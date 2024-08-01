@@ -1,0 +1,67 @@
+[package]
+name = "optionstratlib"
+version = "0.1.0"
+edition = "2021"
+authors = ["Joaquin Bejar <jb@taunais.com>"]
+description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/joaquinbejar/OptionStratLib"
+homepage = "https://github.com/joaquinbejar/OptionStratLib"
+keywords = ["finance", "options", "trading"]
+categories = ["finance", "data-structures"]
+exclude = [
+    "/examples",
+    "/tests",
+    "/target",
+    "/.git",
+    "/.github",
+    "/.idea",
+    "/.vscode",
+    "Cargo.lock"
+]
+
+[dependencies]
+tokio = { version = "1.39.2", features = ["rt", "rt-multi-thread", "macros", "time", "signal"] }
+futures-util = "0.3.30"
+dotenv = "0.15.0"
+thiserror = "1.0.63"
+serde_json = "1.0.121"
+serde = { version = "1.0.204", features = ["derive"] }
+redis = { version = "0.26.0", features = ["cluster", "cluster-async", "aio", "async-std-comp"] }
+mongodb-aggregations = "0.1.0"
+mongodb = {  version = "=2.8.2" }
+futures = "0.3.30"
+chrono = "0.4.38"
+regex = "1.10.5"
+rand = "0.8.5"
+sha2 = "0.10.8"
+reqwest = { version = "0.12.5", features = ["json"] }
+anyhow = "1.0.86"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+async-trait = "0.1.80"
+sqlx = { version = "0.8.0", features = ["runtime-tokio", "macros", "mysql"] }
+chrono-tz = "0.9.0"
+
+
+[dev-dependencies]
+assert-json-diff = "2.0.2"
+mockall = "0.13.0"
+tokio-test = "0.4.4"
+futures-util = "0.3.30"
+async-std = "1.12.0"
+lazy_static = "1.5.0"
+
+[[example]]
+name = "example"
+path = "examples/example.rs"
+
+[[test]]
+name = "tests"
+path = "tests/unit/mod.rs"
+
+[lib]
+name = "optionstratlib"
+path = "src/lib.rs"
+
