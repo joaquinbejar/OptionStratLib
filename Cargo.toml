@@ -21,6 +21,9 @@ exclude = [
     "Cargo.lock"
 ]
 
+[toolchain]
+channel = "nightly"
+
 [dependencies]
 tokio = { version = "1.39.2", features = ["rt", "rt-multi-thread", "macros", "time", "signal"] }
 futures-util = "0.3.30"
