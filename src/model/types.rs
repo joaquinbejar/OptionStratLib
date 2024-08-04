@@ -1,12 +1,14 @@
 use crate::pricing::payoff::Payoff;
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum Side {
     Long,
     Short,
 }
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum OptionStyle {
     Call,
     Put,
@@ -85,9 +87,14 @@ pub enum LookbackType {
 }
 
 impl Payoff for OptionType {
-    fn payoff(&self, spot: f64, strike: f64) -> f64 {
+    fn payoff(&self, spot: f64, strike: f64, style: &OptionStyle) -> f64 {
         match self {
-            OptionType::European | OptionType::American => (spot - strike).max(0.0),
+            OptionType::European | OptionType::American => {
+                match style {
+                    OptionStyle::Call => (spot - strike).max(0.0),
+                    OptionStyle::Put => (strike - spot).max(0.0),
+                }
+            },
             // TODO: Implement payoff for other types of options
             _ => panic!("Payoff not implemented for this option type"),
         }

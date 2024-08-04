@@ -1,4 +1,4 @@
-use crate::model::types::{OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::binomial_model::{price_binomial, BinomialPricingParams};
 use chrono::{DateTime, Utc};
 
@@ -13,6 +13,7 @@ pub struct OptionConfig {
     pub quantity: u32,
     pub underlying_price: f64,
     pub risk_free_rate: f64,
+    pub option_style: OptionStyle,
 }
 
 #[allow(dead_code)]
@@ -27,12 +28,14 @@ pub struct Option {
     pub quantity: u32,
     pub underlying_price: f64,
     pub risk_free_rate: f64,
+    pub option_style:  OptionStyle,
 }
 
 impl Option {
     pub fn new(config: OptionConfig) -> Self {
         Option {
             option_type: config.option_type,
+            option_style: config.option_style,
             side: config.side,
             underlying_symbol: config.underlying_symbol,
             strike_price: config.strike_price,
@@ -69,6 +72,7 @@ impl Option {
             expiry,
             no_steps,
             option_type: &self.option_type,
+            option_style: &self.option_style,
             side: &self.side,
         })
     }
