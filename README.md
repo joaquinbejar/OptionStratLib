@@ -1,6 +1,6 @@
 
 <div style="text-align: center;">
-  <img src="doc/images/logo.png" alt="OptionStratLib" style="width: 100%;">
+  <img src="doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 100px;">
 </div>
 
 OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes. This versatile toolkit enables traders, quants, and developers to:
