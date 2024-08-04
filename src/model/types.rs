@@ -1,6 +1,18 @@
 use crate::pricing::payoff::Payoff;
 
 #[allow(dead_code)]
+pub enum Side {
+    Long,
+    Short,
+}
+
+#[allow(dead_code)]
+pub enum OptionStyle {
+    Call,
+    Put,
+}
+
+#[allow(dead_code)]
 pub enum OptionType {
     European,
     American,

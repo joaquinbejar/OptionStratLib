@@ -1,12 +1,6 @@
-use crate::model::types::OptionType;
+use crate::model::types::{OptionType, Side};
 use crate::pricing::binomial_model::{price_binomial, BinomialPricingParams};
 use chrono::{DateTime, Utc};
-
-#[allow(dead_code)]
-pub enum Side {
-    Long,
-    Short,
-}
 
 pub struct OptionConfig {
     pub option_type: OptionType,
