@@ -5,4 +5,4 @@
 ******************************************************************************/
 
 pub(crate) mod option;
-pub(crate) mod types;
+pub mod types;

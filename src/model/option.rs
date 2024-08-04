@@ -28,7 +28,7 @@ pub struct Option {
     pub quantity: u32,
     pub underlying_price: f64,
     pub risk_free_rate: f64,
-    pub option_style:  OptionStyle,
+    pub option_style: OptionStyle,
 }
 
 impl Option {
