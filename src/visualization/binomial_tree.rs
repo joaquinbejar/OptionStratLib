@@ -5,7 +5,6 @@
 ******************************************************************************/
 
 use plotters::prelude::*;
-use plotters::style::text_anchor::Pos;
 
 /// This function draws a binomial tree of asset prices and option prices using the plotters library and saves it to a specified file.
 ///
@@ -68,9 +67,13 @@ pub fn draw_binomial_tree(
         .x_label_area_size(40)
         .y_label_area_size(60)
         .right_y_label_area_size(60)
-        .build_cartesian_2d(-0.1f32..(steps as f32 + 0.1), min_price - 5.0..max_price + 5.0)?;
+        .build_cartesian_2d(
+            -0.1f32..(steps as f32 + 0.1),
+            min_price - 5.0..max_price + 5.0,
+        )?;
 
-    chart.configure_mesh()
+    chart
+        .configure_mesh()
         .x_labels(steps + 1)
         .y_labels(20)
         .draw()?;
@@ -99,7 +102,7 @@ pub fn draw_binomial_tree(
 
     // Draw the nodes of the asset price tree
     for (i, step_vec) in asset_tree.iter().enumerate().take(steps + 1) {
-        for (j, &value) in step_vec.iter().enumerate().take(i + 1) {
+        for (_j, &value) in step_vec.iter().enumerate().take(i + 1) {
             let x_offset = if i == steps { -30 } else { 0 };
             chart.draw_series(PointSeries::of_element(
                 vec![(i as f32, value)],
@@ -109,10 +112,10 @@ pub fn draw_binomial_tree(
                     EmptyElement::at(coord)
                         + Circle::new((0, 0), size, style.filled())
                         + Text::new(
-                        format!("{:.2}", value),
-                        (x_offset, -23),
-                        ("sans-serif", 18).into_font(),
-                    )
+                            format!("{:.2}", value),
+                            (x_offset, -23),
+                            ("sans-serif", 18).into_font(),
+                        )
                 },
             ))?;
         }
@@ -130,10 +133,10 @@ pub fn draw_binomial_tree(
                     EmptyElement::at(coord)
                         + Circle::new((0, 0), size, style.filled())
                         + Text::new(
-                        format!("{:.2}", option_tree[i][j]),
-                        (x_offset, 23),
-                        ("sans-serif", 18).into_font(),
-                    )
+                            format!("{:.2}", option_tree[i][j]),
+                            (x_offset, 23),
+                            ("sans-serif", 18).into_font(),
+                        )
                 },
             ))?;
         }
