@@ -2,8 +2,8 @@ use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::Payoff;
 use crate::pricing::utils::{
     calculate_discount_factor, calculate_discounted_payoff, calculate_discounted_value,
-    calculate_down_factor, calculate_option_price, calculate_payoff, calculate_probability,
-    calculate_up_factor,
+    calculate_down_factor, calculate_option_node_value, calculate_option_price, calculate_payoff,
+    calculate_probability, calculate_up_factor,
 };
 
 #[derive(Clone)]
@@ -177,10 +177,10 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
     }
 
     for step in (0..params.no_steps).rev() {
-        let (current, next) = option_tree.split_at_mut(step + 1);
-        for (node, node_val) in current[step].iter_mut().enumerate().take(step + 1) {
-            *node_val = (probability * next[0][node] + (1.0 - probability) * next[0][node + 1])
-                * discount_factor;
+        let (current_step_arr, next_step_arr) = option_tree.split_at_mut(step + 1);
+        for (node_idx, node_val) in current_step_arr[step].iter_mut().enumerate().take(step + 1) {
+            *node_val =
+                calculate_option_node_value(probability, next_step_arr, node_idx, discount_factor);
         }
     }
 

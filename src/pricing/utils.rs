@@ -38,6 +38,32 @@ pub(crate) fn calculate_payoff(params: BinomialPricingParams) -> f64 {
     }
 }
 
+/// Calculates the value of an option node in a binomial options pricing model.
+///
+/// This function computes the value of a node by weighing the possible
+/// future values at the next time step by the given probability of moving up.
+/// The result is then discounted by a given discount factor to account for the
+/// time value of money.
+///
+/// # Arguments
+///
+/// * `probability` - A `f64` representing the probability of moving to the next state.
+/// * `next` - A mutable reference to a 2D vector containing the future values of the option.
+/// * `node` - A `usize` indicating the current node's position.
+/// * `discount_factor` - A `f64` used to discount the future values back to the present value.
+///
+/// # Returns
+///
+/// * A `f64` representing the calculated value of the current option node.
+pub(crate) fn calculate_option_node_value(
+    probability: f64,
+    next: &mut [Vec<f64>],
+    node: usize,
+    discount_factor: f64,
+) -> f64 {
+    (probability * next[0][node] + (1.0 - probability) * next[0][node + 1]) * discount_factor
+}
+
 pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 {
     let future_asset_price = params.asset * (params.int_rate * params.expiry).exp();
     let discounted_payoff = (-params.int_rate * params.expiry).exp()
