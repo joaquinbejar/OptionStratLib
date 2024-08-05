@@ -44,6 +44,7 @@ async-trait = "0.1.80"
 sqlx = { version = "0.8.0", features = ["runtime-tokio", "macros", "mysql"] }
 chrono-tz = "0.9.0"
 approx = "0.5.1"
+plotters = "0.3"
 
 
 [dev-dependencies]
