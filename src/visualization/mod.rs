@@ -3,4 +3,4 @@
    Email: jb@taunais.com
    Date: 1/8/24
 ******************************************************************************/
-mod binomial_tree;
+pub mod binomial_tree;

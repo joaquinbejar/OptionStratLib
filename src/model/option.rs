@@ -1,5 +1,7 @@
 use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::pricing::binomial_model::{price_binomial, BinomialPricingParams, generate_binomial_tree};
+use crate::pricing::binomial_model::{
+    generate_binomial_tree, price_binomial, BinomialPricingParams,
+};
 use chrono::{DateTime, Utc};
 
 pub struct OptionConfig {
@@ -77,7 +79,10 @@ impl Option {
         })
     }
 
-    pub fn calculate_price_binomial_tree(&self, no_steps: usize) -> (f64, Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    pub fn calculate_price_binomial_tree(
+        &self,
+        no_steps: usize,
+    ) -> (f64, Vec<Vec<f64>>, Vec<Vec<f64>>) {
         let expiry = self.time_to_expiration();
         let params = BinomialPricingParams {
             asset: self.underlying_price,
