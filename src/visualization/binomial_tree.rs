@@ -5,6 +5,7 @@
 ******************************************************************************/
 
 use plotters::prelude::*;
+use plotters::style::text_anchor::Pos;
 
 /// This function draws a binomial tree of asset prices and option prices using the plotters library and saves it to a specified file.
 ///
@@ -30,12 +31,14 @@ use plotters::prelude::*;
 ///     vec![100.0],
 ///     vec![105.0, 95.0],
 ///     vec![110.25, 99.75, 90.25],
+///     vec![115.25, 105.0, 95.0, 85.0],
 /// ];
 ///
 /// let option_tree = vec![
 ///     vec![5.0],
 ///     vec![10.0, 0.0],
 ///     vec![15.0, 5.0, 0.0],
+///     vec![20.0, 10.0, 0.0, 0.0],
 /// ];
 ///
 /// let filename = "./Draws/Binomial Tree/binomial_tree.png";
@@ -46,7 +49,7 @@ pub fn draw_binomial_tree(
     option_tree: &[Vec<f64>],
     filename: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
+    let root = BitMapBackend::new(filename, (1200, 800)).into_drawing_area();
     root.fill(&WHITE)?;
     let steps = asset_tree.len() - 1;
     let max_price = asset_tree
@@ -57,13 +60,21 @@ pub fn draw_binomial_tree(
         .iter()
         .flat_map(|row| row.iter().cloned())
         .fold(f64::INFINITY, f64::min);
+
     let mut chart = ChartBuilder::on(&root)
         .caption("Binomial Tree", ("sans-serif", 30))
-        .margin(5)
-        .x_label_area_size(30)
-        .y_label_area_size(30)
-        .build_cartesian_2d(0f32..steps as f32, min_price..max_price)?;
-    chart.configure_mesh().draw()?;
+        .margin(10)
+        .top_x_label_area_size(40)
+        .x_label_area_size(40)
+        .y_label_area_size(60)
+        .right_y_label_area_size(60)
+        .build_cartesian_2d(-0.1f32..(steps as f32 + 0.1), min_price - 5.0..max_price + 5.0)?;
+
+    chart.configure_mesh()
+        .x_labels(steps + 1)
+        .y_labels(20)
+        .draw()?;
+
     // Draw the asset price tree lines
     for i in 0..steps {
         for j in 0..=i {
@@ -85,9 +96,11 @@ pub fn draw_binomial_tree(
             }
         }
     }
+
     // Draw the nodes of the asset price tree
     for (i, step_vec) in asset_tree.iter().enumerate().take(steps + 1) {
-        for (_j, &value) in step_vec.iter().enumerate().take(i + 1) {
+        for (j, &value) in step_vec.iter().enumerate().take(i + 1) {
+            let x_offset = if i == steps { -30 } else { 0 };
             chart.draw_series(PointSeries::of_element(
                 vec![(i as f32, value)],
                 5,
@@ -96,10 +109,10 @@ pub fn draw_binomial_tree(
                     EmptyElement::at(coord)
                         + Circle::new((0, 0), size, style.filled())
                         + Text::new(
-                            format!("{:.2}", value),
-                            (10, 0),
-                            ("sans-serif", 10).into_font(),
-                        )
+                        format!("{:.2}", value),
+                        (x_offset, -23),
+                        ("sans-serif", 18).into_font(),
+                    )
                 },
             ))?;
         }
@@ -108,6 +121,7 @@ pub fn draw_binomial_tree(
     // Draw the nodes of the option price tree
     for i in 0..=steps {
         for j in 0..=i {
+            let x_offset = if i == steps { -30 } else { 0 };
             chart.draw_series(PointSeries::of_element(
                 vec![(i as f32, asset_tree[i][j])],
                 5,
@@ -116,10 +130,10 @@ pub fn draw_binomial_tree(
                     EmptyElement::at(coord)
                         + Circle::new((0, 0), size, style.filled())
                         + Text::new(
-                            format!("{:.2}", option_tree[i][j]),
-                            (10, 15),
-                            ("sans-serif", 10).into_font(),
-                        )
+                        format!("{:.2}", option_tree[i][j]),
+                        (x_offset, 23),
+                        ("sans-serif", 18).into_font(),
+                    )
                 },
             ))?;
         }
