@@ -1,9 +1,9 @@
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::Payoff;
 use crate::pricing::utils::{
-    calculate_discount_factor, calculate_discounted_payoff, calculate_discounted_value,
-    calculate_down_factor, calculate_option_node_value, calculate_option_price,
-    calculate_probability, calculate_up_factor,
+    calculate_discount_factor, calculate_discounted_payoff, calculate_down_factor,
+    calculate_option_price, calculate_probability, calculate_up_factor, option_node_value,
+    option_node_value_wrapper,
 };
 
 #[derive(Clone)]
@@ -89,6 +89,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> f64 {
     let u = calculate_up_factor(params.volatility, dt);
     let d = calculate_down_factor(params.volatility, dt);
     let p = calculate_probability(params.int_rate, dt, d, u);
+    let discount_factor = calculate_discount_factor(params.int_rate, dt);
 
     let mut prices: Vec<f64> = (0..=params.no_steps)
         .map(|i| calculate_option_price(params.clone(), u, d, i))
@@ -96,8 +97,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> f64 {
 
     for step in (0..params.no_steps).rev() {
         for i in 0..=step {
-            let option_value =
-                calculate_discounted_value(p, prices[i + 1], prices[i], params.int_rate, dt);
+            let option_value = option_node_value(p, prices[i + 1], prices[i], discount_factor);
             match params.option_type {
                 OptionType::American => {
                     let spot = params.asset * u.powi(i as i32) * d.powi((step - i) as i32);
@@ -197,22 +197,22 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
     for step in (0..params.no_steps).rev() {
         let (current_step_arr, next_step_arr) = option_tree.split_at_mut(step + 1);
         for (node_idx, node_val) in current_step_arr[step].iter_mut().enumerate().take(step + 1) {
-            let option_node_value =
-                calculate_option_node_value(probability, next_step_arr, node_idx, discount_factor);
+            let node_value =
+                option_node_value_wrapper(probability, next_step_arr, node_idx, discount_factor);
             match params.option_type {
                 OptionType::European => {
-                    *node_val = option_node_value;
+                    *node_val = node_value;
                 }
                 OptionType::American => {
                     if (step == 0) & (node_idx == 0) {
-                        *node_val = option_node_value;
+                        *node_val = node_value;
                     } else {
                         let spot = asset_tree[step][node_idx];
                         let intrinsic_value =
                             params
                                 .option_type
                                 .payoff(spot, params.strike, params.option_style);
-                        *node_val = intrinsic_value.max(option_node_value);
+                        *node_val = intrinsic_value.max(node_value);
                     }
                 }
                 _ => {

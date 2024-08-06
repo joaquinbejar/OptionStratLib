@@ -94,13 +94,63 @@ pub(crate) fn calculate_discount_factor(int_rate: f64, dt: f64) -> f64 {
 /// # Returns
 ///
 /// * A `f64` representing the calculated value of the current option node.
-pub(crate) fn calculate_option_node_value(
+pub(crate) fn option_node_value_wrapper(
     probability: f64,
     next: &mut [Vec<f64>],
     node: usize,
     discount_factor: f64,
 ) -> f64 {
-    (probability * next[0][node] + (1.0 - probability) * next[0][node + 1]) * discount_factor
+    option_node_value(
+        probability,
+        next[0][node],
+        next[0][node + 1],
+        discount_factor,
+    )
+}
+
+/// Calculates the value of an option node in a binomial tree model.
+///
+/// # Parameters
+/// - `probability`: The probability of the price moving up.
+/// - `price_up`: The price if the market moves up.
+/// - `price_down`: The price if the market moves down.
+/// - `discount_factor`: The factor to discount the future value.
+///
+/// # Returns
+/// The discounted expected value of the option node.
+pub(crate) fn option_node_value(
+    probability: f64,
+    price_up: f64,
+    price_down: f64,
+    discount_factor: f64,
+) -> f64 {
+    (probability * price_up + (1.0 - probability) * price_down) * discount_factor
+}
+
+/// Calculates the option price using the Binomial Pricing Model.
+///
+/// # Parameters
+///
+/// * `params`: An instance of `BinomialPricingParams` containing the necessary parameters
+///   such as the asset price, strike price, option type, and number of steps.
+/// * `u`: A `f64` representing the up factor in the binomial tree.
+/// * `d`: A `f64` representing the down factor in the binomial tree.
+/// * `i`: An `usize` representing the current step in the binomial tree.
+///
+/// # Returns
+///
+/// Returns a `f64` representing the calculated option price at the given step.
+///
+pub(crate) fn calculate_option_price(
+    params: BinomialPricingParams,
+    u: f64,
+    d: f64,
+    i: usize,
+) -> f64 {
+    let price = params.asset * u.powi(i as i32) * d.powi((params.no_steps - i) as i32);
+    params
+        .option_type
+        .payoff(price, params.strike, params.option_style)
 }
 
 /// Calculates the discounted payoff for an option based on the binomial pricing model.
@@ -130,56 +180,6 @@ pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 
         Side::Long => discounted_payoff,
         Side::Short => -discounted_payoff,
     }
-}
-
-/// Calculates the option price using the Binomial Pricing Model.
-///
-/// # Parameters
-///
-/// * `params`: An instance of `BinomialPricingParams` containing the necessary parameters
-///   such as the asset price, strike price, option type, and number of steps.
-/// * `u`: A `f64` representing the up factor in the binomial tree.
-/// * `d`: A `f64` representing the down factor in the binomial tree.
-/// * `i`: An `usize` representing the current step in the binomial tree.
-///
-/// # Returns
-///
-/// Returns a `f64` representing the calculated option price at the given step.
-///
-pub(crate) fn calculate_option_price(
-    params: BinomialPricingParams,
-    u: f64,
-    d: f64,
-    i: usize,
-) -> f64 {
-    let price = params.asset * u.powi(i as i32) * d.powi((params.no_steps - i) as i32);
-    params
-        .option_type
-        .payoff(price, params.strike, params.option_style)
-}
-
-/// Calculates the discounted value based on the given parameters.
-///
-/// The function calculates the expected value when there is a certain
-/// probability `p` of a price moving up, and a probability `1 - p` of the price moving down.
-/// This is then discounted back to the present value using the interest rate `int_rate`
-/// over a time period `dt`.
-///
-/// # Parameters
-/// - `p`: The probability of the price moving up.
-/// - `price_up`: The price if it moves up.
-/// - `price_down`: The price if it moves down.
-/// - `int_rate`: The interest rate for discounting.
-/// - `dt`: The time period over which the discounting occurs.
-///
-pub(crate) fn calculate_discounted_value(
-    p: f64,
-    price_up: f64,
-    price_down: f64,
-    int_rate: f64,
-    dt: f64,
-) -> f64 {
-    (p * price_up + (1.0 - p) * price_down) * (-int_rate * dt).exp()
 }
 
 #[cfg(test)]
