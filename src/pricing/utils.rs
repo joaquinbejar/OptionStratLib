@@ -28,15 +28,15 @@ pub(crate) fn calculate_discount_factor(int_rate: f64, dt: f64) -> f64 {
     (-int_rate * dt).exp()
 }
 
-pub(crate) fn calculate_payoff(params: BinomialPricingParams) -> f64 {
-    let payoff = params
-        .option_type
-        .payoff(params.asset, params.strike, params.option_style);
-    match params.side {
-        Side::Long => payoff,
-        Side::Short => -payoff,
-    }
-}
+// pub(crate) fn calculate_payoff(params: BinomialPricingParams) -> f64 {
+//     let payoff = params
+//         .option_type
+//         .payoff(params.asset, params.strike, params.option_style);
+//     match params.side {
+//         Side::Long => payoff,
+//         Side::Short => -payoff,
+//     }
+// }
 
 /// Calculates the value of an option node in a binomial options pricing model.
 ///
