@@ -124,8 +124,8 @@ pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 
     let future_asset_price = params.asset * (params.int_rate * params.expiry).exp();
     let discounted_payoff = (-params.int_rate * params.expiry).exp()
         * params
-        .option_type
-        .payoff(future_asset_price, params.strike, params.option_style);
+            .option_type
+            .payoff(future_asset_price, params.strike, params.option_style);
     match params.side {
         Side::Long => discounted_payoff,
         Side::Short => -discounted_payoff,
@@ -250,6 +250,16 @@ mod tests_utils {
             expected_probability,
             probability
         );
+    }
+
+    #[test]
+    fn test_calculate_probability_ii() {
+        let int_rate = 0.05;
+        let dt = 1.0;
+        let down_factor = 0.8;
+        let up_factor = 1.2;
+        let probability = calculate_probability(int_rate, dt, down_factor, up_factor);
+        assert_relative_eq!(probability, 0.6282, epsilon = 0.001);
     }
 
     #[test]

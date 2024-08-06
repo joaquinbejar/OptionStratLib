@@ -197,8 +197,28 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
     for step in (0..params.no_steps).rev() {
         let (current_step_arr, next_step_arr) = option_tree.split_at_mut(step + 1);
         for (node_idx, node_val) in current_step_arr[step].iter_mut().enumerate().take(step + 1) {
-            *node_val =
+            let option_node_value =
                 calculate_option_node_value(probability, next_step_arr, node_idx, discount_factor);
+            match params.option_type {
+                OptionType::European => {
+                    *node_val = option_node_value;
+                }
+                OptionType::American => {
+                    if (step == 0) & (node_idx == 0) {
+                        *node_val = option_node_value;
+                    } else {
+                        let spot = asset_tree[step][node_idx];
+                        let intrinsic_value =
+                            params
+                                .option_type
+                                .payoff(spot, params.strike, params.option_style);
+                        *node_val = intrinsic_value.max(option_node_value);
+                    }
+                }
+                _ => {
+                    panic!("OptionType not implemented.")
+                }
+            }
         }
     }
 
@@ -245,6 +265,24 @@ mod tests_price_binomial {
 
         let price = price_binomial(params);
         assert_relative_eq!(price, 5.57, epsilon = 0.1);
+    }
+
+    #[test]
+    fn test_european_put_option_extended() {
+        let params = BinomialPricingParams {
+            asset: 50.0,
+            volatility: 0.2,
+            int_rate: 0.05,
+            strike: 52.0,
+            expiry: 1.0,
+            no_steps: 1,
+            option_type: &OptionType::European,
+            option_style: &OptionStyle::Put,
+            side: &Side::Long,
+        };
+
+        let price = price_binomial(params);
+        assert_relative_eq!(price, 4.446, epsilon = 0.001);
     }
 
     #[test]
@@ -512,44 +550,70 @@ mod tests_generate_binomial_tree {
     }
 
     #[test]
-    fn test_binomial_tree_american_option() {
+    fn test_binomial_tree_european_put_option() {
         // Define parameters for an American option test case
         let params = BinomialPricingParams {
-            asset: 100.0,
-            strike: 100.0,
-            int_rate: 0.05,
+            asset: 50.0,
             volatility: 0.2,
-            expiry: 1.0,
-            no_steps: 3,
-            option_type: &OptionType::American,
-            option_style: &OptionStyle::Call,
+            int_rate: 0.05,
+            strike: 52.0,
+            expiry: 2.0,
+            no_steps: 2,
+            option_type: &OptionType::European,
+            option_style: &OptionStyle::Put,
             side: &Side::Long,
         };
 
         let (asset_tree, option_tree) = generate_binomial_tree(&params);
 
-        assert_relative_eq!(asset_tree[0][0], 100.0, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[1][0], 112.24, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[1][1], 89.094, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[2][0], 125.978, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[2][1], 100.0, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[2][2], 79.378, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[3][0], 141.398, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[3][1], 112.240, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[3][2], 89.094, epsilon = 0.001);
-        assert_relative_eq!(asset_tree[3][3], 70.722, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[0][0], 50.0, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[1][0], 61.070, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[1][1], 40.936, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[2][0], 74.591, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[2][1], 50.0, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[2][2], 33.516, epsilon = 0.001);
 
-        assert_relative_eq!(option_tree[0][0], 11.043, epsilon = 0.001);
-        assert_relative_eq!(option_tree[1][0], 17.713, epsilon = 0.001);
-        assert_relative_eq!(option_tree[1][1], 3.500, epsilon = 0.001);
-        assert_relative_eq!(option_tree[2][0], 27.631, epsilon = 0.001);
-        assert_relative_eq!(option_tree[2][1], 6.545, epsilon = 0.001);
-        assert_relative_eq!(option_tree[2][2], 0.0, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][0], 41.398, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][1], 12.240, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][2], 0.0, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][3], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[0][0], 3.868, epsilon = 0.001);
+        assert_relative_eq!(option_tree[1][0], 0.803, epsilon = 0.001);
+        assert_relative_eq!(option_tree[1][1], 8.527, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][0], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][1], 2.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][2], 18.483, epsilon = 0.001);
     }
 
-    // Add more test cases as needed to cover different scenarios and edge cases
+    #[test]
+    fn test_binomial_tree_american_put_option() {
+        // Define parameters for an American option test case
+        let params = BinomialPricingParams {
+            asset: 50.0,
+            volatility: 0.2,
+            int_rate: 0.05,
+            strike: 52.0,
+            expiry: 2.0,
+            no_steps: 2,
+            option_type: &OptionType::American,
+            option_style: &OptionStyle::Put,
+            side: &Side::Long,
+        };
+        let (asset_tree, option_tree) = generate_binomial_tree(&params);
+
+        assert_relative_eq!(asset_tree[0][0], 50.0, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[1][0], 61.070, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[1][1], 40.936, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[2][0], 74.591, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[2][1], 50.0, epsilon = 0.001);
+        assert_relative_eq!(asset_tree[2][2], 33.516, epsilon = 0.001);
+
+        assert_relative_eq!(option_tree[2][0], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][1], 2.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][2], 18.483, epsilon = 0.001);
+        assert_relative_eq!(option_tree[1][0], 0.803, epsilon = 0.001);
+
+        assert_relative_eq!(
+            option_tree[1][1],
+            params.strike - asset_tree[1][1],
+            epsilon = 0.001
+        );
+        assert_relative_eq!(option_tree[0][0], 4.887, epsilon = 0.001);
+    }
 }
