@@ -1,5 +1,5 @@
 use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::pricing::payoff::Payoff;
+use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::{
     calculate_discount_factor, calculate_discounted_payoff, calculate_down_factor,
     calculate_option_price, calculate_probability, calculate_up_factor, option_node_value,
@@ -76,10 +76,19 @@ pub struct BinomialPricingParams<'a> {
 /// - This model assumes that the underlying asset follows a multiplicative binomial process.
 /// - For American options, this model accounts for the possibility of early exercise.
 pub fn price_binomial(params: BinomialPricingParams) -> f64 {
+    let mut info = PayoffInfo {
+        spot: params.asset,
+        strike: params.strike,
+        style: params.option_style.clone(),
+        spot_prices: None,
+        spot_min: None,
+        spot_max: None,
+    };
+
     if params.expiry == 0.0 {
         return params
             .option_type
-            .payoff(params.asset, params.strike, params.option_style);
+            .payoff(&info);
     }
     if params.volatility == 0.0 {
         return calculate_discounted_payoff(params);
@@ -101,10 +110,11 @@ pub fn price_binomial(params: BinomialPricingParams) -> f64 {
             match params.option_type {
                 OptionType::American => {
                     let spot = params.asset * u.powi(i as i32) * d.powi((step - i) as i32);
+                    info.spot = spot;
                     let intrinsic_value =
                         params
                             .option_type
-                            .payoff(spot, params.strike, params.option_style);
+                            .payoff(&info);
                     prices[i] = option_value.max(intrinsic_value);
                 }
                 OptionType::European => {
@@ -167,6 +177,15 @@ pub fn price_binomial(params: BinomialPricingParams) -> f64 {
 /// let (asset_tree, option_tree) = generate_binomial_tree(&params);
 /// ```
 pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    let mut info = PayoffInfo {
+        spot: params.asset,
+        strike: params.strike,
+        style: params.option_style.clone(),
+        spot_prices: None,
+        spot_min: None,
+        spot_max: None,
+    };
+
     let dt = params.expiry / params.no_steps as f64;
     let up_factor = calculate_up_factor(params.volatility, dt);
     let down_factor = calculate_down_factor(params.volatility, dt);
@@ -188,10 +207,11 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
         .enumerate()
         .take(params.no_steps + 1)
     {
+        info.spot = *node_val;
         option_tree[params.no_steps][node] =
             params
                 .option_type
-                .payoff(*node_val, params.strike, params.option_style);
+                .payoff(&info);
     }
 
     for step in (0..params.no_steps).rev() {
@@ -207,11 +227,11 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
                     if (step == 0) & (node_idx == 0) {
                         *node_val = node_value;
                     } else {
-                        let spot = asset_tree[step][node_idx];
+                        info.spot = asset_tree[step][node_idx];
                         let intrinsic_value =
                             params
                                 .option_type
-                                .payoff(spot, params.strike, params.option_style);
+                                .payoff(&info);
                         *node_val = intrinsic_value.max(node_value);
                     }
                 }

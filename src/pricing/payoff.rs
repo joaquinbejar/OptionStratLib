@@ -12,3 +12,9 @@ pub struct PayoffInfo {
     pub spot_min: Option<f64>,
     pub spot_max: Option<f64>,
 }
+
+impl PayoffInfo {
+    pub fn spot_prices_len(&self) -> Option<usize> {
+        self.spot_prices.as_ref().map(|vec| vec.len())
+    }
+}

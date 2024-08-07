@@ -15,6 +15,7 @@ pub enum OptionStyle {
 }
 
 #[allow(dead_code)]
+#[derive(Clone)]
 /// Represents the type of option in a financial context.
 /// Options can be categorized into various types based on their characteristics and the conditions under which they can be exercised.
 pub enum OptionType {
@@ -137,6 +138,7 @@ pub enum OptionType {
 
 /// Describes how the average price is calculated for Asian options.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum AsianAveragingType {
     /// Arithmetic averaging calculates the average of the prices in a straightforward manner.
     /// This is the most common type of averaging for Asian options.
@@ -148,6 +150,7 @@ pub enum AsianAveragingType {
 
 /// Describes the type of barrier for Barrier options.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum BarrierType {
     /// The option becomes active only if the underlying asset price goes above a certain level.
     UpAndIn,
@@ -161,6 +164,7 @@ pub enum BarrierType {
 
 /// Describes the type of binary option.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum BinaryType {
     /// The option pays a fixed amount of cash if the underlying asset is above or below a certain level.
     CashOrNothing,
@@ -170,6 +174,7 @@ pub enum BinaryType {
 
 /// Describes the type of lookback option.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum LookbackType {
     /// The strike price is fixed at the beginning, and the payoff is based on the maximum or minimum price of the underlying asset during the option's life.
     FixedStrike,
@@ -195,16 +200,21 @@ impl Payoff for OptionType {
                 // We need to calculate the average based on the averaging_type
                 // For this, we'd need a series of spot prices over time
                 // Let's assume we have access to these prices in a vector called 'spot_prices'
-                let average = match averaging_type {
-                    AsianAveragingType::Arithmetic => {
-                        // Arithmetic mean
-                        info.spot_prices.iter().sum::<f64>() / info.spot_prices.len() as f64
+                let average = match (&info.spot_prices, info.spot_prices_len()) {
+                    (Some(spot_prices), Some(len)) if len > 0 => {
+                        match averaging_type {
+                            AsianAveragingType::Arithmetic => {
+                                // Media aritmética
+                                spot_prices.iter().sum::<f64>() / len as f64
+                            },
+                            AsianAveragingType::Geometric => {
+                                // Media geométrica
+                                let product = spot_prices.iter().fold(1.0, |acc, &x| acc * x);
+                                product.powf(1.0 / len as f64)
+                            },
+                        }
                     },
-                    AsianAveragingType::Geometric => {
-                        // Geometric mean
-                        let product = info.spot_prices.iter().fold(1.0, |acc, &x| acc * x);
-                        product.powf(1.0 / info.spot_prices.len() as f64)
-                    },
+                    _ => return 0.0, // O maneja el caso donde no hay precios spot
                 };
 
                 // Now we can calculate the payoff using this average
