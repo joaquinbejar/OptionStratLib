@@ -6,7 +6,7 @@
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
-use crate::pricing::payoff::Payoff;
+use crate::pricing::payoff::{Payoff, PayoffInfo};
 
 /// Calculates the up factor for an asset's price movement model.
 ///
@@ -147,10 +147,15 @@ pub(crate) fn calculate_option_price(
     d: f64,
     i: usize,
 ) -> f64 {
-    let price = params.asset * u.powi(i as i32) * d.powi((params.no_steps - i) as i32);
-    params
-        .option_type
-        .payoff(price, params.strike, params.option_style)
+    let info = PayoffInfo {
+        spot: params.asset * u.powi(i as i32) * d.powi((params.no_steps - i) as i32),
+        strike: params.strike,
+        style: params.option_style.clone(),
+        spot_prices: None,
+        spot_min: None,
+        spot_max: None,
+    };
+    params.option_type.payoff(&info)
 }
 
 /// Calculates the discounted payoff for an option based on the binomial pricing model.
@@ -171,11 +176,16 @@ pub(crate) fn calculate_option_price(
 /// of the trade (long or short).
 ///
 pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 {
-    let future_asset_price = params.asset * (params.int_rate * params.expiry).exp();
-    let discounted_payoff = (-params.int_rate * params.expiry).exp()
-        * params
-            .option_type
-            .payoff(future_asset_price, params.strike, params.option_style);
+    let info = PayoffInfo {
+        spot: params.asset * (params.int_rate * params.expiry).exp(),
+        strike: params.strike,
+        style: params.option_style.clone(),
+        spot_prices: None,
+        spot_min: None,
+        spot_max: None,
+    };
+    let discounted_payoff =
+        (-params.int_rate * params.expiry).exp() * params.option_type.payoff(&info);
     match params.side {
         Side::Long => discounted_payoff,
         Side::Short => -discounted_payoff,

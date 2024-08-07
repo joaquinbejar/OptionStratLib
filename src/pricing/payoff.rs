@@ -4,6 +4,7 @@ pub trait Payoff {
     fn payoff(&self, info: &PayoffInfo) -> f64;
 }
 
+#[allow(dead_code)]
 pub struct PayoffInfo {
     pub spot: f64,
     pub strike: f64,

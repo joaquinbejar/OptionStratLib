@@ -201,20 +201,16 @@ impl Payoff for OptionType {
                 // For this, we'd need a series of spot prices over time
                 // Let's assume we have access to these prices in a vector called 'spot_prices'
                 let average = match (&info.spot_prices, info.spot_prices_len()) {
-                    (Some(spot_prices), Some(len)) if len > 0 => {
-                        match averaging_type {
-                            AsianAveragingType::Arithmetic => {
-                                // Media aritmética
-                                spot_prices.iter().sum::<f64>() / len as f64
-                            },
-                            AsianAveragingType::Geometric => {
-                                // Media geométrica
-                                let product = spot_prices.iter().fold(1.0, |acc, &x| acc * x);
-                                product.powf(1.0 / len as f64)
-                            },
+                    (Some(spot_prices), Some(len)) if len > 0 => match averaging_type {
+                        AsianAveragingType::Arithmetic => {
+                            spot_prices.iter().sum::<f64>() / len as f64
+                        }
+                        AsianAveragingType::Geometric => {
+                            let product = spot_prices.iter().fold(1.0, |acc, &x| acc * x);
+                            product.powf(1.0 / len as f64)
                         }
                     },
-                    _ => return 0.0, // O maneja el caso donde no hay precios spot
+                    _ => return 0.0,
                 };
 
                 // Now we can calculate the payoff using this average
@@ -222,7 +218,7 @@ impl Payoff for OptionType {
                     OptionStyle::Call => (average - info.strike).max(0.0),
                     OptionStyle::Put => (info.strike - average).max(0.0),
                 }
-            },
+            }
             OptionType::Barrier {
                 barrier_type,
                 barrier_level,
@@ -278,30 +274,29 @@ impl Payoff for OptionType {
                     }
                 }
             }
-            // OptionType::Lookback { lookback_type } => {
-            //     match lookback_type {
-            //         LookbackType::FixedStrike => {
-            //             // Assume 'spot' is the maximum (for call) or minimum (for put) price reached
-            //             match style {
-            //                 OptionStyle::Call => (spot - strike).max(0.0),
-            //                 OptionStyle::Put => (strike - spot).max(0.0),
-            //             }
-            //         },
-            //         LookbackType::FloatingStrike => {
-            //             // For floating strike, we need both the current spot price and the extremum price
-            //             // Let's assume we have access to these values
-            //             // TODO: spot_min and spot_max needed as parameters
-            //             let extremum = match style {
-            //                 OptionStyle::Call => spot_min, // Assume spot_min is available
-            //                 OptionStyle::Put => spot_max, // Assume spot_max is available
-            //             };
-            //             match style {
-            //                 OptionStyle::Call => spot - extremum,
-            //                 OptionStyle::Put => extremum - spot,
-            //             }
-            //         },
-            //     }
-            // },
+            OptionType::Lookback { lookback_type } => {
+                match lookback_type {
+                    LookbackType::FixedStrike => {
+                        // Assume 'spot' is the maximum (for call) or minimum (for put) price reached
+                        match info.style {
+                            OptionStyle::Call => (info.spot - info.strike).max(0.0),
+                            OptionStyle::Put => (info.strike - info.spot).max(0.0),
+                        }
+                    }
+                    LookbackType::FloatingStrike => {
+                        // For floating strike, we need both the current spot price and the extremum price
+                        // Let's assume we have access to these values
+                        let extremum = match info.style {
+                            OptionStyle::Call => info.spot_min, // Assume spot_min is available
+                            OptionStyle::Put => info.spot_max,  // Assume spot_max is available
+                        };
+                        match info.style {
+                            OptionStyle::Call => info.spot - extremum.unwrap_or(0.0),
+                            OptionStyle::Put => extremum.unwrap_or(0.0) - info.spot,
+                        }
+                    }
+                }
+            }
             OptionType::Compound { underlying_option } => {
                 // Payoff depends on the value of the underlying_option
                 // This implementation is simplified and may not be accurate
@@ -343,7 +338,6 @@ impl Payoff for OptionType {
                     OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(0.0),
                 }
             }
-            _ => panic!("Payoff not implemented for this option type"),
         }
     }
 }

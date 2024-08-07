@@ -86,9 +86,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> f64 {
     };
 
     if params.expiry == 0.0 {
-        return params
-            .option_type
-            .payoff(&info);
+        return params.option_type.payoff(&info);
     }
     if params.volatility == 0.0 {
         return calculate_discounted_payoff(params);
@@ -111,10 +109,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> f64 {
                 OptionType::American => {
                     let spot = params.asset * u.powi(i as i32) * d.powi((step - i) as i32);
                     info.spot = spot;
-                    let intrinsic_value =
-                        params
-                            .option_type
-                            .payoff(&info);
+                    let intrinsic_value = params.option_type.payoff(&info);
                     prices[i] = option_value.max(intrinsic_value);
                 }
                 OptionType::European => {
@@ -208,10 +203,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
         .take(params.no_steps + 1)
     {
         info.spot = *node_val;
-        option_tree[params.no_steps][node] =
-            params
-                .option_type
-                .payoff(&info);
+        option_tree[params.no_steps][node] = params.option_type.payoff(&info);
     }
 
     for step in (0..params.no_steps).rev() {
@@ -228,10 +220,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
                         *node_val = node_value;
                     } else {
                         info.spot = asset_tree[step][node_idx];
-                        let intrinsic_value =
-                            params
-                                .option_type
-                                .payoff(&info);
+                        let intrinsic_value = params.option_type.payoff(&info);
                         *node_val = intrinsic_value.max(node_value);
                     }
                 }
