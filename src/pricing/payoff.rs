@@ -4,14 +4,13 @@ pub trait Payoff {
     fn payoff(&self, info: &PayoffInfo) -> f64;
 }
 
-#[allow(dead_code)]
 pub struct PayoffInfo {
     pub spot: f64,
     pub strike: f64,
     pub style: OptionStyle,
-    pub spot_prices: Option<Vec<f64>>,
-    pub spot_min: Option<f64>,
-    pub spot_max: Option<f64>,
+    pub spot_prices: Option<Vec<f64>>, // Asian
+    pub spot_min: Option<f64>,         // Lookback
+    pub spot_max: Option<f64>,         //Lookback
 }
 
 impl PayoffInfo {
