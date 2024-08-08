@@ -29,3 +29,23 @@ impl PayoffInfo {
         self.spot_prices.as_ref().map(|vec| vec.len())
     }
 }
+
+/// Calculates the standard payoff for an option given its information.
+///
+/// # Arguments
+///
+/// * `info` - A reference to a `PayoffInfo` struct that contains the essential details of the option such as its style, spot price, and strike price.
+///
+/// # Returns
+///
+/// * `f64` - The payoff value based on the type of the option (call or put).
+///
+/// This function evaluates the payoff based on the option style:
+/// - For a call option: Max(spot price - strike price, 0)
+/// - For a put option: Max(strike price - spot price, 0)
+pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
+    match info.style {
+        OptionStyle::Call => (info.spot - info.strike).max(0.0),
+        OptionStyle::Put => (info.strike - info.spot).max(0.0),
+    }
+}

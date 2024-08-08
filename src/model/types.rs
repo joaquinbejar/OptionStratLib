@@ -1,4 +1,4 @@
-use crate::pricing::payoff::{Payoff, PayoffInfo};
+use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -185,16 +185,10 @@ pub enum LookbackType {
 impl Payoff for OptionType {
     fn payoff(&self, info: &PayoffInfo) -> f64 {
         match self {
-            OptionType::European | OptionType::American => match info.style {
-                OptionStyle::Call => (info.spot - info.strike).max(0.0),
-                OptionStyle::Put => (info.strike - info.spot).max(0.0),
-            },
+            OptionType::European | OptionType::American => standard_payoff(info),
             OptionType::Bermuda { .. } => {
                 // Assume that on the exercise date, the payoff is the same as a European option
-                match info.style {
-                    OptionStyle::Call => (info.spot - info.strike).max(0.0),
-                    OptionStyle::Put => (info.strike - info.spot).max(0.0),
-                }
+                standard_payoff(info)
             }
             OptionType::Asian { averaging_type } => {
                 // We need to calculate the average based on the averaging_type
@@ -228,15 +222,12 @@ impl Payoff for OptionType {
                     BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
                 };
 
-                let standard_payoff = match info.style {
-                    OptionStyle::Call => (info.spot - info.strike).max(0.0),
-                    OptionStyle::Put => (info.strike - info.spot).max(0.0),
-                };
+                let std_payoff = standard_payoff(info);
 
                 match barrier_type {
                     BarrierType::UpAndIn | BarrierType::DownAndIn => {
                         if barrier_condition {
-                            standard_payoff
+                            std_payoff
                         } else {
                             0.0
                         }
@@ -245,7 +236,7 @@ impl Payoff for OptionType {
                         if barrier_condition {
                             0.0
                         } else {
-                            standard_payoff
+                            std_payoff
                         }
                     }
                 }
@@ -278,10 +269,7 @@ impl Payoff for OptionType {
                 match lookback_type {
                     LookbackType::FixedStrike => {
                         // Assume 'spot' is the maximum (for call) or minimum (for put) price reached
-                        match info.style {
-                            OptionStyle::Call => (info.spot - info.strike).max(0.0),
-                            OptionStyle::Put => (info.strike - info.spot).max(0.0),
-                        }
+                        standard_payoff(info)
                     }
                     LookbackType::FloatingStrike => {
                         // For floating strike, we need both the current spot price and the extremum price
@@ -308,27 +296,18 @@ impl Payoff for OptionType {
             }
             OptionType::Cliquet { .. } => {
                 // Assume 'strike' has already been reset
-                match info.style {
-                    OptionStyle::Call => (info.spot - info.strike).max(0.0),
-                    OptionStyle::Put => (info.strike - info.spot).max(0.0),
-                }
+                standard_payoff(info)
             }
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
             | OptionType::Exchange { .. } => {
                 // These types require information about multiple assets
                 // This implementation is a simplification
-                match info.style {
-                    OptionStyle::Call => (info.spot - info.strike).max(0.0),
-                    OptionStyle::Put => (info.strike - info.spot).max(0.0),
-                }
+                standard_payoff(info)
             }
             OptionType::Quanto { exchange_rate } => {
                 // Payoff is calculated in the original currency and then converted
-                let original_payoff = match info.style {
-                    OptionStyle::Call => (info.spot - info.strike).max(0.0),
-                    OptionStyle::Put => (info.strike - info.spot).max(0.0),
-                };
+                let original_payoff = standard_payoff(info);
                 original_payoff * exchange_rate
             }
             OptionType::Power { exponent } => {
