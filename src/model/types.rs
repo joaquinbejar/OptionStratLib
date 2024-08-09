@@ -320,3 +320,109 @@ impl Payoff for OptionType {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests_payoff {
+    use super::*;
+
+    #[test]
+    fn test_european_call() {
+        let option = OptionType::European;
+        let info = PayoffInfo {
+            spot: 110.0,
+            strike: 100.0,
+            style: OptionStyle::Call,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_european_put() {
+        let option = OptionType::European;
+        let info = PayoffInfo {
+            spot: 90.0,
+            strike: 100.0,
+            style: OptionStyle::Put,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_asian_arithmetic_call() {
+        let option = OptionType::Asian { averaging_type: AsianAveragingType::Arithmetic };
+        let info = PayoffInfo {
+            spot: 100.0,
+            strike: 100.0,
+            style: OptionStyle::Call,
+            spot_prices: Some(vec![90.0, 100.0, 110.0]),
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 0.0);
+    }
+
+    #[test]
+    fn test_barrier_up_and_in_call() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::UpAndIn,
+            barrier_level: 120.0,
+        };
+        let info = PayoffInfo {
+            spot: 130.0,
+            strike: 100.0,
+            style: OptionStyle::Call,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 30.0);
+    }
+
+    #[test]
+    fn test_binary_cash_or_nothing_call() {
+        let option = OptionType::Binary { binary_type: BinaryType::CashOrNothing };
+        let info = PayoffInfo {
+            spot: 110.0,
+            strike: 100.0,
+            style: OptionStyle::Call,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 1.0);
+    }
+
+    #[test]
+    fn test_lookback_fixed_strike_put() {
+        let option = OptionType::Lookback { lookback_type: LookbackType::FixedStrike };
+        let info = PayoffInfo {
+            spot: 90.0,
+            strike: 100.0,
+            style: OptionStyle::Put,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_quanto_call() {
+        let option = OptionType::Quanto { exchange_rate: 1.5 };
+        let info = PayoffInfo {
+            spot: 110.0,
+            strike: 100.0,
+            style: OptionStyle::Call,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 15.0);
+    }
+
+    #[test]
+    fn test_power_call() {
+        let option = OptionType::Power { exponent: 2.0 };
+        let info = PayoffInfo {
+            spot: 10.0,
+            strike: 90.0,
+            style: OptionStyle::Call,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+}
