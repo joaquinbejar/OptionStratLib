@@ -186,138 +186,110 @@ impl Payoff for OptionType {
     fn payoff(&self, info: &PayoffInfo) -> f64 {
         match self {
             OptionType::European | OptionType::American => standard_payoff(info),
-            OptionType::Bermuda { .. } => {
-                // Assume that on the exercise date, the payoff is the same as a European option
-                standard_payoff(info)
-            }
-            OptionType::Asian { averaging_type } => {
-                // We need to calculate the average based on the averaging_type
-                // For this, we'd need a series of spot prices over time
-                // Let's assume we have access to these prices in a vector called 'spot_prices'
-                let average = match (&info.spot_prices, info.spot_prices_len()) {
-                    (Some(spot_prices), Some(len)) if len > 0 => match averaging_type {
-                        AsianAveragingType::Arithmetic => {
-                            spot_prices.iter().sum::<f64>() / len as f64
-                        }
-                        AsianAveragingType::Geometric => {
-                            let product = spot_prices.iter().fold(1.0, |acc, &x| acc * x);
-                            product.powf(1.0 / len as f64)
-                        }
-                    },
-                    _ => return 0.0,
-                };
-
-                // Now we can calculate the payoff using this average
-                match info.style {
-                    OptionStyle::Call => (average - info.strike).max(0.0),
-                    OptionStyle::Put => (info.strike - average).max(0.0),
-                }
-            }
+            OptionType::Bermuda { .. } => standard_payoff(info),
+            OptionType::Asian { averaging_type } => calculate_asian_payoff(averaging_type, info),
             OptionType::Barrier {
                 barrier_type,
                 barrier_level,
-            } => {
-                let barrier_condition = match barrier_type {
-                    BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
-                    BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
-                };
-
-                let std_payoff = standard_payoff(info);
-
-                match barrier_type {
-                    BarrierType::UpAndIn | BarrierType::DownAndIn => {
-                        if barrier_condition {
-                            std_payoff
-                        } else {
-                            0.0
-                        }
-                    }
-                    BarrierType::UpAndOut | BarrierType::DownAndOut => {
-                        if barrier_condition {
-                            0.0
-                        } else {
-                            std_payoff
-                        }
-                    }
-                }
-            }
-            OptionType::Binary { binary_type } => {
-                let is_in_the_money = match info.style {
-                    OptionStyle::Call => info.spot > info.strike,
-                    OptionStyle::Put => info.spot < info.strike,
-                };
-
-                match binary_type {
-                    BinaryType::CashOrNothing => {
-                        // Assume a fixed payout of 1.0 if the option is in-the-money
-                        if is_in_the_money {
-                            1.0
-                        } else {
-                            0.0
-                        }
-                    }
-                    BinaryType::AssetOrNothing => {
-                        if is_in_the_money {
-                            info.spot
-                        } else {
-                            0.0
-                        }
-                    }
-                }
-            }
-            OptionType::Lookback { lookback_type } => {
-                match lookback_type {
-                    LookbackType::FixedStrike => {
-                        // Assume 'spot' is the maximum (for call) or minimum (for put) price reached
-                        standard_payoff(info)
-                    }
-                    LookbackType::FloatingStrike => {
-                        // For floating strike, we need both the current spot price and the extremum price
-                        // Let's assume we have access to these values
-                        let extremum = match info.style {
-                            OptionStyle::Call => info.spot_min, // Assume spot_min is available
-                            OptionStyle::Put => info.spot_max,  // Assume spot_max is available
-                        };
-                        match info.style {
-                            OptionStyle::Call => info.spot - extremum.unwrap_or(0.0),
-                            OptionStyle::Put => extremum.unwrap_or(0.0) - info.spot,
-                        }
-                    }
-                }
-            }
-            OptionType::Compound { underlying_option } => {
-                // Payoff depends on the value of the underlying_option
-                // This implementation is simplified and may not be accurate
-                underlying_option.payoff(info)
-            }
+            } => calculate_barrier_payoff(barrier_type, barrier_level, info),
+            OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
+            OptionType::Lookback { lookback_type } => match lookback_type {
+                LookbackType::FixedStrike => standard_payoff(info),
+                LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
+            },
+            OptionType::Compound { underlying_option } => underlying_option.payoff(info),
             OptionType::Chooser { .. } => {
-                // At the choice date, the payoff will be the maximum of call and put
                 ((info.spot - info.strike).max(0.0)).max((info.strike - info.spot).max(0.0))
             }
-            OptionType::Cliquet { .. } => {
-                // Assume 'strike' has already been reset
-                standard_payoff(info)
-            }
+            OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
-            | OptionType::Exchange { .. } => {
-                // These types require information about multiple assets
-                // This implementation is a simplification
-                standard_payoff(info)
+            | OptionType::Exchange { .. } => standard_payoff(info),
+            OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
+            OptionType::Power { exponent } => match info.style {
+                OptionStyle::Call => (info.spot.powf(*exponent) - info.strike).max(0.0),
+                OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(0.0),
+            },
+        }
+    }
+}
+
+fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo) -> f64 {
+    let average = match (&info.spot_prices, info.spot_prices_len()) {
+        (Some(spot_prices), Some(len)) if len > 0 => match averaging_type {
+            AsianAveragingType::Arithmetic => spot_prices.iter().sum::<f64>() / len as f64,
+            AsianAveragingType::Geometric => {
+                let product = spot_prices.iter().fold(1.0, |acc, &x| acc * x);
+                product.powf(1.0 / len as f64)
             }
-            OptionType::Quanto { exchange_rate } => {
-                // Payoff is calculated in the original currency and then converted
-                let original_payoff = standard_payoff(info);
-                original_payoff * exchange_rate
-            }
-            OptionType::Power { exponent } => {
-                // Payoff is based on the asset price raised to a power
-                match info.style {
-                    OptionStyle::Call => (info.spot.powf(*exponent) - info.strike).max(0.0),
-                    OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(0.0),
-                }
+        },
+        _ => return 0.0,
+    };
+    match info.style {
+        OptionStyle::Call => (average - info.strike).max(0.0),
+        OptionStyle::Put => (info.strike - average).max(0.0),
+    }
+}
+
+fn calculate_barrier_payoff(
+    barrier_type: &BarrierType,
+    barrier_level: &f64,
+    info: &PayoffInfo,
+) -> f64 {
+    let barrier_condition = match barrier_type {
+        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
+        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
+    };
+    let std_payoff = standard_payoff(info);
+    match barrier_type {
+        BarrierType::UpAndIn | BarrierType::DownAndIn => {
+            if barrier_condition {
+                std_payoff
+            } else {
+                0.0
             }
         }
+        BarrierType::UpAndOut | BarrierType::DownAndOut => {
+            if barrier_condition {
+                0.0
+            } else {
+                std_payoff
+            }
+        }
+    }
+}
+
+fn calculate_binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> f64 {
+    let is_in_the_money = match info.style {
+        OptionStyle::Call => info.spot > info.strike,
+        OptionStyle::Put => info.spot < info.strike,
+    };
+    match binary_type {
+        BinaryType::CashOrNothing => {
+            if is_in_the_money {
+                1.0
+            } else {
+                0.0
+            }
+        }
+        BinaryType::AssetOrNothing => {
+            if is_in_the_money {
+                info.spot
+            } else {
+                0.0
+            }
+        }
+    }
+}
+
+fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
+    let extremum = match info.style {
+        OptionStyle::Call => info.spot_min,
+        OptionStyle::Put => info.spot_max,
+    };
+    match info.style {
+        OptionStyle::Call => info.spot - extremum.unwrap_or(0.0),
+        OptionStyle::Put => extremum.unwrap_or(0.0) - info.spot,
     }
 }
 
