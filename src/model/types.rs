@@ -321,7 +321,6 @@ impl Payoff for OptionType {
     }
 }
 
-
 #[cfg(test)]
 mod tests_payoff {
     use super::*;
@@ -352,7 +351,9 @@ mod tests_payoff {
 
     #[test]
     fn test_asian_arithmetic_call() {
-        let option = OptionType::Asian { averaging_type: AsianAveragingType::Arithmetic };
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Arithmetic,
+        };
         let info = PayoffInfo {
             spot: 100.0,
             strike: 100.0,
@@ -380,7 +381,9 @@ mod tests_payoff {
 
     #[test]
     fn test_binary_cash_or_nothing_call() {
-        let option = OptionType::Binary { binary_type: BinaryType::CashOrNothing };
+        let option = OptionType::Binary {
+            binary_type: BinaryType::CashOrNothing,
+        };
         let info = PayoffInfo {
             spot: 110.0,
             strike: 100.0,
@@ -392,7 +395,9 @@ mod tests_payoff {
 
     #[test]
     fn test_lookback_fixed_strike_put() {
-        let option = OptionType::Lookback { lookback_type: LookbackType::FixedStrike };
+        let option = OptionType::Lookback {
+            lookback_type: LookbackType::FixedStrike,
+        };
         let info = PayoffInfo {
             spot: 90.0,
             strike: 100.0,

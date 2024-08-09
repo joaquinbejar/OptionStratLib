@@ -24,6 +24,19 @@ pub struct PayoffInfo {
     pub spot_max: Option<f64>,         // Lookback
 }
 
+impl Default for PayoffInfo {
+    fn default() -> Self {
+        PayoffInfo {
+            spot: 0.0,
+            strike: 0.0,
+            style: OptionStyle::Call,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        }
+    }
+}
+
 impl PayoffInfo {
     pub fn spot_prices_len(&self) -> Option<usize> {
         self.spot_prices.as_ref().map(|vec| vec.len())
