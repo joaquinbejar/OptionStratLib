@@ -4,6 +4,7 @@
    Date: 11/8/24
 ******************************************************************************/
 
+use crate::constants::{DAYS_IN_A_YEAR, SECONDS_IN_A_DAY};
 use crate::model::option::Options;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
@@ -62,6 +63,7 @@ pub(crate) fn d2(s: f64, r: f64, t: f64, sigma: f64) -> f64 {
 ///
 /// A floating point number representing the value of the density function at point `x`.
 ///
+#[allow(dead_code)]
 pub(crate) fn n(x: f64) -> f64 {
     1.0 / (2.0 * PI).sqrt() * (-x * x / 2.0).exp()
 }
@@ -79,8 +81,30 @@ pub(crate) fn n(x: f64) -> f64 {
 ///
 /// This function returns a `f64` which is the derivative of the function `n` at `x`.
 ///
+#[allow(dead_code)]
 pub(crate) fn n_prime(x: f64) -> f64 {
     -x * n(x)
+}
+
+/// Calculates the time to expiry for a given option in years.
+///
+/// # Arguments
+///
+/// * `option` - A reference to an `Options` struct containing the expiration date of the option.
+///
+/// # Returns
+///
+/// A `f64` representing the time to expiry in years.
+///
+/// This function relies on the `chrono` crate for handling date and time operations.
+pub(crate) fn calculate_time_to_expiry(option: &Options) -> f64 {
+    let now = chrono::Utc::now();
+    let duration = option.expiration_date - now;
+    let mut days = duration.num_days();
+    if duration.num_seconds() > days * SECONDS_IN_A_DAY {
+        days += 1;
+    }
+    days as f64 / DAYS_IN_A_YEAR as f64
 }
 
 /// Computes the cumulative distribution function (CDF) of the standard normal distribution

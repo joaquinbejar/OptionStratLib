@@ -4,9 +4,9 @@
    Date: 11/8/24
 ******************************************************************************/
 
-use crate::greeks::utils::{big_n, calculate_d_values};
+use crate::greeks::utils::{big_n, calculate_d_values, calculate_time_to_expiry};
 use crate::model::option::Options;
-use crate::model::types::OptionStyle;
+use crate::model::types::{OptionStyle, OptionType, Side};
 
 /// Computes the price of an option using the Black-Scholes model.
 ///
@@ -33,18 +33,74 @@ use crate::model::types::OptionStyle;
 ///
 /// The function returns the computed price based on the type of option provided.
 ///
+#[allow(dead_code)]
 pub fn black_scholes(
     option: Options,
     time_to_expiry: Option<f64>, // Time until expiration in years
 ) -> f64 {
     let (d1, d2, expiry_time) = calculate_d1_d2_and_time(&option, time_to_expiry);
+
+    match option.option_type {
+        OptionType::European => calculate_european_option_price(&option, d1, d2, expiry_time),
+        OptionType::American => 0.0,        // TODO: calculate this
+        OptionType::Bermuda { .. } => 0.0,  // TODO: calculate this
+        OptionType::Asian { .. } => 0.0,    // TODO: calculate this
+        OptionType::Barrier { .. } => 0.0,  // TODO: calculate this
+        OptionType::Binary { .. } => 0.0,   // TODO: calculate this
+        OptionType::Lookback { .. } => 0.0, // TODO: calculate this
+        OptionType::Compound { .. } => 0.0, // TODO: calculate this
+        OptionType::Chooser { .. } => 0.0,  // TODO: calculate this
+        OptionType::Cliquet { .. } => 0.0,  // TODO: calculate this
+        OptionType::Rainbow { .. } => 0.0,  // TODO: calculate this
+        OptionType::Spread { .. } => 0.0,   // TODO: calculate this
+        OptionType::Quanto { .. } => 0.0,   // TODO: calculate this
+        OptionType::Exchange { .. } => 0.0, // TODO: calculate this
+        OptionType::Power { .. } => 0.0,    // TODO: calculate this
+    }
+}
+
+/// Calculates the price of a European option.
+///
+/// This function calculates the price of a European option based on the given parameters.
+/// The calculation varies depending on the position (long or short) stated in the `option`.
+///
+/// # Arguments
+///
+/// * `option` - A reference to an `Options` struct that contains the options details (e.g., side, strike price, etc.).
+/// * `d1` - The d1 parameter used in the Black-Scholes model for pricing options.
+/// * `d2` - The d2 parameter used in the Black-Scholes model for pricing options.
+/// * `expiry_time` - The time remaining until the option's expiry, expressed in years.
+///
+/// # Returns
+///
+/// The calculated price of the European option as a floating-point number.
+///
+/// Note: This example uses placeholder values and the `Options` and `Side` structs should be defined accordingly in your codebase.
+fn calculate_european_option_price(option: &Options, d1: f64, d2: f64, expiry_time: f64) -> f64 {
+    match option.side {
+        Side::Long => calculate_long_position(option, d1, d2, expiry_time),
+        Side::Short => -calculate_long_position(option, d1, d2, expiry_time),
+    }
+}
+
+/// Calculates the price of a long position in an option based on its style (Call or Put).
+///
+/// # Arguments
+///
+/// * `option` - A reference to an `Options` struct which contains the details of the option.
+/// * `d1` - A floating-point value representing the first parameter (typically related to the Black-Scholes model).
+/// * `d2` - A floating-point value representing the second parameter (typically related to the Black-Scholes model).
+/// * `expiry_time` - A floating-point value representing the time to expiry of the option.
+///
+/// # Returns
+///
+/// A floating-point value representing the calculated price of the long position.
+///
+/// The function matches on the style of the option (Call or Put) and calls the respective price calculation function.
+fn calculate_long_position(option: &Options, d1: f64, d2: f64, expiry_time: f64) -> f64 {
     match option.option_style {
-        OptionStyle::Call => {
-            calculate_call_option_price(&option, d1, d2, expiry_time)
-        }
-        OptionStyle::Put => {
-            calculate_put_option_price(&option, d1, d2, expiry_time)
-        }
+        OptionStyle::Call => calculate_call_option_price(option, d1, d2, expiry_time),
+        OptionStyle::Put => calculate_put_option_price(option, d1, d2, expiry_time),
     }
 }
 
@@ -64,9 +120,7 @@ pub fn black_scholes(
 fn calculate_d1_d2_and_time(option: &Options, time_to_expiry: Option<f64>) -> (f64, f64, f64) {
     match time_to_expiry {
         None => {
-            let now = chrono::Utc::now();
-            let duration = option.expiration_date - now;
-            let calculated_time_to_expiry = duration.num_days() as f64 / 365.0;
+            let calculated_time_to_expiry = calculate_time_to_expiry(option);
             let (d1, d2) = calculate_d_values(option, calculated_time_to_expiry);
             (d1, d2, calculated_time_to_expiry)
         }
@@ -186,9 +240,8 @@ mod tests_black_scholes {
     #[test]
     fn test_black_scholes_call_without_explicit_time_to_expiry() {
         let option = mock_options_call();
-        let price = black_scholes(option, None); // No explicit time to expiry
-
-        assert_relative_eq!(price, 4.864, epsilon = 0.001);
+        let price = black_scholes(option, None);
+        assert_relative_eq!(price, 4.877, epsilon = 0.001);
     }
 
     #[test]

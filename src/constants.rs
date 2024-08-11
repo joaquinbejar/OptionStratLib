@@ -1,13 +1,8 @@
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
-   Date: 1/8/24
+   Date: 11/8/24
 ******************************************************************************/
-pub mod backtesting;
-pub mod constants;
-pub mod greeks;
-pub mod model;
-pub mod pricing;
-pub mod risk;
-pub mod strategies;
-pub mod visualization;
+
+pub(crate) const SECONDS_IN_A_DAY: i64 = 86400;
+pub(crate) const DAYS_IN_A_YEAR: i64 = 365;
