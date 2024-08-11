@@ -15,6 +15,7 @@ pub struct OptionConfig {
     pub underlying_price: f64,
     pub risk_free_rate: f64,
     pub option_style: OptionStyle,
+    pub dividend_yield: f64,
 }
 
 #[allow(dead_code)]
@@ -29,6 +30,7 @@ pub struct Options {
     pub underlying_price: f64,
     pub risk_free_rate: f64,
     pub option_style: OptionStyle,
+    pub dividend_yield: f64,
 }
 
 impl Options {
@@ -44,6 +46,7 @@ impl Options {
             quantity: config.quantity,
             underlying_price: config.underlying_price,
             risk_free_rate: config.risk_free_rate,
+            dividend_yield: config.dividend_yield,
         }
     }
 

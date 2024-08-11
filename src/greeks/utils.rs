@@ -175,6 +175,7 @@ mod tests_calculate_d_values {
             expiration_date: Default::default(),
             quantity: 0,
             option_style: OptionStyle::Call,
+            dividend_yield: 0.0,
         };
 
         let time_to_expiry = 2.0; // 1 year

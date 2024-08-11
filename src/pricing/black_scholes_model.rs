@@ -201,6 +201,7 @@ mod tests_black_scholes {
             option_style: OptionStyle::Call,
             underlying_symbol: "".to_string(),
             quantity: 0,
+            dividend_yield: 0.0,
         }
     }
 
@@ -216,6 +217,7 @@ mod tests_black_scholes {
             option_style: OptionStyle::Put,
             underlying_symbol: "".to_string(),
             quantity: 0,
+            dividend_yield: 0.0,
         }
     }
 
