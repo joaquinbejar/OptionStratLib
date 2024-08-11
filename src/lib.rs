@@ -4,6 +4,7 @@
    Date: 1/8/24
 ******************************************************************************/
 pub mod backtesting;
+pub mod greeks;
 pub mod model;
 pub mod pricing;
 pub mod risk;
