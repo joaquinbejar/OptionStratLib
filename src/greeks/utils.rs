@@ -4,6 +4,7 @@
    Date: 11/8/24
 ******************************************************************************/
 
+use crate::model::option::Options;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
 
@@ -101,6 +102,66 @@ pub(crate) fn big_n(x: f64) -> f64 {
     normal_distribution.cdf(x)
 }
 
+/// Calculates the d1 and d2 values used in financial option pricing models such as the Black-Scholes model.
+///
+/// # Arguments
+///
+/// * `option` - A reference to an `Options` struct containing the underlying price,
+///              the risk-free rate, and the implied volatility of the option.
+/// * `time_to_expiry` - The time remaining until option expiry in years.
+///
+/// # Returns
+///
+/// * A tuple containing two `f64` values:
+///     - `d1_value`: The calculated d1 value.
+///     - `d2_value`: The calculated d2 value.
+///
+pub(crate) fn calculate_d_values(option: &Options, time_to_expiry: f64) -> (f64, f64) {
+    let d1_value = d1(
+        option.underlying_price,
+        option.risk_free_rate,
+        time_to_expiry,
+        option.implied_volatility,
+    );
+    let d2_value = d2(
+        option.underlying_price,
+        option.risk_free_rate,
+        time_to_expiry,
+        option.implied_volatility,
+    );
+    (d1_value, d2_value)
+}
+
+#[cfg(test)]
+mod tests_calculate_d_values {
+    use super::*;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn test_calculate_d_values() {
+        let option = Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "".to_string(),
+            strike_price: 0.0,
+            underlying_price: 100.0,
+            risk_free_rate: 0.05,
+            implied_volatility: 10.12,
+            expiration_date: Default::default(),
+            quantity: 0,
+            option_style: OptionStyle::Call,
+        };
+
+        let time_to_expiry = 2.0; // 1 year
+
+        let (d1_value, d2_value) = calculate_d_values(&option, time_to_expiry);
+
+        assert_relative_eq!(d1_value, 7.484, epsilon = 0.001);
+        assert_relative_eq!(d2_value, -6.827, epsilon = 0.001);
+    }
+}
+
 #[cfg(test)]
 mod tests_src_greeks_utils {
     use super::*;
@@ -115,7 +176,10 @@ mod tests_src_greeks_utils {
         let sigma = 0.2;
         let expected_d1 = (100.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
         let computed_d1 = d1(s, r, t, sigma);
-        assert!((computed_d1 - expected_d1).abs() < 1e-10, "d1 function failed");
+        assert!(
+            (computed_d1 - expected_d1).abs() < 1e-10,
+            "d1 function failed"
+        );
     }
 
     #[test]
@@ -127,7 +191,10 @@ mod tests_src_greeks_utils {
         let computed_d2 = d2(s, r, t, sigma);
         let expected_d1 = (100.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
         let expected_d2 = expected_d1 - 0.2 * 1.0_f64.sqrt();
-        assert!((computed_d2 - expected_d2).abs() < 1e-10, "d2 function failed");
+        assert!(
+            (computed_d2 - expected_d2).abs() < 1e-10,
+            "d2 function failed"
+        );
     }
 
     #[test]
@@ -148,12 +215,18 @@ mod tests_src_greeks_utils {
         let x = 0.0;
         let expected_n_prime = 0.0;
         let computed_n_prime = n_prime(x);
-        assert!((computed_n_prime - expected_n_prime).abs() < 1e-10, "n_prime function failed");
+        assert!(
+            (computed_n_prime - expected_n_prime).abs() < 1e-10,
+            "n_prime function failed"
+        );
 
         let x = 1.0;
         let expected_n_prime = -1.0 * 1.0 / (2.0 * PI).sqrt() * (-0.5f64).exp();
         let computed_n_prime = n_prime(x);
-        assert!((computed_n_prime - expected_n_prime).abs() < 1e-10, "n_prime function failed");
+        assert!(
+            (computed_n_prime - expected_n_prime).abs() < 1e-10,
+            "n_prime function failed"
+        );
     }
 
     #[test]
@@ -162,11 +235,17 @@ mod tests_src_greeks_utils {
         let normal_distribution = Normal::new(0.0, 1.0).unwrap();
         let expected_big_n = normal_distribution.cdf(x);
         let computed_big_n = big_n(x);
-        assert!((computed_big_n - expected_big_n).abs() < 1e-10, "big_n function failed");
+        assert!(
+            (computed_big_n - expected_big_n).abs() < 1e-10,
+            "big_n function failed"
+        );
 
         let x = 1.0;
         let expected_big_n = normal_distribution.cdf(x);
         let computed_big_n = big_n(x);
-        assert!((computed_big_n - expected_big_n).abs() < 1e-10, "big_n function failed");
+        assert!(
+            (computed_big_n - expected_big_n).abs() < 1e-10,
+            "big_n function failed"
+        );
     }
 }
