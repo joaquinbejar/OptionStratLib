@@ -147,3 +147,95 @@ pub fn rho_d(option: &Options, time_to_expiry: f64) -> f64 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_greeks_equations {
+    use super::*;
+    use crate::model::option::Options;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use approx::assert_relative_eq;
+
+    fn create_test_option(style: OptionStyle) -> Options {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: 100.0,
+            strike_price: 100.0,
+            risk_free_rate: 0.05,
+            dividend_yield: 0.02,
+            implied_volatility: 7.2,
+            option_style: style,
+            underlying_symbol: "".to_string(),
+            expiration_date: Default::default(),
+            quantity: 0,
+        }
+    }
+
+    #[test]
+    fn test_delta() {
+        let call_option = create_test_option(OptionStyle::Call);
+        let put_option = create_test_option(OptionStyle::Put);
+        let time_to_expiry = 1.0;
+
+        assert_relative_eq!(delta(&call_option, time_to_expiry), 0.9801, epsilon = 1e-4);
+        assert_relative_eq!(
+            delta(&put_option, time_to_expiry),
+            -1.0639e-5,
+            epsilon = 1e-6
+        );
+    }
+
+    #[test]
+    fn test_gamma() {
+        let option = create_test_option(OptionStyle::Call); // Gamma is the same for calls and puts
+        let time_to_expiry = 1.0;
+
+        assert_relative_eq!(
+            gamma(&option, time_to_expiry),
+            6.59222905750737e-8,
+            epsilon = 1e-8
+        );
+    }
+
+    #[test]
+    fn test_theta() {
+        let call_option = create_test_option(OptionStyle::Call);
+        let put_option = create_test_option(OptionStyle::Put);
+        let time_to_expiry = 1.0;
+
+        assert_relative_eq!(theta(&call_option, time_to_expiry), 1.9358, epsilon = 1e-4);
+        assert_relative_eq!(theta(&put_option, time_to_expiry), 4.7315, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_vega() {
+        let option = create_test_option(OptionStyle::Call); // Vega is the same for calls and puts
+        let time_to_expiry = 1.0;
+
+        assert_relative_eq!(vega(&option, time_to_expiry), 0.0047, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_rho() {
+        let call_option = create_test_option(OptionStyle::Call);
+        let put_option = create_test_option(OptionStyle::Put);
+        let time_to_expiry = 1.0;
+
+        assert_relative_eq!(rho(&call_option, time_to_expiry), 0.14945, epsilon = 1e-4);
+        assert_relative_eq!(rho(&put_option, time_to_expiry), -94.9734, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_rho_d() {
+        let call_option = create_test_option(OptionStyle::Call);
+        let put_option = create_test_option(OptionStyle::Put);
+        let time_to_expiry = 1.0;
+
+        assert_relative_eq!(
+            rho_d(&call_option, time_to_expiry),
+            -98.01880,
+            epsilon = 1e-4
+        );
+        assert_relative_eq!(rho_d(&put_option, time_to_expiry), 0.0010, epsilon = 1e-4);
+    }
+}
