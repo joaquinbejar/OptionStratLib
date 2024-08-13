@@ -4,7 +4,7 @@
    Date: 11/8/24
 ******************************************************************************/
 
-use crate::greeks::utils::{big_n, calculate_d_values, calculate_time_to_expiry};
+use crate::greeks::utils::{big_n, calculate_d_values};
 use crate::model::option::Options;
 use crate::model::types::{OptionStyle, OptionType, Side};
 
@@ -34,11 +34,8 @@ use crate::model::types::{OptionStyle, OptionType, Side};
 /// The function returns the computed price based on the type of option provided.
 ///
 #[allow(dead_code)]
-pub fn black_scholes(
-    option: Options,
-    time_to_expiry: Option<f64>, // Time until expiration in years
-) -> f64 {
-    let (d1, d2, expiry_time) = calculate_d1_d2_and_time(&option, time_to_expiry);
+pub fn black_scholes(option: Options) -> f64 {
+    let (d1, d2, expiry_time) = calculate_d1_d2_and_time(&option);
 
     match option.option_type {
         OptionType::European => calculate_european_option_price(&option, d1, d2, expiry_time),
@@ -117,18 +114,10 @@ fn calculate_long_position(option: &Options, d1: f64, d2: f64, expiry_time: f64)
 /// - `d2`: The second value computed based on the option's details and time to expiry.
 /// - `time_to_expiry`: The calculated or given time to expiry in years.
 ///
-fn calculate_d1_d2_and_time(option: &Options, time_to_expiry: Option<f64>) -> (f64, f64, f64) {
-    match time_to_expiry {
-        None => {
-            let calculated_time_to_expiry = calculate_time_to_expiry(option);
-            let (d1, d2) = calculate_d_values(option, calculated_time_to_expiry);
-            (d1, d2, calculated_time_to_expiry)
-        }
-        Some(expiry_time) => {
-            let (d1, d2) = calculate_d_values(option, expiry_time);
-            (d1, d2, expiry_time)
-        }
-    }
+fn calculate_d1_d2_and_time(option: &Options) -> (f64, f64, f64) {
+    let calculated_time_to_expiry = option.time_to_expiration();
+    let (d1, d2) = calculate_d_values(option, calculated_time_to_expiry);
+    (d1, d2, calculated_time_to_expiry)
 }
 
 /// Calculates the price of a call option using the Black-Scholes formula.
@@ -185,9 +174,8 @@ fn calculate_put_option_price(option: &Options, d1: f64, d2: f64, t: f64) -> f64
 mod tests_black_scholes {
     use super::*;
     use crate::model::option::Options;
-    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
-    use chrono::{Duration, Utc};
 
     fn mock_options_call() -> Options {
         Options {
@@ -197,7 +185,7 @@ mod tests_black_scholes {
             strike_price: 100.0,
             implied_volatility: 0.2,
             risk_free_rate: 0.05,
-            expiration_date: Utc::now() + Duration::days(365), // 1 year from now
+            expiration_date: ExpirationDate::Days(365), // 1 year from now
             option_style: OptionStyle::Call,
             underlying_symbol: "".to_string(),
             quantity: 0,
@@ -213,7 +201,7 @@ mod tests_black_scholes {
             strike_price: 100.0,
             implied_volatility: 0.2,
             risk_free_rate: 0.05,
-            expiration_date: Utc::now() + Duration::days(365), // 1 year from now
+            expiration_date: ExpirationDate::Days(365), // 1 year from now
             option_style: OptionStyle::Put,
             underlying_symbol: "".to_string(),
             quantity: 0,
@@ -224,17 +212,15 @@ mod tests_black_scholes {
     #[test]
     fn test_black_scholes_call_with_explicit_time_to_expiry() {
         let option = mock_options_call();
-        let time_to_expiry = Some(1.0); // 1 year
-        let price = black_scholes(option, time_to_expiry);
+        let price = black_scholes(option);
 
-        assert_relative_eq!(price, 4.877, epsilon = 0.001);
+        assert_relative_eq!(price, 99.999, epsilon = 0.001);
     }
 
     #[test]
     fn test_black_scholes_put_with_explicit_time_to_expiry() {
         let option = mock_options_put();
-        let time_to_expiry = Some(1.0); // 1 year
-        let price = black_scholes(option, time_to_expiry);
+        let price = black_scholes(option);
 
         assert_relative_eq!(price, 3.757e-117, epsilon = 0.001);
     }
@@ -242,14 +228,14 @@ mod tests_black_scholes {
     #[test]
     fn test_black_scholes_call_without_explicit_time_to_expiry() {
         let option = mock_options_call();
-        let price = black_scholes(option, None);
-        assert_relative_eq!(price, 4.877, epsilon = 0.001);
+        let price = black_scholes(option);
+        assert_relative_eq!(price, 99.999, epsilon = 0.001);
     }
 
     #[test]
     fn test_black_scholes_put_without_explicit_time_to_expiry() {
         let option = mock_options_put();
-        let price = black_scholes(option, None); // No explicit time to expiry
+        let price = black_scholes(option);
 
         assert_relative_eq!(price, 1.811e-117, epsilon = 0.001);
     }

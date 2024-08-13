@@ -1,15 +1,15 @@
-use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::binomial_model::{
     generate_binomial_tree, price_binomial, BinomialPricingParams,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 
 pub struct OptionConfig {
     pub option_type: OptionType,
     pub side: Side,
     pub underlying_symbol: String,
     pub strike_price: f64,
-    pub expiration_date: DateTime<Utc>,
+    pub expiration_date: ExpirationDate,
     pub implied_volatility: f64,
     pub quantity: u32,
     pub underlying_price: f64,
@@ -24,7 +24,7 @@ pub struct Options {
     pub side: Side,
     pub underlying_symbol: String,
     pub strike_price: f64,
-    pub expiration_date: DateTime<Utc>,
+    pub expiration_date: ExpirationDate,
     pub implied_volatility: f64,
     pub quantity: u32,
     pub underlying_price: f64,
@@ -51,9 +51,14 @@ impl Options {
     }
 
     pub fn time_to_expiration(&self) -> f64 {
-        let now = Utc::now();
-        let duration = self.expiration_date.signed_duration_since(now);
-        duration.num_days() as f64 / 365.0
+        match self.expiration_date {
+            ExpirationDate::Days(days) => days as f64,
+            ExpirationDate::DateTime(datetime) => {
+                let now = Utc::now();
+                let duration = datetime.signed_duration_since(now);
+                duration.num_days() as f64 / 365.0
+            }
+        }
     }
 
     pub fn is_long(&self) -> bool {
