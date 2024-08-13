@@ -4,20 +4,6 @@ use crate::pricing::binomial_model::{
 };
 use chrono::Utc;
 
-pub struct OptionConfig {
-    pub option_type: OptionType,
-    pub side: Side,
-    pub underlying_symbol: String,
-    pub strike_price: f64,
-    pub expiration_date: ExpirationDate,
-    pub implied_volatility: f64,
-    pub quantity: u32,
-    pub underlying_price: f64,
-    pub risk_free_rate: f64,
-    pub option_style: OptionStyle,
-    pub dividend_yield: f64,
-}
-
 #[allow(dead_code)]
 pub struct Options {
     pub option_type: OptionType,
@@ -34,19 +20,32 @@ pub struct Options {
 }
 
 impl Options {
-    pub fn new(config: OptionConfig) -> Self {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        option_type: OptionType,
+        side: Side,
+        underlying_symbol: String,
+        strike_price: f64,
+        expiration_date: ExpirationDate,
+        implied_volatility: f64,
+        quantity: u32,
+        underlying_price: f64,
+        risk_free_rate: f64,
+        option_style: OptionStyle,
+        dividend_yield: f64,
+    ) -> Self {
         Options {
-            option_type: config.option_type,
-            option_style: config.option_style,
-            side: config.side,
-            underlying_symbol: config.underlying_symbol,
-            strike_price: config.strike_price,
-            expiration_date: config.expiration_date,
-            implied_volatility: config.implied_volatility,
-            quantity: config.quantity,
-            underlying_price: config.underlying_price,
-            risk_free_rate: config.risk_free_rate,
-            dividend_yield: config.dividend_yield,
+            option_type,
+            side,
+            underlying_symbol,
+            strike_price,
+            expiration_date,
+            implied_volatility,
+            quantity,
+            underlying_price,
+            risk_free_rate,
+            option_style,
+            dividend_yield,
         }
     }
 
