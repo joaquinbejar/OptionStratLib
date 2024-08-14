@@ -25,8 +25,8 @@ use std::f64::consts::PI;
 /// the price of options. It takes into account factors such as the current stock
 /// price, risk-free rate, time to expiration, and stock volatility to produce
 /// an important intermediate result.
-pub(crate) fn d1(s: f64, r: f64, t: f64, sigma: f64) -> f64 {
-    (s.ln() + (r + 0.5 * sigma * sigma) * t) / (sigma * t.sqrt())
+pub(crate) fn d1(s: f64, k: f64, r: f64, t: f64, sigma: f64) -> f64 {
+    ((s / k).ln() + (r + sigma * sigma / 2.0) * t) / (sigma *  t.sqrt())
 }
 
 /// Calculates the d2 value commonly used in financial mathematics, specifically in
@@ -43,8 +43,8 @@ pub(crate) fn d1(s: f64, r: f64, t: f64, sigma: f64) -> f64 {
 /// # Returns
 ///
 /// * `f64` - The computed d2 value.
-pub(crate) fn d2(s: f64, r: f64, t: f64, sigma: f64) -> f64 {
-    d1(s, r, t, sigma) - sigma * t.sqrt()
+pub(crate) fn d2(s: f64,k: f64, r: f64, t: f64, sigma: f64) -> f64 {
+    d1(s, k, r, t, sigma) - sigma * t.sqrt()
 }
 
 /// Calculates the value of the standard normal distribution density function at a given point `x`.
@@ -96,7 +96,7 @@ pub(crate) fn n_prime(x: f64) -> f64 {
 ///
 /// A floating-point number representing the CDF of the standard normal distribution at the given `x`.
 ///
-pub(crate) fn big_n(x: f64) -> f64 {
+pub fn big_n(x: f64) -> f64 {
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
 
@@ -118,17 +118,19 @@ pub(crate) fn big_n(x: f64) -> f64 {
 ///     - `d1_value`: The calculated d1 value.
 ///     - `d2_value`: The calculated d2 value.
 ///
-pub(crate) fn calculate_d_values(option: &Options, time_to_expiry: f64) -> (f64, f64) {
+pub(crate) fn calculate_d_values(option: &Options) -> (f64, f64) {
     let d1_value = d1(
         option.underlying_price,
+        option.strike_price,
         option.risk_free_rate,
-        time_to_expiry,
+        option.expiration_date.get_years(),
         option.implied_volatility,
     );
     let d2_value = d2(
         option.underlying_price,
+        option.strike_price,
         option.risk_free_rate,
-        time_to_expiry,
+        option.expiration_date.get_years(),
         option.implied_volatility,
     );
     (d1_value, d2_value)
@@ -146,7 +148,7 @@ mod tests_calculate_d_values {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "".to_string(),
-            strike_price: 0.0,
+            strike_price: 110.0,
             underlying_price: 100.0,
             risk_free_rate: 0.05,
             implied_volatility: 10.12,
@@ -155,13 +157,10 @@ mod tests_calculate_d_values {
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
         };
+        let (d1_value, d2_value) = calculate_d_values(&option);
 
-        let time_to_expiry = 2.0; // 1 year
-
-        let (d1_value, d2_value) = calculate_d_values(&option, time_to_expiry);
-
-        assert_relative_eq!(d1_value, 7.484, epsilon = 0.001);
-        assert_relative_eq!(d2_value, -6.827, epsilon = 0.001);
+        assert_relative_eq!(d1_value, 5.0555, epsilon = 0.001);
+        assert_relative_eq!(d2_value, -5.064, epsilon = 0.001);
     }
 }
 
@@ -174,11 +173,12 @@ mod tests_src_greeks_utils {
     #[test]
     fn test_d1() {
         let s = 100.0;
+        let k = 100.0;
         let r = 0.05;
         let t = 1.0;
         let sigma = 0.2;
-        let expected_d1 = (100.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
-        let computed_d1 = d1(s, r, t, sigma);
+        let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
+        let computed_d1 = d1(s, k, r, t, sigma);
         assert!(
             (computed_d1 - expected_d1).abs() < 1e-10,
             "d1 function failed"
@@ -188,11 +188,12 @@ mod tests_src_greeks_utils {
     #[test]
     fn test_d2() {
         let s = 100.0;
+        let k = 100.0;
         let r = 0.05;
         let t = 1.0;
         let sigma = 0.2;
-        let computed_d2 = d2(s, r, t, sigma);
-        let expected_d1 = (100.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
+        let computed_d2 = d2(s, k, r, t, sigma);
+        let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
         let expected_d2 = expected_d1 - 0.2 * 1.0_f64.sqrt();
         assert!(
             (computed_d2 - expected_d2).abs() < 1e-10,

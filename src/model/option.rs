@@ -51,7 +51,7 @@ impl Options {
 
     pub fn time_to_expiration(&self) -> f64 {
         match self.expiration_date {
-            ExpirationDate::Days(days) => days as f64,
+            ExpirationDate::Days(days) => days,
             ExpirationDate::DateTime(datetime) => {
                 let now = Utc::now();
                 let duration = datetime.signed_duration_since(now);

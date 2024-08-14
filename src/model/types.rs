@@ -2,14 +2,27 @@ use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use chrono::{DateTime, Utc};
 
 #[allow(dead_code)]
-pub(crate) enum ExpirationDate {
-    Days(u16),
+pub enum ExpirationDate {
+    Days(f64),
     DateTime(DateTime<Utc>),
+}
+
+impl ExpirationDate {
+    pub(crate) fn get_years(&self) -> f64 {
+        match self {
+            ExpirationDate::Days(days) => days / 365.0,
+            ExpirationDate::DateTime(datetime) => {
+                let now = Utc::now();
+                let duration = datetime.signed_duration_since(now);
+                duration.num_days() as f64 / 365.0
+            }
+        }
+    }
 }
 
 impl Default for ExpirationDate {
     fn default() -> Self {
-        ExpirationDate::Days(365)
+        ExpirationDate::Days(365.0)
     }
 }
 

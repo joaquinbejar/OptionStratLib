@@ -46,6 +46,7 @@ chrono = "0.4.38"
 approx = "0.5.1"
 plotters = "0.3"
 statrs = "0.17.1"
+rayon = "1.10.0"
 
 
 [dev-dependencies]
@@ -58,7 +59,7 @@ lazy_static = "1.5.0"
 
 [[example]]
 name = "example"
-path = "examples/example.rs"
+path = "examples/volatility.rs"
 
 [[test]]
 name = "tests"
