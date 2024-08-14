@@ -2,9 +2,10 @@ use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::binomial_model::{
     generate_binomial_tree, price_binomial, BinomialPricingParams,
 };
-use chrono::Utc;
+use crate::pricing::black_scholes_model::black_scholes;
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct Options {
     pub option_type: OptionType,
     pub side: Side,
@@ -50,14 +51,7 @@ impl Options {
     }
 
     pub fn time_to_expiration(&self) -> f64 {
-        match self.expiration_date {
-            ExpirationDate::Days(days) => days,
-            ExpirationDate::DateTime(datetime) => {
-                let now = Utc::now();
-                let duration = datetime.signed_duration_since(now);
-                duration.num_days() as f64 / 365.0
-            }
-        }
+        self.expiration_date.get_years()
     }
 
     pub fn is_long(&self) -> bool {
@@ -107,6 +101,10 @@ impl Options {
         };
 
         (price, asset_tree, option_tree)
+    }
+
+    pub fn calculate_price_black_scholes(&self) -> f64 {
+        black_scholes(&self)
     }
 
     // TODO:

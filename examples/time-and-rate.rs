@@ -114,7 +114,7 @@ fn main() {
             OptionStyle::Call,
             0.0,
         );
-        let theoretical_price = black_scholes(option);
+        let theoretical_price = black_scholes(&option);
         let price_is;
         let option_is;
         if theoretical_price < opt.market_price {

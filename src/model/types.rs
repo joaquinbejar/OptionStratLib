@@ -2,6 +2,7 @@ use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use chrono::{DateTime, Utc};
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum ExpirationDate {
     Days(f64),
     DateTime(DateTime<Utc>),
@@ -469,7 +470,7 @@ mod tests_expiration_date {
     #[test]
     fn test_expiration_date_datetime_specific() {
         // Test with a specific date
-        let specific_date = Utc.ymd(2024, 1, 1).and_hms(0, 0, 0);
+        let specific_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
         let expiration = ExpirationDate::DateTime(specific_date);
 
         // Calculate expected years (this will change based on when the test is run)
