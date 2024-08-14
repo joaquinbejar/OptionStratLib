@@ -429,3 +429,53 @@ mod tests_payoff {
         assert_eq!(option.payoff(&info), 10.0);
     }
 }
+
+
+#[cfg(test)]
+mod tests_expiration_date {
+    use super::*;
+    use chrono::{Duration, TimeZone};
+
+    #[test]
+    fn test_expiration_date_days() {
+        let expiration = ExpirationDate::Days(365.0);
+        assert_eq!(expiration.get_years(), 1.0);
+
+        let expiration = ExpirationDate::Days(182.5);
+        assert_eq!(expiration.get_years(), 0.5);
+
+        let expiration = ExpirationDate::Days(0.0);
+        assert_eq!(expiration.get_years(), 0.0);
+    }
+
+    #[test]
+    fn test_expiration_date_datetime() {
+        // Test for a date exactly one year in the future
+        let one_year_future = Utc::now() + Duration::days(365);
+        let expiration = ExpirationDate::DateTime(one_year_future);
+        assert!((expiration.get_years() - 1.0).abs() < 0.01); // Allow small deviation due to leap years
+
+        // Test for a date 6 months in the future
+        let six_months_future = Utc::now() + Duration::days(182);
+        let expiration = ExpirationDate::DateTime(six_months_future);
+        assert!((expiration.get_years() - 0.5).abs() < 0.01);
+
+        // Test for a date in the past (should return a negative value)
+        let one_year_past = Utc::now() - Duration::days(365);
+        let expiration = ExpirationDate::DateTime(one_year_past);
+        assert!(expiration.get_years() < 0.0);
+    }
+
+    #[test]
+    fn test_expiration_date_datetime_specific() {
+        // Test with a specific date
+        let specific_date = Utc.ymd(2024, 1, 1).and_hms(0, 0, 0);
+        let expiration = ExpirationDate::DateTime(specific_date);
+
+        // Calculate expected years (this will change based on when the test is run)
+        let now = Utc::now();
+        let expected_years = (specific_date - now).num_days() as f64 / 365.0;
+
+        assert!((expiration.get_years() - expected_years).abs() < 0.01);
+    }
+}

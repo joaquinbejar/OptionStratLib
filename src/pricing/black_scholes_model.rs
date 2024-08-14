@@ -176,6 +176,7 @@ mod tests_black_scholes {
     use crate::model::option::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
+    use crate::greeks::utils::{d1, d2};
 
     fn mock_options_call() -> Options {
         Options {
@@ -184,8 +185,24 @@ mod tests_black_scholes {
             underlying_price: 2476.6,
             strike_price: 2485.0,
             implied_volatility: 0.22,
-            risk_free_rate: 0.05,
+            risk_free_rate: 0.006,
             expiration_date: ExpirationDate::Days(3.0),
+            option_style: OptionStyle::Call,
+            underlying_symbol: "GOLD".to_string(),
+            quantity: 1,
+            dividend_yield: 0.0,
+        }
+    }
+
+    fn mock_options_simplest_call() -> Options {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: 100.0,
+            strike_price: 100.0,
+            implied_volatility: 0.01,
+            risk_free_rate: 0.0,
+            expiration_date: ExpirationDate::Days(365.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
@@ -210,12 +227,48 @@ mod tests_black_scholes {
     }
 
     #[test]
+    fn test_black_scholes_simplest_call() {
+        let option = mock_options_simplest_call();
+        assert_relative_eq!(option.expiration_date.get_years(), 1.0, epsilon = 0.00001);
+        let d1 = d1(
+            option.strike_price,
+                    option.underlying_price,
+            option.risk_free_rate,
+            option.expiration_date.get_years(),
+            option.implied_volatility
+        );
+        assert_relative_eq!(d1, 0.005, epsilon = 0.00001);
+        let d2 = d2(
+            option.strike_price,
+            option.underlying_price,
+            option.risk_free_rate,
+            option.expiration_date.get_years(),
+            option.implied_volatility
+        );
+        assert_relative_eq!(d2, -0.005, epsilon = 0.00001);
+        let big_n_d1 = big_n(d1);
+        assert_relative_eq!(big_n_d1, 0.501994, epsilon = 0.00001);
+        let big_n_d2 = big_n(d2);
+        assert_relative_eq!(big_n_d2, 0.498005, epsilon = 0.00001);
+
+        let option_value = option.strike_price * big_n_d1 - option.underlying_price * big_n_d2;
+        assert_relative_eq!(option_value, 0.3989406, epsilon = 0.00001);
+        let volatility = 0.2;
+        let value_at_20 = volatility * option.strike_price * option_value;
+        assert_relative_eq!(value_at_20, 7.97881, epsilon = 0.00001);
+
+        let price = black_scholes(option);
+
+        assert_relative_eq!(price, 0.39894, epsilon = 0.001);
+    }
+
+    #[test]
     fn test_black_scholes_call_with_explicit_time_to_expiry() {
         let option = mock_options_call();
         let price = black_scholes(option);
 
         // assert_relative_eq!(price, 15.4, epsilon = 0.001);
-        assert_relative_eq!(price, 167.00677, epsilon = 0.001);
+        assert_relative_eq!(price, 34.8692, epsilon = 0.001);
     }
 
     #[test]
@@ -230,7 +283,7 @@ mod tests_black_scholes {
     fn test_black_scholes_call_without_explicit_time_to_expiry() {
         let option = mock_options_call();
         let price = black_scholes(option);
-        assert_relative_eq!(price, 167.00677, epsilon = 0.001);
+        assert_relative_eq!(price, 34.8692, epsilon = 0.001);
     }
 
     #[test]
