@@ -57,16 +57,16 @@ fn implied_volatility(
 }
 
 fn main() {
-    let s = 2476.6; // Precio actual del oro
-    let k = 2530.0; // Strike
+    let s = 2476.6;
+    let k = 2530.0;
     let t = 0.0070;
-    let r = 0.0733; // Tasa libre de riesgo (asumida)
-    let market_price = 4.4; // Precio de mercado de la opción
-    let epsilon = 0.00001; // Precisión deseada
+    let r = 0.0733;
+    let market_price = 4.4;
+    let epsilon = 0.00001;
     let max_iterations = 1000;
 
     match implied_volatility(s, k, t, r, market_price, epsilon, max_iterations) {
-        Some(iv) => println!("The implied volatility is: {:.4}", iv * 100.0), // 20.6875
+        Some(iv) => println!("The implied volatility is: {:.4}", iv * 100.0),
         None => println!("Could not converge to a solution"),
     }
 }
