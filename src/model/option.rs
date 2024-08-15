@@ -19,9 +19,6 @@ pub struct Options {
     pub risk_free_rate: f64,
     pub option_style: OptionStyle,
     pub dividend_yield: f64,
-    // pub spot_prices: Option<Vec<f64>>, // Asian
-    // pub spot_min: Option<f64>,         // Lookback
-    // pub spot_max: Option<f64>,         // Lookback
     pub exotic_params: Option<ExoticParams>,
 }
 
