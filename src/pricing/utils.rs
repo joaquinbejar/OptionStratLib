@@ -194,7 +194,7 @@ pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 
     }
 }
 
-/// Calculates a Wiener process (Brownian motion) increment over a small time step `dt`.
+/// Calculates a Wiener process (Brownian motion) increment over a small-time step `dt`.
 ///
 /// This function uses the standard normal distribution to sample a value and scales it
 /// by the square root of `dt` to produce the Wiener increment. The Wiener increment is a
