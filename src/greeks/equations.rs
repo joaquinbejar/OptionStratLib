@@ -175,6 +175,9 @@ mod tests_greeks_equations {
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: 0,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
         }
     }
 

@@ -167,6 +167,9 @@ mod tests_calculate_d_values {
             quantity: 0,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
         };
         let (d1_value, d2_value) = calculate_d_values(&option);
 

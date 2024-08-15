@@ -1,7 +1,7 @@
-use crate::model::types::OptionStyle;
+use crate::model::types::{OptionStyle, Side};
 
 pub trait Payoff {
-    fn payoff(&self, info: &PayoffInfo) -> f64;
+    fn payoff(&self, info: &PayoffInfo, side: &Side) -> f64;
 }
 
 /// `PayoffInfo` is a struct that holds information about an option's payoff variables.
@@ -56,9 +56,13 @@ impl PayoffInfo {
 /// This function evaluates the payoff based on the option style:
 /// - For a call option: Max(spot price - strike price, 0)
 /// - For a put option: Max(strike price - spot price, 0)
-pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
-    match info.style {
+pub(crate) fn standard_payoff(info: &PayoffInfo, side: &Side) -> f64 {
+    let payoff = match info.style {
         OptionStyle::Call => (info.spot - info.strike).max(0.0),
         OptionStyle::Put => (info.strike - info.spot).max(0.0),
+    };
+    match side {
+        Side::Long => payoff,
+        Side::Short => -payoff,
     }
 }
