@@ -3,6 +3,7 @@ use crate::pricing::binomial_model::{
     generate_binomial_tree, price_binomial, BinomialPricingParams,
 };
 use crate::pricing::black_scholes_model::black_scholes;
+use crate::pricing::payoff::{Payoff, PayoffInfo};
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -53,7 +54,6 @@ impl Options {
     pub fn time_to_expiration(&self) -> f64 {
         self.expiration_date.get_years()
     }
-
     pub fn is_long(&self) -> bool {
         matches!(self.side, Side::Long)
     }
@@ -106,6 +106,19 @@ impl Options {
     pub fn calculate_price_black_scholes(&self) -> f64 {
         black_scholes(&self)
     }
+
+    pub fn payoff(&self) -> f64 {
+        let payoff_info = PayoffInfo {
+            spot: self.underlying_price,
+            strike: self.strike_price,
+            style: self.option_style.clone(),
+            spot_prices: None, // TODO: implement in Options struct
+            spot_min: None, // TODO: implement in Options struct
+            spot_max: None, // TODO: implement in Options struct
+        };
+        self.option_type.payoff(&payoff_info)
+    }
+
 
     // TODO:
     // - calculate_intrinsic_value

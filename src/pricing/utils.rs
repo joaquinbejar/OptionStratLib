@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 5/8/24
 ******************************************************************************/
+use rand::distributions::Distribution;
+use statrs::distribution::Normal;
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
@@ -190,6 +192,33 @@ pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 
         Side::Long => discounted_payoff,
         Side::Short => -discounted_payoff,
     }
+}
+
+/// Calculates a Wiener process (Brownian motion) increment over a small time step `dt`.
+///
+/// This function uses the standard normal distribution to sample a value and scales it
+/// by the square root of `dt` to produce the Wiener increment. The Wiener increment is a
+/// random variable with a normal distribution, which is essential for simulating Brownian motion
+/// in continuous time.
+///
+/// # Arguments
+///
+/// * `dt` - A small time step over which the Wiener increment is calculated.
+///
+/// # Returns
+///
+/// * `f64` - The Wiener process increment for the given time step.
+///
+/// # Panics
+///
+/// This function will panic if the creation of the normal distribution fails, which is
+/// highly unlikely with valid inputs.
+///
+pub(crate) fn wiener_increment(dt: f64) -> f64 {
+    let normal = Normal::new(0.0, 1.0).unwrap();
+    let mut rng = rand::thread_rng();
+    let wiener_increment = normal.sample(&mut rng) * dt.sqrt();
+    wiener_increment
 }
 
 #[cfg(test)]
