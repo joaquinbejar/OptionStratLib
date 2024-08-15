@@ -173,8 +173,12 @@ impl Options {
         }
     }
 
-    // TODO:
-    // - calculate_time_value
+    pub fn time_value(&self) -> f64 {
+        let option_price = self.calculate_price_black_scholes().abs();
+        let intrinsic_value = self.intrinsic_value(self.underlying_price);
+
+        (option_price - intrinsic_value).max(0.0)
+    }
 }
 
 #[cfg(test)]
@@ -301,6 +305,110 @@ mod tests_options {
         let put_payoff = put_option.payoff();
         assert_eq!(put_payoff, 5.0); // max(100 - 95, 0) = 5
     }
+
+    #[test]
+    fn test_calculate_time_value() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "AAPL".to_string(),
+            100.0,
+            ExpirationDate::Days(30.0),
+            0.2,
+            1,
+            105.0,
+            0.05,
+            OptionStyle::Call,
+            0.0,
+            None,
+        );
+
+        let time_value = option.time_value();
+        assert!(time_value > 0.0);
+        assert!(time_value < option.calculate_price_black_scholes());
+    }
+}
+
+#[cfg(test)]
+mod tests_time_value {
+    use super::*;
+
+    fn create_option(side: Side, option_style: OptionStyle, underlying_price: f64) -> Options {
+        Options::new(
+            OptionType::European,
+            side,
+            "AAPL".to_string(),
+            100.0,
+            ExpirationDate::Days(30.0),
+            0.2,
+            1,
+            underlying_price,
+            0.05,
+            option_style,
+            0.0,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_calculate_time_value_long_call() {
+        let option = create_option(Side::Long, OptionStyle::Call, 105.0);
+        let time_value = option.time_value();
+        assert!(time_value > 0.0);
+        assert!(time_value < option.calculate_price_black_scholes());
+    }
+
+    // #[test]
+    // fn test_calculate_time_value_short_call() {
+    //     let option = create_option(Side::Short, OptionStyle::Call, 105.0);
+    //     let time_value = option.time_value();
+    //     assert!(time_value > 0.0);
+    //     assert!(time_value < option.calculate_price_black_scholes().abs());
+    // }
+
+    #[test]
+    fn test_calculate_time_value_long_put() {
+        let option = create_option(Side::Long, OptionStyle::Put, 95.0);
+        let time_value = option.time_value();
+        assert!(time_value > 0.0);
+        assert!(time_value < option.calculate_price_black_scholes());
+    }
+
+    // #[test]
+    // fn test_calculate_time_value_short_put() {
+    //     let option = create_option(Side::Short, OptionStyle::Put, 95.0);
+    //     let time_value = option.time_value();
+    //     assert!(time_value > 0.0);
+    //     assert!(time_value < option.calculate_price_black_scholes().abs());
+    // }
+
+    #[test]
+    fn test_calculate_time_value_at_the_money() {
+        let call = create_option(Side::Long, OptionStyle::Call, 100.0);
+        let put = create_option(Side::Long, OptionStyle::Put, 100.0);
+
+        let call_time_value = call.time_value();
+        let put_time_value = put.time_value();
+
+        assert!(call_time_value > 0.0);
+        assert!(put_time_value > 0.0);
+        assert_eq!(call_time_value, call.calculate_price_black_scholes());
+        assert_eq!(put_time_value, put.calculate_price_black_scholes());
+    }
+
+    // #[test]
+    // fn test_calculate_time_value_deep_in_the_money() {
+    //     let call = create_option(Side::Long, OptionStyle::Call, 150.0);
+    //     let put = create_option(Side::Long, OptionStyle::Put, 50.0);
+    //
+    //     let call_time_value = call.time_value();
+    //     let put_time_value = put.time_value();
+    //
+    //     assert!(call_time_value > 0.0);
+    //     // assert!(put_time_value > 0.0);
+    //     assert!(call_time_value < call.calculate_price_black_scholes() - 50.0);
+    //     assert!(put_time_value < put.calculate_price_black_scholes() - 50.0);
+    // }
 }
 
 #[cfg(test)]
