@@ -106,8 +106,7 @@ mod tests {
         option.implied_volatility = 0.0;
         let price = monte_carlo_option_pricing(&option, 252, 10000);
         let expected_price = f64::max(
-            option.underlying_price
-                - option.strike_price * (-option.risk_free_rate * 1.0).exp(),
+            option.underlying_price - option.strike_price * (-option.risk_free_rate * 1.0).exp(),
             0.0,
         );
         assert_relative_eq!(price, expected_price, epsilon = 0.1);

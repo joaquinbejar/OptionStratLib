@@ -1,3 +1,4 @@
+use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::binomial_model::{
     generate_binomial_tree, price_binomial, BinomialPricingParams,
@@ -129,15 +130,51 @@ impl Options {
         self.option_type.payoff(&payoff_info, &self.side)
     }
 
+    pub fn intrinsic_value(&self, underlying_price: f64) -> f64 {
+        let payoff_info = PayoffInfo {
+            spot: underlying_price,
+            strike: self.strike_price,
+            style: self.option_style.clone(),
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        self.option_type.payoff(&payoff_info, &self.side)
+    }
+
+    pub fn delta(&self) -> f64 {
+        delta(self)
+    }
+
+    pub fn gamma(&self) -> f64 {
+        gamma(self)
+    }
+
+    pub fn theta(&self) -> f64 {
+        theta(self)
+    }
+
+    pub fn vega(&self) -> f64 {
+        vega(self)
+    }
+
+    pub fn rho(&self) -> f64 {
+        rho(self)
+    }
+
+    pub fn rho_d(&self) -> f64 {
+        rho_d(self)
+    }
+
+    pub fn is_in_the_money(&self) -> bool {
+        match self.option_style {
+            OptionStyle::Call => self.underlying_price >= self.strike_price,
+            OptionStyle::Put => self.underlying_price <= self.strike_price,
+        }
+    }
+
     // TODO:
-    // - calculate_intrinsic_value
     // - calculate_time_value
-    // - is_in_the_money
-    // - calculate_delta
-    // - calculate_gamma
-    // - calculate_theta
-    // - calculate_vega
-    // - calculate_rho
 }
 
 #[cfg(test)]

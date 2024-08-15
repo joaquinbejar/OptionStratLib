@@ -4,6 +4,8 @@
    Date: 15/8/24
 ******************************************************************************/
 
+use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE};
+use crate::model::option::Options;
 use std::f64;
 
 /// Calculates the constant volatility from a series of returns.
@@ -66,31 +68,60 @@ fn ewma_volatility(returns: &[f64], lambda: f64) -> Vec<f64> {
     volatilities
 }
 
-/// Calculates implied volatility (simplified, requires Black-Scholes implementation).
+/// Calculates the implied volatility of an option given its market price.
 ///
-/// # Arguments
+/// This function uses the Newton-Raphson method to iteratively approximate the implied
+/// volatility that corresponds to the observed market price of the option. The implied
+/// volatility is updated within the `Options` struct provided as a mutable reference.
 ///
-/// * `market_price` - The market price of the option.
-/// * `strike` - The strike price of the option.
-/// * `spot` - The spot price of the underlying asset.
-/// * `time_to_expiry` - Time to expiry in years.
-/// * `risk_free_rate` - The risk-free interest rate.
-/// * `is_call` - Boolean indicating whether it's a call option (true) or put option (false).
+/// # Parameters
+/// - `market_price`: The observed market price of the option.
+/// - `options`: A mutable reference to an `Options` struct, which should contain the necessary
+///   methods and fields such as `implied_volatility`, `calculate_price_black_scholes()`, and `vega()`.
+/// - `max_iterations`: The maximum number of iterations allowed for the Newton-Raphson method.
 ///
 /// # Returns
+/// The function returns the estimated implied volatility of the option.
 ///
-/// The calculated implied volatility as an f64.
+/// # Remarks
+/// - If the price difference between the calculated and market price is within the tolerated threshold (`TOLERANCE`),
+///   the current implied volatility is returned.
+/// - The function ensures that the implied volatility stays positive.
+///
 fn implied_volatility(
     market_price: f64,
-    strike: f64,
-    spot: f64,
-    time_to_expiry: f64,
-    risk_free_rate: f64,
-    is_call: bool,
+    options: &mut Options, // Pass Options struct as a mutable reference
+    max_iterations: i64,
 ) -> f64 {
-    // This function would need an implementation of the Black-Scholes model
-    // and a numerical method to find the root (such as Newton-Raphson)
-    todo!("Requires Black-Scholes implementation");
+    let mut iv = options.implied_volatility;
+    for _ in 0..max_iterations {
+        options.implied_volatility = iv; // Update the implied volatility in the Options struct
+
+        let price = options.calculate_price_black_scholes();
+        let vega = options.vega();
+
+        let price_diff = price - market_price;
+
+        if price_diff.abs() < TOLERANCE {
+            return iv; // The current implied volatility is close enough
+        }
+
+        iv -= price_diff / vega; // Newton-Raphson update step
+
+        if iv < 0.0 {
+            iv = 1e-8; // Ensure volatility stays positive
+        }
+        let new_iv = iv - price_diff / vega;
+
+        // Check if new_iv is NaN or infinite
+        if !new_iv.is_nan() || !new_iv.is_infinite() {
+            return iv;
+        }
+
+        // Limit the range of implied volatility
+        iv = new_iv.max(MIN_VOLATILITY).min(MAX_VOLATILITY);
+    }
+    iv
 }
 
 /// Calculates GARCH(1,1) volatility (simplified).
@@ -430,6 +461,80 @@ mod tests_ewma_volatility {
         for (res, &exp) in result.iter().zip(expected.iter()) {
             assert_relative_eq!(res, &exp, epsilon = 1e-10);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_implied_volatility {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use approx::assert_relative_eq;
+
+    fn create_test_option() -> Options {
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            100.0,
+            ExpirationDate::Days(30.0),
+            0.2, // initial implied volatility
+            1,
+            100.0,
+            0.05,
+            OptionStyle::Call,
+            0.0,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_implied_volatility_convergence() {
+        let mut option = create_test_option();
+        let market_price = 5.0; // Assume this is the observed market price
+        let iv = implied_volatility(market_price, &mut option, 100);
+
+        // Check if the calculated price with the new IV is close to the market price
+        option.implied_volatility = iv;
+        let calculated_price = option.calculate_price_black_scholes();
+        println!("{}", (calculated_price - market_price).abs());
+        assert_relative_eq!(calculated_price, market_price, epsilon = 0.002);
+    }
+
+    #[test]
+    fn test_implied_volatility_bounds() {
+        let mut option = create_test_option();
+        let market_price = 5.0;
+        let iv = implied_volatility(market_price, &mut option, 100);
+
+        assert!(iv > 0.0, "Implied volatility should be positive");
+        assert!(iv < 1.0, "Implied volatility should be less than 100%");
+    }
+
+    #[test]
+    fn test_implied_volatility_max_iterations() {
+        let mut option = create_test_option();
+        let market_price = 5.0;
+        let iv = implied_volatility(market_price, &mut option, 1); // Only allow 1 iteration
+
+        // The IV might not have converged, but it should still be a valid number
+        assert!(!iv.is_nan());
+        assert!(!iv.is_infinite());
+    }
+
+    #[test]
+    fn test_implied_volatility_extreme_prices() {
+        let mut option = create_test_option();
+
+        // Test with a very low market price
+        let low_price = 0.01;
+        let low_iv = implied_volatility(low_price, &mut option, 100);
+        assert!(low_iv > 0.0);
+
+        // Test with a very high market price
+        let high_price = 10.0;
+        let high_iv = implied_volatility(high_price, &mut option, 100);
+        println!("{}", high_iv);
+        assert!(high_iv < 1.0);
     }
 }
 
