@@ -35,9 +35,9 @@ use crate::model::types::{OptionStyle, OptionType, Side};
 ///
 #[allow(dead_code)]
 pub fn black_scholes(option: &Options) -> f64 {
-    let (d1, d2, expiry_time) = calculate_d1_d2_and_time(&option);
+    let (d1, d2, expiry_time) = calculate_d1_d2_and_time(option);
     match option.option_type {
-        OptionType::European => calculate_european_option_price(&option, d1, d2, expiry_time),
+        OptionType::European => calculate_european_option_price(option, d1, d2, expiry_time),
         OptionType::American => 0.0,        // TODO: calculate this
         OptionType::Bermuda { .. } => 0.0,  // TODO: calculate this
         OptionType::Asian { .. } => 0.0,    // TODO: calculate this
@@ -172,10 +172,10 @@ fn calculate_put_option_price(option: &Options, d1: f64, d2: f64, t: f64) -> f64
 #[cfg(test)]
 mod tests_black_scholes {
     use super::*;
+    use crate::greeks::utils::{d1, d2};
     use crate::model::option::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
-    use crate::greeks::utils::{d1, d2};
 
     fn mock_options_call() -> Options {
         Options {
@@ -190,9 +190,7 @@ mod tests_black_scholes {
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
             dividend_yield: 0.0,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
+            exotic_params: None,
         }
     }
 
@@ -209,9 +207,7 @@ mod tests_black_scholes {
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
             dividend_yield: 0.0,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
+            exotic_params: None,
         }
     }
 
@@ -228,9 +224,7 @@ mod tests_black_scholes {
             underlying_symbol: "".to_string(),
             quantity: 0,
             dividend_yield: 0.0,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
+            exotic_params: None,
         }
     }
 
@@ -299,9 +293,7 @@ mod tests_black_scholes {
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
             dividend_yield: 0.0,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
+            exotic_params: None,
         };
         // assert_relative_eq!(option.expiration_date.get_years(), 1.0, epsilon = 0.00001);
         let d1 = d1(
@@ -347,14 +339,12 @@ mod tests_black_scholes {
             strike_price: 65.0,
             implied_volatility: 0.3,
             risk_free_rate: 0.08,
-            expiration_date: ExpirationDate::Days(365.0/4.0),
+            expiration_date: ExpirationDate::Days(365.0 / 4.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
             dividend_yield: 0.0,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
+            exotic_params: None,
         };
         assert_relative_eq!(option.expiration_date.get_years(), 0.25, epsilon = 0.00001);
         let d1 = d1(
@@ -378,15 +368,21 @@ mod tests_black_scholes {
         let big_n_d2 = big_n(d2);
         assert_relative_eq!(big_n_d2, 0.3172920, epsilon = 0.00001);
 
-        let option_value = option.underlying_price * big_n_d1 - option.strike_price *
-            big_n_d2 * (-option.risk_free_rate *option.expiration_date.get_years()).exp();
+        let option_value = option.underlying_price * big_n_d1
+            - option.strike_price
+                * big_n_d2
+                * (-option.risk_free_rate * option.expiration_date.get_years()).exp();
         assert_relative_eq!(option_value, 2.133368, epsilon = 0.00001);
 
         let price = black_scholes(&option.clone());
 
         assert_relative_eq!(price, 2.133368, epsilon = 0.001);
         assert_relative_eq!(price, option_value, epsilon = 0.001);
-        assert_relative_eq!(option.calculate_price_black_scholes(), option_value, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.calculate_price_black_scholes(),
+            option_value,
+            epsilon = 0.0001
+        );
     }
 
     #[test]

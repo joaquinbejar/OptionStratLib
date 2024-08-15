@@ -1,9 +1,10 @@
 use crate::model::option::Options;
 use crate::pricing::utils::wiener_increment;
 
+#[allow(dead_code)]
 fn monte_carlo_option_pricing(
     option: Options,
-    steps: usize,      // Número de pasos en el tiempo
+    steps: usize,       // Número de pasos en el tiempo
     simulations: usize, // Número de simulaciones de Monte Carlo
 ) -> f64 {
     let dt = option.expiration_date.get_years() / steps as f64;
@@ -23,6 +24,6 @@ fn monte_carlo_option_pricing(
     }
 
     // Average value of the payoffs discounted to present value
-    (payoff_sum / simulations as f64) * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
+    (payoff_sum / simulations as f64)
+        * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
 }
-

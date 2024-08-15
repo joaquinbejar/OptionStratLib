@@ -1,4 +1,3 @@
-
 use optionstratlib::greeks::utils::big_n;
 
 fn black_scholes_call(s: f64, k: f64, t: f64, r: f64, sigma: f64) -> f64 {
@@ -8,7 +7,15 @@ fn black_scholes_call(s: f64, k: f64, t: f64, r: f64, sigma: f64) -> f64 {
     s * big_n(d1) - k * (-r * t).exp() * big_n(d2)
 }
 
-fn implied_risk_free_rate(s: f64, k: f64, t: f64, sigma: f64, market_price: f64, epsilon: f64, max_iterations: usize) -> Option<f64> {
+fn implied_risk_free_rate(
+    s: f64,
+    k: f64,
+    t: f64,
+    sigma: f64,
+    market_price: f64,
+    epsilon: f64,
+    max_iterations: usize,
+) -> Option<f64> {
     let mut r_low = -1.0;
     let mut r_high = 1.0;
 
@@ -50,7 +57,10 @@ fn main() {
     let market_price2 = 87.8;
 
     match implied_risk_free_rate(s, k2, t, sigma2, market_price2, epsilon, max_iterations) {
-        Some(r) => println!("The implied risk-free rate for the second set is: {:.4}%", r * 100.0),
+        Some(r) => println!(
+            "The implied risk-free rate for the second set is: {:.4}%",
+            r * 100.0
+        ),
         None => println!("Could not converge to a solution for the second set"),
     }
 }

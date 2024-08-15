@@ -1,14 +1,14 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 14/8/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 14/8/24
+******************************************************************************/
 
-use rayon::prelude::*;
+use optionstratlib::greeks::utils::big_n;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::pricing::black_scholes_model::black_scholes;
-use optionstratlib::greeks::utils::big_n;
+use rayon::prelude::*;
 
 struct OptionSimple {
     strike: f64,
@@ -25,27 +25,52 @@ fn black_scholes_local(s: f64, k: f64, t: f64, r: f64, sigma: f64) -> f64 {
 }
 
 fn volatility_mse(s: f64, options: &[OptionSimple], t: f64, r: f64) -> f64 {
-    options.par_iter().map(|opt| {
-        let calculated_price = black_scholes_local(s, opt.strike, t, r, opt.implied_volatility);
-        (calculated_price - opt.market_price).powi(2)
-    }).sum::<f64>() / options.len() as f64
+    options
+        .par_iter()
+        .map(|opt| {
+            let calculated_price = black_scholes_local(s, opt.strike, t, r, opt.implied_volatility);
+            (calculated_price - opt.market_price).powi(2)
+        })
+        .sum::<f64>()
+        / options.len() as f64
 }
 
 fn optimize_parameters(s: f64, options: &[OptionSimple]) -> (f64, f64) {
     let t_range: Vec<f64> = (1..30).map(|days| days as f64 / 365.0).collect();
     let r_range: Vec<f64> = (0..100).map(|rate| rate as f64 / 1000.0).collect();
 
-    let (best_t, best_r, _min_mse) = t_range.par_iter().flat_map(|&t| {
-        r_range.par_iter().map(move |&r| {
-            let mse = volatility_mse(s, options, t, r);
-            (t, r, mse)
+    let (best_t, best_r, _min_mse) = t_range
+        .par_iter()
+        .flat_map(|&t| {
+            r_range.par_iter().map(move |&r| {
+                let mse = volatility_mse(s, options, t, r);
+                (t, r, mse)
+            })
         })
-    }).min_by(|a, b| a.2.partial_cmp(&b.2).unwrap()).unwrap();
+        .min_by(|a, b| a.2.partial_cmp(&b.2).unwrap())
+        .unwrap();
 
     (best_t, best_r)
 }
 
+fn get_price_status(theoretical_price: f64, market_price: f64) -> &'static str {
+    if theoretical_price < market_price {
+        "Expensive"
+    } else {
+        "Cheap"
+    }
+}
 
+fn get_option_status(strike: f64, s: f64) -> &'static str {
+    if strike < s {
+        "ATM"
+    } else {
+        "OTM"
+    }
+}
+
+#[rustfmt::skip]
+#[allow(clippy::all)]
 fn main() {
     let s = 2476.6;
 
@@ -94,11 +119,11 @@ fn main() {
         OptionSimple { strike: 2585.0, market_price: 0.2, implied_volatility: 0.27 },
     ];
 
+
     let (best_t, best_r) = optimize_parameters(s, &broker_data);
 
     println!("Best t: {:.4} años ({:.1} days)", best_t, best_t * 365.0);
     println!("Best r: {:.4}", best_r);
-
 
     for opt in &broker_data {
         let option = Options::new(
@@ -114,29 +139,19 @@ fn main() {
             OptionStyle::Call,
             0.0,
             None,
-            None,
-            None,
         );
         let theoretical_price = black_scholes(&option);
-        let price_is;
-        let option_is;
-        if theoretical_price < opt.market_price {
-            price_is = "Expensive";
-        } else {
-            price_is = "Cheap";
-        }
-        if opt.strike < s {
-            option_is = "ATM";
-        } else {
-            option_is = "OTM";
-        }
+        let price_status = get_price_status(theoretical_price, opt.market_price);
+        let option_status = get_option_status(opt.strike, s);
 
-        println!("Strike {}: Market Price = {:.2}, Theoretical Price = {:.2}, VI = {:.2}% is {} is {}",
-                 opt.strike,
-                 opt.market_price,
-                 theoretical_price,
-                 opt.implied_volatility * 100.0,
-                 price_is,
-                 option_is);
+        println!(
+            "Strike {}: Market Price = {:.2}, Theoretical Price = {:.2}, VI = {:.2}% is {} is {}",
+            opt.strike,
+            opt.market_price,
+            theoretical_price,
+            opt.implied_volatility * 100.0,
+            price_status,
+            option_status
+        );
     }
 }

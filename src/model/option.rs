@@ -19,6 +19,14 @@ pub struct Options {
     pub risk_free_rate: f64,
     pub option_style: OptionStyle,
     pub dividend_yield: f64,
+    // pub spot_prices: Option<Vec<f64>>, // Asian
+    // pub spot_min: Option<f64>,         // Lookback
+    // pub spot_max: Option<f64>,         // Lookback
+    pub exotic_params: Option<ExoticParams>,
+}
+
+#[derive(Clone, Default)]
+pub struct ExoticParams {
     pub spot_prices: Option<Vec<f64>>, // Asian
     pub spot_min: Option<f64>,         // Lookback
     pub spot_max: Option<f64>,         // Lookback
@@ -38,9 +46,7 @@ impl Options {
         risk_free_rate: f64,
         option_style: OptionStyle,
         dividend_yield: f64,
-        spot_prices: Option<Vec<f64>>,
-        spot_min: Option<f64>,
-        spot_max: Option<f64>,
+        exotic_params: Option<ExoticParams>,
     ) -> Self {
         Options {
             option_type,
@@ -54,9 +60,7 @@ impl Options {
             risk_free_rate,
             option_style,
             dividend_yield,
-            spot_prices,
-            spot_min,
-            spot_max,
+            exotic_params,
         }
     }
 
@@ -113,7 +117,7 @@ impl Options {
     }
 
     pub fn calculate_price_black_scholes(&self) -> f64 {
-        black_scholes(&self)
+        black_scholes(self)
     }
 
     pub fn payoff(&self) -> f64 {
@@ -128,7 +132,6 @@ impl Options {
         self.option_type.payoff(&payoff_info, &self.side)
     }
 
-
     // TODO:
     // - calculate_intrinsic_value
     // - calculate_time_value
@@ -139,7 +142,6 @@ impl Options {
     // - calculate_vega
     // - calculate_rho
 }
-
 
 #[cfg(test)]
 mod tests_options {
@@ -158,9 +160,7 @@ mod tests_options {
             105.0,
             0.05,
             OptionStyle::Call,
-            0.01,
-            None,
-            None,
+            0.0,
             None,
         )
     }
@@ -192,10 +192,7 @@ mod tests_options {
             OptionStyle::Call,
             0.01,
             None,
-            None,
-            None,
         );
-        println!("{}", option_with_datetime.time_to_expiration() * 365.0);
         assert!(option_with_datetime.time_to_expiration() >= 59.0 / 365.0);
         assert!(option_with_datetime.time_to_expiration() < 61.0 / 365.0);
     }
@@ -218,8 +215,6 @@ mod tests_options {
             0.05,
             OptionStyle::Call,
             0.01,
-            None,
-            None,
             None,
         );
         assert!(!short_option.is_long());
@@ -268,8 +263,6 @@ mod tests_options {
             OptionStyle::Put,
             0.01,
             None,
-            None,
-            None,
         );
         let put_payoff = put_option.payoff();
         assert_eq!(put_payoff, 5.0); // max(100 - 95, 0) = 5
@@ -280,7 +273,11 @@ mod tests_options {
 mod tests_options_payoffs {
     use super::*;
 
-    fn create_sample_option(option_style: OptionStyle, side: Side, underlying_price: f64) -> Options {
+    fn create_sample_option(
+        option_style: OptionStyle,
+        side: Side,
+        underlying_price: f64,
+    ) -> Options {
         Options::new(
             OptionType::European,
             side,
@@ -293,8 +290,6 @@ mod tests_options_payoffs {
             0.05,
             option_style,
             0.01,
-            None,
-            None,
             None,
         )
     }

@@ -4,9 +4,8 @@
    Date: 1/8/24
 ******************************************************************************/
 
-use statrs::distribution::{Normal, ContinuousCDF};
+use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
-
 
 pub(crate) fn big_n(x: f64) -> f64 {
     const MEAN: f64 = 0.0;
@@ -28,7 +27,15 @@ fn vega(s: f64, k: f64, t: f64, r: f64, sigma: f64) -> f64 {
     s * t.sqrt() * (-(d1 * d1 / 2.0)).exp() / (2.0 * PI).sqrt()
 }
 
-fn implied_volatility(s: f64, k: f64, t: f64, r: f64, market_price: f64, epsilon: f64, max_iterations: usize) -> Option<f64> {
+fn implied_volatility(
+    s: f64,
+    k: f64,
+    t: f64,
+    r: f64,
+    market_price: f64,
+    epsilon: f64,
+    max_iterations: usize,
+) -> Option<f64> {
     let mut sigma = 0.5; // Initial guess
     let mut iteration = 0;
 

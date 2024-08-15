@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 5/8/24
 ******************************************************************************/
-use rand::distributions::Distribution;
-use statrs::distribution::Normal;
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
+use rand::distributions::Distribution;
+use statrs::distribution::Normal;
 
 /// Calculates the up factor for an asset's price movement model.
 ///
@@ -214,11 +214,12 @@ pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 
 /// This function will panic if the creation of the normal distribution fails, which is
 /// highly unlikely with valid inputs.
 ///
+#[allow(dead_code)]
 pub(crate) fn wiener_increment(dt: f64) -> f64 {
     let normal = Normal::new(0.0, 1.0).unwrap();
     let mut rng = rand::thread_rng();
-    let wiener_increment = normal.sample(&mut rng) * dt.sqrt();
-    wiener_increment
+
+    normal.sample(&mut rng) * dt.sqrt()
 }
 
 #[cfg(test)]

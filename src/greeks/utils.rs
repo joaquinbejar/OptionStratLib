@@ -25,14 +25,16 @@ use std::f64::consts::PI;
 /// the price of options. It takes into account factors such as the current stock
 /// price, risk-free rate, time to expiration, and stock volatility to produce
 /// an important intermediate result.
-pub(crate) fn d1(underlying_price: f64,
-                 strike_price: f64,
-                 risk_free_rate: f64,
-                 expiration_date: f64,
-                 implied_volatility: f64) -> f64 {
-    ((underlying_price / strike_price).ln() +
-        (risk_free_rate + implied_volatility * implied_volatility / 2.0) *
-            expiration_date) / (implied_volatility * expiration_date.sqrt())
+pub(crate) fn d1(
+    underlying_price: f64,
+    strike_price: f64,
+    risk_free_rate: f64,
+    expiration_date: f64,
+    implied_volatility: f64,
+) -> f64 {
+    ((underlying_price / strike_price).ln()
+        + (risk_free_rate + implied_volatility * implied_volatility / 2.0) * expiration_date)
+        / (implied_volatility * expiration_date.sqrt())
 }
 
 /// Calculates the d2 value commonly used in financial mathematics, specifically in
@@ -49,13 +51,20 @@ pub(crate) fn d1(underlying_price: f64,
 /// # Returns
 ///
 /// * `f64` - The computed d2 value.
-pub(crate) fn d2(underlying_price: f64,
-                 strike_price: f64,
-                 risk_free_rate: f64,
-                 expiration_date: f64,
-                 implied_volatility: f64) -> f64 {
-    d1(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility) -
-        implied_volatility * expiration_date.sqrt()
+pub(crate) fn d2(
+    underlying_price: f64,
+    strike_price: f64,
+    risk_free_rate: f64,
+    expiration_date: f64,
+    implied_volatility: f64,
+) -> f64 {
+    d1(
+        underlying_price,
+        strike_price,
+        risk_free_rate,
+        expiration_date,
+        implied_volatility,
+    ) - implied_volatility * expiration_date.sqrt()
 }
 
 /// Calculates the value of the standard normal distribution density function at a given point `x`.
@@ -167,9 +176,7 @@ mod tests_calculate_d_values {
             quantity: 0,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
+            exotic_params: None,
         };
         let (d1_value, d2_value) = calculate_d_values(&option);
 

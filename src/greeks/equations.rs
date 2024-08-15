@@ -19,8 +19,12 @@ pub fn delta(option: &Options) -> f64 {
     );
 
     match option.option_style {
-        OptionStyle::Call => (-option.dividend_yield * option.expiration_date.get_years()).exp() * big_n(d1),
-        OptionStyle::Put => (-option.dividend_yield * option.expiration_date.get_years()).exp() * (big_n(d1) - 1.0),
+        OptionStyle::Call => {
+            (-option.dividend_yield * option.expiration_date.get_years()).exp() * big_n(d1)
+        }
+        OptionStyle::Put => {
+            (-option.dividend_yield * option.expiration_date.get_years()).exp() * (big_n(d1) - 1.0)
+        }
     }
 }
 
@@ -35,7 +39,9 @@ pub fn gamma(option: &Options) -> f64 {
     );
 
     (-option.dividend_yield * option.expiration_date.get_years()).exp() * n(d1)
-        / (option.underlying_price * option.implied_volatility * option.expiration_date.get_years().sqrt())
+        / (option.underlying_price
+            * option.implied_volatility
+            * option.expiration_date.get_years().sqrt())
 }
 
 #[allow(dead_code)]
@@ -175,9 +181,7 @@ mod tests_greeks_equations {
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: 0,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
+            exotic_params: None,
         }
     }
 
@@ -186,32 +190,21 @@ mod tests_greeks_equations {
         let call_option = create_test_option(OptionStyle::Call);
         let put_option = create_test_option(OptionStyle::Put);
 
-
         assert_relative_eq!(delta(&call_option), 0.9801, epsilon = 1e-4);
-        assert_relative_eq!(
-            delta(&put_option),
-            -0.000151,
-            epsilon = 1e-6
-        );
+        assert_relative_eq!(delta(&put_option), -0.000151, epsilon = 1e-6);
     }
 
     #[test]
     fn test_gamma() {
         let option = create_test_option(OptionStyle::Call); // Gamma is the same for calls and puts
 
-
-        assert_relative_eq!(
-            gamma(&option),
-            8.124480543702491e-7,
-            epsilon = 1e-6
-        );
+        assert_relative_eq!(gamma(&option), 8.124480543702491e-7, epsilon = 1e-6);
     }
 
     #[test]
     fn test_theta() {
         let call_option = create_test_option(OptionStyle::Call);
         let put_option = create_test_option(OptionStyle::Put);
-
 
         assert_relative_eq!(theta(&call_option), 1.7487299, epsilon = 1e-4);
         assert_relative_eq!(theta(&put_option), 4.5444, epsilon = 1e-4);
@@ -237,12 +230,7 @@ mod tests_greeks_equations {
         let call_option = create_test_option(OptionStyle::Call);
         let put_option = create_test_option(OptionStyle::Put);
 
-
-        assert_relative_eq!(
-            rho_d(&call_option),
-            -98.00468,
-            epsilon = 1e-4
-        );
+        assert_relative_eq!(rho_d(&call_option), -98.00468, epsilon = 1e-4);
         assert_relative_eq!(rho_d(&put_option), 0.01518, epsilon = 1e-4);
     }
 }

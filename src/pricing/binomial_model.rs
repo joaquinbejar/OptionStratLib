@@ -203,7 +203,8 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
         .take(params.no_steps + 1)
     {
         info.spot = *node_val;
-        option_tree[params.no_steps][node] = params.option_type.payoff(&info,  &Side::Long); // TODO: remove hardcode Side
+        option_tree[params.no_steps][node] = params.option_type.payoff(&info, &Side::Long);
+        // TODO: remove hardcode Side
     }
 
     for step in (0..params.no_steps).rev() {
@@ -220,7 +221,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
                         *node_val = node_value;
                     } else {
                         info.spot = asset_tree[step][node_idx];
-                        let intrinsic_value = params.option_type.payoff(&info, &Side::Long ); // TODO: remove hardcode Side
+                        let intrinsic_value = params.option_type.payoff(&info, &Side::Long); // TODO: remove hardcode Side
                         *node_val = intrinsic_value.max(node_value);
                     }
                 }

@@ -212,8 +212,8 @@ pub enum LookbackType {
 impl Payoff for OptionType {
     fn payoff(&self, info: &PayoffInfo, side: &Side) -> f64 {
         match self {
-            OptionType::European | OptionType::American => standard_payoff(info,side),
-            OptionType::Bermuda { .. } => standard_payoff(info,side),
+            OptionType::European | OptionType::American => standard_payoff(info, side),
+            OptionType::Bermuda { .. } => standard_payoff(info, side),
             OptionType::Asian { averaging_type } => calculate_asian_payoff(averaging_type, info),
             OptionType::Barrier {
                 barrier_type,
@@ -221,18 +221,18 @@ impl Payoff for OptionType {
             } => calculate_barrier_payoff(barrier_type, barrier_level, info, side),
             OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
             OptionType::Lookback { lookback_type } => match lookback_type {
-                LookbackType::FixedStrike => standard_payoff(info,side),
+                LookbackType::FixedStrike => standard_payoff(info, side),
                 LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
             },
-            OptionType::Compound { underlying_option } => underlying_option.payoff(info,side ),
+            OptionType::Compound { underlying_option } => underlying_option.payoff(info, side),
             OptionType::Chooser { .. } => {
                 ((info.spot - info.strike).max(0.0)).max((info.strike - info.spot).max(0.0))
             }
-            OptionType::Cliquet { .. } => standard_payoff(info,side),
+            OptionType::Cliquet { .. } => standard_payoff(info, side),
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
-            | OptionType::Exchange { .. } => standard_payoff(info,side),
-            OptionType::Quanto { exchange_rate } => standard_payoff(info,side) * exchange_rate,
+            | OptionType::Exchange { .. } => standard_payoff(info, side),
+            OptionType::Quanto { exchange_rate } => standard_payoff(info, side) * exchange_rate,
             OptionType::Power { exponent } => match info.style {
                 OptionStyle::Call => (info.spot.powf(*exponent) - info.strike).max(0.0),
                 OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(0.0),
@@ -268,7 +268,7 @@ fn calculate_barrier_payoff(
         BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
         BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
     };
-    let std_payoff = standard_payoff(info,&side);
+    let std_payoff = standard_payoff(info, side);
     match barrier_type {
         BarrierType::UpAndIn | BarrierType::DownAndIn => {
             if barrier_condition {
@@ -416,7 +416,7 @@ mod tests_payoff {
             style: OptionStyle::Call,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info,&Side::Long), 15.0);
+        assert_eq!(option.payoff(&info, &Side::Long), 15.0);
     }
 
     #[test]
@@ -428,10 +428,9 @@ mod tests_payoff {
             style: OptionStyle::Call,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info,&Side::Long ), 10.0);
+        assert_eq!(option.payoff(&info, &Side::Long), 10.0);
     }
 }
-
 
 #[cfg(test)]
 mod tests_expiration_date {
