@@ -153,11 +153,12 @@ pub(crate) fn calculate_option_price(
         spot: params.asset * u.powi(i as i32) * d.powi((params.no_steps - i) as i32),
         strike: params.strike,
         style: params.option_style.clone(),
+        side: params.side.clone(),
         spot_prices: None,
         spot_min: None,
         spot_max: None,
     };
-    params.option_type.payoff(&info, &Side::Long) // TODO: remove hardcode Side
+    params.option_type.payoff(&info)
 }
 
 /// Calculates the discounted payoff for an option based on the binomial pricing model.
@@ -182,12 +183,13 @@ pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 
         spot: params.asset * (params.int_rate * params.expiry).exp(),
         strike: params.strike,
         style: params.option_style.clone(),
+        side: params.side.clone(),
         spot_prices: None,
         spot_min: None,
         spot_max: None,
     };
     let discounted_payoff =
-        (-params.int_rate * params.expiry).exp() * params.option_type.payoff(&info, &Side::Long); // TODO: remove hardcode Side
+        (-params.int_rate * params.expiry).exp() * params.option_type.payoff(&info);
     match params.side {
         Side::Long => discounted_payoff,
         Side::Short => -discounted_payoff,

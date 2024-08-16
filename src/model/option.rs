@@ -128,11 +128,12 @@ impl Options {
             spot: self.underlying_price,
             strike: self.strike_price,
             style: self.option_style.clone(),
+            side: self.side.clone(),
             spot_prices: None,
             spot_min: None,
             spot_max: None,
         };
-        self.option_type.payoff(&payoff_info, &self.side) * self.quantity as f64
+        self.option_type.payoff(&payoff_info) * self.quantity as f64
     }
 
     pub fn intrinsic_value(&self, underlying_price: f64) -> f64 {
@@ -140,11 +141,12 @@ impl Options {
             spot: underlying_price,
             strike: self.strike_price,
             style: self.option_style.clone(),
+            side: self.side.clone(),
             spot_prices: None,
             spot_min: None,
             spot_max: None,
         };
-        self.option_type.payoff(&payoff_info, &self.side) * self.quantity as f64
+        self.option_type.payoff(&payoff_info) * self.quantity as f64
     }
 
     pub fn delta(&self) -> f64 {
@@ -185,12 +187,12 @@ impl Options {
         (option_price - intrinsic_value).max(0.0)
     }
 
-    pub  fn pnl(&self, asset_price: f64) -> f64 {
-        pnl(&self, asset_price)
+    pub fn pnl(&self, asset_price: f64) -> f64 {
+        pnl(self, asset_price)
     }
 
-    pub  fn pnl_at_expiration(&self) -> f64 {
-        pnl_at_expiration(&self)
+    pub fn pnl_at_expiration(&self) -> f64 {
+        pnl_at_expiration(self)
     }
 }
 
@@ -703,7 +705,6 @@ mod tests_pnl_basic {
 
         assert_eq!(option.pnl_at_expiration(), -5.0); // (100 - 90) - 5 = 5
     }
-
 }
 
 #[cfg(test)]
@@ -731,56 +732,56 @@ mod tests_pnl_extended {
     #[test]
     fn test_pnl_call_long() {
         let option = create_option(OptionStyle::Call, Side::Long, 5.0);
-        assert_eq!(option.pnl(110.0), 5.0);  // (110 - 100) - 5 = 5
-        assert_eq!(option.pnl(90.0), -5.0);  // 0 - 5 = -5
+        assert_eq!(option.pnl(110.0), 5.0); // (110 - 100) - 5 = 5
+        assert_eq!(option.pnl(90.0), -5.0); // 0 - 5 = -5
     }
 
     #[test]
     fn test_pnl_at_expiration_call_long() {
         let mut option = create_option(OptionStyle::Call, Side::Long, 5.0);
         option.underlying_price = 110.0;
-        assert_eq!(option.pnl_at_expiration(), 5.0);  // (110 - 100) - 5 = 5
+        assert_eq!(option.pnl_at_expiration(), 5.0); // (110 - 100) - 5 = 5
     }
 
     #[test]
     fn test_pnl_call_short() {
         let option = create_option(OptionStyle::Call, Side::Short, -5.0);
-        assert_eq!(option.pnl(110.0), -5.0);  // -(110 - 100) + 5 = -5
-        assert_eq!(option.pnl(90.0), 5.0);  // 0 + 5 = 5
+        assert_eq!(option.pnl(110.0), -5.0); // -(110 - 100) + 5 = -5
+        assert_eq!(option.pnl(90.0), 5.0); // 0 + 5 = 5
     }
 
     #[test]
     fn test_pnl_at_expiration_call_short() {
         let mut option = create_option(OptionStyle::Call, Side::Short, -5.0);
         option.underlying_price = 110.0;
-        assert_eq!(option.pnl_at_expiration(), -5.0);  // -(110 - 100) + 5 = -5
+        assert_eq!(option.pnl_at_expiration(), -5.0); // -(110 - 100) + 5 = -5
     }
 
     #[test]
     fn test_pnl_put_long() {
         let option = create_option(OptionStyle::Put, Side::Long, 5.0);
-        assert_eq!(option.pnl(90.0), 5.0);  // (100 - 90) - 5 = 5
-        assert_eq!(option.pnl(110.0), -5.0);  // 0 - 5 = -5
+        assert_eq!(option.pnl(90.0), 5.0); // (100 - 90) - 5 = 5
+        assert_eq!(option.pnl(110.0), -5.0); // 0 - 5 = -5
     }
 
     #[test]
     fn test_pnl_at_expiration_put_long() {
         let mut option = create_option(OptionStyle::Put, Side::Long, 5.0);
         option.underlying_price = 90.0;
-        assert_eq!(option.pnl_at_expiration(), 5.0);  // (100 - 90) - 5 = 5
+        assert_eq!(option.pnl_at_expiration(), 5.0); // (100 - 90) - 5 = 5
     }
 
     #[test]
     fn test_pnl_put_short() {
         let option = create_option(OptionStyle::Put, Side::Short, -5.0);
-        assert_eq!(option.pnl(90.0), -5.0);  // -(100 - 90) + 5 = -5
-        assert_eq!(option.pnl(110.0), 5.0);  // 0 + 5 = 5
+        assert_eq!(option.pnl(90.0), -5.0); // -(100 - 90) + 5 = -5
+        assert_eq!(option.pnl(110.0), 5.0); // 0 + 5 = 5
     }
 
     #[test]
     fn test_pnl_at_expiration_put_short() {
         let mut option = create_option(OptionStyle::Put, Side::Short, -5.0);
         option.underlying_price = 90.0;
-        assert_eq!(option.pnl_at_expiration(), -5.0);  // -(100 - 90) + 5 = -5
+        assert_eq!(option.pnl_at_expiration(), -5.0); // -(100 - 90) + 5 = -5
     }
 }

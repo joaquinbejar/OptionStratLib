@@ -210,29 +210,29 @@ pub enum LookbackType {
 }
 
 impl Payoff for OptionType {
-    fn payoff(&self, info: &PayoffInfo, side: &Side) -> f64 {
+    fn payoff(&self, info: &PayoffInfo) -> f64 {
         match self {
-            OptionType::European | OptionType::American => standard_payoff(info, side),
-            OptionType::Bermuda { .. } => standard_payoff(info, side),
+            OptionType::European | OptionType::American => standard_payoff(info),
+            OptionType::Bermuda { .. } => standard_payoff(info),
             OptionType::Asian { averaging_type } => calculate_asian_payoff(averaging_type, info),
             OptionType::Barrier {
                 barrier_type,
                 barrier_level,
-            } => calculate_barrier_payoff(barrier_type, barrier_level, info, side),
+            } => calculate_barrier_payoff(barrier_type, barrier_level, info),
             OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
             OptionType::Lookback { lookback_type } => match lookback_type {
-                LookbackType::FixedStrike => standard_payoff(info, side),
+                LookbackType::FixedStrike => standard_payoff(info),
                 LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
             },
-            OptionType::Compound { underlying_option } => underlying_option.payoff(info, side),
+            OptionType::Compound { underlying_option } => underlying_option.payoff(info),
             OptionType::Chooser { .. } => {
                 ((info.spot - info.strike).max(0.0)).max((info.strike - info.spot).max(0.0))
             }
-            OptionType::Cliquet { .. } => standard_payoff(info, side),
+            OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
-            | OptionType::Exchange { .. } => standard_payoff(info, side),
-            OptionType::Quanto { exchange_rate } => standard_payoff(info, side) * exchange_rate,
+            | OptionType::Exchange { .. } => standard_payoff(info),
+            OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
             OptionType::Power { exponent } => match info.style {
                 OptionStyle::Call => (info.spot.powf(*exponent) - info.strike).max(0.0),
                 OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(0.0),
@@ -262,13 +262,12 @@ fn calculate_barrier_payoff(
     barrier_type: &BarrierType,
     barrier_level: &f64,
     info: &PayoffInfo,
-    side: &Side,
 ) -> f64 {
     let barrier_condition = match barrier_type {
         BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
         BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
     };
-    let std_payoff = standard_payoff(info, side);
+    let std_payoff = standard_payoff(info);
     match barrier_type {
         BarrierType::UpAndIn | BarrierType::DownAndIn => {
             if barrier_condition {
@@ -332,9 +331,10 @@ mod tests_payoff {
             spot: 110.0,
             strike: 100.0,
             style: OptionStyle::Call,
+            side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info, &Side::Long), 10.0);
+        assert_eq!(option.payoff(&info), 10.0);
     }
 
     #[test]
@@ -344,9 +344,10 @@ mod tests_payoff {
             spot: 90.0,
             strike: 100.0,
             style: OptionStyle::Put,
+            side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info, &Side::Long), 10.0);
+        assert_eq!(option.payoff(&info), 10.0);
     }
 
     #[test]
@@ -358,10 +359,11 @@ mod tests_payoff {
             spot: 100.0,
             strike: 100.0,
             style: OptionStyle::Call,
+            side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info, &Side::Long), 0.0);
+        assert_eq!(option.payoff(&info), 0.0);
     }
 
     #[test]
@@ -374,9 +376,10 @@ mod tests_payoff {
             spot: 130.0,
             strike: 100.0,
             style: OptionStyle::Call,
+            side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info, &Side::Long), 30.0);
+        assert_eq!(option.payoff(&info), 30.0);
     }
 
     #[test]
@@ -388,9 +391,10 @@ mod tests_payoff {
             spot: 110.0,
             strike: 100.0,
             style: OptionStyle::Call,
+            side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info, &Side::Long), 1.0);
+        assert_eq!(option.payoff(&info), 1.0);
     }
 
     #[test]
@@ -402,9 +406,10 @@ mod tests_payoff {
             spot: 90.0,
             strike: 100.0,
             style: OptionStyle::Put,
+            side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info, &Side::Long), 10.0);
+        assert_eq!(option.payoff(&info), 10.0);
     }
 
     #[test]
@@ -414,9 +419,10 @@ mod tests_payoff {
             spot: 110.0,
             strike: 100.0,
             style: OptionStyle::Call,
+            side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info, &Side::Long), 15.0);
+        assert_eq!(option.payoff(&info), 15.0);
     }
 
     #[test]
@@ -426,9 +432,10 @@ mod tests_payoff {
             spot: 10.0,
             strike: 90.0,
             style: OptionStyle::Call,
+            side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info, &Side::Long), 10.0);
+        assert_eq!(option.payoff(&info), 10.0);
     }
 }
 

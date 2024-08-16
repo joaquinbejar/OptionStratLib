@@ -1,8 +1,8 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 16/8/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 16/8/24
+******************************************************************************/
 use crate::model::option::Options;
 
 /// Calculates the profit and loss (P&L) for a given option based on the current price of the underlying asset.
