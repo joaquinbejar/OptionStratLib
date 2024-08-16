@@ -3,10 +3,7 @@
    Email: jb@taunais.com
    Date: 16/8/24
 ******************************************************************************/
-use optionstratlib::volatility::utils::{
-    constant_volatility, ewma_volatility, garch_volatility, historical_volatility,
-    simulate_heston_volatility,
-};
+use optionstratlib::volatility::utils::{constant_volatility, ewma_volatility, garch_volatility, historical_volatility, interpolate_volatility_surface, simulate_heston_volatility};
 
 fn main() {
     let returns = vec![0.01, 0.02, -0.01, 0.03, 0.00];
@@ -44,4 +41,19 @@ fn main() {
     let steps = 5;
     let heston_vol = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps);
     println!("Simulated Heston Volatility: {:?}", heston_vol);
+
+    let volatility_surface = vec![
+        (100.0, 0.5, 0.2),
+        (100.0, 1.0, 0.25),
+        (120.0, 0.5, 0.22),
+        (120.0, 1.0, 0.28),
+    ];
+
+    let strike = 110.0;
+    let time_to_expiry = 0.75;
+
+    match interpolate_volatility_surface(strike, time_to_expiry, &volatility_surface) {
+        Ok(vol) => println!("Interpolated Volatility: {:.4}", vol),
+        Err(e) => println!("Error: {}", e),
+    }
 }
