@@ -3,7 +3,10 @@
    Email: jb@taunais.com
    Date: 16/8/24
 ******************************************************************************/
-use optionstratlib::volatility::utils::{constant_volatility, ewma_volatility, garch_volatility, historical_volatility, interpolate_volatility_surface, simulate_heston_volatility};
+use optionstratlib::volatility::utils::{
+    constant_volatility, ewma_volatility, garch_volatility, historical_volatility,
+    interpolate_volatility_surface, simulate_heston_volatility,
+};
 
 fn main() {
     let returns = vec![0.01, 0.02, -0.01, 0.03, 0.00];

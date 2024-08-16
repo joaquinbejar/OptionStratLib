@@ -196,18 +196,41 @@ pub fn interpolate_volatility_surface(
     volatility_surface: &[(f64, f64, f64)],
 ) -> Result<f64, &'static str> {
     // Check if the exact point exists in the surface
-    if let Some(&(_, _, vol)) = volatility_surface.iter().find(|&&(s, t, _)| s == strike && t == time_to_expiry) {
+    if let Some(&(_, _, vol)) = volatility_surface
+        .iter()
+        .find(|&&(s, t, _)| s == strike && t == time_to_expiry)
+    {
         return Ok(vol);
     }
 
     // Find surrounding points on the volatility surface
-    let lower_strike = volatility_surface.iter().filter(|&&(s, _, _)| s <= strike).map(|&(s, _, _)| s).max_by(|a, b| a.partial_cmp(b).unwrap());
-    let upper_strike = volatility_surface.iter().filter(|&&(s, _, _)| s >= strike).map(|&(s, _, _)| s).min_by(|a, b| a.partial_cmp(b).unwrap());
-    let lower_expiry = volatility_surface.iter().filter(|&&(_, t, _)| t <= time_to_expiry).map(|&(_, t, _)| t).max_by(|a, b| a.partial_cmp(b).unwrap());
-    let upper_expiry = volatility_surface.iter().filter(|&&(_, t, _)| t >= time_to_expiry).map(|&(_, t, _)| t).min_by(|a, b| a.partial_cmp(b).unwrap());
+    let lower_strike = volatility_surface
+        .iter()
+        .filter(|&&(s, _, _)| s <= strike)
+        .map(|&(s, _, _)| s)
+        .max_by(|a, b| a.partial_cmp(b).unwrap());
+    let upper_strike = volatility_surface
+        .iter()
+        .filter(|&&(s, _, _)| s >= strike)
+        .map(|&(s, _, _)| s)
+        .min_by(|a, b| a.partial_cmp(b).unwrap());
+    let lower_expiry = volatility_surface
+        .iter()
+        .filter(|&&(_, t, _)| t <= time_to_expiry)
+        .map(|&(_, t, _)| t)
+        .max_by(|a, b| a.partial_cmp(b).unwrap());
+    let upper_expiry = volatility_surface
+        .iter()
+        .filter(|&&(_, t, _)| t >= time_to_expiry)
+        .map(|&(_, t, _)| t)
+        .min_by(|a, b| a.partial_cmp(b).unwrap());
 
     // Check if we have enough surrounding points
-    if lower_strike.is_none() || upper_strike.is_none() || lower_expiry.is_none() || upper_expiry.is_none() {
+    if lower_strike.is_none()
+        || upper_strike.is_none()
+        || lower_expiry.is_none()
+        || upper_expiry.is_none()
+    {
         return Err("Interpolation failed due to insufficient surrounding points");
     }
 
@@ -215,14 +238,26 @@ pub fn interpolate_volatility_surface(
         lower_strike.unwrap(),
         upper_strike.unwrap(),
         lower_expiry.unwrap(),
-        upper_expiry.unwrap()
+        upper_expiry.unwrap(),
     );
 
     // Retrieve corresponding volatilities
-    let q11 = volatility_surface.iter().find(|&&(s, t, _)| s == lower_strike && t == lower_expiry).map(|&(_, _, v)| v);
-    let q12 = volatility_surface.iter().find(|&&(s, t, _)| s == lower_strike && t == upper_expiry).map(|&(_, _, v)| v);
-    let q21 = volatility_surface.iter().find(|&&(s, t, _)| s == upper_strike && t == lower_expiry).map(|&(_, _, v)| v);
-    let q22 = volatility_surface.iter().find(|&&(s, t, _)| s == upper_strike && t == upper_expiry).map(|&(_, _, v)| v);
+    let q11 = volatility_surface
+        .iter()
+        .find(|&&(s, t, _)| s == lower_strike && t == lower_expiry)
+        .map(|&(_, _, v)| v);
+    let q12 = volatility_surface
+        .iter()
+        .find(|&&(s, t, _)| s == lower_strike && t == upper_expiry)
+        .map(|&(_, _, v)| v);
+    let q21 = volatility_surface
+        .iter()
+        .find(|&&(s, t, _)| s == upper_strike && t == lower_expiry)
+        .map(|&(_, _, v)| v);
+    let q22 = volatility_surface
+        .iter()
+        .find(|&&(s, t, _)| s == upper_strike && t == upper_expiry)
+        .map(|&(_, _, v)| v);
 
     if let (Some(q11), Some(q12), Some(q21), Some(q22)) = (q11, q12, q21, q22) {
         // Bilinear interpolation
@@ -874,8 +909,8 @@ mod tests_simulate_heston_volatility {
 
 #[cfg(test)]
 mod tests_interpolate_volatility_surface {
-    use approx::assert_relative_eq;
     use super::*;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_interpolate_volatility_surface_success() {
@@ -933,17 +968,17 @@ mod tests_interpolate_volatility_surface {
 
     #[test]
     fn test_interpolate_volatility_surface_insufficient_points() {
-        let volatility_surface = vec![
-            (100.0, 0.5, 0.2),
-            (100.0, 1.0, 0.25),
-        ];
+        let volatility_surface = vec![(100.0, 0.5, 0.2), (100.0, 1.0, 0.25)];
 
         let strike = 110.0;
         let time_to_expiry = 0.75;
         let result = interpolate_volatility_surface(strike, time_to_expiry, &volatility_surface);
 
         assert!(result.is_err());
-        assert_eq!(result.err(), Some("Interpolation failed due to insufficient surrounding points"));
+        assert_eq!(
+            result.err(),
+            Some("Interpolation failed due to insufficient surrounding points")
+        );
     }
 
     #[test]
@@ -960,6 +995,9 @@ mod tests_interpolate_volatility_surface {
         let result = interpolate_volatility_surface(strike, time_to_expiry, &volatility_surface);
 
         assert!(result.is_err());
-        assert_eq!(result.err(), Some("Interpolation failed due to insufficient surrounding points"));
+        assert_eq!(
+            result.err(),
+            Some("Interpolation failed due to insufficient surrounding points")
+        );
     }
 }
