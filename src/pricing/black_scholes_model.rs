@@ -190,6 +190,7 @@ mod tests_black_scholes {
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
             dividend_yield: 0.0,
+            premium: 0.0,
             exotic_params: None,
         }
     }
@@ -207,6 +208,7 @@ mod tests_black_scholes {
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
             dividend_yield: 0.0,
+            premium: 0.0,
             exotic_params: None,
         }
     }
@@ -224,6 +226,7 @@ mod tests_black_scholes {
             underlying_symbol: "".to_string(),
             quantity: 0,
             dividend_yield: 0.0,
+            premium: 0.0,
             exotic_params: None,
         }
     }
@@ -293,6 +296,7 @@ mod tests_black_scholes {
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
             dividend_yield: 0.0,
+            premium: 0.0,
             exotic_params: None,
         };
         // assert_relative_eq!(option.expiration_date.get_years(), 1.0, epsilon = 0.00001);
@@ -344,6 +348,7 @@ mod tests_black_scholes {
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
             dividend_yield: 0.0,
+            premium: 0.0,
             exotic_params: None,
         };
         assert_relative_eq!(option.expiration_date.get_years(), 0.25, epsilon = 0.00001);

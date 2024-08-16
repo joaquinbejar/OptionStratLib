@@ -69,6 +69,7 @@ mod tests {
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
+            premium: 0.0,
             exotic_params: None,
         }
     }

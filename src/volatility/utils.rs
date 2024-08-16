@@ -483,6 +483,7 @@ mod tests_implied_volatility {
             0.05,
             OptionStyle::Call,
             0.0,
+            0.0,
             None,
         )
     }

@@ -6,6 +6,13 @@ use crate::pricing::binomial_model::{
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 
+#[derive(Clone, Default)]
+pub struct ExoticParams {
+    pub spot_prices: Option<Vec<f64>>, // Asian
+    pub spot_min: Option<f64>,         // Lookback
+    pub spot_max: Option<f64>,         // Lookback
+}
+
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct Options {
@@ -20,14 +27,8 @@ pub struct Options {
     pub risk_free_rate: f64,
     pub option_style: OptionStyle,
     pub dividend_yield: f64,
+    pub premium: f64, // fee paid if long or got if short
     pub exotic_params: Option<ExoticParams>,
-}
-
-#[derive(Clone, Default)]
-pub struct ExoticParams {
-    pub spot_prices: Option<Vec<f64>>, // Asian
-    pub spot_min: Option<f64>,         // Lookback
-    pub spot_max: Option<f64>,         // Lookback
 }
 
 impl Options {
@@ -44,6 +45,7 @@ impl Options {
         risk_free_rate: f64,
         option_style: OptionStyle,
         dividend_yield: f64,
+        premium: f64,
         exotic_params: Option<ExoticParams>,
     ) -> Self {
         Options {
@@ -58,6 +60,7 @@ impl Options {
             risk_free_rate,
             option_style,
             dividend_yield,
+            premium,
             exotic_params,
         }
     }
@@ -65,6 +68,7 @@ impl Options {
     pub fn time_to_expiration(&self) -> f64 {
         self.expiration_date.get_years()
     }
+
     pub fn is_long(&self) -> bool {
         matches!(self.side, Side::Long)
     }
@@ -199,6 +203,7 @@ mod tests_options {
             0.05,
             OptionStyle::Call,
             0.0,
+            0.0,
             None,
         )
     }
@@ -229,6 +234,7 @@ mod tests_options {
             0.05,
             OptionStyle::Call,
             0.01,
+            0.0,
             None,
         );
         assert!(option_with_datetime.time_to_expiration() >= 59.0 / 365.0);
@@ -253,6 +259,7 @@ mod tests_options {
             0.05,
             OptionStyle::Call,
             0.01,
+            0.0,
             None,
         );
         assert!(!short_option.is_long());
@@ -300,6 +307,7 @@ mod tests_options {
             0.05,
             OptionStyle::Put,
             0.01,
+            0.0,
             None,
         );
         let put_payoff = put_option.payoff();
@@ -319,6 +327,7 @@ mod tests_options {
             105.0,
             0.05,
             OptionStyle::Call,
+            0.0,
             0.0,
             None,
         );
@@ -345,6 +354,7 @@ mod tests_time_value {
             underlying_price,
             0.05,
             option_style,
+            0.0,
             0.0,
             None,
         )
@@ -432,6 +442,7 @@ mod tests_options_payoffs {
             0.05,
             option_style,
             0.01,
+            0.0,
             None,
         )
     }

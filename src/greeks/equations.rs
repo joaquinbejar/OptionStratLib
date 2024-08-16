@@ -181,6 +181,7 @@ mod tests_greeks_equations {
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: 0,
+            premium: 0.0,
             exotic_params: None,
         }
     }

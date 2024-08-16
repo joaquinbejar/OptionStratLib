@@ -138,6 +138,7 @@ fn main() {
             best_r,
             OptionStyle::Call,
             0.0,
+            0.0,
             None,
         );
         let theoretical_price = black_scholes(&option);
