@@ -11,11 +11,9 @@ use optionstratlib::volatility::utils::{
 fn main() {
     let returns = vec![0.01, 0.02, -0.01, 0.03, 0.00];
 
-    // Calcula la volatilidad constante
     let const_vol = constant_volatility(&returns);
     println!("Constant Volatility: {:.6}", const_vol);
 
-    // Calcula la volatilidad histórica con una ventana de tamaño 3
     let window_size = 3;
     let hist_vol = historical_volatility(&returns, window_size);
     println!(
@@ -23,19 +21,16 @@ fn main() {
         window_size, hist_vol
     );
 
-    // Calcula la volatilidad EWMA con un lambda de 0.94
     let lambda = 0.94;
     let ewma_vol = ewma_volatility(&returns, lambda);
     println!("EWMA Volatility (lambda {}): {:?}", lambda, ewma_vol);
 
-    // Calcula la volatilidad GARCH(1,1)
     let omega = 0.000001;
     let alpha = 0.1;
     let beta = 0.85;
     let garch_vol = garch_volatility(&returns, omega, alpha, beta);
     println!("GARCH(1,1) Volatility: {:?}", garch_vol);
 
-    // Simula la volatilidad usando el modelo de Heston
     let kappa = 0.5;
     let theta = 0.04;
     let xi = 0.1;
