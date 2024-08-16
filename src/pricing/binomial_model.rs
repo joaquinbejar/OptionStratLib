@@ -455,12 +455,10 @@ mod tests_generate_binomial_tree {
 
         let (_, option_tree) = generate_binomial_tree(&params);
 
-        // TODO: Check if the option tree is generated correctly at expiry for put option
         assert_relative_eq!(option_tree[3][0], 0.0, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][1], 0.0, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][2], 10.905, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][3], 29.277, epsilon = 0.001);
-        // TODO: Add more assertions to fully validate the option tree for put option
     }
 
     #[test]
