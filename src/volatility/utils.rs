@@ -564,7 +564,6 @@ mod tests_implied_volatility {
             0.05,
             OptionStyle::Call,
             0.0,
-            0.0,
             None,
         )
     }
@@ -1025,7 +1024,6 @@ mod tests_uncertain_volatility_bounds {
             0.05,  // risk-free rate
             OptionStyle::Call,
             0.0,  // dividend yield
-            0.0,  // premium
             None, // exotic params
         )
     }
@@ -1124,7 +1122,6 @@ mod tests_uncertain_volatility_bounds_side {
             0.05,  // risk-free rate
             option_style,
             0.0,  // dividend yield
-            0.0,  // premium
             None, // exotic params
         )
     }

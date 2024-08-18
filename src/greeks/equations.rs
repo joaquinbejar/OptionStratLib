@@ -9,6 +9,20 @@ use crate::model::option::Options;
 use crate::model::types::OptionStyle;
 
 #[allow(dead_code)]
+pub struct Greek {
+    pub delta: f64,
+    pub gamma: f64,
+    pub theta: f64,
+    pub vega: f64,
+    pub rho: f64,
+    pub rho_d: f64,
+}
+
+pub trait Greeks {
+    fn greeks(&self) -> Greek;
+}
+
+#[allow(dead_code)]
 pub fn delta(option: &Options) -> f64 {
     let d1 = d1(
         option.underlying_price,
@@ -181,7 +195,6 @@ mod tests_greeks_equations {
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: 0,
-            premium: 0.0,
             exotic_params: None,
         }
     }

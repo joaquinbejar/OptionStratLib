@@ -1,7 +1,6 @@
 use crate::constants::ZERO;
-use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega};
+use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use crate::pnl::utils::{pnl, pnl_at_expiration};
 use crate::pricing::binomial_model::{
     generate_binomial_tree, price_binomial, BinomialPricingParams,
 };
@@ -29,7 +28,6 @@ pub struct Options {
     pub risk_free_rate: f64,
     pub option_style: OptionStyle,
     pub dividend_yield: f64,
-    pub premium: f64, // (positive) fee paid if long or (negative) got if short
     pub exotic_params: Option<ExoticParams>,
 }
 
@@ -47,7 +45,6 @@ impl Options {
         risk_free_rate: f64,
         option_style: OptionStyle,
         dividend_yield: f64,
-        premium: f64,
         exotic_params: Option<ExoticParams>,
     ) -> Self {
         Options {
@@ -62,7 +59,6 @@ impl Options {
             risk_free_rate,
             option_style,
             dividend_yield,
-            premium,
             exotic_params,
         }
     }
@@ -185,13 +181,18 @@ impl Options {
 
         (option_price - intrinsic_value).max(ZERO)
     }
+}
 
-    pub fn pnl(&self, asset_price: f64) -> f64 {
-        pnl(self, asset_price)
-    }
-
-    pub fn pnl_at_expiration(&self) -> f64 {
-        pnl_at_expiration(self)
+impl Greeks for Options {
+    fn greeks(&self) -> Greek {
+        Greek {
+            delta: self.delta(),
+            gamma: self.gamma(),
+            theta: self.theta(),
+            vega: self.vega(),
+            rho: self.rho(),
+            rho_d: self.rho_d(),
+        }
     }
 }
 
@@ -212,7 +213,6 @@ mod tests_options {
             105.0,
             0.05,
             OptionStyle::Call,
-            0.0,
             0.0,
             None,
         )
@@ -244,7 +244,6 @@ mod tests_options {
             0.05,
             OptionStyle::Call,
             0.01,
-            0.0,
             None,
         );
         assert!(option_with_datetime.time_to_expiration() >= 59.0 / 365.0);
@@ -269,7 +268,6 @@ mod tests_options {
             0.05,
             OptionStyle::Call,
             0.01,
-            0.0,
             None,
         );
         assert!(!short_option.is_long());
@@ -317,7 +315,6 @@ mod tests_options {
             0.05,
             OptionStyle::Put,
             0.01,
-            0.0,
             None,
         );
         let put_payoff = put_option.payoff();
@@ -337,8 +334,7 @@ mod tests_options {
             105.0,
             0.05,
             OptionStyle::Call,
-            0.0,
-            0.0,
+            ZERO,
             None,
         );
 
@@ -364,7 +360,6 @@ mod tests_time_value {
             underlying_price,
             0.05,
             option_style,
-            0.0,
             0.0,
             None,
         )
@@ -452,7 +447,6 @@ mod tests_options_payoffs {
             0.05,
             option_style,
             0.01,
-            0.0,
             None,
         )
     }
@@ -524,7 +518,6 @@ mod tests_options_payoffs_with_quantity {
             0.05,
             option_style,
             0.01,
-            0.0,
             None,
         )
     }
@@ -603,184 +596,5 @@ mod tests_options_payoffs_with_quantity {
     fn test_intrinsic_value_with_quantity() {
         let option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 23);
         assert_eq!(option.intrinsic_value(110.0), 230.0); // (110 - 100) * 23
-    }
-}
-
-#[cfg(test)]
-mod tests_pnl_basic {
-    use super::*;
-
-    #[test]
-    fn test_pnl() {
-        let option = Options::new(
-            OptionType::European,
-            Side::Long,
-            "AAPL".to_string(),
-            100.0,
-            ExpirationDate::Days(30.0),
-            0.2,
-            1,
-            100.0,
-            0.05,
-            OptionStyle::Call,
-            0.01,
-            5.0, // premium
-            None,
-        );
-
-        // Test PnL when the asset price is above the strike price
-        assert_eq!(option.pnl(110.0), 5.0); // (110 - 100) - 5 = 5
-
-        // Test PnL when the asset price is below the strike price
-        assert_eq!(option.pnl(90.0), -5.0); // 0 - 5 = -5
-
-        // Test PnL when the asset price is equal to the strike price
-        assert_eq!(option.pnl(100.0), -5.0); // 0 - 5 = -5
-    }
-
-    #[test]
-    fn test_pnl_at_expiration() {
-        let option = Options::new(
-            OptionType::European,
-            Side::Long,
-            "AAPL".to_string(),
-            100.0,
-            ExpirationDate::Days(ZERO), // Expired
-            0.2,
-            1,
-            110.0, // Underlying price at expiration
-            0.05,
-            OptionStyle::Call,
-            0.01,
-            5.0, // premium
-            None,
-        );
-
-        assert_eq!(option.pnl_at_expiration(), 5.0); // (110 - 100) - 5 = 5
-    }
-
-    #[test]
-    fn test_pnl_short_option() {
-        let option = Options::new(
-            OptionType::European,
-            Side::Short,
-            "AAPL".to_string(),
-            100.0,
-            ExpirationDate::Days(30.0),
-            0.2,
-            1,
-            100.0,
-            0.05,
-            OptionStyle::Put,
-            0.01,
-            -5.0, // premium (received)
-            None,
-        );
-
-        // Test PnL when the asset price is above the strike price
-        assert_eq!(option.pnl(110.0), 5.0); // 0 + 5 = 5
-
-        // Test PnL when the asset price is below the strike price
-        assert_eq!(option.pnl(90.0), -5.0); // (100 - 90) - 5 = 5
-    }
-
-    #[test]
-    fn test_pnl_at_expiration_short_option() {
-        let option = Options::new(
-            OptionType::European,
-            Side::Short,
-            "AAPL".to_string(),
-            100.0,
-            ExpirationDate::Days(ZERO), // Expired
-            0.2,
-            1,
-            90.0, // Underlying price at expiration
-            0.05,
-            OptionStyle::Put,
-            0.01,
-            -5.0, // premium (received)
-            None,
-        );
-
-        assert_eq!(option.pnl_at_expiration(), -5.0); // (100 - 90) - 5 = 5
-    }
-}
-
-#[cfg(test)]
-mod tests_pnl_extended {
-    use super::*;
-
-    fn create_option(option_style: OptionStyle, side: Side, premium: f64) -> Options {
-        Options::new(
-            OptionType::European,
-            side,
-            "AAPL".to_string(),
-            100.0,
-            ExpirationDate::Days(30.0),
-            0.2,
-            1,
-            100.0,
-            0.05,
-            option_style,
-            0.01,
-            premium,
-            None,
-        )
-    }
-
-    #[test]
-    fn test_pnl_call_long() {
-        let option = create_option(OptionStyle::Call, Side::Long, 5.0);
-        assert_eq!(option.pnl(110.0), 5.0); // (110 - 100) - 5 = 5
-        assert_eq!(option.pnl(90.0), -5.0); // 0 - 5 = -5
-    }
-
-    #[test]
-    fn test_pnl_at_expiration_call_long() {
-        let mut option = create_option(OptionStyle::Call, Side::Long, 5.0);
-        option.underlying_price = 110.0;
-        assert_eq!(option.pnl_at_expiration(), 5.0); // (110 - 100) - 5 = 5
-    }
-
-    #[test]
-    fn test_pnl_call_short() {
-        let option = create_option(OptionStyle::Call, Side::Short, -5.0);
-        assert_eq!(option.pnl(110.0), -5.0); // -(110 - 100) + 5 = -5
-        assert_eq!(option.pnl(90.0), 5.0); // 0 + 5 = 5
-    }
-
-    #[test]
-    fn test_pnl_at_expiration_call_short() {
-        let mut option = create_option(OptionStyle::Call, Side::Short, -5.0);
-        option.underlying_price = 110.0;
-        assert_eq!(option.pnl_at_expiration(), -5.0); // -(110 - 100) + 5 = -5
-    }
-
-    #[test]
-    fn test_pnl_put_long() {
-        let option = create_option(OptionStyle::Put, Side::Long, 5.0);
-        assert_eq!(option.pnl(90.0), 5.0); // (100 - 90) - 5 = 5
-        assert_eq!(option.pnl(110.0), -5.0); // 0 - 5 = -5
-    }
-
-    #[test]
-    fn test_pnl_at_expiration_put_long() {
-        let mut option = create_option(OptionStyle::Put, Side::Long, 5.0);
-        option.underlying_price = 90.0;
-        assert_eq!(option.pnl_at_expiration(), 5.0); // (100 - 90) - 5 = 5
-    }
-
-    #[test]
-    fn test_pnl_put_short() {
-        let option = create_option(OptionStyle::Put, Side::Short, -5.0);
-        assert_eq!(option.pnl(90.0), -5.0); // -(100 - 90) + 5 = -5
-        assert_eq!(option.pnl(110.0), 5.0); // 0 + 5 = 5
-    }
-
-    #[test]
-    fn test_pnl_at_expiration_put_short() {
-        let mut option = create_option(OptionStyle::Put, Side::Short, -5.0);
-        option.underlying_price = 90.0;
-        assert_eq!(option.pnl_at_expiration(), -5.0); // -(100 - 90) + 5 = -5
     }
 }
