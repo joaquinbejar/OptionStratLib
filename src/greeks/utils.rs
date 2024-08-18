@@ -22,7 +22,7 @@ use std::f64::consts::PI;
 /// * Returns negative infinity if the `underlying_price` is less than the `strike_price`.
 /// * Returns zero if the `underlying_price` is equal to the `strike_price`.
 ///
-fn handle_zero_volatility(underlying_price: f64, strike_price: f64) -> f64 {
+fn handle_zero(underlying_price: f64, strike_price: f64) -> f64 {
     if underlying_price > strike_price {
         INFINITY_POSITIVE
     } else if underlying_price < strike_price {
@@ -56,8 +56,8 @@ pub(crate) fn d1(
     expiration_date: f64,
     implied_volatility: f64,
 ) -> f64 {
-    if implied_volatility == ZERO {
-        return handle_zero_volatility(underlying_price, strike_price);
+    if implied_volatility == ZERO || expiration_date == ZERO {
+        return handle_zero(underlying_price, strike_price);
     }
     ((underlying_price / strike_price).ln()
         + (risk_free_rate + implied_volatility * implied_volatility / 2.0) * expiration_date)
@@ -85,8 +85,8 @@ pub(crate) fn d2(
     expiration_date: f64,
     implied_volatility: f64,
 ) -> f64 {
-    if implied_volatility == ZERO {
-        return handle_zero_volatility(underlying_price, strike_price);
+    if implied_volatility == ZERO || expiration_date == ZERO {
+        return handle_zero(underlying_price, strike_price);
     }
     d1(
         underlying_price,
@@ -250,6 +250,17 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    fn test_d1_zero_t() {
+        let s = 100.0;
+        let k = 100.0;
+        let r = 0.05;
+        let t = 0.0;
+        let sigma = 0.01;
+        let computed_d1 = d1(s, k, r, t, sigma);
+        assert_relative_eq!(computed_d1, 0.0, epsilon = 0.001);
+    }
+
+    #[test]
     fn test_d2() {
         let s = 100.0;
         let k = 100.0;
@@ -304,6 +315,20 @@ mod tests_src_greeks_utils {
         let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
         let expected_d2 = expected_d1 - 0.2 * 1.0_f64.sqrt();
         assert_relative_eq!(expected_d1, 0.35000000, epsilon = 0.001);
+        assert_relative_eq!(computed_d2, 0.0, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_d2_zero_t() {
+        let s = 100.0;
+        let k = 100.0;
+        let r = 0.02;
+        let t = 0.0;
+        let sigma = 0.01;
+        let computed_d2 = d2(s, k, r, t, sigma);
+        let expected_d1 = d1(s, k, r, t, sigma);
+        let expected_d2 = expected_d1 - 0.2 * 1.0_f64.sqrt();
+        assert_relative_eq!(expected_d1, 0.0, epsilon = 0.001);
         assert_relative_eq!(computed_d2, 0.0, epsilon = 0.001);
     }
 
