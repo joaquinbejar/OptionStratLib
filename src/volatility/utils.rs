@@ -108,7 +108,7 @@ pub fn implied_volatility(
 
         iv -= price_diff / vega; // Newton-Raphson update step
 
-        if iv < 0.0 {
+        if iv < ZERO {
             iv = 1e-8; // Ensure volatility stays positive
         }
         let new_iv = iv - price_diff / vega;
@@ -316,14 +316,14 @@ mod tests_constant_volatility {
     fn test_constant_volatility_single_value() {
         let returns = [0.05];
         let result = constant_volatility(&returns);
-        assert_eq!(result, 0.0);
+        assert_eq!(result, ZERO);
     }
 
     #[test]
     fn test_constant_volatility_identical_values() {
         let returns = [0.02, 0.02, 0.02, 0.02];
         let result = constant_volatility(&returns);
-        assert_eq!(result, 0.0);
+        assert_eq!(result, ZERO);
     }
 
     #[test]
@@ -610,7 +610,7 @@ mod tests_implied_volatility {
         // Test with a very low market price
         let low_price = 0.01;
         let low_iv = implied_volatility(low_price, &mut option, 100);
-        assert!(low_iv > 0.0);
+        assert!(low_iv > ZERO);
 
         // Test with a very high market price
         let high_price = 10.0;
@@ -817,7 +817,7 @@ mod tests_simulate_heston_volatility {
 
         // Ensure all volatilities are non-negative
         for &vol in &result {
-            assert!(vol >= 0.0);
+            assert!(vol >= ZERO);
         }
     }
 
@@ -837,7 +837,7 @@ mod tests_simulate_heston_volatility {
 
         // Ensure all volatilities are non-negative
         for &vol in &result {
-            assert!(vol >= 0.0);
+            assert!(vol >= ZERO);
         }
     }
 
@@ -857,7 +857,7 @@ mod tests_simulate_heston_volatility {
 
         // Ensure all volatilities are non-negative
         for &vol in &result {
-            assert!(vol >= 0.0);
+            assert!(vol >= ZERO);
         }
     }
 
@@ -881,7 +881,7 @@ mod tests_simulate_heston_volatility {
 
         // Ensure all volatilities are non-negative
         for &vol in &result {
-            assert!(vol >= 0.0);
+            assert!(vol >= ZERO);
         }
     }
 
@@ -907,7 +907,7 @@ mod tests_simulate_heston_volatility {
 
         // Ensure all volatilities are non-negative
         for &vol in &result {
-            assert!(vol >= 0.0);
+            assert!(vol >= ZERO);
         }
     }
 }

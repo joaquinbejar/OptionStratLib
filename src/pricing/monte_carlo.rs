@@ -1,3 +1,4 @@
+use crate::constants::ZERO;
 use crate::model::option::Options;
 use crate::pricing::utils::wiener_increment;
 
@@ -42,7 +43,7 @@ fn monte_carlo_option_pricing(
             st *= 1.0 + option.risk_free_rate * dt + option.implied_volatility * w;
         }
         // Calculate the payoff for a call option
-        let payoff = f64::max(st - option.strike_price, 0.0);
+        let payoff = f64::max(st - option.strike_price, ZERO);
         payoff_sum += payoff;
     }
     // Average value of the payoffs discounted to present value

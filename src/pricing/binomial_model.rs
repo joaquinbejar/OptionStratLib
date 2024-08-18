@@ -1,3 +1,4 @@
+use crate::constants::ZERO;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::{
@@ -86,10 +87,10 @@ pub fn price_binomial(params: BinomialPricingParams) -> f64 {
         spot_max: None,
     };
 
-    if params.expiry == 0.0 {
+    if params.expiry == ZERO {
         return params.option_type.payoff(&info);
     }
-    if params.volatility == 0.0 {
+    if params.volatility == ZERO {
         return calculate_discounted_payoff(params);
     }
 
@@ -239,9 +240,9 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
 #[cfg(test)]
 mod tests_price_binomial {
     use super::*;
+    use crate::constants::ZERO;
     use crate::model::types::OptionType;
     use approx::assert_relative_eq;
-    use crate::constants::ZERO;
 
     #[test]
     fn test_european_call_option() {

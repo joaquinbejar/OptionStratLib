@@ -1,6 +1,6 @@
+use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use chrono::{DateTime, Utc};
-use crate::constants::ZERO;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -364,7 +364,7 @@ mod tests_payoff {
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 0.0);
+        assert_eq!(option.payoff(&info), ZERO);
     }
 
     #[test]
@@ -454,7 +454,7 @@ mod tests_expiration_date {
         assert_eq!(expiration.get_years(), 0.5);
 
         let expiration = ExpirationDate::Days(ZERO);
-        assert_eq!(expiration.get_years(), 0.0);
+        assert_eq!(expiration.get_years(), ZERO);
     }
 
     #[test]
@@ -472,7 +472,7 @@ mod tests_expiration_date {
         // Test for a date in the past (should return a negative value)
         let one_year_past = Utc::now() - Duration::days(365);
         let expiration = ExpirationDate::DateTime(one_year_past);
-        assert!(expiration.get_years() < 0.0);
+        assert!(expiration.get_years() < ZERO);
     }
 
     #[test]

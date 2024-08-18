@@ -348,9 +348,9 @@ mod tests_utils {
 #[cfg(test)]
 mod tests_probability_keep_under_strike {
     use super::*;
+    use crate::constants::ZERO;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
     use approx::assert_relative_eq;
-    use crate::constants::ZERO;
 
     #[test]
     fn test_probability_keep_under_strike_with_given_strike() {
@@ -450,7 +450,7 @@ mod tests_probability_keep_under_strike {
         let strike = None;
         let probability = probability_keep_under_strike(option, strike);
         assert!(
-            probability > 0.0 && probability < 1.0,
+            probability > ZERO && probability < 1.0,
             "Probability should still be valid even with high volatility"
         );
     }

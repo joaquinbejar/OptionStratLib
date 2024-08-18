@@ -280,14 +280,14 @@ mod tests_options {
     fn test_calculate_price_binomial() {
         let option = create_sample_option();
         let price = option.calculate_price_binomial(100);
-        assert!(price > 0.0);
+        assert!(price > ZERO);
     }
 
     #[test]
     fn test_calculate_price_binomial_tree() {
         let option = create_sample_option();
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5);
-        assert!(price > 0.0);
+        assert!(price > ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
     }
@@ -296,7 +296,7 @@ mod tests_options {
     fn test_calculate_price_black_scholes() {
         let option = create_sample_option();
         let price = option.calculate_price_black_scholes();
-        assert!(price > 0.0);
+        assert!(price > ZERO);
     }
 
     #[test]
@@ -343,7 +343,7 @@ mod tests_options {
         );
 
         let time_value = option.time_value();
-        assert!(time_value > 0.0);
+        assert!(time_value > ZERO);
         assert!(time_value < option.calculate_price_black_scholes());
     }
 }
@@ -374,7 +374,7 @@ mod tests_time_value {
     fn test_calculate_time_value_long_call() {
         let option = create_option(Side::Long, OptionStyle::Call, 105.0);
         let time_value = option.time_value();
-        assert!(time_value > 0.0);
+        assert!(time_value > ZERO);
         assert!(time_value < option.calculate_price_black_scholes());
     }
 
@@ -382,7 +382,7 @@ mod tests_time_value {
     // fn test_calculate_time_value_short_call() {
     //     let option = create_option(Side::Short, OptionStyle::Call, 105.0);
     //     let time_value = option.time_value();
-    //     assert!(time_value > 0.0);
+    //     assert!(time_value > ZERO);
     //     assert!(time_value < option.calculate_price_black_scholes().abs());
     // }
 
@@ -390,7 +390,7 @@ mod tests_time_value {
     fn test_calculate_time_value_long_put() {
         let option = create_option(Side::Long, OptionStyle::Put, 95.0);
         let time_value = option.time_value();
-        assert!(time_value > 0.0);
+        assert!(time_value > ZERO);
         assert!(time_value < option.calculate_price_black_scholes());
     }
 
@@ -398,7 +398,7 @@ mod tests_time_value {
     // fn test_calculate_time_value_short_put() {
     //     let option = create_option(Side::Short, OptionStyle::Put, 95.0);
     //     let time_value = option.time_value();
-    //     assert!(time_value > 0.0);
+    //     assert!(time_value > ZERO);
     //     assert!(time_value < option.calculate_price_black_scholes().abs());
     // }
 
@@ -410,8 +410,8 @@ mod tests_time_value {
         let call_time_value = call.time_value();
         let put_time_value = put.time_value();
 
-        assert!(call_time_value > 0.0);
-        assert!(put_time_value > 0.0);
+        assert!(call_time_value > ZERO);
+        assert!(put_time_value > ZERO);
         assert_eq!(call_time_value, call.calculate_price_black_scholes());
         assert_eq!(put_time_value, put.calculate_price_black_scholes());
     }
@@ -424,8 +424,8 @@ mod tests_time_value {
     //     let call_time_value = call.time_value();
     //     let put_time_value = put.time_value();
     //
-    //     assert!(call_time_value > 0.0);
-    //     // assert!(put_time_value > 0.0);
+    //     assert!(call_time_value > ZERO);
+    //     // assert!(put_time_value > ZERO);
     //     assert!(call_time_value < call.calculate_price_black_scholes() - 50.0);
     //     assert!(put_time_value < put.calculate_price_black_scholes() - 50.0);
     // }
@@ -465,7 +465,7 @@ mod tests_options_payoffs {
 
         let call_option_otm = create_sample_option(OptionStyle::Call, Side::Long, 95.0);
         let call_payoff_otm = call_option_otm.payoff();
-        assert_eq!(call_payoff_otm, 0.0); // max(95 - 100, 0) = 0
+        assert_eq!(call_payoff_otm, ZERO); // max(95 - 100, 0) = 0
     }
 
     #[test]
@@ -476,7 +476,7 @@ mod tests_options_payoffs {
 
         let call_option_otm = create_sample_option(OptionStyle::Call, Side::Short, 95.0);
         let call_payoff_otm = call_option_otm.payoff();
-        assert_eq!(call_payoff_otm, 0.0); // -max(95 - 100, 0) = 0
+        assert_eq!(call_payoff_otm, ZERO); // -max(95 - 100, 0) = 0
     }
 
     #[test]
@@ -487,7 +487,7 @@ mod tests_options_payoffs {
 
         let put_option_otm = create_sample_option(OptionStyle::Put, Side::Long, 105.0);
         let put_payoff_otm = put_option_otm.payoff();
-        assert_eq!(put_payoff_otm, 0.0); // max(100 - 105, 0) = 0
+        assert_eq!(put_payoff_otm, ZERO); // max(100 - 105, 0) = 0
     }
 
     #[test]
@@ -498,7 +498,7 @@ mod tests_options_payoffs {
 
         let put_option_otm = create_sample_option(OptionStyle::Put, Side::Short, 105.0);
         let put_payoff_otm = put_option_otm.payoff();
-        assert_eq!(put_payoff_otm, 0.0); // -max(100 - 105, 0) = 0
+        assert_eq!(put_payoff_otm, ZERO); // -max(100 - 105, 0) = 0
     }
 }
 
@@ -535,7 +535,7 @@ mod tests_options_payoffs_with_quantity {
         assert_eq!(option.payoff(), 50.0);
 
         let option_otm = create_sample_option(OptionStyle::Call, Side::Long, 95.0, 4);
-        assert_eq!(option_otm.payoff(), 0.0);
+        assert_eq!(option_otm.payoff(), ZERO);
     }
 
     #[test]
@@ -544,7 +544,7 @@ mod tests_options_payoffs_with_quantity {
         assert_eq!(option.payoff(), -15.0);
 
         let option_otm = create_sample_option(OptionStyle::Call, Side::Short, 95.0, 7);
-        assert_eq!(option_otm.payoff(), 0.0);
+        assert_eq!(option_otm.payoff(), ZERO);
     }
 
     #[test]
@@ -553,7 +553,7 @@ mod tests_options_payoffs_with_quantity {
         assert_eq!(option.payoff(), 10.0);
 
         let option_otm = create_sample_option(OptionStyle::Put, Side::Long, 105.0, 7);
-        assert_eq!(option_otm.payoff(), 0.0);
+        assert_eq!(option_otm.payoff(), ZERO);
     }
 
     #[test]
@@ -562,7 +562,7 @@ mod tests_options_payoffs_with_quantity {
         assert_eq!(option.payoff(), -15.0);
 
         let option_otm = create_sample_option(OptionStyle::Put, Side::Short, 105.0, 3);
-        assert_eq!(option_otm.payoff(), 0.0);
+        assert_eq!(option_otm.payoff(), ZERO);
     }
 
     #[test]
@@ -575,28 +575,28 @@ mod tests_options_payoffs_with_quantity {
     fn test_intrinsic_value_call_long() {
         let option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 11);
         assert_eq!(option.intrinsic_value(105.0), 55.0);
-        assert_eq!(option.intrinsic_value(95.0), 0.0);
+        assert_eq!(option.intrinsic_value(95.0), ZERO);
     }
 
     #[test]
     fn test_intrinsic_value_call_short() {
         let option = create_sample_option(OptionStyle::Call, Side::Short, 100.0, 13);
         assert_eq!(option.intrinsic_value(105.0), -65.0);
-        assert_eq!(option.intrinsic_value(95.0), 0.0);
+        assert_eq!(option.intrinsic_value(95.0), ZERO);
     }
 
     #[test]
     fn test_intrinsic_value_put_long() {
         let option = create_sample_option(OptionStyle::Put, Side::Long, 100.0, 17);
         assert_eq!(option.intrinsic_value(95.0), 85.0);
-        assert_eq!(option.intrinsic_value(105.0), 0.0);
+        assert_eq!(option.intrinsic_value(105.0), ZERO);
     }
 
     #[test]
     fn test_intrinsic_value_put_short() {
         let option = create_sample_option(OptionStyle::Put, Side::Short, 100.0, 19);
         assert_eq!(option.intrinsic_value(95.0), -95.0);
-        assert_eq!(option.intrinsic_value(105.0), 0.0);
+        assert_eq!(option.intrinsic_value(105.0), ZERO);
     }
 
     #[test]
