@@ -1,5 +1,6 @@
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use chrono::{DateTime, Utc};
+use crate::constants::ZERO;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -226,7 +227,7 @@ impl Payoff for OptionType {
             },
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
             OptionType::Chooser { .. } => {
-                ((info.spot - info.strike).max(0.0)).max((info.strike - info.spot).max(0.0))
+                ((info.spot - info.strike).max(ZERO)).max((info.strike - info.spot).max(ZERO))
             }
             OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }
@@ -234,8 +235,8 @@ impl Payoff for OptionType {
             | OptionType::Exchange { .. } => standard_payoff(info),
             OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
             OptionType::Power { exponent } => match info.style {
-                OptionStyle::Call => (info.spot.powf(*exponent) - info.strike).max(0.0),
-                OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(0.0),
+                OptionStyle::Call => (info.spot.powf(*exponent) - info.strike).max(ZERO),
+                OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(ZERO),
             },
         }
     }
@@ -253,8 +254,8 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
         _ => return 0.0,
     };
     match info.style {
-        OptionStyle::Call => (average - info.strike).max(0.0),
-        OptionStyle::Put => (info.strike - average).max(0.0),
+        OptionStyle::Call => (average - info.strike).max(ZERO),
+        OptionStyle::Put => (info.strike - average).max(ZERO),
     }
 }
 
@@ -315,8 +316,8 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
         OptionStyle::Put => info.spot_max,
     };
     match info.style {
-        OptionStyle::Call => info.spot - extremum.unwrap_or(0.0),
-        OptionStyle::Put => extremum.unwrap_or(0.0) - info.spot,
+        OptionStyle::Call => info.spot - extremum.unwrap_or(ZERO),
+        OptionStyle::Put => extremum.unwrap_or(ZERO) - info.spot,
     }
 }
 
@@ -452,7 +453,7 @@ mod tests_expiration_date {
         let expiration = ExpirationDate::Days(182.5);
         assert_eq!(expiration.get_years(), 0.5);
 
-        let expiration = ExpirationDate::Days(0.0);
+        let expiration = ExpirationDate::Days(ZERO);
         assert_eq!(expiration.get_years(), 0.0);
     }
 

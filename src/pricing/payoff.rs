@@ -1,3 +1,4 @@
+use crate::constants::ZERO;
 use crate::model::types::{OptionStyle, Side};
 
 pub trait Payoff {
@@ -60,8 +61,8 @@ impl PayoffInfo {
 /// - For a put option: Max(strike price - spot price, 0)
 pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
     let payoff = match info.style {
-        OptionStyle::Call => (info.spot - info.strike).max(0.0),
-        OptionStyle::Put => (info.strike - info.spot).max(0.0),
+        OptionStyle::Call => (info.spot - info.strike).max(ZERO),
+        OptionStyle::Put => (info.strike - info.spot).max(ZERO),
     };
     match info.side {
         Side::Long => payoff,

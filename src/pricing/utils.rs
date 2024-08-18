@@ -350,6 +350,7 @@ mod tests_probability_keep_under_strike {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
     use approx::assert_relative_eq;
+    use crate::constants::ZERO;
 
     #[test]
     fn test_probability_keep_under_strike_with_given_strike() {
@@ -465,7 +466,7 @@ mod tests_probability_keep_under_strike {
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
             premium: 0.0,
-            expiration_date: ExpirationDate::Days(0.0),
+            expiration_date: ExpirationDate::Days(ZERO),
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             quantity: 0,

@@ -241,6 +241,7 @@ mod tests_price_binomial {
     use super::*;
     use crate::model::types::OptionType;
     use approx::assert_relative_eq;
+    use crate::constants::ZERO;
 
     #[test]
     fn test_european_call_option() {
@@ -340,7 +341,7 @@ mod tests_price_binomial {
         let price = price_binomial(params);
 
         let exact_price =
-            (asset * (int_rate * expiry).exp() - strike).max(0.0) * (-int_rate * expiry).exp();
+            (asset * (int_rate * expiry).exp() - strike).max(ZERO) * (-int_rate * expiry).exp();
 
         assert_relative_eq!(price, exact_price, epsilon = 1e-10);
     }

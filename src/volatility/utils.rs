@@ -4,7 +4,7 @@
    Date: 15/8/24
 ******************************************************************************/
 
-use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE};
+use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
 use crate::model::option::Options;
 use std::f64;
 
@@ -171,7 +171,7 @@ pub fn simulate_heston_volatility(
     for _ in 1..steps {
         let dw = rand::random::<f64>() * dt.sqrt();
         v += kappa * (theta - v) * dt + xi * v.sqrt() * dw;
-        v = v.max(0.0); // Ensure variance doesn't become negative
+        v = v.max(ZERO); // Ensure variance doesn't become negative
         volatilities.push(v.sqrt());
     }
     volatilities

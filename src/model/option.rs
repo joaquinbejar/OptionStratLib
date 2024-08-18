@@ -1,3 +1,4 @@
+use crate::constants::ZERO;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{pnl, pnl_at_expiration};
@@ -182,7 +183,7 @@ impl Options {
         let option_price = self.calculate_price_black_scholes().abs();
         let intrinsic_value = self.intrinsic_value(self.underlying_price);
 
-        (option_price - intrinsic_value).max(0.0)
+        (option_price - intrinsic_value).max(ZERO)
     }
 
     pub fn pnl(&self, asset_price: f64) -> f64 {
@@ -644,7 +645,7 @@ mod tests_pnl_basic {
             Side::Long,
             "AAPL".to_string(),
             100.0,
-            ExpirationDate::Days(0.0), // Expired
+            ExpirationDate::Days(ZERO), // Expired
             0.2,
             1,
             110.0, // Underlying price at expiration
@@ -690,7 +691,7 @@ mod tests_pnl_basic {
             Side::Short,
             "AAPL".to_string(),
             100.0,
-            ExpirationDate::Days(0.0), // Expired
+            ExpirationDate::Days(ZERO), // Expired
             0.2,
             1,
             90.0, // Underlying price at expiration
