@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub struct Point {
     pub strike: f64,
@@ -7,6 +8,7 @@ pub struct Point {
     pub value: f64,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Surface {
     pub points: Vec<Point>,
@@ -14,6 +16,7 @@ pub struct Surface {
     pub maturity_range: (f64, f64),
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum InterpolationType {
     Linear,
@@ -22,12 +25,14 @@ pub enum InterpolationType {
     Spline,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum SurfaceConstructionMethod {
     FromData,
     Parametric,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum SurfaceType {
     Volatility,
@@ -37,6 +42,7 @@ pub enum SurfaceType {
     // Other types as needed
 }
 
+#[allow(dead_code)]
 // Configuration for surface building
 pub struct SurfaceConfig {
     pub surface_type: SurfaceType,
@@ -45,6 +51,7 @@ pub struct SurfaceConfig {
     pub extra_params: HashMap<String, f64>,
 }
 
+#[allow(dead_code)]
 impl Surface {
     pub fn new(points: Vec<Point>) -> Self {
         let strike_range = Surface::calculate_range(points.iter().map(|p| p.strike));
@@ -77,7 +84,7 @@ impl Surface {
     }
 }
 
-// Surface analysis result
+#[allow(dead_code)]
 pub struct SurfaceAnalysisResult {
     pub mean: f64,
     pub median: f64,
@@ -86,8 +93,8 @@ pub struct SurfaceAnalysisResult {
     pub kurtosis: f64,
 }
 
-// Custom error for surface operations
-#[derive(Debug)]
+#[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 pub enum SurfaceError {
     InterpolationError(String),
     ConstructionError(String),

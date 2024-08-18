@@ -226,6 +226,7 @@ pub(crate) fn wiener_increment(dt: f64) -> f64 {
     normal.sample(&mut rng) * dt.sqrt()
 }
 
+#[allow(dead_code)]
 /// Calculates the probability that the option will remain under the strike price.
 ///
 /// # Parameters

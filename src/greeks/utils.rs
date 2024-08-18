@@ -286,7 +286,6 @@ mod tests_src_greeks_utils {
         let computed_d2 = d2(s, k, r, t, sigma);
         let computed_d1 = d1(s, k, r, t, sigma);
         assert_relative_eq!(computed_d1, 0.15800237, epsilon = 0.001);
-        let expected_d2 = computed_d1 - 0.2 * 1.0_f64.sqrt();
         assert_relative_eq!(computed_d2, -0.124840, epsilon = 0.001);
     }
 
@@ -300,7 +299,6 @@ mod tests_src_greeks_utils {
         let computed_d2 = d2(s, k, r, t, sigma);
         let computed_d1 = d1(s, k, r, t, sigma);
         assert_relative_eq!(computed_d1, 1.1064664, epsilon = 0.001);
-        let expected_d2 = computed_d1 - 0.2 * 1.0_f64.sqrt();
         assert_relative_eq!(computed_d2, 0.9064664, epsilon = 0.001);
     }
 
@@ -313,7 +311,6 @@ mod tests_src_greeks_utils {
         let sigma = 0.0;
         let computed_d2 = d2(s, k, r, t, sigma);
         let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
-        let expected_d2 = expected_d1 - 0.2 * 1.0_f64.sqrt();
         assert_relative_eq!(expected_d1, 0.35000000, epsilon = 0.001);
         assert_relative_eq!(computed_d2, 0.0, epsilon = 0.001);
     }
@@ -327,7 +324,6 @@ mod tests_src_greeks_utils {
         let sigma = 0.01;
         let computed_d2 = d2(s, k, r, t, sigma);
         let expected_d1 = d1(s, k, r, t, sigma);
-        let expected_d2 = expected_d1 - 0.2 * 1.0_f64.sqrt();
         assert_relative_eq!(expected_d1, 0.0, epsilon = 0.001);
         assert_relative_eq!(computed_d2, 0.0, epsilon = 0.001);
     }
