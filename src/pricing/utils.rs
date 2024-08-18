@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 5/8/24
 ******************************************************************************/
+use crate::greeks::utils::{big_n, d2};
+use crate::model::option::Options;
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
@@ -224,6 +226,30 @@ pub(crate) fn wiener_increment(dt: f64) -> f64 {
     normal.sample(&mut rng) * dt.sqrt()
 }
 
+/// Calculates the probability that the option will remain under the strike price.
+///
+/// # Parameters
+/// - `option`: An `Options` struct that contains various attributes necessary for the calculation,
+///   such as underlying price, strike price, risk-free rate, expiration date, and implied volatility.
+/// - `strike`: An optional `f64` value representing the strike price. If `None` is provided, the function
+///   uses the `strike_price` from the `Options` struct.
+///
+/// # Returns
+/// A `f64` value representing the calculated probability.
+pub fn probability_keep_under_strike(option: Options, strike: Option<f64>) -> f64 {
+    let strike_price = match strike {
+        Some(strike) => strike,
+        None => option.strike_price,
+    };
+    big_n(-d2(
+        option.underlying_price,
+        strike_price,
+        option.risk_free_rate,
+        option.expiration_date.get_years(),
+        option.implied_volatility,
+    ))
+}
+
 #[cfg(test)]
 mod tests_utils {
     use super::*;
@@ -315,6 +341,141 @@ mod tests_utils {
             "Expected {}, got {}",
             expected_discount_factor,
             discount_factor
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_probability_keep_under_strike {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn test_probability_keep_under_strike_with_given_strike() {
+        let option = Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: 100.0,
+            strike_price: 100.0,
+            risk_free_rate: 0.0,
+            option_style: OptionStyle::Call,
+            dividend_yield: 0.0,
+            premium: 10.0,
+            expiration_date: ExpirationDate::Days(365.0),
+            implied_volatility: 0.0,
+            underlying_symbol: "".to_string(),
+            quantity: 1,
+            exotic_params: None,
+        };
+        let strike = Some(100.0);
+        let probability = probability_keep_under_strike(option, strike);
+        println!("{:?} {}", strike, probability);
+        assert!(
+            (0.0..=1.0).contains(&probability),
+            "Probability should be between 0 and 1"
+        );
+        assert_relative_eq!(probability, 0.5, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_probability_keep_under_strike_with_default_strike() {
+        let option = Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: 100.0,
+            strike_price: 110.0,
+            risk_free_rate: 0.05,
+            option_style: OptionStyle::Call,
+            dividend_yield: 0.0,
+            premium: 0.0,
+            expiration_date: ExpirationDate::Days(365.0),
+            implied_volatility: 0.2,
+            underlying_symbol: "".to_string(),
+            quantity: 0,
+            exotic_params: None,
+        };
+        let strike = None;
+        let probability = probability_keep_under_strike(option, strike);
+        assert!(
+            (0.0..=1.0).contains(&probability),
+            "Probability should be between 0 and 1"
+        );
+        // Aquí también podrías comparar `probability` con un valor esperado si tienes uno.
+    }
+
+    #[test]
+    fn test_probability_keep_under_strike_zero_volatility() {
+        let option = Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: 100.0,
+            strike_price: 100.0,
+            risk_free_rate: 0.05,
+            option_style: OptionStyle::Call,
+            dividend_yield: 0.0,
+            premium: 0.0,
+            expiration_date: ExpirationDate::Days(365.0),
+            implied_volatility: 0.0, // Sin volatilidad
+            underlying_symbol: "".to_string(),
+            quantity: 0,
+            exotic_params: None,
+        };
+        let strike = None;
+        let probability = probability_keep_under_strike(option, strike);
+        assert_eq!(
+            probability, 0.5,
+            "With zero volatility, the probability should be 0.5"
+        );
+    }
+
+    #[test]
+    fn test_probability_keep_under_strike_high_volatility() {
+        let option = Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: 100.0,
+            strike_price: 110.0,
+            risk_free_rate: 0.05,
+            option_style: OptionStyle::Call,
+            dividend_yield: 0.0,
+            premium: 0.0,
+            expiration_date: ExpirationDate::Days(365.0),
+            implied_volatility: 5.0, // Alta volatilidad
+            underlying_symbol: "".to_string(),
+            quantity: 0,
+            exotic_params: None,
+        };
+        let strike = None;
+        let probability = probability_keep_under_strike(option, strike);
+        assert!(
+            probability > 0.0 && probability < 1.0,
+            "Probability should still be valid even with high volatility"
+        );
+    }
+
+    #[test]
+    fn test_probability_keep_under_strike_expired_option() {
+        let option = Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: 100.0,
+            strike_price: 110.0,
+            risk_free_rate: 0.05,
+            option_style: OptionStyle::Call,
+            dividend_yield: 0.0,
+            premium: 0.0,
+            expiration_date: ExpirationDate::Days(0.0),
+            implied_volatility: 0.2,
+            underlying_symbol: "".to_string(),
+            quantity: 0,
+            exotic_params: None,
+        };
+        let strike = None;
+        let probability = probability_keep_under_strike(option, strike);
+        assert_eq!(
+            probability, 1.0,
+            "Expired option should have zero probability of being ITM"
         );
     }
 }

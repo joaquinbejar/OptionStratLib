@@ -13,3 +13,7 @@ pub(crate) const TOLERANCE: f64 = 1e-8;
 
 pub(crate) const MIN_VOLATILITY: f64 = 1e-8;
 pub(crate) const MAX_VOLATILITY: f64 = 100.0; // 10000%
+
+pub(crate) const ZERO: f64 = 0.0;
+pub(crate) const INFINITY_POSITIVE: f64 = f64::INFINITY;
+pub(crate) const INFINITY_NEGATIVE: f64 = f64::NEG_INFINITY;

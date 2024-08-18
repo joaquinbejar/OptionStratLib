@@ -109,13 +109,11 @@ impl Options {
             option_style: &self.option_style,
             side: &self.side,
         };
-
         let (asset_tree, option_tree) = generate_binomial_tree(&params);
         let price = match self.side {
             Side::Long => option_tree[0][0],
             Side::Short => -option_tree[0][0],
         };
-
         (price, asset_tree, option_tree)
     }
 

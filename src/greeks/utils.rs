@@ -4,9 +4,33 @@
    Date: 11/8/24
 ******************************************************************************/
 
+use crate::constants::{INFINITY_NEGATIVE, INFINITY_POSITIVE, ZERO};
 use crate::model::option::Options;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
+
+/// Evaluates the option payoff based on comparative values of the underlying price and strike price.
+///
+/// # Arguments
+///
+/// * `underlying_price` - The current price of the underlying asset.
+/// * `strike_price` - The strike price of the option.
+///
+/// # Returns
+///
+/// * Returns positive infinity if the `underlying_price` is greater than the `strike_price`.
+/// * Returns negative infinity if the `underlying_price` is less than the `strike_price`.
+/// * Returns zero if the `underlying_price` is equal to the `strike_price`.
+///
+fn handle_zero_volatility(underlying_price: f64, strike_price: f64) -> f64 {
+    if underlying_price > strike_price {
+        INFINITY_POSITIVE
+    } else if underlying_price < strike_price {
+        INFINITY_NEGATIVE
+    } else {
+        ZERO
+    }
+}
 
 /// Calculates the d1 component used in the Black-Scholes option pricing model.
 ///
@@ -32,6 +56,9 @@ pub(crate) fn d1(
     expiration_date: f64,
     implied_volatility: f64,
 ) -> f64 {
+    if implied_volatility == ZERO {
+        return handle_zero_volatility(underlying_price, strike_price);
+    }
     ((underlying_price / strike_price).ln()
         + (risk_free_rate + implied_volatility * implied_volatility / 2.0) * expiration_date)
         / (implied_volatility * expiration_date.sqrt())
@@ -58,6 +85,9 @@ pub(crate) fn d2(
     expiration_date: f64,
     implied_volatility: f64,
 ) -> f64 {
+    if implied_volatility == ZERO {
+        return handle_zero_volatility(underlying_price, strike_price);
+    }
     d1(
         underlying_price,
         strike_price,
@@ -189,6 +219,7 @@ mod tests_calculate_d_values {
 #[cfg(test)]
 mod tests_src_greeks_utils {
     use super::*;
+    use approx::assert_relative_eq;
     use statrs::distribution::ContinuousCDF;
     use statrs::distribution::Normal;
 
@@ -208,6 +239,17 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    fn test_d1_zero_sigma() {
+        let s = 100.0;
+        let k = 100.0;
+        let r = 0.05;
+        let t = 1.0;
+        let sigma = 0.0;
+        let computed_d1 = d1(s, k, r, t, sigma);
+        assert_relative_eq!(computed_d1, 0.0, epsilon = 0.001);
+    }
+
+    #[test]
     fn test_d2() {
         let s = 100.0;
         let k = 100.0;
@@ -221,6 +263,48 @@ mod tests_src_greeks_utils {
             (computed_d2 - expected_d2).abs() < 1e-10,
             "d2 function failed"
         );
+    }
+
+    #[test]
+    fn test_d2_bis_i() {
+        let s = 100.0;
+        let k = 110.0;
+        let r = 0.05;
+        let t = 2.0;
+        let sigma = 0.2;
+        let computed_d2 = d2(s, k, r, t, sigma);
+        let computed_d1 = d1(s, k, r, t, sigma);
+        assert_relative_eq!(computed_d1, 0.15800237, epsilon = 0.001);
+        let expected_d2 = computed_d1 - 0.2 * 1.0_f64.sqrt();
+        assert_relative_eq!(computed_d2, -0.124840, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_d2_bis_ii() {
+        let s = 100.0;
+        let k = 95.0;
+        let r = 0.15;
+        let t = 1.0;
+        let sigma = 0.2;
+        let computed_d2 = d2(s, k, r, t, sigma);
+        let computed_d1 = d1(s, k, r, t, sigma);
+        assert_relative_eq!(computed_d1, 1.1064664, epsilon = 0.001);
+        let expected_d2 = computed_d1 - 0.2 * 1.0_f64.sqrt();
+        assert_relative_eq!(computed_d2, 0.9064664, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_d2_zero_sigma() {
+        let s = 100.0;
+        let k = 100.0;
+        let r = 0.0;
+        let t = 1.0;
+        let sigma = 0.0;
+        let computed_d2 = d2(s, k, r, t, sigma);
+        let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
+        let expected_d2 = expected_d1 - 0.2 * 1.0_f64.sqrt();
+        assert_relative_eq!(expected_d1, 0.35000000, epsilon = 0.001);
+        assert_relative_eq!(computed_d2, 0.0, epsilon = 0.001);
     }
 
     #[test]
