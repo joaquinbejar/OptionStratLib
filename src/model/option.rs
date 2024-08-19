@@ -6,6 +6,7 @@ use crate::pricing::binomial_model::{
 };
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo};
+use crate::pricing::telegraph::telegraph;
 
 #[derive(Clone, Default)]
 pub struct ExoticParams {
@@ -118,9 +119,27 @@ impl Options {
         black_scholes(self)
     }
 
+    pub fn calculate_price_telegraph(&self, no_steps: usize) -> f64 {
+        telegraph(self, no_steps)
+    }
+
     pub fn payoff(&self) -> f64 {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,
+            strike: self.strike_price,
+            style: self.option_style.clone(),
+            side: self.side.clone(),
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        self.option_type.payoff(&payoff_info) * self.quantity as f64
+    }
+
+    pub fn payoff_at_price(&self, price: f64) -> f64 {
+        // TODO: test it
+        let payoff_info = PayoffInfo {
+            spot: price,
             strike: self.strike_price,
             style: self.option_style.clone(),
             side: self.side.clone(),
