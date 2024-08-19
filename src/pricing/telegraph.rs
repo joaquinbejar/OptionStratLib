@@ -6,7 +6,7 @@
 
 use crate::constants::ZERO;
 use crate::model::option::Options;
-use rand::Rng;
+use rand::random;
 
 #[derive(Clone)]
 pub struct TelegraphProcess {
@@ -33,7 +33,7 @@ impl TelegraphProcess {
         };
         let probability = 1.0 - (-lambda * dt).exp();
 
-        if rand::thread_rng().gen::<f64>() < probability {
+        if random::<f64>() < probability {
             self.current_state *= -1;
         }
 
@@ -69,6 +69,5 @@ pub fn telegraph(option: &Options, no_steps: usize) -> f64 {
     let payoff = option.payoff_at_price(price);
     payoff * (-option.risk_free_rate * option.time_to_expiration()).exp()
 }
-
 
 // TODO: Unit Tests
