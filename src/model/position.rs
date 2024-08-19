@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 18/8/24
 ******************************************************************************/
+use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, Side};
@@ -51,11 +52,13 @@ pub struct Position {
 impl Position {
     pub fn new(
         option: Options,
-        premium: f64, // TODO: no allow negative values
+        premium: f64,
         date: DateTime<Utc>,
         open_fee: f64,
         close_fee: f64,
     ) -> Self {
+        let premium = Self::check_premium(premium);
+
         Position {
             option,
             premium,
@@ -86,17 +89,11 @@ impl Position {
     pub fn unrealized_pnl(&self, current_option_price: f64) -> f64 {
         match self.option.side {
             Side::Long => {
-                (current_option_price
-                    - self.premium
-                    - self.open_fee
-                    - self.close_fee)
+                (current_option_price - self.premium - self.open_fee - self.close_fee)
                     * self.option.quantity as f64
             }
             Side::Short => {
-                (self.premium
-                    - current_option_price
-                    - self.open_fee
-                    - self.close_fee)
+                (self.premium - current_option_price - self.open_fee - self.close_fee)
                     * self.option.quantity as f64
             }
         }
@@ -128,6 +125,13 @@ impl Position {
             Side::Short => true,
         }
     }
+
+    fn check_premium(mut premium: f64) -> f64 {
+        if premium < ZERO {
+            premium *= -1.0;
+        }
+        premium
+    }
 }
 
 impl Greeks for Position {
@@ -139,9 +143,9 @@ impl Greeks for Position {
 #[cfg(test)]
 mod tests_position {
     use super::*;
+    use crate::constants::ZERO;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use chrono::Duration;
-    use crate::constants::ZERO;
 
     fn setup_option(
         side: Side,
@@ -175,6 +179,17 @@ mod tests_position {
             position.total_cost(),
             51.0,
             "Total cost calculation is incorrect."
+        );
+    }
+
+    #[test]
+    fn test_position_check_negative_premium() {
+        let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 110.0, 1, 0);
+        let position = Position::new(option, -5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(
+            position.pnl_at_expiration(),
+            3.0,
+            "PNL at expiration for long call ITM is incorrect."
         );
     }
 
