@@ -213,7 +213,7 @@ mod tests_options {
             105.0,
             0.05,
             OptionStyle::Call,
-            0.0,
+            ZERO,
             None,
         )
     }
@@ -360,7 +360,7 @@ mod tests_time_value {
             underlying_price,
             0.05,
             option_style,
-            0.0,
+            ZERO,
             None,
         )
     }

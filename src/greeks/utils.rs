@@ -205,7 +205,7 @@ mod tests_calculate_d_values {
             expiration_date: Default::default(),
             quantity: 0,
             option_style: OptionStyle::Call,
-            dividend_yield: 0.0,
+            dividend_yield: ZERO,
             exotic_params: None,
         };
         let (d1_value, d2_value) = calculate_d_values(&option);
@@ -245,7 +245,7 @@ mod tests_src_greeks_utils {
         let t = 1.0;
         let sigma = 0.0;
         let computed_d1 = d1(s, k, r, t, sigma);
-        assert_relative_eq!(computed_d1, 0.0, epsilon = 0.001);
+        assert_relative_eq!(computed_d1, ZERO, epsilon = 0.001);
     }
 
     #[test]
@@ -256,7 +256,7 @@ mod tests_src_greeks_utils {
         let t = 0.0;
         let sigma = 0.01;
         let computed_d1 = d1(s, k, r, t, sigma);
-        assert_relative_eq!(computed_d1, 0.0, epsilon = 0.001);
+        assert_relative_eq!(computed_d1, ZERO, epsilon = 0.001);
     }
 
     #[test]
@@ -311,7 +311,7 @@ mod tests_src_greeks_utils {
         let computed_d2 = d2(s, k, r, t, sigma);
         let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
         assert_relative_eq!(expected_d1, 0.35000000, epsilon = 0.001);
-        assert_relative_eq!(computed_d2, 0.0, epsilon = 0.001);
+        assert_relative_eq!(computed_d2, ZERO, epsilon = 0.001);
     }
 
     #[test]
@@ -323,8 +323,8 @@ mod tests_src_greeks_utils {
         let sigma = 0.01;
         let computed_d2 = d2(s, k, r, t, sigma);
         let expected_d1 = d1(s, k, r, t, sigma);
-        assert_relative_eq!(expected_d1, 0.0, epsilon = 0.001);
-        assert_relative_eq!(computed_d2, 0.0, epsilon = 0.001);
+        assert_relative_eq!(expected_d1, ZERO, epsilon = 0.001);
+        assert_relative_eq!(computed_d2, ZERO, epsilon = 0.001);
     }
 
     #[test]

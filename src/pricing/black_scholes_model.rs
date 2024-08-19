@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-
+use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, calculate_d_values};
 use crate::model::option::Options;
 use crate::model::types::{OptionStyle, OptionType, Side};
@@ -38,20 +38,20 @@ pub fn black_scholes(option: &Options) -> f64 {
     let (d1, d2, expiry_time) = calculate_d1_d2_and_time(option);
     match option.option_type {
         OptionType::European => calculate_european_option_price(option, d1, d2, expiry_time),
-        OptionType::American => 0.0,        // TODO: calculate this
-        OptionType::Bermuda { .. } => 0.0,  // TODO: calculate this
-        OptionType::Asian { .. } => 0.0,    // TODO: calculate this
-        OptionType::Barrier { .. } => 0.0,  // TODO: calculate this
-        OptionType::Binary { .. } => 0.0,   // TODO: calculate this
-        OptionType::Lookback { .. } => 0.0, // TODO: calculate this
-        OptionType::Compound { .. } => 0.0, // TODO: calculate this
-        OptionType::Chooser { .. } => 0.0,  // TODO: calculate this
-        OptionType::Cliquet { .. } => 0.0,  // TODO: calculate this
-        OptionType::Rainbow { .. } => 0.0,  // TODO: calculate this
-        OptionType::Spread { .. } => 0.0,   // TODO: calculate this
-        OptionType::Quanto { .. } => 0.0,   // TODO: calculate this
-        OptionType::Exchange { .. } => 0.0, // TODO: calculate this
-        OptionType::Power { .. } => 0.0,    // TODO: calculate this
+        OptionType::American => ZERO,        // TODO: calculate this
+        OptionType::Bermuda { .. } => ZERO,  // TODO: calculate this
+        OptionType::Asian { .. } => ZERO,    // TODO: calculate this
+        OptionType::Barrier { .. } => ZERO,  // TODO: calculate this
+        OptionType::Binary { .. } => ZERO,   // TODO: calculate this
+        OptionType::Lookback { .. } => ZERO, // TODO: calculate this
+        OptionType::Compound { .. } => ZERO, // TODO: calculate this
+        OptionType::Chooser { .. } => ZERO,  // TODO: calculate this
+        OptionType::Cliquet { .. } => ZERO,  // TODO: calculate this
+        OptionType::Rainbow { .. } => ZERO,  // TODO: calculate this
+        OptionType::Spread { .. } => ZERO,   // TODO: calculate this
+        OptionType::Quanto { .. } => ZERO,   // TODO: calculate this
+        OptionType::Exchange { .. } => ZERO, // TODO: calculate this
+        OptionType::Power { .. } => ZERO,    // TODO: calculate this
     }
 }
 
@@ -189,7 +189,7 @@ mod tests_black_scholes {
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
-            dividend_yield: 0.0,
+            dividend_yield: ZERO,
             exotic_params: None,
         }
     }
@@ -201,12 +201,12 @@ mod tests_black_scholes {
             underlying_price: 100.0,
             strike_price: 100.0,
             implied_volatility: 0.01,
-            risk_free_rate: 0.0,
+            risk_free_rate: ZERO,
             expiration_date: ExpirationDate::Days(365.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
-            dividend_yield: 0.0,
+            dividend_yield: ZERO,
 
             exotic_params: None,
         }
@@ -224,7 +224,7 @@ mod tests_black_scholes {
             option_style: OptionStyle::Put,
             underlying_symbol: "".to_string(),
             quantity: 0,
-            dividend_yield: 0.0,
+            dividend_yield: ZERO,
 
             exotic_params: None,
         }
@@ -289,12 +289,12 @@ mod tests_black_scholes {
             underlying_price: 100.0,
             strike_price: 50.0,
             implied_volatility: 0.01,
-            risk_free_rate: 0.0,
+            risk_free_rate: ZERO,
             expiration_date: ExpirationDate::Days(365.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
-            dividend_yield: 0.0,
+            dividend_yield: ZERO,
 
             exotic_params: None,
         };
@@ -346,7 +346,7 @@ mod tests_black_scholes {
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: 1,
-            dividend_yield: 0.0,
+            dividend_yield: ZERO,
 
             exotic_params: None,
         };
@@ -374,8 +374,8 @@ mod tests_black_scholes {
 
         let option_value = option.underlying_price * big_n_d1
             - option.strike_price
-                * big_n_d2
-                * (-option.risk_free_rate * option.expiration_date.get_years()).exp();
+            * big_n_d2
+            * (-option.risk_free_rate * option.expiration_date.get_years()).exp();
         assert_relative_eq!(option_value, 2.133368, epsilon = 0.00001);
 
         let price = black_scholes(&option.clone());

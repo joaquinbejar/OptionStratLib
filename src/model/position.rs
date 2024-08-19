@@ -166,7 +166,7 @@ mod tests_position {
             underlying_price,
             risk_free_rate: 0.01,
             option_style,
-            dividend_yield: 0.0,
+            dividend_yield: ZERO,
             exotic_params: None,
         }
     }
@@ -309,7 +309,7 @@ mod tests_position {
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
             position.unrealized_pnl(7.0),
-            0.0,
+            ZERO,
             "Unrealized PNL for long call is incorrect."
         );
     }
@@ -320,7 +320,7 @@ mod tests_position {
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
             position.unrealized_pnl(7.0),
-            0.0,
+            ZERO,
             "Unrealized PNL for long call is incorrect."
         );
     }

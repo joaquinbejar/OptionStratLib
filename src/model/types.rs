@@ -251,7 +251,7 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
                 product.powf(1.0 / len as f64)
             }
         },
-        _ => return 0.0,
+        _ => return ZERO,
     };
     match info.style {
         OptionStyle::Call => (average - info.strike).max(ZERO),

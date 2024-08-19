@@ -69,7 +69,7 @@ mod tests {
             underlying_price: 100.0,
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
-            dividend_yield: 0.0,
+            dividend_yield: ZERO,
             exotic_params: None,
         }
     }
@@ -108,7 +108,7 @@ mod tests {
         let price = monte_carlo_option_pricing(&option, 252, 10000);
         let expected_price = f64::max(
             option.underlying_price - option.strike_price * (-option.risk_free_rate * 1.0).exp(),
-            0.0,
+            ZERO,
         );
         assert_relative_eq!(price, expected_price, epsilon = 0.1);
     }

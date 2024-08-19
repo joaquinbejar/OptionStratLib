@@ -563,7 +563,7 @@ mod tests_implied_volatility {
             100.0,
             0.05,
             OptionStyle::Call,
-            0.0,
+            ZERO,
             None,
         )
     }
@@ -587,7 +587,7 @@ mod tests_implied_volatility {
         let market_price = 5.0;
         let iv = implied_volatility(market_price, &mut option, 100);
 
-        assert!(iv > 0.0, "Implied volatility should be positive");
+        assert!(iv > ZERO, "Implied volatility should be positive");
         assert!(iv < 1.0, "Implied volatility should be less than 100%");
     }
 
@@ -832,7 +832,7 @@ mod tests_simulate_heston_volatility {
         let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps);
 
         // Check that the initial volatility is zero
-        assert_relative_eq!(result[0], 0.0, epsilon = 1e-10);
+        assert_relative_eq!(result[0], ZERO, epsilon = 1e-10);
 
         // Ensure all volatilities are non-negative
         for &vol in &result {
@@ -1023,7 +1023,7 @@ mod tests_uncertain_volatility_bounds {
             100.0, // underlying price
             0.05,  // risk-free rate
             OptionStyle::Call,
-            0.0,  // dividend yield
+            ZERO, // dividend yield
             None, // exotic params
         )
     }
@@ -1034,7 +1034,7 @@ mod tests_uncertain_volatility_bounds {
         let (lower, upper) = uncertain_volatility_bounds(&option, 0.1, 0.3);
 
         assert!(lower < upper, "Lower bound should be less than upper bound");
-        assert!(lower > 0.0, "Lower bound should be positive");
+        assert!(lower > ZERO, "Lower bound should be positive");
     }
 
     #[test]
@@ -1080,7 +1080,10 @@ mod tests_uncertain_volatility_bounds {
             put_lower < put_upper,
             "Put option lower bound should be less than upper bound"
         );
-        assert!(put_lower > 0.0, "Put option lower bound should be positive");
+        assert!(
+            put_lower > ZERO,
+            "Put option lower bound should be positive"
+        );
     }
 
     #[test]
@@ -1093,7 +1096,7 @@ mod tests_uncertain_volatility_bounds {
             "Lower bound should be less than upper bound even with extreme volatilities"
         );
         assert!(
-            lower > 0.0,
+            lower > ZERO,
             "Lower bound should be positive even with very low volatility"
         );
         assert!(
@@ -1121,7 +1124,7 @@ mod tests_uncertain_volatility_bounds_side {
             100.0, // underlying price
             0.05,  // risk-free rate
             option_style,
-            0.0,  // dividend yield
+            ZERO, // dividend yield
             None, // exotic params
         )
     }
@@ -1135,7 +1138,7 @@ mod tests_uncertain_volatility_bounds_side {
             lower < upper,
             "Call Long: Lower bound should be less than upper bound"
         );
-        assert!(lower > 0.0, "Call Long: Lower bound should be positive");
+        assert!(lower > ZERO, "Call Long: Lower bound should be positive");
     }
 
     #[test]
@@ -1147,7 +1150,7 @@ mod tests_uncertain_volatility_bounds_side {
             lower > upper,
             "Call Short: Lower bound should be less than upper bound"
         );
-        assert!(lower < 0.0, "Call Short: Lower bound should be negative");
+        assert!(lower < ZERO, "Call Short: Lower bound should be negative");
     }
 
     #[test]
@@ -1159,7 +1162,7 @@ mod tests_uncertain_volatility_bounds_side {
             lower < upper,
             "Put Long: Lower bound should be less than upper bound"
         );
-        assert!(lower > 0.0, "Put Long: Lower bound should be positive");
+        assert!(lower > ZERO, "Put Long: Lower bound should be positive");
     }
 
     #[test]
@@ -1171,7 +1174,7 @@ mod tests_uncertain_volatility_bounds_side {
             lower > upper,
             "Put Short: Lower bound should be less than upper bound"
         );
-        assert!(lower < 0.0, "Put Short: Lower bound should be negative");
+        assert!(lower < ZERO, "Put Short: Lower bound should be negative");
     }
 
     #[test]
@@ -1213,7 +1216,7 @@ mod tests_uncertain_volatility_bounds_side {
             "Lower bound should be less than upper bound even with extreme volatilities"
         );
         assert!(
-            lower > 0.0,
+            lower > ZERO,
             "Lower bound should be positive even with very low volatility"
         );
         assert!(

@@ -329,7 +329,7 @@ mod tests_price_binomial {
 
         let params = BinomialPricingParams {
             asset,
-            volatility: 0.0,
+            volatility: ZERO,
             int_rate,
             strike,
             expiry,
@@ -390,7 +390,7 @@ mod tests_price_binomial {
             volatility: 0.2,
             int_rate: 0.05,
             strike: 100.0,
-            expiry: 0.0,
+            expiry: ZERO,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -398,7 +398,7 @@ mod tests_price_binomial {
         };
 
         let price = price_binomial(params);
-        assert_relative_eq!(price, 0.0, epsilon = 0.01);
+        assert_relative_eq!(price, ZERO, epsilon = 0.01);
     }
 }
 
@@ -434,11 +434,11 @@ mod tests_generate_binomial_tree {
         assert_relative_eq!(option_tree[1][1], 3.500, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][0], 27.631, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][1], 6.545, epsilon = 0.001);
-        assert_relative_eq!(option_tree[2][2], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][2], ZERO, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][0], 41.398, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][1], 12.240, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][2], 0.0, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][3], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[3][2], ZERO, epsilon = 0.001);
+        assert_relative_eq!(option_tree[3][3], ZERO, epsilon = 0.001);
     }
 
     #[test]
@@ -457,8 +457,8 @@ mod tests_generate_binomial_tree {
 
         let (_, option_tree) = generate_binomial_tree(&params);
 
-        assert_relative_eq!(option_tree[3][0], 0.0, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][1], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[3][0], ZERO, epsilon = 0.001);
+        assert_relative_eq!(option_tree[3][1], ZERO, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][2], 10.905, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][3], 29.277, epsilon = 0.001);
     }
@@ -486,7 +486,7 @@ mod tests_generate_binomial_tree {
         assert_relative_eq!(asset_tree[1][1], 25.309, epsilon = 0.001);
         assert_relative_eq!(option_tree[0][0], 3.213, epsilon = 0.001);
         assert_relative_eq!(option_tree[1][0], 5.559, epsilon = 0.001);
-        assert_relative_eq!(option_tree[1][1], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[1][1], ZERO, epsilon = 0.001);
 
         let params = BinomialPricingParams {
             asset: 30.0,
@@ -513,10 +513,10 @@ mod tests_generate_binomial_tree {
 
         assert_relative_eq!(option_tree[0][0], 2.564, epsilon = 0.001);
         assert_relative_eq!(option_tree[1][0], 4.572, epsilon = 0.001);
-        assert_relative_eq!(option_tree[1][1], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[1][1], ZERO, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][0], 8.153, epsilon = 0.001);
-        assert_relative_eq!(option_tree[2][1], 0.0, epsilon = 0.001);
-        assert_relative_eq!(option_tree[2][2], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][1], ZERO, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][2], ZERO, epsilon = 0.001);
     }
 
     #[test]
@@ -551,11 +551,11 @@ mod tests_generate_binomial_tree {
         assert_relative_eq!(option_tree[0][0], 2.890, epsilon = 0.001);
         assert_relative_eq!(option_tree[1][0], 1.125, epsilon = 0.001);
         assert_relative_eq!(option_tree[1][1], 8.623, epsilon = 0.001);
-        assert_relative_eq!(option_tree[2][0], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][0], ZERO, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][1], 4.635, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][2], 21.990, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][0], 0.0, epsilon = 0.001);
-        assert_relative_eq!(option_tree[3][1], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[3][0], ZERO, epsilon = 0.001);
+        assert_relative_eq!(option_tree[3][1], ZERO, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][2], 19.090, epsilon = 0.001);
         assert_relative_eq!(option_tree[3][3], 34.868, epsilon = 0.001);
     }
@@ -587,7 +587,7 @@ mod tests_generate_binomial_tree {
         assert_relative_eq!(option_tree[0][0], 3.868, epsilon = 0.001);
         assert_relative_eq!(option_tree[1][0], 0.803, epsilon = 0.001);
         assert_relative_eq!(option_tree[1][1], 8.527, epsilon = 0.001);
-        assert_relative_eq!(option_tree[2][0], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][0], ZERO, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][1], 2.0, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][2], 18.483, epsilon = 0.001);
     }
@@ -615,7 +615,7 @@ mod tests_generate_binomial_tree {
         assert_relative_eq!(asset_tree[2][1], 50.0, epsilon = 0.001);
         assert_relative_eq!(asset_tree[2][2], 33.516, epsilon = 0.001);
 
-        assert_relative_eq!(option_tree[2][0], 0.0, epsilon = 0.001);
+        assert_relative_eq!(option_tree[2][0], ZERO, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][1], 2.0, epsilon = 0.001);
         assert_relative_eq!(option_tree[2][2], 18.483, epsilon = 0.001);
         assert_relative_eq!(option_tree[1][0], 0.803, epsilon = 0.001);

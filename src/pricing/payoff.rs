@@ -29,8 +29,8 @@ pub struct PayoffInfo {
 impl Default for PayoffInfo {
     fn default() -> Self {
         PayoffInfo {
-            spot: 0.0,
-            strike: 0.0,
+            spot: ZERO,
+            strike: ZERO,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
