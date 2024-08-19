@@ -84,29 +84,20 @@ impl Position {
     }
 
     pub fn unrealized_pnl(&self, current_option_price: f64) -> f64 {
-        // TODO: check the tests
         match self.option.side {
             Side::Long => {
-                (current_option_price - self.premium) * self.option.quantity as f64 - self.open_fee
+                (current_option_price
+                    - self.premium
+                    - self.open_fee
+                    - self.close_fee)
+                    * self.option.quantity as f64
             }
             Side::Short => {
-                (self.premium - current_option_price) * self.option.quantity as f64 - self.open_fee
-            }
-        }
-    }
-
-    pub fn realized_pnl(&self, close_option_price: f64) -> f64 {
-        // TODO: check the tests
-        match self.option.side {
-            Side::Long => {
-                (close_option_price - self.premium) * self.option.quantity as f64
+                (self.premium
+                    - current_option_price
                     - self.open_fee
-                    - self.close_fee
-            }
-            Side::Short => {
-                (self.premium - close_option_price) * self.option.quantity as f64
-                    - self.open_fee
-                    - self.close_fee
+                    - self.close_fee)
+                    * self.option.quantity as f64
             }
         }
     }
@@ -150,6 +141,7 @@ mod tests_position {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use chrono::Duration;
+    use crate::constants::ZERO;
 
     fn setup_option(
         side: Side,
@@ -298,11 +290,22 @@ mod tests_position {
 
     #[test]
     fn test_unrealized_pnl_long_call() {
+        let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(
+            position.unrealized_pnl(7.0),
+            0.0,
+            "Unrealized PNL for long call is incorrect."
+        );
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_call_quantity() {
         let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 105.0, 10, 30);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
             position.unrealized_pnl(7.0),
-            19.0,
+            0.0,
             "Unrealized PNL for long call is incorrect."
         );
     }
@@ -313,40 +316,19 @@ mod tests_position {
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
             position.unrealized_pnl(3.0),
-            19.0,
+            ZERO,
             "Unrealized PNL for short call is incorrect."
         );
     }
 
     #[test]
-    fn test_realized_pnl_long_put() {
-        let option = setup_option(Side::Long, OptionStyle::Put, 100.0, 95.0, 1, 30);
+    fn test_unrealized_pnl_short_call_bis() {
+        let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 105.0, 1, 30);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.realized_pnl(6.0),
-            -1.0,
-            "Realized PNL for long put is incorrect."
-        );
-    }
-
-    #[test]
-    fn test_realized_pnl_long_put_quantity() {
-        let option = setup_option(Side::Long, OptionStyle::Put, 100.0, 95.0, 10, 30);
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(
-            position.realized_pnl(6.0),
-            8.0,
-            "Realized PNL for long put is incorrect."
-        );
-    }
-    #[test]
-    fn test_realized_pnl_short_put() {
-        let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 95.0, 10, 30);
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(
-            position.realized_pnl(4.0),
-            8.0,
-            "Realized PNL for short put is incorrect."
+            position.unrealized_pnl(10.0),
+            -7.0,
+            "Unrealized PNL for short call is incorrect."
         );
     }
 
