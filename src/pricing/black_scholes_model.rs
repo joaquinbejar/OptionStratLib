@@ -374,8 +374,8 @@ mod tests_black_scholes {
 
         let option_value = option.underlying_price * big_n_d1
             - option.strike_price
-            * big_n_d2
-            * (-option.risk_free_rate * option.expiration_date.get_years()).exp();
+                * big_n_d2
+                * (-option.risk_free_rate * option.expiration_date.get_years()).exp();
         assert_relative_eq!(option_value, 2.133368, epsilon = 0.00001);
 
         let price = black_scholes(&option.clone());
