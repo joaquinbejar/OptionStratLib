@@ -120,7 +120,7 @@ impl Options {
     }
 
     pub fn calculate_price_telegraph(&self, no_steps: usize) -> f64 {
-        telegraph(self, no_steps)
+        telegraph(self, no_steps, None, None)
     }
 
     pub fn payoff(&self) -> f64 {
@@ -511,6 +511,72 @@ mod tests_options_payoffs {
 
         let put_option_otm = create_sample_option(OptionStyle::Put, Side::Short, 105.0);
         let put_payoff_otm = put_option_otm.payoff();
+        assert_eq!(put_payoff_otm, ZERO); // -max(100 - 105, 0) = 0
+    }
+}
+
+#[cfg(test)]
+mod tests_options_payoff_at_price {
+    use super::*;
+
+    fn create_sample_option(option_style: OptionStyle, side: Side) -> Options {
+        Options::new(
+            OptionType::European,
+            side,
+            "AAPL".to_string(),
+            100.0,
+            ExpirationDate::Days(30.0),
+            0.2,
+            1,
+            100.0,
+            0.05,
+            option_style,
+            0.01,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_payoff_european_call_long() {
+        let call_option = create_sample_option(OptionStyle::Call, Side::Long);
+        let call_payoff = call_option.payoff_at_price(105.0);
+        assert_eq!(call_payoff, 5.0); // max(105 - 100, 0) = 5
+
+        let call_option_otm = create_sample_option(OptionStyle::Call, Side::Long);
+        let call_payoff_otm = call_option_otm.payoff_at_price(95.0);
+        assert_eq!(call_payoff_otm, ZERO); // max(95 - 100, 0) = 0
+    }
+
+    #[test]
+    fn test_payoff_european_call_short() {
+        let call_option = create_sample_option(OptionStyle::Call, Side::Short);
+        let call_payoff = call_option.payoff_at_price(105.0);
+        assert_eq!(call_payoff, -5.0); // -max(105 - 100, 0) = -5
+
+        let call_option_otm = create_sample_option(OptionStyle::Call, Side::Short);
+        let call_payoff_otm = call_option_otm.payoff_at_price(95.0);
+        assert_eq!(call_payoff_otm, ZERO); // -max(95 - 100, 0) = 0
+    }
+
+    #[test]
+    fn test_payoff_european_put_long() {
+        let put_option = create_sample_option(OptionStyle::Put, Side::Long);
+        let put_payoff = put_option.payoff_at_price(95.0);
+        assert_eq!(put_payoff, 5.0); // max(100 - 95, 0) = 5
+
+        let put_option_otm = create_sample_option(OptionStyle::Put, Side::Long);
+        let put_payoff_otm = put_option_otm.payoff_at_price(105.0);
+        assert_eq!(put_payoff_otm, ZERO); // max(100 - 105, 0) = 0
+    }
+
+    #[test]
+    fn test_payoff_european_put_short() {
+        let put_option = create_sample_option(OptionStyle::Put, Side::Short);
+        let put_payoff = put_option.payoff_at_price(95.0);
+        assert_eq!(put_payoff, -5.0); // -max(100 - 95, 0) = -5
+
+        let put_option_otm = create_sample_option(OptionStyle::Put, Side::Short);
+        let put_payoff_otm = put_option_otm.payoff_at_price(105.0);
         assert_eq!(put_payoff_otm, ZERO); // -max(100 - 105, 0) = 0
     }
 }

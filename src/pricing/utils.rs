@@ -10,7 +10,32 @@ use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use rand::distributions::Distribution;
+use rand::Rng;
 use statrs::distribution::Normal;
+
+/// Simulates stock returns based on a normal distribution.
+///
+/// # Arguments
+///
+/// * `mean` - The mean return (annualized)
+/// * `std_dev` - The standard deviation of returns (annualized)
+/// * `length` - The number of returns to simulate
+/// * `time_step` - The time step for each return (e.g., 1/252 for daily returns assuming 252 trading days)
+///
+/// # Returns
+///
+/// A vector of simulated returns
+pub(crate) fn simulate_returns(mean: f64, std_dev: f64, length: usize, time_step: f64) -> Vec<f64> {
+    let mut rng = rand::thread_rng();
+
+    // Adjust mean and standard deviation for the time step
+    let adjusted_mean = mean * time_step;
+    let adjusted_std_dev = std_dev * time_step.sqrt();
+
+    let normal = Normal::new(adjusted_mean, adjusted_std_dev).unwrap();
+
+    (0..length).map(|_| normal.sample(&mut rng)).collect()
+}
 
 /// Calculates the up factor for an asset's price movement model.
 ///
@@ -195,6 +220,36 @@ pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 
     match params.side {
         Side::Long => discounted_payoff,
         Side::Short => -discounted_payoff,
+    }
+}
+
+#[cfg(test)]
+mod tests_simulate_returns {
+    use super::*;
+    use approx::assert_relative_eq;
+    use statrs::statistics::Statistics;
+
+    #[test]
+    fn test_simulate_returns() {
+        let mean = 0.05; // 5% annual return
+        let std_dev = 0.2; // 20% annual volatility
+        let length = 252; // One year of daily returns
+        let time_step = 1.0 / 252.0; // Daily time step
+
+        let returns = simulate_returns(mean, std_dev, length, time_step);
+
+        assert_eq!(returns.len(), length);
+
+        // Check that the mean and standard deviation are reasonably close to expected values
+        let simulated_mean = returns.clone().mean();
+        let simulated_std_dev = returns.std_dev();
+
+        assert_relative_eq!(simulated_mean, mean * time_step, epsilon = 0.001);
+        assert_relative_eq!(
+            simulated_std_dev,
+            std_dev * time_step.sqrt(),
+            epsilon = 0.01
+        );
     }
 }
 
