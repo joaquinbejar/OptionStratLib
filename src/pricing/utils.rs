@@ -10,7 +10,6 @@ use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use rand::distributions::Distribution;
-use rand::Rng;
 use statrs::distribution::Normal;
 
 /// Simulates stock returns based on a normal distribution.

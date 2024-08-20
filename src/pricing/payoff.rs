@@ -16,6 +16,7 @@ pub trait Payoff {
 /// - `spot_min` (Option<f64>): The minimum spot price for Lookback options, where the payoff depends on the minimum price of the underlying asset.
 /// - `spot_max` (Option<f64>): The maximum spot price for Lookback options, where the payoff depends on the maximum price of the underlying asset.
 ///
+#[derive(Debug)]
 pub struct PayoffInfo {
     pub spot: f64,
     pub strike: f64,

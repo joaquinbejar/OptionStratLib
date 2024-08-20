@@ -245,17 +245,21 @@ impl fmt::Display for LookbackType {
 mod tests_options {
     use super::*;
     use crate::model::types::BarrierType;
-    use chrono::{DateTime, NaiveDate, Utc};
+    use chrono::{NaiveDate, TimeZone, Utc};
 
     #[test]
     fn test_debug_options() {
-        let naive = NaiveDate::from_ymd(2024, 8, 8).and_hms(0, 0, 0);
+        let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
+            .expect("Invalid date")
+            .and_hms_opt(0, 0, 0)
+            .expect("Invalid time");
+
         let options = Options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
             strike_price: 150.0,
-            expiration_date: ExpirationDate::DateTime(DateTime::from_utc(naive, Utc)),
+            expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: 0.25,
             quantity: 10,
             underlying_price: 155.0,
@@ -286,14 +290,17 @@ mod tests_options {
 
     #[test]
     fn test_display_options() {
-        let naive = NaiveDate::from_ymd(2024, 8, 8).and_hms(0, 0, 0);
+        let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
+            .expect("Invalid date")
+            .and_hms_opt(0, 0, 0)
+            .expect("Invalid time");
 
         let options = Options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
             strike_price: 150.0,
-            expiration_date: ExpirationDate::DateTime(DateTime::from_utc(naive, Utc)),
+            expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: 0.25,
             quantity: 10,
             underlying_price: 155.0,
@@ -324,7 +331,10 @@ mod tests_options {
             spot_min: None,
             spot_max: None,
         };
-        let naive = NaiveDate::from_ymd(2024, 8, 8).and_hms(0, 0, 0);
+        let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
+            .expect("Invalid date")
+            .and_hms_opt(0, 0, 0)
+            .expect("Invalid time");
 
         let options = Options {
             option_type: OptionType::Barrier {
@@ -334,7 +344,7 @@ mod tests_options {
             side: Side::Short,
             underlying_symbol: "GOOGL".to_string(),
             strike_price: 2000.0,
-            expiration_date: ExpirationDate::DateTime(DateTime::from_utc(naive, Utc)),
+            expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: 0.30,
             quantity: 5,
             underlying_price: 1900.0,
@@ -363,7 +373,7 @@ mod tests_options {
 #[cfg(test)]
 mod tests_expiration_date {
     use super::*;
-    use chrono::{Duration, TimeZone};
+    use chrono::{Duration, NaiveDate, TimeZone};
     #[test]
     fn test_display_days() {
         let expiration = ExpirationDate::Days(30.5);
@@ -391,7 +401,13 @@ mod tests_expiration_date {
 
     #[test]
     fn test_debug_datetime() {
-        let date = Utc.ymd(2023, 12, 31).and_hms(23, 59, 59);
+        let date = Utc.from_utc_datetime(
+            &NaiveDate::from_ymd_opt(2023, 12, 31)
+                .expect("Invalid date")
+                .and_hms_opt(23, 59, 59)
+                .expect("Invalid Time"),
+        );
+
         let expiration = ExpirationDate::DateTime(date);
         let debug_string = format!("{:?}", expiration);
         assert_eq!(

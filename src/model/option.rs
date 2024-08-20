@@ -137,7 +137,6 @@ impl Options {
     }
 
     pub fn payoff_at_price(&self, price: f64) -> f64 {
-        // TODO: test it
         let payoff_info = PayoffInfo {
             spot: price,
             strike: self.strike_price,
