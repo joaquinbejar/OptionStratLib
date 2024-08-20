@@ -1,3 +1,4 @@
+use std::fmt;
 use crate::constants::ZERO;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -8,7 +9,7 @@ use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::telegraph::telegraph;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct ExoticParams {
     pub spot_prices: Option<Vec<f64>>, // Asian
     pub spot_min: Option<f64>,         // Lookback
@@ -31,6 +32,7 @@ pub struct Options {
     pub dividend_yield: f64,
     pub exotic_params: Option<ExoticParams>,
 }
+
 
 impl Options {
     #[allow(clippy::too_many_arguments)]
@@ -683,3 +685,4 @@ mod tests_options_payoffs_with_quantity {
         assert_eq!(option.intrinsic_value(110.0), 230.0); // (110 - 100) * 23
     }
 }
+

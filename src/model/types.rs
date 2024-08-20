@@ -1,6 +1,7 @@
 use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
+use std::fmt;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -43,7 +44,7 @@ pub enum OptionStyle {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// Represents the type of option in a financial context.
 /// Options can be categorized into various types based on their characteristics and the conditions under which they can be exercised.
 pub enum OptionType {
@@ -166,7 +167,7 @@ pub enum OptionType {
 
 /// Describes how the average price is calculated for Asian options.
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum AsianAveragingType {
     /// Arithmetic averaging calculates the average of the prices in a straightforward manner.
     /// This is the most common type of averaging for Asian options.
@@ -178,7 +179,7 @@ pub enum AsianAveragingType {
 
 /// Describes the type of barrier for Barrier options.
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum BarrierType {
     /// The option becomes active only if the underlying asset price goes above a certain level.
     UpAndIn,
@@ -192,7 +193,7 @@ pub enum BarrierType {
 
 /// Describes the type of binary option.
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum BinaryType {
     /// The option pays a fixed amount of cash if the underlying asset is above or below a certain level.
     CashOrNothing,
@@ -202,7 +203,7 @@ pub enum BinaryType {
 
 /// Describes the type of lookback option.
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum LookbackType {
     /// The strike price is fixed at the beginning, and the payoff is based on the maximum or minimum price of the underlying asset during the option's life.
     FixedStrike,
@@ -488,3 +489,4 @@ mod tests_expiration_date {
         assert!((expiration.get_years() - expected_years).abs() < 0.01);
     }
 }
+
