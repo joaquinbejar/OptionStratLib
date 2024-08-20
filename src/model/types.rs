@@ -1,7 +1,6 @@
 use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use chrono::{DateTime, Duration, Utc};
-use std::fmt;
+use chrono::{DateTime, Utc};
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -489,4 +488,3 @@ mod tests_expiration_date {
         assert!((expiration.get_years() - expected_years).abs() < 0.01);
     }
 }
-

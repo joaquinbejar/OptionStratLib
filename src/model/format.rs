@@ -1,22 +1,37 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 20/8/24
- ******************************************************************************/
-use std::fmt;
-use chrono::{Duration, Utc};
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 20/8/24
+******************************************************************************/
 use crate::model::option::{ExoticParams, Options};
-use crate::model::types::{AsianAveragingType, BarrierType, BinaryType, ExpirationDate, LookbackType, OptionStyle, OptionType, Side};
+use crate::model::types::{
+    AsianAveragingType, BarrierType, BinaryType, ExpirationDate, LookbackType, OptionStyle,
+    OptionType, Side,
+};
+use chrono::{Duration, Utc};
+use std::fmt;
 
 impl fmt::Display for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {} {} Option\n", self.side, self.option_style, self.option_type)?;
-        write!(f, "Underlying: {} @ ${:.2}\n", self.underlying_symbol, self.underlying_price)?;
-        write!(f, "Strike: ${:.2}\n", self.strike_price)?;
-        write!(f, "Expiration: {}\n", self.expiration_date)?;
-        write!(f, "Implied Volatility: {:.2}%\n", self.implied_volatility * 100.0)?;
-        write!(f, "Quantity: {}\n", self.quantity)?;
-        write!(f, "Risk-free Rate: {:.2}%\n", self.risk_free_rate * 100.0)?;
+        writeln!(
+            f,
+            "{} {} {} Option",
+            self.side, self.option_style, self.option_type
+        )?;
+        writeln!(
+            f,
+            "Underlying: {} @ ${:.2}",
+            self.underlying_symbol, self.underlying_price
+        )?;
+        writeln!(f, "Strike: ${:.2}", self.strike_price)?;
+        writeln!(f, "Expiration: {}", self.expiration_date)?;
+        writeln!(
+            f,
+            "Implied Volatility: {:.2}%",
+            self.implied_volatility * 100.0
+        )?;
+        writeln!(f, "Quantity: {}", self.quantity)?;
+        writeln!(f, "Risk-free Rate: {:.2}%", self.risk_free_rate * 100.0)?;
         write!(f, "Dividend Yield: {:.2}%", self.dividend_yield * 100.0)?;
         if let Some(exotic) = &self.exotic_params {
             write!(f, "\nExotic Parameters: {:?}", exotic)?;
@@ -142,71 +157,48 @@ impl fmt::Display for OptionType {
         match self {
             OptionType::European => write!(f, "European Option"),
             OptionType::American => write!(f, "American Option"),
-            OptionType::Bermuda { exercise_dates } => write!(
-                f,
-                "Bermuda Option (Exercise Dates: {:?})",
-                exercise_dates
-            ),
-            OptionType::Asian { averaging_type } => write!(
-                f,
-                "Asian Option (Averaging Type: {})",
-                averaging_type
-            ),
-            OptionType::Barrier { barrier_type, barrier_level } => write!(
+            OptionType::Bermuda { exercise_dates } => {
+                write!(f, "Bermuda Option (Exercise Dates: {:?})", exercise_dates)
+            }
+            OptionType::Asian { averaging_type } => {
+                write!(f, "Asian Option (Averaging Type: {})", averaging_type)
+            }
+            OptionType::Barrier {
+                barrier_type,
+                barrier_level,
+            } => write!(
                 f,
                 "Barrier Option (Type: {}, Level: {})",
                 barrier_type, barrier_level
             ),
-            OptionType::Binary { binary_type } => write!(
-                f,
-                "Binary Option (Type: {})",
-                binary_type
-            ),
-            OptionType::Lookback { lookback_type } => write!(
-                f,
-                "Lookback Option (Type: {})",
-                lookback_type
-            ),
-            OptionType::Compound { underlying_option } => write!(
-                f,
-                "Compound Option (Underlying: {})",
-                underlying_option
-            ),
-            OptionType::Chooser { choice_date } => write!(
-                f,
-                "Chooser Option (Choice Date: {})",
-                choice_date
-            ),
-            OptionType::Cliquet { reset_dates } => write!(
-                f,
-                "Cliquet Option (Reset Dates: {:?})",
-                reset_dates
-            ),
-            OptionType::Rainbow { num_assets } => write!(
-                f,
-                "Rainbow Option (Number of Assets: {})",
-                num_assets
-            ),
-            OptionType::Spread { second_asset } => write!(
-                f,
-                "Spread Option (Second Asset: {})",
-                second_asset
-            ),
-            OptionType::Quanto { exchange_rate } => write!(
-                f,
-                "Quanto Option (Exchange Rate: {})",
-                exchange_rate
-            ),
-            OptionType::Exchange { second_asset } => write!(
-                f,
-                "Exchange Option (Second Asset: {})",
-                second_asset
-            ),
-            OptionType::Power { exponent } => write!(
-                f,
-                "Power Option (Exponent: {})",
-                exponent
-            ),
+            OptionType::Binary { binary_type } => {
+                write!(f, "Binary Option (Type: {})", binary_type)
+            }
+            OptionType::Lookback { lookback_type } => {
+                write!(f, "Lookback Option (Type: {})", lookback_type)
+            }
+            OptionType::Compound { underlying_option } => {
+                write!(f, "Compound Option (Underlying: {})", underlying_option)
+            }
+            OptionType::Chooser { choice_date } => {
+                write!(f, "Chooser Option (Choice Date: {})", choice_date)
+            }
+            OptionType::Cliquet { reset_dates } => {
+                write!(f, "Cliquet Option (Reset Dates: {:?})", reset_dates)
+            }
+            OptionType::Rainbow { num_assets } => {
+                write!(f, "Rainbow Option (Number of Assets: {})", num_assets)
+            }
+            OptionType::Spread { second_asset } => {
+                write!(f, "Spread Option (Second Asset: {})", second_asset)
+            }
+            OptionType::Quanto { exchange_rate } => {
+                write!(f, "Quanto Option (Exchange Rate: {})", exchange_rate)
+            }
+            OptionType::Exchange { second_asset } => {
+                write!(f, "Exchange Option (Second Asset: {})", second_asset)
+            }
+            OptionType::Power { exponent } => write!(f, "Power Option (Exponent: {})", exponent),
         }
     }
 }
@@ -249,12 +241,11 @@ impl fmt::Display for LookbackType {
     }
 }
 
-
 #[cfg(test)]
 mod tests_options {
-    use chrono::{DateTime, NaiveDate, Utc};
-    use crate::model::types::BarrierType;
     use super::*;
+    use crate::model::types::BarrierType;
+    use chrono::{DateTime, NaiveDate, Utc};
 
     #[test]
     fn test_debug_options() {
@@ -264,7 +255,7 @@ mod tests_options {
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
             strike_price: 150.0,
-            expiration_date: ExpirationDate::DateTime( DateTime::from_utc(naive, Utc)),
+            expiration_date: ExpirationDate::DateTime(DateTime::from_utc(naive, Utc)),
             implied_volatility: 0.25,
             quantity: 10,
             underlying_price: 155.0,
@@ -302,7 +293,7 @@ mod tests_options {
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
             strike_price: 150.0,
-            expiration_date: ExpirationDate::DateTime( DateTime::from_utc(naive, Utc)),
+            expiration_date: ExpirationDate::DateTime(DateTime::from_utc(naive, Utc)),
             implied_volatility: 0.25,
             quantity: 10,
             underlying_price: 155.0,
@@ -343,7 +334,7 @@ mod tests_options {
             side: Side::Short,
             underlying_symbol: "GOOGL".to_string(),
             strike_price: 2000.0,
-            expiration_date: ExpirationDate::DateTime( DateTime::from_utc(naive, Utc)),
+            expiration_date: ExpirationDate::DateTime(DateTime::from_utc(naive, Utc)),
             implied_volatility: 0.30,
             quantity: 5,
             underlying_price: 1900.0,
@@ -502,7 +493,10 @@ mod tests_option_type_display_debug {
             exercise_dates: vec![1.0, 2.0, 3.0],
         };
         let display_output = format!("{}", option);
-        assert_eq!(display_output, "Bermuda Option (Exercise Dates: [1.0, 2.0, 3.0])");
+        assert_eq!(
+            display_output,
+            "Bermuda Option (Exercise Dates: [1.0, 2.0, 3.0])"
+        );
     }
 
     #[test]
@@ -520,7 +514,10 @@ mod tests_option_type_display_debug {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let display_output = format!("{}", option);
-        assert_eq!(display_output, "Asian Option (Averaging Type: Arithmetic Averaging)");
+        assert_eq!(
+            display_output,
+            "Asian Option (Averaging Type: Arithmetic Averaging)"
+        );
     }
 
     #[test]
@@ -530,7 +527,10 @@ mod tests_option_type_display_debug {
             barrier_level: 100.0,
         };
         let debug_output = format!("{:?}", option);
-        assert_eq!(debug_output, "Barrier { barrier_type: UpAndIn, barrier_level: 100.0 }");
+        assert_eq!(
+            debug_output,
+            "Barrier { barrier_type: UpAndIn, barrier_level: 100.0 }"
+        );
     }
 
     #[test]
@@ -540,7 +540,10 @@ mod tests_option_type_display_debug {
             barrier_level: 100.0,
         };
         let display_output = format!("{}", option);
-        assert_eq!(display_output, "Barrier Option (Type: Up-And-In Barrier, Level: 100)");
+        assert_eq!(
+            display_output,
+            "Barrier Option (Type: Up-And-In Barrier, Level: 100)"
+        );
     }
 
     #[test]
@@ -558,7 +561,10 @@ mod tests_option_type_display_debug {
             binary_type: BinaryType::CashOrNothing,
         };
         let display_output = format!("{}", option);
-        assert_eq!(display_output, "Binary Option (Type: Cash-Or-Nothing Binary Option)");
+        assert_eq!(
+            display_output,
+            "Binary Option (Type: Cash-Or-Nothing Binary Option)"
+        );
     }
 
     #[test]
@@ -576,7 +582,10 @@ mod tests_option_type_display_debug {
             lookback_type: LookbackType::FixedStrike,
         };
         let display_output = format!("{}", option);
-        assert_eq!(display_output, "Lookback Option (Type: Fixed-Strike Lookback Option)");
+        assert_eq!(
+            display_output,
+            "Lookback Option (Type: Fixed-Strike Lookback Option)"
+        );
     }
 
     #[test]
@@ -594,23 +603,22 @@ mod tests_option_type_display_debug {
             underlying_option: Box::new(OptionType::European),
         };
         let display_output = format!("{}", option);
-        assert_eq!(display_output, "Compound Option (Underlying: European Option)");
+        assert_eq!(
+            display_output,
+            "Compound Option (Underlying: European Option)"
+        );
     }
 
     #[test]
     fn test_debug_chooser_option() {
-        let option = OptionType::Chooser {
-            choice_date: 2.0,
-        };
+        let option = OptionType::Chooser { choice_date: 2.0 };
         let debug_output = format!("{:?}", option);
         assert_eq!(debug_output, "Chooser { choice_date: 2.0 }");
     }
 
     #[test]
     fn test_display_chooser_option() {
-        let option = OptionType::Chooser {
-            choice_date: 2.0,
-        };
+        let option = OptionType::Chooser { choice_date: 2.0 };
         let display_output = format!("{}", option);
         assert_eq!(display_output, "Chooser Option (Choice Date: 2)");
     }
