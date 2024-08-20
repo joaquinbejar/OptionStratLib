@@ -1,6 +1,6 @@
 use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -18,6 +18,13 @@ impl ExpirationDate {
                 let duration = datetime.signed_duration_since(now);
                 duration.num_days() as f64 / 365.0
             }
+        }
+    }
+
+    pub(crate) fn get_date(&self) -> DateTime<Utc> {
+        match self {
+            ExpirationDate::Days(days) => Utc::now() + Duration::days(*days as i64),
+            ExpirationDate::DateTime(datetime) => *datetime,
         }
     }
 }

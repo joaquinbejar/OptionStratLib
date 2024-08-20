@@ -1,12 +1,14 @@
 use crate::constants::ZERO;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::binomial_model::{
     generate_binomial_tree, price_binomial, BinomialPricingParams,
 };
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::telegraph::telegraph;
+use chrono::{DateTime, Utc};
 
 #[derive(Clone, Default, Debug)]
 pub struct ExoticParams {
@@ -211,6 +213,16 @@ impl Greeks for Options {
             rho: self.rho(),
             rho_d: self.rho_d(),
         }
+    }
+}
+
+impl PnLCalculator for Options {
+    fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: f64) -> PnL {
+        todo!()
+    }
+
+    fn calculate_pnl_at_expiration(&self) -> PnL {
+        todo!()
     }
 }
 

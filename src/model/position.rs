@@ -7,6 +7,7 @@ use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, Side};
+use crate::pnl::utils::{PnL, PnLCalculator};
 use chrono::{DateTime, Utc};
 
 /// The `Position` struct represents a financial position in an options market.
@@ -69,21 +70,24 @@ impl Position {
     }
 
     pub fn total_cost(&self) -> f64 {
-        self.premium * self.option.quantity as f64 + self.open_fee
+        match self.option.side {
+            Side::Long => {
+                (self.premium + self.open_fee + self.close_fee) * self.option.quantity as f64
+            }
+            Side::Short => (self.open_fee + self.close_fee) * self.option.quantity as f64,
+        }
+    }
+
+    pub fn premium_received(&self) -> f64 {
+        match self.option.side {
+            Side::Long => ZERO,
+            Side::Short => self.premium * self.option.quantity as f64,
+        }
     }
 
     pub fn pnl_at_expiration(&self) -> f64 {
-        let intrinsic_value = self.option.intrinsic_value(self.option.underlying_price);
-        match self.option.side {
-            Side::Long => {
-                intrinsic_value
-                    - (self.premium + self.open_fee + self.close_fee) * self.option.quantity as f64
-            }
-            Side::Short => {
-                intrinsic_value - (self.open_fee + self.close_fee) * self.option.quantity as f64
-                    + self.premium * self.option.quantity as f64
-            }
-        }
+        self.option.intrinsic_value(self.option.underlying_price) - self.total_cost()
+            + self.premium_received()
     }
 
     pub fn unrealized_pnl(&self, current_option_price: f64) -> f64 {
@@ -140,6 +144,28 @@ impl Greeks for Position {
     }
 }
 
+impl PnLCalculator for Position {
+    fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: f64) -> PnL {
+        PnL::new(
+            None,
+            Some(self.unrealized_pnl(market_price)),
+            self.total_cost(),
+            self.premium_received(),
+            date_time,
+        )
+    }
+
+    fn calculate_pnl_at_expiration(&self) -> PnL {
+        PnL::new(
+            Some(self.pnl_at_expiration()),
+            None,
+            self.total_cost(),
+            self.premium_received(),
+            self.option.expiration_date.get_date(),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests_position {
     use super::*;
@@ -173,11 +199,44 @@ mod tests_position {
 
     #[test]
     fn test_position_total_cost() {
+        let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(
+            position.total_cost(),
+            7.0,
+            "Total cost calculation is incorrect."
+        );
+    }
+
+    #[test]
+    fn test_position_total_cost_size() {
         let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 105.0, 10, 30);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
             position.total_cost(),
-            51.0,
+            70.0,
+            "Total cost calculation is incorrect."
+        );
+    }
+
+    #[test]
+    fn test_position_total_cost_short() {
+        let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(
+            position.total_cost(),
+            2.0,
+            "Total cost calculation is incorrect."
+        );
+    }
+
+    #[test]
+    fn test_position_total_cost_short_size() {
+        let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(
+            position.total_cost(),
+            20.0,
             "Total cost calculation is incorrect."
         );
     }
@@ -185,7 +244,7 @@ mod tests_position {
     #[test]
     fn test_position_check_negative_premium() {
         let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 110.0, 1, 0);
-        let position = Position::new(option, -5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
             position.pnl_at_expiration(),
             3.0,

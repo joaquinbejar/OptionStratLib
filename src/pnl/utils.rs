@@ -10,9 +10,9 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone)]
 pub struct PnL {
     /// The realized profit or loss.
-    pub realized: f64,
+    pub realized: Option<f64>,
     /// The unrealized profit or loss.
-    pub unrealized: f64,
+    pub unrealized: Option<f64>,
     /// The initial costs (fees, premiums paid).
     pub initial_costs: f64,
     /// The initial income (premiums received).
@@ -23,8 +23,8 @@ pub struct PnL {
 
 impl PnL {
     pub fn new(
-        realized: f64,
-        unrealized: f64,
+        realized: Option<f64>,
+        unrealized: Option<f64>,
         initial_costs: f64,
         initial_income: f64,
         date_time: DateTime<Utc>,
@@ -36,10 +36,6 @@ impl PnL {
             initial_income,
             date_time,
         }
-    }
-
-    pub fn total(&self) -> f64 {
-        self.realized + self.unrealized + self.initial_income - self.initial_costs
     }
 }
 
