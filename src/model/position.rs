@@ -10,8 +10,8 @@ use crate::model::types::{ExpirationDate, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
-use plotters::prelude::*;
 use plotters::element::{Circle, EmptyElement, Text};
+use plotters::prelude::*;
 use std::error::Error;
 
 /// The `Position` struct represents a financial position in an options market.
@@ -148,7 +148,8 @@ impl Position {
         premium
     }
 
-    fn break_even(&self) -> f64 { // TODO: tests it
+    fn break_even(&self) -> f64 {
+        // TODO: tests it
         match self.option.side {
             Side::Long => self.option.strike_price + self.premium - self.total_cost(),
             Side::Short => self.option.strike_price - self.premium - self.total_cost(),
@@ -198,15 +199,9 @@ impl Graph for Position {
 
         // Determine the range for the X and Y axes
         let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min) ;
-        let max_pnl_value = pnl_values
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max)* 1.2;
-        let min_pnl_value = pnl_values
-            .iter()
-            .cloned()
-            .fold(f64::INFINITY, f64::min)* 1.3;
+        let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min);
+        let max_pnl_value = pnl_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max) * 1.2;
+        let min_pnl_value = pnl_values.iter().cloned().fold(f64::INFINITY, f64::min) * 1.3;
 
         let title: String = self.title();
 
@@ -218,10 +213,7 @@ impl Graph for Position {
             .x_label_area_size(40)
             .y_label_area_size(60)
             .right_y_label_area_size(60)
-            .build_cartesian_2d(
-                min_price..max_price,
-                min_pnl_value..max_pnl_value,
-            )?;
+            .build_cartesian_2d(min_price..max_price, min_pnl_value..max_pnl_value)?;
 
         // Configure and draw the mesh grid
         chart.configure_mesh().x_labels(20).y_labels(20).draw()?;
@@ -249,21 +241,24 @@ impl Graph for Position {
                 size,
                 point_color,
                 &|coord, size, style| {
-                    let element = EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled());
+                    let element =
+                        EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled());
 
                     if i % 10 == 0 {
-                        element + Text::new(
-                            format!("{:.2}", value),
-                            (label_offset.0 as i32, label_offset.1 as i32),
-                            ("sans-serif", 15).into_font(),
-                        )
+                        element
+                            + Text::new(
+                                format!("{:.2}", value),
+                                (label_offset.0, label_offset.1),
+                                ("sans-serif", 15).into_font(),
+                            )
                     } else {
-                        EmptyElement::at(coord) + Circle::new((0, 0), size-2, style.filled())
-                         + Text::new(
-                            format!(""),
-                            (label_offset.0 as i32, label_offset.1 as i32),
-                            ("sans-serif", 15).into_font(),
-                        )
+                        EmptyElement::at(coord)
+                            + Circle::new((0, 0), size - 2, style.filled())
+                            + Text::new(
+                                String::new(),
+                                (label_offset.0, label_offset.1),
+                                ("sans-serif", 15).into_font(),
+                            )
                     }
                 },
             ))?;
