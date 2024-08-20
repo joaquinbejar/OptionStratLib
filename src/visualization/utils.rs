@@ -1,7 +1,11 @@
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
-   Date: 1/8/24
+   Date: 20/8/24
 ******************************************************************************/
-pub mod binomial_tree;
-pub mod utils;
+
+pub trait Graph {
+    fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn std::error::Error>>;
+
+    fn title(&self) -> String;
+}

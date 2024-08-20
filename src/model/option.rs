@@ -8,7 +8,10 @@ use crate::pricing::binomial_model::{
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::telegraph::telegraph;
+use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
+use plotters::prelude::*;
+use std::error::Error;
 
 #[derive(Clone, Default, Debug)]
 pub struct ExoticParams {
@@ -217,12 +220,106 @@ impl Greeks for Options {
 }
 
 impl PnLCalculator for Options {
-    fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: f64) -> PnL {
+    fn calculate_pnl(&self, _date_time: DateTime<Utc>, _market_price: f64) -> PnL {
         todo!()
     }
 
     fn calculate_pnl_at_expiration(&self) -> PnL {
         todo!()
+    }
+}
+
+impl Graph for Options {
+    fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
+        // Generate intrinsic value for each price in the data vector
+        let intrinsic_values: Vec<f64> = data
+            .iter()
+            .map(|&price| self.intrinsic_value(price))
+            .collect();
+
+        // Set up the drawing area with a 1200x800 pixel canvas
+        let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
+        root.fill(&WHITE)?;
+
+        // Determine the range for the X and Y axes
+        let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min);
+        let max_intrinsic_value = intrinsic_values
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+        let min_intrinsic_value = intrinsic_values
+            .iter()
+            .cloned()
+            .fold(f64::INFINITY, f64::min);
+
+        let title: String = self.title();
+
+        // Build the chart with specified margins and label sizes
+        let mut chart = ChartBuilder::on(&root)
+            .caption(title, ("sans-serif", 30))
+            .margin(10)
+            .top_x_label_area_size(40)
+            .x_label_area_size(40)
+            .y_label_area_size(60)
+            .right_y_label_area_size(60)
+            .build_cartesian_2d(
+                min_price..max_price,
+                min_intrinsic_value..max_intrinsic_value,
+            )?;
+
+        // Configure and draw the mesh grid
+        chart.configure_mesh().x_labels(20).y_labels(20).draw()?;
+
+        // Draw the line series representing intrinsic values
+        chart.draw_series(LineSeries::new(
+            data.iter().cloned().zip(intrinsic_values.iter().cloned()),
+            &RED,
+        ))?;
+
+        // Draw points on the graph with labels for the intrinsic values
+        for (i, (&price, &value)) in data.iter().zip(intrinsic_values.iter()).enumerate() {
+            if i % 10 == 0 && value > 0.0 {
+                chart.draw_series(PointSeries::of_element(
+                    vec![(price, value)],
+                    3,
+                    &RED,
+                    &|coord, size, style| {
+                        EmptyElement::at(coord)
+                            + Circle::new((0, 0), size, style.filled())
+                            + Text::new(
+                                format!("{:.2}", value),
+                                (20, 0),
+                                ("sans-serif", 15).into_font(),
+                            )
+                    },
+                ))?;
+            } else {
+                chart.draw_series(PointSeries::of_element(
+                    vec![(price, value)],
+                    2,
+                    &RED,
+                    &|coord, size, style| {
+                        EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled())
+                    },
+                ))?;
+            }
+        }
+
+        // Finalize and render the chart
+        root.present()?;
+        Ok(())
+    }
+
+    fn title(&self) -> String {
+        format!(
+            "Underlying: {} @ ${:.0} {} {} {}",
+            self.underlying_symbol,
+            self.strike_price,
+            self.side,
+            self.option_style,
+            self.option_type
+        )
     }
 }
 

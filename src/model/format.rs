@@ -15,7 +15,7 @@ impl fmt::Display for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "{} {} {} Option",
+            "{} {} {}",
             self.side, self.option_style, self.option_type
         )?;
         writeln!(
@@ -312,7 +312,7 @@ mod tests_options {
 
         let display_output = format!("{}", options);
         let expected_output = "\
-            Long Call European Option Option\n\
+            Long Call European Option\n\
             Underlying: AAPL @ $155.00\n\
             Strike: $150.00\n\
             Expiration: 2024-08-08 00:00:00 UTC (-12 days)\n\
@@ -356,7 +356,7 @@ mod tests_options {
 
         let display_output = format!("{}", options);
         let expected_output = "\
-            Short Call Barrier Option (Type: Up-And-In Barrier, Level: 100) Option\n\
+            Short Call Barrier Option (Type: Up-And-In Barrier, Level: 100)\n\
             Underlying: GOOGL @ $1900.00\n\
             Strike: $2000.00\n\
             Expiration: 2024-08-08 00:00:00 UTC (-12 days)\n\
