@@ -41,5 +41,5 @@ impl PnL {
 
 pub trait PnLCalculator {
     fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: f64) -> PnL;
-    fn calculate_pnl_at_expiration(&self) -> PnL;
+    fn calculate_pnl_at_expiration(&self, underlying_price: Option<f64>) -> PnL;
 }

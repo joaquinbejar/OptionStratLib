@@ -6,5 +6,5 @@
 
 mod format;
 pub mod option;
-mod position;
+pub mod position;
 pub mod types;

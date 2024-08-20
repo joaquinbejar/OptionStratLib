@@ -8,7 +8,11 @@ use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
+use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
+use plotters::prelude::*;
+use plotters::element::{Circle, EmptyElement, Text};
+use std::error::Error;
 
 /// The `Position` struct represents a financial position in an options market.
 /// It includes various attributes related to the option, such as its cost,
@@ -85,9 +89,16 @@ impl Position {
         }
     }
 
-    pub fn pnl_at_expiration(&self) -> f64 {
-        self.option.intrinsic_value(self.option.underlying_price) - self.total_cost()
-            + self.premium_received()
+    pub fn pnl_at_expiration(&self, underlying_price: Option<f64>) -> f64 {
+        match underlying_price {
+            None => {
+                self.option.intrinsic_value(self.option.underlying_price) - self.total_cost()
+                    + self.premium_received()
+            }
+            Some(price) => {
+                self.option.intrinsic_value(price) - self.total_cost() + self.premium_received()
+            }
+        }
     }
 
     pub fn unrealized_pnl(&self, current_option_price: f64) -> f64 {
@@ -136,6 +147,13 @@ impl Position {
         }
         premium
     }
+
+    fn break_even(&self) -> f64 { // TODO: tests it
+        match self.option.side {
+            Side::Long => self.option.strike_price + self.premium - self.total_cost(),
+            Side::Short => self.option.strike_price - self.premium - self.total_cost(),
+        }
+    }
 }
 
 impl Greeks for Position {
@@ -155,14 +173,109 @@ impl PnLCalculator for Position {
         )
     }
 
-    fn calculate_pnl_at_expiration(&self) -> PnL {
+    fn calculate_pnl_at_expiration(&self, underlying_price: Option<f64>) -> PnL {
         PnL::new(
-            Some(self.pnl_at_expiration()),
+            Some(self.pnl_at_expiration(underlying_price)),
             None,
             self.total_cost(),
             self.premium_received(),
             self.option.expiration_date.get_date(),
         )
+    }
+}
+
+impl Graph for Position {
+    fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
+        // Generate PNL at expiration for each price in the data vector
+        let pnl_values: Vec<f64> = data
+            .iter()
+            .map(|&price| self.pnl_at_expiration(Some(price)))
+            .collect();
+
+        // Set up the drawing area with a 1200x800 pixel canvas
+        let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
+        root.fill(&WHITE)?;
+
+        // Determine the range for the X and Y axes
+        let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min) ;
+        let max_pnl_value = pnl_values
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max)* 1.2;
+        let min_pnl_value = pnl_values
+            .iter()
+            .cloned()
+            .fold(f64::INFINITY, f64::min)* 1.3;
+
+        let title: String = self.title();
+
+        // Build the chart with specified margins and label sizes
+        let mut chart = ChartBuilder::on(&root)
+            .caption(title, ("sans-serif", 30))
+            .margin(10)
+            .top_x_label_area_size(40)
+            .x_label_area_size(40)
+            .y_label_area_size(60)
+            .right_y_label_area_size(60)
+            .build_cartesian_2d(
+                min_price..max_price,
+                min_pnl_value..max_pnl_value,
+            )?;
+
+        // Configure and draw the mesh grid
+        chart.configure_mesh().x_labels(20).y_labels(20).draw()?;
+
+        // Draw a horizontal line at y = 0 to indicate break-even
+        chart.draw_series(LineSeries::new(
+            vec![(min_price, 0.0), (max_price, 0.0)],
+            &BLACK,
+        ))?;
+
+        // Draw the line series representing PNL values
+        chart.draw_series(LineSeries::new(
+            data.iter().cloned().zip(pnl_values.iter().cloned()),
+            &BLUE,
+        ))?;
+
+        // Draw points on the graph with labels for the PNL values
+        for (i, (&price, &value)) in data.iter().zip(pnl_values.iter()).enumerate() {
+            let point_color = if value >= 0.0 { &GREEN } else { &RED };
+            let label_offset = if value >= 0.0 { (20, 0) } else { (-20, -20) };
+            let size = 4;
+
+            chart.draw_series(PointSeries::of_element(
+                vec![(price, value)],
+                size,
+                point_color,
+                &|coord, size, style| {
+                    let element = EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled());
+
+                    if i % 10 == 0 {
+                        element + Text::new(
+                            format!("{:.2}", value),
+                            (label_offset.0 as i32, label_offset.1 as i32),
+                            ("sans-serif", 15).into_font(),
+                        )
+                    } else {
+                        EmptyElement::at(coord) + Circle::new((0, 0), size-2, style.filled())
+                         + Text::new(
+                            format!(""),
+                            (label_offset.0 as i32, label_offset.1 as i32),
+                            ("sans-serif", 15).into_font(),
+                        )
+                    }
+                },
+            ))?;
+        }
+
+        // Finalize and render the chart
+        root.present()?;
+        Ok(())
+    }
+
+    fn title(&self) -> String {
+        self.option.title()
     }
 }
 
@@ -246,7 +359,7 @@ mod tests_position {
         let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 110.0, 1, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             3.0,
             "PNL at expiration for long call ITM is incorrect."
         );
@@ -257,7 +370,7 @@ mod tests_position {
         let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 110.0, 1, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             3.0,
             "PNL at expiration for long call ITM is incorrect."
         );
@@ -268,7 +381,7 @@ mod tests_position {
         let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 110.0, 10, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             30.0,
             "PNL at expiration for long call ITM is incorrect."
         );
@@ -279,7 +392,7 @@ mod tests_position {
         let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 110.0, 1, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             -7.0,
             "PNL at expiration for short call ITM is incorrect."
         );
@@ -290,7 +403,7 @@ mod tests_position {
         let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 110.0, 10, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             -70.0,
             "PNL at expiration for short call ITM is incorrect."
         );
@@ -301,7 +414,7 @@ mod tests_position {
         let option = setup_option(Side::Long, OptionStyle::Put, 100.0, 90.0, 1, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             3.0,
             "PNL at expiration for long put ITM is incorrect."
         );
@@ -312,7 +425,7 @@ mod tests_position {
         let option = setup_option(Side::Long, OptionStyle::Put, 100.0, 90.0, 10, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             30.0,
             "PNL at expiration for long put ITM is incorrect."
         );
@@ -323,7 +436,7 @@ mod tests_position {
         let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 90.0, 1, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             -7.0,
             "PNL at expiration for short put ITM is incorrect."
         );
@@ -334,7 +447,7 @@ mod tests_position {
         let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 90.0, 10, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             -70.0,
             "PNL at expiration for short put ITM is incorrect."
         );
@@ -345,7 +458,7 @@ mod tests_position {
         let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 110.0, 1, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             3.0,
             "PNL at expiration for short put ITM is incorrect."
         );
@@ -356,7 +469,7 @@ mod tests_position {
         let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 110.0, 10, 0);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
-            position.pnl_at_expiration(),
+            position.pnl_at_expiration(None),
             30.0,
             "PNL at expiration for short put ITM is incorrect."
         );
@@ -457,181 +570,3 @@ mod tests_position {
         );
     }
 }
-
-// #[cfg(test)]
-// mod tests_pnl_basic {
-//     use super::*;
-//
-//     #[test]
-//     fn test_pnl() {
-//         let option = Options::new(
-//             OptionType::European,
-//             Side::Long,
-//             "AAPL".to_string(),
-//             100.0,
-//             ExpirationDate::Days(30.0),
-//             0.2,
-//             1,
-//             100.0,
-//             0.05,
-//             OptionStyle::Call,
-//             0.01,
-//             None,
-//         );
-//
-//         // Test PnL when the asset price is above the strike price
-//         assert_eq!(option.pnl(110.0), 5.0); // (110 - 100) - 5 = 5
-//
-//         // Test PnL when the asset price is below the strike price
-//         assert_eq!(option.pnl(90.0), -5.0); // 0 - 5 = -5
-//
-//         // Test PnL when the asset price is equal to the strike price
-//         assert_eq!(option.pnl(100.0), -5.0); // 0 - 5 = -5
-//     }
-//
-//     #[test]
-//     fn test_pnl_at_expiration() {
-//         let option = Options::new(
-//             OptionType::European,
-//             Side::Long,
-//             "AAPL".to_string(),
-//             100.0,
-//             ExpirationDate::Days(ZERO), // Expired
-//             0.2,
-//             1,
-//             110.0, // Underlying price at expiration
-//             0.05,
-//             OptionStyle::Call,
-//             0.01,
-//             5.0, // premium
-//             None,
-//         );
-//
-//         assert_eq!(option.pnl_at_expiration(), 5.0); // (110 - 100) - 5 = 5
-//     }
-//
-//     #[test]
-//     fn test_pnl_short_option() {
-//         let option = Options::new(
-//             OptionType::European,
-//             Side::Short,
-//             "AAPL".to_string(),
-//             100.0,
-//             ExpirationDate::Days(30.0),
-//             0.2,
-//             1,
-//             100.0,
-//             0.05,
-//             OptionStyle::Put,
-//             0.01,
-//             -5.0, // premium (received)
-//             None,
-//         );
-//
-//         // Test PnL when the asset price is above the strike price
-//         assert_eq!(option.pnl(110.0), 5.0); // 0 + 5 = 5
-//
-//         // Test PnL when the asset price is below the strike price
-//         assert_eq!(option.pnl(90.0), -5.0); // (100 - 90) - 5 = 5
-//     }
-//
-//     #[test]
-//     fn test_pnl_at_expiration_short_option() {
-//         let option = Options::new(
-//             OptionType::European,
-//             Side::Short,
-//             "AAPL".to_string(),
-//             100.0,
-//             ExpirationDate::Days(ZERO), // Expired
-//             0.2,
-//             1,
-//             90.0, // Underlying price at expiration
-//             0.05,
-//             OptionStyle::Put,
-//             0.01,
-//             -5.0, // premium (received)
-//             None,
-//         );
-//
-//         assert_eq!(option.pnl_at_expiration(), -5.0); // (100 - 90) - 5 = 5
-//     }
-// }
-//
-// #[cfg(test)]
-// mod tests_pnl_extended {
-//     use super::*;
-//
-//     fn create_option(option_style: OptionStyle, side: Side, premium: f64) -> Options {
-//         Options::new(
-//             OptionType::European,
-//             side,
-//             "AAPL".to_string(),
-//             100.0,
-//             ExpirationDate::Days(30.0),
-//             0.2,
-//             1,
-//             100.0,
-//             0.05,
-//             option_style,
-//             0.01,
-//             premium,
-//             None,
-//         )
-//     }
-//
-//     #[test]
-//     fn test_pnl_call_long() {
-//         let option = create_option(OptionStyle::Call, Side::Long, 5.0);
-//         assert_eq!(option.pnl(110.0), 5.0); // (110 - 100) - 5 = 5
-//         assert_eq!(option.pnl(90.0), -5.0); // 0 - 5 = -5
-//     }
-//
-//     #[test]
-//     fn test_pnl_at_expiration_call_long() {
-//         let mut option = create_option(OptionStyle::Call, Side::Long, 5.0);
-//         option.underlying_price = 110.0;
-//         assert_eq!(option.pnl_at_expiration(), 5.0); // (110 - 100) - 5 = 5
-//     }
-//
-//     #[test]
-//     fn test_pnl_call_short() {
-//         let option = create_option(OptionStyle::Call, Side::Short, -5.0);
-//         assert_eq!(option.pnl(110.0), -5.0); // -(110 - 100) + 5 = -5
-//         assert_eq!(option.pnl(90.0), 5.0); // 0 + 5 = 5
-//     }
-//
-//     #[test]
-//     fn test_pnl_at_expiration_call_short() {
-//         let mut option = create_option(OptionStyle::Call, Side::Short, -5.0);
-//         option.underlying_price = 110.0;
-//         assert_eq!(option.pnl_at_expiration(), -5.0); // -(110 - 100) + 5 = -5
-//     }
-//
-//     #[test]
-//     fn test_pnl_put_long() {
-//         let option = create_option(OptionStyle::Put, Side::Long, 5.0);
-//         assert_eq!(option.pnl(90.0), 5.0); // (100 - 90) - 5 = 5
-//         assert_eq!(option.pnl(110.0), -5.0); // 0 - 5 = -5
-//     }
-//
-//     #[test]
-//     fn test_pnl_at_expiration_put_long() {
-//         let mut option = create_option(OptionStyle::Put, Side::Long, 5.0);
-//         option.underlying_price = 90.0;
-//         assert_eq!(option.pnl_at_expiration(), 5.0); // (100 - 90) - 5 = 5
-//     }
-//
-//     #[test]
-//     fn test_pnl_put_short() {
-//         let option = create_option(OptionStyle::Put, Side::Short, -5.0);
-//         assert_eq!(option.pnl(90.0), -5.0); // -(100 - 90) + 5 = -5
-//         assert_eq!(option.pnl(110.0), 5.0); // 0 + 5 = 5
-//     }
-//
-//     #[test]
-//     fn test_pnl_at_expiration_put_short() {
-//         let mut option = create_option(OptionStyle::Put, Side::Short, -5.0);
-//         option.underlying_price = 90.0;
-//         assert_eq!(option.pnl_at_expiration(), -5.0); // -(100 - 90) + 5 = -5
-//     }
-// }

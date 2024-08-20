@@ -224,7 +224,7 @@ impl PnLCalculator for Options {
         todo!()
     }
 
-    fn calculate_pnl_at_expiration(&self) -> PnL {
+    fn calculate_pnl_at_expiration(&self, _underlying_price: Option<f64>) -> PnL {
         todo!()
     }
 }
