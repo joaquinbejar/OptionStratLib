@@ -1,16 +1,8 @@
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
-   Date: 1/8/24
+   Date: 5/8/24
 ******************************************************************************/
-pub mod backtesting;
-pub mod constants;
-pub mod greeks;
-pub mod model;
-pub mod pnl;
-pub mod pricing;
-pub mod risk;
-pub mod strategies;
-pub mod surfaces;
-pub mod visualization;
-pub mod volatility;
+
+pub(crate) const CLAMP_MIN: f64 = 0.0;
+pub(crate) const CLAMP_MAX: f64 = 1.0;

@@ -1,16 +1,11 @@
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
-   Date: 1/8/24
+   Date: 20/8/24
 ******************************************************************************/
-pub mod backtesting;
-pub mod constants;
-pub mod greeks;
-pub mod model;
-pub mod pnl;
-pub mod pricing;
-pub mod risk;
-pub mod strategies;
-pub mod surfaces;
-pub mod visualization;
-pub mod volatility;
+
+pub trait Graph {
+    fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn std::error::Error>>;
+
+    fn title(&self) -> String;
+}

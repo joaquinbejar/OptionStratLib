@@ -1,16 +1,7 @@
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
-   Date: 1/8/24
+   Date: 11/8/24
 ******************************************************************************/
-pub mod backtesting;
-pub mod constants;
-pub mod greeks;
-pub mod model;
-pub mod pnl;
-pub mod pricing;
-pub mod risk;
-pub mod strategies;
-pub mod surfaces;
-pub mod visualization;
-pub mod volatility;
+pub(crate) mod equations;
+pub mod utils;
