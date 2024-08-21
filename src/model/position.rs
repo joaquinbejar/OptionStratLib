@@ -199,6 +199,9 @@ impl Graph for Position {
             .map(|&price| self.pnl_at_expiration(Some(price)))
             .collect();
 
+        let dark_green = RGBColor(0, 150, 0);
+        let dark_red = RGBColor(220, 0, 0);
+
         // Set up the drawing area with a 1200x800 pixel canvas
         let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
         root.fill(&WHITE)?;
@@ -231,11 +234,25 @@ impl Graph for Position {
             &BLACK,
         ))?;
 
-        // Draw the line series representing PNL values
-        chart.draw_series(LineSeries::new(
-            data.iter().cloned().zip(pnl_values.iter().cloned()),
-            &BLUE,
-        ))?;
+        // // Draw the line series representing PNL values
+        // chart.draw_series(LineSeries::new(
+        //     data.iter().cloned().zip(pnl_values.iter().cloned()),
+        //     &BLUE,
+        // ))?;
+
+        // Iterate through the data and PNL values to draw the line segments
+        let mut last_point = None;
+        for (&price, &pnl_value) in data.iter().zip(pnl_values.iter()) {
+            if let Some((last_price, last_pnl)) = last_point {
+                let color = if pnl_value >= 0.0 { &dark_green } else { &dark_red };
+
+                chart.draw_series(LineSeries::new(
+                    vec![(last_price, last_pnl), (price, pnl_value)],
+                    color,
+                ))?;
+            }
+            last_point = Some((price, pnl_value));
+        }
 
         // Draw a vertical line at the break-even price
         chart.draw_series(LineSeries::new(
@@ -259,18 +276,18 @@ impl Graph for Position {
             &|coord, _size, _style| {
                 EmptyElement::at(coord)
                     + Text::new(
-                        format!("Break Even: {:.2}", break_even_price),
-                        break_even_label_position, // Position the text just above the top of the line
-                        ("sans-serif", 15).into_font(),
-                    )
+                    format!("Break Even: {:.2}", break_even_price),
+                    break_even_label_position, // Position the text just above the top of the line
+                    ("sans-serif", 15).into_font(),
+                )
             },
         ))?;
 
         // Draw points on the graph with labels for the PNL values
         for (i, (&price, &value)) in data.iter().zip(pnl_values.iter()).enumerate() {
-            let point_color = if value >= 0.0 { &GREEN } else { &RED };
+            let point_color = if value >= 0.0 { &dark_green } else { &dark_red };
             let label_offset = if value >= 0.0 { (20, 0) } else { (-20, -20) };
-            let size = 4;
+            let size = 3;
 
             chart.draw_series(PointSeries::of_element(
                 vec![(price, value)],
@@ -283,18 +300,16 @@ impl Graph for Position {
                     if i % 10 == 0 {
                         element
                             + Text::new(
-                                format!("{:.2}", value),
-                                (label_offset.0, label_offset.1),
-                                ("sans-serif", 15).into_font(),
-                            )
+                            format!("{:.2}", value),
+                            (label_offset.0, label_offset.1),
+                            ("sans-serif", 15).into_font(),
+                        )
                     } else {
-                        EmptyElement::at(coord)
-                            + Circle::new((0, 0), size - 2, style.filled())
-                            + Text::new(
-                                String::new(),
-                                (label_offset.0, label_offset.1),
-                                ("sans-serif", 15).into_font(),
-                            )
+                        EmptyElement::at(coord) + Circle::new((0, 0), 0, style.filled()) + Text::new(
+                            String::new(),
+                            (label_offset.0, label_offset.1),
+                            ("sans-serif", 15).into_font(),
+                        )
                     }
                 },
             ))?;
