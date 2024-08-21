@@ -18,7 +18,8 @@ exclude = [
     "/.github",
     "/.idea",
     "/.vscode",
-    "Cargo.lock"
+    "Cargo.lock",
+    "/**/.DS_Store",
 ]
 include = [
     "src/**/*",
