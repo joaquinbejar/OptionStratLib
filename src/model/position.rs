@@ -161,6 +161,20 @@ impl Position {
             }
         }
     }
+
+    pub(crate) fn max_profit(&self) -> f64 {
+        match self.option.side {
+            Side::Long => f64::INFINITY,
+            Side::Short => self.premium * self.option.quantity as f64,
+        }
+    }
+
+    pub(crate) fn max_loss(&self) -> f64 {
+        match self.option.side {
+            Side::Long => self.total_cost(),
+            Side::Short => f64::INFINITY,
+        }
+    }
 }
 
 impl Greeks for Position {
