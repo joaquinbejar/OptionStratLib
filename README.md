@@ -5,6 +5,16 @@
 
 OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes. This versatile toolkit enables traders, quants, and developers to:
 
+[![Dual License](https://img.shields.io/badge/license-MIT%20and%20Apache%202.0-blue)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/rust_financial_options.svg)](https://crates.io/crates/optionstratlib)
+[![Downloads](https://img.shields.io/crates/d/rust_financial_options.svg)](https://crates.io/crates/optionstratlib)
+[![Stars](https://img.shields.io/github/stars/joaquinbejar/OptionStratLib.svg)](https://github.com/joaquinbejar/OptionStratLib/stargazers)
+
+[![Build Status](https://img.shields.io/github/workflow/status/yourusername/rust_financial_options/CI)](https://github.com/yourusername/rust_financial_options/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/yourusername/rust_financial_options)](https://codecov.io/gh/yourusername/rust_financial_options)
+[![Dependencies](https://img.shields.io/librariesio/github/yourusername/rust_financial_options)](https://libraries.io/github/yourusername/rust_financial_options)
+
+
 Price options on various underlying assets
 Implement complex option strategies
 Analyze risk metrics and Greeks

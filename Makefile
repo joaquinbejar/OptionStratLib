@@ -58,3 +58,6 @@ fix:
 .PHONY: pre-push
 pre-push: fix fmt lint-fix test
 
+.PHONY: doc
+doc:
+	cargo doc --open

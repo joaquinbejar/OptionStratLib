@@ -18,3 +18,4 @@ Cargo.lock
 .local/
 /Docker/.erlang.cookie
 /Doc/.*.drawio.bkp
+/**/.DS_Store
