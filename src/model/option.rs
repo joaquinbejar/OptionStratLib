@@ -237,6 +237,8 @@ impl Graph for Options {
             .map(|&price| self.intrinsic_value(price))
             .collect();
 
+        let dark_red = RGBColor(220, 0, 0);
+
         // Set up the drawing area with a 1200x800 pixel canvas
         let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
         root.fill(&WHITE)?;
@@ -244,14 +246,20 @@ impl Graph for Options {
         // Determine the range for the X and Y axes
         let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max_intrinsic_value = intrinsic_values
+
+        let max_intrinsic_values = intrinsic_values
             .iter()
             .cloned()
             .fold(f64::NEG_INFINITY, f64::max);
-        let min_intrinsic_value = intrinsic_values
+        let min_intrinsic_values = intrinsic_values
             .iter()
             .cloned()
             .fold(f64::INFINITY, f64::min);
+        let adjusted_max = (max_intrinsic_values * 1.2 - max_intrinsic_values).abs();
+        let adjusted_min = (min_intrinsic_values * 1.2 - min_intrinsic_values).abs();
+        let margin_value = std::cmp::max(adjusted_max as i64, adjusted_min as i64);
+        let max_intrinsic_value = max_intrinsic_values + margin_value as f64;
+        let min_intrinsic_value = min_intrinsic_values - margin_value as f64;
 
         let title: String = self.title();
 
@@ -271,19 +279,54 @@ impl Graph for Options {
         // Configure and draw the mesh grid
         chart.configure_mesh().x_labels(20).y_labels(20).draw()?;
 
+        // Draw a horizontal line at y = 0 to indicate break-even
+        chart.draw_series(LineSeries::new(
+            vec![(min_price, 0.0), (max_price, 0.0)],
+            &BLACK,
+        ))?;
+
+        // Draw a vertical line at the break-even price
+        chart.draw_series(LineSeries::new(
+            vec![
+                (self.strike_price, min_intrinsic_value),
+                (self.strike_price, max_intrinsic_value),
+            ],
+            &BLACK,
+        ))?;
+        println!("{} {}", min_intrinsic_value, max_intrinsic_value);
+        let break_even_label_position = match self.side {
+            Side::Long => (10, 30),
+            Side::Short => (10, 600),
+        };
+
+        // Add a label at the top of the break-even line
+        chart.draw_series(PointSeries::of_element(
+            vec![(self.strike_price, max_intrinsic_value)],
+            5,
+            &BLACK,
+            &|coord, _size, _style| {
+                EmptyElement::at(coord)
+                    + Text::new(
+                        format!("Strike: {:.2}", self.strike_price),
+                        break_even_label_position, // Position the text just above the top of the line
+                        ("sans-serif", 15).into_font(),
+                    )
+            },
+        ))?;
+
         // Draw the line series representing intrinsic values
         chart.draw_series(LineSeries::new(
             data.iter().cloned().zip(intrinsic_values.iter().cloned()),
-            &RED,
+            &dark_red,
         ))?;
 
         // Draw points on the graph with labels for the intrinsic values
         for (i, (&price, &value)) in data.iter().zip(intrinsic_values.iter()).enumerate() {
-            if i % 10 == 0 && value > 0.0 {
+            if i % 10 == 0 && value != 0.0 {
                 chart.draw_series(PointSeries::of_element(
                     vec![(price, value)],
                     3,
-                    &RED,
+                    &dark_red,
                     &|coord, size, style| {
                         EmptyElement::at(coord)
                             + Circle::new((0, 0), size, style.filled())
@@ -297,8 +340,8 @@ impl Graph for Options {
             } else {
                 chart.draw_series(PointSeries::of_element(
                     vec![(price, value)],
-                    2,
-                    &RED,
+                    0,
+                    &dark_red,
                     &|coord, size, style| {
                         EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled())
                     },
@@ -322,6 +365,110 @@ impl Graph for Options {
         )
     }
 }
+
+// impl Graph for Options {
+//     fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
+//         // Generate intrinsic value for each price in the data vector
+//         let intrinsic_values: Vec<f64> = data
+//             .iter()
+//             .map(|&price| self.intrinsic_value(price))
+//             .collect();
+//
+//         let dark_red = RGBColor(220, 0, 0);
+//
+//         // Set up the drawing area with a 1200x800 pixel canvas
+//         let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
+//         root.fill(&WHITE)?;
+//
+//         // Determine the range for the X and Y axes
+//         let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+//         let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min);
+//
+//         let max_intrinsic_values = intrinsic_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+//         let min_intrinsic_values = intrinsic_values.iter().cloned().fold(f64::INFINITY, f64::min);
+//         let adjusted_max = (max_intrinsic_values * 1.2 - max_intrinsic_values).abs();
+//         let adjusted_min = (min_intrinsic_values * 1.2 - min_intrinsic_values).abs();
+//         let margin_value = std::cmp::max(adjusted_max as i64, adjusted_min as i64);
+//         let max_intrinsic_value = max_intrinsic_values + margin_value as f64;
+//         let min_intrinsic_value = min_intrinsic_values - margin_value as f64;
+//
+//
+//         let title: String = self.title();
+//
+//         // Build the chart with specified margins and label sizes
+//         let mut chart = ChartBuilder::on(&root)
+//             .caption(title, ("sans-serif", 30))
+//             .margin(10)
+//             .top_x_label_area_size(40)
+//             .x_label_area_size(40)
+//             .y_label_area_size(60)
+//             .right_y_label_area_size(60)
+//             .build_cartesian_2d(
+//                 min_price..max_price,
+//                 min_intrinsic_value..max_intrinsic_value,
+//             )?;
+//
+//         // Configure and draw the mesh grid
+//         chart.configure_mesh().x_labels(20).y_labels(20).draw()?;
+//
+//         // Draw a horizontal line at y = 0 to indicate break-even
+//         chart.draw_series(LineSeries::new(
+//             vec![(min_price, 0.0), (max_price, 0.0)],
+//             &BLACK,
+//         ))?;
+//
+//         // Draw the line series representing intrinsic values
+//         chart.draw_series(LineSeries::new(
+//             data.iter().cloned().zip(intrinsic_values.iter().cloned()),
+//             &dark_red,
+//         ))?;
+//
+//         // Draw points on the graph with labels for the intrinsic values
+//         for (i, (&price, &value)) in data.iter().zip(intrinsic_values.iter()).enumerate() {
+//             if i % 10 == 0 && value > 0.0 {
+//                 chart.draw_series(PointSeries::of_element(
+//                     vec![(price, value)],
+//                     3,
+//                     &dark_red,
+//                     &|coord, size, style| {
+//                         EmptyElement::at(coord)
+//                             + Circle::new((0, 0), size, style.filled())
+//                             + Text::new(
+//                                 format!("{:.2}", value),
+//                                 (20, 0),
+//                                 ("sans-serif", 15).into_font(),
+//                             )
+//                     },
+//                 ))?;
+//             } else {
+//                 chart.draw_series(PointSeries::of_element(
+//                     vec![(price, value)],
+//                     0,
+//                     &dark_red,
+//                     &|coord, size, style| {
+//                         EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled())
+//                     },
+//                 ))?;
+//
+//             }
+//         }
+//
+//         // Finalize and render the chart
+//         root.present()?;
+//         Ok(())
+//     }
+//
+//     fn title(&self) -> String {
+//         format!(
+//             "Underlying: {} @ ${:.0} {} {} {}",
+//             self.underlying_symbol,
+//             self.strike_price,
+//             self.side,
+//             self.option_style,
+//             self.option_type
+//         )
+//     }
+// }
 
 #[cfg(test)]
 mod tests_options {
