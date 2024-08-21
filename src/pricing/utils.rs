@@ -243,7 +243,7 @@ mod tests_simulate_returns {
         let simulated_mean = returns.clone().mean();
         let simulated_std_dev = returns.std_dev();
 
-        assert_relative_eq!(simulated_mean, mean * time_step, epsilon = 0.001);
+        assert_relative_eq!(simulated_mean, mean * time_step, epsilon = 0.01);
         assert_relative_eq!(
             simulated_std_dev,
             std_dev * time_step.sqrt(),

@@ -6,7 +6,7 @@
 use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
-use crate::model::types::{ExpirationDate, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
@@ -149,10 +149,16 @@ impl Position {
     }
 
     fn break_even(&self) -> f64 {
-        // TODO: tests it
-        match self.option.side {
-            Side::Long => self.option.strike_price + self.premium - self.total_cost(),
-            Side::Short => self.option.strike_price - self.premium - self.total_cost(),
+        let total_cost_per_contract = self.total_cost() / self.option.quantity as f64;
+        match (&self.option.side, &self.option.option_style) {
+            (Side::Long, OptionStyle::Call) => self.option.strike_price + total_cost_per_contract,
+            (Side::Short, OptionStyle::Call) => {
+                self.option.strike_price + self.premium - total_cost_per_contract
+            }
+            (Side::Long, OptionStyle::Put) => self.option.strike_price - total_cost_per_contract,
+            (Side::Short, OptionStyle::Put) => {
+                self.option.strike_price - self.premium + total_cost_per_contract
+            }
         }
     }
 }
@@ -200,10 +206,11 @@ impl Graph for Position {
         // Determine the range for the X and Y axes
         let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max_pnl_value = pnl_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max) * 1.2;
+        let max_pnl_value = pnl_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max) * 1.3;
         let min_pnl_value = pnl_values.iter().cloned().fold(f64::INFINITY, f64::min) * 1.3;
 
         let title: String = self.title();
+        let break_even_price = self.break_even(); // Get the break-even price
 
         // Build the chart with specified margins and label sizes
         let mut chart = ChartBuilder::on(&root)
@@ -228,6 +235,35 @@ impl Graph for Position {
         chart.draw_series(LineSeries::new(
             data.iter().cloned().zip(pnl_values.iter().cloned()),
             &BLUE,
+        ))?;
+
+        // Draw a vertical line at the break-even price
+        chart.draw_series(LineSeries::new(
+            vec![
+                (break_even_price, min_pnl_value),
+                (break_even_price, max_pnl_value),
+            ],
+            &BLACK,
+        ))?;
+
+        let break_even_label_position = match self.option.side {
+            Side::Long => (10, 15),
+            Side::Short => (10, -min_pnl_value as i32 + 15),
+        };
+
+        // Add a label at the top of the break-even line
+        chart.draw_series(PointSeries::of_element(
+            vec![(break_even_price, max_pnl_value)],
+            5,
+            &BLACK,
+            &|coord, _size, _style| {
+                EmptyElement::at(coord)
+                    + Text::new(
+                        format!("Break Even: {:.2}", break_even_price),
+                        break_even_label_position, // Position the text just above the top of the line
+                        ("sans-serif", 15).into_font(),
+                    )
+            },
         ))?;
 
         // Draw points on the graph with labels for the PNL values
@@ -563,5 +599,92 @@ mod tests_position {
             !position.is_long(),
             "is_long should return false for short positions."
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_position_break_even {
+    use super::*;
+    use crate::constants::ZERO;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+
+    fn setup_option(
+        side: Side,
+        option_style: OptionStyle,
+        strike_price: f64,
+        underlying_price: f64,
+        quantity: u32,
+        expiration_days: i64,
+    ) -> Options {
+        Options {
+            option_type: OptionType::European,
+            side,
+            underlying_symbol: "".to_string(),
+            strike_price,
+            expiration_date: ExpirationDate::Days(expiration_days as f64),
+            implied_volatility: 0.2,
+            quantity,
+            underlying_price,
+            risk_free_rate: 0.01,
+            option_style,
+            dividend_yield: ZERO,
+            exotic_params: None,
+        }
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_call() {
+        let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.break_even(), 107.0);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_call_size() {
+        let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.break_even(), 107.0);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_short_call() {
+        let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.break_even(), 103.0);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_short_call_size() {
+        let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.break_even(), 103.0);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_put() {
+        let option = setup_option(Side::Long, OptionStyle::Put, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.break_even(), 93.0);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_put_size() {
+        let option = setup_option(Side::Long, OptionStyle::Put, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.break_even(), 93.0);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_short_put() {
+        let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.break_even(), 97.0);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_short_put_size() {
+        let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.break_even(), 97.0);
     }
 }

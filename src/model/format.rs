@@ -85,21 +85,10 @@ impl fmt::Display for ExpirationDate {
             ExpirationDate::Days(days) => {
                 let duration = Duration::days(*days as i64);
                 let expiration = Utc::now() + duration;
-                write!(
-                    f,
-                    "{} ({:.2} days)",
-                    expiration.format("%Y-%m-%d %H:%M:%S UTC"),
-                    days
-                )
+                write!(f, "{}", expiration.format("%Y-%m-%d %H:%M:%S UTC"))
             }
             ExpirationDate::DateTime(date_time) => {
-                let days = (*date_time - Utc::now()).num_days();
-                write!(
-                    f,
-                    "{} ({} days)",
-                    date_time.format("%Y-%m-%d %H:%M:%S UTC"),
-                    days
-                )
+                write!(f, "{}", date_time.format("%Y-%m-%d %H:%M:%S UTC"))
             }
         }
     }
@@ -315,7 +304,7 @@ mod tests_options {
             Long Call European Option\n\
             Underlying: AAPL @ $155.00\n\
             Strike: $150.00\n\
-            Expiration: 2024-08-08 00:00:00 UTC (-12 days)\n\
+            Expiration: 2024-08-08 00:00:00 UTC\n\
             Implied Volatility: 25.00%\n\
             Quantity: 10\n\
             Risk-free Rate: 1.00%\n\
@@ -359,12 +348,12 @@ mod tests_options {
             Short Call Barrier Option (Type: Up-And-In Barrier, Level: 100)\n\
             Underlying: GOOGL @ $1900.00\n\
             Strike: $2000.00\n\
-            Expiration: 2024-08-08 00:00:00 UTC (-12 days)\n\
+            Expiration: 2024-08-08 00:00:00 UTC\n\
             Implied Volatility: 30.00%\n\
             Quantity: 5\n\
             Risk-free Rate: 1.50%\n\
             Dividend Yield: 1.00%\n\
-            Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None }"; // Ajusta según la implementación de ExoticParams
+            Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None }";
 
         assert_eq!(display_output, expected_output);
     }
@@ -378,7 +367,6 @@ mod tests_expiration_date {
     fn test_display_days() {
         let expiration = ExpirationDate::Days(30.5);
         let display_string = format!("{}", expiration);
-        assert!(display_string.contains("30.50 days"));
         assert!(display_string.contains("UTC"));
     }
 
@@ -387,7 +375,6 @@ mod tests_expiration_date {
         let future_date = Utc::now() + Duration::days(15) + Duration::minutes(1);
         let expiration = ExpirationDate::DateTime(future_date);
         let display_string = format!("{}", expiration);
-        assert!(display_string.contains("15 days"));
         assert!(display_string.contains("UTC"));
         assert!(display_string.contains(&future_date.format("%Y-%m-%d %H:%M:%S").to_string()));
     }
@@ -421,7 +408,8 @@ mod tests_expiration_date {
         let past_date = Utc::now() - Duration::days(5);
         let expiration = ExpirationDate::DateTime(past_date);
         let display_string = format!("{}", expiration);
-        assert!(display_string.contains("-5 days"));
+        assert!(display_string.contains("UTC"));
+        assert!(display_string.contains(&past_date.format("%Y-%m-%d %H:%M:%S").to_string()));
     }
 
     #[test]
@@ -429,7 +417,8 @@ mod tests_expiration_date {
         let today = Utc::now();
         let expiration = ExpirationDate::DateTime(today);
         let display_string = format!("{}", expiration);
-        assert!(display_string.contains("0 days"));
+        println!("{}", display_string);
+        assert!(display_string.contains(&today.format("%Y-%m-%d %H:%M:%S").to_string()));
     }
 }
 

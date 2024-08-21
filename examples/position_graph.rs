@@ -18,7 +18,7 @@ fn create_sample_option() -> Options {
         100.0,
         ExpirationDate::Days(30.0),
         0.2,
-        1,
+        10,
         105.0,
         0.05,
         OptionStyle::Call,
@@ -27,7 +27,7 @@ fn create_sample_option() -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    let position = Position::new(create_sample_option(), 5.0, Utc::now(), 1.0, 1.0);
+    let position = Position::new(create_sample_option(), 5.71, Utc::now(), 1.0, 1.0);
 
     let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();
 
