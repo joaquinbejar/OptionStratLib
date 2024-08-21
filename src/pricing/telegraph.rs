@@ -135,6 +135,7 @@ impl TelegraphProcess {
         self.current_state
     }
 
+    #[allow(dead_code)]
     /// Returns the current state of the process.
     ///
     /// # Returns
