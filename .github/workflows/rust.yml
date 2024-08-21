@@ -1,0 +1,39 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    
+    - name: Install make
+      run: sudo apt-get install make
+    
+    - name: Build
+      run: make build
+    
+    - name: Format check
+      run: make fmt
+    
+    - name: Lint
+      run: make lint
+    
+    - name: Run tests
+      run: make test
