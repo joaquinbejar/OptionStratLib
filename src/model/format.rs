@@ -4,6 +4,7 @@
    Date: 20/8/24
 ******************************************************************************/
 use crate::model::option::{ExoticParams, Options};
+use crate::model::position::Position;
 use crate::model::types::{
     AsianAveragingType, BarrierType, BinaryType, ExpirationDate, LookbackType, OptionStyle,
     OptionType, Side,
@@ -227,6 +228,29 @@ impl fmt::Display for LookbackType {
             LookbackType::FixedStrike => write!(f, "Fixed-Strike Lookback Option"),
             LookbackType::FloatingStrike => write!(f, "Floating-Strike Lookback Option"),
         }
+    }
+}
+
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Position Details:")?;
+        writeln!(f, "Option: {}", self.option)?;
+        writeln!(f, "Premium per contract: ${:.2}", self.premium)?;
+        writeln!(f, "Date: {}", self.date)?;
+        writeln!(f, "Open Fee per contract: ${:.2}", self.open_fee)?;
+        write!(f, "Close Fee per contract: ${:.2}", self.close_fee)
+    }
+}
+
+impl fmt::Debug for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Position")
+            .field("option", &self.option)
+            .field("premium", &self.premium)
+            .field("date", &self.date)
+            .field("open_fee", &self.open_fee)
+            .field("close_fee", &self.close_fee)
+            .finish()
     }
 }
 
@@ -714,5 +738,100 @@ mod tests_option_type_display_debug {
         let option = OptionType::Power { exponent: 2.5 };
         let display_output = format!("{}", option);
         assert_eq!(display_output, "Power Option (Exponent: 2.5)");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{DateTime, NaiveDate, TimeZone};
+
+    fn get_option() -> (Options, DateTime<Utc>) {
+        let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
+            .expect("Invalid date")
+            .and_hms_opt(0, 0, 0)
+            .expect("Invalid time");
+
+        (
+            Options {
+                option_type: OptionType::European,
+                side: Side::Long,
+                underlying_symbol: "AAPL".to_string(),
+                strike_price: 150.0,
+                expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
+                implied_volatility: 0.25,
+                quantity: 10,
+                underlying_price: 155.0,
+                risk_free_rate: 0.01,
+                option_style: OptionStyle::Call,
+                dividend_yield: 0.02,
+                exotic_params: None,
+            },
+            Utc.from_utc_datetime(&naive_date),
+        )
+    }
+
+    #[test]
+    fn test_position_display() {
+        let (option, naive_date) = get_option();
+        let position = Position {
+            option,
+            premium: 5.75,
+            date: naive_date,
+            open_fee: 0.50,
+            close_fee: 0.45,
+        };
+
+        let expected_display = "Position Details:\n\
+                Option: Long Call European Option\n\
+                Underlying: AAPL @ $155.00\n\
+                Strike: $150.00\n\
+                Expiration: 2024-08-08 00:00:00 UTC\n\
+                Implied Volatility: 25.00%\n\
+                Quantity: 10\n\
+                Risk-free Rate: 1.00%\n\
+                Dividend Yield: 2.00%\n\
+                Premium per contract: $5.75\n\
+                Date: 2024-08-08 00:00:00 UTC\n\
+                Open Fee per contract: $0.50\n\
+                Close Fee per contract: $0.45";
+
+        assert_eq!(format!("{}", position), expected_display);
+    }
+
+    #[test]
+    fn test_position_debug() {
+        let (option, naive_date) = get_option();
+
+        let position = Position {
+            option,
+            premium: 5.75,
+            date: naive_date,
+            open_fee: 0.50,
+            close_fee: 0.45,
+        };
+
+        let expected_debug = "Position { \
+        option: Options { \
+            option_type: European, \
+            side: Side::Long, \
+            underlying_symbol: \"AAPL\", \
+            strike_price: 150.0, \
+            expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), \
+            implied_volatility: 0.25, \
+            quantity: 10, \
+            underlying_price: 155.0, \
+            risk_free_rate: 0.01, \
+            option_style: OptionStyle::Call, \
+            dividend_yield: 0.02, \
+            exotic_params: None \
+        }, \
+        premium: 5.75, \
+        date: 2024-08-08T00:00:00Z, \
+        open_fee: 0.5, \
+        close_fee: 0.45 \
+    }";
+
+        assert_eq!(format!("{:?}", position), expected_debug);
     }
 }
