@@ -162,13 +162,14 @@ impl Position {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn max_profit(&self) -> f64 {
         match self.option.side {
             Side::Long => f64::INFINITY,
-            Side::Short => self.premium * self.option.quantity as f64,
+            Side::Short => self.premium * self.option.quantity as f64 - self.total_cost(),
         }
     }
-
+    #[allow(dead_code)]
     pub(crate) fn max_loss(&self) -> f64 {
         match self.option.side {
             Side::Long => self.total_cost(),
@@ -720,5 +721,101 @@ mod tests_position_break_even {
         let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 105.0, 10, 30);
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even(), 97.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_position_max_loss_profit {
+    use super::*;
+    use crate::constants::ZERO;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use approx::assert_relative_eq;
+
+    fn setup_option(
+        side: Side,
+        option_style: OptionStyle,
+        strike_price: f64,
+        underlying_price: f64,
+        quantity: u32,
+        expiration_days: i64,
+    ) -> Options {
+        Options {
+            option_type: OptionType::European,
+            side,
+            underlying_symbol: "".to_string(),
+            strike_price,
+            expiration_date: ExpirationDate::Days(expiration_days as f64),
+            implied_volatility: 0.2,
+            quantity,
+            underlying_price,
+            risk_free_rate: 0.01,
+            option_style,
+            dividend_yield: ZERO,
+            exotic_params: None,
+        }
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_call() {
+        let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_relative_eq!(position.max_loss(), 7.0, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit(), f64::INFINITY, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_call_size() {
+        let option = setup_option(Side::Long, OptionStyle::Call, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_relative_eq!(position.max_loss(), 70.0, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit(), f64::INFINITY, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_short_call() {
+        let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit(), 3.0, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_short_call_size() {
+        let option = setup_option(Side::Short, OptionStyle::Call, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit(), 30.0, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_put() {
+        let option = setup_option(Side::Long, OptionStyle::Put, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_relative_eq!(position.max_loss(), 7.0, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit(), f64::INFINITY, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_long_put_size() {
+        let option = setup_option(Side::Long, OptionStyle::Put, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_relative_eq!(position.max_loss(), 70.0, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit(), f64::INFINITY, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_short_put() {
+        let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 105.0, 1, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit(), 3.0, epsilon = 0.001);
+    }
+
+    #[test]
+    fn test_unrealized_pnl_short_put_size() {
+        let option = setup_option(Side::Short, OptionStyle::Put, 100.0, 105.0, 10, 30);
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit(), 30.0, epsilon = 0.001);
     }
 }

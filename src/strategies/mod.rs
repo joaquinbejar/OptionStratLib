@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 1/8/24
 ******************************************************************************/
-mod base;
+pub mod base;
 mod bear_put_spread;
 mod bull_call_spread;
 mod butterfly_spread;

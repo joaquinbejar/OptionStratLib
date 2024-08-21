@@ -18,6 +18,8 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use chrono::Utc;
 
+#[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
 pub fn create_bull_call_spread(
     underlying_symbol: String,
     underlying_price: f64,

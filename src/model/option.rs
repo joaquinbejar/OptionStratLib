@@ -366,110 +366,6 @@ impl Graph for Options {
     }
 }
 
-// impl Graph for Options {
-//     fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
-//         // Generate intrinsic value for each price in the data vector
-//         let intrinsic_values: Vec<f64> = data
-//             .iter()
-//             .map(|&price| self.intrinsic_value(price))
-//             .collect();
-//
-//         let dark_red = RGBColor(220, 0, 0);
-//
-//         // Set up the drawing area with a 1200x800 pixel canvas
-//         let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
-//         root.fill(&WHITE)?;
-//
-//         // Determine the range for the X and Y axes
-//         let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-//         let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min);
-//
-//         let max_intrinsic_values = intrinsic_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-//         let min_intrinsic_values = intrinsic_values.iter().cloned().fold(f64::INFINITY, f64::min);
-//         let adjusted_max = (max_intrinsic_values * 1.2 - max_intrinsic_values).abs();
-//         let adjusted_min = (min_intrinsic_values * 1.2 - min_intrinsic_values).abs();
-//         let margin_value = std::cmp::max(adjusted_max as i64, adjusted_min as i64);
-//         let max_intrinsic_value = max_intrinsic_values + margin_value as f64;
-//         let min_intrinsic_value = min_intrinsic_values - margin_value as f64;
-//
-//
-//         let title: String = self.title();
-//
-//         // Build the chart with specified margins and label sizes
-//         let mut chart = ChartBuilder::on(&root)
-//             .caption(title, ("sans-serif", 30))
-//             .margin(10)
-//             .top_x_label_area_size(40)
-//             .x_label_area_size(40)
-//             .y_label_area_size(60)
-//             .right_y_label_area_size(60)
-//             .build_cartesian_2d(
-//                 min_price..max_price,
-//                 min_intrinsic_value..max_intrinsic_value,
-//             )?;
-//
-//         // Configure and draw the mesh grid
-//         chart.configure_mesh().x_labels(20).y_labels(20).draw()?;
-//
-//         // Draw a horizontal line at y = 0 to indicate break-even
-//         chart.draw_series(LineSeries::new(
-//             vec![(min_price, 0.0), (max_price, 0.0)],
-//             &BLACK,
-//         ))?;
-//
-//         // Draw the line series representing intrinsic values
-//         chart.draw_series(LineSeries::new(
-//             data.iter().cloned().zip(intrinsic_values.iter().cloned()),
-//             &dark_red,
-//         ))?;
-//
-//         // Draw points on the graph with labels for the intrinsic values
-//         for (i, (&price, &value)) in data.iter().zip(intrinsic_values.iter()).enumerate() {
-//             if i % 10 == 0 && value > 0.0 {
-//                 chart.draw_series(PointSeries::of_element(
-//                     vec![(price, value)],
-//                     3,
-//                     &dark_red,
-//                     &|coord, size, style| {
-//                         EmptyElement::at(coord)
-//                             + Circle::new((0, 0), size, style.filled())
-//                             + Text::new(
-//                                 format!("{:.2}", value),
-//                                 (20, 0),
-//                                 ("sans-serif", 15).into_font(),
-//                             )
-//                     },
-//                 ))?;
-//             } else {
-//                 chart.draw_series(PointSeries::of_element(
-//                     vec![(price, value)],
-//                     0,
-//                     &dark_red,
-//                     &|coord, size, style| {
-//                         EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled())
-//                     },
-//                 ))?;
-//
-//             }
-//         }
-//
-//         // Finalize and render the chart
-//         root.present()?;
-//         Ok(())
-//     }
-//
-//     fn title(&self) -> String {
-//         format!(
-//             "Underlying: {} @ ${:.0} {} {} {}",
-//             self.underlying_symbol,
-//             self.strike_price,
-//             self.side,
-//             self.option_style,
-//             self.option_type
-//         )
-//     }
-// }
-
 #[cfg(test)]
 mod tests_options {
     use super::*;
@@ -773,64 +669,48 @@ mod tests_options_payoffs {
 #[cfg(test)]
 mod tests_options_payoff_at_price {
     use super::*;
-
-    fn create_sample_option(option_style: OptionStyle, side: Side) -> Options {
-        Options::new(
-            OptionType::European,
-            side,
-            "AAPL".to_string(),
-            100.0,
-            ExpirationDate::Days(30.0),
-            0.2,
-            1,
-            100.0,
-            0.05,
-            option_style,
-            0.01,
-            None,
-        )
-    }
+    use crate::model::utils::create_sample_option_simplest;
 
     #[test]
     fn test_payoff_european_call_long() {
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long);
+        let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let call_payoff = call_option.payoff_at_price(105.0);
         assert_eq!(call_payoff, 5.0); // max(105 - 100, 0) = 5
 
-        let call_option_otm = create_sample_option(OptionStyle::Call, Side::Long);
+        let call_option_otm = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let call_payoff_otm = call_option_otm.payoff_at_price(95.0);
         assert_eq!(call_payoff_otm, ZERO); // max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_call_short() {
-        let call_option = create_sample_option(OptionStyle::Call, Side::Short);
+        let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let call_payoff = call_option.payoff_at_price(105.0);
         assert_eq!(call_payoff, -5.0); // -max(105 - 100, 0) = -5
 
-        let call_option_otm = create_sample_option(OptionStyle::Call, Side::Short);
+        let call_option_otm = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let call_payoff_otm = call_option_otm.payoff_at_price(95.0);
         assert_eq!(call_payoff_otm, ZERO); // -max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_long() {
-        let put_option = create_sample_option(OptionStyle::Put, Side::Long);
+        let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
         let put_payoff = put_option.payoff_at_price(95.0);
         assert_eq!(put_payoff, 5.0); // max(100 - 95, 0) = 5
 
-        let put_option_otm = create_sample_option(OptionStyle::Put, Side::Long);
+        let put_option_otm = create_sample_option_simplest(OptionStyle::Put, Side::Long);
         let put_payoff_otm = put_option_otm.payoff_at_price(105.0);
         assert_eq!(put_payoff_otm, ZERO); // max(100 - 105, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_short() {
-        let put_option = create_sample_option(OptionStyle::Put, Side::Short);
+        let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Short);
         let put_payoff = put_option.payoff_at_price(95.0);
         assert_eq!(put_payoff, -5.0); // -max(100 - 95, 0) = -5
 
-        let put_option_otm = create_sample_option(OptionStyle::Put, Side::Short);
+        let put_option_otm = create_sample_option_simplest(OptionStyle::Put, Side::Short);
         let put_payoff_otm = put_option_otm.payoff_at_price(105.0);
         assert_eq!(put_payoff_otm, ZERO); // -max(100 - 105, 0) = 0
     }
@@ -839,28 +719,7 @@ mod tests_options_payoff_at_price {
 #[cfg(test)]
 mod tests_options_payoffs_with_quantity {
     use super::*;
-
-    fn create_sample_option(
-        option_style: OptionStyle,
-        side: Side,
-        underlying_price: f64,
-        quantity: u32,
-    ) -> Options {
-        Options::new(
-            OptionType::European,
-            side,
-            "AAPL".to_string(),
-            100.0,
-            ExpirationDate::Days(30.0),
-            0.2,
-            quantity,
-            underlying_price,
-            0.05,
-            option_style,
-            0.01,
-            None,
-        )
-    }
+    use crate::model::utils::create_sample_option;
 
     #[test]
     fn test_payoff_call_long() {

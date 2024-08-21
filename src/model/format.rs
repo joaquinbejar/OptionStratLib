@@ -9,6 +9,7 @@ use crate::model::types::{
     AsianAveragingType, BarrierType, BinaryType, ExpirationDate, LookbackType, OptionStyle,
     OptionType, Side,
 };
+use crate::strategies::base::Strategy;
 use chrono::{Duration, Utc};
 use std::fmt;
 
@@ -250,6 +251,43 @@ impl fmt::Debug for Position {
             .field("date", &self.date)
             .field("open_fee", &self.open_fee)
             .field("close_fee", &self.close_fee)
+            .finish()
+    }
+}
+
+impl fmt::Display for Strategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Strategy: {}", self.name)?;
+        writeln!(f, "Type: {:?}", self.kind)?;
+        writeln!(f, "Description: {}", self.description)?;
+        writeln!(f, "Legs:")?;
+        for leg in &self.legs {
+            writeln!(f, "  {}", leg)?;
+        }
+        if let Some(max_profit) = self.max_profit {
+            writeln!(f, "Max Profit: ${:.2}", max_profit)?;
+        }
+        if let Some(max_loss) = self.max_loss {
+            writeln!(f, "Max Loss: ${:.2}", max_loss)?;
+        }
+        writeln!(f, "Break-even Points:")?;
+        for point in &self.break_even_points {
+            writeln!(f, "  ${:.2}", point)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for Strategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Strategy")
+            .field("name", &self.name)
+            .field("kind", &self.kind)
+            .field("description", &self.description)
+            .field("legs", &self.legs)
+            .field("max_profit", &self.max_profit)
+            .field("max_loss", &self.max_loss)
+            .field("break_even_points", &self.break_even_points)
             .finish()
     }
 }
@@ -742,7 +780,7 @@ mod tests_option_type_display_debug {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_position_type_display_debug {
     use super::*;
     use chrono::{DateTime, NaiveDate, TimeZone};
 
@@ -833,5 +871,86 @@ mod tests {
     }";
 
         assert_eq!(format!("{:?}", position), expected_debug);
+    }
+}
+
+#[cfg(test)]
+mod tests_strategy_type_display_debug {
+    use super::*;
+    use crate::model::utils::create_sample_option;
+    use crate::strategies::base::StrategyType;
+    use chrono::{NaiveDate, TimeZone};
+
+    #[test]
+    fn test_strategy_display() {
+        let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
+            .expect("Invalid date")
+            .and_hms_opt(0, 0, 0)
+            .expect("Invalid time");
+        let strategy = Strategy {
+            name: "Bull Call Spread".to_string(),
+            kind: StrategyType::BullCallSpread,
+            description: "A bullish options strategy".to_string(),
+            legs: vec![
+                Position::new(
+                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1),
+                    5.0,
+                    Utc.from_utc_datetime(&naive_date),
+                    0.5,
+                    0.45,
+                ),
+                Position::new(
+                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1),
+                    5.0,
+                    Utc.from_utc_datetime(&naive_date),
+                    0.5,
+                    0.45,
+                ),
+            ],
+            max_profit: Some(10.0),
+            max_loss: Some(5.0),
+            break_even_points: vec![102.0, 108.0],
+        };
+
+        let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 20.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.00\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 20.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.00\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102.00\n  $108.00\n";
+
+        assert_eq!(format!("{}", strategy), expected_output);
+    }
+
+    #[test]
+    fn test_strategy_debug() {
+        let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
+            .expect("Invalid date")
+            .and_hms_opt(0, 0, 0)
+            .expect("Invalid time");
+
+        let strategy = Strategy {
+            name: "Bear Put Spread".to_string(),
+            kind: StrategyType::BearPutSpread,
+            description: "A bearish options strategy".to_string(),
+            legs: vec![
+                Position::new(
+                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1),
+                    5.0,
+                    Utc.from_utc_datetime(&naive_date),
+                    0.5,
+                    0.45,
+                ),
+                Position::new(
+                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1),
+                    5.0,
+                    Utc.from_utc_datetime(&naive_date),
+                    0.5,
+                    0.45,
+                ),
+            ],
+            max_profit: Some(8.0),
+            max_loss: Some(2.0),
+            break_even_points: vec![82.0, 88.0],
+        };
+
+        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 100.0, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.2, quantity: 1, underlying_price: 100.0, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 100.0, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.2, quantity: 1, underlying_price: 100.0, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82.0, 88.0] }";
+
+        assert_eq!(format!("{:?}", strategy), expected_output);
     }
 }
