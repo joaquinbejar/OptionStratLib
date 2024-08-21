@@ -61,3 +61,9 @@ pre-push: fix fmt lint-fix test
 .PHONY: doc
 doc:
 	cargo doc --open
+
+.PHONY: publish
+publish:
+	cargo login ${CARGO_REGISTRY_TOKEN}
+	cargo package
+	cargo publish
