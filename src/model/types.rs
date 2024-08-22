@@ -36,7 +36,7 @@ impl Default for ExpirationDate {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Side {
     Long,
     Short,

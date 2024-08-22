@@ -89,6 +89,13 @@ impl Position {
         }
     }
 
+    pub fn net_premium_received(&self) -> f64 {
+        match self.option.side {
+            Side::Long => ZERO,
+            Side::Short => self.premium_received() - self.total_cost(),
+        }
+    }
+
     pub fn pnl_at_expiration(&self, underlying_price: Option<f64>) -> f64 {
         match underlying_price {
             None => {
@@ -148,7 +155,7 @@ impl Position {
         premium
     }
 
-    fn break_even(&self) -> f64 {
+    pub fn break_even(&self) -> f64 {
         let total_cost_per_contract = self.total_cost() / self.option.quantity as f64;
         match (&self.option.side, &self.option.option_style) {
             (Side::Long, OptionStyle::Call) => self.option.strike_price + total_cost_per_contract,

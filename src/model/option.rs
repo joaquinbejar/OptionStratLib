@@ -293,7 +293,7 @@ impl Graph for Options {
             ],
             &BLACK,
         ))?;
-        println!("{} {}", min_intrinsic_value, max_intrinsic_value);
+
         let break_even_label_position = match self.side {
             Side::Long => (10, 30),
             Side::Short => (10, 600),
