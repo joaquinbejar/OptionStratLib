@@ -5,6 +5,7 @@
 ******************************************************************************/
 pub mod backtesting;
 pub mod constants;
+mod curves;
 pub mod greeks;
 pub mod model;
 pub mod pnl;

@@ -10,8 +10,6 @@ Key characteristics:
 - Lower cost than buying a call option outright
 */
 
-// src/strategies/bull_call_spread.rs
-
 use super::base::{Strategy, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
