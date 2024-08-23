@@ -10,6 +10,7 @@ use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side
 use optionstratlib::strategies::base::{Strategy, StrategyType};
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
+use optionstratlib::strategies::bull_call_spread::create_bull_call_spread;
 
 fn create_sample_option(
     option_style: OptionStyle,
@@ -38,31 +39,49 @@ fn create_sample_option(
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    let position_long_call = Position::new(
-        create_sample_option(OptionStyle::Call, Side::Long, 2505.8, 2460.0, 1),
+    // let position_long_call = Position::new(
+    //     create_sample_option(OptionStyle::Call, Side::Long, 2505.8, 2460.0, 1),
+    //     27.26,
+    //     Utc::now(),
+    //     0.58,
+    //     0.58,
+    // );
+    //
+    // let position_short_call = Position::new(
+    //     create_sample_option(OptionStyle::Call, Side::Short, 2505.8, 2515.0, 1),
+    //     5.33,
+    //     Utc::now(),
+    //     0.58,
+    //     0.58,
+    // );
+    //
+    // let mut strategy = Strategy::new(
+    //     "Bull Call Spread".to_string(),
+    //     StrategyType::BullCallSpread,
+    //     "A bull call spread consists of buying a call option and selling another call option with a higher strike price to offset the cost.".to_string(),
+    // );
+    // strategy.add_leg(position_long_call.clone());
+    // strategy.add_leg(position_short_call.clone());
+    // strategy.add_break_even_point(position_long_call.break_even());
+    // strategy.add_break_even_point(position_short_call.break_even());
+
+    let strategy = create_bull_call_spread(
+        "GOLD".to_string(),
+        2505.8,
+        2460.0,
+        2515.0,
+        ExpirationDate::Days(30.0),
+        0.2,
+        0.05,
+        0.0,
+        1,
         27.26,
-        Utc::now(),
-        0.58,
-        0.58,
-    );
-
-    let position_short_call = Position::new(
-        create_sample_option(OptionStyle::Call, Side::Short, 2505.8, 2515.0, 1),
         5.33,
-        Utc::now(),
+        0.58,
+        0.58,
         0.58,
         0.58,
     );
-
-    let mut strategy = Strategy::new(
-        "Bull Call Spread".to_string(),
-        StrategyType::BullCallSpread,
-        "A bull call spread consists of buying a call option and selling another call option with a higher strike price to offset the cost.".to_string(),
-    );
-    strategy.add_leg(position_long_call.clone());
-    strategy.add_leg(position_short_call.clone());
-    strategy.add_break_even_point(position_long_call.break_even());
-    strategy.add_break_even_point(position_short_call.break_even());
 
     println!("Title: {}", strategy.title());
     println!("Break Even {}", strategy.break_even());
@@ -70,7 +89,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let price_range: Vec<f64> = (2400..2600).map(|x| x as f64).collect();
 
     // Generate the intrinsic value graph
-    strategy.graph(&price_range, "Draws/Strategy/intrinsic_value_chart.png")?;
+    strategy.graph(&price_range, "Draws/Strategy/bull_call_spread_value_chart.png")?;
 
     Ok(())
 }

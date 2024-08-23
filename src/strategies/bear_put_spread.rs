@@ -9,3 +9,4 @@ Key characteristics:
 - Limited risk
 - Lower cost than buying a put option outright
 */
+
