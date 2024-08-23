@@ -70,4 +70,5 @@ publish:
 
 .PHONY: coverage
 coverage:
+	cargo install cargo-tarpaulin
 	cargo tarpaulin --out Lcov --output-dir coverage/
