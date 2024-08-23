@@ -3,11 +3,11 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
+use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
-use optionstratlib::greeks::equations::Greeks;
 
 fn create_sample_option() -> Options {
     Options::new(
