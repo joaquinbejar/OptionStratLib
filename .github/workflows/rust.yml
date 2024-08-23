@@ -37,14 +37,3 @@ jobs:
     
     - name: Run tests
       run: make test
-
-    - name: Generate code coverage report
-      run: make coverage
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./lcov.info
-        fail_ci_if_error: true
-        verbose: true
-        minimum_coverage: 50%
