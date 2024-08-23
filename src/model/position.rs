@@ -148,6 +148,15 @@ impl Position {
         }
     }
 
+    pub(crate) fn net_cost(&self) -> f64 {
+        match self.option.side {
+            Side::Long => self.total_cost(),
+            Side::Short => {
+                (self.open_fee + self.close_fee - self.premium).abs() * self.option.quantity as f64
+            }
+        }
+    }
+
     fn check_premium(mut premium: f64) -> f64 {
         if premium < ZERO {
             premium *= -1.0;
@@ -181,6 +190,18 @@ impl Position {
         match self.option.side {
             Side::Long => self.total_cost(),
             Side::Short => f64::INFINITY,
+        }
+    }
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Position {
+            option: Options::default(),
+            premium: ZERO,
+            date: Utc::now(),
+            open_fee: ZERO,
+            close_fee: ZERO,
         }
     }
 }

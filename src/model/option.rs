@@ -206,6 +206,25 @@ impl Options {
     }
 }
 
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "".to_string(),
+            strike_price: ZERO,
+            expiration_date: ExpirationDate::Days(0.0),
+            implied_volatility: ZERO,
+            quantity: 0,
+            underlying_price: ZERO,
+            risk_free_rate: ZERO,
+            option_style: OptionStyle::Call,
+            dividend_yield: ZERO,
+            exotic_params: None,
+        }
+    }
+}
+
 impl Greeks for Options {
     fn greeks(&self) -> Greek {
         Greek {
