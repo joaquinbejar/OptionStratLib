@@ -211,7 +211,7 @@ impl Graph for Strategy {
             &|coord, _size, _style| {
                 EmptyElement::at(coord)
                     + Text::new(
-                        format!("Strike: {:.2}", break_even),
+                        format!("Break Even: {:.2}", break_even),
                         break_even_label_position, // Position the text just above the top of the line
                         ("sans-serif", 15).into_font(),
                     )

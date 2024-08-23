@@ -25,7 +25,7 @@ fn create_sample_option(
     Options::new(
         OptionType::European,
         side,
-        "AAPL".to_string(),
+        "GOLD".to_string(),
         strike,
         ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
         0.2,
@@ -39,19 +39,19 @@ fn create_sample_option(
 }
 fn main() -> Result<(), Box<dyn Error>> {
     let position_long_call = Position::new(
-        create_sample_option(OptionStyle::Call, Side::Long, 100.0, 90.0, 1),
-        5.71,
+        create_sample_option(OptionStyle::Call, Side::Long, 2505.8, 2460.0, 1),
+        27.26,
         Utc::now(),
-        1.0,
-        1.0,
+        0.58,
+        0.58,
     );
 
     let position_short_call = Position::new(
-        create_sample_option(OptionStyle::Call, Side::Short, 100.0, 110.0, 1),
-        5.71,
+        create_sample_option(OptionStyle::Call, Side::Short, 2505.8, 2515.0, 1),
+        5.33,
         Utc::now(),
-        1.0,
-        1.0,
+        0.58,
+        0.58,
     );
 
     let mut strategy = Strategy::new(
@@ -67,7 +67,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Title: {}", strategy.title());
     println!("Break Even {}", strategy.break_even());
     // Define a range of prices for the graph
-    let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();
+    let price_range: Vec<f64> = (2400..2600).map(|x| x as f64).collect();
 
     // Generate the intrinsic value graph
     strategy.graph(&price_range, "Draws/Strategy/intrinsic_value_chart.png")?;
