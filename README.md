@@ -33,14 +33,14 @@ OptionStratLib is a comprehensive Rust library for options trading and strategy 
 1. **Valuation Models**: Implements Black-Scholes and binomial models for option pricing.
 2. **Greeks Calculation**: Calculates delta, gamma, theta, vega, and rho for sensitivity analysis.
 3. **Option Types**: Supports European and American options, both calls and puts.
-4. **Risk Analysis**: Includes VaR (Value at Risk) calculations and other risk metrics.
+4. **Risk Analysis**: Includes VaR (Value at Risk) calculations and other risk metrics. **TODO!**
 5. **Simulations**: Allows Monte Carlo simulations for scenario analysis.
-6. **Exotic Options**: Supports some types of exotic options such as Asian and lookback options.
+6. **Exotic Options**: Supports some types of exotic options such as Asian and lookback options. **TODO!**
 7. **Strategy Development**: Provides tools for creating and backtesting option trading strategies.
 8. **Performance Visualization**: Generates payoff diagrams and risk profiles for visual analysis.
-9. **Multi-Asset Support**: TODO
-10. **Risk Management**: TODO
-11. **Backtesting**: TODO
+9. **Multi-Asset Support**: **TODO!**
+10. **Risk Management**: **TODO!**
+11. **Backtesting**: **TODO!**
 12. **Performance Metrics**: Generates performance metrics for strategy evaluation and Positions.
 
 
