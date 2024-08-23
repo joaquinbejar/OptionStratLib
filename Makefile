@@ -71,4 +71,5 @@ publish:
 .PHONY: coverage
 coverage:
 	cargo install cargo-tarpaulin
+	mkdir -p coverage
 	cargo tarpaulin --out Lcov --output-dir coverage/

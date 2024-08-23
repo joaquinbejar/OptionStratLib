@@ -20,4 +20,4 @@ Cargo.lock
 /Doc/.*.drawio.bkp
 /**/.DS_Store
 /*.profraw
-/coverage/
+/coverage/*.info
