@@ -72,4 +72,4 @@ publish:
 coverage:
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	cargo tarpaulin --out Lcov --output-dir coverage/
+	cargo tarpaulin --out lcov --output-dir coverage/
