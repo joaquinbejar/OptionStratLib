@@ -46,3 +46,5 @@ jobs:
       with:
         files: ./lcov.info
         fail_ci_if_error: true
+        verbose: true
+        minimum_coverage: 50%
