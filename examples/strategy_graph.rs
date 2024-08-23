@@ -51,7 +51,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     _ = strategy.max_loss();
     println!("Title: {}", strategy.title());
     println!("Break Even {}", strategy.break_even());
-    // print net_premium_received, max_profit, max_loss, total_cost
     println!("Net Premium Received: {}", strategy.net_premium_received());
     println!("Max Profit: {}", strategy.max_profit());
     println!("Max Loss: {}", strategy.max_loss());
