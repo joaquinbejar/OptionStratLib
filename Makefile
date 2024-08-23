@@ -67,3 +67,7 @@ publish:
 	cargo login ${CARGO_REGISTRY_TOKEN}
 	cargo package
 	cargo publish
+
+.PHONY: coverage
+coverage:
+	cargo tarpaulin --out Lcov --output-dir coverage/

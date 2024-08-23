@@ -3,5 +3,5 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-pub(crate) mod equations;
+pub mod equations;
 pub mod utils;

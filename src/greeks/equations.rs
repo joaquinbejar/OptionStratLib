@@ -9,6 +9,7 @@ use crate::model::option::Options;
 use crate::model::types::OptionStyle;
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct Greek {
     pub delta: f64,
     pub gamma: f64,

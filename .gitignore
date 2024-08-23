@@ -19,3 +19,5 @@ Cargo.lock
 /Docker/.erlang.cookie
 /Doc/.*.drawio.bkp
 /**/.DS_Store
+/*.profraw
+/coverage/
