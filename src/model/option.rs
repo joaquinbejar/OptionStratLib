@@ -259,6 +259,7 @@ impl Graph for Options {
             .collect()
     }
 
+    // TODO: use the default implementation for this method
     fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
         // Generate intrinsic value for each price in the data vector
         let intrinsic_values: Vec<f64> = self.get_values(data);

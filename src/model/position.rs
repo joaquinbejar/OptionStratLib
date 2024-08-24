@@ -245,6 +245,7 @@ impl Graph for Position {
             .collect()
     }
 
+    // TODO: use the default implementation for this method
     fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
         // Generate PNL at expiration for each price in the data vector
         let pnl_values: Vec<f64> = self.get_values(data);

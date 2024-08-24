@@ -24,6 +24,7 @@ impl Graph for Strategy {
             .collect()
     }
 
+    // TODO: use the default implementation for this method
     fn graph(&self, x_axis_data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
