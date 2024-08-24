@@ -10,21 +10,11 @@ Key characteristics:
 - Lower cost than buying a call option outright
 */
 use super::base::{Strategies, StrategyType};
-use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use crate::visualization::utils::{calculate_axis_range, Graph};
-use crate::{
-    build_chart, configure_chart_and_draw_mesh, create_drawing_area, draw_line_segments,
-    draw_points_with_labels, draw_vertical_lines_and_labels,
-};
+use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::backend::BitMapBackend;
-use plotters::chart::ChartBuilder;
-use plotters::element::{Circle, EmptyElement, Text};
-use plotters::prelude::{IntoDrawingArea, IntoFont, LineSeries, PointSeries, BLACK, WHITE};
-use std::error::Error;
 
 const DESCRIPTION: &str = "A bull call spread involves buying a call option with a lower strike \
 price and selling a call option with a higher strike price, both with the same expiration date. \
@@ -159,56 +149,28 @@ impl Strategies for BullCallSpread {
 }
 
 impl Graph for BullCallSpread {
+    fn get_vertical_lines(&self) -> Vec<f64> {
+        [self.break_even()].to_vec()
+    }
+
     fn get_values(&self, data: &[f64]) -> Vec<f64> {
         data.iter()
             .map(|&price| self.calculate_profit_at(price))
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<f64> {
-        [self.break_even()].to_vec()
-    }
-
-    fn graph(&self, x_axis_data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
-        // Generate profit values for each price in the data vector
-        let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
-
-        // Determine the range for the X and Y axes
-        let (max_x_value, min_x_value, max_y_value, min_y_value) =
-            calculate_axis_range(x_axis_data, &y_axis_data);
-
-        // Set up the drawing area with a 1200x800 pixel canvas
-        let root = create_drawing_area!(file_path, 1200, 800);
-
-        let mut chart = build_chart!(
-            &root,
-            self.title(),
-            15,
-            min_x_value,
-            max_x_value,
-            min_y_value,
-            max_y_value
-        );
-
-        configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value, max_x_value);
-        draw_line_segments!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED);
-
-        draw_vertical_lines_and_labels!(
-            chart,
-            self.get_vertical_lines(),
-            min_y_value,
-            max_y_value,
-            BLACK,
-            (10, 30)
-        );
-        draw_points_with_labels!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED, 10);
-
-        root.present()?;
-        Ok(())
-    }
-
     fn title(&self) -> String {
-        format!("{} Strategy", self.name)
+        let strategy_title = format!("Strategy: {:?}", self.kind);
+        let leg_titles: Vec<String> = [self.long_call.title(), self.short_call.title()]
+            .iter()
+            .map(|leg| leg.to_string())
+            .collect();
+
+        if leg_titles.is_empty() {
+            strategy_title
+        } else {
+            format!("{}\n{}", strategy_title, leg_titles.join("\n"))
+        }
     }
 }
 

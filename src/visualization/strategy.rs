@@ -14,14 +14,14 @@ use plotters::prelude::{
 use std::error::Error;
 
 impl Graph for Strategy {
+    fn get_vertical_lines(&self) -> Vec<f64> {
+        [self.break_even()].to_vec()
+    }
+
     fn get_values(&self, data: &[f64]) -> Vec<f64> {
         data.iter()
             .map(|&price| self.calculate_profit_at(price))
             .collect()
-    }
-
-    fn get_vertical_lines(&self) -> Vec<f64> {
-        [self.break_even()].to_vec()
     }
 
     fn graph(&self, x_axis_data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
@@ -34,23 +34,6 @@ impl Graph for Strategy {
         // Set up the drawing area with a 1200x800 pixel canvas
         let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
         root.fill(&WHITE)?;
-
-        // // Determine the range for the X and Y axes
-        // let max_x_value = x_axis_data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        // let min_x_value = x_axis_data.iter().cloned().fold(f64::INFINITY, f64::min);
-        // let max_y_temp = y_axis_data
-        //     .iter()
-        //     .cloned()
-        //     .fold(f64::NEG_INFINITY, f64::max);
-        // let min_y_temp = y_axis_data
-        //     .iter()
-        //     .cloned()
-        //     .fold(f64::INFINITY, f64::min);
-        // let adjusted_max_profit = (max_y_temp * 1.2 - max_y_temp).abs();
-        // let adjusted_min_profit = (min_y_temp * 1.2 - min_y_temp).abs();
-        // let margin_value = std::cmp::max(adjusted_max_profit as i64, adjusted_min_profit as i64);
-        // let max_y_value = max_y_temp + margin_value as f64;
-        // let min_y_value = min_y_temp - margin_value as f64;
 
         let (max_x_value, min_x_value, max_y_value, min_y_value) =
             calculate_axis_range(x_axis_data, &y_axis_data);

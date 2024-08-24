@@ -235,14 +235,14 @@ impl PnLCalculator for Position {
 }
 
 impl Graph for Position {
+    fn get_vertical_lines(&self) -> Vec<f64> {
+        [self.break_even()].to_vec()
+    }
+
     fn get_values(&self, data: &[f64]) -> Vec<f64> {
         data.iter()
             .map(|&price| self.pnl_at_expiration(Some(price)))
             .collect()
-    }
-
-    fn get_vertical_lines(&self) -> Vec<f64> {
-        [self.break_even()].to_vec()
     }
 
     fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
