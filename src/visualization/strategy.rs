@@ -14,8 +14,8 @@ use plotters::prelude::{
 use std::error::Error;
 
 impl Graph for Strategy {
-    fn get_vertical_lines(&self) -> Vec<f64> {
-        [self.break_even()].to_vec()
+    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
+        [("Break Even".to_string(), self.break_even())].to_vec()
     }
 
     fn get_values(&self, data: &[f64]) -> Vec<f64> {

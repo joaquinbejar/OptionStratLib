@@ -249,8 +249,8 @@ impl PnLCalculator for Options {
 }
 
 impl Graph for Options {
-    fn get_vertical_lines(&self) -> Vec<f64> {
-        [self.strike_price].to_vec()
+    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
+        [("Strike".to_string(), self.strike_price)].to_vec()
     }
 
     fn get_values(&self, data: &[f64]) -> Vec<f64> {

@@ -76,7 +76,7 @@ macro_rules! draw_line_segments {
 #[macro_export]
 macro_rules! draw_vertical_lines_and_labels {
     ($chart:expr, $vertical_lines:expr, $min_y_value:expr, $max_y_value:expr, $BLACK:expr, $label_position:expr) => {
-        for line in $vertical_lines {
+        for (label, line) in $vertical_lines {
             $chart.draw_series(LineSeries::new(
                 vec![(line, $min_y_value), (line, $max_y_value)],
                 &$BLACK,
@@ -89,7 +89,7 @@ macro_rules! draw_vertical_lines_and_labels {
                 &|coord, _size, _style| {
                     EmptyElement::at(coord)
                         + Text::new(
-                            format!("Break Even: {:.2}", line),
+                            format!("{}: {:.2}", label, line),
                             $label_position,
                             ("sans-serif", 15).into_font(),
                         )
@@ -185,7 +185,7 @@ pub trait Graph {
     // fn get_values(&self, data: &[f64]) -> Vec<f64>;
     fn get_values(&self, data: &[f64]) -> Vec<f64>;
 
-    fn get_vertical_lines(&self) -> Vec<f64>;
+    fn get_vertical_lines(&self) -> Vec<(String, f64)>;
 }
 
 /// Calculates the range for the X and Y axes.
