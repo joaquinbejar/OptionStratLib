@@ -25,7 +25,6 @@ jobs:
       - name: Generate code coverage report.
         run:
           cargo tarpaulin
-#          --verbose
           --all-features
           --workspace
           --timeout 120
