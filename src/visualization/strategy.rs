@@ -4,7 +4,7 @@
    Date: 23/8/24
 ******************************************************************************/
 use crate::strategies::base::Strategy;
-use crate::visualization::utils::Graph;
+use crate::visualization::utils::{calculate_axis_range, Graph};
 use plotters::backend::BitMapBackend;
 use plotters::chart::ChartBuilder;
 use plotters::element::{EmptyElement, Text};
@@ -14,12 +14,19 @@ use plotters::prelude::{
 use std::error::Error;
 
 impl Graph for Strategy {
-    fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
-        // Generate profit values for each price in the data vector
-        let profit_values: Vec<f64> = data
-            .iter()
+    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+        data.iter()
             .map(|&price| self.calculate_profit_at(price))
-            .collect();
+            .collect()
+    }
+
+    fn get_vertical_lines(&self) -> Vec<f64> {
+        [self.break_even()].to_vec()
+    }
+
+    fn graph(&self, x_axis_data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
+        // Generate profit values for each price in the data vector
+        let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
 
         let dark_green = RGBColor(0, 150, 0);
         let dark_red = RGBColor(220, 0, 0);
@@ -28,19 +35,25 @@ impl Graph for Strategy {
         let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
         root.fill(&WHITE)?;
 
-        // Determine the range for the X and Y axes
-        let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max_profit = profit_values
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max);
-        let min_profit = profit_values.iter().cloned().fold(f64::INFINITY, f64::min);
-        let adjusted_max_profit = (max_profit * 1.2 - max_profit).abs();
-        let adjusted_min_profit = (min_profit * 1.2 - min_profit).abs();
-        let margin_value = std::cmp::max(adjusted_max_profit as i64, adjusted_min_profit as i64);
-        let max_profit_value = max_profit + margin_value as f64;
-        let min_profit_value = min_profit - margin_value as f64;
+        // // Determine the range for the X and Y axes
+        // let max_x_value = x_axis_data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        // let min_x_value = x_axis_data.iter().cloned().fold(f64::INFINITY, f64::min);
+        // let max_y_temp = y_axis_data
+        //     .iter()
+        //     .cloned()
+        //     .fold(f64::NEG_INFINITY, f64::max);
+        // let min_y_temp = y_axis_data
+        //     .iter()
+        //     .cloned()
+        //     .fold(f64::INFINITY, f64::min);
+        // let adjusted_max_profit = (max_y_temp * 1.2 - max_y_temp).abs();
+        // let adjusted_min_profit = (min_y_temp * 1.2 - min_y_temp).abs();
+        // let margin_value = std::cmp::max(adjusted_max_profit as i64, adjusted_min_profit as i64);
+        // let max_y_value = max_y_temp + margin_value as f64;
+        // let min_y_value = min_y_temp - margin_value as f64;
+
+        let (max_x_value, min_x_value, max_y_value, min_y_value) =
+            calculate_axis_range(x_axis_data, &y_axis_data);
 
         let title = self.title();
 
@@ -52,20 +65,20 @@ impl Graph for Strategy {
             .x_label_area_size(40)
             .y_label_area_size(60)
             .right_y_label_area_size(60)
-            .build_cartesian_2d(min_price..max_price, min_profit_value..max_profit_value)?;
+            .build_cartesian_2d(min_x_value..max_x_value, min_y_value..max_y_value)?;
 
         // Configure and draw the mesh grid
         chart.configure_mesh().x_labels(20).y_labels(20).draw()?;
 
         // Draw a horizontal line at y = 0 to indicate break-even
         chart.draw_series(LineSeries::new(
-            vec![(min_price, 0.0), (max_price, 0.0)],
+            vec![(min_x_value, 0.0), (max_x_value, 0.0)],
             &BLACK,
         ))?;
 
         // Iterate through the data and profit values to draw the line segments
         let mut last_point = None;
-        for (&price, &profit_value) in data.iter().zip(profit_values.iter()) {
+        for (&price, &profit_value) in x_axis_data.iter().zip(y_axis_data.iter()) {
             if let Some((last_price, last_profit)) = last_point {
                 let color = if profit_value >= 0.0 {
                     &dark_green
@@ -84,10 +97,7 @@ impl Graph for Strategy {
         let break_even = self.break_even();
         // Draw a vertical line at the break-even price
         chart.draw_series(LineSeries::new(
-            vec![
-                (break_even, min_profit_value),
-                (break_even, max_profit_value),
-            ],
+            vec![(break_even, min_y_value), (break_even, max_y_value)],
             &BLACK,
         ))?;
 
@@ -95,7 +105,7 @@ impl Graph for Strategy {
 
         // Add a label at the top of the break-even line
         chart.draw_series(PointSeries::of_element(
-            vec![(break_even, max_profit_value)],
+            vec![(break_even, max_y_value)],
             5,
             &BLACK,
             &|coord, _size, _style| {
@@ -109,7 +119,7 @@ impl Graph for Strategy {
         ))?;
 
         // Draw points on the graph with labels for the profit values
-        for (i, (&price, &value)) in data.iter().zip(profit_values.iter()).enumerate() {
+        for (i, (&price, &value)) in x_axis_data.iter().zip(y_axis_data.iter()).enumerate() {
             let point_color = if value >= 0.0 { &dark_green } else { &dark_red };
             let label_offset = if value >= 0.0 { (20, 0) } else { (-20, -20) };
             let size = 3;

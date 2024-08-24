@@ -235,12 +235,19 @@ impl PnLCalculator for Position {
 }
 
 impl Graph for Position {
+    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+        data.iter()
+            .map(|&price| self.pnl_at_expiration(Some(price)))
+            .collect()
+    }
+
+    fn get_vertical_lines(&self) -> Vec<f64> {
+        [self.break_even()].to_vec()
+    }
+
     fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
         // Generate PNL at expiration for each price in the data vector
-        let pnl_values: Vec<f64> = data
-            .iter()
-            .map(|&price| self.pnl_at_expiration(Some(price)))
-            .collect();
+        let pnl_values: Vec<f64> = self.get_values(data);
 
         let dark_green = RGBColor(0, 150, 0);
         let dark_red = RGBColor(220, 0, 0);

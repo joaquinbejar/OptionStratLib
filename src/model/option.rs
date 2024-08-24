@@ -249,12 +249,19 @@ impl PnLCalculator for Options {
 }
 
 impl Graph for Options {
+    fn get_vertical_lines(&self) -> Vec<f64> {
+        [self.strike_price].to_vec()
+    }
+
+    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+        data.iter()
+            .map(|&price| self.intrinsic_value(price))
+            .collect()
+    }
+
     fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
         // Generate intrinsic value for each price in the data vector
-        let intrinsic_values: Vec<f64> = data
-            .iter()
-            .map(|&price| self.intrinsic_value(price))
-            .collect();
+        let intrinsic_values: Vec<f64> = self.get_values(data);
 
         let dark_red = RGBColor(220, 0, 0);
 
