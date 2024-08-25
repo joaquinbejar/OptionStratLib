@@ -494,4 +494,140 @@ mod tests_expiration_date {
 
         assert!((expiration.get_years() - expected_years).abs() < 0.01);
     }
+
+    #[test]
+    fn test_get_date_from_days() {
+        let days = 30;
+        let expiration = ExpirationDate::Days(days as f64);
+        let expected_date = Utc::now() + Duration::days(days);
+        let result = expiration.get_date();
+
+        assert!((result - expected_date).num_seconds().abs() <= 1);
+    }
+
+    #[test]
+    fn test_get_date_from_datetime() {
+        let future_date = Utc::now() + Duration::days(60);
+        let expiration = ExpirationDate::DateTime(future_date);
+        let result = expiration.get_date();
+
+        assert_eq!(result, future_date);
+    }
+
+    #[test]
+    fn test_get_date_from_past_datetime() {
+        let past_date = Utc::now() - Duration::days(30);
+        let expiration = ExpirationDate::DateTime(past_date);
+        let result = expiration.get_date();
+
+        assert_eq!(result, past_date);
+    }
+
+    #[test]
+    fn test_get_date_from_zero_days() {
+        let expiration = ExpirationDate::Days(0.0);
+        let expected_date = Utc::now();
+        let result = expiration.get_date();
+
+        assert!((result - expected_date).num_seconds().abs() <= 1);
+    }
+
+    #[test]
+    fn test_get_date_from_fractional_days() {
+        let days = 1.0;
+        let expiration = ExpirationDate::Days(days);
+        let expected_date = Utc::now() + Duration::milliseconds((days * 24.0 * 60.0 * 60.0 * 1000.0) as i64);
+        let result = expiration.get_date();
+
+        assert!((result - expected_date).num_seconds().abs() <= 1);
+    }
+}
+
+#[cfg(test)]
+mod tests_calculate_floating_strike_payoff {
+    use super::*;
+
+    #[test]
+    fn test_call_option_with_spot_min() {
+        let info = PayoffInfo {
+            spot: 100.0,
+            strike: 0.0, // Not used in floating strike
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: Some(80.0),
+            spot_max: None,
+        };
+        assert_eq!(calculate_floating_strike_payoff(&info), 20.0);
+    }
+
+    #[test]
+    fn test_call_option_without_spot_min() {
+        let info = PayoffInfo {
+            spot: 100.0,
+            strike: 0.0,
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        assert_eq!(calculate_floating_strike_payoff(&info), 100.0);
+    }
+
+    #[test]
+    fn test_put_option_with_spot_max() {
+        let info = PayoffInfo {
+            spot: 100.0,
+            strike: 0.0,
+            style: OptionStyle::Put,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: Some(120.0),
+        };
+        assert_eq!(calculate_floating_strike_payoff(&info), 20.0);
+    }
+
+    #[test]
+    fn test_put_option_without_spot_max() {
+        let info = PayoffInfo {
+            spot: 100.0,
+            strike: 0.0,
+            style: OptionStyle::Put,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        assert_eq!(calculate_floating_strike_payoff(&info), -100.0);
+    }
+
+    #[test]
+    fn test_call_option_spot_equals_min() {
+        let info = PayoffInfo {
+            spot: 100.0,
+            strike: 0.0,
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: Some(100.0),
+            spot_max: None,
+        };
+        assert_eq!(calculate_floating_strike_payoff(&info), 0.0);
+    }
+
+    #[test]
+    fn test_put_option_spot_equals_max() {
+        let info = PayoffInfo {
+            spot: 100.0,
+            strike: 0.0,
+            style: OptionStyle::Put,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: Some(100.0),
+        };
+        assert_eq!(calculate_floating_strike_payoff(&info), 0.0);
+    }
 }
