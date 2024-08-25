@@ -10,9 +10,6 @@ use crate::model::types::{ExpirationDate, OptionStyle, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
-use plotters::element::{Circle, EmptyElement, Text};
-use plotters::prelude::*;
-use std::error::Error;
 
 /// The `Position` struct represents a financial position in an options market.
 /// It includes various attributes related to the option, such as its cost,
@@ -235,8 +232,9 @@ impl PnLCalculator for Position {
 }
 
 impl Graph for Position {
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        [("Break Even".to_string(), self.break_even())].to_vec()
+
+    fn title(&self) -> String {
+        self.option.title()
     }
 
     fn get_values(&self, data: &[f64]) -> Vec<f64> {
@@ -245,139 +243,9 @@ impl Graph for Position {
             .collect()
     }
 
-    // TODO: use the default implementation for this method
-    fn graph(&self, data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
-        // Generate PNL at expiration for each price in the data vector
-        let pnl_values: Vec<f64> = self.get_values(data);
 
-        let dark_green = RGBColor(0, 150, 0);
-        let dark_red = RGBColor(220, 0, 0);
-
-        // Set up the drawing area with a 1200x800 pixel canvas
-        let root = BitMapBackend::new(file_path, (1200, 800)).into_drawing_area();
-        root.fill(&WHITE)?;
-
-        // Determine the range for the X and Y axes
-        let max_price = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let min_price = data.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max_pnl = pnl_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let min_pnl = pnl_values.iter().cloned().fold(f64::INFINITY, f64::min);
-        let adjusted_max_pnl = (max_pnl * 1.2 - max_pnl).abs();
-        let adjusted_min_pnl = (min_pnl * 1.2 - min_pnl).abs();
-        let margin_value = std::cmp::max(adjusted_max_pnl as i64, adjusted_min_pnl as i64);
-        let max_pnl_value = max_pnl + margin_value as f64;
-        let min_pnl_value = min_pnl - margin_value as f64;
-
-        let title: String = self.title();
-        let break_even_price = self.break_even(); // Get the break-even price
-
-        // Build the chart with specified margins and label sizes
-        let mut chart = ChartBuilder::on(&root)
-            .caption(title, ("sans-serif", 30))
-            .margin(10)
-            .top_x_label_area_size(40)
-            .x_label_area_size(40)
-            .y_label_area_size(60)
-            .right_y_label_area_size(60)
-            .build_cartesian_2d(min_price..max_price, min_pnl_value..max_pnl_value)?;
-
-        // Configure and draw the mesh grid
-        chart.configure_mesh().x_labels(20).y_labels(20).draw()?;
-
-        // Draw a horizontal line at y = 0 to indicate break-even
-        chart.draw_series(LineSeries::new(
-            vec![(min_price, 0.0), (max_price, 0.0)],
-            &BLACK,
-        ))?;
-
-        // Iterate through the data and PNL values to draw the line segments
-        let mut last_point = None;
-        for (&price, &pnl_value) in data.iter().zip(pnl_values.iter()) {
-            if let Some((last_price, last_pnl)) = last_point {
-                let color = if pnl_value >= 0.0 {
-                    &dark_green
-                } else {
-                    &dark_red
-                };
-
-                chart.draw_series(LineSeries::new(
-                    vec![(last_price, last_pnl), (price, pnl_value)],
-                    color,
-                ))?;
-            }
-            last_point = Some((price, pnl_value));
-        }
-
-        // Draw a vertical line at the break-even price
-        chart.draw_series(LineSeries::new(
-            vec![
-                (break_even_price, min_pnl_value),
-                (break_even_price, max_pnl_value),
-            ],
-            &BLACK,
-        ))?;
-
-        let break_even_label_position = match self.option.side {
-            Side::Long => (10, 15),
-            Side::Short => (10, -min_pnl_value as i32 + 15),
-        };
-
-        // Add a label at the top of the break-even line
-        chart.draw_series(PointSeries::of_element(
-            vec![(break_even_price, max_pnl_value)],
-            5,
-            &BLACK,
-            &|coord, _size, _style| {
-                EmptyElement::at(coord)
-                    + Text::new(
-                        format!("Break Even: {:.2}", break_even_price),
-                        break_even_label_position, // Position the text just above the top of the line
-                        ("sans-serif", 15).into_font(),
-                    )
-            },
-        ))?;
-
-        // Draw points on the graph with labels for the PNL values
-        for (i, (&price, &value)) in data.iter().zip(pnl_values.iter()).enumerate() {
-            let point_color = if value >= 0.0 { &dark_green } else { &dark_red };
-            let label_offset = if value >= 0.0 { (20, 0) } else { (-20, -20) };
-            let size = 3;
-
-            chart.draw_series(PointSeries::of_element(
-                vec![(price, value)],
-                size,
-                point_color,
-                &|coord, size, style| {
-                    let element =
-                        EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled());
-
-                    if i % 10 == 0 {
-                        element
-                            + Text::new(
-                                format!("{:.2}", value),
-                                (label_offset.0, label_offset.1),
-                                ("sans-serif", 15).into_font(),
-                            )
-                    } else {
-                        EmptyElement::at(coord)
-                            + Circle::new((0, 0), 0, style.filled())
-                            + Text::new(
-                                String::new(),
-                                (label_offset.0, label_offset.1),
-                                ("sans-serif", 15).into_font(),
-                            )
-                    }
-                },
-            ))?;
-        }
-
-        // Finalize and render the chart
-        root.present()?;
-        Ok(())
-    }
-
-    fn title(&self) -> String {
-        self.option.title()
+    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
+        [("Break Even".to_string(), self.break_even())].to_vec()
     }
 }
 

@@ -12,7 +12,7 @@ use std::error::Error;
 fn create_sample_option() -> Options {
     Options::new(
         OptionType::European,
-        Side::Short,
+        Side::Long,
         "AAPL".to_string(),
         100.0,
         ExpirationDate::Days(30.0),

@@ -103,7 +103,7 @@ macro_rules! draw_vertical_lines_and_labels {
 macro_rules! draw_points_with_labels {
     ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr, $label_interval:expr) => {
         for (i, (&price, &value)) in $x_axis_data.iter().zip($y_axis_data.iter()).enumerate() {
-            let point_color = if value >= 0.0 {
+            let point_color = if value > 0.0 {
                 &$dark_green
             } else {
                 &$dark_red
@@ -111,6 +111,7 @@ macro_rules! draw_points_with_labels {
             let label_offset = if value >= 0.0 { (20, 0) } else { (-20, -20) };
             let size = 3;
 
+            if value != 0.0 {
             $chart.draw_series(PointSeries::of_element(
                 vec![(price, value)],
                 size,
@@ -137,6 +138,7 @@ macro_rules! draw_points_with_labels {
                     }
                 },
             ))?;
+            }
         }
     };
 }

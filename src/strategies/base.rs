@@ -6,6 +6,7 @@
 use crate::constants::ZERO;
 use crate::model::position::Position;
 use crate::model::types::Side;
+use crate::visualization::utils::Graph;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -117,6 +118,30 @@ impl Strategy {
             .iter()
             .map(|leg| leg.pnl_at_expiration(Some(price)))
             .sum()
+    }
+}
+
+impl Graph for Strategy {
+
+    fn title(&self) -> String {
+        let strategy_title = format!("Strategy: {} - {:?}", self.name, self.kind);
+        let leg_titles: Vec<String> = self.legs.iter().map(|leg| leg.title()).collect();
+
+        if leg_titles.is_empty() {
+            strategy_title
+        } else {
+            format!("{}\n{}", strategy_title, leg_titles.join("\n"))
+        }
+    }
+
+    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+        data.iter()
+            .map(|&price| self.calculate_profit_at(price))
+            .collect()
+    }
+
+    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
+        [("Break Even".to_string(), self.break_even())].to_vec()
     }
 }
 
