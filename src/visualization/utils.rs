@@ -9,7 +9,7 @@ use crate::{
     draw_points_with_labels, draw_vertical_lines_and_labels,
 };
 use plotters::backend::BitMapBackend;
-use plotters::chart::ChartBuilder;
+use plotters::chart::{ChartBuilder};
 use plotters::element::{Circle, EmptyElement, Text};
 use plotters::prelude::{IntoDrawingArea, IntoFont, LineSeries, PointSeries, BLACK, WHITE};
 use std::error::Error;
@@ -144,7 +144,14 @@ macro_rules! draw_points_with_labels {
 }
 
 pub trait Graph {
-    fn graph(&self, x_axis_data: &[f64], file_path: &str) -> Result<(), Box<dyn Error>> {
+    fn graph(&self,
+             x_axis_data: &[f64],
+             file_path: &str,
+             title_size: u32, // 15
+             canvas_size: (u32, u32), // (1200, 800)
+             label_coors: (i32, i32), // (10, 30)
+             label_interval: usize, // 10
+    ) -> Result<(), Box<dyn Error>> {
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
 
@@ -153,12 +160,12 @@ pub trait Graph {
             calculate_axis_range(x_axis_data, &y_axis_data);
 
         // Set up the drawing area with a 1200x800 pixel canvas
-        let root = create_drawing_area!(file_path, 1200, 800);
+        let root = create_drawing_area!(file_path, canvas_size.0, canvas_size.1);
 
         let mut chart = build_chart!(
             &root,
             self.title(),
-            15,
+            title_size,
             min_x_value,
             max_x_value,
             min_y_value,
@@ -174,9 +181,9 @@ pub trait Graph {
             min_y_value,
             max_y_value,
             BLACK,
-            (10, 30)
+            label_coors
         );
-        draw_points_with_labels!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED, 10);
+        draw_points_with_labels!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED, label_interval);
 
         root.present()?;
         Ok(())
