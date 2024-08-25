@@ -232,7 +232,6 @@ impl PnLCalculator for Position {
 }
 
 impl Graph for Position {
-
     fn title(&self) -> String {
         self.option.title()
     }
@@ -242,7 +241,6 @@ impl Graph for Position {
             .map(|&price| self.pnl_at_expiration(Some(price)))
             .collect()
     }
-
 
     fn get_vertical_lines(&self) -> Vec<(String, f64)> {
         [("Break Even".to_string(), self.break_even())].to_vec()

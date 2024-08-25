@@ -34,12 +34,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();
 
     // Generate the intrinsic value graph
-    option.graph(&price_range,
-                 "Draws/Options/intrinsic_value_chart.png",
-                 25,
-                 (1400, 933),
-                 (10, 30),
-                 10
+    option.graph(
+        &price_range,
+        "Draws/Options/intrinsic_value_chart.png",
+        25,
+        (1400, 933),
+        (10, 30),
+        10,
     )?;
 
     Ok(())

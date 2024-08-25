@@ -27,21 +27,17 @@ fn create_sample_option() -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    let position = Position::new(create_sample_option(),
-                                 5.71,
-                                 Utc::now(),
-                                 1.0,
-                                 1.0,
-    );
+    let position = Position::new(create_sample_option(), 5.71, Utc::now(), 1.0, 1.0);
 
     let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();
 
-    position.graph(&price_range,
-                   "Draws/Position/pnl_at_expiration_chart.png",
-                   25,
-                   (1400, 933),
-                   (10, 30),
-                   10,
+    position.graph(
+        &price_range,
+        "Draws/Position/pnl_at_expiration_chart.png",
+        25,
+        (1400, 933),
+        (10, 30),
+        10,
     )?;
 
     Ok(())

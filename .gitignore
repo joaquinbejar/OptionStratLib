@@ -21,3 +21,5 @@ Cargo.lock
 /**/.DS_Store
 /*.profraw
 /coverage/*.info
+/cobertura.xml
+/tarpaulin-report.html

@@ -72,5 +72,10 @@ publish:
 coverage:
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	#cargo tarpaulin --out lcov --output-dir coverage/
-	cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
+	cargo tarpaulin --all-features --workspace --timeout 120 --out Xml
+
+.PHONY: coverage-html
+coverage-html:
+	cargo install cargo-tarpaulin
+	mkdir -p coverage
+	cargo tarpaulin --all-features --workspace --timeout 120 --out Html

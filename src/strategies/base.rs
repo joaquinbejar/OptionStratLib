@@ -122,7 +122,6 @@ impl Strategy {
 }
 
 impl Graph for Strategy {
-
     fn title(&self) -> String {
         let strategy_title = format!("Strategy: {} - {:?}", self.name, self.kind);
         let leg_titles: Vec<String> = self.legs.iter().map(|leg| leg.title()).collect();

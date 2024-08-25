@@ -9,7 +9,7 @@ use crate::{
     draw_points_with_labels, draw_vertical_lines_and_labels,
 };
 use plotters::backend::BitMapBackend;
-use plotters::chart::{ChartBuilder};
+use plotters::chart::ChartBuilder;
 use plotters::element::{Circle, EmptyElement, Text};
 use plotters::prelude::{IntoDrawingArea, IntoFont, LineSeries, PointSeries, BLACK, WHITE};
 use std::error::Error;
@@ -112,45 +112,46 @@ macro_rules! draw_points_with_labels {
             let size = 3;
 
             if value != 0.0 {
-            $chart.draw_series(PointSeries::of_element(
-                vec![(price, value)],
-                size,
-                point_color,
-                &|coord, size, style| {
-                    let element =
-                        EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled());
+                $chart.draw_series(PointSeries::of_element(
+                    vec![(price, value)],
+                    size,
+                    point_color,
+                    &|coord, size, style| {
+                        let element =
+                            EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled());
 
-                    if i % $label_interval == 0 {
-                        element
-                            + Text::new(
-                                format!("{:.2}", value),
-                                (label_offset.0, label_offset.1),
-                                ("sans-serif", 15).into_font(),
-                            )
-                    } else {
-                        EmptyElement::at(coord)
-                            + Circle::new((0, 0), 0, style.filled())
-                            + Text::new(
-                                String::new(),
-                                (label_offset.0, label_offset.1),
-                                ("sans-serif", 15).into_font(),
-                            )
-                    }
-                },
-            ))?;
+                        if i % $label_interval == 0 {
+                            element
+                                + Text::new(
+                                    format!("{:.2}", value),
+                                    (label_offset.0, label_offset.1),
+                                    ("sans-serif", 15).into_font(),
+                                )
+                        } else {
+                            EmptyElement::at(coord)
+                                + Circle::new((0, 0), 0, style.filled())
+                                + Text::new(
+                                    String::new(),
+                                    (label_offset.0, label_offset.1),
+                                    ("sans-serif", 15).into_font(),
+                                )
+                        }
+                    },
+                ))?;
             }
         }
     };
 }
 
 pub trait Graph {
-    fn graph(&self,
-             x_axis_data: &[f64],
-             file_path: &str,
-             title_size: u32, // 15
-             canvas_size: (u32, u32), // (1200, 800)
-             label_coors: (i32, i32), // (10, 30)
-             label_interval: usize, // 10
+    fn graph(
+        &self,
+        x_axis_data: &[f64],
+        file_path: &str,
+        title_size: u32,         // 15
+        canvas_size: (u32, u32), // (1200, 800)
+        label_coors: (i32, i32), // (10, 30)
+        label_interval: usize,   // 10
     ) -> Result<(), Box<dyn Error>> {
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
@@ -183,7 +184,14 @@ pub trait Graph {
             BLACK,
             label_coors
         );
-        draw_points_with_labels!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED, label_interval);
+        draw_points_with_labels!(
+            chart,
+            x_axis_data,
+            y_axis_data,
+            DARK_GREEN,
+            DARK_RED,
+            label_interval
+        );
 
         root.present()?;
         Ok(())
@@ -217,16 +225,14 @@ pub(crate) fn calculate_axis_range(
     x_axis_data: &[f64],
     y_axis_data: &[f64],
 ) -> (f64, f64, f64, f64) {
-    let (min_x_value, max_x_value) = x_axis_data
-        .iter()
-        .fold((f64::INFINITY, f64::NEG_INFINITY),
-              |(min_x, max_x), &value| (f64::min(min_x, value), f64::max(max_x, value)),
-        );
-    let (min_y_temp, max_y_temp) = y_axis_data
-        .iter()
-        .fold((f64::INFINITY, f64::NEG_INFINITY),
-              |(min_y, max_y), &value| (f64::min(min_y, value), f64::max(max_y, value)),
-        );
+    let (min_x_value, max_x_value) = x_axis_data.iter().fold(
+        (f64::INFINITY, f64::NEG_INFINITY),
+        |(min_x, max_x), &value| (f64::min(min_x, value), f64::max(max_x, value)),
+    );
+    let (min_y_temp, max_y_temp) = y_axis_data.iter().fold(
+        (f64::INFINITY, f64::NEG_INFINITY),
+        |(min_y, max_y), &value| (f64::min(min_y, value), f64::max(max_y, value)),
+    );
     let adjusted_max_profit = (max_y_temp * 1.2 - max_y_temp).abs();
     let adjusted_min_profit = (min_y_temp * 1.2 - min_y_temp).abs();
     let margin_value = adjusted_max_profit.max(adjusted_min_profit);
