@@ -217,25 +217,90 @@ pub(crate) fn calculate_axis_range(
     x_axis_data: &[f64],
     y_axis_data: &[f64],
 ) -> (f64, f64, f64, f64) {
-    // Determine the range for the X and Y axes
-    let max_x_value = x_axis_data
+    let (min_x_value, max_x_value) = x_axis_data
         .iter()
-        .cloned()
-        .fold(f64::NEG_INFINITY, f64::max);
-    let min_x_value = x_axis_data.iter().cloned().fold(f64::INFINITY, f64::min);
-    let max_y_temp = y_axis_data
+        .fold((f64::INFINITY, f64::NEG_INFINITY),
+              |(min_x, max_x), &value| (f64::min(min_x, value), f64::max(max_x, value)),
+        );
+    let (min_y_temp, max_y_temp) = y_axis_data
         .iter()
-        .cloned()
-        .fold(f64::NEG_INFINITY, f64::max);
-    let min_y_temp = y_axis_data.iter().cloned().fold(f64::INFINITY, f64::min);
-
+        .fold((f64::INFINITY, f64::NEG_INFINITY),
+              |(min_y, max_y), &value| (f64::min(min_y, value), f64::max(max_y, value)),
+        );
     let adjusted_max_profit = (max_y_temp * 1.2 - max_y_temp).abs();
     let adjusted_min_profit = (min_y_temp * 1.2 - min_y_temp).abs();
-
     let margin_value = adjusted_max_profit.max(adjusted_min_profit);
-
     let max_y_value = max_y_temp + margin_value;
     let min_y_value = min_y_temp - margin_value;
-
     (max_x_value, min_x_value, max_y_value, min_y_value)
+}
+
+#[cfg(test)]
+mod tests_calculate_axis_range {
+    use super::*;
+
+    #[test]
+    fn test_calculate_axis_range() {
+        let x_data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, 5.0);
+        assert_eq!(min_x, 1.0);
+        assert!(max_y > 10.0);
+        assert!(min_y < -10.0);
+    }
+
+    #[test]
+    fn test_calculate_axis_range_single_value() {
+        let x_data = vec![1.0];
+        let y_data = vec![0.0];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, 1.0);
+        assert_eq!(min_x, 1.0);
+        assert_eq!(max_y, 0.0);
+        assert_eq!(min_y, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_axis_range_negative_values() {
+        let x_data = vec![-5.0, -3.0, -1.0];
+        let y_data = vec![-10.0, -20.0, -30.0];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, -1.0);
+        assert_eq!(min_x, -5.0);
+        assert!(max_y > -10.0);
+        assert!(min_y < -30.0);
+    }
+
+    #[test]
+    fn test_calculate_axis_range_zero_values() {
+        let x_data = vec![0.0, 0.0, 0.0];
+        let y_data = vec![0.0, 0.0, 0.0];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, 0.0);
+        assert_eq!(min_x, 0.0);
+        assert_eq!(max_y, 0.0);
+        assert_eq!(min_y, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_axis_range_large_values() {
+        let x_data = vec![1e6, 2e6, 3e6];
+        let y_data = vec![1e9, 2e9, 3e9];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, 3e6);
+        assert_eq!(min_x, 1e6);
+        assert!(max_y > 3e9);
+        assert!(min_y < 1e9);
+    }
 }

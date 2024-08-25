@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.58,
         0.58,
         0.55,
-        0.55,
+        0.54,
     );
     let price_range: Vec<f64> = (2400..2600).map(|x| x as f64).collect();
     println!("Title: {}", strategy.title());
