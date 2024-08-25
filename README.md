@@ -202,13 +202,17 @@ fn main() -> Result<(), Box<dyn Error>> {
    let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();
 
    // Generate the intrinsic value graph
-   option.graph(&price_range, "Draws/Options/intrinsic_value_chart.png")?;
+   option.graph(&price_range,
+                "Draws/Options/intrinsic_value_chart.png",
+                25,
+                (1400, 933),
+                (10, 30),
+                10
+   )?;
 
    Ok(())
 }
 ```
-Here are some examples of how to use the library for strategy analysis and visualization:
-
 
 ```rust
 use optionstratlib::model::types::ExpirationDate;
@@ -218,45 +222,43 @@ use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let strategy = BullCallSpread::new(
-        "GOLD".to_string(),
-        2505.8,
-        2460.0,
-        2515.0,
-        ExpirationDate::Days(30.0),
-        0.2,
-        0.05,
-        0.0,
-        2,
-        27.26,
-        5.33,
-        0.58,
-        0.58,
-        0.55,
-        0.55,
-    );
-    let price_range: Vec<f64> = (2400..2600).map(|x| x as f64).collect();
-    
-    _ = strategy.max_profit();
-    _ = strategy.max_loss();
-    println!("Title: {}", strategy.title());
-    println!("Break Even {}", strategy.break_even());
-    println!("Net Premium Received: {}", strategy.net_premium_received());
-    println!("Max Profit: {}", strategy.max_profit());
-    println!("Max Loss: {}", strategy.max_loss());
-    println!("Total Cost: {}", strategy.total_cost());
+   let strategy = BullCallSpread::new(
+      "GOLD".to_string(),
+      2505.8,
+      2460.0,
+      2515.0,
+      ExpirationDate::Days(30.0),
+      0.2,
+      0.05,
+      0.0,
+      1,
+      27.26,
+      5.33,
+      0.58,
+      0.58,
+      0.55,
+      0.55,
+   );
+   let price_range: Vec<f64> = (2400..2600).map(|x| x as f64).collect();
+   println!("Title: {}", strategy.title());
+   println!("Break Even {}", strategy.break_even());
+   println!("Net Premium Received: {}", strategy.net_premium_received());
+   println!("Max Profit: {}", strategy.max_profit());
+   println!("Max Loss: {}", strategy.max_loss());
+   println!("Total Cost: {}", strategy.total_cost());
 
-    // Generate the intrinsic value graph
-    strategy.graph(
-        &price_range,
-        "Draws/Strategy/bull_call_spread_value_chart.png",
-    )?;
-
-    Ok(())
+   // Generate the intrinsic value graph
+   strategy.graph(
+      &price_range,
+      "Draws/Strategy/bull_call_spread_value_chart.png",
+      20,
+      (1400, 933),
+      (10, 30),
+      15
+   )?;
+   Ok(())
 }
-
 ```
-
 
 ## Testing
 
