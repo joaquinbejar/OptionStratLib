@@ -1,49 +1,42 @@
 use std::collections::HashMap;
+use crate::curves::construction::types::CurveConstructionMethod;
+use crate::curves::interpolation::types::InterpolationType;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
-pub struct Point {
-    pub strike: f64,
-    pub maturity: f64,
-    pub value: f64,
+pub struct Point1D {
+    pub x: f64,
+    pub y: f64,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Curve {
-    pub points: Vec<Point>,
-    pub strike_range: (f64, f64),
-    pub maturity_range: (f64, f64),
+    pub points: Vec<Point1D>,
+    pub x_range: (f64, f64),
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
-pub enum InterpolationType {
-    Linear,
-    Bilinear,
-    Cubic,
-    Spline,
-}
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
-pub enum CurveConstructionMethod {
-    FromData,
-    Parametric,
-}
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum CurveType {
     Volatility,
-    Price,
     Delta,
     Gamma,
-    // Other types as needed
+    Theta,
+    Rho,
+    RhoD,
+    Vega,
+    Binomial,
+    BlackScholes,
+    Telegraph,
+    Payoff,
+    IntrinsicValue,
+    TimeValue,
 }
 
 #[allow(dead_code)]
-// Configuration for curve building
 pub struct CurveConfig {
     pub curve_type: CurveType,
     pub interpolation: InterpolationType,
@@ -53,14 +46,12 @@ pub struct CurveConfig {
 
 #[allow(dead_code)]
 impl Curve {
-    pub fn new(points: Vec<Point>) -> Self {
-        let strike_range = Curve::calculate_range(points.iter().map(|p| p.strike));
-        let maturity_range = Curve::calculate_range(points.iter().map(|p| p.maturity));
+    pub fn new(points: Vec<Point1D>) -> Self {
+        let x_range = Curve::calculate_range(points.iter().map(|p| p.x));
 
         Curve {
             points,
-            strike_range,
-            maturity_range,
+            x_range,
         }
     }
 
@@ -73,25 +64,36 @@ impl Curve {
         })
     }
 
-    pub fn get_value(
-        &self,
-        _strike: f64,
-        _maturity: f64,
-        _interpolation: InterpolationType,
-    ) -> Option<f64> {
-        todo!(" Implement interpolation logic here");
-        // This would be a placeholder, the actual implementation would go in the interpolation modules
+    pub fn get_value(&self, x: f64, interpolation: InterpolationType) -> Option<f64> {
+        match interpolation {
+            InterpolationType::Linear => self.linear_interpolation(x),
+            InterpolationType::Cubic => todo!("Implement cubic interpolation"),
+            InterpolationType::Spline => todo!("Implement spline interpolation"),
+            InterpolationType::Bilinear => todo!("Implement bilinear interpolation"),
+        }
+    }
+
+    fn linear_interpolation(&self, x: f64) -> Option<f64> {
+        if self.points.is_empty() {
+            return None;
+        }
+
+        if x < self.x_range.0 || x > self.x_range.1 {
+            return None;
+        }
+
+        let (i, j) = self.points.windows(2)
+            .enumerate()
+            .find(|(_,w)| w[0].x <= x && x <= w[1].x)?;
+
+        let (x1, y1) = (self.points[i].x, self.points[i].y);
+        let (x2, y2) = (self.points[i+1].x, self.points[i+1].y);
+
+        Some(y1 + (y2 - y1) * (x - x1) / (x2 - x1))
     }
 }
 
-#[allow(dead_code)]
-pub struct CurveAnalysisResult {
-    pub mean: f64,
-    pub median: f64,
-    pub std_dev: f64,
-    pub skew: f64,
-    pub kurtosis: f64,
-}
+
 
 #[allow(dead_code)]
 #[allow(clippy::enum_variant_names)]
@@ -99,5 +101,5 @@ pub enum CurveError {
     InterpolationError(String),
     ConstructionError(String),
     AnalysisError(String),
-    // Other types of errors as needed
+    OperationError(String),
 }

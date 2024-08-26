@@ -1,2 +1,3 @@
-mod metrics;
-mod statistics;
+pub(crate) mod metrics;
+pub(crate) mod statistics;
+
