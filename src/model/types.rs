@@ -536,7 +536,8 @@ mod tests_expiration_date {
     fn test_get_date_from_fractional_days() {
         let days = 1.0;
         let expiration = ExpirationDate::Days(days);
-        let expected_date = Utc::now() + Duration::milliseconds((days * 24.0 * 60.0 * 60.0 * 1000.0) as i64);
+        let expected_date =
+            Utc::now() + Duration::milliseconds((days * 24.0 * 60.0 * 60.0 * 1000.0) as i64);
         let result = expiration.get_date();
 
         assert!((result - expected_date).num_seconds().abs() <= 1);

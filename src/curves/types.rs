@@ -1,7 +1,6 @@
-use std::collections::HashMap;
 use crate::curves::construction::types::CurveConstructionMethod;
 use crate::curves::interpolation::types::InterpolationType;
-
+use std::collections::HashMap;
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub struct Point1D {
@@ -15,8 +14,6 @@ pub struct Curve {
     pub points: Vec<Point1D>,
     pub x_range: (f64, f64),
 }
-
-
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
@@ -49,10 +46,7 @@ impl Curve {
     pub fn new(points: Vec<Point1D>) -> Self {
         let x_range = Curve::calculate_range(points.iter().map(|p| p.x));
 
-        Curve {
-            points,
-            x_range,
-        }
+        Curve { points, x_range }
     }
 
     fn calculate_range<I>(iter: I) -> (f64, f64)
@@ -82,18 +76,18 @@ impl Curve {
             return None;
         }
 
-        let (i, j) = self.points.windows(2)
+        let (i, _j) = self
+            .points
+            .windows(2)
             .enumerate()
-            .find(|(_,w)| w[0].x <= x && x <= w[1].x)?;
+            .find(|(_, w)| w[0].x <= x && x <= w[1].x)?;
 
         let (x1, y1) = (self.points[i].x, self.points[i].y);
-        let (x2, y2) = (self.points[i+1].x, self.points[i+1].y);
+        let (x2, y2) = (self.points[i + 1].x, self.points[i + 1].y);
 
         Some(y1 + (y2 - y1) * (x - x1) / (x2 - x1))
     }
 }
-
-
 
 #[allow(dead_code)]
 #[allow(clippy::enum_variant_names)]
