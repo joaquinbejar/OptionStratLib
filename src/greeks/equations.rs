@@ -23,6 +23,39 @@ pub trait Greeks {
     fn greeks(&self) -> Greek;
 }
 
+/// Calculates the delta of a financial option.
+///
+/// The delta measures the sensitivity of the option's price to changes in the price
+/// of the underlying asset. It is a key metric in options trading and risk management.
+///
+/// # Parameters
+///
+/// - `option`: A reference to an `Options` struct which holds relevant data for the option such as:
+///   - `underlying_price`: The current price of the underlying asset.
+///   - `strike_price`: The strike price of the option.
+///   - `risk_free_rate`: The risk-free interest rate over the life of the option.
+///   - `expiration_date`: The expiration date of the option, from which we get the time to expiration in years.
+///   - `implied_volatility`: The implied volatility of the underlying asset.
+///   - `dividend_yield`: The dividend yield of the underlying asset.
+///   - `option_style`: The style of the option, which can be either a `Call` or a `Put`.
+///
+/// # Returns
+///
+/// - `f64`: The delta of the option.
+///
+/// The function internally calls the `d1` function to calculate a component needed for the delta.
+/// Depending on the option style (`Call` or `Put`), it then computes the delta using the cumulative
+/// distribution function (`big_n`) of the standard normal distribution.
+///
+/// # Note
+///
+/// This function assumes that all input values are properly validated and that `option.expiration_date.get_years()`
+/// correctly returns the time to expiration in years.
+///
+/// # Panics
+///
+/// This function will not panic if the input `Options` struct adheres to the expected format and all methods
+/// (like `get_years`) function correctly.
 #[allow(dead_code)]
 pub fn delta(option: &Options) -> f64 {
     let d1 = d1(
@@ -43,6 +76,36 @@ pub fn delta(option: &Options) -> f64 {
     }
 }
 
+/// Computes the gamma of an option.
+///
+/// Gamma measures the rate of change of delta with respect to changes in the underlying price of the asset.
+/// It is a second-order derivative of the option price.
+///
+/// # Arguments
+///
+/// * `option` - A reference to an `Options` struct containing the necessary parameters to compute the gamma.
+///
+/// # Returns
+///
+/// A `f64` value representing the gamma of the option.
+///
+/// # Calculation
+///
+/// Gamma is computed using the following formula:
+///
+/// ```text
+/// Gamma = (e^(-dividend_yield * T) * N'(d1)) / (S * σ * sqrt(T))
+/// ```
+///
+/// Where:
+/// * `N'(d1)` is the standard normal probability density function evaluated at `d1`.
+/// * `S` is the underlying price of the asset.
+/// * `σ` (sigma) is the implied volatility.
+/// * `T` is the time to expiration in years.
+///
+/// The function first calculates `d1` using the `d1` function and then applies the gamma formula.
+/// The exponential expression accounts for continuous dividend yield over the life of the option.
+///
 #[allow(dead_code)]
 pub fn gamma(option: &Options) -> f64 {
     let d1 = d1(
