@@ -122,6 +122,46 @@ pub fn gamma(option: &Options) -> f64 {
             * option.expiration_date.get_years().sqrt())
 }
 
+/// Computes the Theta value for a given option.
+///
+/// Theta measures the sensitivity of the option's price with respect to time decay.
+/// It represents the rate at which the value of the option decreases as the expiration
+/// date approaches, holding all other inputs constant.
+///
+/// # Parameters
+/// - `option`: A reference to an `Options` struct that encapsulates various parameters
+///   necessary for the calculation.
+///   - `underlying_price`: Current price of the underlying asset.
+///   - `strike_price`: Strike price of the option.
+///   - `risk_free_rate`: Risk-free interest rate.
+///   - `expiration_date`: Expiration date of the option (needs to provide `get_years` method).
+///   - `implied_volatility`: Implied volatility of the underlying asset.
+///   - `dividend_yield`: Expected dividend yield of the underlying asset.
+///   - `option_style`: Style of the option, either `Call` or `Put`.
+///
+/// # Returns
+/// - `f64`: The calculated Theta value for the given option.
+///
+/// # Formula
+/// The function utilizes the Black-Scholes model to compute Theta. It applies
+/// different formulas for call and put options:
+///
+/// For Call Options:
+/// `common_term - risk_free_rate * strike_price * exp(-risk_free_rate * expiration_years) * big_n(d2) + dividend_yield * underlying_price * exp(-dividend_yield * expiration_years) * big_n(d1)`
+///
+/// For Put Options:
+/// `common_term + risk_free_rate * strike_price * exp(-risk_free_rate * expiration_years) * big_n(-d2) - dividend_yield * underlying_price * exp(-dividend_yield * expiration_years) * big_n(-d1)`
+///
+/// Where:
+/// - `common_term = -underlying_price * implied_volatility * exp(-dividend_yield * expiration_years) * n(d1) / (2.0 * sqrt(expiration_years))`
+///
+/// The `d1` and `d2` terms are intermediate calculations used in the Black-Scholes model.
+///
+/// - `d1` is calculated using the `d1` function.
+/// - `d2` is calculated using the `d2` function.
+///
+/// - `n(.)` and `big_n(.)` refer to the probability density function (pdf) and the cumulative
+///   distribution function (cdf) of the standard normal distribution respectively.
 #[allow(dead_code)]
 pub fn theta(option: &Options) -> f64 {
     let d1 = d1(
