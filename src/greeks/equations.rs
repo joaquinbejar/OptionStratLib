@@ -250,6 +250,41 @@ pub fn vega(option: &Options) -> f64 {
         * option.expiration_date.get_years().sqrt()
 }
 
+/// Calculates the rho of an options contract.
+///
+/// Rho measures the sensitivity of the options price to changes in the risk-free interest rate.
+/// This function computes the rho based on the given options parameters.
+///
+/// # Parameters
+///
+/// - `option`: A reference to an `Options` struct which contains all necessary information about the options contract.
+///
+/// The `Options` struct should include the following fields:
+/// - `underlying_price`: The current price of the underlying asset.
+/// - `strike_price`: The strike price of the option.
+/// - `risk_free_rate`: The risk-free interest rate.
+/// - `expiration_date`: An object providing the expiration date of the option, with a method `get_years()` that returns the term in years.
+/// - `implied_volatility`: The implied volatility of the option.
+/// - `option_style`: The style of the option, either `Call` or `Put`.
+///
+/// # Returns
+///
+/// A `f64` value representing the rho of the options contract.
+///
+/// # Formula
+///
+/// For a Call option:
+/// \[ \rho = K \cdot T \cdot e^{-rT} \cdot N(d2) \]
+///
+/// For a Put option:
+/// \[ \rho = -K \cdot T \cdot e^{-rT} \cdot N(-d2) \]
+///
+/// Where:
+/// - \( K \) is `strike_price`
+/// - \( T \) is `expiration_date.get_years()`
+/// - \( r \) is `risk_free_rate`
+/// - \( N(d2) \) is the cumulative distribution function of the standard normal distribution evaluated at `d2`
+///
 #[allow(dead_code)]
 pub fn rho(option: &Options) -> f64 {
     let d2 = d2(
