@@ -211,6 +211,29 @@ pub fn theta(option: &Options) -> f64 {
     }
 }
 
+/// Calculates the "vega" of an option, which measures the sensitivity of the option's price
+/// to changes in the volatility of the underlying asset. Vega indicates how much the price
+/// of an option is expected to change for a 1% change in the implied volatility.
+///
+/// # Arguments
+///
+/// * `option` - A reference to an `Options` struct containing all the necessary parameters
+///   for the calculation including underlying price, strike price, risk-free rate,
+///   expiration date, implied volatility, and dividend yield.
+///
+/// # Returns
+///
+/// * `f64` - The calculated vega value of the option.
+///
+/// # Implementation Details
+///
+/// The formula used for calculating vega is based on the Black-Scholes option pricing model.
+/// - `d1` is calculated using several parameters of the `Options` struct.
+/// - The underlying price is then multiplied by the exponential term of the negative
+///   dividend yield times the time to expiration.
+/// - This product is further multiplied by the value of the normal distribution `n(d1)`
+///   and the square root of the time to expiration.
+///
 #[allow(dead_code)]
 pub fn vega(option: &Options) -> f64 {
     let d1 = d1(
