@@ -311,6 +311,50 @@ pub fn rho(option: &Options) -> f64 {
     }
 }
 
+/// Computes the dividend rate sensitivity (rho) of an option.
+///
+/// The `rho_d` function calculates the sensitivity of the option price
+/// with respect to the dividend yield of the underlying asset. It takes
+/// into account whether the option is a call or a put and uses various
+/// financial parameters to compute the result.
+///
+/// # Parameters
+///
+/// - `option`: A reference to an `Options` struct that holds important
+///   information about the option including underlying price, strike
+///   price, risk-free rate, expiration date, implied volatility, and
+///   dividend yield.
+///
+/// # Returns
+///
+/// Returns a `f64` value representing the rate of change of the option
+/// price concerning the dividend yield.
+///
+/// # Calculations
+///
+/// - First, the function calculates the `d1` value using the provided
+///   option parameters.
+/// - Then, it matches on the option style (`Call` or `Put`) to compute
+///   the corresponding rho value.
+/// - For a `Call` option, the rho value is calculated using the formula:
+///
+/// ```text
+/// -T * S * e^(-q * T) * N(d1)
+/// ```
+///
+/// - For a `Put` option, the rho value is calculated using the formula:
+///
+/// ```text
+/// T * S * e^(-q * T) * N(-d1)
+/// ```
+///
+/// where:
+/// - `T` is the expiration time in years,
+/// - `S` is the underlying price,
+/// - `q` is the dividend yield,
+/// - `N` is the cumulative distribution function of the standard normal distribution,
+/// - `d1` is a calculated parameter for option pricing.
+///
 #[allow(dead_code)]
 pub fn rho_d(option: &Options) -> f64 {
     let d1 = d1(
