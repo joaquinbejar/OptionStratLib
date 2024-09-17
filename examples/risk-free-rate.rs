@@ -47,8 +47,8 @@ fn main() {
     let max_iterations = 1000;
 
     match implied_risk_free_rate(s, k, t, sigma, market_price, epsilon, max_iterations) {
-        Some(r) => println!("The implied risk-free rate is: {:.4}%", r * 100.0),
-        None => println!("Could not converge to a solution"),
+        Some(r) => info!("The implied risk-free rate is: {:.4}%", r * 100.0),
+        None => info!("Could not converge to a solution"),
     }
 
     // Test with the other set of parameters
@@ -57,10 +57,10 @@ fn main() {
     let market_price2 = 87.8;
 
     match implied_risk_free_rate(s, k2, t, sigma2, market_price2, epsilon, max_iterations) {
-        Some(r) => println!(
+        Some(r) => info!(
             "The implied risk-free rate for the second set is: {:.4}%",
             r * 100.0
         ),
-        None => println!("Could not converge to a solution for the second set"),
+        None => info!("Could not converge to a solution for the second set"),
     }
 }
