@@ -66,7 +66,7 @@ fn main() {
     let max_iterations = 1000;
 
     match implied_volatility(s, k, t, r, market_price, epsilon, max_iterations) {
-        Some(iv) => println!("The implied volatility is: {:.4}", iv * 100.0),
-        None => println!("Could not converge to a solution"),
+        Some(iv) => info!("The implied volatility is: {:.4}", iv * 100.0),
+        None => info!("Could not converge to a solution"),
     }
 }

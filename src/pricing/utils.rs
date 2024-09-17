@@ -406,6 +406,7 @@ mod tests_probability_keep_under_strike {
     use crate::constants::ZERO;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
     use approx::assert_relative_eq;
+    use tracing::info;
 
     #[test]
     fn test_probability_keep_under_strike_with_given_strike() {
@@ -425,7 +426,7 @@ mod tests_probability_keep_under_strike {
         };
         let strike = Some(100.0);
         let probability = probability_keep_under_strike(option, strike);
-        println!("{:?} {}", strike, probability);
+        info!("{:?} {}", strike, probability);
         assert!(
             (0.0..=1.0).contains(&probability),
             "Probability should be between 0 and 1"
@@ -455,7 +456,6 @@ mod tests_probability_keep_under_strike {
             (0.0..=1.0).contains(&probability),
             "Probability should be between 0 and 1"
         );
-        // Aquí también podrías comparar `probability` con un valor esperado si tienes uno.
     }
 
     #[test]

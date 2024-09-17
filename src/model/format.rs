@@ -425,6 +425,8 @@ mod tests_options {
 mod tests_expiration_date {
     use super::*;
     use chrono::{Duration, NaiveDate, TimeZone};
+    use tracing::info;
+
     #[test]
     fn test_display_days() {
         let expiration = ExpirationDate::Days(30.5);
@@ -479,7 +481,7 @@ mod tests_expiration_date {
         let today = Utc::now();
         let expiration = ExpirationDate::DateTime(today);
         let display_string = format!("{}", expiration);
-        println!("{}", display_string);
+        info!("{}", display_string);
         assert!(display_string.contains(&today.format("%Y-%m-%d %H:%M:%S").to_string()));
     }
 }
@@ -893,14 +895,14 @@ mod tests_strategy_type_display_debug {
             description: "A bullish options strategy".to_string(),
             legs: vec![
                 Position::new(
-                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1),
+                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.02),
                     5.0,
                     Utc.from_utc_datetime(&naive_date),
                     0.5,
                     0.45,
                 ),
                 Position::new(
-                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1),
+                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1, 100.0, 0.02),
                     5.0,
                     Utc.from_utc_datetime(&naive_date),
                     0.5,
@@ -930,14 +932,14 @@ mod tests_strategy_type_display_debug {
             description: "A bearish options strategy".to_string(),
             legs: vec![
                 Position::new(
-                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1),
+                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 110.0, 0.02),
                     5.0,
                     Utc.from_utc_datetime(&naive_date),
                     0.5,
                     0.45,
                 ),
                 Position::new(
-                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1),
+                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1, 110.0, 0.02),
                     5.0,
                     Utc.from_utc_datetime(&naive_date),
                     0.5,

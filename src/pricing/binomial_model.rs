@@ -68,7 +68,7 @@ pub struct BinomialPricingParams<'a> {
 /// };
 ///
 /// let price = price_binomial(params);
-/// println!("The option price is: {}", price);
+/// info!("The option price is: {}", price);
 /// ```
 ///
 /// # Notes

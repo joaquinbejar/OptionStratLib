@@ -27,8 +27,8 @@ fn create_sample_option() -> Options {
 }
 fn main() -> Result<(), Box<dyn Error>> {
     let option = create_sample_option();
-    println!("Title: {}", option.title());
-    println!("Greeks: {:?}", option.greeks());
+    info!("Title: {}", option.title());
+    info!("Greeks: {:?}", option.greeks());
 
     // Define a range of prices for the graph
     let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();

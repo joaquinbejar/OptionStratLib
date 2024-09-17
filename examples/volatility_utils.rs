@@ -12,24 +12,24 @@ fn main() {
     let returns = vec![0.01, 0.02, -0.01, 0.03, 0.00];
 
     let const_vol = constant_volatility(&returns);
-    println!("Constant Volatility: {:.6}", const_vol);
+    info!("Constant Volatility: {:.6}", const_vol);
 
     let window_size = 3;
     let hist_vol = historical_volatility(&returns, window_size);
-    println!(
+    info!(
         "Historical Volatility (window size {}): {:?}",
         window_size, hist_vol
     );
 
     let lambda = 0.94;
     let ewma_vol = ewma_volatility(&returns, lambda);
-    println!("EWMA Volatility (lambda {}): {:?}", lambda, ewma_vol);
+    info!("EWMA Volatility (lambda {}): {:?}", lambda, ewma_vol);
 
     let omega = 0.000001;
     let alpha = 0.1;
     let beta = 0.85;
     let garch_vol = garch_volatility(&returns, omega, alpha, beta);
-    println!("GARCH(1,1) Volatility: {:?}", garch_vol);
+    info!("GARCH(1,1) Volatility: {:?}", garch_vol);
 
     let kappa = 0.5;
     let theta = 0.04;
@@ -38,7 +38,7 @@ fn main() {
     let dt = 1.0 / 252.0;
     let steps = 5;
     let heston_vol = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps);
-    println!("Simulated Heston Volatility: {:?}", heston_vol);
+    info!("Simulated Heston Volatility: {:?}", heston_vol);
 
     let volatility_surface = vec![
         (100.0, 0.5, 0.2),
@@ -51,7 +51,7 @@ fn main() {
     let time_to_expiry = 0.75;
 
     match interpolate_volatility_surface(strike, time_to_expiry, &volatility_surface) {
-        Ok(vol) => println!("Interpolated Volatility: {:.4}", vol),
-        Err(e) => println!("Error: {}", e),
+        Ok(vol) => info!("Interpolated Volatility: {:.4}", vol),
+        Err(e) => info!("Error: {}", e),
     }
 }
