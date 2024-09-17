@@ -15,3 +15,4 @@ pub mod strategies;
 pub mod surfaces;
 pub mod visualization;
 pub mod volatility;
+pub mod utils;
