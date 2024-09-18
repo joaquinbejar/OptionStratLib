@@ -8,6 +8,8 @@ use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
+use tracing::info;
+use optionstratlib::utils::logger::setup_logger;
 
 fn create_sample_option() -> Options {
     Options::new(
@@ -26,9 +28,10 @@ fn create_sample_option() -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let option = create_sample_option();
-    println!("Title: {}", option.title());
-    println!("Greeks: {:?}", option.greeks());
+    info!("Title: {}", option.title());
+    info!("Greeks: {:?}", option.greeks());
 
     // Define a range of prices for the graph
     let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();
