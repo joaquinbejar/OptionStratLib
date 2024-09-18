@@ -8,6 +8,7 @@ use crate::constants::{INFINITY_NEGATIVE, INFINITY_POSITIVE, ZERO};
 use crate::model::option::Options;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
+use tracing::info;
 
 /// Evaluates the option payoff based on comparative values of the underlying price and strike price.
 ///

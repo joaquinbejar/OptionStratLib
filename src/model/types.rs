@@ -12,14 +12,24 @@ pub enum ExpirationDate {
 impl ExpirationDate {
     pub(crate) fn get_years(&self) -> f64 {
         match self {
-            ExpirationDate::Days(days) => days / 365.0,
+            ExpirationDate::Days(days) => {
+                if *days < 0.0 {
+                    panic!("Days cannot be negative");
+                }
+                days / 365.0
+            }
             ExpirationDate::DateTime(datetime) => {
                 let now = Utc::now();
                 let duration = datetime.signed_duration_since(now);
-                duration.num_days() as f64 / 365.0
+                let num_days = duration.num_days();
+                if num_days < 0 {
+                    panic!("DateTime results in negative duration");
+                }
+                num_days as f64 / 365.0
             }
         }
     }
+
 
     pub(crate) fn get_date(&self) -> DateTime<Utc> {
         match self {
@@ -475,14 +485,10 @@ mod tests_expiration_date {
         let six_months_future = Utc::now() + Duration::days(182);
         let expiration = ExpirationDate::DateTime(six_months_future);
         assert!((expiration.get_years() - 0.5).abs() < 0.01);
-
-        // Test for a date in the past (should return a negative value)
-        let one_year_past = Utc::now() - Duration::days(365);
-        let expiration = ExpirationDate::DateTime(one_year_past);
-        assert!(expiration.get_years() < ZERO);
     }
 
     #[test]
+    #[should_panic(expected = "DateTime results in negative duration")]
     fn test_expiration_date_datetime_specific() {
         // Test with a specific date
         let specific_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
@@ -541,6 +547,28 @@ mod tests_expiration_date {
         let result = expiration.get_date();
 
         assert!((result - expected_date).num_seconds().abs() <= 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Days cannot be negative")]
+    fn test_negative_days_panic() {
+        let expiration = ExpirationDate::Days(-10.0);
+        expiration.get_years();
+    }
+
+    #[test]
+    #[should_panic(expected = "DateTime results in negative duration")]
+    fn test_negative_datetime_panic() {
+        let past_date = Utc::now() - Duration::days(10);
+        let expiration = ExpirationDate::DateTime(past_date);
+        expiration.get_years();
+    }
+
+    #[test]
+    fn test_positive_days() {
+        let expiration = ExpirationDate::Days(365.0);
+        let years = expiration.get_years();
+        assert_eq!(years, 1.0);
     }
 }
 

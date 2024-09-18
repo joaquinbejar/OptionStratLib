@@ -456,7 +456,6 @@ mod tests_probability_keep_under_strike {
             (0.0..=1.0).contains(&probability),
             "Probability should be between 0 and 1"
         );
-        // Aquí también podrías comparar `probability` con un valor esperado si tienes uno.
     }
 
     #[test]
