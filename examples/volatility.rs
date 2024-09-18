@@ -6,6 +6,8 @@
 
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
+use tracing::info;
+use optionstratlib::utils::logger::setup_logger;
 
 pub(crate) fn big_n(x: f64) -> f64 {
     const MEAN: f64 = 0.0;
@@ -57,6 +59,8 @@ fn implied_volatility(
 }
 
 fn main() {
+    setup_logger();
+
     let s = 2476.6;
     let k = 2530.0;
     let t = 0.0070;
@@ -66,7 +70,7 @@ fn main() {
     let max_iterations = 1000;
 
     match implied_volatility(s, k, t, r, market_price, epsilon, max_iterations) {
-        Some(iv) => println!("The implied volatility is: {:.4}", iv * 100.0),
-        None => println!("Could not converge to a solution"),
+        Some(iv) => info!("The implied volatility is: {:.4}", iv * 100.0),
+        None => info!("Could not converge to a solution"),
     }
 }
