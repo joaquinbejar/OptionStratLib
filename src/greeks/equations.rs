@@ -3,10 +3,11 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-use tracing::info;
+use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::option::Options;
 use crate::model::types::OptionStyle;
+use tracing::info;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -59,7 +60,7 @@ pub trait Greeks {
 #[allow(dead_code)]
 
 pub fn delta(option: &Options) -> f64 {
-    if option.implied_volatility == 0.0 {
+    if option.implied_volatility == ZERO {
         let sign = if option.is_long() { 1.0 } else { -1.0 };
         match option.option_style {
             OptionStyle::Call => {
@@ -93,10 +94,11 @@ pub fn delta(option: &Options) -> f64 {
             info!("{}", d1);
             sign * big_n(d1) * (-option.dividend_yield * option.time_to_expiration()).exp()
         }
-        OptionStyle::Put => sign * (big_n(d1) - 1.0) * (-option.dividend_yield * option.time_to_expiration()).exp(),
+        OptionStyle::Put => {
+            sign * (big_n(d1) - 1.0) * (-option.dividend_yield * option.time_to_expiration()).exp()
+        }
     }
 }
-
 
 /// Computes the gamma of an option.
 ///
@@ -130,6 +132,9 @@ pub fn delta(option: &Options) -> f64 {
 ///
 #[allow(dead_code)]
 pub fn gamma(option: &Options) -> f64 {
+    if option.implied_volatility == ZERO {
+        return 0.0;
+    }
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
@@ -140,8 +145,8 @@ pub fn gamma(option: &Options) -> f64 {
 
     (-option.dividend_yield * option.expiration_date.get_years()).exp() * n(d1)
         / (option.underlying_price
-        * option.implied_volatility
-        * option.expiration_date.get_years().sqrt())
+            * option.implied_volatility
+            * option.expiration_date.get_years().sqrt())
 }
 
 /// Computes the Theta value for a given option.
@@ -211,24 +216,24 @@ pub fn theta(option: &Options) -> f64 {
         OptionStyle::Call => {
             common_term
                 - option.risk_free_rate
-                * option.strike_price
-                * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
-                * big_n(d2)
+                    * option.strike_price
+                    * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
+                    * big_n(d2)
                 + option.dividend_yield
-                * option.underlying_price
-                * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                * big_n(d1)
+                    * option.underlying_price
+                    * (-option.dividend_yield * option.expiration_date.get_years()).exp()
+                    * big_n(d1)
         }
         OptionStyle::Put => {
             common_term
                 + option.risk_free_rate
-                * option.strike_price
-                * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
-                * big_n(-d2)
+                    * option.strike_price
+                    * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
+                    * big_n(-d2)
                 - option.dividend_yield
-                * option.underlying_price
-                * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                * big_n(-d1)
+                    * option.underlying_price
+                    * (-option.dividend_yield * option.expiration_date.get_years()).exp()
+                    * big_n(-d1)
         }
     }
 }
@@ -403,16 +408,14 @@ pub fn rho_d(option: &Options) -> f64 {
     }
 }
 
-
 #[cfg(test)]
 mod tests_delta_equations {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
-    use approx::assert_relative_eq;
     use crate::constants::ZERO;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::utils::logger::setup_logger;
-
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_delta_no_volatility_itm() {
@@ -530,14 +533,13 @@ mod tests_delta_equations {
     }
 }
 
-
 #[cfg(test)]
 mod tests_gamma_equations {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
-    use approx::assert_relative_eq;
     use crate::model::utils::create_sample_option;
     use crate::utils::logger::setup_logger;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_gamma_deep_in_the_money_call() {
@@ -595,6 +597,6 @@ mod tests_gamma_equations {
         let option = create_sample_option(OptionStyle::Put, Side::Short, 100.0, 1, 100.0, 5.0);
         let gamma_value = gamma(&option);
         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
-        assert_relative_eq!(gamma_value, 0.000123456789, epsilon = 1e-8); // Ajusta el valor según cálculos
+        assert_relative_eq!(gamma_value, 0.002146478293943308, epsilon = 1e-8);
     }
 }

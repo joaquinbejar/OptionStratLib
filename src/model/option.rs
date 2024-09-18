@@ -619,77 +619,77 @@ mod tests_options_payoffs_with_quantity {
 
     #[test]
     fn test_payoff_call_long() {
-        let option = create_sample_option(OptionStyle::Call, Side::Long, 105.0, 10, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Call, Side::Long, 105.0, 10, 100.0, 0.02);
         assert_eq!(option.payoff(), 50.0);
 
-        let option_otm = create_sample_option(OptionStyle::Call, Side::Long, 95.0, 4, 110.0, 0.02);
+        let option_otm = create_sample_option(OptionStyle::Call, Side::Long, 95.0, 4, 100.0, 0.02);
         assert_eq!(option_otm.payoff(), ZERO);
     }
 
     #[test]
     fn test_payoff_call_short() {
-        let option = create_sample_option(OptionStyle::Call, Side::Short, 105.0, 3, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Call, Side::Short, 105.0, 3, 100.0, 0.02);
         assert_eq!(option.payoff(), -15.0);
 
-        let option_otm = create_sample_option(OptionStyle::Call, Side::Short, 95.0, 7, 110.0, 0.02);
+        let option_otm = create_sample_option(OptionStyle::Call, Side::Short, 95.0, 7, 100.0, 0.02);
         assert_eq!(option_otm.payoff(), ZERO);
     }
 
     #[test]
     fn test_payoff_put_long() {
-        let option = create_sample_option(OptionStyle::Put, Side::Long, 95.0, 2, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Put, Side::Long, 95.0, 2, 100.0, 0.02);
         assert_eq!(option.payoff(), 10.0);
 
-        let option_otm = create_sample_option(OptionStyle::Put, Side::Long, 105.0, 7, 110.0, 0.02);
+        let option_otm = create_sample_option(OptionStyle::Put, Side::Long, 105.0, 7, 100.0, 0.02);
         assert_eq!(option_otm.payoff(), ZERO);
     }
 
     #[test]
     fn test_payoff_put_short() {
-        let option = create_sample_option(OptionStyle::Put, Side::Short, 95.0, 3, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Put, Side::Short, 95.0, 3, 100.0, 0.02);
         assert_eq!(option.payoff(), -15.0);
 
-        let option_otm = create_sample_option(OptionStyle::Put, Side::Short, 105.0, 3, 110.0, 0.02);
+        let option_otm = create_sample_option(OptionStyle::Put, Side::Short, 105.0, 3, 100.0, 0.02);
         assert_eq!(option_otm.payoff(), ZERO);
     }
 
     #[test]
     fn test_payoff_with_quantity() {
-        let option = create_sample_option(OptionStyle::Call, Side::Long, 110.0, 3, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Call, Side::Long, 110.0, 3, 100.0, 0.02);
         assert_eq!(option.payoff(), 30.0); // (110 - 100) * 3
     }
 
     #[test]
     fn test_intrinsic_value_call_long() {
-        let option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 11, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 11, 100.0, 0.02);
         assert_eq!(option.intrinsic_value(105.0), 55.0);
         assert_eq!(option.intrinsic_value(95.0), ZERO);
     }
 
     #[test]
     fn test_intrinsic_value_call_short() {
-        let option = create_sample_option(OptionStyle::Call, Side::Short, 100.0, 13, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Call, Side::Short, 100.0, 13, 100.0, 0.02);
         assert_eq!(option.intrinsic_value(105.0), -65.0);
         assert_eq!(option.intrinsic_value(95.0), ZERO);
     }
 
     #[test]
     fn test_intrinsic_value_put_long() {
-        let option = create_sample_option(OptionStyle::Put, Side::Long, 100.0, 17, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Put, Side::Long, 100.0, 17, 100.0, 0.02);
         assert_eq!(option.intrinsic_value(95.0), 85.0);
         assert_eq!(option.intrinsic_value(105.0), ZERO);
     }
 
     #[test]
     fn test_intrinsic_value_put_short() {
-        let option = create_sample_option(OptionStyle::Put, Side::Short, 100.0, 19, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Put, Side::Short, 100.0, 19, 100.0, 0.02);
         assert_eq!(option.intrinsic_value(95.0), -95.0);
         assert_eq!(option.intrinsic_value(105.0), ZERO);
     }
 
     #[test]
     fn test_intrinsic_value_with_quantity() {
-        let option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 23, 110.0, 0.02);
+        let option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 23, 100.0, 0.02);
         assert_eq!(option.intrinsic_value(110.0), 230.0); // (110 - 100) * 23
     }
 }
