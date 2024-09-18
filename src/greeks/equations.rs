@@ -273,7 +273,7 @@ pub fn vega(option: &Options) -> f64 {
 
     option.underlying_price
         * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-        * n(d1)
+        * big_n(d1)
         * option.expiration_date.get_years().sqrt()
 }
 
@@ -598,5 +598,99 @@ mod tests_gamma_equations {
         let gamma_value = gamma(&option);
         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.002146478293943308, epsilon = 1e-8);
+    }
+}
+
+#[cfg(test)]
+mod tests_vega_equation {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionType, Side};
+
+    fn create_test_option(
+        underlying_price: f64,
+        strike_price: f64,
+        implied_volatility: f64,
+        dividend_yield: f64,
+        expiration_in_days: f64,
+    ) -> Options {
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            strike_price,
+            ExpirationDate::Days(expiration_in_days),
+            implied_volatility,
+            1, // Quantity
+            underlying_price,
+            0.05, // Risk-free rate
+            OptionStyle::Call,
+            dividend_yield,
+            None, // No exotic params for this test
+        )
+    }
+
+    #[test]
+    fn test_vega_atm() {
+        let option = create_test_option(100.0, 100.0, 0.2, 0.0, 365.0);
+        let vega = vega(&option);
+        let expected_vega = 63.68306511756191;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega ATM test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+
+    #[test]
+    fn test_vega_otm() {
+        let option = create_test_option(90.0, 100.0, 0.2, 0.0, 365.0);
+        let vega = vega(&option);
+        let expected_vega = 38.68485587005888;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega OTM test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+
+    #[test]
+    fn test_vega_short_expiration() {
+        let option = create_test_option(100.0, 100.0, 0.2, 0.0, 1.0);
+        let vega = vega(&option);
+        let expected_vega = 2.6553722124554757;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega short expiration test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+
+    #[test]
+    fn test_vega_with_dividends() {
+        let option = create_test_option(100.0, 100.0, 0.2, 0.03, 1.0);
+        let vega = vega(&option);
+        let expected_vega = 2.6551539716535117;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega with dividends test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+
+    #[test]
+    fn test_vega_itm() {
+        let option = create_test_option(110.0, 100.0, 0.2, 0.0, 1.0);
+        let vega = vega(&option);
+        let expected_vega = 5.757663148492351;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega ITM test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
     }
 }
