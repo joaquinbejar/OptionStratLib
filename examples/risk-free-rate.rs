@@ -1,4 +1,6 @@
+use tracing::info;
 use optionstratlib::greeks::utils::big_n;
+use optionstratlib::utils::logger::setup_logger;
 
 fn black_scholes_call(s: f64, k: f64, t: f64, r: f64, sigma: f64) -> f64 {
     let d1 = (s.ln() / k + (r + sigma * sigma / 2.0) * t) / (sigma * t.sqrt());
@@ -38,6 +40,7 @@ fn implied_risk_free_rate(
 }
 
 fn main() {
+    setup_logger();
     let s = 2476.6; // Current gold price
     let k = 2470.0; // Strike price
     let t = 3.0 / 365.0; // Time to expiration in years
@@ -47,8 +50,8 @@ fn main() {
     let max_iterations = 1000;
 
     match implied_risk_free_rate(s, k, t, sigma, market_price, epsilon, max_iterations) {
-        Some(r) => println!("The implied risk-free rate is: {:.4}%", r * 100.0),
-        None => println!("Could not converge to a solution"),
+        Some(r) => info!("The implied risk-free rate is: {:.4}%", r * 100.0),
+        None => info!("Could not converge to a solution"),
     }
 
     // Test with the other set of parameters
@@ -57,10 +60,10 @@ fn main() {
     let market_price2 = 87.8;
 
     match implied_risk_free_rate(s, k2, t, sigma2, market_price2, epsilon, max_iterations) {
-        Some(r) => println!(
+        Some(r) => info!(
             "The implied risk-free rate for the second set is: {:.4}%",
             r * 100.0
         ),
-        None => println!("Could not converge to a solution for the second set"),
+        None => info!("Could not converge to a solution for the second set"),
     }
 }
