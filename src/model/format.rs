@@ -895,14 +895,14 @@ mod tests_strategy_type_display_debug {
             description: "A bullish options strategy".to_string(),
             legs: vec![
                 Position::new(
-                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1),
+                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.02),
                     5.0,
                     Utc.from_utc_datetime(&naive_date),
                     0.5,
                     0.45,
                 ),
                 Position::new(
-                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1),
+                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1, 100.0, 0.02),
                     5.0,
                     Utc.from_utc_datetime(&naive_date),
                     0.5,
@@ -932,14 +932,14 @@ mod tests_strategy_type_display_debug {
             description: "A bearish options strategy".to_string(),
             legs: vec![
                 Position::new(
-                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1),
+                    create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 110.0, 0.02),
                     5.0,
                     Utc.from_utc_datetime(&naive_date),
                     0.5,
                     0.45,
                 ),
                 Position::new(
-                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1),
+                    create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1, 110.0, 0.02),
                     5.0,
                     Utc.from_utc_datetime(&naive_date),
                     0.5,
