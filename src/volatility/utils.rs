@@ -550,6 +550,7 @@ mod tests_implied_volatility {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
+    use tracing::info;
 
     fn create_test_option() -> Options {
         Options::new(
@@ -577,7 +578,7 @@ mod tests_implied_volatility {
         // Check if the calculated price with the new IV is close to the market price
         option.implied_volatility = iv;
         let calculated_price = option.calculate_price_black_scholes();
-        println!("{}", (calculated_price - market_price).abs());
+        info!("{}", (calculated_price - market_price).abs());
         assert_relative_eq!(calculated_price, market_price, epsilon = 0.002);
     }
 
@@ -614,7 +615,7 @@ mod tests_implied_volatility {
         // Test with a very high market price
         let high_price = 10.0;
         let high_iv = implied_volatility(high_price, &mut option, 100);
-        println!("{}", high_iv);
+        info!("{}", high_iv);
         assert!(high_iv < 1.0);
     }
 }
@@ -1111,6 +1112,7 @@ mod tests_uncertain_volatility_bounds_side {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
+    use tracing::info;
 
     fn create_test_option(option_style: OptionStyle, side: Side) -> Options {
         Options::new(
@@ -1169,7 +1171,7 @@ mod tests_uncertain_volatility_bounds_side {
     fn test_uncertain_volatility_bounds_put_short() {
         let option = create_test_option(OptionStyle::Put, Side::Short);
         let (lower, upper) = uncertain_volatility_bounds(&option, 0.1, 0.3);
-        println!("{} {}", lower, upper);
+        info!("{} {}", lower, upper);
         assert!(
             lower > upper,
             "Put Short: Lower bound should be less than upper bound"
