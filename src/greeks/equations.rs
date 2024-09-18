@@ -4,7 +4,6 @@
    Date: 11/8/24
 ******************************************************************************/
 use tracing::info;
-use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::option::Options;
 use crate::model::types::OptionStyle;
@@ -69,7 +68,7 @@ pub fn delta(option: &Options) -> f64 {
                 } else {
                     return 0.0; // Delta es 0 para Call out-of-the-money
                 }
-            },
+            }
             OptionStyle::Put => {
                 if option.underlying_price <= option.strike_price {
                     return sign * -1.0; // Delta es -1 para Put in-the-money
@@ -93,7 +92,7 @@ pub fn delta(option: &Options) -> f64 {
         OptionStyle::Call => {
             info!("{}", d1);
             sign * big_n(d1) * (-option.dividend_yield * option.time_to_expiration()).exp()
-        },
+        }
         OptionStyle::Put => sign * (big_n(d1) - 1.0) * (-option.dividend_yield * option.time_to_expiration()).exp(),
     }
 }
@@ -141,8 +140,8 @@ pub fn gamma(option: &Options) -> f64 {
 
     (-option.dividend_yield * option.expiration_date.get_years()).exp() * n(d1)
         / (option.underlying_price
-            * option.implied_volatility
-            * option.expiration_date.get_years().sqrt())
+        * option.implied_volatility
+        * option.expiration_date.get_years().sqrt())
 }
 
 /// Computes the Theta value for a given option.
@@ -212,24 +211,24 @@ pub fn theta(option: &Options) -> f64 {
         OptionStyle::Call => {
             common_term
                 - option.risk_free_rate
-                    * option.strike_price
-                    * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
-                    * big_n(d2)
+                * option.strike_price
+                * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
+                * big_n(d2)
                 + option.dividend_yield
-                    * option.underlying_price
-                    * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                    * big_n(d1)
+                * option.underlying_price
+                * (-option.dividend_yield * option.expiration_date.get_years()).exp()
+                * big_n(d1)
         }
         OptionStyle::Put => {
             common_term
                 + option.risk_free_rate
-                    * option.strike_price
-                    * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
-                    * big_n(-d2)
+                * option.strike_price
+                * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
+                * big_n(-d2)
                 - option.dividend_yield
-                    * option.underlying_price
-                    * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                    * big_n(-d1)
+                * option.underlying_price
+                * (-option.dividend_yield * option.expiration_date.get_years()).exp()
+                * big_n(-d1)
         }
     }
 }
