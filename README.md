@@ -195,8 +195,8 @@ fn create_sample_option() -> Options {
 }
 fn main() -> Result<(), Box<dyn Error>> {
    let option = create_sample_option();
-   println!("Title: {}", option.title());
-   println!("Greeks: {:?}", option.greeks());
+   info!("Title: {}", option.title());
+   info!("Greeks: {:?}", option.greeks());
 
    // Define a range of prices for the graph
    let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();
@@ -240,12 +240,12 @@ fn main() -> Result<(), Box<dyn Error>> {
       0.55,
    );
    let price_range: Vec<f64> = (2400..2600).map(|x| x as f64).collect();
-   println!("Title: {}", strategy.title());
-   println!("Break Even {}", strategy.break_even());
-   println!("Net Premium Received: {}", strategy.net_premium_received());
-   println!("Max Profit: {}", strategy.max_profit());
-   println!("Max Loss: {}", strategy.max_loss());
-   println!("Total Cost: {}", strategy.total_cost());
+   info!("Title: {}", strategy.title());
+   info!("Break Even {}", strategy.break_even());
+   info!("Net Premium Received: {}", strategy.net_premium_received());
+   info!("Max Profit: {}", strategy.max_profit());
+   info!("Max Loss: {}", strategy.max_loss());
+   info!("Total Cost: {}", strategy.total_cost());
 
    // Generate the intrinsic value graph
    strategy.graph(
