@@ -4,10 +4,10 @@
    Date: 1/8/24
 ******************************************************************************/
 
+use optionstratlib::utils::logger::setup_logger;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
 use tracing::info;
-use optionstratlib::utils::logger::setup_logger;
 
 pub(crate) fn big_n(x: f64) -> f64 {
     const MEAN: f64 = 0.0;

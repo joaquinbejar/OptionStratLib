@@ -41,8 +41,6 @@ use std::error::Error;
 ///
 #[allow(dead_code)]
 pub trait CurveOperations {
-
-
     fn generate_curve(
         &self,
         x_values: Vec<f64>,

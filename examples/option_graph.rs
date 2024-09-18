@@ -6,10 +6,10 @@
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::info;
-use optionstratlib::utils::logger::setup_logger;
 
 fn create_sample_option() -> Options {
     Options::new(

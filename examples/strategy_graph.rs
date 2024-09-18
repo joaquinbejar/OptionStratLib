@@ -6,10 +6,10 @@
 use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
+use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::info;
-use optionstratlib::utils::logger::setup_logger;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();

@@ -8,9 +8,9 @@ use optionstratlib::greeks::utils::big_n;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::pricing::black_scholes_model::black_scholes;
+use optionstratlib::utils::logger::setup_logger;
 use rayon::prelude::*;
 use tracing::info;
-use optionstratlib::utils::logger::setup_logger;
 
 struct OptionSimple {
     strike: f64,

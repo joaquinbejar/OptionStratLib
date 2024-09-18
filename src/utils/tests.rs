@@ -13,7 +13,10 @@ macro_rules! assert_decimal_relative_eq {
                 abs_diff <= epsilon,
                 "assertion failed: `(left == right)` \
                  (left: `{}`, right: `{}`, expected diff: `{}`, real diff: `{}`)",
-                left, right, epsilon, abs_diff
+                left,
+                right,
+                epsilon,
+                abs_diff
             );
         } else {
             let relative_diff = abs_diff / max_abs;
@@ -21,7 +24,10 @@ macro_rules! assert_decimal_relative_eq {
                 relative_diff <= epsilon,
                 "assertion failed: `(left ≈ right)` \
                  (left: `{}`, right: `{}`, expected relative diff: `{}`, real relative diff: `{}`)",
-                left, right, epsilon, relative_diff
+                left,
+                right,
+                epsilon,
+                relative_diff
             );
         }
     }};

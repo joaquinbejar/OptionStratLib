@@ -21,12 +21,12 @@ test:
 # Format the code
 .PHONY: fmt
 fmt:
-	cargo +nightly fmt --all
+	cargo +stable fmt --all
 
 # Check formatting
 .PHONY: fmt-check
 fmt-check:
-	cargo +nightly fmt --check
+	cargo +stable fmt --check
 
 # Run Clippy for linting
 .PHONY: lint
