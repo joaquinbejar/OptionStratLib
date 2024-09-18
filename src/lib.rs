@@ -13,6 +13,6 @@ pub mod pricing;
 pub mod risk;
 pub mod strategies;
 pub mod surfaces;
+pub mod utils;
 pub mod visualization;
 pub mod volatility;
-pub mod utils;

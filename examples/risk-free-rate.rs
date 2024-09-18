@@ -1,4 +1,6 @@
 use optionstratlib::greeks::utils::big_n;
+use optionstratlib::utils::logger::setup_logger;
+use tracing::info;
 
 fn black_scholes_call(s: f64, k: f64, t: f64, r: f64, sigma: f64) -> f64 {
     let d1 = (s.ln() / k + (r + sigma * sigma / 2.0) * t) / (sigma * t.sqrt());
@@ -38,6 +40,7 @@ fn implied_risk_free_rate(
 }
 
 fn main() {
+    setup_logger();
     let s = 2476.6; // Current gold price
     let k = 2470.0; // Strike price
     let t = 3.0 / 365.0; // Time to expiration in years

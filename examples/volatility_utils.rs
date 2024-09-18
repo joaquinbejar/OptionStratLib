@@ -3,12 +3,15 @@
    Email: jb@taunais.com
    Date: 16/8/24
 ******************************************************************************/
+use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::volatility::utils::{
     constant_volatility, ewma_volatility, garch_volatility, historical_volatility,
     interpolate_volatility_surface, simulate_heston_volatility,
 };
+use tracing::info;
 
 fn main() {
+    setup_logger();
     let returns = vec![0.01, 0.02, -0.01, 0.03, 0.00];
 
     let const_vol = constant_volatility(&returns);

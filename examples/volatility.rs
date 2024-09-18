@@ -4,8 +4,10 @@
    Date: 1/8/24
 ******************************************************************************/
 
+use optionstratlib::utils::logger::setup_logger;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
+use tracing::info;
 
 pub(crate) fn big_n(x: f64) -> f64 {
     const MEAN: f64 = 0.0;
@@ -57,6 +59,8 @@ fn implied_volatility(
 }
 
 fn main() {
+    setup_logger();
+
     let s = 2476.6;
     let k = 2530.0;
     let t = 0.0070;

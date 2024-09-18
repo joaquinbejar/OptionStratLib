@@ -30,7 +30,6 @@ impl ExpirationDate {
         }
     }
 
-
     pub(crate) fn get_date(&self) -> DateTime<Utc> {
         match self {
             ExpirationDate::Days(days) => Utc::now() + Duration::days(*days as i64),

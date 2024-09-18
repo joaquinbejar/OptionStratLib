@@ -52,6 +52,7 @@ pub struct BinomialPricingParams<'a> {
 /// # Example
 ///
 /// ```
+/// use tracing::info;
 /// use optionstratlib::model::types::{OptionType, OptionStyle, Side};
 /// use optionstratlib::pricing::binomial_model::{price_binomial, BinomialPricingParams};
 ///

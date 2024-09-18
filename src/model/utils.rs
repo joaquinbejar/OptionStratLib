@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use chrono::{NaiveDateTime, TimeZone, Utc};
 
 #[allow(dead_code)]
 pub(crate) fn create_sample_option(
@@ -21,6 +22,32 @@ pub(crate) fn create_sample_option(
         "AAPL".to_string(),
         strike_price,
         ExpirationDate::Days(30.0),
+        volatility,
+        quantity,
+        underlying_price,
+        0.05,
+        option_style,
+        0.01,
+        None,
+    )
+}
+
+#[allow(dead_code)]
+pub(crate) fn create_sample_option_with_date(
+    option_style: OptionStyle,
+    side: Side,
+    underlying_price: f64,
+    quantity: u32,
+    strike_price: f64,
+    volatility: f64,
+    naive_date: NaiveDateTime,
+) -> Options {
+    Options::new(
+        OptionType::European,
+        side,
+        "AAPL".to_string(),
+        strike_price,
+        ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
         volatility,
         quantity,
         underlying_price,

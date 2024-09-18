@@ -6,8 +6,10 @@
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
+use tracing::info;
 
 fn create_sample_option() -> Options {
     Options::new(
@@ -26,6 +28,7 @@ fn create_sample_option() -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let option = create_sample_option();
     info!("Title: {}", option.title());
     info!("Greeks: {:?}", option.greeks());

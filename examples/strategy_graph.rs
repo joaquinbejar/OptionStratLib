@@ -6,10 +6,13 @@
 use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
+use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
+use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
         2505.8,

@@ -8,7 +8,9 @@ use optionstratlib::greeks::utils::big_n;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::pricing::black_scholes_model::black_scholes;
+use optionstratlib::utils::logger::setup_logger;
 use rayon::prelude::*;
+use tracing::info;
 
 struct OptionSimple {
     strike: f64,
@@ -72,6 +74,8 @@ fn get_option_status(strike: f64, s: f64) -> &'static str {
 #[rustfmt::skip]
 #[allow(clippy::all)]
 fn main() {
+    setup_logger();
+
     let s = 2476.6;
 
     let broker_data = vec![
