@@ -9,6 +9,8 @@ use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::pricing::black_scholes_model::black_scholes;
 use rayon::prelude::*;
+use tracing::info;
+use optionstratlib::utils::logger::setup_logger;
 
 struct OptionSimple {
     strike: f64,
@@ -72,6 +74,8 @@ fn get_option_status(strike: f64, s: f64) -> &'static str {
 #[rustfmt::skip]
 #[allow(clippy::all)]
 fn main() {
+    setup_logger();
+
     let s = 2476.6;
 
     let broker_data = vec![
@@ -122,8 +126,8 @@ fn main() {
 
     let (best_t, best_r) = optimize_parameters(s, &broker_data);
 
-    println!("Best t: {:.4} años ({:.1} days)", best_t, best_t * 365.0);
-    println!("Best r: {:.4}", best_r);
+    info!("Best t: {:.4} años ({:.1} days)", best_t, best_t * 365.0);
+    info!("Best r: {:.4}", best_r);
 
     for opt in &broker_data {
         let option = Options::new(
@@ -144,7 +148,7 @@ fn main() {
         let price_status = get_price_status(theoretical_price, opt.market_price);
         let option_status = get_option_status(opt.strike, s);
 
-        println!(
+        info!(
             "Strike {}: Market Price = {:.2}, Theoretical Price = {:.2}, VI = {:.2}% is {} is {}",
             opt.strike,
             opt.market_price,
