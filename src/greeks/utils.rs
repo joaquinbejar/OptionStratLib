@@ -380,7 +380,6 @@ mod tests_src_greeks_utils {
     }
 }
 
-
 #[cfg(test)]
 mod calculate_d1_values {
     use super::*;
@@ -741,5 +740,231 @@ mod calculate_n_values {
 
         // Assert that n(x) is effectively 0 for such a large negative input
         assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-100);
+    }
+}
+
+#[cfg(test)]
+mod calculate_n_prime_values {
+    use super::*;
+    use approx::assert_relative_eq;
+    use std::f64::consts::PI;
+
+    #[test]
+    fn test_n_prime_zero() {
+        // Case where x = 0.0
+        let x = 0.0f64;
+
+        // The derivative of the PDF at x = 0 should be 0 because -x * n(x) = 0 * n(0) = 0
+        let expected_n_prime = 0.0f64;
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_positive_small_value() {
+        // Case where x is a small positive value
+        let x = 0.5f64;
+
+        // Expected result for n_prime(0.5), we calculate -x * n(x)
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_negative_small_value() {
+        // Case where x is a small negative value
+        let x = -0.5f64;
+
+        // Expected result for n_prime(-0.5), we calculate -x * n(x)
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_large_positive_value() {
+        // Case where x is a large positive value
+        let x = 5.0f64;
+
+        // Expected result for n_prime(5.0), we calculate -x * n(x)
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_large_negative_value() {
+        // Case where x is a large negative value
+        let x = -5.0f64;
+
+        // Expected result for n_prime(-5.0), we calculate -x * n(x)
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_extreme_positive_value() {
+        // Case where x is a very large positive value
+        let x = 100.0f64;
+
+        // Expected result for n_prime(100.0), should be extremely close to 0
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that n_prime(x) is effectively 0 for such a large input
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-100);
+    }
+
+    #[test]
+    fn test_n_prime_extreme_negative_value() {
+        // Case where x is a very large negative value
+        let x = -100.0f64;
+
+        // Expected result for n_prime(-100.0), should be extremely close to 0
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that n_prime(x) is effectively 0 for such a large negative input
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-100);
+    }
+}
+
+#[cfg(test)]
+mod calculate_big_n_values {
+    use super::*;
+    use approx::assert_relative_eq;
+    use statrs::distribution::Normal;
+
+    #[test]
+    fn test_big_n_zero() {
+        // Case where x = 0.0
+        let x = 0.0f64;
+
+        // The CDF of the standard normal distribution at x = 0 is 0.5
+        let expected_big_n = 0.5f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_big_n_positive_small_value() {
+        // Case where x is a small positive value
+        let x = 0.5f64;
+
+        // The expected CDF for the standard normal distribution at x = 0.5 can be precomputed
+        let normal_distribution = Normal::new(0.0, 1.0).unwrap();
+        let expected_big_n = normal_distribution.cdf(x);
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_big_n_negative_small_value() {
+        // Case where x is a small negative value
+        let x = -0.5f64;
+
+        // The expected CDF for the standard normal distribution at x = -0.5 can be precomputed
+        let normal_distribution = Normal::new(0.0, 1.0).unwrap();
+        let expected_big_n = normal_distribution.cdf(x);
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_big_n_large_positive_value() {
+        // Case where x is a large positive value
+        let x = 5.0f64;
+
+        // The CDF for large positive x should be very close to 1
+        let expected_big_n = 1.0f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6);// if lower epsilon fail
+    }
+
+    #[test]
+    fn test_big_n_large_negative_value() {
+        // Case where x is a large negative value
+        let x = -5.0f64;
+
+        // The CDF for large negative x should be very close to 0
+        let expected_big_n = 0.0f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6);// if lower epsilon fail
+    }
+
+    #[test]
+    fn test_big_n_extreme_positive_value() {
+        // Case where x is an extremely large positive value
+        let x = 100.0f64;
+
+        // The CDF for an extremely large positive x should be effectively 1
+        let expected_big_n = 1.0f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that big_n(x) is effectively 1 for such a large positive input
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn test_big_n_extreme_negative_value() {
+        // Case where x is an extremely large negative value
+        let x = -100.0f64;
+
+        // The CDF for an extremely large negative x should be effectively 0
+        let expected_big_n = 0.0f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that big_n(x) is effectively 0 for such a large negative input
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-12);
     }
 }
