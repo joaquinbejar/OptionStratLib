@@ -379,3 +379,704 @@ mod tests_src_greeks_utils {
         );
     }
 }
+
+#[cfg(test)]
+mod calculate_d1_values {
+    use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn test_d1_zero_volatility() {
+        // Case where volatility (sigma) is zero
+        let underlying_price = 100.0;
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 0.0;
+
+        // When volatility is zero, d1 should handle the case correctly
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Expected to handle division by zero or return a reasonable value like zero
+        let expected_d1 = handle_zero(underlying_price, strike_price);
+
+        // Assert that the calculated d1 is equal to the expected result
+        assert_relative_eq!(calculated_d1, expected_d1, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_d1_zero_time_to_expiry() {
+        // Case where time to expiry is zero
+        let underlying_price = 100.0;
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 0.0;
+        let implied_volatility = 0.2;
+
+        // When time to expiry is zero, d1 should handle the case correctly
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Expected to handle division by zero or return a reasonable value like zero
+        let expected_d1 = handle_zero(underlying_price, strike_price);
+
+        // Assert that the calculated d1 is equal to the expected result
+        assert_relative_eq!(calculated_d1, expected_d1, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_d1_high_volatility() {
+        // Case with extremely high volatility
+        let underlying_price = 100.0;
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 100.0; // Very high volatility
+
+        // High volatility should result in a small or large value for d1
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Assert the result should be finite and non-infinite
+        assert!(
+            calculated_d1.is_finite(),
+            "d1 should not be infinite for high volatility"
+        );
+    }
+
+    #[test]
+    fn test_d1_high_underlying_price() {
+        // Case with extremely high underlying price
+        let underlying_price = f64::MAX; // Very high stock price
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 0.2;
+
+        // Very high underlying price should result in a large d1 value
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Assert that d1 is finite and not infinite
+        assert!(
+            calculated_d1.is_finite(),
+            "d1 should not be infinite for high underlying price"
+        );
+    }
+
+    #[test]
+    fn test_d1_low_underlying_price() {
+        // Case with extremely low underlying price (near zero)
+        let underlying_price = 0.01; // Very low stock price
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 0.2;
+
+        // Very low underlying price should result in a small or negative d1 value
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Assert the result should be finite and not infinite
+        assert!(
+            calculated_d1.is_finite(),
+            "d1 should not be infinite for low underlying price"
+        );
+        assert!(
+            calculated_d1.is_sign_negative(),
+            "d1 should be negative for very low underlying price"
+        );
+    }
+
+    #[test]
+    fn test_d1_zero_strike_price() {
+        // Case where strike price is zero
+        let underlying_price = 100.0;
+        let strike_price = 0.0; // Strike price set to zero
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 0.2;
+
+        // Since strike price is zero, the function should call handle_zero and return positive infinity
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Expecting positive infinity since underlying_price > strike_price
+        assert!(calculated_d1.is_infinite() && calculated_d1.is_sign_positive(), "d1 should return positive infinity when strike price is zero and underlying is greater.");
+    }
+
+    #[test]
+    fn test_d1_infinite_risk_free_rate() {
+        // Case where risk-free rate is very high (infinite-like)
+        let underlying_price = 100.0;
+        let strike_price = 100.0;
+        let risk_free_rate = f64::MAX; // Very high risk-free rate
+        let expiration_date = 1.0;
+        let implied_volatility = 0.2;
+
+        // High risk-free rate should result in a large d1 value, potentially infinite
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Assert that d1 is positive infinity
+        assert!(
+            calculated_d1.is_infinite() && calculated_d1.is_sign_positive(),
+            "d1 should be positive infinity for extremely high risk-free rate"
+        );
+    }
+}
+
+#[cfg(test)]
+mod calculate_d2_values {
+    use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn test_d2_zero_volatility() {
+        // Case where volatility (implied_volatility) is zero
+        let underlying_price = 100.0;
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 0.0;
+
+        // When volatility is zero, d2 should handle the case correctly using handle_zero
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Since volatility is zero, handle_zero will be invoked
+        let expected_d2 = handle_zero(underlying_price, strike_price);
+
+        // Assert that d2 is equal to the expected result from handle_zero
+        assert_relative_eq!(calculated_d2, expected_d2, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_d2_zero_time_to_expiry() {
+        // Case where time to expiration is zero
+        let underlying_price = 100.0;
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 0.0;
+        let implied_volatility = 0.2;
+
+        // When time to expiration is zero, handle_zero should be called
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Since expiration_date is zero, handle_zero will be invoked
+        let expected_d2 = handle_zero(underlying_price, strike_price);
+
+        // Assert that d2 is equal to the expected result from handle_zero
+        assert_relative_eq!(calculated_d2, expected_d2, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_d2_high_volatility() {
+        // Case with extremely high volatility
+        let underlying_price = 100.0;
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 100.0; // Very high volatility
+
+        // High volatility should result in a significant negative shift in d2
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // d2 should be finite and not infinite
+        assert!(
+            calculated_d2.is_finite(),
+            "d2 should not be infinite for high volatility"
+        );
+    }
+
+    #[test]
+    fn test_d2_high_underlying_price() {
+        // Case with extremely high underlying price
+        let underlying_price = f64::MAX; // Very high stock price
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 0.2;
+
+        // Very high underlying price should result in a large d2 value
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // d2 should be finite and not infinite
+        assert!(
+            calculated_d2.is_finite(),
+            "d2 should not be infinite for high underlying price"
+        );
+    }
+
+    #[test]
+    fn test_d2_low_underlying_price() {
+        // Case with extremely low underlying price (near zero)
+        let underlying_price = 0.01; // Very low stock price
+        let strike_price = 100.0;
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 0.2;
+
+        // Very low underlying price should result in a small or negative d2 value
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Assert the result should be finite and not infinite
+        assert!(
+            calculated_d2.is_finite(),
+            "d2 should not be infinite for low underlying price"
+        );
+        assert!(
+            calculated_d2.is_sign_negative(),
+            "d2 should be negative for very low underlying price"
+        );
+    }
+
+    #[test]
+    fn test_d2_zero_strike_price() {
+        // Case where strike price is zero
+        let underlying_price = 100.0;
+        let strike_price = 0.0; // Strike price set to zero
+        let risk_free_rate = 0.05;
+        let expiration_date = 1.0;
+        let implied_volatility = 0.2;
+
+        // Since strike price is zero, the function should call handle_zero and return positive infinity
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Expecting positive infinity since underlying_price > strike_price
+        assert!(calculated_d2.is_infinite() && calculated_d2.is_sign_positive(), "d2 should return positive infinity when strike price is zero and underlying is greater.");
+    }
+
+    #[test]
+    fn test_d2_infinite_risk_free_rate() {
+        // Case where risk-free rate is very high (infinite-like)
+        let underlying_price = 100.0;
+        let strike_price = 100.0;
+        let risk_free_rate = f64::MAX; // Very high risk-free rate
+        let expiration_date = 1.0;
+        let implied_volatility = 0.2;
+
+        // High risk-free rate should result in a large d2 value, potentially infinite
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        // Assert that d2 is positive infinity
+        assert!(
+            calculated_d2.is_infinite() && calculated_d2.is_sign_positive(),
+            "d2 should be positive infinity for extremely high risk-free rate"
+        );
+    }
+}
+
+#[cfg(test)]
+mod calculate_n_values {
+    use super::*;
+    use approx::assert_relative_eq;
+    use std::f64::consts::PI;
+
+    #[test]
+    fn test_n_zero() {
+        // Case where x = 0.0
+        let x = 0.0f64;
+
+        // The PDF of the standard normal distribution at x = 0 is 1/sqrt(2*pi)
+        let expected_n = 1.0f64 / (2.0 * PI).sqrt();
+
+        // Compute n(x)
+        let calculated_n = n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_positive_small_value() {
+        // Case where x is a small positive value
+        let x = 0.5f64;
+
+        // Expected result for n(0.5), can be precomputed
+        let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-0.5f64 * 0.5f64 / 2.0f64).exp();
+
+        // Compute n(x)
+        let calculated_n = n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_negative_small_value() {
+        // Case where x is a small negative value
+        let x = -0.5f64;
+
+        // Expected result for n(-0.5), which should be the same as n(0.5) due to symmetry
+        let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-0.5f64 * 0.5f64 / 2.0f64).exp();
+
+        // Compute n(x)
+        let calculated_n = n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_large_positive_value() {
+        // Case where x is a large positive value
+        let x = 5.0f64;
+
+        // Expected result for n(5.0), should be a very small value
+        let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-5.0f64 * 5.0f64 / 2.0f64).exp();
+
+        // Compute n(x)
+        let calculated_n = n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_large_negative_value() {
+        // Case where x is a large negative value
+        let x = -5.0f64;
+
+        // Expected result for n(-5.0), should be the same as n(5.0) due to symmetry
+        let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-5.0f64 * 5.0f64 / 2.0f64).exp();
+
+        // Compute n(x)
+        let calculated_n = n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_extreme_positive_value() {
+        // Case where x is a very large positive value
+        let x = 100.0f64;
+
+        // Expected result for n(100.0), should be extremely close to 0
+        let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-100.0f64 * 100.0f64 / 2.0f64).exp();
+
+        // Compute n(x)
+        let calculated_n = n(x);
+
+        // Assert that n(x) is effectively 0 for such a large input
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-100);
+    }
+
+    #[test]
+    fn test_n_extreme_negative_value() {
+        // Case where x is a very large negative value
+        let x = -100.0f64;
+
+        // Expected result for n(-100.0), should be extremely close to 0
+        let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-100.0f64 * 100.0f64 / 2.0f64).exp();
+
+        // Compute n(x)
+        let calculated_n = n(x);
+
+        // Assert that n(x) is effectively 0 for such a large negative input
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-100);
+    }
+}
+
+#[cfg(test)]
+mod calculate_n_prime_values {
+    use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn test_n_prime_zero() {
+        // Case where x = 0.0
+        let x = 0.0f64;
+
+        // The derivative of the PDF at x = 0 should be 0 because -x * n(x) = 0 * n(0) = 0
+        let expected_n_prime = 0.0f64;
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_positive_small_value() {
+        // Case where x is a small positive value
+        let x = 0.5f64;
+
+        // Expected result for n_prime(0.5), we calculate -x * n(x)
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_negative_small_value() {
+        // Case where x is a small negative value
+        let x = -0.5f64;
+
+        // Expected result for n_prime(-0.5), we calculate -x * n(x)
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_large_positive_value() {
+        // Case where x is a large positive value
+        let x = 5.0f64;
+
+        // Expected result for n_prime(5.0), we calculate -x * n(x)
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_large_negative_value() {
+        // Case where x is a large negative value
+        let x = -5.0f64;
+
+        // Expected result for n_prime(-5.0), we calculate -x * n(x)
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_extreme_positive_value() {
+        // Case where x is a very large positive value
+        let x = 100.0f64;
+
+        // Expected result for n_prime(100.0), should be extremely close to 0
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that n_prime(x) is effectively 0 for such a large input
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-100);
+    }
+
+    #[test]
+    fn test_n_prime_extreme_negative_value() {
+        // Case where x is a very large negative value
+        let x = -100.0f64;
+
+        // Expected result for n_prime(-100.0), should be extremely close to 0
+        let expected_n_prime = -x * n(x);
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x);
+
+        // Assert that n_prime(x) is effectively 0 for such a large negative input
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-100);
+    }
+}
+
+#[cfg(test)]
+mod calculate_big_n_values {
+    use super::*;
+    use approx::assert_relative_eq;
+    use statrs::distribution::Normal;
+
+    #[test]
+    fn test_big_n_zero() {
+        // Case where x = 0.0
+        let x = 0.0f64;
+
+        // The CDF of the standard normal distribution at x = 0 is 0.5
+        let expected_big_n = 0.5f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_big_n_positive_small_value() {
+        // Case where x is a small positive value
+        let x = 0.5f64;
+
+        // The expected CDF for the standard normal distribution at x = 0.5 can be precomputed
+        let normal_distribution = Normal::new(0.0, 1.0).unwrap();
+        let expected_big_n = normal_distribution.cdf(x);
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_big_n_negative_small_value() {
+        // Case where x is a small negative value
+        let x = -0.5f64;
+
+        // The expected CDF for the standard normal distribution at x = -0.5 can be precomputed
+        let normal_distribution = Normal::new(0.0, 1.0).unwrap();
+        let expected_big_n = normal_distribution.cdf(x);
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_big_n_large_positive_value() {
+        // Case where x is a large positive value
+        let x = 5.0f64;
+
+        // The CDF for large positive x should be very close to 1
+        let expected_big_n = 1.0f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6); // if lower epsilon fail
+    }
+
+    #[test]
+    fn test_big_n_large_negative_value() {
+        // Case where x is a large negative value
+        let x = -5.0f64;
+
+        // The CDF for large negative x should be very close to 0
+        let expected_big_n = 0.0f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6); // if lower epsilon fail
+    }
+
+    #[test]
+    fn test_big_n_extreme_positive_value() {
+        // Case where x is an extremely large positive value
+        let x = 100.0f64;
+
+        // The CDF for an extremely large positive x should be effectively 1
+        let expected_big_n = 1.0f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that big_n(x) is effectively 1 for such a large positive input
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn test_big_n_extreme_negative_value() {
+        // Case where x is an extremely large negative value
+        let x = -100.0f64;
+
+        // The CDF for an extremely large negative x should be effectively 0
+        let expected_big_n = 0.0f64;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x);
+
+        // Assert that big_n(x) is effectively 0 for such a large negative input
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-12);
+    }
+}

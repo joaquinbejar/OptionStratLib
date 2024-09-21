@@ -10,28 +10,19 @@ repository = "https://github.com/joaquinbejar/OptionStratLib"
 homepage = "https://github.com/joaquinbejar/OptionStratLib"
 keywords = ["finance", "options", "trading"]
 categories = ["finance", "data-structures"]
-exclude = [
-    "/examples",
-    "/tests",
-    "/target",
-    "/.git",
-    "/.github",
-    "/.idea",
-    "/.vscode",
-    "Cargo.lock",
-    "/**/.DS_Store",
-]
+
 include = [
-    "src/**/*",
+    "src/**/*.rs",
     "Cargo.toml",
     "README.md",
     "LICENSE",
-    "examples/**/*",
-    "tests/**/*",
+    "examples/**/*.rs",
+    "tests/**/*.rs",
     "Makefile",
     "rust-toolchain.toml",
-    "Draws/**/*",
-    "Docker/**/*",
+    "Draws/**/*.png",
+    "Docker/**/*.Dockerfile",
+    "Docker/**/*.yml",
 ]
 
 [dependencies]
