@@ -333,20 +333,14 @@ pub fn rho(option: &Options) -> f64 {
             if big_n_d2 == ZERO {
                 return ZERO;
             }
-            option.strike_price
-                * option.expiration_date.get_years()
-                * e_rt
-                * big_n_d2
+            option.strike_price * option.expiration_date.get_years() * e_rt * big_n_d2
         }
         OptionStyle::Put => {
             let big_n_minus_d2 = big_n(-d2);
             if big_n_minus_d2 == ZERO {
                 return ZERO;
             }
-            -option.strike_price
-                * option.expiration_date.get_years()
-                * e_rt
-                * big_n_minus_d2
+            -option.strike_price * option.expiration_date.get_years() * e_rt * big_n_minus_d2
         }
     }
 }
@@ -790,9 +784,9 @@ mod tests_rho_equations {
 #[cfg(test)]
 mod tests_theta_long_equations {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::model::types::{ExpirationDate, Side};
     use crate::model::utils::create_sample_option;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_theta_call_option() {
@@ -888,9 +882,9 @@ mod tests_theta_long_equations {
 #[cfg(test)]
 mod tests_theta_short_equations {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::model::types::{ExpirationDate, Side};
     use crate::model::utils::create_sample_option;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_theta_short_call_option() {

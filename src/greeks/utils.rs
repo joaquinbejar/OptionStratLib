@@ -395,7 +395,13 @@ mod calculate_d1_values {
         let implied_volatility = 0.0;
 
         // When volatility is zero, d1 should handle the case correctly
-        let calculated_d1 = d1(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Expected to handle division by zero or return a reasonable value like zero
         let expected_d1 = handle_zero(underlying_price, strike_price);
@@ -414,7 +420,13 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // When time to expiry is zero, d1 should handle the case correctly
-        let calculated_d1 = d1(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Expected to handle division by zero or return a reasonable value like zero
         let expected_d1 = handle_zero(underlying_price, strike_price);
@@ -433,10 +445,19 @@ mod calculate_d1_values {
         let implied_volatility = 100.0; // Very high volatility
 
         // High volatility should result in a small or large value for d1
-        let calculated_d1 = d1(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Assert the result should be finite and non-infinite
-        assert!(calculated_d1.is_finite(), "d1 should not be infinite for high volatility");
+        assert!(
+            calculated_d1.is_finite(),
+            "d1 should not be infinite for high volatility"
+        );
     }
 
     #[test]
@@ -449,10 +470,19 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // Very high underlying price should result in a large d1 value
-        let calculated_d1 = d1(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Assert that d1 is finite and not infinite
-        assert!(calculated_d1.is_finite(), "d1 should not be infinite for high underlying price");
+        assert!(
+            calculated_d1.is_finite(),
+            "d1 should not be infinite for high underlying price"
+        );
     }
 
     #[test]
@@ -465,11 +495,23 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // Very low underlying price should result in a small or negative d1 value
-        let calculated_d1 = d1(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Assert the result should be finite and not infinite
-        assert!(calculated_d1.is_finite(), "d1 should not be infinite for low underlying price");
-        assert!(calculated_d1.is_sign_negative(), "d1 should be negative for very low underlying price");
+        assert!(
+            calculated_d1.is_finite(),
+            "d1 should not be infinite for low underlying price"
+        );
+        assert!(
+            calculated_d1.is_sign_negative(),
+            "d1 should be negative for very low underlying price"
+        );
     }
 
     #[test]
@@ -482,7 +524,13 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // Since strike price is zero, the function should call handle_zero and return positive infinity
-        let calculated_d1 = d1(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Expecting positive infinity since underlying_price > strike_price
         assert!(calculated_d1.is_infinite() && calculated_d1.is_sign_positive(), "d1 should return positive infinity when strike price is zero and underlying is greater.");
@@ -498,12 +546,20 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // High risk-free rate should result in a large d1 value, potentially infinite
-        let calculated_d1 = d1(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Assert that d1 is positive infinity
-        assert!(calculated_d1.is_infinite() && calculated_d1.is_sign_positive(), "d1 should be positive infinity for extremely high risk-free rate");
+        assert!(
+            calculated_d1.is_infinite() && calculated_d1.is_sign_positive(),
+            "d1 should be positive infinity for extremely high risk-free rate"
+        );
     }
-
 }
 
 #[cfg(test)]
@@ -521,7 +577,13 @@ mod calculate_d2_values {
         let implied_volatility = 0.0;
 
         // When volatility is zero, d2 should handle the case correctly using handle_zero
-        let calculated_d2 = d2(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Since volatility is zero, handle_zero will be invoked
         let expected_d2 = handle_zero(underlying_price, strike_price);
@@ -540,7 +602,13 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // When time to expiration is zero, handle_zero should be called
-        let calculated_d2 = d2(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Since expiration_date is zero, handle_zero will be invoked
         let expected_d2 = handle_zero(underlying_price, strike_price);
@@ -559,10 +627,19 @@ mod calculate_d2_values {
         let implied_volatility = 100.0; // Very high volatility
 
         // High volatility should result in a significant negative shift in d2
-        let calculated_d2 = d2(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // d2 should be finite and not infinite
-        assert!(calculated_d2.is_finite(), "d2 should not be infinite for high volatility");
+        assert!(
+            calculated_d2.is_finite(),
+            "d2 should not be infinite for high volatility"
+        );
     }
 
     #[test]
@@ -575,10 +652,19 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // Very high underlying price should result in a large d2 value
-        let calculated_d2 = d2(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // d2 should be finite and not infinite
-        assert!(calculated_d2.is_finite(), "d2 should not be infinite for high underlying price");
+        assert!(
+            calculated_d2.is_finite(),
+            "d2 should not be infinite for high underlying price"
+        );
     }
 
     #[test]
@@ -591,11 +677,23 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // Very low underlying price should result in a small or negative d2 value
-        let calculated_d2 = d2(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Assert the result should be finite and not infinite
-        assert!(calculated_d2.is_finite(), "d2 should not be infinite for low underlying price");
-        assert!(calculated_d2.is_sign_negative(), "d2 should be negative for very low underlying price");
+        assert!(
+            calculated_d2.is_finite(),
+            "d2 should not be infinite for low underlying price"
+        );
+        assert!(
+            calculated_d2.is_sign_negative(),
+            "d2 should be negative for very low underlying price"
+        );
     }
 
     #[test]
@@ -608,7 +706,13 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // Since strike price is zero, the function should call handle_zero and return positive infinity
-        let calculated_d2 = d2(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Expecting positive infinity since underlying_price > strike_price
         assert!(calculated_d2.is_infinite() && calculated_d2.is_sign_positive(), "d2 should return positive infinity when strike price is zero and underlying is greater.");
@@ -624,10 +728,19 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // High risk-free rate should result in a large d2 value, potentially infinite
-        let calculated_d2 = d2(underlying_price, strike_price, risk_free_rate, expiration_date, implied_volatility);
+        let calculated_d2 = d2(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
 
         // Assert that d2 is positive infinity
-        assert!(calculated_d2.is_infinite() && calculated_d2.is_sign_positive(), "d2 should be positive infinity for extremely high risk-free rate");
+        assert!(
+            calculated_d2.is_infinite() && calculated_d2.is_sign_positive(),
+            "d2 should be positive infinity for extremely high risk-free rate"
+        );
     }
 }
 
@@ -747,7 +860,6 @@ mod calculate_n_values {
 mod calculate_n_prime_values {
     use super::*;
     use approx::assert_relative_eq;
-    use std::f64::consts::PI;
 
     #[test]
     fn test_n_prime_zero() {
@@ -920,7 +1032,7 @@ mod calculate_big_n_values {
         let calculated_big_n = big_n(x);
 
         // Assert that the calculated value is close to the expected value
-        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6);// if lower epsilon fail
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6); // if lower epsilon fail
     }
 
     #[test]
@@ -935,7 +1047,7 @@ mod calculate_big_n_values {
         let calculated_big_n = big_n(x);
 
         // Assert that the calculated value is close to the expected value
-        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6);// if lower epsilon fail
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6); // if lower epsilon fail
     }
 
     #[test]
