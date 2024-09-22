@@ -145,6 +145,7 @@ impl Strategies for ShortStrangle {
     fn total_cost(&self) -> f64 {
         self.short_call.net_cost() + self.short_put.net_cost()
     }
+
     fn net_premium_received(&self) -> f64 {
         self.short_call.net_premium_received() + self.short_put.net_premium_received()
     }
@@ -287,10 +288,10 @@ impl LongStrangle {
 
         strategy
             .break_even_points
-            .push(put_strike - strategy.total_cost());
+            .push(put_strike - strategy.total_cost()/2.0);
         strategy
             .break_even_points
-            .push(call_strike + strategy.total_cost());
+            .push(call_strike + strategy.total_cost()/2.0);
 
         strategy
     }
@@ -348,7 +349,7 @@ impl Graph for LongStrangle {
         if leg_titles.is_empty() {
             strategy_title
         } else {
-            format!("{}\n{}", strategy_title, leg_titles.join("\n"))
+            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
 
@@ -480,7 +481,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
 #[cfg(test)]
 mod tests_long_strangle {
     use super::*;
-    use chrono::Utc;
 
     #[test]
     fn test_long_strangle_new() {
@@ -523,27 +523,27 @@ mod tests_long_strangle {
         assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
 
         let break_even_points = vec![
-            put_strike - strategy.total_cost(),
-            call_strike + strategy.total_cost()
+            put_strike - strategy.total_cost()/2.0,
+            call_strike + strategy.total_cost()/2.0
         ];
         assert_eq!(strategy.break_even_points, break_even_points);
     }
 
     #[test]
     fn test_break_even() {
-        let mut long_strangle = setup_long_strangle();
+        let long_strangle = setup_long_strangle();
         assert_eq!(long_strangle.break_even(), long_strangle.long_put.option.strike_price - long_strangle.total_cost());
     }
 
     #[test]
     fn test_total_cost() {
-        let mut long_strangle = setup_long_strangle();
+        let long_strangle = setup_long_strangle();
         assert_eq!(long_strangle.total_cost(), long_strangle.long_call.net_cost() + long_strangle.long_put.net_cost());
     }
 
     #[test]
     fn test_calculate_profit_at() {
-        let mut long_strangle = setup_long_strangle();
+        let long_strangle = setup_long_strangle();
         let price = 150.0;
         let expected_profit = long_strangle.long_call.pnl_at_expiration(Some(price)) + long_strangle.long_put.pnl_at_expiration(Some(price));
         assert_eq!(long_strangle.calculate_profit_at(price), expected_profit);
