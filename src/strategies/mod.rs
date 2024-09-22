@@ -12,5 +12,5 @@ mod covered_call;
 mod iron_condor;
 mod protective_put;
 mod straddle;
-mod strangle;
+pub mod strangle;
 mod utils;
