@@ -107,10 +107,10 @@ impl ShortStrangle {
 
         strategy
             .break_even_points
-            .push(put_strike - strategy.net_premium_received());
+            .push(put_strike - strategy.net_premium_received()/2.0);
         strategy
             .break_even_points
-            .push(call_strike + strategy.net_premium_received());
+            .push(call_strike + strategy.net_premium_received()/2.0);
 
         strategy
     }
@@ -126,7 +126,7 @@ impl Strategies for ShortStrangle {
 
     fn break_even(&self) -> f64 {
         // Short strangle has two break-even points, we'll return the lower one
-        self.short_put.option.strike_price - self.net_premium_received()
+        self.short_put.option.strike_price + self.net_premium_received()
     }
 
     fn calculate_profit_at(&self, price: f64) -> f64 {
@@ -154,6 +154,15 @@ impl Strategies for ShortStrangle {
             + self.short_call.close_fee
             + self.short_put.open_fee
             + self.short_put.close_fee
+    }
+
+    fn area(&self) -> f64 {
+        let strike_diff = self.short_call.option.strike_price - self.short_put.option.strike_price;
+        let inner_square = strike_diff * self.max_profit();
+        let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
+        let outer_square = break_even_diff * self.max_profit();
+        let triangles = (outer_square - inner_square) / 2.0;
+        (inner_square + triangles) / self.short_call.option.underlying_price
     }
 }
 
