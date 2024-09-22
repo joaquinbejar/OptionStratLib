@@ -121,7 +121,7 @@ impl Strategies for BullCallSpread {
     fn break_even(&self) -> f64 {
         self.long_call.option.strike_price
             + (self.long_call.total_cost() - self.short_call.net_premium_received())
-            / self.long_call.option.quantity as f64
+                / self.long_call.option.quantity as f64
     }
 
     fn calculate_profit_at(&self, price: f64) -> f64 {
@@ -148,7 +148,10 @@ impl Strategies for BullCallSpread {
     }
 
     fn fees(&self) -> f64 {
-        self.short_call.open_fee + self.short_call.close_fee + self.long_call.open_fee + self.long_call.close_fee
+        self.short_call.open_fee
+            + self.short_call.close_fee
+            + self.long_call.open_fee
+            + self.long_call.close_fee
     }
 }
 
