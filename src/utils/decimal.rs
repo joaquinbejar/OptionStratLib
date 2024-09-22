@@ -63,7 +63,11 @@ pub trait FloatLike:
     fn pow_two(self) -> Self;
     fn ln(self) -> Self;
     fn sqrt(self) -> Self;
+
+    #[allow(dead_code)]
     fn abs(self) -> Self;
+
+    #[allow(dead_code)]
     fn is_infinite(&self) -> bool;
 
     fn get(value: f64) -> Self;
