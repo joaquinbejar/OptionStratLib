@@ -34,7 +34,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
-    info!("Net Premium Received: ${:.2}", strategy.net_premium_received());
+    info!(
+        "Net Premium Received: ${:.2}",
+        strategy.net_premium_received()
+    );
     info!("Max Profit: ${:.2}", strategy.max_profit());
     info!("Max Loss: ${:.2}", strategy.max_loss());
     info!("Total Fees: ${:.2}", strategy.fees());
