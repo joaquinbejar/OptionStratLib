@@ -7,6 +7,7 @@ use crate::constants::ZERO;
 use crate::model::position::Position;
 use crate::model::types::Side;
 use crate::visualization::utils::Graph;
+use num_traits::Float;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -146,6 +147,7 @@ impl Graph for Strategy {
 
 pub trait Strategies {
     fn add_leg(&mut self, position: Position);
+
     fn break_even(&self) -> f64;
 
     fn calculate_profit_at(&self, price: f64) -> f64;
@@ -157,4 +159,10 @@ pub trait Strategies {
     fn total_cost(&self) -> f64;
 
     fn net_premium_received(&self) -> f64;
+
+    fn fees(&self) -> f64;
+
+    fn area(&self) -> f64 {
+        f64::infinity()
+    }
 }

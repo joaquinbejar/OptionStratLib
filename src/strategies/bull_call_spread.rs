@@ -146,6 +146,13 @@ impl Strategies for BullCallSpread {
     fn net_premium_received(&self) -> f64 {
         self.short_call.net_premium_received()
     }
+
+    fn fees(&self) -> f64 {
+        self.short_call.open_fee
+            + self.short_call.close_fee
+            + self.long_call.open_fee
+            + self.long_call.close_fee
+    }
 }
 
 impl Graph for BullCallSpread {
