@@ -4,12 +4,19 @@
    Date: 11/8/24
 ******************************************************************************/
 
-use crate::constants::{INFINITY_NEGATIVE, INFINITY_POSITIVE, ZERO};
 use crate::model::option::Options;
+use crate::utils::decimal::FloatLike;
+use num_traits::Float;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
 
 /// Evaluates the option payoff based on comparative values of the underlying price and strike price.
+///
+/// This function assesses the value of an option by comparing the current price of the underlying asset (`underlying_price`) to the strike price of the option (`strike_price`). The function returns distinct values based on the comparison:
+///
+/// * Positive infinity if the current price exceeds the strike price, indicating the option is in-the-money.
+/// * Negative infinity if the current price is below the strike price, indicating the option is out-of-the-money.
+/// * Zero if the current price is equal to the strike price, indicating the option is at the money.
 ///
 /// # Arguments
 ///
@@ -18,83 +25,133 @@ use std::f64::consts::PI;
 ///
 /// # Returns
 ///
-/// * Returns positive infinity if the `underlying_price` is greater than the `strike_price`.
-/// * Returns negative infinity if the `underlying_price` is less than the `strike_price`.
-/// * Returns zero if the `underlying_price` is equal to the `strike_price`.
+/// This function returns a floating point number of the same type as the input:
 ///
-fn handle_zero(underlying_price: f64, strike_price: f64) -> f64 {
+/// * Positive infinity if the `underlying_price` is greater than the `strike_price`.
+/// * Negative infinity if the `underlying_price` is less than the `strike_price`.
+/// * Zero if the `underlying_price` is equal to the `strike_price`.
+///
+/// # Qualifications
+///
+/// This function requires that the generic type `T` implements the `Float` trait, which provides the methods `T::infinity()`, `T::neg_infinity()`, and `T::zero()`. These methods return positive infinity, negative infinity, and zero respectively, appropriate to the type `T`.
+fn handle_zero<T: FloatLike>(underlying_price: T, strike_price: T) -> T {
     if underlying_price > strike_price {
-        INFINITY_POSITIVE
+        T::infinity()
     } else if underlying_price < strike_price {
-        INFINITY_NEGATIVE
+        T::neg_infinity()
     } else {
-        ZERO
+        T::zero()
     }
 }
 
 /// Calculates the d1 component used in the Black-Scholes option pricing model.
 ///
+/// # Type Parameters
+///
+/// * `T` - A floating-point type that implements the `num_traits::Float` trait
+///
 /// # Arguments
 ///
-/// * `s` - Current stock price
-/// * `r` - Risk-free rate
-/// * `t` - Time to expiration in years
-/// * `sigma` - Volatility of the stock
+/// * `underlying_price` - Current stock price
+/// * `strike_price` - Option strike price
+/// * `risk_free_rate` - Risk-free rate
+/// * `expiration_date` - Time to expiration in years
+/// * `implied_volatility` - Volatility of the stock
 ///
 /// # Returns
 ///
-/// * `f64` - The computed d1 value
+/// * `T` - The computed d1 value
 ///
 /// d1 is a crucial component in the Black-Scholes model, vital for determining
 /// the price of options. It takes into account factors such as the current stock
 /// price, risk-free rate, time to expiration, and stock volatility to produce
 /// an important intermediate result.
-pub(crate) fn d1(
-    underlying_price: f64,
-    strike_price: f64,
-    risk_free_rate: f64,
-    expiration_date: f64,
-    implied_volatility: f64,
-) -> f64 {
-    if implied_volatility == ZERO || expiration_date == ZERO {
+pub(crate) fn d1<T>(
+    underlying_price: T,
+    strike_price: T,
+    risk_free_rate: T,
+    expiration_date: T,
+    implied_volatility: T,
+) -> T
+where
+    T: FloatLike + Clone,
+{
+    let zero = <T as FloatLike>::zero();
+    if strike_price == zero {
+        return <T as FloatLike>::infinity();
+    }
+
+    if implied_volatility == zero || expiration_date == zero {
         return handle_zero(underlying_price, strike_price);
     }
-    ((underlying_price / strike_price).ln()
-        + (risk_free_rate + implied_volatility * implied_volatility / 2.0) * expiration_date)
-        / (implied_volatility * expiration_date.sqrt())
+
+    let implied_volatility_squared = implied_volatility.clone().pow_two();
+    let ln_price_ratio = (underlying_price / strike_price).ln();
+    let rate_vol_term = risk_free_rate + implied_volatility_squared / T::two();
+    let numerator = ln_price_ratio + rate_vol_term * expiration_date.clone();
+    let denominator = implied_volatility * expiration_date.sqrt();
+
+    numerator / denominator
 }
 
 /// Calculates the d2 value commonly used in financial mathematics, specifically in
 /// the Black-Scholes option pricing model. The d2 value is derived from the d1
 /// value and is used to determine the probability of the option ending up in-the-money.
 ///
+/// # Type Parameters
+///
+/// * `T` - A floating-point type that implements the `num_traits::Float` trait
+///
 /// # Arguments
 ///
-/// * `s` - The current stock price.
-/// * `r` - The risk-free interest rate.
-/// * `t` - The time to expiration (in years).
-/// * `sigma` - The volatility of the stock's returns.
+/// * `underlying_price` - The current stock price, represented as a floating-point number of type `T`.
+/// * `strike_price` - The option strike price, represented as a floating-point number of type `T`.
+/// * `risk_free_rate` - The risk-free interest rate, represented as a floating-point number of type `T`.
+/// * `expiration_date` - The time to expiration (in years), represented as a floating-point number of type `T`.
+/// * `implied_volatility` - The volatility of the stock's returns, represented as a floating-point number of type `T`.
 ///
 /// # Returns
 ///
-/// * `f64` - The computed d2 value.
-pub(crate) fn d2(
-    underlying_price: f64,
-    strike_price: f64,
-    risk_free_rate: f64,
-    expiration_date: f64,
-    implied_volatility: f64,
-) -> f64 {
-    if implied_volatility == ZERO || expiration_date == ZERO {
+/// * `T` - The computed d2 value, which is used in the Black-Scholes option pricing model.
+///
+/// # Details
+///
+/// The function first checks if either `implied_volatility` or `expiration_date` is zero. If so,
+/// it delegates to the `handle_zero` function to handle this special case.
+///
+/// If neither of these values is zero, the function calculates the d1 value using the `d1` function
+/// and then derives the d2 value by subtracting the product of the `implied_volatility` and the
+/// square root of the `expiration_date` from the d1 value.
+///
+/// The d2 value is crucial for determining the likelihood that an option will finish in-the-money
+/// (i.e., the stock price will be above the strike price for a call option or below the strike price
+/// for a put option at expiration).
+///
+pub(crate) fn d2<T>(
+    underlying_price: T,
+    strike_price: T,
+    risk_free_rate: T,
+    expiration_date: T,
+    implied_volatility: T,
+) -> T
+where
+    T: FloatLike + Clone,
+{
+    let zero = <T as FloatLike>::zero();
+
+    if implied_volatility == zero || expiration_date == zero {
         return handle_zero(underlying_price, strike_price);
     }
-    d1(
+
+    let d1_value = d1(
         underlying_price,
         strike_price,
         risk_free_rate,
-        expiration_date,
-        implied_volatility,
-    ) - implied_volatility * expiration_date.sqrt()
+        expiration_date.clone(),
+        implied_volatility.clone(),
+    );
+
+    d1_value - implied_volatility * expiration_date.sqrt()
 }
 
 /// Calculates the value of the standard normal distribution density function at a given point `x`.
@@ -113,8 +170,17 @@ pub(crate) fn d2(
 /// A floating point number representing the value of the density function at point `x`.
 ///
 #[allow(dead_code)]
-pub(crate) fn n(x: f64) -> f64 {
-    1.0 / (2.0 * PI).sqrt() * (-x * x / 2.0).exp()
+pub(crate) fn n<T>(x: T) -> T
+where
+    T: Float,
+{
+    let two = T::from(2.0).unwrap();
+    let pi = T::from(PI).unwrap();
+
+    let denominator = (two * pi).sqrt();
+    let exponent = -x * x / two;
+
+    T::one() / denominator * exponent.exp()
 }
 
 /// Calculate the derivative of the function `n` at a given point `x`.
@@ -128,10 +194,34 @@ pub(crate) fn n(x: f64) -> f64 {
 ///
 /// # Returns
 ///
-/// This function returns a `f64` which is the derivative of the function `n` at `x`.
+/// This function returns a value of type `T` which is the derivative of the
+/// function `n` at `x`.
 ///
+/// # Type Parameters
+///
+/// * `T`: A type that implements the `Float` trait, which allows for floating point operations.
+///
+/// # Examples
+///
+/// Although no example usage is provided, it typically involves calling `n_prime`
+/// with a specific floating point number as the argument to obtain the derivative
+/// of the function `n` at that point.
+///
+/// # Panics
+///
+/// This function does not explicitly handle panics. Ensure that the function `n`
+/// and the floating point operations are well-defined for the input value `x`.
+///
+/// # Safety
+///
+/// This code assumes that the function `n` is defined and behaves correctly for
+/// the provided input type `T`. Improper or undefined behavior of `n` may lead
+/// to unexpected results or runtime errors.
 #[allow(dead_code)]
-pub(crate) fn n_prime(x: f64) -> f64 {
+pub(crate) fn n_prime<T>(x: T) -> T
+where
+    T: Float,
+{
     -x * n(x)
 }
 
@@ -146,12 +236,15 @@ pub(crate) fn n_prime(x: f64) -> f64 {
 ///
 /// A floating-point number representing the CDF of the standard normal distribution at the given `x`.
 ///
-pub fn big_n(x: f64) -> f64 {
+pub fn big_n<T>(x: T) -> T
+where
+    T: Float + From<f64>,
+{
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
 
     let normal_distribution = Normal::new(MEAN, STD_DEV).unwrap();
-    normal_distribution.cdf(x)
+    normal_distribution.cdf(x.to_f64().unwrap()).into()
 }
 
 /// Calculates the d1 and d2 values used in financial option pricing models such as the Black-Scholes model.
@@ -187,8 +280,98 @@ pub(crate) fn calculate_d_values(option: &Options) -> (f64, f64) {
 }
 
 #[cfg(test)]
+mod tests_handle_zero {
+    use super::*;
+    use rust_decimal::Decimal;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_underlying_greater_than_strike() {
+        let underlying = Decimal::from_str("100.50").unwrap();
+        let strike = Decimal::from_str("100.00").unwrap();
+        assert_eq!(handle_zero(underlying, strike), Decimal::infinity());
+    }
+
+    #[test]
+    fn test_underlying_greater_than_strike_f64() {
+        let underlying = 100.50;
+        let strike = 100.00;
+        assert_eq!(
+            handle_zero(underlying, strike),
+            <f64 as FloatLike>::infinity()
+        );
+    }
+
+    #[test]
+    fn test_underlying_less_than_strike() {
+        let underlying = Decimal::from_str("99.50").unwrap();
+        let strike = Decimal::from_str("100.00").unwrap();
+        assert_eq!(handle_zero(underlying, strike), Decimal::MIN);
+    }
+
+    #[test]
+    fn test_underlying_less_than_strike_f64() {
+        let underlying = 99.50;
+        let strike = 100.00;
+        assert_eq!(
+            handle_zero(underlying, strike),
+            <f64 as FloatLike>::neg_infinity()
+        );
+    }
+
+    #[test]
+    fn test_underlying_equal_to_strike() {
+        let underlying = Decimal::from_str("100.00").unwrap();
+        let strike = Decimal::from_str("100.00").unwrap();
+        assert_eq!(handle_zero(underlying, strike), Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_underlying_equal_to_strike_f64() {
+        let underlying = 100.00;
+        let strike = 100.00;
+        assert_eq!(handle_zero(underlying, strike), <f64 as FloatLike>::zero());
+    }
+
+    #[test]
+    fn test_with_large_numbers() {
+        let underlying = Decimal::from_str("1000000.01").unwrap();
+        let strike = Decimal::from_str("1000000.00").unwrap();
+        assert_eq!(handle_zero(underlying, strike), Decimal::MAX);
+    }
+
+    #[test]
+    fn test_with_large_numbers_f64() {
+        let underlying = 1000000.01;
+        let strike = 1000000.00;
+        assert_eq!(
+            handle_zero(underlying, strike),
+            <f64 as FloatLike>::infinity()
+        );
+    }
+
+    #[test]
+    fn test_with_small_numbers() {
+        let underlying = Decimal::from_str("0.000001").unwrap();
+        let strike = Decimal::from_str("0.000002").unwrap();
+        assert_eq!(handle_zero(underlying, strike), Decimal::MIN);
+    }
+
+    #[test]
+    fn test_with_small_numbers_f64() {
+        let underlying = 0.000001;
+        let strike = 0.000002;
+        assert_eq!(
+            handle_zero(underlying, strike),
+            <f64 as FloatLike>::neg_infinity()
+        );
+    }
+}
+
+#[cfg(test)]
 mod tests_calculate_d_values {
     use super::*;
+    use crate::constants::ZERO;
     use crate::model::types::{OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
 
@@ -218,6 +401,7 @@ mod tests_calculate_d_values {
 #[cfg(test)]
 mod tests_src_greeks_utils {
     use super::*;
+    use crate::constants::ZERO;
     use approx::assert_relative_eq;
     use statrs::distribution::ContinuousCDF;
     use statrs::distribution::Normal;
@@ -346,7 +530,7 @@ mod tests_src_greeks_utils {
         let expected_n_prime = 0.0;
         let computed_n_prime = n_prime(x);
         assert!(
-            (computed_n_prime - expected_n_prime).abs() < 1e-10,
+            FloatLike::abs(computed_n_prime - expected_n_prime) < 1e-10,
             "n_prime function failed"
         );
 
@@ -559,6 +743,154 @@ mod calculate_d1_values {
             calculated_d1.is_infinite() && calculated_d1.is_sign_positive(),
             "d1 should be positive infinity for extremely high risk-free rate"
         );
+    }
+}
+
+#[cfg(test)]
+mod calculate_d1_values_decimal {
+    use super::*;
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_d1_zero_volatility() {
+        let underlying_price = dec!(100.0);
+        let strike_price = dec!(100.0);
+        let risk_free_rate = dec!(0.05);
+        let expiration_date = dec!(1.0);
+        let implied_volatility = dec!(0.0);
+
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        let expected_d1 = handle_zero(underlying_price, strike_price);
+
+        assert_relative_eq!(
+            calculated_d1.to_f64().unwrap(),
+            expected_d1.to_f64().unwrap(),
+            epsilon = 1e-4
+        );
+    }
+
+    #[test]
+    fn test_d1_zero_time_to_expiry() {
+        let underlying_price = dec!(100.0);
+        let strike_price = dec!(100.0);
+        let risk_free_rate = dec!(0.05);
+        let expiration_date = dec!(0.0);
+        let implied_volatility = dec!(0.2);
+
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        let expected_d1 = handle_zero(underlying_price, strike_price);
+
+        assert_relative_eq!(
+            calculated_d1.to_f64().unwrap(),
+            expected_d1.to_f64().unwrap(),
+            epsilon = 1e-4
+        );
+    }
+
+    #[test]
+    fn test_d1_high_volatility() {
+        let underlying_price = dec!(100.0);
+        let strike_price = dec!(100.0);
+        let risk_free_rate = dec!(0.05);
+        let expiration_date = dec!(1.0);
+        let implied_volatility = dec!(100.0);
+
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        assert!(
+            !calculated_d1.is_infinite(),
+            "d1 should not be infinite for high volatility"
+        );
+    }
+
+    #[test]
+    fn test_d1_high_underlying_price() {
+        let underlying_price = Decimal::MAX;
+        let strike_price = dec!(100.0);
+        let risk_free_rate = dec!(0.05);
+        let expiration_date = dec!(1.0);
+        let implied_volatility = dec!(0.2);
+
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        assert!(
+            !calculated_d1.is_infinite(),
+            "d1 should not be infinite for high underlying price"
+        );
+    }
+
+    #[test]
+    fn test_d1_low_underlying_price() {
+        let underlying_price = dec!(0.01);
+        let strike_price = dec!(100.0);
+        let risk_free_rate = dec!(0.05);
+        let expiration_date = dec!(1.0);
+        let implied_volatility = dec!(0.2);
+
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        assert!(
+            !calculated_d1.is_infinite(),
+            "d1 should not be infinite for low underlying price"
+        );
+        assert!(
+            calculated_d1.is_sign_negative(),
+            "d1 should be negative for very low underlying price"
+        );
+    }
+
+    #[test]
+    fn test_d1_zero_strike_price() {
+        let underlying_price = dec!(100.0);
+        let strike_price = dec!(0.0);
+        let risk_free_rate = dec!(0.05);
+        let expiration_date = dec!(1.0);
+        let implied_volatility = dec!(0.2);
+
+        let calculated_d1 = d1(
+            underlying_price,
+            strike_price,
+            risk_free_rate,
+            expiration_date,
+            implied_volatility,
+        );
+
+        assert!(calculated_d1.is_infinite() && calculated_d1.is_sign_positive(), "d1 should return positive infinity when strike price is zero and underlying is greater.");
     }
 }
 
