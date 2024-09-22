@@ -3,11 +3,11 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use num_traits::Float;
 use crate::constants::ZERO;
 use crate::model::position::Position;
 use crate::model::types::Side;
 use crate::visualization::utils::Graph;
+use num_traits::Float;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
