@@ -65,16 +65,16 @@ pub fn delta(option: &Options) -> f64 {
         match option.option_style {
             OptionStyle::Call => {
                 if option.underlying_price >= option.strike_price {
-                    return sign * 1.0; // Delta es 1 para Call in-the-money
+                    return sign; // Delta is 1 for Call in-the-money
                 } else {
-                    return 0.0; // Delta es 0 para Call out-of-the-money
+                    return 0.0; // Delta is 0 for Call out-of-the-money
                 }
             }
             OptionStyle::Put => {
                 if option.underlying_price <= option.strike_price {
-                    return sign * -1.0; // Delta es -1 para Put in-the-money
+                    return sign * -1.0; // Delta is -1 for Put in-the-money
                 } else {
-                    return 0.0; // Delta es 0 para Put out-of-the-money
+                    return 0.0; // Delta is 0 for Put out-of-the-money
                 }
             }
         }
