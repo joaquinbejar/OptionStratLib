@@ -17,7 +17,8 @@ use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 
-const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
+const SHORT_STRANGLE_DESCRIPTION: &str =
+    "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
 is expected and the underlying asset's price is anticipated to remain stable.";
 
@@ -104,8 +105,12 @@ impl ShortStrangle {
         );
         strategy.add_leg(short_put.clone());
 
-        strategy.break_even_points.push(put_strike - strategy.net_premium_received());
-        strategy.break_even_points.push(call_strike + strategy.net_premium_received());
+        strategy
+            .break_even_points
+            .push(put_strike - strategy.net_premium_received());
+        strategy
+            .break_even_points
+            .push(call_strike + strategy.net_premium_received());
 
         strategy
     }
@@ -145,8 +150,10 @@ impl Strategies for ShortStrangle {
     }
 
     fn fees(&self) -> f64 {
-        self.short_call.open_fee + self.short_call.close_fee
-            + self.short_put.open_fee + self.short_put.close_fee
+        self.short_call.open_fee
+            + self.short_call.close_fee
+            + self.short_put.open_fee
+            + self.short_put.close_fee
     }
 }
 
@@ -180,7 +187,8 @@ impl Graph for ShortStrangle {
     }
 }
 
-const LONG_STRANGLE_DESCRIPTION: &str = "A long strangle involves buying an out-of-the-money call and an \
+const LONG_STRANGLE_DESCRIPTION: &str =
+    "A long strangle involves buying an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when high volatility \
 is expected and a significant move in the underlying asset's price is anticipated, but the \
 direction is uncertain.";
@@ -268,8 +276,12 @@ impl LongStrangle {
         );
         strategy.add_leg(long_put.clone());
 
-        strategy.break_even_points.push(put_strike - strategy.total_cost());
-        strategy.break_even_points.push(call_strike + strategy.total_cost());
+        strategy
+            .break_even_points
+            .push(put_strike - strategy.total_cost());
+        strategy
+            .break_even_points
+            .push(call_strike + strategy.total_cost());
 
         strategy
     }
@@ -289,8 +301,7 @@ impl Strategies for LongStrangle {
     }
 
     fn calculate_profit_at(&self, price: f64) -> f64 {
-        self.long_call.pnl_at_expiration(Some(price))
-            + self.long_put.pnl_at_expiration(Some(price))
+        self.long_call.pnl_at_expiration(Some(price)) + self.long_put.pnl_at_expiration(Some(price))
     }
 
     fn max_profit(&self) -> f64 {
@@ -310,8 +321,10 @@ impl Strategies for LongStrangle {
     }
 
     fn fees(&self) -> f64 {
-        self.long_call.open_fee + self.long_call.close_fee
-            + self.long_put.open_fee + self.long_put.close_fee
+        self.long_call.open_fee
+            + self.long_call.close_fee
+            + self.long_put.open_fee
+            + self.long_put.close_fee
     }
 }
 
