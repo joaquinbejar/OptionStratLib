@@ -20,6 +20,8 @@ pub trait FloatLike:
     fn sqrt(self) -> Self;
     fn abs(self) -> Self;
     fn is_infinite(&self) -> bool;
+
+    fn get(value: f64) -> Self;
 }
 
 impl FloatLike for Decimal {
@@ -68,6 +70,10 @@ impl FloatLike for Decimal {
         let max_threshold = Decimal::from_f64(1e24).unwrap();
         self >= &max_threshold || self <= &-max_threshold
     }
+
+    fn get(value: f64) -> Self {
+        Decimal::from_f64(value).unwrap()
+    }
 }
 
 impl FloatLike for f64 {
@@ -107,6 +113,10 @@ impl FloatLike for f64 {
 
     fn is_infinite(&self) -> bool {
         f64::is_infinite(*self)
+    }
+
+    fn get(value: f64) -> Self {
+        value
     }
 }
 

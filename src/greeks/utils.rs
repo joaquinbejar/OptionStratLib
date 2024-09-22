@@ -261,7 +261,10 @@ where
 ///     - `d1_value`: The calculated d1 value.
 ///     - `d2_value`: The calculated d2 value.
 ///
-pub(crate) fn calculate_d_values(option: &Options) -> (f64, f64) {
+pub(crate) fn calculate_d_values<T>(option: &Options) -> (T, T)
+where
+    T: FloatLike + Clone,
+{
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
@@ -276,7 +279,7 @@ pub(crate) fn calculate_d_values(option: &Options) -> (f64, f64) {
         option.expiration_date.get_years(),
         option.implied_volatility,
     );
-    (d1_value, d2_value)
+    (T::get(d1_value), T::get(d2_value))
 }
 
 #[cfg(test)]
@@ -391,7 +394,7 @@ mod tests_calculate_d_values {
             dividend_yield: ZERO,
             exotic_params: None,
         };
-        let (d1_value, d2_value) = calculate_d_values(&option);
+        let (d1_value, d2_value): (f64, f64) = calculate_d_values(&option);
 
         assert_relative_eq!(d1_value, 5.0555, epsilon = 0.001);
         assert_relative_eq!(d2_value, -5.064, epsilon = 0.001);
