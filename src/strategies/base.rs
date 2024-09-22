@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+use num_traits::Float;
 use crate::constants::ZERO;
 use crate::model::position::Position;
 use crate::model::types::Side;
@@ -160,4 +161,8 @@ pub trait Strategies {
     fn net_premium_received(&self) -> f64;
 
     fn fees(&self) -> f64;
+
+    fn area(&self) -> f64 {
+        f64::infinity()
+    }
 }
