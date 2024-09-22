@@ -2,6 +2,51 @@ use num_traits::{abs, ConstZero, FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 use std::ops::{Add, Div, Mul, Sub};
 
+/// This trait defines a set of operations and associated functions for
+/// floating-point-like types. It is designed to abstract over various
+/// floating-point types, providing a consistent interface for mathematical
+/// operations commonly used in numerical computations.
+///
+/// Implementors of this trait are required to support standard mathematical
+/// operations such as addition, subtraction, multiplication, and division.
+/// Furthermore, they must provide implementations for various utility
+/// functions such as computing powers, natural logarithms, square roots,
+/// and absolute values, as well as methods to check for infinity.
+///
+/// # Required Methods
+///
+/// - `fn infinity() -> Self`
+///   - Returns the "positive infinity" value of the type.
+///
+/// - `fn neg_infinity() -> Self`
+///   - Returns the "negative infinity" value of the type.
+///
+/// - `fn zero() -> Self`
+///   - Returns the zero value of the type.
+///
+/// - `fn two() -> Self`
+///   - Returns the numeric value two of the type.
+///
+/// - `fn powf(self, exp: Self) -> Self`
+///   - Raises the value to the power of `exp`.
+///
+/// - `fn pow_two(self) -> Self`
+///   - Computes the square of the value.
+///
+/// - `fn ln(self) -> Self`
+///   - Computes the natural logarithm of the value.
+///
+/// - `fn sqrt(self) -> Self`
+///   - Computes the square root of the value.
+///
+/// - `fn abs(self) -> Self`
+///   - Computes the absolute value.
+///
+/// - `fn is_infinite(&self) -> bool`
+///   - Checks if the value is infinite.
+///
+/// - `fn get(value: f64) -> Self`
+///   - Converts a `f64` value into the implementing type.
 pub trait FloatLike:
     Sized
     + PartialOrd
