@@ -146,6 +146,7 @@ impl Graph for Strategy {
 
 pub trait Strategies {
     fn add_leg(&mut self, position: Position);
+
     fn break_even(&self) -> f64;
 
     fn calculate_profit_at(&self, price: f64) -> f64;
@@ -157,4 +158,6 @@ pub trait Strategies {
     fn total_cost(&self) -> f64;
 
     fn net_premium_received(&self) -> f64;
+
+    fn fees(&self) -> f64;
 }
