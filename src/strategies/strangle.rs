@@ -167,20 +167,6 @@ impl Strategies for ShortStrangle {
 }
 
 impl Graph for ShortStrangle {
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        self.break_even_points
-            .iter()
-            .enumerate()
-            .map(|(i, &point)| (format!("Break Even {}", i + 1), point))
-            .collect()
-    }
-
-    fn get_values(&self, data: &[f64]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
-    }
-
     fn title(&self) -> String {
         let strategy_title = format!("Short Strangle Strategy: {:?}", self.kind);
         let leg_titles: Vec<String> = [self.short_call.title(), self.short_put.title()]
@@ -193,6 +179,20 @@ impl Graph for ShortStrangle {
         } else {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
+    }
+
+    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+        data.iter()
+            .map(|&price| self.calculate_profit_at(price))
+            .collect()
+    }
+
+    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
+        self.break_even_points
+            .iter()
+            .enumerate()
+            .map(|(i, &point)| (format!("Break Even {}", i + 1), point))
+            .collect()
     }
 }
 
@@ -338,20 +338,6 @@ impl Strategies for LongStrangle {
 }
 
 impl Graph for LongStrangle {
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        self.break_even_points
-            .iter()
-            .enumerate()
-            .map(|(i, &point)| (format!("Break Even {}", i + 1), point))
-            .collect()
-    }
-
-    fn get_values(&self, data: &[f64]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
-    }
-
     fn title(&self) -> String {
         let strategy_title = format!("Long Strangle Strategy: {:?}", self.kind);
         let leg_titles: Vec<String> = [self.long_call.title(), self.long_put.title()]
@@ -364,5 +350,129 @@ impl Graph for LongStrangle {
         } else {
             format!("{}\n{}", strategy_title, leg_titles.join("\n"))
         }
+    }
+
+    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+        data.iter()
+            .map(|&price| self.calculate_profit_at(price))
+            .collect()
+    }
+
+    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
+        self.break_even_points
+            .iter()
+            .enumerate()
+            .map(|(i, &point)| (format!("Break Even {}", i + 1), point))
+            .collect()
+    }
+}
+
+
+#[cfg(test)]
+mod tests_short_strangle {
+    use super::*;
+
+    fn setup() -> ShortStrangle {
+        ShortStrangle::new(
+            "AAPL".to_string(),
+            150.0,
+            155.0,
+            145.0,
+            ExpirationDate::Days(30.0),
+            0.2,
+            0.01,
+            0.02,
+            100,
+            2.0,
+            1.5,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+        )
+    }
+
+    #[test]
+    fn test_new() {
+        let strategy = setup();
+        assert_eq!(strategy.name, "Short Strangle");
+        assert_eq!(strategy.kind, StrategyType::Strangle);
+        assert_eq!(
+            strategy.description,
+            "A short strangle involves selling an out-of-the-money call and an \
+out-of-the-money put with the same expiration date. This strategy is used when low volatility \
+is expected and the underlying asset's price is anticipated to remain stable."
+        );
+    }
+
+    #[test]
+    fn test_break_even() {
+        let strategy = setup();
+        assert_eq!(strategy.break_even(), 455.0);
+    }
+
+    #[test]
+    fn test_calculate_profit_at() {
+        let strategy = setup();
+        let price = 150.0;
+        assert_eq!(strategy.calculate_profit_at(price), 310.0);
+    }
+
+    #[test]
+    fn test_max_profit() {
+        let strategy = setup();
+        assert_eq!(strategy.max_profit(), strategy.net_premium_received());
+    }
+
+    #[test]
+    fn test_max_loss() {
+        let strategy = setup();
+        assert_eq!(strategy.max_loss(), f64::INFINITY);
+    }
+
+    #[test]
+    fn test_total_cost() {
+        let strategy = setup();
+        assert_eq!(strategy.total_cost(), strategy.short_call.net_cost() + strategy.short_put.net_cost());
+    }
+
+    #[test]
+    fn test_net_premium_received() {
+        let strategy = setup();
+        assert_eq!(strategy.net_premium_received(), strategy.short_call.net_premium_received() + strategy.short_put.net_premium_received());
+    }
+
+    #[test]
+    fn test_fees() {
+        let strategy = setup();
+        let expected_fees = 0.4;
+        assert_eq!(strategy.fees(), expected_fees);
+    }
+
+    #[test]
+    fn test_area() {
+        let strategy = setup();
+        assert_eq!(strategy.area(), 341.0);
+    }
+
+    #[test]
+    fn test_graph_methods() {
+        let strategy = setup();
+
+        let vertical_lines = strategy.get_vertical_lines();
+        assert_eq!(vertical_lines.len(), 2);
+        assert_eq!(vertical_lines[0].0, "Break Even 1");
+        assert_eq!(vertical_lines[1].0, "Break Even 2");
+
+        let data = vec![140.0, 145.0, 150.0, 155.0, 160.0];
+        let values = strategy.get_values(&data);
+        for (i, &price) in data.iter().enumerate() {
+            assert_eq!(values[i], strategy.calculate_profit_at(price));
+        }
+
+        let title = strategy.title();
+        assert!(title.contains("Short Strangle Strategy"));
+        assert!(title.contains("Call"));
+        assert!(title.contains("Put"));
     }
 }
