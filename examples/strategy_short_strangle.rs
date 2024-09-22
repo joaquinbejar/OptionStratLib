@@ -14,15 +14,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let strategy = ShortStrangle::new(
         "GOLD".to_string(),
         underlying_price, // underlying_price
-        2680.0,           // call_strike
-        2620.0,           // put_strike
+        2725.0,           // call_strike
+        2560.0,           // put_strike
         ExpirationDate::Days(60.0),
         0.1548, // implied_volatility
         0.05,   // risk_free_rate
         0.0,    // dividend_yield
-        1,      // quantity
-        53.7,   // premium_short_call
-        54.0,   // premium_short_put
+        2,      // quantity
+        38.8,   // premium_short_call
+        30.4,   // premium_short_put
         0.96,   // open_fee_short_call
         0.96,   // close_fee_short_call
         0.96,   // open_fee_short_put
@@ -34,15 +34,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
-    info!("Net Premium Received: {}", strategy.net_premium_received());
-    info!("Max Profit: {}", strategy.max_profit());
+    info!("Net Premium Received: {:.2}", strategy.net_premium_received());
+    info!("Max Profit: {:.2}", strategy.max_profit());
     info!("Max Loss: {}", strategy.max_loss());
-    info!("Total Fees: {}", strategy.fees());
+    info!("Total Fees: {:.2}", strategy.fees());
     info!(
-        "Range of Profit: {:.2} {:.2}%",
+        "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
+    info!("Profit Area: {:.2}%", strategy.area());
 
     // Generate the profit/loss graph
     strategy.graph(
