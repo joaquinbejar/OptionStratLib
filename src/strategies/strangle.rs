@@ -476,3 +476,112 @@ is expected and the underlying asset's price is anticipated to remain stable."
         assert!(title.contains("Put"));
     }
 }
+
+#[cfg(test)]
+mod tests_long_strangle {
+    use super::*;
+    use chrono::Utc;
+
+    #[test]
+    fn test_long_strangle_new() {
+        let underlying_symbol = "AAPL".to_string();
+        let underlying_price = 150.0;
+        let call_strike = 160.0;
+        let put_strike = 140.0;
+        let expiration = ExpirationDate::default();
+        let implied_volatility = 0.25;
+        let risk_free_rate = 0.01;
+        let dividend_yield = 0.02;
+        let quantity = 10;
+        let premium_long_call = 5.0;
+        let premium_long_put = 5.0;
+        let open_fee_long_call = 0.5;
+        let close_fee_long_call = 0.5;
+        let open_fee_long_put = 0.5;
+        let close_fee_long_put = 0.5;
+
+        let strategy = LongStrangle::new(
+            underlying_symbol.clone(),
+            underlying_price,
+            call_strike,
+            put_strike,
+            expiration.clone(),
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_long_put,
+            open_fee_long_call,
+            close_fee_long_call,
+            open_fee_long_put,
+            close_fee_long_put,
+        );
+
+        assert_eq!(strategy.name, "Long Strangle");
+        assert_eq!(strategy.kind, StrategyType::Strangle);
+        assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
+
+        let break_even_points = vec![
+            put_strike - strategy.total_cost(),
+            call_strike + strategy.total_cost()
+        ];
+        assert_eq!(strategy.break_even_points, break_even_points);
+    }
+
+    #[test]
+    fn test_break_even() {
+        let mut long_strangle = setup_long_strangle();
+        assert_eq!(long_strangle.break_even(), long_strangle.long_put.option.strike_price - long_strangle.total_cost());
+    }
+
+    #[test]
+    fn test_total_cost() {
+        let mut long_strangle = setup_long_strangle();
+        assert_eq!(long_strangle.total_cost(), long_strangle.long_call.net_cost() + long_strangle.long_put.net_cost());
+    }
+
+    #[test]
+    fn test_calculate_profit_at() {
+        let mut long_strangle = setup_long_strangle();
+        let price = 150.0;
+        let expected_profit = long_strangle.long_call.pnl_at_expiration(Some(price)) + long_strangle.long_put.pnl_at_expiration(Some(price));
+        assert_eq!(long_strangle.calculate_profit_at(price), expected_profit);
+    }
+
+    fn setup_long_strangle() -> LongStrangle {
+        let underlying_symbol = "AAPL".to_string();
+        let underlying_price = 150.0;
+        let call_strike = 160.0;
+        let put_strike = 140.0;
+        let expiration = ExpirationDate::default();
+        let implied_volatility = 0.25;
+        let risk_free_rate = 0.01;
+        let dividend_yield = 0.02;
+        let quantity = 10;
+        let premium_long_call = 5.0;
+        let premium_long_put = 5.0;
+        let open_fee_long_call = 0.5;
+        let close_fee_long_call = 0.5;
+        let open_fee_long_put = 0.5;
+        let close_fee_long_put = 0.5;
+
+        LongStrangle::new(
+            underlying_symbol,
+            underlying_price,
+            call_strike,
+            put_strike,
+            expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_long_put,
+            open_fee_long_call,
+            close_fee_long_call,
+            open_fee_long_put,
+            close_fee_long_put
+        )
+    }
+}
