@@ -107,10 +107,10 @@ impl ShortStrangle {
 
         strategy
             .break_even_points
-            .push(put_strike - strategy.net_premium_received()/2.0);
+            .push(put_strike - strategy.net_premium_received() / 2.0);
         strategy
             .break_even_points
-            .push(call_strike + strategy.net_premium_received()/2.0);
+            .push(call_strike + strategy.net_premium_received() / 2.0);
 
         strategy
     }
@@ -288,10 +288,10 @@ impl LongStrangle {
 
         strategy
             .break_even_points
-            .push(put_strike - strategy.total_cost()/2.0);
+            .push(put_strike - strategy.total_cost() / 2.0);
         strategy
             .break_even_points
-            .push(call_strike + strategy.total_cost()/2.0);
+            .push(call_strike + strategy.total_cost() / 2.0);
 
         strategy
     }
@@ -368,7 +368,6 @@ impl Graph for LongStrangle {
     }
 }
 
-
 #[cfg(test)]
 mod tests_short_strangle {
     use super::*;
@@ -434,13 +433,19 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_total_cost() {
         let strategy = setup();
-        assert_eq!(strategy.total_cost(), strategy.short_call.net_cost() + strategy.short_put.net_cost());
+        assert_eq!(
+            strategy.total_cost(),
+            strategy.short_call.net_cost() + strategy.short_put.net_cost()
+        );
     }
 
     #[test]
     fn test_net_premium_received() {
         let strategy = setup();
-        assert_eq!(strategy.net_premium_received(), strategy.short_call.net_premium_received() + strategy.short_put.net_premium_received());
+        assert_eq!(
+            strategy.net_premium_received(),
+            strategy.short_call.net_premium_received() + strategy.short_put.net_premium_received()
+        );
     }
 
     #[test]
@@ -523,8 +528,8 @@ mod tests_long_strangle {
         assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
 
         let break_even_points = vec![
-            put_strike - strategy.total_cost()/2.0,
-            call_strike + strategy.total_cost()/2.0
+            put_strike - strategy.total_cost() / 2.0,
+            call_strike + strategy.total_cost() / 2.0,
         ];
         assert_eq!(strategy.break_even_points, break_even_points);
     }
@@ -532,20 +537,27 @@ mod tests_long_strangle {
     #[test]
     fn test_break_even() {
         let long_strangle = setup_long_strangle();
-        assert_eq!(long_strangle.break_even(), long_strangle.long_put.option.strike_price - long_strangle.total_cost());
+        assert_eq!(
+            long_strangle.break_even(),
+            long_strangle.long_put.option.strike_price - long_strangle.total_cost()
+        );
     }
 
     #[test]
     fn test_total_cost() {
         let long_strangle = setup_long_strangle();
-        assert_eq!(long_strangle.total_cost(), long_strangle.long_call.net_cost() + long_strangle.long_put.net_cost());
+        assert_eq!(
+            long_strangle.total_cost(),
+            long_strangle.long_call.net_cost() + long_strangle.long_put.net_cost()
+        );
     }
 
     #[test]
     fn test_calculate_profit_at() {
         let long_strangle = setup_long_strangle();
         let price = 150.0;
-        let expected_profit = long_strangle.long_call.pnl_at_expiration(Some(price)) + long_strangle.long_put.pnl_at_expiration(Some(price));
+        let expected_profit = long_strangle.long_call.pnl_at_expiration(Some(price))
+            + long_strangle.long_put.pnl_at_expiration(Some(price));
         assert_eq!(long_strangle.calculate_profit_at(price), expected_profit);
     }
 
@@ -581,7 +593,7 @@ mod tests_long_strangle {
             open_fee_long_call,
             close_fee_long_call,
             open_fee_long_put,
-            close_fee_long_put
+            close_fee_long_put,
         )
     }
 }
