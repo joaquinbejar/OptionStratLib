@@ -105,12 +105,13 @@ impl ShortStrangle {
         );
         strategy.add_leg(short_put.clone());
 
+        let net_quantity = (short_call.option.quantity as f64 + short_put.option.quantity as f64 ) / 2.0;
         strategy
             .break_even_points
-            .push(put_strike - strategy.net_premium_received() / 2.0);
+            .push(put_strike - strategy.net_premium_received() / net_quantity);
         strategy
             .break_even_points
-            .push(call_strike + strategy.net_premium_received() / 2.0);
+            .push(call_strike + strategy.net_premium_received() / net_quantity);
 
         strategy
     }
@@ -286,12 +287,13 @@ impl LongStrangle {
         );
         strategy.add_leg(long_put.clone());
 
+        let net_quantity = (long_call.option.quantity as f64 + long_put.option.quantity as f64 ) / 2.0;
         strategy
             .break_even_points
-            .push(put_strike - strategy.total_cost() / 2.0);
+            .push(put_strike - strategy.net_premium_received() / net_quantity);
         strategy
             .break_even_points
-            .push(call_strike + strategy.total_cost() / 2.0);
+            .push(call_strike + strategy.net_premium_received() / net_quantity);
 
         strategy
     }
