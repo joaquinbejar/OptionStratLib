@@ -531,9 +531,7 @@ mod tests_long_strangle {
         assert_eq!(strategy.kind, StrategyType::Strangle);
         assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
 
-        let break_even_points = vec![
-            140.0, 160.0
-        ];
+        let break_even_points = vec![140.0, 160.0];
         assert_eq!(strategy.break_even_points, break_even_points);
     }
 
