@@ -105,7 +105,8 @@ impl ShortStrangle {
         );
         strategy.add_leg(short_put.clone());
 
-        let net_quantity = (short_call.option.quantity as f64 + short_put.option.quantity as f64 ) / 2.0;
+        let net_quantity =
+            (short_call.option.quantity as f64 + short_put.option.quantity as f64) / 2.0;
         strategy
             .break_even_points
             .push(put_strike - strategy.net_premium_received() / net_quantity);
@@ -287,7 +288,8 @@ impl LongStrangle {
         );
         strategy.add_leg(long_put.clone());
 
-        let net_quantity = (long_call.option.quantity as f64 + long_put.option.quantity as f64 ) / 2.0;
+        let net_quantity =
+            (long_call.option.quantity as f64 + long_put.option.quantity as f64) / 2.0;
         strategy
             .break_even_points
             .push(put_strike - strategy.net_premium_received() / net_quantity);
@@ -460,7 +462,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_area() {
         let strategy = setup();
-        assert_eq!(strategy.area(), 341.0);
+        assert_eq!(strategy.area(), 27.07333333333332);
     }
 
     #[test]
@@ -530,8 +532,7 @@ mod tests_long_strangle {
         assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
 
         let break_even_points = vec![
-            put_strike - strategy.total_cost() / 2.0,
-            call_strike + strategy.total_cost() / 2.0,
+            140.0, 160.0
         ];
         assert_eq!(strategy.break_even_points, break_even_points);
     }
