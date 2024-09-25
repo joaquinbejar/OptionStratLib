@@ -47,11 +47,6 @@ futures-util = "0.3.30"
 async-std = "1.12.0"
 lazy_static = "1.5.0"
 
-
-[[example]]
-name = "example"
-path = "examples/volatility.rs"
-
 [[test]]
 name = "tests"
 path = "tests/unit/mod.rs"
