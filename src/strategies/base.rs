@@ -27,6 +27,7 @@ pub enum StrategyType {
     LongPut,
     ShortCall,
     ShortPut,
+    PoorMansCoveredCall,
     Custom,
 }
 
@@ -110,6 +111,21 @@ impl Strategy {
             StrategyType::LongPut => ZERO,
             StrategyType::ShortCall => ZERO,
             StrategyType::ShortPut => ZERO,
+            StrategyType::PoorMansCoveredCall => {
+                let long_call = self
+                    .legs
+                    .iter()
+                    .find(|leg| leg.option.side == Side::Long)
+                    .unwrap();
+                let short_call = self
+                    .legs
+                    .iter()
+                    .find(|leg| leg.option.side == Side::Short)
+                    .unwrap();
+                let net_debit = (long_call.max_loss() - short_call.max_profit())
+                    / long_call.option.quantity as f64;
+                long_call.option.strike_price + net_debit
+            }
             StrategyType::Custom => ZERO,
         }
     }
