@@ -4,6 +4,7 @@
    Date: 1/8/24
 ******************************************************************************/
 
+pub mod chain;
 mod format;
 pub mod option;
 pub mod position;

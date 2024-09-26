@@ -12,6 +12,7 @@ mod covered_call;
 pub mod iron_condor;
 pub mod poor_mans_covered_call;
 mod protective_put;
+pub mod ratio_call_spread;
 mod straddle;
 pub mod strangle;
 mod utils;
