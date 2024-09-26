@@ -10,6 +10,7 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
+use tracing::info;
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -60,6 +61,29 @@ impl RatioCallSpread {
             underlying_price,
         };
 
+        let short_call_option = Options::new(
+            OptionType::European,
+            Side::Short,
+            underlying_symbol.clone(),
+            short_strike,
+            expiration.clone(),
+            implied_volatility,
+            short_quantity,
+            underlying_price,
+            risk_free_rate,
+            OptionStyle::Call,
+            dividend_yield,
+            None,
+        );
+        let short_call = Position::new(
+            short_call_option,
+            premium_short,
+            Utc::now(),
+            open_fee_short,
+            close_fee_short,
+        );
+        strategy.add_leg(short_call.clone());
+
         let long_call_itm_option = Options::new(
             OptionType::European,
             Side::Long,
@@ -106,38 +130,16 @@ impl RatioCallSpread {
         );
         strategy.add_leg(long_call_otm.clone());
 
-        let short_call_option = Options::new(
-            OptionType::European,
-            Side::Short,
-            underlying_symbol,
-            short_strike,
-            expiration,
-            implied_volatility,
-            short_quantity,
-            underlying_price,
-            risk_free_rate,
-            OptionStyle::Call,
-            dividend_yield,
-            None,
-        );
-        let short_call = Position::new(
-            short_call_option,
-            premium_short,
-            Utc::now(),
-            open_fee_short,
-            close_fee_short,
-        );
-        strategy.add_leg(short_call.clone());
-
         // Calculate break-even points
-        let net_debit = strategy.total_cost();
+        let net_debit = strategy.total_cost() / long_quantity as f64;
 
         strategy
             .break_even_points
             .push(long_call_itm.option.strike_price + net_debit);
 
-        // let upper_break_even = short_strike + (net_debit / (short_quantity as f64 - long_quantity as f64));
-        // strategy.break_even_points.push(upper_break_even);
+        strategy
+            .break_even_points
+            .push(long_call_otm.option.strike_price - net_debit);
 
         strategy
     }
@@ -147,7 +149,7 @@ impl Strategies for RatioCallSpread {
     fn add_leg(&mut self, position: Position) {
         match position.option.side {
             Side::Long => {
-                if position.option.strike_price >= self.underlying_price {
+                if position.option.strike_price >= self.short_call.option.strike_price {
                     self.long_call_otm = position
                 } else {
                     self.long_call_itm = position
@@ -162,7 +164,6 @@ impl Strategies for RatioCallSpread {
     }
 
     fn calculate_profit_at(&self, price: f64) -> f64 {
-        // TODO: Implement
         let long_call_itm_profit = self.long_call_itm.pnl_at_expiration(Some(price));
         let long_call_otm_profit = self.long_call_otm.pnl_at_expiration(Some(price));
         let short_call_profit = self.short_call.pnl_at_expiration(Some(price));
@@ -171,9 +172,12 @@ impl Strategies for RatioCallSpread {
     }
 
     fn max_profit(&self) -> f64 {
-        // let short_strike = self.short_calls[0].option.strike_price;
-        // self.calculate_profit_at(short_strike)
-        0.0
+        let premium_paid = self.long_call_itm.premium + self.long_call_otm.premium;
+        let premium_received = self.short_call.premium * self.short_call.option.quantity as f64;
+        let range = self.short_call.option.strike_price - self.long_call_itm.option.strike_price;
+        let fees = self.fees();
+        let max_profit = range - (premium_paid - premium_received + fees);
+        max_profit
     }
 
     fn max_loss(&self) -> f64 {
@@ -193,8 +197,14 @@ impl Strategies for RatioCallSpread {
             + self.long_call_itm.close_fee
             + self.long_call_otm.open_fee
             + self.long_call_otm.close_fee
-            + self.short_call.open_fee
-            + self.short_call.close_fee
+            + self.short_call.open_fee * self.short_call.option.quantity as f64
+            + self.short_call.close_fee * self.short_call.option.quantity as f64
+    }
+
+    fn area(&self) -> f64 {
+        let range = self.short_call.option.strike_price - self.long_call_itm.option.strike_price;
+        let max_profit = self.max_profit();
+        (range * max_profit / 2.0) / self.underlying_price * 100.0
     }
 }
 
