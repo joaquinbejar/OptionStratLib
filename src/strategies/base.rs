@@ -8,6 +8,7 @@ use crate::model::position::Position;
 use crate::model::types::Side;
 use crate::visualization::utils::Graph;
 use num_traits::Float;
+use crate::model::chain::OptionChain;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -182,5 +183,13 @@ pub trait Strategies {
 
     fn area(&self) -> f64 {
         f64::infinity()
+    }
+
+    fn best_ratio(&self, option_chain: &OptionChain) -> &Self {
+        self
+    }
+
+    fn best_area(&self, option_chain: &OptionChain) -> &Self {
+        self
     }
 }
