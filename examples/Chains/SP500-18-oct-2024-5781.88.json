@@ -1,0 +1,367 @@
+{
+  "symbol": "SP500",
+  "underlying_price": 5781.88,
+  "expiration_date": "18 oct 2024",
+  "options": [
+    {
+      "strike_price": 5520.0,
+      "call_bid": 274.26,
+      "call_ask": 276.06,
+      "put_bid": 13.22,
+      "put_ask": 14.9,
+      "implied_volatility": 16.31
+    },
+    {
+      "strike_price": 5525.0,
+      "call_bid": 269.62,
+      "call_ask": 271.42,
+      "put_bid": 13.54,
+      "put_ask": 15.27,
+      "implied_volatility": 16.205
+    },
+    {
+      "strike_price": 5530.0,
+      "call_bid": 265.0,
+      "call_ask": 266.8,
+      "put_bid": 13.88,
+      "put_ask": 15.65,
+      "implied_volatility": 16.1
+    },
+    {
+      "strike_price": 5540.0,
+      "call_bid": 255.78,
+      "call_ask": 257.58,
+      "put_bid": 14.62,
+      "put_ask": 16.42,
+      "implied_volatility": 15.89
+    },
+    {
+      "strike_price": 5550.0,
+      "call_bid": 246.61,
+      "call_ask": 248.41,
+      "put_bid": 15.42,
+      "put_ask": 17.22,
+      "implied_volatility": 15.68
+    },
+    {
+      "strike_price": 5560.0,
+      "call_bid": 237.49,
+      "call_ask": 239.29,
+      "put_bid": 15.96,
+      "put_ask": 18.07,
+      "implied_volatility": 15.47
+    },
+    {
+      "strike_price": 5570.0,
+      "call_bid": 228.42,
+      "call_ask": 230.22,
+      "put_bid": 17.18,
+      "put_ask": 18.98,
+      "implied_volatility": 15.26
+    },
+    {
+      "strike_price": 5575.0,
+      "call_bid": 223.91,
+      "call_ask": 225.71,
+      "put_bid": 17.65,
+      "put_ask": 19.45,
+      "implied_volatility": 15.155
+    },
+    {
+      "strike_price": 5580.0,
+      "call_bid": 219.42,
+      "call_ask": 221.22,
+      "put_bid": 18.14,
+      "put_ask": 19.94,
+      "implied_volatility": 15.05
+    },
+    {
+      "strike_price": 5590.0,
+      "call_bid": 210.48,
+      "call_ask": 212.28,
+      "put_bid": 18.07,
+      "put_ask": 20.23,
+      "implied_volatility": 14.84
+    },
+    {
+      "strike_price": 5600.0,
+      "call_bid": 201.6,
+      "call_ask": 203.4,
+      "put_bid": 19.17,
+      "put_ask": 20.97,
+      "implied_volatility": 14.63
+    },
+    {
+      "strike_price": 5610.0,
+      "call_bid": 192.8,
+      "call_ask": 194.6,
+      "put_bid": 21.43,
+      "put_ask": 23.23,
+      "implied_volatility": 14.42
+    },
+    {
+      "strike_price": 5620.0,
+      "call_bid": 184.08,
+      "call_ask": 185.88,
+      "put_bid": 22.68,
+      "put_ask": 24.48,
+      "implied_volatility": 14.21
+    },
+    {
+      "strike_price": 5625.0,
+      "call_bid": 179.75,
+      "call_ask": 181.55,
+      "put_bid": 23.33,
+      "put_ask": 25.13,
+      "implied_volatility": 14.105
+    },
+    {
+      "strike_price": 5630.0,
+      "call_bid": 175.44,
+      "call_ask": 177.24,
+      "put_bid": 24.01,
+      "put_ask": 25.81,
+      "implied_volatility": 14.0
+    },
+    {
+      "strike_price": 5640.0,
+      "call_bid": 167.02,
+      "call_ask": 168.82,
+      "put_bid": 25.56,
+      "put_ask": 27.36,
+      "implied_volatility": 13.82
+    },
+    {
+      "strike_price": 5650.0,
+      "call_bid": 158.71,
+      "call_ask": 160.51,
+      "put_bid": 27.22,
+      "put_ask": 29.02,
+      "implied_volatility": 13.64
+    },
+    {
+      "strike_price": 5660.0,
+      "call_bid": 150.51,
+      "call_ask": 152.31,
+      "put_bid": 28.99,
+      "put_ask": 30.79,
+      "implied_volatility": 13.46
+    },
+    {
+      "strike_price": 5670.0,
+      "call_bid": 142.43,
+      "call_ask": 144.23,
+      "put_bid": 30.89,
+      "put_ask": 32.69,
+      "implied_volatility": 13.28
+    },
+    {
+      "strike_price": 5675.0,
+      "call_bid": 138.44,
+      "call_ask": 140.24,
+      "put_bid": 31.88,
+      "put_ask": 33.68,
+      "implied_volatility": 13.19
+    },
+    {
+      "strike_price": 5680.0,
+      "call_bid": 134.48,
+      "call_ask": 136.28,
+      "put_bid": 32.91,
+      "put_ask": 34.71,
+      "implied_volatility": 13.1
+    },
+    {
+      "strike_price": 5690.0,
+      "call_bid": 126.67,
+      "call_ask": 128.47,
+      "put_bid": 35.07,
+      "put_ask": 36.87,
+      "implied_volatility": 12.92
+    },
+    {
+      "strike_price": 5700.0,
+      "call_bid": 119.01,
+      "call_ask": 120.81,
+      "put_bid": 37.37,
+      "put_ask": 39.17,
+      "implied_volatility": 12.74
+    },
+    {
+      "strike_price": 5710.0,
+      "call_bid": 111.5,
+      "call_ask": 113.3,
+      "put_bid": 39.83,
+      "put_ask": 41.63,
+      "implied_volatility": 12.56
+    },
+    {
+      "strike_price": 5720.0,
+      "call_bid": 104.16,
+      "call_ask": 105.96,
+      "put_bid": 42.46,
+      "put_ask": 44.26,
+      "implied_volatility": 12.38
+    },
+    {
+      "strike_price": 5730.0,
+      "call_bid": 96.99,
+      "call_ask": 98.79,
+      "put_bid": 45.27,
+      "put_ask": 47.07,
+      "implied_volatility": 12.2
+    },
+    {
+      "strike_price": 5740.0,
+      "call_bid": 90.02,
+      "call_ask": 91.82,
+      "put_bid": 48.26,
+      "put_ask": 50.06,
+      "implied_volatility": 12.02
+    },
+    {
+      "strike_price": 5750.0,
+      "call_bid": 83.24,
+      "call_ask": 85.04,
+      "put_bid": 51.45,
+      "put_ask": 53.25,
+      "implied_volatility": 11.84
+    },
+    {
+      "strike_price": 5760.0,
+      "call_bid": 76.67,
+      "call_ask": 78.47,
+      "put_bid": 54.85,
+      "put_ask": 56.65,
+      "implied_volatility": 11.66
+    },
+    {
+      "strike_price": 5770.0,
+      "call_bid": 70.32,
+      "call_ask": 72.12,
+      "put_bid": 58.47,
+      "put_ask": 60.27,
+      "implied_volatility": 11.48
+    },
+    {
+      "strike_price": 5780.0,
+      "call_bid": 64.2,
+      "call_ask": 66.0,
+      "put_bid": 62.32,
+      "put_ask": 64.12,
+      "implied_volatility": 11.3
+    },
+    {
+      "strike_price": 5790.0,
+      "call_bid": 58.5,
+      "call_ask": 60.3,
+      "put_bid": 66.59,
+      "put_ask": 68.39,
+      "implied_volatility": 11.15
+    },
+    {
+      "strike_price": 5800.0,
+      "call_bid": 53.04,
+      "call_ask": 54.84,
+      "put_bid": 71.11,
+      "put_ask": 72.91,
+      "implied_volatility": 11.0
+    },
+    {
+      "strike_price": 5810.0,
+      "call_bid": 47.85,
+      "call_ask": 49.65,
+      "put_bid": 75.89,
+      "put_ask": 77.69,
+      "implied_volatility": 10.85
+    },
+    {
+      "strike_price": 5820.0,
+      "call_bid": 42.93,
+      "call_ask": 44.73,
+      "put_bid": 80.94,
+      "put_ask": 82.74,
+      "implied_volatility": 10.7
+    },
+    {
+      "strike_price": 5830.0,
+      "call_bid": 38.29,
+      "call_ask": 40.09,
+      "put_bid": 86.27,
+      "put_ask": 88.07,
+      "implied_volatility": 10.55
+    },
+    {
+      "strike_price": 5840.0,
+      "call_bid": 33.93,
+      "call_ask": 35.73,
+      "put_bid": 91.87,
+      "put_ask": 93.67,
+      "implied_volatility": 10.4
+    },
+    {
+      "strike_price": 5850.0,
+      "call_bid": 29.85,
+      "call_ask": 31.65,
+      "put_bid": 97.77,
+      "put_ask": 99.57,
+      "implied_volatility": 10.25
+    },
+    {
+      "strike_price": 5900.0,
+      "call_bid": 16.05,
+      "call_ask": 17.85,
+      "put_bid": 133.82,
+      "put_ask": 135.62,
+      "implied_volatility": 10.058
+    },
+    {
+      "strike_price": 5950.0,
+      "call_bid": 8.05,
+      "call_ask": 9.08,
+      "put_bid": 175.28,
+      "put_ask": 177.08,
+      "implied_volatility": 9.928
+    },
+    {
+      "strike_price": 6000.0,
+      "call_bid": 3.38,
+      "call_ask": 4.38,
+      "put_bid": 220.45,
+      "put_ask": 222.25,
+      "implied_volatility": 9.798
+    },
+    {
+      "strike_price": 6050.0,
+      "call_bid": 1.06,
+      "call_ask": 2.06,
+      "put_bid": 267.98,
+      "put_ask": 269.78,
+      "implied_volatility": 9.668
+    },
+    {
+      "strike_price": 6100.0,
+      "call_bid": 0.05,
+      "call_ask": 1.05,
+      "put_bid": 316.82,
+      "put_ask": 318.62,
+      "implied_volatility": 9.538
+    },
+    {
+      "strike_price": 6150.0,
+      "call_bid": 0.0,
+      "call_ask": 1.0,
+      "put_bid": 366.3,
+      "put_ask": 368.1,
+      "implied_volatility": 9.46
+    },
+    {
+      "strike_price": 6200.0,
+      "call_bid": 0.0,
+      "call_ask": 1.0,
+      "put_bid": 416.03,
+      "put_ask": 417.83,
+      "implied_volatility": 9.46
+    }
+  ]
+}
