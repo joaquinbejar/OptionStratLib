@@ -5,7 +5,7 @@
 ******************************************************************************/
 use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::Strategies;
-use optionstratlib::strategies::ratio_call_spread::RatioCallSpread;
+use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let underlying_price = 5781.88;
 
-    let strategy = RatioCallSpread::new(
+    let strategy = CallButterfly::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
         5750.0,           // long_strike_itm
@@ -59,7 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Generate the profit/loss graph
     strategy.graph(
         &price_range,
-        "Draws/Strategy/ratio_call_spread_profit_loss_chart.png",
+        "Draws/Strategy/call_butterfly_profit_loss_chart.png",
         20,
         (1400, 933),
         (10, 30),

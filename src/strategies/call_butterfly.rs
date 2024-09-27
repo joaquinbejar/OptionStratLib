@@ -22,7 +22,7 @@ const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     asset's price is expected, but with limited upside potential.";
 
 #[derive(Clone, Debug)]
-pub struct RatioCallSpread {
+pub struct CallButterfly {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
@@ -33,7 +33,7 @@ pub struct RatioCallSpread {
     underlying_price: f64,
 }
 
-impl RatioCallSpread {
+impl CallButterfly {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -55,9 +55,9 @@ impl RatioCallSpread {
         open_fee_short: f64,
         close_fee_short: f64,
     ) -> Self {
-        let mut strategy = RatioCallSpread {
+        let mut strategy = CallButterfly {
             name: underlying_symbol.to_string(),
-            kind: StrategyType::RatioCallSpread,
+            kind: StrategyType::CallButterfly,
             description: RATIO_CALL_SPREAD_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             long_call_itm: Position::default(),
@@ -138,15 +138,18 @@ impl RatioCallSpread {
         strategy.long_call_otm = long_call_otm;
 
         // Calculate break-even points
-        let loss_at_itm_strike = strategy.calculate_profit_at(strategy.long_call_itm.option.strike_price);
-        let loss_at_otm_strike = strategy.calculate_profit_at(strategy.long_call_otm.option.strike_price);
+        let loss_at_itm_strike =
+            strategy.calculate_profit_at(strategy.long_call_itm.option.strike_price);
+        let loss_at_otm_strike =
+            strategy.calculate_profit_at(strategy.long_call_otm.option.strike_price);
 
-        let first_bep = strategy.long_call_itm.option.strike_price - (loss_at_itm_strike / long_quantity as f64);
+        let first_bep = strategy.long_call_itm.option.strike_price
+            - (loss_at_itm_strike / long_quantity as f64);
         strategy.break_even_points.push(first_bep);
 
-        let second_bep = strategy.long_call_otm.option.strike_price + (loss_at_otm_strike / long_quantity as f64);
+        let second_bep = strategy.long_call_otm.option.strike_price
+            + (loss_at_otm_strike / long_quantity as f64);
         strategy.break_even_points.push(second_bep);
-
 
         // TODO: fix break_even_points when legs have same loss
         strategy
@@ -237,8 +240,8 @@ impl RatioCallSpread {
         long_itm: &OptionData,
         long_otm: &OptionData,
         short_option: &OptionData,
-    ) -> RatioCallSpread {
-        RatioCallSpread::new(
+    ) -> CallButterfly {
+        CallButterfly::new(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
             long_itm.strike_price,
@@ -261,9 +264,9 @@ impl RatioCallSpread {
     }
 }
 
-impl Default for RatioCallSpread {
+impl Default for CallButterfly {
     fn default() -> Self {
-        RatioCallSpread::new(
+        CallButterfly::new(
             "".to_string(),
             0.0,
             0.0,
@@ -286,7 +289,7 @@ impl Default for RatioCallSpread {
     }
 }
 
-impl Strategies for RatioCallSpread {
+impl Strategies for CallButterfly {
     fn add_leg(&mut self, position: Position) {
         match position.option.side {
             Side::Long => {
@@ -394,7 +397,7 @@ impl Strategies for RatioCallSpread {
     }
 }
 
-impl Graph for RatioCallSpread {
+impl Graph for CallButterfly {
     fn title(&self) -> String {
         let strategy_title = format!("Ratio Call Spread Strategy: {:?}", self.kind);
         let long_call_itm_title = self.long_call_itm.title();
@@ -423,12 +426,12 @@ impl Graph for RatioCallSpread {
 }
 
 #[cfg(test)]
-mod tests_ratio_call_spread {
+mod tests_call_butterfly {
     use super::*;
     use approx::assert_relative_eq;
 
-    fn setup() -> RatioCallSpread {
-        RatioCallSpread::new(
+    fn setup() -> CallButterfly {
+        CallButterfly::new(
             "AAPL".to_string(),
             150.0,
             155.0,
@@ -454,7 +457,7 @@ mod tests_ratio_call_spread {
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "AAPL");
-        assert_eq!(strategy.kind, StrategyType::RatioCallSpread);
+        assert_eq!(strategy.kind, StrategyType::CallButterfly);
         assert!(strategy
             .description
             .contains("A Ratio Call Spread involves"));

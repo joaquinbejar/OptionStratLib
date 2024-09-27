@@ -31,7 +31,7 @@ pub enum StrategyType {
     ShortCall,
     ShortPut,
     PoorMansCoveredCall,
-    RatioCallSpread,
+    CallButterfly,
     Custom,
 }
 
@@ -130,7 +130,7 @@ impl Strategy {
                     / long_call.option.quantity as f64;
                 long_call.option.strike_price + net_debit
             }
-            StrategyType::RatioCallSpread => ZERO,
+            StrategyType::CallButterfly => ZERO,
             StrategyType::Custom => ZERO,
         }
     }

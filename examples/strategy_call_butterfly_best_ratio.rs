@@ -7,7 +7,7 @@ use optionstratlib::constants::ZERO;
 use optionstratlib::model::chain::OptionChain;
 use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::Strategies;
-use optionstratlib::strategies::ratio_call_spread::RatioCallSpread;
+use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     let underlying_price = option_chain.underlying_price;
-    let mut strategy = RatioCallSpread::new(
+    let mut strategy = CallButterfly::new(
         "".to_string(),
         underlying_price, // underlying_price
         ZERO,             // long_strike_itm
@@ -62,7 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     strategy.graph(
         &price_range,
-        "Draws/Strategy/ratio_call_spread_profit_loss_chart_best_ratio.png",
+        "Draws/Strategy/call_butterfly_profit_loss_chart_best_ratio.png",
         20,
         (1400, 933),
         (10, 30),
