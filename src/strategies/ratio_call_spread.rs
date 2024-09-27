@@ -138,13 +138,15 @@ impl RatioCallSpread {
         strategy.long_call_otm = long_call_otm;
 
         // Calculate break-even points
-        let net_debit = strategy.total_cost() / long_quantity as f64;
+        let loss_at_itm_strike = strategy.calculate_profit_at(strategy.long_call_itm.option.strike_price);
+        let loss_at_otm_strike = strategy.calculate_profit_at(strategy.long_call_otm.option.strike_price);
 
-        let first_bep = long_strike_itm + net_debit;
+        let first_bep = strategy.long_call_itm.option.strike_price - loss_at_itm_strike;
         strategy.break_even_points.push(first_bep);
 
-        let second_bep = short_strike + (short_strike - first_bep);
+        let second_bep = strategy.long_call_otm.option.strike_price + loss_at_otm_strike;
         strategy.break_even_points.push(second_bep);
+
 
         // TODO: fix break_even_points when legs have same loss
         strategy

@@ -24,3 +24,4 @@ pub(crate) fn calculate_price_range(start_price: f64, end_price: f64, step: f64)
     }
     range
 }
+
