@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.73, // close_fee_short
     );
 
-    strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
+    strategy.best_ratio(&option_chain, FindOptimalSide::Range(5700.0, 5900.0));
     let price_range = strategy.best_range_to_show(1.0).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
     info!("Title: {}", strategy.title());

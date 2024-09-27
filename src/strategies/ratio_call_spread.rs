@@ -216,6 +216,9 @@ impl RatioCallSpread {
             FindOptimalSide::Upper => short_option.strike_price >= self.underlying_price,
             FindOptimalSide::Lower => short_option.strike_price <= self.underlying_price,
             FindOptimalSide::All => true,
+            FindOptimalSide::Range(start, end) => {
+                short_option.strike_price >= *start && short_option.strike_price <= *end
+            }
         }
     }
 
