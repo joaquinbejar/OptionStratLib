@@ -3,12 +3,14 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+
 use crate::constants::ZERO;
+use crate::model::chain::OptionChain;
 use crate::model::position::Position;
 use crate::model::types::Side;
+use crate::strategies::utils::FindOptimalSide;
 use crate::visualization::utils::Graph;
 use num_traits::Float;
-use crate::model::chain::OptionChain;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -185,11 +187,23 @@ pub trait Strategies {
         f64::infinity()
     }
 
-    fn best_ratio(&self, option_chain: &OptionChain) -> &Self {
-        self
+    fn ratio(&self) -> f64 {
+        f64::infinity()
     }
 
-    fn best_area(&self, option_chain: &OptionChain) -> &Self {
-        self
+    fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
+        panic!("Best ratio is not applicable for this strategy");
+    }
+
+    fn best_area(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
+        panic!("Best area is not applicable for this strategy");
+    }
+
+    fn validate(&self) -> bool {
+        true
+    }
+
+    fn best_range_to_show(&self, _step: f64) -> Option<Vec<f64>> {
+        None
     }
 }

@@ -10,6 +10,7 @@ use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::telegraph::telegraph;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
+use tracing::error;
 
 #[derive(Clone, Default, Debug)]
 pub struct ExoticParams {
@@ -201,6 +202,38 @@ impl Options {
         let intrinsic_value = self.intrinsic_value(self.underlying_price);
 
         (option_price - intrinsic_value).max(ZERO)
+    }
+
+    pub(crate) fn validate(&self) -> bool {
+        if self.underlying_symbol == *"" {
+            error!("Underlying symbol is empty");
+            return false;
+        }
+        if self.strike_price <= ZERO {
+            error!("Strike price is less than or equal to zero");
+            return false;
+        }
+        if self.implied_volatility < ZERO {
+            error!("Implied volatility is less than zero");
+            return false;
+        }
+        if self.quantity == 0 {
+            error!("Quantity is equal to zero");
+            return false;
+        }
+        if self.underlying_price <= ZERO {
+            error!("Underlying price is less than or equal to zero");
+            return false;
+        }
+        if self.risk_free_rate < ZERO {
+            error!("Risk free rate is less than zero");
+            return false;
+        }
+        if self.dividend_yield < ZERO {
+            error!("Dividend yield is less than zero");
+            return false;
+        }
+        true
     }
 }
 
@@ -407,6 +440,98 @@ mod tests_options {
         let time_value = option.time_value();
         assert!(time_value > ZERO);
         assert!(time_value < option.calculate_price_black_scholes());
+    }
+}
+
+#[cfg(test)]
+mod tests_valid_option {
+    use super::*;
+    use crate::constants::ZERO;
+
+    fn create_valid_option() -> Options {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "AAPL".to_string(),
+            strike_price: 100.0,
+            expiration_date: ExpirationDate::Days(30.0),
+            implied_volatility: 0.2,
+            quantity: 1,
+            underlying_price: 105.0,
+            risk_free_rate: 0.05,
+            option_style: OptionStyle::Call,
+            dividend_yield: 0.01,
+            exotic_params: None,
+        }
+    }
+
+    #[test]
+    fn test_valid_option() {
+        let option = create_valid_option();
+        assert!(option.validate());
+    }
+
+    #[test]
+    fn test_empty_underlying_symbol() {
+        let mut option = create_valid_option();
+        option.underlying_symbol = "".to_string();
+        assert!(!option.validate());
+    }
+
+    #[test]
+    fn test_zero_strike_price() {
+        let mut option = create_valid_option();
+        option.strike_price = ZERO;
+        assert!(!option.validate());
+    }
+
+    #[test]
+    fn test_negative_strike_price() {
+        let mut option = create_valid_option();
+        option.strike_price = -10.0;
+        assert!(!option.validate());
+    }
+
+    #[test]
+    fn test_negative_implied_volatility() {
+        let mut option = create_valid_option();
+        option.implied_volatility = -0.1;
+        assert!(!option.validate());
+    }
+
+    #[test]
+    fn test_zero_quantity() {
+        let mut option = create_valid_option();
+        option.quantity = 0;
+        assert!(!option.validate());
+    }
+
+    #[test]
+    fn test_zero_underlying_price() {
+        let mut option = create_valid_option();
+        option.underlying_price = ZERO;
+        assert!(!option.validate());
+    }
+
+    #[test]
+    fn test_negative_underlying_price() {
+        let mut option = create_valid_option();
+        option.underlying_price = -10.0;
+        assert!(!option.validate());
+    }
+
+    #[test]
+    fn test_negative_risk_free_rate() {
+        let mut option = create_valid_option();
+        option.risk_free_rate = -0.01;
+        assert!(!option.validate());
+    }
+
+    #[test]
+    fn test_negative_dividend_yield() {
+        let mut option = create_valid_option();
+        option.dividend_yield = -0.01;
+        assert!(!option.validate());
     }
 }
 

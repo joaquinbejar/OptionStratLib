@@ -23,18 +23,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         5850.0,           // long_strike_otm
         5800.0,           // short_strike
         ExpirationDate::Days(2.0),
-        0.18, // implied_volatility
-        0.05, // risk_free_rate
-        0.0,  // dividend_yield
-        1,    // long quantity
-        2,    // short_quantity
+        0.18,  // implied_volatility
+        0.05,  // risk_free_rate
+        0.0,   // dividend_yield
+        1,     // long quantity
+        2,     // short_quantity
         85.04, // premium_long
         31.65, // premium_short
         53.04, // open_fee_long
-        0.78, // open_fee_long
-        0.78, // close_fee_long
-        0.73, // close_fee_short
-        0.73, // close_fee_short
+        0.78,  // open_fee_long
+        0.78,  // close_fee_long
+        0.73,  // close_fee_short
+        0.73,  // close_fee_short
     );
 
     let price_range: Vec<f64> = (5681..=5881).map(|x| x as f64).collect();

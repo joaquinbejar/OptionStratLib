@@ -5,26 +5,53 @@
 ******************************************************************************/
 use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct OptionData {
-    strike_price: f64,
-    call_bid: f64,
-    call_ask: f64,
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub(crate) struct OptionData {
+    pub(crate) strike_price: f64,
+    pub(crate) call_bid: f64,
+    pub(crate) call_ask: f64,
     put_bid: f64,
     put_ask: f64,
-    implied_volatility: f64,
+    pub(crate) implied_volatility: f64,
+}
+
+#[allow(clippy::non_canonical_partial_ord_impl)]
+impl PartialOrd for OptionData {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.strike_price.partial_cmp(&other.strike_price)
+    }
+}
+
+impl Eq for OptionData {}
+
+impl Ord for OptionData {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or_else(|| {
+            if self.strike_price.is_nan() {
+                if other.strike_price.is_nan() {
+                    Ordering::Equal
+                } else {
+                    Ordering::Greater
+                }
+            } else {
+                Ordering::Less
+            }
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OptionChain {
-    symbol: String,
-    underlying_price: f64,
+    pub(crate) symbol: String,
+    pub underlying_price: f64,
     expiration_date: String,
-    options: Vec<OptionData>,
+    pub(crate) options: BTreeSet<OptionData>,
 }
 
 impl OptionChain {
@@ -33,7 +60,7 @@ impl OptionChain {
             symbol: symbol.to_string(),
             underlying_price,
             expiration_date,
-            options: Vec::new(),
+            options: BTreeSet::new(),
         }
     }
 
@@ -54,7 +81,7 @@ impl OptionChain {
             put_ask,
             implied_volatility,
         };
-        self.options.push(option_data);
+        self.options.insert(option_data);
     }
 
     pub fn get_title(&self) -> String {
@@ -121,7 +148,7 @@ impl OptionChain {
 
     pub fn load_from_csv(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let mut rdr = csv::Reader::from_path(file_path)?;
-        let mut options = Vec::new();
+        let mut options = BTreeSet::new();
         for result in rdr.records() {
             let record = result?;
             let option_data = OptionData {
@@ -132,7 +159,7 @@ impl OptionChain {
                 put_ask: record[4].parse()?,
                 implied_volatility: record[5].parse()?,
             };
-            options.push(option_data);
+            options.insert(option_data);
         }
 
         let mut option_chain = OptionChain {
@@ -150,6 +177,25 @@ impl OptionChain {
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
         option_chain.set_from_title(file_path);
         Ok(option_chain)
+    }
+
+    pub fn strike_price_range_vec(&self, step: f64) -> Option<Vec<f64>> {
+        let first = self.options.iter().next();
+        let last = self.options.iter().next_back();
+
+        if let (Some(first), Some(last)) = (first, last) {
+            let mut range = Vec::new();
+            let mut current_price = first.strike_price;
+
+            while current_price <= last.strike_price {
+                range.push(current_price);
+                current_price += step;
+            }
+
+            Some(range)
+        } else {
+            None
+        }
     }
 }
 
@@ -207,8 +253,10 @@ mod tests_chain_base {
         let mut chain = OptionChain::new("SP500", 5781.88, "18-oct-2024".to_string());
         chain.add_option(5520.0, 274.26, 276.06, 13.22, 14.90, 16.31);
         assert_eq!(chain.options.len(), 1);
-        assert_eq!(chain.options[0].strike_price, 5520.0);
-        assert_eq!(chain.options[0].call_bid, 274.26);
+        // first option in the chain
+        let option = chain.options.iter().next().unwrap();
+        assert_eq!(option.strike_price, 5520.0);
+        assert_eq!(option.call_bid, 274.26);
     }
 
     #[test]

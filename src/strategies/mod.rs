@@ -15,4 +15,4 @@ mod protective_put;
 pub mod ratio_call_spread;
 mod straddle;
 pub mod strangle;
-mod utils;
+pub mod utils;

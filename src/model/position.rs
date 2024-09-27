@@ -189,6 +189,27 @@ impl Position {
             Side::Short => f64::INFINITY,
         }
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn fees(&self) -> f64 {
+        (self.open_fee + self.close_fee) * self.option.quantity as f64
+    }
+
+    pub(crate) fn validate(&self) -> bool {
+        if self.premium <= ZERO {
+            return false;
+        }
+        if self.open_fee < ZERO {
+            return false;
+        }
+        if self.close_fee < ZERO {
+            return false;
+        }
+        if !self.option.validate() {
+            return false;
+        }
+        true
+    }
 }
 
 impl Default for Position {
@@ -536,6 +557,90 @@ mod tests_position {
             !position.is_long(),
             "is_long should return false for short positions."
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_valid_position {
+    use super::*;
+    use crate::constants::ZERO;
+    use crate::model::types::OptionType;
+    use chrono::Utc;
+
+    fn create_valid_option() -> Options {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "AAPL".to_string(),
+            strike_price: 100.0,
+            expiration_date: ExpirationDate::Days(30.0),
+            implied_volatility: 0.2,
+            quantity: 1,
+            underlying_price: 105.0,
+            risk_free_rate: 0.05,
+            option_style: OptionStyle::Call,
+            dividend_yield: 0.01,
+            exotic_params: None,
+        }
+    }
+
+    fn create_valid_position() -> Position {
+        Position {
+            option: create_valid_option(),
+            premium: 5.0,
+            date: Utc::now(),
+            open_fee: 0.5,
+            close_fee: 0.5,
+        }
+    }
+
+    #[test]
+    fn test_valid_position() {
+        let position = create_valid_position();
+        assert!(position.validate());
+    }
+
+    #[test]
+    fn test_zero_premium() {
+        let mut position = create_valid_position();
+        position.premium = ZERO;
+        assert!(!position.validate());
+    }
+
+    #[test]
+    fn test_negative_premium() {
+        let mut position = create_valid_position();
+        position.premium = -1.0;
+        assert!(!position.validate());
+    }
+
+    #[test]
+    fn test_negative_open_fee() {
+        let mut position = create_valid_position();
+        position.open_fee = -0.1;
+        assert!(!position.validate());
+    }
+
+    #[test]
+    fn test_negative_close_fee() {
+        let mut position = create_valid_position();
+        position.close_fee = -0.1;
+        assert!(!position.validate());
+    }
+
+    #[test]
+    fn test_invalid_option() {
+        let mut position = create_valid_position();
+        position.option.strike_price = ZERO; // This makes the option invalid
+        assert!(!position.validate());
+    }
+
+    #[test]
+    fn test_zero_fees() {
+        let mut position = create_valid_position();
+        position.open_fee = ZERO;
+        position.close_fee = ZERO;
+        assert!(position.validate());
     }
 }
 

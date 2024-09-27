@@ -16,7 +16,10 @@ pub(crate) const TOLERANCE: f64 = 1e-8;
 pub(crate) const MIN_VOLATILITY: f64 = 1e-16;
 pub(crate) const MAX_VOLATILITY: f64 = 100.0; // 10000%
 
-pub(crate) const ZERO: f64 = 0.0;
+pub const ZERO: f64 = 0.0;
 
 pub(crate) const DARK_GREEN: RGBColor = RGBColor(0, 150, 0);
 pub(crate) const DARK_RED: RGBColor = RGBColor(220, 0, 0);
+
+pub(crate) const STRIKE_PRICE_LOWER_BOUND_MULTIPLIER: f64 = 0.98;
+pub(crate) const STRIKE_PRICE_UPPER_BOUND_MULTIPLIER: f64 = 1.02;
