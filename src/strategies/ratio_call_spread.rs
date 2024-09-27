@@ -141,10 +141,10 @@ impl RatioCallSpread {
         let loss_at_itm_strike = strategy.calculate_profit_at(strategy.long_call_itm.option.strike_price);
         let loss_at_otm_strike = strategy.calculate_profit_at(strategy.long_call_otm.option.strike_price);
 
-        let first_bep = strategy.long_call_itm.option.strike_price - loss_at_itm_strike;
+        let first_bep = strategy.long_call_itm.option.strike_price - (loss_at_itm_strike / long_quantity as f64);
         strategy.break_even_points.push(first_bep);
 
-        let second_bep = strategy.long_call_otm.option.strike_price + loss_at_otm_strike;
+        let second_bep = strategy.long_call_otm.option.strike_price + (loss_at_otm_strike / long_quantity as f64);
         strategy.break_even_points.push(second_bep);
 
 
@@ -373,6 +373,11 @@ impl Strategies for RatioCallSpread {
         }
         if self.underlying_price <= 0.0 {
             error!("Underlying price must be greater than zero");
+            return false;
+        }
+        if self.short_call.option.quantity != self.long_call_itm.option.quantity * 2 {
+            error!("Short call quantity must be twice the long call quantity and currently is short: {} and long: {}",
+                self.short_call.option.quantity, self.long_call_itm.option.quantity);
             return false;
         }
         true

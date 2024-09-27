@@ -29,8 +29,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         ZERO, // implied_volatility
         0.05, // risk_free_rate
         ZERO, // dividend_yield
-        1,    // long quantity
-        2,    // short_quantity
+        2,    // long quantity
+        4,    // short_quantity
         ZERO, // premium_long_itm
         ZERO, // premium_long_otm
         ZERO, // premium_short
