@@ -192,8 +192,8 @@ impl CallButterfly {
                 }
 
                 let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.ratio(),
-                    OptimizationCriteria::Area => strategy.area(),
+                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                    OptimizationCriteria::Area => strategy.profit_area(),
                 };
 
                 debug!(
@@ -342,13 +342,13 @@ impl Strategies for CallButterfly {
             + self.short_call.close_fee * self.short_call.option.quantity as f64
     }
 
-    fn area(&self) -> f64 {
+    fn profit_area(&self) -> f64 {
         let range = self.short_call.option.strike_price - self.long_call_itm.option.strike_price;
         let max_profit = self.max_profit();
         (range * max_profit / 2.0) / self.underlying_price * 100.0
     }
 
-    fn ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> f64 {
         self.max_profit() / self.max_loss().abs()
     }
 
