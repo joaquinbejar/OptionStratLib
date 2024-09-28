@@ -180,7 +180,7 @@ impl Strategies for PoorMansCoveredCall {
                 * self.short_call.option.quantity as f64
     }
 
-    fn area(&self) -> f64 {
+    fn profit_area(&self) -> f64 {
         f64::INFINITY
     }
 }
