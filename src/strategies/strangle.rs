@@ -159,7 +159,7 @@ impl Strategies for ShortStrangle {
             + self.short_put.close_fee
     }
 
-    fn area(&self) -> f64 {
+    fn profit_area(&self) -> f64 {
         let strike_diff = self.short_call.option.strike_price - self.short_put.option.strike_price;
         let inner_square = strike_diff * self.max_profit();
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
@@ -462,7 +462,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_area() {
         let strategy = setup();
-        assert_eq!(strategy.area(), 27.07333333333332);
+        assert_eq!(strategy.profit_area(), 27.07333333333332);
     }
 
     #[test]
