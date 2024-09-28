@@ -183,11 +183,11 @@ pub trait Strategies {
 
     fn fees(&self) -> f64;
 
-    fn area(&self) -> f64 {
+    fn profit_area(&self) -> f64 {
         f64::infinity()
     }
 
-    fn ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> f64 {
         f64::infinity()
     }
 
