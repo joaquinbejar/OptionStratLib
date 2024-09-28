@@ -241,7 +241,7 @@ impl Strategies for IronCondor {
             + self.long_put.close_fee
     }
 
-    fn area(&self) -> f64 {
+    fn profit_area(&self) -> f64 {
         let inner_width = self.short_call.option.strike_price - self.short_put.option.strike_price;
         let outer_width = self.long_call.option.strike_price - self.long_put.option.strike_price;
         let height = self.max_profit();
