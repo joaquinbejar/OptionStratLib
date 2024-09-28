@@ -10,16 +10,23 @@ Key characteristics:
 - Lower cost than buying a call option outright
 */
 use super::base::{Strategies, StrategyType};
+use crate::constants::{
+    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+};
+use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
+use tracing::{debug, error};
 
 const DESCRIPTION: &str = "A bull call spread involves buying a call option with a lower strike \
 price and selling a call option with a higher strike price, both with the same expiration date. \
 This strategy is used when a moderate rise in the underlying asset's price is expected.";
 
+#[derive(Clone, Debug)]
 pub struct BullCallSpread {
     pub name: String,
     pub kind: StrategyType,
@@ -106,7 +113,111 @@ impl BullCallSpread {
         strategy.add_leg(higher_call.clone());
         strategy.break_even_points.push(higher_call.break_even());
 
+        strategy.validate();
         strategy
+    }
+
+    fn find_optimal(
+        &mut self,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
+    ) {
+        // TODO: Check this
+        let options: Vec<&OptionData> = option_chain.options.iter().collect();
+        let mut best_value = f64::NEG_INFINITY;
+
+        for short_index in 1..options.len() - 1 {
+            let short_option = &options[short_index];
+            if !self.is_valid_short_option(short_option, &side) {
+                debug!("Skipping short option: {}", short_option.strike_price);
+                continue;
+            }
+
+            for long_itm_index in 0..short_index {
+                let long_otm_index = short_index + (short_index - long_itm_index);
+
+                if long_otm_index >= options.len() {
+                    continue;
+                }
+
+                let long_option = &options[long_itm_index];
+
+                if !self.are_valid_prices(long_option, short_option) {
+                    continue;
+                }
+
+                let strategy = self.create_strategy(option_chain, long_option, short_option);
+
+                if !strategy.validate() {
+                    panic!("Invalid strategy");
+                }
+
+                let current_value = match criteria {
+                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                    OptimizationCriteria::Area => strategy.profit_area(),
+                };
+
+                debug!(
+                    "{}: {:.2}%",
+                    if matches!(criteria, OptimizationCriteria::Ratio) {
+                        "Ratio"
+                    } else {
+                        "Area"
+                    },
+                    current_value
+                );
+
+                if current_value > best_value {
+                    best_value = current_value;
+                    self.clone_from(&strategy);
+                }
+            }
+        }
+    }
+
+    fn is_valid_short_option(&self, short_option: &OptionData, side: &FindOptimalSide) -> bool {
+        match side {
+            FindOptimalSide::Upper => {
+                short_option.strike_price >= self.short_call.option.underlying_price
+            }
+            FindOptimalSide::Lower => {
+                short_option.strike_price <= self.short_call.option.underlying_price
+            }
+            FindOptimalSide::All => true,
+            FindOptimalSide::Range(start, end) => {
+                short_option.strike_price >= *start && short_option.strike_price <= *end
+            }
+        }
+    }
+
+    fn are_valid_prices(&self, long_option: &OptionData, short_option: &OptionData) -> bool {
+        long_option.call_ask > ZERO && short_option.call_bid > ZERO
+    }
+
+    fn create_strategy(
+        &self,
+        option_chain: &OptionChain,
+        long_option: &OptionData,
+        short_option: &OptionData,
+    ) -> BullCallSpread {
+        BullCallSpread::new(
+            option_chain.symbol.clone(),
+            option_chain.underlying_price,
+            long_option.strike_price,
+            short_option.strike_price,
+            self.short_call.option.expiration_date.clone(),
+            short_option.implied_volatility,
+            self.long_call.option.risk_free_rate,
+            self.long_call.option.dividend_yield,
+            self.long_call.option.quantity,
+            long_option.call_ask,
+            short_option.call_bid,
+            self.long_call.open_fee,
+            self.long_call.close_fee,
+            self.short_call.open_fee,
+            self.short_call.close_fee,
+        )
     }
 }
 
@@ -119,8 +230,8 @@ impl Strategies for BullCallSpread {
     }
 
     fn break_even(&self) -> f64 {
-        self.long_call.option.strike_price
-            + (self.long_call.total_cost() - self.short_call.net_premium_received())
+        self.short_call.option.strike_price
+            - self.calculate_profit_at(self.short_call.option.strike_price)
                 / self.long_call.option.quantity as f64
     }
 
@@ -130,13 +241,12 @@ impl Strategies for BullCallSpread {
     }
 
     fn max_profit(&self) -> f64 {
-        (self.short_call.option.strike_price - self.long_call.option.strike_price)
-            * self.long_call.option.quantity as f64
-            - self.total_cost()
+        self.calculate_profit_at(self.short_call.option.strike_price)
     }
 
     fn max_loss(&self) -> f64 {
-        self.total_cost()
+        self.calculate_profit_at(self.long_call.option.strike_price)
+            .abs()
     }
 
     fn total_cost(&self) -> f64 {
@@ -153,19 +263,58 @@ impl Strategies for BullCallSpread {
             + self.long_call.open_fee
             + self.long_call.close_fee
     }
+
+    fn profit_area(&self) -> f64 {
+        (self.short_call.option.strike_price - self.break_even()) * self.max_profit() / 100.0
+    }
+
+    fn profit_ratio(&self) -> f64 {
+        (self.max_profit() / self.max_loss()).abs() * 100.0
+    }
+
+    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
+    }
+
+    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+    }
+
+    fn validate(&self) -> bool {
+        if self.name.is_empty() {
+            error!("Symbol is required");
+            return false;
+        }
+        if !self.long_call.validate() {
+            return false;
+        }
+        if !self.short_call.validate() {
+            return false;
+        }
+
+        if self.long_call.option.underlying_price <= 0.0 {
+            error!("Underlying price must be greater than zero");
+            return false;
+        }
+        if self.short_call.option.strike_price <= self.long_call.option.strike_price {
+            error!("Long call strike price must be less than short call strike price");
+            return false;
+        }
+        true
+    }
+
+    fn best_range_to_show(&self, step: f64) -> Option<Vec<f64>> {
+        let (first_option, last_option) = (
+            self.long_call.option.clone(),
+            self.short_call.option.clone(),
+        );
+        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
+    }
 }
 
 impl Graph for BullCallSpread {
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        [("Break Even".to_string(), self.break_even())].to_vec()
-    }
-
-    fn get_values(&self, data: &[f64]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
-    }
-
     fn title(&self) -> String {
         let strategy_title = format!("Strategy: {:?}", self.kind);
         let leg_titles: Vec<String> = [self.long_call.title(), self.short_call.title()]
@@ -178,6 +327,16 @@ impl Graph for BullCallSpread {
         } else {
             format!("{}\n{}", strategy_title, leg_titles.join("\n"))
         }
+    }
+
+    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+        data.iter()
+            .map(|&price| self.calculate_profit_at(price))
+            .collect()
+    }
+
+    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
+        [("Break Even".to_string(), self.break_even())].to_vec()
     }
 }
 
