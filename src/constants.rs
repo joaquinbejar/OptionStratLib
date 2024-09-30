@@ -21,5 +21,7 @@ pub const ZERO: f64 = 0.0;
 pub(crate) const DARK_GREEN: RGBColor = RGBColor(0, 150, 0);
 pub(crate) const DARK_RED: RGBColor = RGBColor(220, 0, 0);
 
+pub(crate) const DARK_BLUE: RGBColor = RGBColor(0, 0, 150);
+
 pub(crate) const STRIKE_PRICE_LOWER_BOUND_MULTIPLIER: f64 = 0.98;
 pub(crate) const STRIKE_PRICE_UPPER_BOUND_MULTIPLIER: f64 = 1.02;

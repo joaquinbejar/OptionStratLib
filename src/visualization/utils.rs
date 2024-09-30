@@ -4,6 +4,7 @@
    Date: 20/8/24
 ******************************************************************************/
 use crate::constants::{DARK_GREEN, DARK_RED};
+use crate::visualization::model::ChartPoint;
 use crate::{
     build_chart, configure_chart_and_draw_mesh, create_drawing_area, draw_line_segments,
     draw_points_with_labels, draw_vertical_lines_and_labels,
@@ -11,8 +12,12 @@ use crate::{
 use plotters::backend::BitMapBackend;
 use plotters::chart::ChartBuilder;
 use plotters::element::{Circle, EmptyElement, Text};
-use plotters::prelude::{IntoDrawingArea, IntoFont, LineSeries, PointSeries, BLACK, WHITE};
+use plotters::prelude::{
+    Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
+    PointSeries, Ranged, BLACK, WHITE,
+};
 use std::error::Error;
+use std::ops::Add;
 
 #[macro_export]
 macro_rules! create_drawing_area {
@@ -174,6 +179,7 @@ pub trait Graph {
         );
 
         configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value, max_x_value);
+
         draw_line_segments!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED);
 
         draw_vertical_lines_and_labels!(
@@ -184,6 +190,7 @@ pub trait Graph {
             BLACK,
             label_coors
         );
+
         draw_points_with_labels!(
             chart,
             x_axis_data,
@@ -192,6 +199,9 @@ pub trait Graph {
             DARK_RED,
             label_interval
         );
+
+        // let points = self.get_points();
+        draw_points_on_chart(&mut chart, &self.get_points())?;
 
         root.present()?;
         Ok(())
@@ -203,6 +213,10 @@ pub trait Graph {
     fn get_values(&self, data: &[f64]) -> Vec<f64>;
 
     fn get_vertical_lines(&self) -> Vec<(String, f64)>;
+
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        vec![]
+    }
 }
 
 /// Calculates the range for the X and Y axes.
@@ -239,6 +253,43 @@ pub(crate) fn calculate_axis_range(
     let max_y_value = max_y_temp + margin_value;
     let min_y_value = min_y_temp - margin_value;
     (max_x_value, min_x_value, max_y_value, min_y_value)
+}
+
+pub fn draw_points_on_chart<DB: DrawingBackend, X, Y>(
+    ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
+    points: &[ChartPoint<(X::ValueType, Y::ValueType)>],
+) -> Result<(), Box<dyn Error>>
+where
+    X: Ranged,
+    Y: Ranged,
+    X::ValueType: Clone + Add<f64, Output = X::ValueType> + 'static,
+    Y::ValueType: Clone + Add<f64, Output = Y::ValueType> + 'static,
+    (X::ValueType, Y::ValueType): Clone + Into<(X::ValueType, Y::ValueType)>,
+    DB::ErrorType: 'static,
+{
+    for point in points {
+        ctx.draw_series(std::iter::once(Circle::new(
+            point.coordinates.clone(),
+            point.point_size,
+            point.point_color.filled(),
+        )))?;
+    }
+
+    for point in points {
+        let (x, y) = point.coordinates.clone();
+        let (offset_x, offset_y) = point.label_offset;
+        let label_pos = (x.add(offset_x), y.add(offset_y));
+
+        ctx.draw_series(std::iter::once(Text::new(
+            point.label.clone(),
+            label_pos,
+            ("sans-serif", point.font_size)
+                .into_font()
+                .color(&point.label_color),
+        )))?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

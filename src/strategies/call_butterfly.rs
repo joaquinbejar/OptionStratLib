@@ -4,14 +4,16 @@
    Date: 25/9/24
 ******************************************************************************/
 use super::base::{Strategies, StrategyType};
+use crate::constants::DARK_GREEN;
 use crate::constants::{
-    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+    DARK_BLUE, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
 };
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
+use crate::visualization::model::ChartPoint;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use tracing::{debug, error};
@@ -417,11 +419,42 @@ impl Graph for CallButterfly {
     }
 
     fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        self.break_even_points
-            .iter()
-            .enumerate()
-            .map(|(i, &point)| (format!("Break Even {}", i + 1), point))
-            .collect()
+        vec![("Current Price".to_string(), self.short_call.option.underlying_price,)]
+    }
+
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[0], 0.0),
+            label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
+            label_offset: (-10.0, -1.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 3,
+            font_size: 15,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[1], 0.0),
+            label: format!("High Break Even\n\n{}", self.break_even_points[1]),
+            label_offset: (-10.0, -1.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 3,
+            font_size: 15,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.short_call.option.strike_price, self.max_profit()),
+            label: format!("Max Profit\n\n{:.2}", self.max_profit()),
+            label_offset: (2.0, 1.0),
+            point_color: DARK_GREEN,
+            label_color: DARK_GREEN,
+            point_size: 3,
+            font_size: 15,
+        });
+        points
     }
 }
 
@@ -511,9 +544,8 @@ mod tests_call_butterfly {
         let strategy = setup();
 
         let vertical_lines = strategy.get_vertical_lines();
-        assert_eq!(vertical_lines.len(), 2);
-        assert_eq!(vertical_lines[0].0, "Break Even 1");
-        assert_eq!(vertical_lines[1].0, "Break Even 2");
+        assert_eq!(vertical_lines.len(), 1);
+        assert_eq!(vertical_lines[0].0, "Current Price");
 
         let data = vec![150.0, 155.0, 160.0, 165.0, 170.0];
         let values = strategy.get_values(&data);
