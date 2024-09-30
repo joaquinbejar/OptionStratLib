@@ -10,6 +10,8 @@ use crate::model::types::{ExpirationDate, OptionStyle, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
+use plotters::prelude::{ShapeStyle, BLACK};
+use crate::visualization::model::ChartVerticalLine;
 
 /// The `Position` struct represents a financial position in an options market.
 /// It includes various attributes related to the option, such as its cost,
@@ -263,8 +265,19 @@ impl Graph for Position {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        [("Break Even".to_string(), self.break_even())].to_vec()
+    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)> {
+        let vertical_lines = vec![    ChartVerticalLine {
+            x_coordinate: self.break_even(),
+            y_range: (-50000.0, 50000.0),
+            label: "Break Even".to_string(),
+            label_offset: (5.0, 5.0),
+            line_color: BLACK,
+            label_color: BLACK,
+            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+            font_size: 18,
+        }];
+
+        vertical_lines
     }
 }
 

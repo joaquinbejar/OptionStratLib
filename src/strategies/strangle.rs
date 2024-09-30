@@ -16,6 +16,8 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
+use plotters::prelude::{ShapeStyle, BLACK};
+use crate::visualization::model::ChartVerticalLine;
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -190,12 +192,21 @@ impl Graph for ShortStrangle {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        self.break_even_points
-            .iter()
-            .enumerate()
-            .map(|(i, &point)| (format!("Break Even {}", i + 1), point))
-            .collect()
+    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)> {
+        let mut vertical_lines: Vec<ChartVerticalLine<f64,f64>> = vec![];
+        for break_even_point in self.break_even_points.clone() {
+            vertical_lines.push(ChartVerticalLine {
+                x_coordinate: break_even_point,
+                y_range: (-50000.0, 50000.0),
+                label: "Break Even".to_string(),
+                label_offset: (5.0, 5.0),
+                line_color: BLACK,
+                label_color: BLACK,
+                line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+                font_size: 18,
+            });
+        }
+        vertical_lines
     }
 }
 
@@ -363,12 +374,21 @@ impl Graph for LongStrangle {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        self.break_even_points
-            .iter()
-            .enumerate()
-            .map(|(i, &point)| (format!("Break Even {}", i + 1), point))
-            .collect()
+    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)> {
+        let mut vertical_lines: Vec<ChartVerticalLine<f64,f64>> = vec![];
+        for break_even_point in self.break_even_points.clone() {
+            vertical_lines.push(ChartVerticalLine {
+                x_coordinate: break_even_point,
+                y_range: (-50000.0, 50000.0),
+                label: "Break Even".to_string(),
+                label_offset: (5.0, 5.0),
+                line_color: BLACK,
+                label_color: BLACK,
+                line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+                font_size: 18,
+            });
+        }
+        vertical_lines
     }
 }
 

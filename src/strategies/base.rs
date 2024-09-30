@@ -11,6 +11,8 @@ use crate::model::types::Side;
 use crate::strategies::utils::FindOptimalSide;
 use crate::visualization::utils::Graph;
 use num_traits::Float;
+use plotters::prelude::{ShapeStyle, BLACK};
+use crate::visualization::model::ChartVerticalLine;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -100,7 +102,7 @@ impl Strategy {
                     .unwrap();
                 long_call.option.strike_price
                     + (long_call.total_cost() - short_call.net_premium_received())
-                        / long_call.option.quantity as f64
+                    / long_call.option.quantity as f64
             }
             StrategyType::BearCallSpread => ZERO,
             StrategyType::BullPutSpread => ZERO,
@@ -161,8 +163,20 @@ impl Graph for Strategy {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        [("Break Even".to_string(), self.break_even())].to_vec()
+
+    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64, f64>)> {
+        let vertical_lines = vec![ChartVerticalLine {
+            x_coordinate: self.break_even(),
+            y_range: (-50000.0, 50000.0),
+            label: "Break Even".to_string(),
+            label_offset: (5.0, 5.0),
+            line_color: BLACK,
+            label_color: BLACK,
+            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+            font_size: 18,
+        }];
+
+        vertical_lines
     }
 }
 

@@ -13,9 +13,11 @@ use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::ChartPoint;
+use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
+use plotters::prelude::{ShapeStyle, BLACK, GREEN, RED};
+use plotters::style::full_palette::ORANGE;
 use tracing::{debug, error};
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
@@ -153,7 +155,6 @@ impl CallButterfly {
             + (loss_at_otm_strike / long_quantity as f64);
         strategy.break_even_points.push(second_bep);
 
-        // TODO: fix break_even_points when legs have same loss
         strategy
     }
 
@@ -418,9 +419,24 @@ impl Graph for CallButterfly {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        vec![("Current Price".to_string(), self.short_call.option.underlying_price,)]
+    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64, f64>)> {
+        let max_value = self.max_profit() * 1.2;
+        let min_value = self.max_loss() * 1.4;
+
+        let vertical_lines = vec![ChartVerticalLine {
+            x_coordinate: self.short_call.option.underlying_price,
+            y_range: (min_value, max_value),
+            label: format!("Current Price: {:.2}", self.short_call.option.underlying_price),
+            label_offset: (-24.0, -1.0),
+            line_color: ORANGE,
+            label_color: ORANGE,
+            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
+            font_size: 18,
+        }];
+
+        vertical_lines
     }
+
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
@@ -428,21 +444,21 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0], 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: (-10.0, -1.0),
+            label_offset: (-26.0, 2.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
-            point_size: 3,
-            font_size: 15,
+            point_size: 5,
+            font_size: 18,
         });
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1], 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: (-10.0, -1.0),
+            label_offset: (1.0, 2.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
-            point_size: 3,
-            font_size: 15,
+            point_size: 5,
+            font_size: 18,
         });
 
         points.push(ChartPoint {
@@ -451,9 +467,33 @@ impl Graph for CallButterfly {
             label_offset: (2.0, 1.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
-            point_size: 3,
-            font_size: 15,
+            point_size: 5,
+            font_size: 18,
         });
+
+        let lower_loss = self.calculate_profit_at(self.long_call_itm.option.strike_price);
+        let upper_loss = self.calculate_profit_at(self.long_call_otm.option.strike_price);
+
+        points.push(ChartPoint {
+            coordinates: (self.long_call_itm.option.strike_price, lower_loss),
+            label: format!("Left Low {:.2}", lower_loss),
+            label_offset: (0.0, -1.0),
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.long_call_otm.option.strike_price, upper_loss),
+            label: format!("Right Low {:.2}", upper_loss),
+            label_offset: (-18.0, -1.0),
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
         points
     }
 }

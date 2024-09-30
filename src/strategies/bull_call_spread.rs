@@ -20,7 +20,9 @@ use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
+use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{debug, error};
+use crate::visualization::model::ChartVerticalLine;
 
 const DESCRIPTION: &str = "A bull call spread involves buying a call option with a lower strike \
 price and selling a call option with a higher strike price, both with the same expiration date. \
@@ -335,8 +337,19 @@ impl Graph for BullCallSpread {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(String, f64)> {
-        [("Break Even".to_string(), self.break_even())].to_vec()
+    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)> {
+        let vertical_lines = vec![    ChartVerticalLine {
+            x_coordinate: self.break_even(),
+            y_range: (-50000.0, 50000.0),
+            label: "Break Even".to_string(),
+            label_offset: (5.0, 5.0),
+            line_color: BLACK,
+            label_color: BLACK,
+            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+            font_size: 18,
+        }];
+
+        vertical_lines
     }
 }
 

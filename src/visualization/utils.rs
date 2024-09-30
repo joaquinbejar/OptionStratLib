@@ -4,20 +4,18 @@
    Date: 20/8/24
 ******************************************************************************/
 use crate::constants::{DARK_GREEN, DARK_RED};
-use crate::visualization::model::ChartPoint;
+use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::{
     build_chart, configure_chart_and_draw_mesh, create_drawing_area, draw_line_segments,
-    draw_points_with_labels, draw_vertical_lines_and_labels,
+    draw_points_with_labels,
 };
 use plotters::backend::BitMapBackend;
 use plotters::chart::ChartBuilder;
 use plotters::element::{Circle, EmptyElement, Text};
-use plotters::prelude::{
-    Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
-    PointSeries, Ranged, BLACK, WHITE,
-};
+use plotters::prelude::{Cartesian2d, ChartContext, Color, DrawingBackend, FontTransform, IntoDrawingArea, IntoFont, LineSeries, PathElement, PointSeries, Ranged, ShapeStyle, TextStyle, BLACK, GREEN, WHITE};
 use std::error::Error;
 use std::ops::Add;
+use tracing::info;
 
 #[macro_export]
 macro_rules! create_drawing_area {
@@ -78,31 +76,31 @@ macro_rules! draw_line_segments {
     };
 }
 
-#[macro_export]
-macro_rules! draw_vertical_lines_and_labels {
-    ($chart:expr, $vertical_lines:expr, $min_y_value:expr, $max_y_value:expr, $BLACK:expr, $label_position:expr) => {
-        for (label, line) in $vertical_lines {
-            $chart.draw_series(LineSeries::new(
-                vec![(line, $min_y_value), (line, $max_y_value)],
-                &$BLACK,
-            ))?;
-
-            $chart.draw_series(PointSeries::of_element(
-                vec![(line, $max_y_value)],
-                5,
-                &$BLACK,
-                &|coord, _size, _style| {
-                    EmptyElement::at(coord)
-                        + Text::new(
-                            format!("{}: {:.2}", label, line),
-                            $label_position,
-                            ("sans-serif", 15).into_font(),
-                        )
-                },
-            ))?;
-        }
-    };
-}
+// #[macro_export]
+// macro_rules! draw_vertical_lines_and_labels {
+//     ($chart:expr, $vertical_lines:expr, $min_y_value:expr, $max_y_value:expr, $BLACK:expr, $label_position:expr) => {
+//         for (label, line) in $vertical_lines {
+//             $chart.draw_series(LineSeries::new(
+//                 vec![(line, $min_y_value), (line, $max_y_value)],
+//                 &$BLACK,
+//             ))?;
+//
+//             $chart.draw_series(PointSeries::of_element(
+//                 vec![(line, $max_y_value)],
+//                 5,
+//                 &$BLACK,
+//                 &|coord, _size, _style| {
+//                     EmptyElement::at(coord)
+//                         + Text::new(
+//                             format!("{}: {:.2}", label, line),
+//                             $label_position,
+//                             ("sans-serif", 15).into_font(),
+//                         )
+//                 },
+//             ))?;
+//         }
+//     };
+// }
 
 #[macro_export]
 macro_rules! draw_points_with_labels {
@@ -182,27 +180,8 @@ pub trait Graph {
 
         draw_line_segments!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED);
 
-        draw_vertical_lines_and_labels!(
-            chart,
-            self.get_vertical_lines(),
-            min_y_value,
-            max_y_value,
-            BLACK,
-            label_coors
-        );
-
-        draw_points_with_labels!(
-            chart,
-            x_axis_data,
-            y_axis_data,
-            DARK_GREEN,
-            DARK_RED,
-            label_interval
-        );
-
-        // let points = self.get_points();
         draw_points_on_chart(&mut chart, &self.get_points())?;
-
+        draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
         root.present()?;
         Ok(())
     }
@@ -212,10 +191,12 @@ pub trait Graph {
     // fn get_values(&self, data: &[f64]) -> Vec<f64>;
     fn get_values(&self, data: &[f64]) -> Vec<f64>;
 
-    fn get_vertical_lines(&self) -> Vec<(String, f64)>;
+    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)>{
+        panic!("Not implemented");
+    }
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        vec![]
+        panic!("Not implemented");
     }
 }
 
@@ -265,7 +246,7 @@ where
     X::ValueType: Clone + Add<f64, Output = X::ValueType> + 'static,
     Y::ValueType: Clone + Add<f64, Output = Y::ValueType> + 'static,
     (X::ValueType, Y::ValueType): Clone + Into<(X::ValueType, Y::ValueType)>,
-    DB::ErrorType: 'static,
+    DB::ErrorType: 'static
 {
     for point in points {
         ctx.draw_series(std::iter::once(Circle::new(
@@ -289,6 +270,50 @@ where
         )))?;
     }
 
+    Ok(())
+}
+
+pub fn draw_vertical_lines_on_chart<DB: DrawingBackend, X, Y>(
+    ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
+    lines: &[ChartVerticalLine<X::ValueType, Y::ValueType>],
+) -> Result<(), Box<dyn Error>>
+where
+    X: Ranged,
+    Y: Ranged,
+    X::ValueType: Clone + Add<f64, Output = X::ValueType>,
+    Y::ValueType: Clone + Add<f64, Output = Y::ValueType>,
+    <X as Ranged>::ValueType: 'static,
+    <Y as Ranged>::ValueType: 'static,
+    <DB as DrawingBackend>::ErrorType: 'static,
+    <X as Ranged>::ValueType: std::fmt::Display,
+    <Y as Ranged>::ValueType: std::fmt::Display
+{
+    for line in lines {
+        ctx.draw_series(LineSeries::new(
+            vec![
+                (line.x_coordinate.clone(), line.y_range.0.clone()),
+                (line.x_coordinate.clone(), line.y_range.1.clone()),
+            ],
+            line.line_style,
+        ))?;
+    }
+
+    for line in lines {
+        let (x, y) = (line.x_coordinate.clone(), line.y_range.1.clone());
+        let (offset_x, offset_y) = line.label_offset;
+        let label_pos = (x.add(offset_x), y.add(offset_y));
+
+        info!("Label Y Min: {}", line.y_range.0);
+        info!("Label Y Max: {}", line.y_range.1);
+
+        ctx.draw_series(std::iter::once(Text::new(
+            line.label.clone(),
+            label_pos,
+            ("sans-serif", line.font_size)
+                .into_font()
+                .color(&line.label_color),
+        )))?;
+    }
     Ok(())
 }
 
