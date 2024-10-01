@@ -9,10 +9,10 @@ use crate::model::chain::OptionChain;
 use crate::model::position::Position;
 use crate::model::types::Side;
 use crate::strategies::utils::FindOptimalSide;
+use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use num_traits::Float;
 use plotters::prelude::{ShapeStyle, BLACK};
-use crate::visualization::model::ChartVerticalLine;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -102,7 +102,7 @@ impl Strategy {
                     .unwrap();
                 long_call.option.strike_price
                     + (long_call.total_cost() - short_call.net_premium_received())
-                    / long_call.option.quantity as f64
+                        / long_call.option.quantity as f64
             }
             StrategyType::BearCallSpread => ZERO,
             StrategyType::BullPutSpread => ZERO,
@@ -163,8 +163,7 @@ impl Graph for Strategy {
             .collect()
     }
 
-
-    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64, f64>)> {
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.break_even(),
             y_range: (-50000.0, 50000.0),

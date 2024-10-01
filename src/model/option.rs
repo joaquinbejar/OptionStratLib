@@ -8,11 +8,11 @@ use crate::pricing::binomial_model::{
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::telegraph::telegraph;
+use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
-use plotters::prelude::{ShapeStyle, BLACK, GREEN};
+use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::error;
-use crate::visualization::model::ChartVerticalLine;
 
 #[derive(Clone, Default, Debug)]
 pub struct ExoticParams {
@@ -299,7 +299,7 @@ impl Graph for Options {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64, f64>)> {
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.strike_price,
             y_range: (-50000.0, 50000.0),
@@ -1010,8 +1010,8 @@ mod tests_graph {
         let vertical_lines = option.get_vertical_lines();
 
         assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].0, "Strike");
-        assert_relative_eq!(vertical_lines[0].1, 100.0, epsilon = 1e-6);
+        assert_eq!(vertical_lines[0].label, "Strike");
+        assert_relative_eq!(vertical_lines[0].x_coordinate, 100.0, epsilon = 1e-6);
     }
 
     #[test]

@@ -16,6 +16,7 @@ pub struct ChartPoint<T> {
     pub(crate) font_size: u32,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct ChartVerticalLine<X, Y> {
     pub x_coordinate: X,
