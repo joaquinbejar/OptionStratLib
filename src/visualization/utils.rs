@@ -5,17 +5,16 @@
 ******************************************************************************/
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::{
-    build_chart, configure_chart_and_draw_mesh, create_drawing_area, draw_line_segments,
-    draw_points_with_labels,
-};
+use crate::{build_chart, configure_chart_and_draw_mesh, create_drawing_area, draw_line_segments};
 use plotters::backend::BitMapBackend;
 use plotters::chart::ChartBuilder;
-use plotters::element::{Circle, EmptyElement, Text};
-use plotters::prelude::{Cartesian2d, ChartContext, Color, DrawingBackend, FontTransform, IntoDrawingArea, IntoFont, LineSeries, PathElement, PointSeries, Ranged, ShapeStyle, TextStyle, BLACK, GREEN, WHITE};
+use plotters::element::{Circle, Text};
+use plotters::prelude::{
+    Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
+    Ranged, BLACK, WHITE,
+};
 use std::error::Error;
 use std::ops::Add;
-use tracing::info;
 
 #[macro_export]
 macro_rules! create_drawing_area {
@@ -76,85 +75,15 @@ macro_rules! draw_line_segments {
     };
 }
 
-// #[macro_export]
-// macro_rules! draw_vertical_lines_and_labels {
-//     ($chart:expr, $vertical_lines:expr, $min_y_value:expr, $max_y_value:expr, $BLACK:expr, $label_position:expr) => {
-//         for (label, line) in $vertical_lines {
-//             $chart.draw_series(LineSeries::new(
-//                 vec![(line, $min_y_value), (line, $max_y_value)],
-//                 &$BLACK,
-//             ))?;
-//
-//             $chart.draw_series(PointSeries::of_element(
-//                 vec![(line, $max_y_value)],
-//                 5,
-//                 &$BLACK,
-//                 &|coord, _size, _style| {
-//                     EmptyElement::at(coord)
-//                         + Text::new(
-//                             format!("{}: {:.2}", label, line),
-//                             $label_position,
-//                             ("sans-serif", 15).into_font(),
-//                         )
-//                 },
-//             ))?;
-//         }
-//     };
-// }
-
-#[macro_export]
-macro_rules! draw_points_with_labels {
-    ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr, $label_interval:expr) => {
-        for (i, (&price, &value)) in $x_axis_data.iter().zip($y_axis_data.iter()).enumerate() {
-            let point_color = if value > 0.0 {
-                &$dark_green
-            } else {
-                &$dark_red
-            };
-            let label_offset = if value >= 0.0 { (20, 0) } else { (-20, -20) };
-            let size = 3;
-
-            if value != 0.0 {
-                $chart.draw_series(PointSeries::of_element(
-                    vec![(price, value)],
-                    size,
-                    point_color,
-                    &|coord, size, style| {
-                        let element =
-                            EmptyElement::at(coord) + Circle::new((0, 0), size, style.filled());
-
-                        if i % $label_interval == 0 {
-                            element
-                                + Text::new(
-                                    format!("{:.2}", value),
-                                    (label_offset.0, label_offset.1),
-                                    ("sans-serif", 15).into_font(),
-                                )
-                        } else {
-                            EmptyElement::at(coord)
-                                + Circle::new((0, 0), 0, style.filled())
-                                + Text::new(
-                                    String::new(),
-                                    (label_offset.0, label_offset.1),
-                                    ("sans-serif", 15).into_font(),
-                                )
-                        }
-                    },
-                ))?;
-            }
-        }
-    };
-}
-
 pub trait Graph {
     fn graph(
         &self,
         x_axis_data: &[f64],
         file_path: &str,
-        title_size: u32,         // 15
-        canvas_size: (u32, u32), // (1200, 800)
-        label_coors: (i32, i32), // (10, 30)
-        label_interval: usize,   // 10
+        title_size: u32,          // 15
+        canvas_size: (u32, u32),  // (1200, 800)
+        _label_coors: (i32, i32), // (10, 30)
+        _label_interval: usize,   // 10
     ) -> Result<(), Box<dyn Error>> {
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
@@ -188,10 +117,9 @@ pub trait Graph {
 
     fn title(&self) -> String;
 
-    // fn get_values(&self, data: &[f64]) -> Vec<f64>;
     fn get_values(&self, data: &[f64]) -> Vec<f64>;
 
-    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)>{
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         panic!("Not implemented");
     }
 
@@ -246,7 +174,7 @@ where
     X::ValueType: Clone + Add<f64, Output = X::ValueType> + 'static,
     Y::ValueType: Clone + Add<f64, Output = Y::ValueType> + 'static,
     (X::ValueType, Y::ValueType): Clone + Into<(X::ValueType, Y::ValueType)>,
-    DB::ErrorType: 'static
+    DB::ErrorType: 'static,
 {
     for point in points {
         ctx.draw_series(std::iter::once(Circle::new(
@@ -286,7 +214,7 @@ where
     <Y as Ranged>::ValueType: 'static,
     <DB as DrawingBackend>::ErrorType: 'static,
     <X as Ranged>::ValueType: std::fmt::Display,
-    <Y as Ranged>::ValueType: std::fmt::Display
+    <Y as Ranged>::ValueType: std::fmt::Display,
 {
     for line in lines {
         ctx.draw_series(LineSeries::new(
@@ -302,9 +230,6 @@ where
         let (x, y) = (line.x_coordinate.clone(), line.y_range.1.clone());
         let (offset_x, offset_y) = line.label_offset;
         let label_pos = (x.add(offset_x), y.add(offset_y));
-
-        info!("Label Y Min: {}", line.y_range.0);
-        info!("Label Y Max: {}", line.y_range.1);
 
         ctx.draw_series(std::iter::once(Text::new(
             line.label.clone(),
