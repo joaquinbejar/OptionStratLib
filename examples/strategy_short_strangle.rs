@@ -9,27 +9,27 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = 2646.9;
+    let underlying_price = 7018.5;
 
     let strategy = ShortStrangle::new(
-        "GOLD".to_string(),
+        "CL".to_string(),
         underlying_price, // underlying_price
-        2725.0,           // call_strike
-        2560.0,           // put_strike
-        ExpirationDate::Days(60.0),
-        0.1548, // implied_volatility
+        7450.0,           // call_strike
+        7050.0,           // put_strike
+        ExpirationDate::Days(45.0),
+        0.3745, // implied_volatility
         0.05,   // risk_free_rate
         0.0,    // dividend_yield
-        2,      // quantity
-        38.8,   // premium_short_call
-        30.4,   // premium_short_put
-        0.96,   // open_fee_short_call
-        0.96,   // close_fee_short_call
-        0.96,   // open_fee_short_put
-        0.96,   // close_fee_short_put
+        1,      // quantity
+        84.2,   // premium_short_call
+        353.2,  // premium_short_put
+        7.01,   // open_fee_short_call
+        7.01,   // close_fee_short_call
+        7.01,   // open_fee_short_put
+        7.01,   // close_fee_short_put
     );
 
-    let price_range: Vec<f64> = (2450..=2850).map(|x| x as f64).collect();
+    let price_range: Vec<f64> = (6400..=8100).map(|x| x as f64).collect();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());
