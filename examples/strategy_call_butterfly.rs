@@ -62,8 +62,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Draws/Strategy/call_butterfly_profit_loss_chart.png",
         20,
         (1400, 933),
-        (10, 30),
-        15,
     )?;
 
     Ok(())

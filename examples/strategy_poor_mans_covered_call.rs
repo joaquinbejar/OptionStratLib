@@ -51,8 +51,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Draws/Strategy/poor_mans_covered_call_profit_loss_chart.png",
         20,
         (1400, 933),
-        (10, 30),
-        15,
     )?;
 
     Ok(())

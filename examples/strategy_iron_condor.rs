@@ -56,8 +56,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Draws/Strategy/iron_condor_profit_loss_chart.png",
         20,
         (1400, 933),
-        (10, 30),
-        15,
     )?;
 
     Ok(())

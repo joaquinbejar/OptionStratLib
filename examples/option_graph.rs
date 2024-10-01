@@ -42,8 +42,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Draws/Options/intrinsic_value_chart.png",
         25,
         (1400, 933),
-        (10, 30),
-        10,
     )?;
 
     Ok(())

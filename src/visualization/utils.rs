@@ -80,10 +80,8 @@ pub trait Graph {
         &self,
         x_axis_data: &[f64],
         file_path: &str,
-        title_size: u32,          // 15
-        canvas_size: (u32, u32),  // (1200, 800)
-        _label_coors: (i32, i32), // (10, 30)
-        _label_interval: usize,   // 10
+        title_size: u32,         // 15
+        canvas_size: (u32, u32), // (1200, 800)
     ) -> Result<(), Box<dyn Error>> {
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
