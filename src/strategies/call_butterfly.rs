@@ -16,7 +16,7 @@ use crate::strategies::utils::{calculate_price_range, FindOptimalSide, Optimizat
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::prelude::{ShapeStyle, BLACK, GREEN, RED};
+use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
 use tracing::{debug, error};
 
@@ -419,14 +419,17 @@ impl Graph for CallButterfly {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64, f64>)> {
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let max_value = self.max_profit() * 1.2;
         let min_value = self.max_loss() * 1.4;
 
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price,
             y_range: (min_value, max_value),
-            label: format!("Current Price: {:.2}", self.short_call.option.underlying_price),
+            label: format!(
+                "Current Price: {:.2}",
+                self.short_call.option.underlying_price
+            ),
             label_offset: (-24.0, -1.0),
             line_color: ORANGE,
             label_color: ORANGE,
@@ -436,7 +439,6 @@ impl Graph for CallButterfly {
 
         vertical_lines
     }
-
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
@@ -585,7 +587,7 @@ mod tests_call_butterfly {
 
         let vertical_lines = strategy.get_vertical_lines();
         assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].0, "Current Price");
+        assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
         let data = vec![150.0, 155.0, 160.0, 165.0, 170.0];
         let values = strategy.get_values(&data);

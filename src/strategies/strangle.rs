@@ -11,13 +11,15 @@ Key characteristics:
 */
 
 use super::base::{Strategies, StrategyType};
+use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
+use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, BLACK};
-use crate::visualization::model::ChartVerticalLine;
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -192,21 +194,61 @@ impl Graph for ShortStrangle {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)> {
-        let mut vertical_lines: Vec<ChartVerticalLine<f64,f64>> = vec![];
-        for break_even_point in self.break_even_points.clone() {
-            vertical_lines.push(ChartVerticalLine {
-                x_coordinate: break_even_point,
-                y_range: (-50000.0, 50000.0),
-                label: "Break Even".to_string(),
-                label_offset: (5.0, 5.0),
-                line_color: BLACK,
-                label_color: BLACK,
-                line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-                font_size: 18,
-            });
-        }
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
+        let max_value = self.max_profit() * 1.2;
+        let min_value = self.max_profit() * -1.2;
+
+        let vertical_lines = vec![ChartVerticalLine {
+            x_coordinate: self.short_call.option.underlying_price,
+            y_range: (min_value, max_value),
+            label: format!(
+                "Current Price: {:.2}",
+                self.short_call.option.underlying_price
+            ),
+            label_offset: (4.0, -1.0),
+            line_color: ORANGE,
+            label_color: ORANGE,
+            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
+            font_size: 18,
+        }];
+
         vertical_lines
+    }
+
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[0], 0.0),
+            label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
+            label_offset: (0.0, -10.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[1], 0.0),
+            label: format!("High Break Even\n\n{}", self.break_even_points[1]),
+            label_offset: (-230.0, -10.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.short_call.option.strike_price, self.max_profit()),
+            label: format!("Max Profit\n\n{:.2}", self.max_profit()),
+            label_offset: (30.0, 10.0),
+            point_color: DARK_GREEN,
+            label_color: DARK_GREEN,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points
     }
 }
 
@@ -374,8 +416,8 @@ impl Graph for LongStrangle {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)> {
-        let mut vertical_lines: Vec<ChartVerticalLine<f64,f64>> = vec![];
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
+        let mut vertical_lines: Vec<ChartVerticalLine<f64, f64>> = vec![];
         for break_even_point in self.break_even_points.clone() {
             vertical_lines.push(ChartVerticalLine {
                 x_coordinate: break_even_point,
@@ -490,9 +532,8 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let strategy = setup();
 
         let vertical_lines = strategy.get_vertical_lines();
-        assert_eq!(vertical_lines.len(), 2);
-        assert_eq!(vertical_lines[0].0, "Break Even 1");
-        assert_eq!(vertical_lines[1].0, "Break Even 2");
+        assert_eq!(vertical_lines.len(), 1);
+        assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
         let data = vec![140.0, 145.0, 150.0, 155.0, 160.0];
         let values = strategy.get_values(&data);

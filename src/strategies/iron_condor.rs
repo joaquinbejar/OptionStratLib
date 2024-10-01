@@ -13,10 +13,10 @@ use super::base::{Strategies, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, BLACK};
-use crate::visualization::model::ChartVerticalLine;
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -285,8 +285,8 @@ impl Graph for IronCondor {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64,f64>)> {
-        let mut vertical_lines: Vec<ChartVerticalLine<f64,f64>> = vec![];
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
+        let mut vertical_lines: Vec<ChartVerticalLine<f64, f64>> = vec![];
         for break_even_point in self.break_even_points.clone() {
             vertical_lines.push(ChartVerticalLine {
                 x_coordinate: break_even_point,

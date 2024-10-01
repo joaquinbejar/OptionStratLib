@@ -31,10 +31,10 @@ use super::base::{Strategies, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, BLACK};
-use crate::visualization::model::ChartVerticalLine;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -179,7 +179,7 @@ impl Strategies for PoorMansCoveredCall {
     fn fees(&self) -> f64 {
         (self.long_call.open_fee + self.long_call.close_fee) * self.long_call.option.quantity as f64
             + (self.short_call.open_fee + self.short_call.close_fee)
-            * self.short_call.option.quantity as f64
+                * self.short_call.option.quantity as f64
     }
 
     fn profit_area(&self) -> f64 {
@@ -205,9 +205,9 @@ impl Graph for PoorMansCoveredCall {
                 self.short_call.option.expiration_date
             ),
         ]
-            .iter()
-            .map(|leg| leg.to_string())
-            .collect();
+        .iter()
+        .map(|leg| leg.to_string())
+        .collect();
 
         if leg_titles.is_empty() {
             strategy_title
@@ -222,7 +222,7 @@ impl Graph for PoorMansCoveredCall {
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<(ChartVerticalLine<f64, f64>)> {
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.break_even(),
             y_range: (-50000.0, 50000.0),
