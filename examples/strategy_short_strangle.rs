@@ -9,7 +9,7 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = 7018.5;
+    let underlying_price = 7138.5;
 
     let strategy = ShortStrangle::new(
         "CL".to_string(),

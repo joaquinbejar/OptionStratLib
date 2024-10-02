@@ -19,7 +19,7 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::{ShapeStyle, RED};
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -238,10 +238,36 @@ impl Graph for ShortStrangle {
             font_size: 18,
         });
 
+        let coordiantes: (f64, f64) = (
+            self.short_put.option.strike_price / 250.0,
+            self.max_profit() / 15.0,
+        );
         points.push(ChartPoint {
             coordinates: (self.short_call.option.strike_price, self.max_profit()),
-            label: format!("Max Profit\n\n{:.2}", self.max_profit()),
-            label_offset: (30.0, 10.0),
+            label: format!(
+                "Max Profit {:.2} at {:.0}",
+                self.max_profit(),
+                self.short_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: DARK_GREEN,
+            label_color: DARK_GREEN,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            -self.short_put.option.strike_price / 30.0,
+            self.max_profit() / 15.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (self.short_put.option.strike_price, self.max_profit()),
+            label: format!(
+                "Max Profit {:.2} at {:.0}",
+                self.max_profit(),
+                self.short_put.option.strike_price
+            ),
+            label_offset: coordiantes,
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -343,12 +369,13 @@ impl LongStrangle {
 
         let net_quantity =
             (long_call.option.quantity as f64 + long_put.option.quantity as f64) / 2.0;
+
         strategy
             .break_even_points
-            .push(put_strike - strategy.net_premium_received() / net_quantity);
+            .push(put_strike - strategy.total_cost() / net_quantity);
         strategy
             .break_even_points
-            .push(call_strike + strategy.net_premium_received() / net_quantity);
+            .push(call_strike + strategy.total_cost() / net_quantity);
 
         strategy
     }
@@ -417,20 +444,78 @@ impl Graph for LongStrangle {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let mut vertical_lines: Vec<ChartVerticalLine<f64, f64>> = vec![];
-        for break_even_point in self.break_even_points.clone() {
-            vertical_lines.push(ChartVerticalLine {
-                x_coordinate: break_even_point,
-                y_range: (-50000.0, 50000.0),
-                label: "Break Even".to_string(),
-                label_offset: (5.0, 5.0),
-                line_color: BLACK,
-                label_color: BLACK,
-                line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-                font_size: 18,
-            });
-        }
+        let max_value = self.max_loss() * 1.2;
+        let min_value = self.max_loss() * -1.2;
+
+        let vertical_lines = vec![ChartVerticalLine {
+            x_coordinate: self.long_call.option.underlying_price,
+            y_range: (min_value, max_value),
+            label: format!(
+                "Current Price: {:.2}",
+                self.long_call.option.underlying_price
+            ),
+            label_offset: (4.0, -50.0),
+            line_color: ORANGE,
+            label_color: ORANGE,
+            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
+            font_size: 18,
+        }];
+
         vertical_lines
+    }
+
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[0], 0.0),
+            label: format!("Low Break Even {}", self.break_even_points[0]),
+            label_offset: (10.0, -10.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[1], 0.0),
+            label: format!("High Break Even {}", self.break_even_points[1]),
+            label_offset: (-60.0, -10.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.long_call.option.strike_price, -self.max_loss()),
+            label: format!(
+                "Max Loss {:.2} at {:.0}",
+                self.max_loss(),
+                self.long_call.option.strike_price
+            ),
+            label_offset: (0.0, -10.0),
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.long_put.option.strike_price, -self.max_loss()),
+            label: format!(
+                "Max Loss {:.2} at {:.0}",
+                self.max_loss(),
+                self.long_put.option.strike_price
+            ),
+            label_offset: (0.0, -10.0),
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points
     }
 }
 
@@ -592,7 +677,7 @@ mod tests_long_strangle {
         assert_eq!(strategy.kind, StrategyType::Strangle);
         assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
 
-        let break_even_points = vec![140.0, 160.0];
+        let break_even_points = vec![128.0, 172.0];
         assert_eq!(strategy.break_even_points, break_even_points);
     }
 
