@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::{build_chart, configure_chart_and_draw_mesh, create_drawing_area, draw_line_segments};
+use crate::{build_chart, configure_chart_and_draw_mesh, create_drawing_area, draw_line_segments, pos};
 use plotters::backend::BitMapBackend;
 use plotters::chart::ChartBuilder;
 use plotters::element::{Circle, Text};
@@ -15,6 +15,7 @@ use plotters::prelude::{
 };
 use std::error::Error;
 use std::ops::Add;
+use crate::model::types::PositiveF64;
 
 #[macro_export]
 macro_rules! create_drawing_area {
@@ -115,7 +116,7 @@ pub trait Graph {
 
     fn title(&self) -> String;
 
-    fn get_values(&self, data: &[f64]) -> Vec<f64>;
+    fn get_values<T>(&self, data: &[T]) -> Vec<f64>;
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         panic!("Not implemented");
@@ -142,13 +143,14 @@ pub trait Graph {
 /// * `max_y_value` - The maximum value in `y_axis_data`, adjusted to include a margin.
 /// * `min_y_value` - The minimum value in `y_axis_data`, adjusted to include a margin.
 ///
-pub(crate) fn calculate_axis_range(
-    x_axis_data: &[f64],
+pub(crate) fn calculate_axis_range<T>(
+    x_axis_data: &[T],
     y_axis_data: &[f64],
-) -> (f64, f64, f64, f64) {
+) -> (T, T, f64, f64) {
     let (min_x_value, max_x_value) = x_axis_data.iter().fold(
         (f64::INFINITY, f64::NEG_INFINITY),
-        |(min_x, max_x), &value| (f64::min(min_x, value), f64::max(max_x, value)),
+        |(min_x, max_x), &value| (
+            f64::min(min_x, value.value()), f64::max(max_x, value.value())),
     );
     let (min_y_temp, max_y_temp) = y_axis_data.iter().fold(
         (f64::INFINITY, f64::NEG_INFINITY),
@@ -159,7 +161,7 @@ pub(crate) fn calculate_axis_range(
     let margin_value = adjusted_max_profit.max(adjusted_min_profit);
     let max_y_value = max_y_temp + margin_value;
     let min_y_value = min_y_temp - margin_value;
-    (max_x_value, min_x_value, max_y_value, min_y_value)
+    (T::from(max_x_value), T::from(min_x_value), max_y_value, min_y_value)
 }
 
 pub fn draw_points_on_chart<DB: DrawingBackend, X, Y>(
