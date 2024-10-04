@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+use std::ops::AddAssign;
+use crate::model::types::PositiveF64;
 
 pub enum FindOptimalSide {
     Upper,
@@ -16,7 +18,7 @@ pub(crate) enum OptimizationCriteria {
     Area,
 }
 
-pub(crate) fn calculate_price_range(start_price: f64, end_price: f64, step: f64) -> Vec<f64> {
+pub(crate) fn calculate_price_range(start_price: PositiveF64, end_price: PositiveF64, step: PositiveF64) -> Vec<PositiveF64> {
     let mut range = Vec::new();
     let mut current_price = start_price;
     while current_price <= end_price {
