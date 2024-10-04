@@ -1,5 +1,5 @@
 use crate::constants::ZERO;
-use crate::model::types::{OptionStyle, Side};
+use crate::model::types::{OptionStyle, PositiveF64, Side, PZERO};
 
 pub trait Payoff {
     fn payoff(&self, info: &PayoffInfo) -> f64;
@@ -18,8 +18,8 @@ pub trait Payoff {
 ///
 #[derive(Debug)]
 pub struct PayoffInfo {
-    pub spot: f64,
-    pub strike: f64,
+    pub spot: PositiveF64,
+    pub strike: PositiveF64,
     pub style: OptionStyle,
     pub side: Side,
     pub spot_prices: Option<Vec<f64>>, // Asian
@@ -30,8 +30,8 @@ pub struct PayoffInfo {
 impl Default for PayoffInfo {
     fn default() -> Self {
         PayoffInfo {
-            spot: ZERO,
-            strike: ZERO,
+            spot: PZERO,
+            strike: PZERO,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
