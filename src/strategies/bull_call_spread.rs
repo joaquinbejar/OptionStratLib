@@ -16,7 +16,7 @@ use crate::constants::{
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
@@ -49,7 +49,7 @@ impl BullCallSpread {
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: u32,
+        quantity: PositiveF64,
         premium_long_call: f64,
         premium_short_call: f64,
         open_fee_long_call: f64,
@@ -234,7 +234,7 @@ impl Strategies for BullCallSpread {
     fn break_even(&self) -> f64 {
         self.short_call.option.strike_price
             - self.calculate_profit_at(self.short_call.option.strike_price)
-                / self.long_call.option.quantity as f64
+                / self.long_call.option.quantity
     }
 
     fn calculate_profit_at(&self, price: f64) -> f64 {
@@ -357,6 +357,7 @@ impl Graph for BullCallSpread {
 mod tests_create_bull_call_spread {
     use super::*;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use approx::assert_relative_eq;
 
     fn create_sample_bull_call_spread() -> BullCallSpread {
@@ -369,7 +370,7 @@ mod tests_create_bull_call_spread {
             0.2,
             0.0,
             0.0,
-            1,
+            pos!(1.0),
             5.71,
             5.71,
             1.0,
@@ -448,6 +449,7 @@ mod tests_create_bull_call_spread {
 mod tests_create_bull_call_spread_gold {
     use super::*;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use approx::assert_relative_eq;
 
     fn create_sample_bull_call_spread() -> BullCallSpread {
@@ -460,7 +462,7 @@ mod tests_create_bull_call_spread_gold {
             0.2,
             0.05,
             0.0,
-            2,
+            pos!(2.0),
             27.26,
             5.33,
             0.58,

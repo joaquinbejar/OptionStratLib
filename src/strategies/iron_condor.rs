@@ -12,7 +12,7 @@ Key characteristics:
 use super::base::{Strategies, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
@@ -48,7 +48,7 @@ impl IronCondor {
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: u32,
+        quantity: PositiveF64,
         premium_short_call: f64,
         premium_short_put: f64,
         premium_long_call: f64,
@@ -209,11 +209,11 @@ impl Strategies for IronCondor {
     fn max_loss(&self) -> f64 {
         let call_wing_width = (self.long_call.option.strike_price
             - self.short_call.option.strike_price)
-            * (self.long_call.option.quantity as f64)
+            * self.long_call.option.quantity
             - self.net_premium_received();
         let put_wing_width = (self.short_put.option.strike_price
             - self.long_put.option.strike_price)
-            * (self.short_put.option.quantity as f64)
+            * self.short_put.option.quantity
             - self.net_premium_received();
 
         call_wing_width.max(put_wing_width)
@@ -306,33 +306,8 @@ impl Graph for IronCondor {
 #[cfg(test)]
 mod tests_iron_condor {
     use super::*;
+    use crate::model::types::SIZE_ONE;
     use chrono::{TimeZone, Utc};
-
-    // fn create_mock_position(strike: f64, style: OptionStyle, side: Side) -> Position {
-    //     let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
-    //     let option = Options {
-    //         option_type: OptionType::European,
-    //         side,
-    //         underlying_symbol: "AAPL".to_string(),
-    //         strike_price: strike,
-    //         expiration_date: ExpirationDate::DateTime(date),
-    //         implied_volatility: 0.2,
-    //         quantity: 1,
-    //         underlying_price: 150.0,
-    //         risk_free_rate: 0.01,
-    //         option_style: style,
-    //         dividend_yield: 0.02,
-    //         exotic_params: None,
-    //     };
-    //
-    //     Position {
-    //         option,
-    //         premium: strike * 0.01,
-    //         date: Utc::now(),
-    //         open_fee: 2.0,
-    //         close_fee: 2.0,
-    //     }
-    // }
 
     #[test]
     fn test_iron_condor_creation() {
@@ -348,7 +323,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            1,
+            SIZE_ONE,
             1.5,
             1.0,
             2.0,
@@ -381,7 +356,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            1,
+            SIZE_ONE,
             1.5,
             1.0,
             2.0,
@@ -407,7 +382,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            1,
+            SIZE_ONE,
             1.5,
             1.0,
             2.0,
@@ -434,7 +409,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            1,
+            SIZE_ONE,
             1.5,
             1.0,
             2.0,
@@ -460,7 +435,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            1,
+            SIZE_ONE,
             1.5,
             1.0,
             2.0,
@@ -494,7 +469,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            1,
+            SIZE_ONE,
             1.5,
             1.0,
             2.0,

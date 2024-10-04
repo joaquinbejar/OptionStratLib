@@ -27,10 +27,11 @@
     This strategy is often used by investors who are moderately bullish on an asset but wish to reduce the cost
     and risk associated with traditional covered call strategies.
 */
+
 use super::base::{Strategies, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
@@ -63,7 +64,7 @@ impl PoorMansCoveredCall {
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: u32,
+        quantity: PositiveF64,
         premium_long_call: f64,
         premium_short_call: f64,
         open_fee_long_call: f64,
@@ -130,7 +131,7 @@ impl PoorMansCoveredCall {
 
         // Calculate break-even point
         let net_debit =
-            (strategy.long_call.max_loss() - strategy.short_call.max_profit()) / quantity as f64;
+            (strategy.long_call.max_loss() - strategy.short_call.max_profit()) / quantity;
         strategy
             .break_even_points
             .push(long_call_strike + net_debit);
@@ -177,9 +178,9 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn fees(&self) -> f64 {
-        (self.long_call.open_fee + self.long_call.close_fee) * self.long_call.option.quantity as f64
+        (self.long_call.open_fee + self.long_call.close_fee) * self.long_call.option.quantity
             + (self.short_call.open_fee + self.short_call.close_fee)
-                * self.short_call.option.quantity as f64
+                * self.short_call.option.quantity
     }
 
     fn profit_area(&self) -> f64 {

@@ -90,14 +90,14 @@ impl SPANMargin {
         let scenario_price = scenario_option.calculate_price_black_scholes();
 
         (scenario_price - current_price)
-            * option.quantity as f64
+            * option.quantity
             * if option.is_short() { -1.0 } else { 1.0 }
     }
 
     fn calculate_short_option_minimum(&self, position: &Position) -> f64 {
         let option = &position.option;
         if option.is_short() {
-            self.short_option_minimum * option.underlying_price * option.quantity as f64
+            self.short_option_minimum * option.underlying_price * option.quantity
         } else {
             0.0
         }
@@ -107,8 +107,10 @@ impl SPANMargin {
 #[cfg(test)]
 mod tests_span {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use chrono::Utc;
     use tracing::info;
@@ -116,7 +118,8 @@ mod tests_span {
     #[test]
     fn test_span_margin() {
         setup_logger();
-        let option = create_sample_option(OptionStyle::Call, Side::Short, 155.0, 1, 150.0, 0.2);
+        let option =
+            create_sample_option(OptionStyle::Call, Side::Short, 155.0, pos!(1.0), 150.0, 0.2);
 
         let position = Position {
             option,

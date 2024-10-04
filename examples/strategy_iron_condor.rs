@@ -1,4 +1,6 @@
 use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::PositiveF64;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::utils::logger::setup_logger;
@@ -19,16 +21,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         2800.0,           // long_call_strike
         2500.0,           // long_put_strike
         ExpirationDate::Days(30.0),
-        0.1548, // implied_volatility
-        0.05,   // risk_free_rate
-        0.0,    // dividend_yield
-        2,      // quantity
-        38.8,   // premium_short_call
-        30.4,   // premium_short_put
-        23.3,   // premium_long_call
-        16.8,   // premium_long_put
-        0.96,   // open_fee
-        0.96,   // close_fee
+        0.1548,    // implied_volatility
+        0.05,      // risk_free_rate
+        0.0,       // dividend_yield
+        pos!(2.0), // quantity
+        38.8,      // premium_short_call
+        30.4,      // premium_short_put
+        23.3,      // premium_long_call
+        16.8,      // premium_long_put
+        0.96,      // open_fee
+        0.96,      // close_fee
     );
 
     let price_range: Vec<f64> = (2450..=2950).map(|x| x as f64).collect();

@@ -14,7 +14,8 @@ use super::base::{Strategies, StrategyType};
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
@@ -46,7 +47,7 @@ impl ShortStrangle {
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: u32,
+        quantity: PositiveF64,
         premium_short_call: f64,
         premium_short_put: f64,
         open_fee_short_call: f64,
@@ -109,8 +110,7 @@ impl ShortStrangle {
         );
         strategy.add_leg(short_put.clone());
 
-        let net_quantity =
-            (short_call.option.quantity as f64 + short_put.option.quantity as f64) / 2.0;
+        let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
         strategy
             .break_even_points
             .push(put_strike - strategy.net_premium_received() / net_quantity);
@@ -304,7 +304,7 @@ impl LongStrangle {
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: u32,
+        quantity: PositiveF64,
         premium_long_call: f64,
         premium_long_put: f64,
         open_fee_long_call: f64,
@@ -367,8 +367,7 @@ impl LongStrangle {
         );
         strategy.add_leg(long_put.clone());
 
-        let net_quantity =
-            (long_call.option.quantity as f64 + long_put.option.quantity as f64) / 2.0;
+        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
 
         strategy
             .break_even_points
@@ -522,6 +521,7 @@ impl Graph for LongStrangle {
 #[cfg(test)]
 mod tests_short_strangle {
     use super::*;
+    use crate::pos;
 
     fn setup() -> ShortStrangle {
         ShortStrangle::new(
@@ -533,7 +533,7 @@ mod tests_short_strangle {
             0.2,
             0.01,
             0.02,
-            100,
+            pos!(100.0),
             2.0,
             1.5,
             0.1,
@@ -636,6 +636,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
 #[cfg(test)]
 mod tests_long_strangle {
     use super::*;
+    use crate::pos;
 
     #[test]
     fn test_long_strangle_new() {
@@ -647,7 +648,7 @@ mod tests_long_strangle {
         let implied_volatility = 0.25;
         let risk_free_rate = 0.01;
         let dividend_yield = 0.02;
-        let quantity = 10;
+        let quantity = pos!(10.0);
         let premium_long_call = 5.0;
         let premium_long_put = 5.0;
         let open_fee_long_call = 0.5;
@@ -717,7 +718,7 @@ mod tests_long_strangle {
         let implied_volatility = 0.25;
         let risk_free_rate = 0.01;
         let dividend_yield = 0.02;
-        let quantity = 10;
+        let quantity = pos!(10.0);
         let premium_long_call = 5.0;
         let premium_long_put = 5.0;
         let open_fee_long_call = 0.5;

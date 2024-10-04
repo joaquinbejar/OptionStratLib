@@ -6,6 +6,8 @@
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::chain::OptionChain;
 use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::PositiveF64;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -26,18 +28,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         ZERO,             // long_strike_otm
         ZERO,             // short_strike
         ExpirationDate::Days(2.0),
-        ZERO, // implied_volatility
-        0.05, // risk_free_rate
-        ZERO, // dividend_yield
-        2,    // long quantity
-        4,    // short_quantity
-        ZERO, // premium_long_itm
-        ZERO, // premium_long_otm
-        ZERO, // premium_short
-        0.78, // open_fee_long
-        0.78, // close_fee_long
-        0.73, // close_fee_short
-        0.73, // close_fee_short
+        ZERO,      // implied_volatility
+        0.05,      // risk_free_rate
+        ZERO,      // dividend_yield
+        pos!(2.0), // long quantity
+        pos!(4.0), // short_quantity
+        ZERO,      // premium_long_itm
+        ZERO,      // premium_long_otm
+        ZERO,      // premium_short
+        0.78,      // open_fee_long
+        0.78,      // close_fee_long
+        0.73,      // close_fee_short
+        0.73,      // close_fee_short
     );
 
     strategy.best_ratio(&option_chain, FindOptimalSide::Range(5700.0, 5900.0));

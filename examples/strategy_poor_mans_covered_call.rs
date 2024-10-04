@@ -5,6 +5,8 @@
 ******************************************************************************/
 
 use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::PositiveF64;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::utils::logger::setup_logger;
@@ -27,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.17,                        // implied_volatility
         0.05,                        // risk_free_rate
         0.0,                         // dividend_yield
-        2,                           // quantity
+        pos!(2.0),                   // quantity
         154.7,                       // premium_short_call
         30.8,                        // premium_short_put
         1.74,                        // open_fee_short_call

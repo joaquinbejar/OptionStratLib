@@ -4,7 +4,8 @@
    Date: 21/8/24
 ******************************************************************************/
 use crate::model::option::Options;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
 use chrono::{NaiveDateTime, TimeZone, Utc};
 
 #[allow(dead_code)]
@@ -12,7 +13,7 @@ pub(crate) fn create_sample_option(
     option_style: OptionStyle,
     side: Side,
     underlying_price: f64,
-    quantity: u32,
+    quantity: PositiveF64,
     strike_price: f64,
     volatility: f64,
 ) -> Options {
@@ -37,7 +38,7 @@ pub(crate) fn create_sample_option_with_date(
     option_style: OptionStyle,
     side: Side,
     underlying_price: f64,
-    quantity: u32,
+    quantity: PositiveF64,
     strike_price: f64,
     volatility: f64,
     naive_date: NaiveDateTime,
@@ -67,7 +68,7 @@ pub(crate) fn create_sample_option_simplest(option_style: OptionStyle, side: Sid
         100.0,
         ExpirationDate::Days(30.0),
         0.2,
-        1,
+        pos!(1.0),
         100.0,
         0.05,
         option_style,
