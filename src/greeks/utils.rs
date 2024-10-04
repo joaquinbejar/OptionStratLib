@@ -6,7 +6,6 @@
 use crate::constants::ZERO;
 use crate::model::option::Options;
 use crate::model::types::{PositiveF64, PZERO};
-use crate::utils::decimal::FloatLike;
 use core::f64;
 use num_traits::Float;
 use statrs::distribution::{ContinuousCDF, Normal};
@@ -36,13 +35,13 @@ use std::f64::consts::PI;
 /// # Qualifications
 ///
 /// This function requires that the generic type `T` implements the `Float` trait, which provides the methods `T::infinity()`, `T::neg_infinity()`, and `T::zero()`. These methods return positive infinity, negative infinity, and zero respectively, appropriate to the type `T`.
-fn handle_zero<T: FloatLike>(underlying_price: T, strike_price: T) -> T {
+fn handle_zero(underlying_price: PositiveF64, strike_price: PositiveF64) -> f64 {
     if underlying_price > strike_price {
-        T::infinity()
+        f64::INFINITY
     } else if underlying_price < strike_price {
-        T::neg_infinity()
+        f64::NEG_INFINITY
     } else {
-        T::zero()
+        ZERO
     }
 }
 
@@ -80,16 +79,16 @@ pub(crate) fn d1(
     }
 
     if implied_volatility == ZERO || expiration_date == ZERO {
-        return handle_zero(underlying_price.value(), strike_price.value());
+        return handle_zero(underlying_price, strike_price);
     }
 
-    let implied_volatility_squared = implied_volatility.pow_two();
-    let ln_price_ratio = (underlying_price / strike_price).ln();
+    let implied_volatility_squared = implied_volatility.powi(2);
+    let ln_price_ratio = (underlying_price / strike_price).value().ln();
     let rate_vol_term = risk_free_rate + implied_volatility_squared / 2.0;
     let numerator = ln_price_ratio + rate_vol_term * expiration_date;
     let denominator = implied_volatility * expiration_date.sqrt();
 
-    (numerator / denominator).value()
+    numerator / denominator
 }
 
 /// Calculates the d2 value commonly used in financial mathematics, specifically in
@@ -133,7 +132,7 @@ pub(crate) fn d2(
     implied_volatility: f64,
 ) -> f64 {
     if implied_volatility == ZERO || expiration_date == ZERO {
-        return handle_zero(underlying_price.value(), strike_price.value());
+        return handle_zero(underlying_price, strike_price);
     }
 
     let d1_value = d1(
@@ -254,10 +253,7 @@ where
 ///     - `d1_value`: The calculated d1 value.
 ///     - `d2_value`: The calculated d2 value.
 ///
-pub(crate) fn calculate_d_values<T>(option: &Options) -> (T, T)
-where
-    T: FloatLike + Clone,
-{
+pub(crate) fn calculate_d_values(option: &Options) -> (f64, f64) {
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
@@ -272,95 +268,47 @@ where
         option.expiration_date.get_years(),
         option.implied_volatility,
     );
-    (T::get(d1_value), T::get(d2_value))
+    (d1_value, d2_value)
 }
 
 #[cfg(test)]
 mod tests_handle_zero {
     use super::*;
-    use rust_decimal::Decimal;
-    use std::str::FromStr;
-
-    #[test]
-    fn test_underlying_greater_than_strike() {
-        let underlying = Decimal::from_str("100.50").unwrap();
-        let strike = Decimal::from_str("100.00").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::infinity());
-    }
+    use crate::pos;
 
     #[test]
     fn test_underlying_greater_than_strike_f64() {
-        let underlying = 100.50;
-        let strike = 100.00;
-        assert_eq!(
-            handle_zero(underlying, strike),
-            <f64 as FloatLike>::infinity()
-        );
-    }
-
-    #[test]
-    fn test_underlying_less_than_strike() {
-        let underlying = Decimal::from_str("99.50").unwrap();
-        let strike = Decimal::from_str("100.00").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::MIN);
+        let underlying = pos!(100.50);
+        let strike = pos!(100.0);
+        assert_eq!(handle_zero(underlying, strike), f64::INFINITY);
     }
 
     #[test]
     fn test_underlying_less_than_strike_f64() {
-        let underlying = 99.50;
-        let strike = 100.00;
-        assert_eq!(
-            handle_zero(underlying, strike),
-            <f64 as FloatLike>::neg_infinity()
-        );
-    }
-
-    #[test]
-    fn test_underlying_equal_to_strike() {
-        let underlying = Decimal::from_str("100.00").unwrap();
-        let strike = Decimal::from_str("100.00").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::ZERO);
+        let underlying = pos!(99.50);
+        let strike = pos!(100.0);
+        assert_eq!(handle_zero(underlying, strike), f64::NEG_INFINITY);
     }
 
     #[test]
     fn test_underlying_equal_to_strike_f64() {
-        let underlying = 100.00;
-        let strike = 100.00;
-        assert_eq!(handle_zero(underlying, strike), <f64 as FloatLike>::zero());
-    }
-
-    #[test]
-    fn test_with_large_numbers() {
-        let underlying = Decimal::from_str("1000000.01").unwrap();
-        let strike = Decimal::from_str("1000000.00").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::MAX);
+        let underlying = pos!(100.0);
+        let strike = pos!(100.00);
+        assert_eq!(handle_zero(underlying, strike), ZERO);
     }
 
     #[test]
     fn test_with_large_numbers_f64() {
-        let underlying = 1000000.01;
-        let strike = 1000000.00;
-        assert_eq!(
-            handle_zero(underlying, strike),
-            <f64 as FloatLike>::infinity()
-        );
-    }
-
-    #[test]
-    fn test_with_small_numbers() {
-        let underlying = Decimal::from_str("0.000001").unwrap();
-        let strike = Decimal::from_str("0.000002").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::MIN);
+        let underlying = pos!(1000000.01);
+        let strike = pos!(1000000.0);
+        assert_eq!(handle_zero(underlying, strike), f64::INFINITY);
     }
 
     #[test]
     fn test_with_small_numbers_f64() {
-        let underlying = 0.000001;
-        let strike = 0.000002;
-        assert_eq!(
-            handle_zero(underlying, strike),
-            <f64 as FloatLike>::neg_infinity()
-        );
+        let underlying = pos!(0.000001);
+        let strike = pos!(0.000002);
+        assert_eq!(handle_zero(underlying, strike), f64::NEG_INFINITY);
     }
 }
 
@@ -402,6 +350,7 @@ mod tests_src_greeks_utils {
     use crate::constants::ZERO;
     use crate::pos;
     use approx::assert_relative_eq;
+    use num_traits::abs;
     use statrs::distribution::ContinuousCDF;
     use statrs::distribution::Normal;
 
@@ -529,7 +478,7 @@ mod tests_src_greeks_utils {
         let expected_n_prime = 0.0;
         let computed_n_prime = n_prime(x);
         assert!(
-            FloatLike::abs(computed_n_prime - expected_n_prime) < 1e-10,
+            abs(computed_n_prime - expected_n_prime) < 1e-10,
             "n_prime function failed"
         );
 
@@ -591,7 +540,7 @@ mod calculate_d1_values {
         let expected_d1 = handle_zero(underlying_price, strike_price);
 
         // Assert that the calculated d1 is equal to the expected result
-        assert_relative_eq!(calculated_d1, expected_d1.value(), epsilon = 1e-4);
+        assert_relative_eq!(calculated_d1, expected_d1, epsilon = 1e-4);
     }
 
     #[test]
@@ -616,7 +565,7 @@ mod calculate_d1_values {
         let expected_d1 = handle_zero(underlying_price, strike_price);
 
         // Assert that the calculated d1 is equal to the expected result
-        assert_relative_eq!(calculated_d1, expected_d1.value(), epsilon = 1e-4);
+        assert_relative_eq!(calculated_d1, expected_d1, epsilon = 1e-4);
     }
 
     #[test]
@@ -774,7 +723,7 @@ mod calculate_d2_values {
         let expected_d2 = handle_zero(underlying_price, strike_price);
 
         // Assert that d2 is equal to the expected result from handle_zero
-        assert_relative_eq!(calculated_d2, expected_d2.value(), epsilon = 1e-4);
+        assert_relative_eq!(calculated_d2, expected_d2, epsilon = 1e-4);
     }
 
     #[test]
@@ -799,7 +748,7 @@ mod calculate_d2_values {
         let expected_d2 = handle_zero(underlying_price, strike_price);
 
         // Assert that d2 is equal to the expected result from handle_zero
-        assert_relative_eq!(calculated_d2, expected_d2.value(), epsilon = 1e-4);
+        assert_relative_eq!(calculated_d2, expected_d2, epsilon = 1e-4);
     }
 
     #[test]

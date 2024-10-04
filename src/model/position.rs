@@ -111,8 +111,10 @@ impl Position {
             Side::Long => ((current_option_price - self.premium - self.open_fee - self.close_fee)
                 * self.option.quantity)
                 .into(),
-            Side::Short => (self.premium - current_option_price - self.open_fee - self.close_fee)
-                * self.option.quantity,
+            Side::Short => {
+                (self.premium - current_option_price - self.open_fee - self.close_fee)
+                    * self.option.quantity
+            }
         }
     }
 

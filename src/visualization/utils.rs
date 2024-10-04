@@ -3,12 +3,15 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
-use crate::create_drawing_area;
-use crate::model::types::PositiveF64;
+use crate::constants::{DARK_GREEN, DARK_RED};
+use crate::model::types::{PositiveF64, PZERO};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::{create_drawing_area, pos};
 use plotters::backend::BitMapBackend;
 use plotters::element::{Circle, Text};
+use plotters::prelude::ChartBuilder;
+use plotters::prelude::BLACK;
 use plotters::prelude::{
     Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
     Ranged, WHITE,
@@ -54,10 +57,31 @@ macro_rules! configure_chart_and_draw_mesh {
     }};
 }
 
+// #[macro_export]
+// macro_rules! draw_line_segments {
+//     ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr) => {
+//         let mut last_point = None;
+//         for (&price, &value) in $x_axis_data.iter().zip($y_axis_data.iter()) {
+//             if let Some((last_price, last_profit)) = last_point {
+//                 let color = if value > 0.0 {
+//                     &$dark_green
+//                 } else {
+//                     &$dark_red
+//                 };
+//                 $chart.draw_series(LineSeries::new(
+//                     vec![(last_price, last_profit), (price, value)],
+//                     color,
+//                 ))?;
+//             }
+//             last_point = Some((price, value));
+//         }
+//     };
+// }
+
 #[macro_export]
 macro_rules! draw_line_segments {
-    ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr) => {
-        let mut last_point = None;
+    ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr) => {{
+        let mut last_point: Option<(PositiveF64, f64)> = None;  // Anotación de tipo explícita para last_point
         for (&price, &value) in $x_axis_data.iter().zip($y_axis_data.iter()) {
             if let Some((last_price, last_profit)) = last_point {
                 let color = if value > 0.0 {
@@ -65,51 +89,55 @@ macro_rules! draw_line_segments {
                 } else {
                     &$dark_red
                 };
-                $chart.draw_series(LineSeries::new(
-                    vec![(last_price, last_profit), (price, value)],
-                    color,
-                ))?;
+
+                let points: Vec<(f64, f64)> = vec![
+                    (last_price.value(), last_profit),
+                    (price.value(), value),
+                ];
+
+                $chart.draw_series(LineSeries::new(points, color))?;
             }
             last_point = Some((price, value));
         }
-    };
+         let _ = Ok::<(), Box<dyn std::error::Error>>(());
+    }};
 }
 
 pub trait Graph: Profit {
     fn graph(
         &self,
-        _x_axis_data: &[PositiveF64],
+        x_axis_data: &[PositiveF64],
         file_path: &str,
-        _title_size: u32,        // 15
+        title_size: u32,         // 15
         canvas_size: (u32, u32), // (1200, 800)
     ) -> Result<(), Box<dyn Error>> {
         // Generate profit values for each price in the data vector
-        // let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
+        let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
 
         // Determine the range for the X and Y axes
-        // let (max_x_value, min_x_value, max_y_value, min_y_value) =
-        //     calculate_axis_range(x_axis_data, &y_axis_data);
+        let (max_x_value, min_x_value, max_y_value, min_y_value) =
+            calculate_axis_range(x_axis_data, &y_axis_data);
 
         // Set up the drawing area with a 1200x800 pixel canvas
         let root = create_drawing_area!(file_path, canvas_size.0, canvas_size.1);
 
-        // let mut chart = build_chart!(
-        //     &root,
-        //     self.title(),
-        //     title_size,
-        //     min_x_value,
-        //     max_x_value,
-        //     min_y_value,
-        //     max_y_value
-        // );
+        let mut chart = build_chart!(
+            &root,
+            self.title(),
+            title_size,
+            min_x_value.value(),
+            max_x_value.value(),
+            min_y_value,
+            max_y_value
+        );
 
-        // configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value, max_x_value);
+        configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value.value(), max_x_value.value());
 
-        // draw_line_segments!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED);
+        draw_line_segments!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED);
 
         // TODO: fix this
-        // draw_points_on_chart(&mut chart, &self.get_points())?;
-        // draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
+        draw_points_on_chart(&mut chart, &self.get_points())?;
+        draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
         root.present()?;
         Ok(())
     }
@@ -147,26 +175,27 @@ pub trait Graph: Profit {
 /// * `max_y_value` - The maximum value in `y_axis_data`, adjusted to include a margin.
 /// * `min_y_value` - The minimum value in `y_axis_data`, adjusted to include a margin.
 ///
-// pub(crate) fn calculate_axis_range<T>(
-//     x_axis_data: &[T],
-//     y_axis_data: &[f64],
-// ) -> (T, T, f64, f64) {
-//     let (min_x_value, max_x_value) = x_axis_data.iter().fold(
-//         (f64::INFINITY, f64::NEG_INFINITY),
-//         |(min_x, max_x), &value| (
-//             f64::min(min_x, value.value()), f64::max(max_x, value.value())),
-//     );
-//     let (min_y_temp, max_y_temp) = y_axis_data.iter().fold(
-//         (f64::INFINITY, f64::NEG_INFINITY),
-//         |(min_y, max_y), &value| (f64::min(min_y, value), f64::max(max_y, value)),
-//     );
-//     let adjusted_max_profit = (max_y_temp * 1.2 - max_y_temp).abs();
-//     let adjusted_min_profit = (min_y_temp * 1.2 - min_y_temp).abs();
-//     let margin_value = adjusted_max_profit.max(adjusted_min_profit);
-//     let max_y_value = max_y_temp + margin_value;
-//     let min_y_value = min_y_temp - margin_value;
-//     (T::from(max_x_value), T::from(min_x_value), max_y_value, min_y_value)
-// }
+pub(crate) fn calculate_axis_range(
+    x_axis_data: &[PositiveF64],
+    y_axis_data: &[f64],
+) -> (PositiveF64, PositiveF64, f64, f64) {
+    let (min_x_value, max_x_value) = x_axis_data
+        .iter()
+        .fold((pos!(f64::INFINITY), PZERO), |(min_x, max_x), &value| {
+            (min_x.min(value), max_x.max(value))
+        });
+
+    let (min_y_temp, max_y_temp) = y_axis_data.iter().fold(
+        (f64::INFINITY, f64::NEG_INFINITY),
+        |(min_y, max_y), &value| (f64::min(min_y, value), f64::max(max_y, value)),
+    );
+    let adjusted_max_profit = (max_y_temp * 1.2 - max_y_temp).abs();
+    let adjusted_min_profit = (min_y_temp * 1.2 - min_y_temp).abs();
+    let margin_value = adjusted_max_profit.max(adjusted_min_profit);
+    let max_y_value = max_y_temp + margin_value;
+    let min_y_value = min_y_temp - margin_value;
+    (max_x_value, min_x_value, max_y_value, min_y_value)
+}
 
 pub fn draw_points_on_chart<DB: DrawingBackend, X, Y>(
     ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
