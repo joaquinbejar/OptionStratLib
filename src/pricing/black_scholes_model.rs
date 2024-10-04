@@ -174,7 +174,7 @@ mod tests_black_scholes {
     use super::*;
     use crate::greeks::utils::{d1, d2};
     use crate::model::option::Options;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, PZERO, SIZE_ONE};
     use approx::assert_relative_eq;
 
     fn mock_options_call() -> Options {
@@ -188,7 +188,7 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(3.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
-            quantity: 1,
+            quantity: SIZE_ONE,
             dividend_yield: ZERO,
             exotic_params: None,
         }
@@ -205,7 +205,7 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(365.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
-            quantity: 1,
+            quantity: SIZE_ONE,
             dividend_yield: ZERO,
 
             exotic_params: None,
@@ -223,9 +223,8 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(365.0), // 1 year from now
             option_style: OptionStyle::Put,
             underlying_symbol: "".to_string(),
-            quantity: 0,
+            quantity: PZERO,
             dividend_yield: ZERO,
-
             exotic_params: None,
         }
     }
@@ -293,7 +292,7 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(365.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
-            quantity: 1,
+            quantity: SIZE_ONE,
             dividend_yield: ZERO,
 
             exotic_params: None,
@@ -345,7 +344,7 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(365.0 / 4.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
-            quantity: 1,
+            quantity: SIZE_ONE,
             dividend_yield: ZERO,
 
             exotic_params: None,

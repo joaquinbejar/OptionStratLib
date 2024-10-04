@@ -556,7 +556,7 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use tracing::info;
@@ -569,7 +569,7 @@ mod tests_implied_volatility {
             100.0,
             ExpirationDate::Days(30.0),
             0.02, // initial implied volatility
-            1,
+            SIZE_ONE,
             100.0,
             0.05,
             OptionStyle::Call,
@@ -1041,8 +1041,9 @@ mod tests_interpolate_volatility_surface {
 
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds {
+
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
 
     fn create_test_option() -> Options {
         Options::new(
@@ -1051,10 +1052,10 @@ mod tests_uncertain_volatility_bounds {
             "TEST".to_string(),
             100.0, // strike price
             ExpirationDate::Days(30.0),
-            0.2,   // implied volatility
-            1,     // quantity
-            100.0, // underlying price
-            0.05,  // risk-free rate
+            0.2,      // implied volatility
+            SIZE_ONE, // quantity
+            100.0,    // underlying price
+            0.05,     // risk-free rate
             OptionStyle::Call,
             ZERO, // dividend yield
             None, // exotic params
@@ -1142,7 +1143,7 @@ mod tests_uncertain_volatility_bounds {
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds_side {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
     use approx::assert_relative_eq;
     use tracing::info;
 
@@ -1153,10 +1154,10 @@ mod tests_uncertain_volatility_bounds_side {
             "TEST".to_string(),
             100.0, // strike price
             ExpirationDate::Days(30.0),
-            0.2,   // implied volatility
-            1,     // quantity
-            100.0, // underlying price
-            0.05,  // risk-free rate
+            0.2,      // implied volatility
+            SIZE_ONE, // quantity
+            100.0,    // underlying price
+            0.05,     // risk-free rate
             option_style,
             ZERO, // dividend yield
             None, // exotic params

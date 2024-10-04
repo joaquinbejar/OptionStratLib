@@ -102,7 +102,7 @@ impl Strategy {
                     .unwrap();
                 long_call.option.strike_price
                     + (long_call.total_cost() - short_call.net_premium_received())
-                        / long_call.option.quantity as f64
+                        / long_call.option.quantity
             }
             StrategyType::BearCallSpread => ZERO,
             StrategyType::BullPutSpread => ZERO,
@@ -128,8 +128,8 @@ impl Strategy {
                     .iter()
                     .find(|leg| leg.option.side == Side::Short)
                     .unwrap();
-                let net_debit = (long_call.max_loss() - short_call.max_profit())
-                    / long_call.option.quantity as f64;
+                let net_debit =
+                    (long_call.max_loss() - short_call.max_profit()) / long_call.option.quantity;
                 long_call.option.strike_price + net_debit
             }
             StrategyType::CallButterfly => ZERO,

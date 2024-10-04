@@ -54,7 +54,9 @@ fn monte_carlo_option_pricing(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
     use approx::assert_relative_eq;
 
     fn create_test_option() -> Options {
@@ -65,7 +67,7 @@ mod tests {
             strike_price: 100.0,
             expiration_date: ExpirationDate::Days(365.0), // 1 year
             implied_volatility: 0.2,
-            quantity: 1,
+            quantity: pos!(1.0),
             underlying_price: 100.0,
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,

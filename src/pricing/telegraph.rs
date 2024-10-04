@@ -237,7 +237,7 @@ pub fn telegraph(
 #[cfg(test)]
 mod tests_telegraph_process_basis {
     use super::*;
-    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::types::{OptionStyle, OptionType, Side, PZERO, SIZE_ONE};
 
     #[test]
     fn test_telegraph_process_new() {
@@ -286,7 +286,7 @@ mod tests_telegraph_process_basis {
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
-            quantity: 1,
+            quantity: SIZE_ONE,
             exotic_params: None,
         };
 
@@ -309,12 +309,12 @@ mod tests_telegraph_process_basis {
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
-            quantity: 0,
+            quantity: PZERO,
             exotic_params: None,
         };
 
         let _price = telegraph(&option, 100, None, None);
-        // price is stochastic
+        // price is stochastic // TODO: Fix this
         // assert_relative_eq!(price, 0.0, epsilon = 0.0001);
     }
 
@@ -332,13 +332,13 @@ mod tests_telegraph_process_basis {
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
-            quantity: 0,
+            quantity: PZERO,
             exotic_params: None,
         };
 
         let _price_up = telegraph(&option, 100, Some(0.5), None);
         let _price_down = telegraph(&option, 100, None, Some(0.5));
-        // price is stochastic
+        // price is stochastic // TODO: Fix this
         // assert_relative_eq!(price_up, 0.0, epsilon = 0.0001);
         // assert_relative_eq!(price_down, 0.0, epsilon = 0.0001);
     }
@@ -347,7 +347,7 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
-    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::types::{OptionStyle, OptionType, Side, PZERO};
 
     // Helper function to create a mock Options struct
     fn create_mock_option() -> Options {
@@ -362,7 +362,7 @@ mod tests_telegraph_process_extended {
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
-            quantity: 0,
+            quantity: PZERO,
             exotic_params: None,
         }
     }

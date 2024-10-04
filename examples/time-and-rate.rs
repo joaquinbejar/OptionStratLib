@@ -6,7 +6,9 @@
 
 use optionstratlib::greeks::utils::big_n;
 use optionstratlib::model::option::Options;
+use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::pos;
 use optionstratlib::pricing::black_scholes_model::black_scholes;
 use optionstratlib::utils::logger::setup_logger;
 use rayon::prelude::*;
@@ -137,7 +139,7 @@ fn main() {
             opt.strike,
             ExpirationDate::Days(best_t * 365.0),
             opt.implied_volatility,
-            1,
+            pos!(1.0),
             s,
             best_r,
             OptionStyle::Call,

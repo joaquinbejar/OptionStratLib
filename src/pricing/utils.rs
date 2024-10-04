@@ -404,7 +404,7 @@ mod tests_utils {
 mod tests_probability_keep_under_strike {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PZERO, SIZE_ONE};
     use approx::assert_relative_eq;
     use tracing::info;
 
@@ -421,7 +421,7 @@ mod tests_probability_keep_under_strike {
             expiration_date: ExpirationDate::Days(365.0),
             implied_volatility: ZERO,
             underlying_symbol: "".to_string(),
-            quantity: 1,
+            quantity: SIZE_ONE,
             exotic_params: None,
         };
         let strike = Some(100.0);
@@ -447,7 +447,7 @@ mod tests_probability_keep_under_strike {
             expiration_date: ExpirationDate::Days(365.0),
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
-            quantity: 0,
+            quantity: PZERO,
             exotic_params: None,
         };
         let strike = None;
@@ -469,9 +469,9 @@ mod tests_probability_keep_under_strike {
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
             expiration_date: ExpirationDate::Days(365.0),
-            implied_volatility: ZERO, // Sin volatilidad
+            implied_volatility: ZERO,
             underlying_symbol: "".to_string(),
-            quantity: 0,
+            quantity: PZERO,
             exotic_params: None,
         };
         let strike = None;
@@ -495,7 +495,7 @@ mod tests_probability_keep_under_strike {
             expiration_date: ExpirationDate::Days(365.0),
             implied_volatility: 5.0, // Alta volatilidad
             underlying_symbol: "".to_string(),
-            quantity: 0,
+            quantity: PZERO,
             exotic_params: None,
         };
         let strike = None;
@@ -519,7 +519,7 @@ mod tests_probability_keep_under_strike {
             expiration_date: ExpirationDate::Days(ZERO),
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
-            quantity: 0,
+            quantity: PZERO,
             exotic_params: None,
         };
         let strike = None;

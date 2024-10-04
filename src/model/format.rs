@@ -295,7 +295,8 @@ impl fmt::Debug for Strategy {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::model::types::BarrierType;
+    use crate::model::types::{BarrierType, PositiveF64};
+    use crate::pos;
     use chrono::{NaiveDate, TimeZone, Utc};
 
     #[test]
@@ -312,7 +313,7 @@ mod tests_options {
             strike_price: 150.0,
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: 0.25,
-            quantity: 10,
+            quantity: pos!(10.0),
             underlying_price: 155.0,
             risk_free_rate: 0.01,
             option_style: OptionStyle::Call,
@@ -353,7 +354,7 @@ mod tests_options {
             strike_price: 150.0,
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: 0.25,
-            quantity: 10,
+            quantity: pos!(10.0),
             underlying_price: 155.0,
             risk_free_rate: 0.01,
             option_style: OptionStyle::Call,
@@ -397,7 +398,7 @@ mod tests_options {
             strike_price: 2000.0,
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: 0.30,
-            quantity: 5,
+            quantity: pos!(5.0),
             underlying_price: 1900.0,
             risk_free_rate: 0.015,
             option_style: OptionStyle::Call,
@@ -784,6 +785,8 @@ mod tests_option_type_display_debug {
 #[cfg(test)]
 mod tests_position_type_display_debug {
     use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::pos;
     use chrono::{DateTime, NaiveDate, TimeZone};
 
     fn get_option() -> (Options, DateTime<Utc>) {
@@ -800,7 +803,7 @@ mod tests_position_type_display_debug {
                 strike_price: 150.0,
                 expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
                 implied_volatility: 0.25,
-                quantity: 10,
+                quantity: pos!(10.0),
                 underlying_price: 155.0,
                 risk_free_rate: 0.01,
                 option_style: OptionStyle::Call,
@@ -879,7 +882,9 @@ mod tests_position_type_display_debug {
 #[cfg(test)]
 mod tests_strategy_type_display_debug {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::utils::create_sample_option_with_date;
+    use crate::pos;
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
 
@@ -899,7 +904,7 @@ mod tests_strategy_type_display_debug {
                         OptionStyle::Call,
                         Side::Long,
                         100.0,
-                        1,
+                        pos!(1.0),
                         100.0,
                         0.02,
                         naive_date,
@@ -914,7 +919,7 @@ mod tests_strategy_type_display_debug {
                         OptionStyle::Call,
                         Side::Short,
                         100.0,
-                        1,
+                        pos!(1.0),
                         100.0,
                         0.02,
                         naive_date,
@@ -952,7 +957,7 @@ mod tests_strategy_type_display_debug {
                         OptionStyle::Call,
                         Side::Long,
                         100.0,
-                        1,
+                        pos!(1.0),
                         110.0,
                         0.02,
                         naive_date,
@@ -967,7 +972,7 @@ mod tests_strategy_type_display_debug {
                         OptionStyle::Call,
                         Side::Short,
                         100.0,
-                        1,
+                        pos!(1.0),
                         110.0,
                         0.02,
                         naive_date,

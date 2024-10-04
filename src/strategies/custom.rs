@@ -312,8 +312,10 @@ impl Graph for CustomStrategy {
 #[cfg(test)]
 mod tests_custom_strategy {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
 
@@ -348,10 +350,10 @@ mod tests_custom_strategy {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            100.0, // underlying_price
-            1,     // quantity
-            100.0, // strike_price
-            0.2,   // volatility
+            100.0,     // underlying_price
+            pos!(1.0), // quantity
+            100.0,     // strike_price
+            0.2,       // volatility
         );
         let position = Position::new(option, 5.0, Default::default(), 0.0, 0.0); // premium
         strategy.add_leg(position);
@@ -369,10 +371,10 @@ mod tests_custom_strategy {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            100.0, // underlying_price
-            1,     // quantity
-            100.0, // strike_price
-            0.2,   // volatility
+            100.0,     // underlying_price
+            pos!(1.0), // quantity
+            100.0,     // strike_price
+            0.2,       // volatility
         );
         let position = Position::new(option, 5.0, Default::default(), 0.0, 0.0); // premium
         strategy.add_leg(position);
@@ -391,18 +393,18 @@ mod tests_custom_strategy {
         let call = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            100.0, // underlying_price
-            1,     // quantity
-            100.0, // strike_price
-            0.2,   // volatility
+            100.0,     // underlying_price
+            pos!(1.0), // quantity
+            100.0,     // strike_price
+            0.2,       // volatility
         );
         let put = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            100.0, // underlying_price
-            1,     // quantity
-            100.0, // strike_price
-            0.2,   // volatility
+            100.0,     // underlying_price
+            pos!(1.0), // quantity
+            100.0,     // strike_price
+            0.2,       // volatility
         );
         let position_call = Position::new(call, 5.0, Default::default(), 0.0, 0.0);
         let position_put = Position::new(put, 5.0, Default::default(), 0.0, 0.0);
@@ -429,10 +431,10 @@ mod tests_custom_strategy {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            100.0, // underlying_price
-            1,     // quantity
-            100.0, // strike_price
-            0.2,   // volatility
+            100.0,     // underlying_price
+            pos!(1.0), // quantity
+            100.0,     // strike_price
+            0.2,       // volatility
         );
         strategy
             .positions
@@ -446,8 +448,10 @@ mod tests_custom_strategy {
 #[cfg(test)]
 mod tests_strategy_trait {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
 
@@ -466,7 +470,8 @@ mod tests_strategy_trait {
     #[test]
     fn test_add_leg() {
         let mut strategy = create_test_strategy();
-        let option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
 
         strategy.add_leg(position.clone());
@@ -481,7 +486,8 @@ mod tests_strategy_trait {
         let mut strategy = create_test_strategy();
 
         // Add a long call
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -513,7 +519,8 @@ mod tests_strategy_trait {
         let mut strategy = create_test_strategy();
 
         // Add a long call
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -522,7 +529,8 @@ mod tests_strategy_trait {
             0.0,
         ));
 
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 90.0, 1, 90.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 90.0, pos!(1.0), 90.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -560,7 +568,8 @@ mod tests_strategy_trait {
         let mut strategy = create_test_strategy();
 
         // Add a long call
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 80.0, 1, 80.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 80.0, pos!(1.0), 80.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             11.0,
@@ -570,7 +579,8 @@ mod tests_strategy_trait {
         ));
 
         // Add a short put
-        let put_option = create_sample_option(OptionStyle::Put, Side::Long, 100.0, 1, 100.0, 0.2);
+        let put_option =
+            create_sample_option(OptionStyle::Put, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             put_option,
             11.0,
@@ -623,21 +633,21 @@ mod tests_strategy_trait {
 
         // Add multiple legs
         strategy.add_leg(Position::new(
-            create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2),
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2),
             1.0,
             Default::default(),
             0.0,
             0.0,
         ));
         strategy.add_leg(Position::new(
-            create_sample_option(OptionStyle::Call, Side::Short, 100.0, 1, 110.0, 0.2),
+            create_sample_option(OptionStyle::Call, Side::Short, 100.0, pos!(1.0), 110.0, 0.2),
             1.0,
             Default::default(),
             0.0,
             0.0,
         ));
         strategy.add_leg(Position::new(
-            create_sample_option(OptionStyle::Put, Side::Long, 90.0, 1, 90.0, 0.2),
+            create_sample_option(OptionStyle::Put, Side::Long, 90.0, pos!(1.0), 90.0, 0.2),
             1.0,
             Default::default(),
             0.0,
@@ -655,8 +665,10 @@ mod tests_strategy_trait {
 #[cfg(test)]
 mod tests_max_profit {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::pos;
 
     fn create_test_strategy() -> CustomStrategy {
         CustomStrategy::new(
@@ -674,7 +686,8 @@ mod tests_max_profit {
     fn test_max_profit_single_long_call() {
         let mut strategy = create_test_strategy();
 
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -691,7 +704,8 @@ mod tests_max_profit {
     fn test_max_profit_single_short_put() {
         let mut strategy = create_test_strategy();
 
-        let put_option = create_sample_option(OptionStyle::Put, Side::Short, 90.0, 1, 90.0, 0.2);
+        let put_option =
+            create_sample_option(OptionStyle::Put, Side::Short, 90.0, pos!(1.0), 90.0, 0.2);
         strategy.add_leg(Position::new(put_option, 1.0, Default::default(), 0.0, 0.0));
 
         let max_profit = strategy.max_profit();
@@ -702,7 +716,8 @@ mod tests_max_profit {
     fn test_max_profit_multi_leg_strategy() {
         let mut strategy = create_test_strategy();
 
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -711,7 +726,8 @@ mod tests_max_profit {
             0.0,
         ));
 
-        let put_option = create_sample_option(OptionStyle::Put, Side::Short, 90.0, 1, 90.0, 0.2);
+        let put_option =
+            create_sample_option(OptionStyle::Put, Side::Short, 90.0, pos!(1.0), 90.0, 0.2);
         strategy.add_leg(Position::new(put_option, 1.0, Default::default(), 0.0, 0.0));
 
         let max_profit = strategy.max_profit();
@@ -731,7 +747,8 @@ mod tests_max_profit {
         let mut strategy = create_test_strategy();
         strategy.step_by = 0.01;
 
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -748,9 +765,10 @@ mod tests_max_profit {
     fn test_max_profit_large_range() {
         let mut strategy = create_test_strategy();
 
-        let call_option_1 = create_sample_option(OptionStyle::Call, Side::Long, 50.0, 1, 50.0, 0.2);
+        let call_option_1 =
+            create_sample_option(OptionStyle::Call, Side::Long, 50.0, pos!(1.0), 50.0, 0.2);
         let call_option_2 =
-            create_sample_option(OptionStyle::Call, Side::Short, 50.0, 1, 150.0, 0.2);
+            create_sample_option(OptionStyle::Call, Side::Short, 50.0, pos!(1.0), 150.0, 0.2);
         strategy.add_leg(Position::new(
             call_option_1,
             1.0,
@@ -774,8 +792,10 @@ mod tests_max_profit {
 #[cfg(test)]
 mod tests_max_loss {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::pos;
 
     fn create_test_strategy() -> CustomStrategy {
         CustomStrategy::new(
@@ -793,7 +813,8 @@ mod tests_max_loss {
     fn test_max_loss_single_long_call() {
         let mut strategy = create_test_strategy();
 
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -810,7 +831,8 @@ mod tests_max_loss {
     fn test_max_loss_single_short_put() {
         let mut strategy = create_test_strategy();
 
-        let put_option = create_sample_option(OptionStyle::Put, Side::Short, 90.0, 1, 90.0, 0.2);
+        let put_option =
+            create_sample_option(OptionStyle::Put, Side::Short, 90.0, pos!(1.0), 90.0, 0.2);
         strategy.add_leg(Position::new(put_option, 1.0, Default::default(), 0.0, 0.0));
 
         let max_loss = strategy.max_loss();
@@ -821,7 +843,8 @@ mod tests_max_loss {
     fn test_max_loss_multi_leg_strategy() {
         let mut strategy = create_test_strategy();
 
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -830,7 +853,8 @@ mod tests_max_loss {
             0.0,
         ));
 
-        let put_option = create_sample_option(OptionStyle::Put, Side::Short, 90.0, 1, 90.0, 0.2);
+        let put_option =
+            create_sample_option(OptionStyle::Put, Side::Short, 90.0, pos!(1.0), 90.0, 0.2);
         strategy.add_leg(Position::new(put_option, 1.0, Default::default(), 0.0, 0.0));
 
         let max_loss = strategy.max_loss();
@@ -850,7 +874,8 @@ mod tests_max_loss {
         let mut strategy = create_test_strategy();
         strategy.step_by = 0.01;
 
-        let call_option = create_sample_option(OptionStyle::Call, Side::Long, 100.0, 1, 100.0, 0.2);
+        let call_option =
+            create_sample_option(OptionStyle::Call, Side::Long, 100.0, pos!(1.0), 100.0, 0.2);
         strategy.add_leg(Position::new(
             call_option,
             1.0,
@@ -867,9 +892,10 @@ mod tests_max_loss {
     fn test_max_loss_large_range() {
         let mut strategy = create_test_strategy();
 
-        let call_option_1 = create_sample_option(OptionStyle::Call, Side::Long, 50.0, 1, 50.0, 0.2);
+        let call_option_1 =
+            create_sample_option(OptionStyle::Call, Side::Long, 50.0, pos!(1.0), 50.0, 0.2);
         let call_option_2 =
-            create_sample_option(OptionStyle::Call, Side::Short, 50.0, 1, 150.0, 0.2);
+            create_sample_option(OptionStyle::Call, Side::Short, 50.0, pos!(1.0), 150.0, 0.2);
         strategy.add_leg(Position::new(
             call_option_1,
             1.0,

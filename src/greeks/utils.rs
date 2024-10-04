@@ -375,7 +375,9 @@ mod tests_handle_zero {
 mod tests_calculate_d_values {
     use super::*;
     use crate::constants::ZERO;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use approx::assert_relative_eq;
 
     #[test]
@@ -389,7 +391,7 @@ mod tests_calculate_d_values {
             risk_free_rate: 0.05,
             implied_volatility: 10.12,
             expiration_date: Default::default(),
-            quantity: 0,
+            quantity: pos!(ZERO),
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
             exotic_params: None,

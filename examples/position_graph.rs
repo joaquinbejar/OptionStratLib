@@ -6,7 +6,9 @@
 use chrono::Utc;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
+use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::pos;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 
@@ -18,7 +20,7 @@ fn create_sample_option() -> Options {
         100.0,
         ExpirationDate::Days(30.0),
         0.2,
-        10,
+        pos!(10.0),
         105.0,
         0.05,
         OptionStyle::Call,

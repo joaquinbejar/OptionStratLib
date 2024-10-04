@@ -1,6 +1,121 @@
 use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use chrono::{DateTime, Duration, Utc};
+use std::fmt;
+use std::ops::{Add, Div, Mul};
+
+pub const PZERO: PositiveF64 = PositiveF64(ZERO);
+pub const SIZE_ONE: PositiveF64 = PositiveF64(1.0);
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct PositiveF64(f64);
+
+#[macro_export]
+macro_rules! pos {
+    ($val:expr) => {
+        PositiveF64::new($val).unwrap()
+    };
+}
+
+impl PositiveF64 {
+    pub fn new(value: f64) -> Result<Self, String> {
+        if value >= ZERO {
+            Ok(PositiveF64(value))
+        } else {
+            Err(format!("Value must be positive, got {}", value))
+        }
+    }
+
+    pub fn value(&self) -> f64 {
+        self.0
+    }
+}
+
+impl From<PositiveF64> for f64 {
+    fn from(pos_f64: PositiveF64) -> Self {
+        pos_f64.0
+    }
+}
+
+impl PartialEq<f64> for PositiveF64 {
+    fn eq(&self, other: &f64) -> bool {
+        self.0 == *other
+    }
+}
+
+impl fmt::Display for PositiveF64 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::Debug for PositiveF64 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Add for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn add(self, other: PositiveF64) -> PositiveF64 {
+        PositiveF64(self.0 + other.0)
+    }
+}
+
+impl Div for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn div(self, other: PositiveF64) -> PositiveF64 {
+        PositiveF64(self.0 / other.0)
+    }
+}
+
+impl Div<f64> for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn div(self, rhs: f64) -> PositiveF64 {
+        PositiveF64(self.0 / rhs)
+    }
+}
+
+impl Mul<PositiveF64> for f64 {
+    type Output = f64;
+
+    fn mul(self, rhs: PositiveF64) -> f64 {
+        self * rhs.0
+    }
+}
+
+impl Mul for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn mul(self, other: PositiveF64) -> PositiveF64 {
+        PositiveF64(self.0 * other.0)
+    }
+}
+
+impl Mul<f64> for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn mul(self, rhs: f64) -> PositiveF64 {
+        PositiveF64(self.0 * rhs)
+    }
+}
+
+impl Default for PositiveF64 {
+    fn default() -> Self {
+        PositiveF64(ZERO)
+    }
+}
+
+impl Div<PositiveF64> for f64 {
+    type Output = f64;
+
+    fn div(self, rhs: PositiveF64) -> f64 {
+        self / rhs.0
+    }
+}
 
 #[allow(dead_code)]
 #[derive(Clone)]

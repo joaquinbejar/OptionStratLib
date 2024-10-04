@@ -11,7 +11,8 @@ use crate::constants::{
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
@@ -49,8 +50,8 @@ impl CallButterfly {
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        long_quantity: u32,
-        short_quantity: u32,
+        long_quantity: PositiveF64,
+        short_quantity: PositiveF64,
         premium_long_itm: f64,
         premium_long_otm: f64,
         premium_short: f64,
@@ -147,12 +148,12 @@ impl CallButterfly {
         let loss_at_otm_strike =
             strategy.calculate_profit_at(strategy.long_call_otm.option.strike_price);
 
-        let first_bep = strategy.long_call_itm.option.strike_price
-            - (loss_at_itm_strike / long_quantity as f64);
+        let first_bep =
+            strategy.long_call_itm.option.strike_price - (loss_at_itm_strike / long_quantity);
         strategy.break_even_points.push(first_bep);
 
-        let second_bep = strategy.long_call_otm.option.strike_price
-            + (loss_at_otm_strike / long_quantity as f64);
+        let second_bep =
+            strategy.long_call_otm.option.strike_price + (loss_at_otm_strike / long_quantity);
         strategy.break_even_points.push(second_bep);
 
         strategy
@@ -279,8 +280,8 @@ impl Default for CallButterfly {
             0.0,
             0.0,
             0.0,
-            1,
-            2,
+            pos!(1.0),
+            pos!(2.0),
             0.0,
             0.0,
             0.0,
@@ -341,8 +342,8 @@ impl Strategies for CallButterfly {
             + self.long_call_itm.close_fee
             + self.long_call_otm.open_fee
             + self.long_call_otm.close_fee
-            + self.short_call.open_fee * self.short_call.option.quantity as f64
-            + self.short_call.close_fee * self.short_call.option.quantity as f64
+            + self.short_call.open_fee * self.short_call.option.quantity
+            + self.short_call.close_fee * self.short_call.option.quantity
     }
 
     fn profit_area(&self) -> f64 {
@@ -381,7 +382,7 @@ impl Strategies for CallButterfly {
             error!("Underlying price must be greater than zero");
             return false;
         }
-        if self.short_call.option.quantity != self.long_call_itm.option.quantity * 2 {
+        if self.short_call.option.quantity != self.long_call_itm.option.quantity * 2.0 {
             error!("Short call quantity must be twice the long call quantity and currently is short: {} and long: {}",
                 self.short_call.option.quantity, self.long_call_itm.option.quantity);
             return false;
@@ -516,8 +517,8 @@ mod tests_call_butterfly {
             0.2,
             0.01,
             0.02,
-            1,
-            2,
+            pos!(1.0),
+            pos!(2.0),
             3.0,
             1.5,
             2.0,
