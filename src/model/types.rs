@@ -1,8 +1,11 @@
+use std::cmp::Ordering;
 use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use chrono::{DateTime, Duration, Utc};
 use std::fmt;
-use std::ops::{Add, Div, Mul};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Range, Sub};
+use plotters::coord::ranged1d::{DefaultFormatting, KeyPointHint};
+use plotters::prelude::Ranged;
 
 pub const PZERO: PositiveF64 = PositiveF64(ZERO);
 pub const SIZE_ONE: PositiveF64 = PositiveF64(1.0);
@@ -14,6 +17,13 @@ pub struct PositiveF64(f64);
 macro_rules! pos {
     ($val:expr) => {
         PositiveF64::new($val).unwrap()
+    };
+}
+
+#[macro_export]
+macro_rules! spos {
+    ($val:expr) => {
+        Some(PositiveF64::new($val).unwrap())
     };
 }
 
@@ -63,11 +73,33 @@ impl Add for PositiveF64 {
     }
 }
 
+impl Sub for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        PositiveF64(self.0 - rhs.0)
+    }
+}
+
 impl Div for PositiveF64 {
     type Output = PositiveF64;
 
     fn div(self, other: PositiveF64) -> PositiveF64 {
         PositiveF64(self.0 / other.0)
+    }
+}
+
+impl Add<f64> for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn add(self, rhs: f64) -> PositiveF64 {
+        PositiveF64(self.0 + rhs)
+    }
+}
+
+impl AddAssign for PositiveF64 {
+    fn add_assign(&mut self, other: PositiveF64) {
+        self.0 += other.0;
     }
 }
 
@@ -79,11 +111,25 @@ impl Div<f64> for PositiveF64 {
     }
 }
 
-impl Mul<PositiveF64> for f64 {
-    type Output = f64;
+impl PartialOrd for PositiveF64 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
 
-    fn mul(self, rhs: PositiveF64) -> f64 {
-        self * rhs.0
+    fn le(&self, other: &Self) -> bool {
+        self.0 <= other.0
+    }
+
+    fn ge(&self, other: &Self) -> bool {
+        self.0 >= other.0
+    }
+}
+
+impl Neg for PositiveF64 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        panic!("Cannot negate a PositiveF64 value!");
     }
 }
 
@@ -109,11 +155,36 @@ impl Default for PositiveF64 {
     }
 }
 
+
 impl Div<PositiveF64> for f64 {
     type Output = f64;
 
     fn div(self, rhs: PositiveF64) -> f64 {
         self / rhs.0
+    }
+}
+
+impl Sub<PositiveF64> for f64 {
+    type Output = f64;
+
+    fn sub(self, rhs: PositiveF64) -> Self::Output {
+        self - rhs.0
+    }
+}
+
+impl Mul<PositiveF64> for f64 {
+    type Output = f64;
+
+    fn mul(self, rhs: PositiveF64) -> f64 {
+        self * rhs.0
+    }
+}
+
+impl Add<PositiveF64> for f64 {
+    type Output = f64;
+
+    fn add(self, rhs: PositiveF64) -> f64 {
+        self + rhs.0
     }
 }
 
@@ -366,8 +437,8 @@ impl Payoff for OptionType {
             | OptionType::Exchange { .. } => standard_payoff(info),
             OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
             OptionType::Power { exponent } => match info.style {
-                OptionStyle::Call => (info.spot.powf(*exponent) - info.strike).max(ZERO),
-                OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(ZERO),
+                OptionStyle::Call => (info.spot.value().powf(*exponent) - info.strike).max(ZERO),
+                OptionStyle::Put => (info.strike - info.spot.value().powf(*exponent)).max(ZERO),
             },
         }
     }
@@ -386,7 +457,7 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
     };
     match info.style {
         OptionStyle::Call => (average - info.strike).max(ZERO),
-        OptionStyle::Put => (info.strike - average).max(ZERO),
+        OptionStyle::Put => (info.strike.value() - average).max(ZERO),
     }
 }
 
@@ -396,8 +467,8 @@ fn calculate_barrier_payoff(
     info: &PayoffInfo,
 ) -> f64 {
     let barrier_condition = match barrier_type {
-        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
-        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
+        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot.value() >= *barrier_level,
+        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot.value() <= *barrier_level,
     };
     let std_payoff = standard_payoff(info);
     match barrier_type {
@@ -433,7 +504,7 @@ fn calculate_binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> f64 {
         }
         BinaryType::AssetOrNothing => {
             if is_in_the_money {
-                info.spot
+                info.spot.value()
             } else {
                 0.0
             }
@@ -447,7 +518,7 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
         OptionStyle::Put => info.spot_max,
     };
     match info.style {
-        OptionStyle::Call => info.spot - extremum.unwrap_or(ZERO),
+        OptionStyle::Call => info.spot.value() - extremum.unwrap_or(ZERO),
         OptionStyle::Put => extremum.unwrap_or(ZERO) - info.spot,
     }
 }
@@ -460,8 +531,8 @@ mod tests_payoff {
     fn test_european_call() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: 110.0,
-            strike: 100.0,
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -473,8 +544,8 @@ mod tests_payoff {
     fn test_european_put() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: 90.0,
-            strike: 100.0,
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -488,8 +559,8 @@ mod tests_payoff {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 100.0,
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -505,8 +576,8 @@ mod tests_payoff {
             barrier_level: 120.0,
         };
         let info = PayoffInfo {
-            spot: 130.0,
-            strike: 100.0,
+            spot: pos!(130.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -520,8 +591,8 @@ mod tests_payoff {
             binary_type: BinaryType::CashOrNothing,
         };
         let info = PayoffInfo {
-            spot: 110.0,
-            strike: 100.0,
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -535,8 +606,8 @@ mod tests_payoff {
             lookback_type: LookbackType::FixedStrike,
         };
         let info = PayoffInfo {
-            spot: 90.0,
-            strike: 100.0,
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -548,8 +619,8 @@ mod tests_payoff {
     fn test_quanto_call() {
         let option = OptionType::Quanto { exchange_rate: 1.5 };
         let info = PayoffInfo {
-            spot: 110.0,
-            strike: 100.0,
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -561,8 +632,8 @@ mod tests_payoff {
     fn test_power_call() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
-            spot: 10.0,
-            strike: 90.0,
+            spot: pos!(10.0),
+            strike: pos!(90.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -693,8 +764,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0, // Not used in floating strike
+            spot: pos!(100.0),
+            strike: pos!(0.0), // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -707,8 +778,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -721,8 +792,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -735,8 +806,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -749,8 +820,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -763,8 +834,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
