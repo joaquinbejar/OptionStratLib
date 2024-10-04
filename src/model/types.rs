@@ -97,6 +97,14 @@ impl Add<f64> for PositiveF64 {
     }
 }
 
+impl Sub<f64> for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn sub(self, rhs: f64) -> PositiveF64 {
+        PositiveF64(self.0 - rhs)
+    }
+}
+
 impl AddAssign for PositiveF64 {
     fn add_assign(&mut self, other: PositiveF64) {
         self.0 += other.0;
