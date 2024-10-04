@@ -11,7 +11,7 @@ use crate::constants::{
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
@@ -31,21 +31,21 @@ pub struct CallButterfly {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<f64>,
+    pub break_even_points: Vec<PositiveF64>,
     long_call_itm: Position,
     long_call_otm: Position,
     short_call: Position,
-    underlying_price: f64,
+    underlying_price: PositiveF64,
 }
 
 impl CallButterfly {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: f64,
-        long_strike_itm: f64,
-        long_strike_otm: f64,
-        short_strike: f64,
+        underlying_price: PositiveF64,
+        long_strike_itm: PositiveF64,
+        long_strike_otm: PositiveF64,
+        short_strike: PositiveF64,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
@@ -272,10 +272,10 @@ impl Default for CallButterfly {
     fn default() -> Self {
         CallButterfly::new(
             "".to_string(),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            PZERO,
+            PZERO,
+            PZERO,
+            PZERO,
             ExpirationDate::Days(0.0),
             0.0,
             0.0,
@@ -307,11 +307,11 @@ impl Strategies for CallButterfly {
         }
     }
 
-    fn break_even(&self) -> f64 {
-        self.break_even_points[0]
+    fn break_even(&self) -> Vec<PositiveF64> {
+        self.break_even_points.clone()
     }
 
-    fn calculate_profit_at(&self, price: f64) -> f64 {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
         let long_call_itm_profit = self.long_call_itm.pnl_at_expiration(Some(price));
         let long_call_otm_profit = self.long_call_otm.pnl_at_expiration(Some(price));
         let short_call_profit = self.short_call.pnl_at_expiration(Some(price));
@@ -349,7 +349,7 @@ impl Strategies for CallButterfly {
     fn profit_area(&self) -> f64 {
         let range = self.short_call.option.strike_price - self.long_call_itm.option.strike_price;
         let max_profit = self.max_profit();
-        (range * max_profit / 2.0) / self.underlying_price * 100.0
+        (range.value() * max_profit / 2.0) / self.underlying_price * 100.0
     }
 
     fn profit_ratio(&self) -> f64 {
@@ -378,7 +378,7 @@ impl Strategies for CallButterfly {
         if !self.short_call.validate() {
             return false;
         }
-        if self.underlying_price <= 0.0 {
+        if self.underlying_price <= PZERO {
             error!("Underlying price must be greater than zero");
             return false;
         }
@@ -390,7 +390,7 @@ impl Strategies for CallButterfly {
         true
     }
 
-    fn best_range_to_show(&self, step: f64) -> Option<Vec<f64>> {
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
         let (first_option, last_option) = (
             self.long_call_itm.option.clone(),
             self.long_call_otm.option.clone(),
@@ -414,7 +414,7 @@ impl Graph for CallButterfly {
         )
     }
 
-    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+    fn get_values<T>(&self, data: &[T]) -> Vec<f64> {
         data.iter()
             .map(|&price| self.calculate_profit_at(price))
             .collect()
@@ -425,7 +425,7 @@ impl Graph for CallButterfly {
         let min_value = self.max_loss() * 1.4;
 
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price,
+            x_coordinate: self.short_call.option.underlying_price.value(),
             y_range: (min_value, max_value),
             label: format!(
                 "Current Price: {:.2}",
@@ -441,8 +441,8 @@ impl Graph for CallButterfly {
         vertical_lines
     }
 
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+    fn get_points(&self) -> Vec<ChartPoint<(PositiveF64, f64)>> {
+        let mut points: Vec<ChartPoint<(PositiveF64, f64)>> = Vec::new();
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0], 0.0),
@@ -509,10 +509,10 @@ mod tests_call_butterfly {
     fn setup() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            150.0,
-            155.0,
-            160.0,
-            157.5,
+            pos!(150.0),
+            pos!(155.0),
+            pos!(160.0),
+            pos!(157.5),
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
@@ -542,14 +542,14 @@ mod tests_call_butterfly {
     #[test]
     fn test_break_even() {
         let strategy = setup();
-        assert_eq!(strategy.break_even(), 156.1);
+        assert_eq!(strategy.break_even()[0], 156.1);
     }
 
     #[test]
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 157.0;
-        assert!(strategy.calculate_profit_at(price) > 0.0);
+        assert!(strategy.calculate_profit_at(pos!(price)) > 0.0);
     }
 
     #[test]
@@ -593,7 +593,7 @@ mod tests_call_butterfly {
         let data = vec![150.0, 155.0, 160.0, 165.0, 170.0];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(price));
+            assert_eq!(values[i], strategy.calculate_profit_at(pos!(price)));
         }
 
         let title = strategy.title();
