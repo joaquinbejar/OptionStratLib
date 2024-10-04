@@ -22,7 +22,7 @@ impl PositiveF64 {
         if value >= ZERO {
             Ok(PositiveF64(value))
         } else {
-            Err(format!("Value must be positive, got {}", value))
+            Err(format!("PositiveF64 value must be positive, got {}", value))
         }
     }
 
@@ -775,4 +775,112 @@ mod tests_calculate_floating_strike_payoff {
     }
 }
 
+#[cfg(test)]
+mod tests_positive_f64 {
+    use super::*;
+    use std::panic;
 
+    #[test]
+    fn test_positive_f64_creation() {
+        assert!(PositiveF64::new(0.0).is_ok());
+        assert!(PositiveF64::new(1.0).is_ok());
+        assert!(PositiveF64::new(-1.0).is_err());
+    }
+
+    #[test]
+    fn test_positive_f64_value() {
+        let pos = PositiveF64::new(5.0).unwrap();
+        assert_eq!(pos.value(), 5.0);
+    }
+
+    #[test]
+    fn test_positive_f64_from() {
+        let pos = PositiveF64::new(3.0).unwrap();
+        let f: f64 = pos.into();
+        assert_eq!(f, 3.0);
+    }
+
+    #[test]
+    fn test_positive_f64_eq() {
+        let pos = PositiveF64::new(2.0).unwrap();
+        assert_eq!(pos, 2.0);
+        assert_ne!(pos, 3.0);
+    }
+
+    #[test]
+    fn test_positive_f64_display() {
+        let pos = PositiveF64::new(4.5).unwrap();
+        assert_eq!(format!("{}", pos), "4.5");
+    }
+
+    #[test]
+    fn test_positive_f64_debug() {
+        let pos = PositiveF64::new(4.5).unwrap();
+        assert_eq!(format!("{:?}", pos), "4.5");
+    }
+
+    #[test]
+    fn test_positive_f64_add() {
+        let a = PositiveF64::new(2.0).unwrap();
+        let b = PositiveF64::new(3.0).unwrap();
+        assert_eq!((a + b).value(), 5.0);
+    }
+
+    #[test]
+    fn test_positive_f64_div() {
+        let a = PositiveF64::new(6.0).unwrap();
+        let b = PositiveF64::new(2.0).unwrap();
+        assert_eq!((a / b).value(), 3.0);
+    }
+
+    #[test]
+    fn test_positive_f64_div_f64() {
+        let a = PositiveF64::new(6.0).unwrap();
+        assert_eq!((a / 2.0).value(), 3.0);
+    }
+
+    #[test]
+    fn test_f64_mul_positive_f64() {
+        let a = 2.0;
+        let b = PositiveF64::new(3.0).unwrap();
+        assert_eq!(a * b, 6.0);
+    }
+
+    #[test]
+    fn test_positive_f64_mul() {
+        let a = PositiveF64::new(2.0).unwrap();
+        let b = PositiveF64::new(3.0).unwrap();
+        assert_eq!((a * b).value(), 6.0);
+    }
+
+    #[test]
+    fn test_positive_f64_mul_f64() {
+        let a = PositiveF64::new(2.0).unwrap();
+        assert_eq!((a * 3.0).value(), 6.0);
+    }
+
+    #[test]
+    fn test_positive_f64_default() {
+        assert_eq!(PositiveF64::default().value(), 0.0);
+    }
+
+    #[test]
+    fn test_f64_div_positive_f64() {
+        let a = 6.0;
+        let b = PositiveF64::new(2.0).unwrap();
+        assert_eq!(a / b, 3.0);
+    }
+
+    #[test]
+    fn test_pos_macro() {
+        assert_eq!(pos!(5.0).value(), 5.0);
+        let result = panic::catch_unwind(|| pos!(-1.0));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_constants() {
+        assert_eq!(PZERO.value(), 0.0);
+        assert_eq!(SIZE_ONE.value(), 1.0);
+    }
+}
