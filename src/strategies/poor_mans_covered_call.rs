@@ -29,14 +29,15 @@
 */
 
 use super::base::{Strategies, StrategyType};
+use crate::constants::ZERO;
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, BLACK};
-use crate::spos;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -156,11 +157,6 @@ impl Strategies for PoorMansCoveredCall {
         self.break_even_points.clone()
     }
 
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
-        self.long_call.pnl_at_expiration(Some(price))
-            + self.short_call.pnl_at_expiration(Some(price))
-    }
-
     fn max_profit(&self) -> f64 {
         let max_profit_price = self.short_call.option.strike_price;
         self.calculate_profit_at(max_profit_price)
@@ -186,6 +182,13 @@ impl Strategies for PoorMansCoveredCall {
 
     fn profit_area(&self) -> f64 {
         f64::INFINITY
+    }
+}
+
+impl Profit for PoorMansCoveredCall {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+        let price = Some(price);
+        self.long_call.pnl_at_expiration(&price) + self.short_call.pnl_at_expiration(&price)
     }
 }
 
@@ -218,15 +221,9 @@ impl Graph for PoorMansCoveredCall {
         }
     }
 
-    fn get_values<T>(&self, data: &[T]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<PositiveF64, f64>> {
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: PZERO, // TODO: underlying price
+            x_coordinate: ZERO, // TODO: underlying price
             y_range: (-50000.0, 50000.0),
             label: "Break Even".to_string(),
             label_offset: (5.0, 5.0),

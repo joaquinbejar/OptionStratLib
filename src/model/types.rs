@@ -1,12 +1,12 @@
-use std::cmp::Ordering;
 use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
+use approx::{AbsDiffEq, RelativeEq};
 use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::cmp::Ordering;
 use std::fmt;
-use std::ops::{Add, AddAssign, Div, Mul, Neg, Range, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
-use plotters::coord::ranged1d::{DefaultFormatting, KeyPointHint};
-use plotters::prelude::Ranged;
 
 pub const PZERO: PositiveF64 = PositiveF64(ZERO);
 pub const SIZE_ONE: PositiveF64 = PositiveF64(1.0);
@@ -40,6 +40,22 @@ impl PositiveF64 {
     pub fn value(&self) -> f64 {
         self.0
     }
+
+    pub fn max(self, other: PositiveF64) -> PositiveF64 {
+        if self.0 > other.0 {
+            self
+        } else {
+            other
+        }
+    }
+
+    pub fn min(self, other: PositiveF64) -> PositiveF64 {
+        if self.0 < other.0 {
+            self
+        } else {
+            other
+        }
+    }
 }
 
 impl From<PositiveF64> for f64 {
@@ -63,6 +79,25 @@ impl fmt::Display for PositiveF64 {
 impl fmt::Debug for PositiveF64 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl Serialize for PositiveF64 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_f64(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for PositiveF64 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = f64::deserialize(deserializer)?;
+        PositiveF64::new(value).map_err(serde::de::Error::custom)
     }
 }
 
@@ -109,6 +144,12 @@ impl Sub<f64> for PositiveF64 {
 impl AddAssign for PositiveF64 {
     fn add_assign(&mut self, other: PositiveF64) {
         self.0 += other.0;
+    }
+}
+
+impl MulAssign<f64> for PositiveF64 {
+    fn mul_assign(&mut self, rhs: f64) {
+        self.0 *= rhs;
     }
 }
 
@@ -176,6 +217,45 @@ impl FromStr for PositiveF64 {
     }
 }
 
+impl From<f64> for PositiveF64 {
+    fn from(value: f64) -> Self {
+        PositiveF64::new(value).expect("Value must be positive")
+    }
+}
+
+// impl Into<f64> for PositiveF64 {
+//     fn into(self) -> f64 {
+//         self.0
+//     }
+// }
+
+impl AbsDiffEq for PositiveF64 {
+    type Epsilon = f64;
+
+    fn default_epsilon() -> Self::Epsilon {
+        f64::default_epsilon()
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        f64::abs_diff_eq(&self.0, &other.0, epsilon)
+    }
+}
+
+impl RelativeEq for PositiveF64 {
+    fn default_max_relative() -> Self::Epsilon {
+        f64::default_max_relative()
+    }
+
+    fn relative_eq(
+        &self,
+        other: &Self,
+        epsilon: Self::Epsilon,
+        max_relative: Self::Epsilon,
+    ) -> bool {
+        f64::relative_eq(&self.0, &other.0, epsilon, max_relative)
+    }
+}
+
 impl Div<PositiveF64> for f64 {
     type Output = f64;
 
@@ -207,6 +287,12 @@ impl Add<PositiveF64> for f64 {
         self + rhs.0
     }
 }
+
+// impl Into<PositiveF64> for f64 {
+//     fn into(self) -> f64 {
+//         self.value()
+//     }
+// }
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -448,9 +534,9 @@ impl Payoff for OptionType {
                 LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
             },
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
-            OptionType::Chooser { .. } => {
-                ((info.spot - info.strike).max(ZERO)).max((info.strike - info.spot).max(ZERO))
-            }
+            OptionType::Chooser { .. } => ((info.spot - info.strike).max(PZERO))
+                .max((info.strike - info.spot).max(PZERO))
+                .value(),
             OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
@@ -458,7 +544,9 @@ impl Payoff for OptionType {
             OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
             OptionType::Power { exponent } => match info.style {
                 OptionStyle::Call => (info.spot.value().powf(*exponent) - info.strike).max(ZERO),
-                OptionStyle::Put => (info.strike - info.spot.value().powf(*exponent)).max(ZERO),
+                OptionStyle::Put => (info.strike - info.spot.value().powf(*exponent))
+                    .max(PZERO)
+                    .value(),
             },
         }
     }

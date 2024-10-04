@@ -3,17 +3,11 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-
-use crate::constants::ZERO;
 use crate::model::chain::OptionChain;
 use crate::model::position::Position;
-use crate::model::types::{PositiveF64, Side, PZERO};
+use crate::model::types::PositiveF64;
 use crate::strategies::utils::FindOptimalSide;
-use crate::visualization::model::ChartVerticalLine;
-use crate::visualization::utils::Graph;
 use num_traits::Float;
-use plotters::prelude::{ShapeStyle, BLACK};
-use crate::spos;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -100,46 +94,38 @@ impl Strategy {
     // }
 }
 
-impl Graph for Strategy {
-    fn title(&self) -> String {
-        let strategy_title = format!("Strategy: {} - {:?}", self.name, self.kind);
-        let leg_titles: Vec<String> = self.legs.iter().map(|leg| leg.title()).collect();
-
-        if leg_titles.is_empty() {
-            strategy_title
-        } else {
-            format!("{}\n{}", strategy_title, leg_titles.join("\n"))
-        }
-    }
-
-    fn get_values<T>(&self, data: &[T]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<PositiveF64, f64>> {
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: PZERO,
-            y_range: (-50000.0, 50000.0),
-            label: "Break Even".to_string(),
-            label_offset: (5.0, 5.0),
-            line_color: BLACK,
-            label_color: BLACK,
-            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-            font_size: 18,
-        }];
-
-        vertical_lines
-    }
-}
+// impl Graph for Strategy {
+//     fn title(&self) -> String {
+//         let strategy_title = format!("Strategy: {} - {:?}", self.name, self.kind);
+//         let leg_titles: Vec<String> = self.legs.iter().map(|leg| leg.title()).collect();
+//
+//         if leg_titles.is_empty() {
+//             strategy_title
+//         } else {
+//             format!("{}\n{}", strategy_title, leg_titles.join("\n"))
+//         }
+//     }
+//
+//     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<PositiveF64, f64>> {
+//         let vertical_lines = vec![ChartVerticalLine {
+//             x_coordinate: PZERO,
+//             y_range: (-50000.0, 50000.0),
+//             label: "Break Even".to_string(),
+//             label_offset: (5.0, 5.0),
+//             line_color: BLACK,
+//             label_color: BLACK,
+//             line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+//             font_size: 18,
+//         }];
+//
+//         vertical_lines
+//     }
+// }
 
 pub trait Strategies {
     fn add_leg(&mut self, position: Position);
 
     fn break_even(&self) -> Vec<PositiveF64>;
-
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64;
 
     fn max_profit(&self) -> f64;
 

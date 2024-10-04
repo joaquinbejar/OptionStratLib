@@ -13,6 +13,7 @@ use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
+use crate::pricing::payoff::Profit;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
@@ -311,13 +312,6 @@ impl Strategies for CallButterfly {
         self.break_even_points.clone()
     }
 
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
-        let long_call_itm_profit = self.long_call_itm.pnl_at_expiration(Some(price));
-        let long_call_otm_profit = self.long_call_otm.pnl_at_expiration(Some(price));
-        let short_call_profit = self.short_call.pnl_at_expiration(Some(price));
-        long_call_itm_profit + long_call_otm_profit + short_call_profit
-    }
-
     fn max_profit(&self) -> f64 {
         self.calculate_profit_at(self.short_call.option.strike_price)
     }
@@ -401,6 +395,16 @@ impl Strategies for CallButterfly {
     }
 }
 
+impl Profit for CallButterfly {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+        let price = Some(price);
+        let long_call_itm_profit = self.long_call_itm.pnl_at_expiration(&price);
+        let long_call_otm_profit = self.long_call_otm.pnl_at_expiration(&price);
+        let short_call_profit = self.short_call.pnl_at_expiration(&price);
+        long_call_itm_profit + long_call_otm_profit + short_call_profit
+    }
+}
+
 impl Graph for CallButterfly {
     fn title(&self) -> String {
         let strategy_title = format!("Ratio Call Spread Strategy: {:?}", self.kind);
@@ -412,12 +416,6 @@ impl Graph for CallButterfly {
             "{}\n\t{}\n\t{}\n\t{}",
             strategy_title, long_call_itm_title, long_call_otm_title, short_call_title
         )
-    }
-
-    fn get_values<T>(&self, data: &[T]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
@@ -441,11 +439,11 @@ impl Graph for CallButterfly {
         vertical_lines
     }
 
-    fn get_points(&self) -> Vec<ChartPoint<(PositiveF64, f64)>> {
-        let mut points: Vec<ChartPoint<(PositiveF64, f64)>> = Vec::new();
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0], 0.0),
+            coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
             label_offset: (-26.0, 2.0),
             point_color: DARK_BLUE,
@@ -455,7 +453,7 @@ impl Graph for CallButterfly {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1], 0.0),
+            coordinates: (self.break_even_points[1].value(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
             label_offset: (1.0, 2.0),
             point_color: DARK_BLUE,
@@ -465,7 +463,10 @@ impl Graph for CallButterfly {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.short_call.option.strike_price, self.max_profit()),
+            coordinates: (
+                self.short_call.option.strike_price.value(),
+                self.max_profit(),
+            ),
             label: format!("Max Profit\n\n{:.2}", self.max_profit()),
             label_offset: (2.0, 1.0),
             point_color: DARK_GREEN,
@@ -478,7 +479,7 @@ impl Graph for CallButterfly {
         let upper_loss = self.calculate_profit_at(self.long_call_otm.option.strike_price);
 
         points.push(ChartPoint {
-            coordinates: (self.long_call_itm.option.strike_price, lower_loss),
+            coordinates: (self.long_call_itm.option.strike_price.value(), lower_loss),
             label: format!("Left Low {:.2}", lower_loss),
             label_offset: (0.0, -1.0),
             point_color: RED,
@@ -488,7 +489,7 @@ impl Graph for CallButterfly {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.long_call_otm.option.strike_price, upper_loss),
+            coordinates: (self.long_call_otm.option.strike_price.value(), upper_loss),
             label: format!("Right Low {:.2}", upper_loss),
             label_offset: (-18.0, -1.0),
             point_color: RED,
@@ -590,10 +591,16 @@ mod tests_call_butterfly {
         assert_eq!(vertical_lines.len(), 1);
         assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
-        let data = vec![150.0, 155.0, 160.0, 165.0, 170.0];
+        let data = vec![
+            pos!(150.0),
+            pos!(155.0),
+            pos!(160.0),
+            pos!(165.0),
+            pos!(170.0),
+        ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(pos!(price)));
+            assert_eq!(values[i], strategy.calculate_profit_at(price));
         }
 
         let title = strategy.title();

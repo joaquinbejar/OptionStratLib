@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::greeks::utils::{big_n, d2};
 use crate::model::option::Options;
-use crate::model::types::Side;
+use crate::model::types::{PositiveF64, Side};
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
@@ -291,7 +291,7 @@ pub(crate) fn wiener_increment(dt: f64) -> f64 {
 ///
 /// # Returns
 /// A `f64` value representing the calculated probability.
-pub fn probability_keep_under_strike(option: Options, strike: Option<f64>) -> f64 {
+pub fn probability_keep_under_strike(option: Options, strike: Option<PositiveF64>) -> f64 {
     let strike_price = match strike {
         Some(strike) => strike,
         None => option.strike_price,
@@ -404,7 +404,9 @@ mod tests_utils {
 mod tests_probability_keep_under_strike {
     use super::*;
     use crate::constants::ZERO;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PZERO, SIZE_ONE};
+    use crate::pos;
     use approx::assert_relative_eq;
     use tracing::info;
 
@@ -413,8 +415,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 100.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: ZERO,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
@@ -424,7 +426,7 @@ mod tests_probability_keep_under_strike {
             quantity: SIZE_ONE,
             exotic_params: None,
         };
-        let strike = Some(100.0);
+        let strike = Some(pos!(100.0));
         let probability = probability_keep_under_strike(option, strike);
         info!("{:?} {}", strike, probability);
         assert!(
@@ -439,8 +441,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 110.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(110.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
@@ -463,8 +465,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 100.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
@@ -487,8 +489,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 110.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(110.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
@@ -511,8 +513,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 110.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(110.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,

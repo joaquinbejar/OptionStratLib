@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
+use crate::model::types::{PositiveF64, PZERO};
+use crate::pos;
 use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -10,16 +12,14 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
-use crate::model::types::{PositiveF64, PZERO};
-use crate::pos;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct OptionData {
     pub(crate) strike_price: PositiveF64,
     pub(crate) call_bid: f64, // TODO: Change to PositiveF64
     pub(crate) call_ask: f64, // TODO: Change to PositiveF64
-    put_bid: f64, // TODO: Change to PositiveF64
-    put_ask: f64, // TODO: Change to PositiveF64
+    put_bid: f64,             // TODO: Change to PositiveF64
+    put_ask: f64,             // TODO: Change to PositiveF64
     pub(crate) implied_volatility: f64,
 }
 
@@ -110,7 +110,7 @@ impl OptionChain {
         let underlying_price_str = parts[4].replace(",", ".");
 
         match underlying_price_str.parse::<f64>() {
-            Ok(price) => self.underlying_price = price.value(),
+            Ok(price) => self.underlying_price = pos!(price),
             Err(_) => panic!("Invalid underlying price format in file name"),
         }
     }

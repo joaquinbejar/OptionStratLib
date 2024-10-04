@@ -78,7 +78,11 @@ pub(crate) fn create_sample_option_simplest(option_style: OptionStyle, side: Sid
 }
 
 #[allow(dead_code)]
-pub(crate) fn create_sample_option_simplest_strike( side: Side, option_style: OptionStyle, strike: PositiveF64) -> Options {
+pub(crate) fn create_sample_option_simplest_strike(
+    side: Side,
+    option_style: OptionStyle,
+    strike: PositiveF64,
+) -> Options {
     Options::new(
         OptionType::European,
         side,

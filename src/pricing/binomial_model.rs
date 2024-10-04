@@ -1,5 +1,6 @@
 use crate::constants::ZERO;
 use crate::model::types::{OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::{
     calculate_discount_factor, calculate_discounted_payoff, calculate_down_factor,
@@ -174,8 +175,9 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
 
     for (step, step_vec) in asset_tree.iter_mut().enumerate() {
         for (node, node_val) in step_vec.iter_mut().enumerate().take(step + 1) {
-            *node_val =
-                params.asset.value() * up_factor.powi((step - node) as i32) * down_factor.powi(node as i32);
+            *node_val = params.asset.value()
+                * up_factor.powi((step - node) as i32)
+                * down_factor.powi(node as i32);
         }
     }
 
@@ -184,7 +186,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
         .enumerate()
         .take(params.no_steps + 1)
     {
-        info.spot = *node_val.value();
+        info.spot = (*node_val).into();
         option_tree[params.no_steps][node] = params.option_type.payoff(&info);
     }
 
@@ -201,7 +203,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
                     if (step == 0) & (node_idx == 0) {
                         *node_val = node_value;
                     } else {
-                        info.spot = asset_tree[step][node_idx];
+                        info.spot = pos!(asset_tree[step][node_idx]);
                         let intrinsic_value = params.option_type.payoff(&info);
                         *node_val = intrinsic_value.max(node_value);
                     }
@@ -220,9 +222,9 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> (Vec<Vec<f64>>,
 mod tests_price_binomial {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::OptionType;
-    use approx::assert_relative_eq;
+    use crate::model::types::{OptionType, PZERO};
     use crate::pos;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_european_call_option() {
@@ -322,9 +324,9 @@ mod tests_price_binomial {
         let price = price_binomial(params);
 
         let exact_price =
-            (asset * (int_rate * expiry).exp() - strike).max(ZERO) * (-int_rate * expiry).exp();
+            (asset * (int_rate * expiry).exp() - strike).max(PZERO) * (-int_rate * expiry).exp();
 
-        assert_relative_eq!(price, exact_price, epsilon = 1e-10);
+        assert_relative_eq!(price, exact_price.value(), epsilon = 1e-10);
     }
 
     #[test]
@@ -386,8 +388,8 @@ mod tests_price_binomial {
 mod tests_generate_binomial_tree {
     use super::*;
     use crate::model::types::OptionType;
-    use approx::assert_relative_eq;
     use crate::pos;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_binomial_tree_basic() {

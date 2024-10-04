@@ -13,11 +13,12 @@ use super::base::{Strategies, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
+use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, BLACK};
-use crate::{pos, spos};
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -196,13 +197,6 @@ impl Strategies for IronCondor {
         self.break_even_points.clone()
     }
 
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
-        self.short_call.pnl_at_expiration(Some(price))
-            + self.short_put.pnl_at_expiration(Some(price))
-            + self.long_call.pnl_at_expiration(Some(price))
-            + self.long_put.pnl_at_expiration(Some(price))
-    }
-
     fn max_profit(&self) -> f64 {
         self.net_premium_received()
     }
@@ -245,14 +239,26 @@ impl Strategies for IronCondor {
     }
 
     fn profit_area(&self) -> f64 {
-        let inner_width = (self.short_call.option.strike_price - self.short_put.option.strike_price).value();
-        let outer_width = (self.long_call.option.strike_price - self.long_put.option.strike_price).value();
+        let inner_width =
+            (self.short_call.option.strike_price - self.short_put.option.strike_price).value();
+        let outer_width =
+            (self.long_call.option.strike_price - self.long_put.option.strike_price).value();
         let height = self.max_profit();
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
         (inner_area + outer_triangles) / self.short_call.option.underlying_price.value()
+    }
+}
+
+impl Profit for IronCondor {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+        let price = Some(price);
+        self.short_call.pnl_at_expiration(&price)
+            + self.short_put.pnl_at_expiration(&price)
+            + self.long_call.pnl_at_expiration(&price)
+            + self.long_put.pnl_at_expiration(&price)
     }
 }
 
@@ -280,17 +286,11 @@ impl Graph for IronCondor {
         }
     }
 
-    fn get_values<T>(&self, data: &[T]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<PositiveF64, f64>> {
-        let mut vertical_lines: Vec<ChartVerticalLine<PositiveF64, f64>> = vec![];
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
+        let mut vertical_lines: Vec<ChartVerticalLine<f64, f64>> = vec![];
         for break_even_point in self.break_even_points.clone() {
             vertical_lines.push(ChartVerticalLine {
-                x_coordinate: break_even_point,
+                x_coordinate: break_even_point.value(),
                 y_range: (-50000.0, 50000.0),
                 label: "Break Even".to_string(),
                 label_offset: (5.0, 5.0),
@@ -419,7 +419,10 @@ mod tests_iron_condor {
             5.0,
         );
 
-        assert_eq!(iron_condor.break_even()[0], iron_condor.break_even_points[0]);
+        assert_eq!(
+            iron_condor.break_even()[0],
+            iron_condor.break_even_points[0]
+        );
     }
 
     #[test]
@@ -479,11 +482,11 @@ mod tests_iron_condor {
             5.0,
         );
 
-        let price = 150.0;
-        let expected_profit = iron_condor.short_call.pnl_at_expiration(spos!(price))
-            + iron_condor.short_put.pnl_at_expiration(spos!(price))
-            + iron_condor.long_call.pnl_at_expiration(spos!(price))
-            + iron_condor.long_put.pnl_at_expiration(spos!(price));
-        assert_eq!(iron_condor.calculate_profit_at(pos!(price)), expected_profit);
+        let price = pos!(150.0);
+        let expected_profit = iron_condor.short_call.pnl_at_expiration(&Some(price))
+            + iron_condor.short_put.pnl_at_expiration(&Some(price))
+            + iron_condor.long_call.pnl_at_expiration(&Some(price))
+            + iron_condor.long_put.pnl_at_expiration(&Some(price));
+        assert_eq!(iron_condor.calculate_profit_at(price), expected_profit);
     }
 }

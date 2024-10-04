@@ -197,7 +197,7 @@ pub fn telegraph(
     lambda_up: Option<f64>,
     lambda_down: Option<f64>,
 ) -> f64 {
-    let mut price = option.underlying_price;
+    let mut price = option.underlying_price.value();
     let dt = option.time_to_expiration() / no_steps as f64;
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
@@ -230,14 +230,16 @@ pub fn telegraph(
         price *= (drift * dt + volatility * (dt.sqrt() * rand::random::<f64>())).exp();
     }
 
-    let payoff = option.payoff_at_price(price);
+    let payoff = option.payoff_at_price(price.into());
     payoff * (-option.risk_free_rate * option.time_to_expiration()).exp()
 }
 
 #[cfg(test)]
 mod tests_telegraph_process_basis {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, OptionType, Side, PZERO, SIZE_ONE};
+    use crate::pos;
 
     #[test]
     fn test_telegraph_process_new() {
@@ -278,8 +280,8 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 100.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
@@ -301,8 +303,8 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 100.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
@@ -324,8 +326,8 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 100.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
@@ -347,15 +349,17 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, OptionType, Side, PZERO};
+    use crate::pos;
 
     // Helper function to create a mock Options struct
     fn create_mock_option() -> Options {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: 100.0,
-            strike_price: 100.0,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,

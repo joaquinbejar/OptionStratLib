@@ -17,11 +17,11 @@ fn create_sample_option() -> Options {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        100.0,
+        pos!(100.0),
         ExpirationDate::Days(30.0),
         0.2,
         pos!(10.0),
-        105.0,
+        pos!(105.0),
         0.05,
         OptionStyle::Call,
         0.0,
@@ -30,8 +30,9 @@ fn create_sample_option() -> Options {
 }
 fn main() -> Result<(), Box<dyn Error>> {
     let position = Position::new(create_sample_option(), 5.71, Utc::now(), 1.0, 1.0);
-
-    let price_range: Vec<f64> = (50..150).map(|x| x as f64).collect();
+    let price_range: Vec<PositiveF64> = (50..150)
+        .map(|x| PositiveF64::new(x as f64).unwrap())
+        .collect();
 
     position.graph(
         &price_range,

@@ -9,13 +9,13 @@ Key characteristics:
 - Lower cost than a straddle
 - Requires a larger price move to become profitable
 */
-use std::ops::Sub;
 use super::base::{Strategies, StrategyType};
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
-use crate::{pos, spos};
+use crate::pos;
+use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
@@ -135,11 +135,6 @@ impl Strategies for ShortStrangle {
         vec![self.short_put.option.strike_price + self.net_premium_received()]
     }
 
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
-        self.short_call.pnl_at_expiration(Some(price))
-            + self.short_put.pnl_at_expiration(Some(price))
-    }
-
     fn max_profit(&self) -> f64 {
         self.net_premium_received()
     }
@@ -154,7 +149,6 @@ impl Strategies for ShortStrangle {
 
     fn net_premium_received(&self) -> f64 {
         self.short_call.net_premium_received() + self.short_put.net_premium_received()
-
     }
 
     fn fees(&self) -> f64 {
@@ -174,6 +168,13 @@ impl Strategies for ShortStrangle {
     }
 }
 
+impl Profit for ShortStrangle {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+        let price = Some(price);
+        self.short_call.pnl_at_expiration(&price) + self.short_put.pnl_at_expiration(&price)
+    }
+}
+
 impl Graph for ShortStrangle {
     fn title(&self) -> String {
         let strategy_title = format!("Short Strangle Strategy: {:?}", self.kind);
@@ -187,12 +188,6 @@ impl Graph for ShortStrangle {
         } else {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
-    }
-
-    fn get_values<T>(&self, data: &[T]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
@@ -216,11 +211,11 @@ impl Graph for ShortStrangle {
         vertical_lines
     }
 
-    fn get_points(&self) -> Vec<ChartPoint<(PositiveF64, f64)>> {
-        let mut points: Vec<ChartPoint<(PositiveF64, f64)>> = Vec::new();
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0], 0.0),
+            coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
             label_offset: (0.0, -10.0),
             point_color: DARK_BLUE,
@@ -230,7 +225,7 @@ impl Graph for ShortStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1], 0.0),
+            coordinates: (self.break_even_points[1].value(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
             label_offset: (-230.0, -10.0),
             point_color: DARK_BLUE,
@@ -244,7 +239,10 @@ impl Graph for ShortStrangle {
             self.max_profit() / 15.0,
         );
         points.push(ChartPoint {
-            coordinates: (self.short_call.option.strike_price, self.max_profit()),
+            coordinates: (
+                self.short_call.option.strike_price.value(),
+                self.max_profit(),
+            ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
                 self.max_profit(),
@@ -262,7 +260,10 @@ impl Graph for ShortStrangle {
             self.max_profit() / 15.0,
         );
         points.push(ChartPoint {
-            coordinates: (self.short_put.option.strike_price, self.max_profit()),
+            coordinates: (
+                self.short_put.option.strike_price.value(),
+                self.max_profit(),
+            ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
                 self.max_profit(),
@@ -389,13 +390,9 @@ impl Strategies for LongStrangle {
         }
     }
 
-    fn break_even(&self) -> f64 {
+    fn break_even(&self) -> Vec<PositiveF64> {
         // Long strangle has two break-even points, we'll return the lower one
-        self.long_put.option.strike_price.value() - self.total_cost()
-    }
-
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
-        self.long_call.pnl_at_expiration(Some(price)) + self.long_put.pnl_at_expiration(Some(price))
+        vec![self.long_put.option.strike_price - self.total_cost()]
     }
 
     fn max_profit(&self) -> f64 {
@@ -422,6 +419,13 @@ impl Strategies for LongStrangle {
     }
 }
 
+impl Profit for LongStrangle {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+        let price = Some(price);
+        self.long_call.pnl_at_expiration(&price) + self.long_put.pnl_at_expiration(&price)
+    }
+}
+
 impl Graph for LongStrangle {
     fn title(&self) -> String {
         let strategy_title = format!("Long Strangle Strategy: {:?}", self.kind);
@@ -435,12 +439,6 @@ impl Graph for LongStrangle {
         } else {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
-    }
-
-    fn get_values<T>(&self, data: &[T]) -> Vec<T> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
@@ -464,11 +462,11 @@ impl Graph for LongStrangle {
         vertical_lines
     }
 
-    fn get_points(&self) -> Vec<ChartPoint<(PositiveF64, f64)>> {
-        let mut points: Vec<ChartPoint<(PositiveF64, f64)>> = Vec::new();
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0], 0.0),
+            coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Low Break Even {}", self.break_even_points[0]),
             label_offset: (10.0, -10.0),
             point_color: DARK_BLUE,
@@ -478,7 +476,7 @@ impl Graph for LongStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1], 0.0),
+            coordinates: (self.break_even_points[1].value(), 0.0),
             label: format!("High Break Even {}", self.break_even_points[1]),
             label_offset: (-60.0, -10.0),
             point_color: DARK_BLUE,
@@ -488,7 +486,7 @@ impl Graph for LongStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.long_call.option.strike_price, -self.max_loss()),
+            coordinates: (self.long_call.option.strike_price.value(), -self.max_loss()),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
                 self.max_loss(),
@@ -502,7 +500,7 @@ impl Graph for LongStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.long_put.option.strike_price, -self.max_loss()),
+            coordinates: (self.long_put.option.strike_price.value(), -self.max_loss()),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
                 self.max_loss(),
@@ -621,10 +619,16 @@ is expected and the underlying asset's price is anticipated to remain stable."
         assert_eq!(vertical_lines.len(), 1);
         assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
-        let data = vec![140.0, 145.0, 150.0, 155.0, 160.0];
+        let data = vec![
+            pos!(140.0),
+            pos!(145.0),
+            pos!(150.0),
+            pos!(155.0),
+            pos!(160.0),
+        ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(pos!(price)));
+            assert_eq!(values[i], strategy.calculate_profit_at(price));
         }
 
         let title = strategy.title();
@@ -637,7 +641,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
 #[cfg(test)]
 mod tests_long_strangle {
     use super::*;
-    use crate::{pos, spos};
+    use crate::pos;
 
     #[test]
     fn test_long_strangle_new() {
@@ -687,7 +691,7 @@ mod tests_long_strangle {
     fn test_break_even() {
         let long_strangle = setup_long_strangle();
         assert_eq!(
-            long_strangle.break_even(),
+            long_strangle.break_even()[0],
             long_strangle.long_put.option.strike_price.value() - long_strangle.total_cost()
         );
     }
@@ -705,8 +709,8 @@ mod tests_long_strangle {
     fn test_calculate_profit_at() {
         let long_strangle = setup_long_strangle();
         let price = pos!(150.0);
-        let expected_profit = long_strangle.long_call.pnl_at_expiration(Some(price))
-            + long_strangle.long_put.pnl_at_expiration(Some(price));
+        let expected_profit = long_strangle.long_call.pnl_at_expiration(&Some(price))
+            + long_strangle.long_put.pnl_at_expiration(&Some(price));
         assert_eq!(long_strangle.calculate_profit_at(price), expected_profit);
     }
 

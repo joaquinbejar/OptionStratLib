@@ -556,11 +556,12 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use tracing::info;
-    use crate::pos;
 
     fn create_test_option() -> Options {
         Options::new(
@@ -1044,6 +1045,7 @@ mod tests_interpolate_volatility_surface {
 mod tests_uncertain_volatility_bounds {
 
     use super::*;
+    use crate::model::types::PositiveF64;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
     use crate::pos;
 
@@ -1054,10 +1056,10 @@ mod tests_uncertain_volatility_bounds {
             "TEST".to_string(),
             pos!(100.0), // strike price
             ExpirationDate::Days(30.0),
-            0.2,      // implied volatility
-            SIZE_ONE, // quantity
-            pos!(100.0),    // underlying price
-            0.05,     // risk-free rate
+            0.2,         // implied volatility
+            SIZE_ONE,    // quantity
+            pos!(100.0), // underlying price
+            0.05,        // risk-free rate
             OptionStyle::Call,
             ZERO, // dividend yield
             None, // exotic params
@@ -1145,10 +1147,12 @@ mod tests_uncertain_volatility_bounds {
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds_side {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
+    use crate::model::types::{
+        ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, SIZE_ONE,
+    };
+    use crate::pos;
     use approx::assert_relative_eq;
     use tracing::info;
-    use crate::pos;
 
     fn create_test_option(option_style: OptionStyle, side: Side) -> Options {
         Options::new(
@@ -1157,10 +1161,10 @@ mod tests_uncertain_volatility_bounds_side {
             "TEST".to_string(),
             pos!(100.0), // strike price
             ExpirationDate::Days(30.0),
-            0.2,      // implied volatility
-            SIZE_ONE, // quantity
-            pos!(100.0),    // underlying price
-            0.05,     // risk-free rate
+            0.2,         // implied volatility
+            SIZE_ONE,    // quantity
+            pos!(100.0), // underlying price
+            0.05,        // risk-free rate
             option_style,
             ZERO, // dividend yield
             None, // exotic params

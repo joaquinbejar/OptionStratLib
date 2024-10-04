@@ -1,3 +1,4 @@
+use crate::model::types::{PositiveF64, PZERO};
 use num_traits::{abs, ConstZero, FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 use std::ops::{Add, Div, Mul, Sub};
@@ -62,6 +63,8 @@ pub trait FloatLike:
     fn powf(self, exp: Self) -> Self;
     fn pow_two(self) -> Self;
     fn ln(self) -> Self;
+
+    #[allow(dead_code)]
     fn sqrt(self) -> Self;
 
     #[allow(dead_code)]
@@ -166,6 +169,52 @@ impl FloatLike for f64 {
 
     fn get(value: f64) -> Self {
         value
+    }
+}
+
+impl FloatLike for PositiveF64 {
+    fn infinity() -> Self {
+        PositiveF64::new(f64::INFINITY).unwrap()
+    }
+
+    fn neg_infinity() -> Self {
+        PositiveF64::new(f64::NEG_INFINITY).unwrap()
+    }
+
+    fn zero() -> Self {
+        PZERO
+    }
+
+    fn two() -> Self {
+        PositiveF64::new(2.0).unwrap()
+    }
+
+    fn powf(self, exp: Self) -> Self {
+        PositiveF64::new(self.value().powf(exp.value())).unwrap()
+    }
+
+    fn pow_two(self) -> Self {
+        PositiveF64::new(self.value().powi(2)).unwrap()
+    }
+
+    fn ln(self) -> Self {
+        PositiveF64::new(self.value().ln()).unwrap()
+    }
+
+    fn sqrt(self) -> Self {
+        PositiveF64::new(self.value().sqrt()).unwrap()
+    }
+
+    fn abs(self) -> Self {
+        PositiveF64::new(self.value().abs()).unwrap()
+    }
+
+    fn is_infinite(&self) -> bool {
+        self.value().is_infinite()
+    }
+
+    fn get(value: f64) -> Self {
+        PositiveF64::new(value).unwrap()
     }
 }
 

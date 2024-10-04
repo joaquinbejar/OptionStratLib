@@ -4,6 +4,7 @@
    Date: 16/8/24
 ******************************************************************************/
 
+use crate::model::types::PositiveF64;
 use chrono::{DateTime, Utc};
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.
@@ -40,6 +41,6 @@ impl PnL {
 }
 
 pub trait PnLCalculator {
-    fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: f64) -> PnL;
-    fn calculate_pnl_at_expiration(&self, underlying_price: Option<f64>) -> PnL;
+    fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: PositiveF64) -> PnL;
+    fn calculate_pnl_at_expiration(&self, underlying_price: Option<PositiveF64>) -> PnL;
 }
