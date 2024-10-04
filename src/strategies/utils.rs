@@ -10,7 +10,7 @@ pub enum FindOptimalSide {
     Upper,
     Lower,
     All,
-    Range(f64, f64),
+    Range(PositiveF64, PositiveF64),
 }
 
 pub(crate) enum OptimizationCriteria {
