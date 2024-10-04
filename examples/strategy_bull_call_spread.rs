@@ -4,6 +4,8 @@
    Date: 25/9/24
 ******************************************************************************/
 use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::PositiveF64;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::utils::logger::setup_logger;
@@ -22,16 +24,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         5750.0,           // long_strike_itm
         5820.0,           // short_strike
         ExpirationDate::Days(2.0),
-        0.18,  // implied_volatility
-        0.05,  // risk_free_rate
-        0.0,   // dividend_yield
-        2,     // long quantity
-        85.04, // premium_long
-        29.85, // premium_short
-        0.78,  // open_fee_long
-        0.78,  // open_fee_long
-        0.73,  // close_fee_long
-        0.73,  // close_fee_short
+        0.18,      // implied_volatility
+        0.05,      // risk_free_rate
+        0.0,       // dividend_yield
+        pos!(2.0), // long quantity
+        85.04,     // premium_long
+        29.85,     // premium_short
+        0.78,      // open_fee_long
+        0.78,      // open_fee_long
+        0.73,      // close_fee_long
+        0.73,      // close_fee_short
     );
 
     let price_range = strategy.best_range_to_show(1.0).unwrap();

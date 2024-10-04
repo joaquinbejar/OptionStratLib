@@ -4,6 +4,8 @@
    Date: 20/8/24
 ******************************************************************************/
 use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::PositiveF64;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::utils::logger::setup_logger;
@@ -22,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.2,
         0.05,
         0.0,
-        1,
+        pos!(1.0),
         27.26,
         5.33,
         0.58,

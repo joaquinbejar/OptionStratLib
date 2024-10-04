@@ -774,3 +774,5 @@ mod tests_calculate_floating_strike_payoff {
         assert_eq!(calculate_floating_strike_payoff(&info), 0.0);
     }
 }
+
+
