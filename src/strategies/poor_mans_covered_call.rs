@@ -31,11 +31,12 @@
 use super::base::{Strategies, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, BLACK};
+use crate::spos;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -47,7 +48,7 @@ pub struct PoorMansCoveredCall {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<f64>,
+    pub break_even_points: Vec<PositiveF64>,
     long_call: Position,
     short_call: Position,
 }
@@ -56,9 +57,9 @@ impl PoorMansCoveredCall {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: f64,
-        long_call_strike: f64,
-        short_call_strike: f64,
+        underlying_price: PositiveF64,
+        long_call_strike: PositiveF64,
+        short_call_strike: PositiveF64,
         long_call_expiration: ExpirationDate,
         short_call_expiration: ExpirationDate,
         implied_volatility: f64,
@@ -151,11 +152,11 @@ impl Strategies for PoorMansCoveredCall {
         }
     }
 
-    fn break_even(&self) -> f64 {
-        self.break_even_points[0]
+    fn break_even(&self) -> Vec<PositiveF64> {
+        self.break_even_points.clone()
     }
 
-    fn calculate_profit_at(&self, price: f64) -> f64 {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
         self.long_call.pnl_at_expiration(Some(price))
             + self.short_call.pnl_at_expiration(Some(price))
     }
@@ -217,15 +218,15 @@ impl Graph for PoorMansCoveredCall {
         }
     }
 
-    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+    fn get_values<T>(&self, data: &[T]) -> Vec<f64> {
         data.iter()
             .map(|&price| self.calculate_profit_at(price))
             .collect()
     }
 
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
+    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<PositiveF64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.break_even(),
+            x_coordinate: PZERO, // TODO: underlying price
             y_range: (-50000.0, 50000.0),
             label: "Break Even".to_string(),
             label_offset: (5.0, 5.0),
