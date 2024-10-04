@@ -4,6 +4,7 @@ use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use chrono::{DateTime, Duration, Utc};
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Range, Sub};
+use std::str::FromStr;
 use plotters::coord::ranged1d::{DefaultFormatting, KeyPointHint};
 use plotters::prelude::Ranged;
 
@@ -163,6 +164,17 @@ impl Default for PositiveF64 {
     }
 }
 
+impl FromStr for PositiveF64 {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.parse::<f64>() {
+            Ok(value) if value > 0.0 => Ok(PositiveF64(value)),
+            Ok(value) => Err(format!("Value must be positive, got {}", value)),
+            Err(e) => Err(format!("Failed to parse as f64: {}", e)),
+        }
+    }
+}
 
 impl Div<PositiveF64> for f64 {
     type Output = f64;
