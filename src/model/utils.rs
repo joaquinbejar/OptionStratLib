@@ -12,9 +12,9 @@ use chrono::{NaiveDateTime, TimeZone, Utc};
 pub(crate) fn create_sample_option(
     option_style: OptionStyle,
     side: Side,
-    underlying_price: f64,
+    underlying_price: PositiveF64,
     quantity: PositiveF64,
-    strike_price: f64,
+    strike_price: PositiveF64,
     volatility: f64,
 ) -> Options {
     Options::new(
@@ -37,9 +37,9 @@ pub(crate) fn create_sample_option(
 pub(crate) fn create_sample_option_with_date(
     option_style: OptionStyle,
     side: Side,
-    underlying_price: f64,
+    underlying_price: PositiveF64,
     quantity: PositiveF64,
-    strike_price: f64,
+    strike_price: PositiveF64,
     volatility: f64,
     naive_date: NaiveDateTime,
 ) -> Options {
@@ -65,11 +65,29 @@ pub(crate) fn create_sample_option_simplest(option_style: OptionStyle, side: Sid
         OptionType::European,
         side,
         "AAPL".to_string(),
-        100.0,
+        pos!(100.0),
         ExpirationDate::Days(30.0),
         0.2,
         pos!(1.0),
-        100.0,
+        pos!(100.0),
+        0.05,
+        option_style,
+        0.01,
+        None,
+    )
+}
+
+#[allow(dead_code)]
+pub(crate) fn create_sample_option_simplest_strike( side: Side, option_style: OptionStyle, strike: PositiveF64) -> Options {
+    Options::new(
+        OptionType::European,
+        side,
+        "AAPL".to_string(),
+        strike,
+        ExpirationDate::Days(30.0),
+        0.2,
+        pos!(1.0),
+        pos!(100.0),
         0.05,
         option_style,
         0.01,
