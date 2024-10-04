@@ -16,13 +16,14 @@ use crate::constants::{
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{debug, error};
+use crate::pos;
 
 const DESCRIPTION: &str = "A bull call spread involves buying a call option with a lower strike \
 price and selling a call option with a higher strike price, both with the same expiration date. \
@@ -33,7 +34,7 @@ pub struct BullCallSpread {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<f64>,
+    pub break_even_points: Vec<PositiveF64>,
     long_call: Position,
     short_call: Position,
 }
@@ -42,9 +43,9 @@ impl BullCallSpread {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: f64,
-        lower_strike: f64,
-        higher_strike: f64,
+        underlying_price: PositiveF64,
+        lower_strike: PositiveF64,
+        higher_strike: PositiveF64,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
@@ -88,7 +89,9 @@ impl BullCallSpread {
             close_fee_long_call,
         );
         strategy.add_leg(lower_call.clone());
-        strategy.break_even_points.push(lower_call.break_even());
+
+        // TODO: push the break even points
+        // strategy.break_even_points.push(lower_call.break_even());
 
         // Add the short call option with higher strike
         let higher_call_option = Options::new(
@@ -113,7 +116,9 @@ impl BullCallSpread {
             close_fee_short_call,
         );
         strategy.add_leg(higher_call.clone());
-        strategy.break_even_points.push(higher_call.break_even());
+
+        // TODO: push the break even points
+        // strategy.break_even_points.push(higher_call.break_even());
 
         strategy.validate();
         strategy
@@ -231,13 +236,13 @@ impl Strategies for BullCallSpread {
         }
     }
 
-    fn break_even(&self) -> f64 {
-        self.short_call.option.strike_price
-            - self.calculate_profit_at(self.short_call.option.strike_price)
-                / self.long_call.option.quantity
+    fn break_even(&self) -> Vec<PositiveF64> {
+        vec![self.short_call.option.strike_price
+            - pos!(self.calculate_profit_at(self.short_call.option.strike_price))
+                / self.long_call.option.quantity]
     }
 
-    fn calculate_profit_at(&self, price: f64) -> f64 {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
         self.long_call.pnl_at_expiration(Some(price))
             + self.short_call.pnl_at_expiration(Some(price))
     }
@@ -267,7 +272,9 @@ impl Strategies for BullCallSpread {
     }
 
     fn profit_area(&self) -> f64 {
-        (self.short_call.option.strike_price - self.break_even()) * self.max_profit() / 100.0
+        // TODO: Implement this
+        // (self.short_call.option.strike_price - self.break_even()) * self.max_profit() / 100.0
+        ZERO
     }
 
     fn profit_ratio(&self) -> f64 {
@@ -294,7 +301,7 @@ impl Strategies for BullCallSpread {
             return false;
         }
 
-        if self.long_call.option.underlying_price <= 0.0 {
+        if self.long_call.option.underlying_price <= PZERO {
             error!("Underlying price must be greater than zero");
             return false;
         }
@@ -305,7 +312,7 @@ impl Strategies for BullCallSpread {
         true
     }
 
-    fn best_range_to_show(&self, step: f64) -> Option<Vec<f64>> {
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
         let (first_option, last_option) = (
             self.long_call.option.clone(),
             self.short_call.option.clone(),
@@ -331,7 +338,7 @@ impl Graph for BullCallSpread {
         }
     }
 
-    fn get_values(&self, data: &[f64]) -> Vec<f64> {
+    fn get_values<T>(&self, data: &[T]) -> Vec<f64> {
         data.iter()
             .map(|&price| self.calculate_profit_at(price))
             .collect()
@@ -339,7 +346,7 @@ impl Graph for BullCallSpread {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.break_even(),
+            x_coordinate: ZERO, // TODO current price
             y_range: (-50000.0, 50000.0),
             label: "Break Even".to_string(),
             label_offset: (5.0, 5.0),
@@ -363,9 +370,9 @@ mod tests_create_bull_call_spread {
     fn create_sample_bull_call_spread() -> BullCallSpread {
         BullCallSpread::new(
             "GOLD".to_string(),
-            100.0,
-            90.0,
-            110.0,
+            pos!(100.0),
+            pos!(90.0),
+            pos!(110.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.0,
@@ -436,8 +443,8 @@ mod tests_create_bull_call_spread {
     #[test]
     fn test_bull_call_spread_trait_strategies() {
         let strategy = create_sample_bull_call_spread();
-        assert_eq!(strategy.break_even(), 94.0);
-        assert_eq!(strategy.calculate_profit_at(100.0), 6.0);
+        assert_eq!(strategy.break_even()[0], 94.0);
+        assert_eq!(strategy.calculate_profit_at(pos!(100.0)), 6.0);
         assert_eq!(strategy.max_profit(), 16.0);
         assert_eq!(strategy.max_loss(), 4.0);
         assert_eq!(strategy.total_cost(), 4.0);
@@ -455,9 +462,9 @@ mod tests_create_bull_call_spread_gold {
     fn create_sample_bull_call_spread() -> BullCallSpread {
         BullCallSpread::new(
             "GOLD".to_string(),
-            2505.8,
-            2460.0,
-            2515.0,
+            pos!(2505.8),
+            pos!(2460.0),
+            pos!(2515.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.05,
@@ -528,9 +535,9 @@ mod tests_create_bull_call_spread_gold {
     #[test]
     fn test_bull_call_spread_trait_strategies() {
         let strategy = create_sample_bull_call_spread();
-        assert_eq!(strategy.break_even(), 2484.19);
+        assert_eq!(strategy.break_even()[0], 2484.19);
         assert_relative_eq!(
-            strategy.calculate_profit_at(2500.0),
+            strategy.calculate_profit_at(pos!(2500.0)),
             31.620000,
             epsilon = 1e-6
         );
