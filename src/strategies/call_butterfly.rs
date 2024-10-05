@@ -308,6 +308,14 @@ impl Strategies for CallButterfly {
         }
     }
 
+    fn get_legs(&self) -> Vec<Position> {
+        vec![
+            self.long_call_itm.clone(),
+            self.long_call_otm.clone(),
+            self.short_call.clone(),
+        ]
+    }
+
     fn break_even(&self) -> Vec<PositiveF64> {
         self.break_even_points.clone()
     }
@@ -347,7 +355,7 @@ impl Strategies for CallButterfly {
     }
 
     fn profit_ratio(&self) -> f64 {
-        self.max_profit() / self.max_loss().abs()
+        self.max_profit() / self.max_loss().abs() * 100.0
     }
 
     fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {

@@ -59,6 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         (range / 2.0) / underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
 
     // Generate the profit/loss graph
     strategy.graph(
