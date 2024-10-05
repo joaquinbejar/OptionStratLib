@@ -30,10 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         7.01,      // open_fee_short_put
         7.01,      // close_fee_short_put
     );
-    let price_range: Vec<PositiveF64> = (6400..=8100)
-        .map(|x| PositiveF64::new(x as f64).unwrap())
-        .collect();
-
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());
@@ -51,6 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         (range / 2.0) / underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
 
     // Generate the profit/loss graph
     strategy.graph(

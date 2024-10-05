@@ -16,6 +16,7 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use crate::pos;
 use crate::pricing::payoff::Profit;
+use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
@@ -165,6 +166,18 @@ impl Strategies for ShortStrangle {
         let outer_square = break_even_diff * self.max_profit();
         let triangles = (outer_square - inner_square) / 2.0;
         ((inner_square + triangles) / self.short_call.option.underlying_price).value()
+    }
+
+    fn profit_ratio(&self) -> f64 {
+        let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
+        self.max_profit() / break_even_diff * 100.0
+    }
+
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
+        let start_price = first_option - self.max_profit();
+        let end_price = last_option + self.max_profit();
+        Some(calculate_price_range(start_price, end_price, step))
     }
 }
 
