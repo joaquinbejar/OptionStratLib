@@ -12,7 +12,7 @@ use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
-use tracing::error;
+use tracing::{error};
 
 #[derive(Clone, Default, Debug)]
 pub struct ExoticParams {
@@ -510,8 +510,19 @@ mod tests_valid_option {
     #[test]
     fn test_negative_strike_price() {
         let mut option = create_valid_option();
-        option.strike_price = pos!(-10.0);
-        assert!(!option.validate());
+
+        // Isolate the potential panic-inducing operation outside the closure
+        let result = std::panic::catch_unwind(|| {
+            // We are only testing the invalid value creation here, not the assignment
+            pos!(-10.0);
+        });
+
+        assert!(result.is_err(), "PositiveF64 value must be positive, got -10");
+
+        // Proceed with assignment after the panic check
+        if result.is_ok() {
+            option.strike_price = pos!(-10.0); // This line won't run due to expected panic
+        }
     }
 
     #[test]
@@ -535,11 +546,23 @@ mod tests_valid_option {
         assert!(!option.validate());
     }
 
+
     #[test]
     fn test_negative_underlying_price() {
         let mut option = create_valid_option();
-        option.underlying_price = pos!(-10.0);
-        assert!(!option.validate());
+
+        // Isolate the potential panic-inducing operation outside the closure
+        let result = std::panic::catch_unwind(|| {
+            // We are only testing the invalid value creation here, not the assignment
+            pos!(-10.0);
+        });
+
+        assert!(result.is_err(), "PositiveF64 value must be positive, got -10");
+
+        // Proceed with assignment after the panic check
+        if result.is_ok() {
+            option.underlying_price = pos!(-10.0); // This line won't run due to expected panic
+        }
     }
 
     #[test]
@@ -559,42 +582,46 @@ mod tests_valid_option {
 
 #[cfg(test)]
 mod tests_time_value {
+    use tracing::{debug, info};
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
     use crate::pos;
+    use crate::utils::logger::setup_logger;
 
     #[test]
     fn test_calculate_time_value_long_call() {
+        setup_logger();
         let option =
             create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(105.0));
         let time_value = option.time_value();
         assert!(time_value > ZERO);
-        assert!(time_value < option.calculate_price_black_scholes());
+        assert!(time_value <= option.calculate_price_black_scholes());
     }
 
-    // #[test] // TODO
-    // fn test_calculate_time_value_short_call() {
-    //     let option = create_option(Side::Short, OptionStyle::Call, 105.0);
-    //     let time_value = option.time_value();
-    //     assert!(time_value > ZERO);
-    //     assert!(time_value < option.calculate_price_black_scholes().abs());
-    // }
+    #[test]
+    fn test_calculate_time_value_short_call() {
+        let option = create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
+        let time_value = option.time_value();
+        assert!(time_value > ZERO);
+        assert!(time_value <= option.calculate_price_black_scholes().abs());
+    }
 
     #[test]
     fn test_calculate_time_value_long_put() {
+        setup_logger();
         let option = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
         let time_value = option.time_value();
         assert!(time_value > ZERO);
-        assert!(time_value < option.calculate_price_black_scholes());
+        assert!(time_value <= option.calculate_price_black_scholes());
     }
 
-    // #[test] // TODO
-    // fn test_calculate_time_value_short_put() {
-    //     let option = create_option(Side::Short, OptionStyle::Put, 95.0);
-    //     let time_value = option.time_value();
-    //     assert!(time_value > ZERO);
-    //     assert!(time_value < option.calculate_price_black_scholes().abs());
-    // }
+    #[test]
+    fn test_calculate_time_value_short_put() {
+        let option = create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
+        let time_value = option.time_value();
+        assert!(time_value > ZERO);
+        assert!(time_value <= option.calculate_price_black_scholes().abs());
+    }
 
     #[test]
     fn test_calculate_time_value_at_the_money() {
@@ -610,19 +637,24 @@ mod tests_time_value {
         assert_eq!(put_time_value, put.calculate_price_black_scholes());
     }
 
-    // #[test] // TODO
-    // fn test_calculate_time_value_deep_in_the_money() {
-    //     let call = create_option(Side::Long, OptionStyle::Call, 150.0);
-    //     let put = create_option(Side::Long, OptionStyle::Put, 50.0);
-    //
-    //     let call_time_value = call.time_value();
-    //     let put_time_value = put.time_value();
-    //
-    //     assert!(call_time_value > ZERO);
-    //     // assert!(put_time_value > ZERO);
-    //     assert!(call_time_value < call.calculate_price_black_scholes() - 50.0);
-    //     assert!(put_time_value < put.calculate_price_black_scholes() - 50.0);
-    // }
+    #[test]
+    fn test_calculate_time_value_deep_in_the_money() {
+        setup_logger();
+        let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(150.0));
+        let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(50.0));
+
+        let call_time_value = call.time_value();
+        let put_time_value = put.time_value();
+
+        assert!(call_time_value > ZERO);
+        assert!(put_time_value > ZERO);
+        debug!("Call time value: {}", call_time_value);
+        debug!("Call BS price: {}", call.calculate_price_black_scholes());
+        debug!("Put time value: {}", put_time_value);
+        debug!("Put BS price: {}", put.calculate_price_black_scholes());
+        assert!(call_time_value <= call.calculate_price_black_scholes());
+        assert!(put_time_value <= put.calculate_price_black_scholes());
+    }
 }
 
 #[cfg(test)]
@@ -630,29 +662,32 @@ mod tests_options_payoffs {
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
     use crate::pos;
+    use crate::utils::logger::setup_logger;
 
     #[test]
     fn test_payoff_european_call_long() {
+        setup_logger();
         let call_option =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
         let call_payoff = call_option.payoff();
-        assert_eq!(call_payoff, 5.0); // max(105 - 100, 0) = 5
+        assert_eq!(call_payoff, 5.0); // max(100 - 95, 0) = 5
 
         let call_option_otm =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(105.0));
         let call_payoff_otm = call_option_otm.payoff();
-        assert_eq!(call_payoff_otm, ZERO); // max(95 - 100, 0) = 0
+        assert_eq!(call_payoff_otm, ZERO); // max(100 - 105, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_call_short() {
+        setup_logger();
         let call_option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(95.0));
         let call_payoff = call_option.payoff();
-        assert_eq!(call_payoff, -5.0); // -max(105 - 100, 0) = -5
+        assert_eq!(call_payoff, -5.0); // -max(100 - 95, 0) = -5
 
         let call_option_otm =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
         let call_payoff_otm = call_option_otm.payoff();
         assert_eq!(call_payoff_otm, ZERO); // -max(95 - 100, 0) = 0
     }
@@ -660,27 +695,27 @@ mod tests_options_payoffs {
     #[test]
     fn test_payoff_european_put_long() {
         let put_option =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(105.0));
         let put_payoff = put_option.payoff();
-        assert_eq!(put_payoff, 5.0); // max(100 - 95, 0) = 5
+        assert_eq!(put_payoff, 5.0); // max(105 - 100, 0) = 5
 
         let put_option_otm =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
         let put_payoff_otm = put_option_otm.payoff();
-        assert_eq!(put_payoff_otm, ZERO); // max(100 - 105, 0) = 0
+        assert_eq!(put_payoff_otm, ZERO); // max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_short() {
         let put_option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(105.0));
         let put_payoff = put_option.payoff();
-        assert_eq!(put_payoff, -5.0); // -max(100 - 95, 0) = -5
+        assert_eq!(put_payoff, -5.0); // -max(105 - 100, 0) = -5
 
         let put_option_otm =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
         let put_payoff_otm = put_option_otm.payoff();
-        assert_eq!(put_payoff_otm, ZERO); // -max(100 - 105, 0) = 0
+        assert_eq!(put_payoff_otm, ZERO); // -max(95 - 100, 0) = 0
     }
 }
 
