@@ -10,9 +10,7 @@ Key characteristics:
 - Lower cost than buying a call option outright
 */
 use super::base::{Strategies, StrategyType};
-use crate::constants::{
-    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
-};
+use crate::constants::{DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO};
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -20,10 +18,12 @@ use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, 
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::ChartVerticalLine;
+use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::{ShapeStyle};
+use plotters::style::full_palette::ORANGE;
+use plotters::style::RED;
 use tracing::{debug, error};
 
 const DESCRIPTION: &str = "A bull call spread involves buying a call option with a lower strike \
@@ -91,8 +91,6 @@ impl BullCallSpread {
         );
         strategy.add_leg(lower_call.clone());
 
-        strategy.break_even_points.push(lower_call.break_even());
-
         // Add the short call option with higher strike
         let higher_call_option = Options::new(
             OptionType::European,
@@ -117,7 +115,8 @@ impl BullCallSpread {
         );
         strategy.add_leg(higher_call.clone());
 
-        strategy.break_even_points.push(higher_call.break_even());
+        let break_even = strategy.short_call.option.strike_price - strategy.max_profit() / quantity;
+        strategy.break_even_points.push(break_even);
 
         strategy.validate();
         strategy
@@ -235,6 +234,10 @@ impl Strategies for BullCallSpread {
         }
     }
 
+    fn get_legs(&self) -> Vec<Position> {
+        vec![self.long_call.clone(), self.short_call.clone()]
+    }
+
     fn break_even(&self) -> Vec<PositiveF64> {
         vec![
             self.short_call.option.strike_price
@@ -343,17 +346,75 @@ impl Graph for BullCallSpread {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: ZERO, // TODO current price
+            x_coordinate: self.short_call.option.underlying_price.value(),
             y_range: (-50000.0, 50000.0),
-            label: "Break Even".to_string(),
+            label: format!("Current Price: {}", self.short_call.option.underlying_price),
             label_offset: (5.0, 5.0),
-            line_color: BLACK,
-            label_color: BLACK,
-            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+            line_color: ORANGE,
+            label_color: ORANGE,
+            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
             font_size: 18,
         }];
 
         vertical_lines
+    }
+
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[0].value(), 0.0),
+            label: format!("Break Even\n\n{}", self.break_even_points[0]),
+            label_offset: (5.0, 5.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            self.short_call.option.strike_price.value() / 2000.0,
+            self.max_profit() / 5.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (
+                self.short_call.option.strike_price.value(),
+                self.max_profit(),
+            ),
+            label: format!(
+                "Max Profit {:.2} at {:.0}",
+                self.max_profit(),
+                self.short_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: DARK_GREEN,
+            label_color: DARK_GREEN,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            self.long_call.option.strike_price.value() / 2000.0,
+            -self.max_loss() / 50.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (
+                self.long_call.option.strike_price.value(),
+                -self.max_loss(),
+            ),
+            label: format!(
+                "Max Loss {:.2} at {:.0}",
+                self.max_loss(),
+                self.long_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points
     }
 }
 
@@ -417,8 +478,8 @@ mod tests_create_bull_call_spread {
     #[test]
     fn test_bull_call_spread_break_even() {
         let strategy = create_sample_bull_call_spread();
-        assert_eq!(strategy.break_even_points.len(), 2);
-        assert_relative_eq!(strategy.break_even_points[0].value(), 97.71, epsilon = 1e-6);
+        assert_eq!(strategy.break_even_points.len(), 1);
+        assert_relative_eq!(strategy.break_even_points[0].value(), 94.0, epsilon = 1e-6);
     }
 
     #[test]
@@ -509,10 +570,10 @@ mod tests_create_bull_call_spread_gold {
     #[test]
     fn test_bull_call_spread_break_even() {
         let strategy = create_sample_bull_call_spread();
-        assert_eq!(strategy.break_even_points.len(), 2);
+        assert_eq!(strategy.break_even_points.len(), 1);
         assert_relative_eq!(
             strategy.break_even_points[0].value(),
-            2488.42,
+            2484.19,
             epsilon = 1e-6
         );
     }
