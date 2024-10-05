@@ -29,17 +29,19 @@
 */
 
 use super::base::{Strategies, StrategyType};
-use crate::constants::{DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
+use crate::constants::{
+    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
+};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use crate::pricing::payoff::Profit;
+use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::prelude::{ShapeStyle, RED};
 use plotters::prelude::full_palette::ORANGE;
-use crate::strategies::utils::calculate_price_range;
+use plotters::prelude::{ShapeStyle, RED};
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -185,7 +187,7 @@ impl Strategies for PoorMansCoveredCall {
     fn profit_area(&self) -> f64 {
         let base = (self.short_call.option.strike_price
             - (self.short_call.option.strike_price - self.max_profit()))
-            .value();
+        .value();
         let high = self.max_profit();
         base * high / 200.0
     }
