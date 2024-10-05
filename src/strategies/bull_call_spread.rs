@@ -29,6 +29,7 @@ use plotters::style::full_palette::ORANGE;
 use plotters::style::RED;
 use tracing::{debug, error};
 
+
 const DESCRIPTION: &str = "A bull call spread involves buying a call option with a lower strike \
 price and selling a call option with a higher strike price, both with the same expiration date. \
 This strategy is used when a moderate rise in the underlying asset's price is expected.";
@@ -274,9 +275,10 @@ impl Strategies for BullCallSpread {
     }
 
     fn profit_area(&self) -> f64 {
-        // TODO: Implement this
-        // (self.short_call.option.strike_price - self.break_even()) * self.max_profit() / 100.0
-        ZERO
+        let base = (self.short_call.option.strike_price -
+            (self.short_call.option.strike_price - self.max_profit())).value();
+        let high = self.max_profit();
+        base * high / 200.0
     }
 
     fn profit_ratio(&self) -> f64 {
