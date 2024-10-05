@@ -13,7 +13,6 @@ use super::base::{Strategies, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
-use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
@@ -202,16 +201,12 @@ impl Strategies for IronCondor {
     }
 
     fn max_loss(&self) -> f64 {
-        let call_wing_width = (self.long_call.option.strike_price
-            - self.short_call.option.strike_price)
-            * self.long_call.option.quantity
-            - pos!(self.net_premium_received());
-        let put_wing_width = (self.short_put.option.strike_price
-            - self.long_put.option.strike_price)
-            * self.short_put.option.quantity
-            - pos!(self.net_premium_received());
+        let call_wing_width = (self.long_call.option.strike_price - self.short_call.option.strike_price).value()
+            * self.long_call.option.quantity.value() - self.net_premium_received();
+        let put_wing_width = (self.short_put.option.strike_price - self.long_put.option.strike_price).value()
+            * self.short_put.option.quantity.value() - self.net_premium_received();
 
-        call_wing_width.value().max(put_wing_width.value())
+        call_wing_width.max(put_wing_width)
     }
 
     fn total_cost(&self) -> f64 {
@@ -275,9 +270,9 @@ impl Graph for IronCondor {
             format!("Long Call: ${}", self.long_call.option.strike_price),
             format!("Expire: {}", self.short_put.option.expiration_date),
         ]
-        .iter()
-        .map(|leg| leg.to_string())
-        .collect();
+            .iter()
+            .map(|leg| leg.to_string())
+            .collect();
 
         if leg_titles.is_empty() {
             strategy_title
@@ -309,6 +304,7 @@ mod tests_iron_condor {
     use super::*;
     use crate::model::types::SIZE_ONE;
     use chrono::{TimeZone, Utc};
+    use crate::pos;
 
     #[test]
     fn test_iron_condor_creation() {

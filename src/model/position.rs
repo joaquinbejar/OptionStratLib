@@ -13,6 +13,7 @@ use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
+use crate::pos;
 
 /// The `Position` struct represents a financial position in an options market.
 /// It includes various attributes related to the option, such as its cost,
@@ -161,20 +162,20 @@ impl Position {
         premium
     }
 
-    pub fn break_even(&self) -> f64 {
+    pub fn break_even(&self) -> PositiveF64 {
         let total_cost_per_contract = self.total_cost() / self.option.quantity;
         match (&self.option.side, &self.option.option_style) {
             (Side::Long, OptionStyle::Call) => {
-                self.option.strike_price.value() + total_cost_per_contract
+                pos!(self.option.strike_price.value() + total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Call) => {
-                self.option.strike_price.value() + self.premium - total_cost_per_contract
+                pos!(self.option.strike_price.value() + self.premium - total_cost_per_contract)
             }
             (Side::Long, OptionStyle::Put) => {
-                self.option.strike_price.value() - total_cost_per_contract
+                pos!(self.option.strike_price.value() - total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Put) => {
-                self.option.strike_price.value() - self.premium + total_cost_per_contract
+                pos!(self.option.strike_price.value() - self.premium + total_cost_per_contract)
             }
         }
     }
@@ -276,7 +277,7 @@ impl Graph for Position {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.break_even(),
+            x_coordinate: self.break_even().value(),
             y_range: (-50000.0, 50000.0),
             label: "Break Even".to_string(),
             label_offset: (5.0, 5.0),

@@ -140,6 +140,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> f64 {
 /// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
 /// use optionstratlib::pricing::binomial_model::{BinomialPricingParams, generate_binomial_tree};
+/// use optionstratlib::model::types::PositiveF64;
 /// let params = BinomialPricingParams {
 ///             asset: pos!(100.0),
 ///             volatility: 0.2,

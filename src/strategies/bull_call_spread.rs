@@ -91,8 +91,7 @@ impl BullCallSpread {
         );
         strategy.add_leg(lower_call.clone());
 
-        // TODO: push the break even points
-        // strategy.break_even_points.push(lower_call.break_even());
+        strategy.break_even_points.push(lower_call.break_even());
 
         // Add the short call option with higher strike
         let higher_call_option = Options::new(
@@ -118,8 +117,7 @@ impl BullCallSpread {
         );
         strategy.add_leg(higher_call.clone());
 
-        // TODO: push the break even points
-        // strategy.break_even_points.push(higher_call.break_even());
+        strategy.break_even_points.push(higher_call.break_even());
 
         strategy.validate();
         strategy

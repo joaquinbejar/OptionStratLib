@@ -72,15 +72,25 @@ impl PartialEq<f64> for PositiveF64 {
 
 impl fmt::Display for PositiveF64 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        if let Some(precision) = f.precision() {
+            write!(f, "{:.1$}", self.0, precision)
+        } else {
+            write!(f, "{}", self.0)
+        }
     }
 }
 
 impl fmt::Debug for PositiveF64 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        if let Some(precision) = f.precision() {
+            write!(f, "{:.1$}", self.0, precision)
+        } else {
+            write!(f, "{:?}", self.0)
+        }
     }
 }
+
+
 
 impl Serialize for PositiveF64 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -223,12 +233,6 @@ impl From<f64> for PositiveF64 {
     }
 }
 
-// impl Into<f64> for PositiveF64 {
-//     fn into(self) -> f64 {
-//         self.0
-//     }
-// }
-
 impl AbsDiffEq for PositiveF64 {
     type Epsilon = f64;
 
@@ -288,11 +292,6 @@ impl Add<PositiveF64> for f64 {
     }
 }
 
-// impl Into<PositiveF64> for f64 {
-//     fn into(self) -> f64 {
-//         self.value()
-//     }
-// }
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -997,6 +996,15 @@ mod tests_positive_f64 {
         let pos = PositiveF64::new(4.5).unwrap();
         assert_eq!(format!("{:?}", pos), "4.5");
     }
+
+    #[test]
+    fn test_positive_f64_display_decimal_fix() {
+        let pos = PositiveF64::new(4.578923789423789).unwrap();
+        assert_eq!(format!("{:.2}", pos), "4.58");
+        assert_eq!(format!("{:.3}", pos), "4.579");
+        assert_eq!(format!("{:.0}", pos), "5");
+    }
+
 
     #[test]
     fn test_positive_f64_add() {

@@ -582,7 +582,7 @@ mod tests_valid_option {
 
 #[cfg(test)]
 mod tests_time_value {
-    use tracing::{debug, info};
+    use tracing::{debug};
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
     use crate::pos;
