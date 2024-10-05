@@ -57,27 +57,6 @@ macro_rules! configure_chart_and_draw_mesh {
     }};
 }
 
-// #[macro_export]
-// macro_rules! draw_line_segments {
-//     ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr) => {
-//         let mut last_point = None;
-//         for (&price, &value) in $x_axis_data.iter().zip($y_axis_data.iter()) {
-//             if let Some((last_price, last_profit)) = last_point {
-//                 let color = if value > 0.0 {
-//                     &$dark_green
-//                 } else {
-//                     &$dark_red
-//                 };
-//                 $chart.draw_series(LineSeries::new(
-//                     vec![(last_price, last_profit), (price, value)],
-//                     color,
-//                 ))?;
-//             }
-//             last_point = Some((price, value));
-//         }
-//     };
-// }
-
 #[macro_export]
 macro_rules! draw_line_segments {
     ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr) => {{
@@ -135,7 +114,6 @@ pub trait Graph: Profit {
 
         draw_line_segments!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED);
 
-        // TODO: fix this
         draw_points_on_chart(&mut chart, &self.get_points())?;
         draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
         root.present()?;

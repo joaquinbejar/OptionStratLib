@@ -7,7 +7,7 @@ use crate::model::chain::OptionChain;
 use crate::model::position::Position;
 use crate::model::types::PositiveF64;
 use crate::strategies::utils::FindOptimalSide;
-use num_traits::Float;
+use crate::constants::ZERO;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -65,84 +65,48 @@ impl Strategy {
             break_even_points: Vec::new(),
         }
     }
-
-    // pub fn add_leg(&mut self, position: Position) {
-    //     self.legs.push(position);
-    // }
-    //
-    // pub fn set_max_profit(&mut self, max_profit: f64) {
-    //     self.max_profit = Some(max_profit);
-    // }
-    //
-    // pub fn set_max_loss(&mut self, max_loss: f64) {
-    //     self.max_loss = Some(max_loss);
-    // }
-    //
-    // pub fn add_break_even_point(&mut self, point: PositiveF64) {
-    //     self.break_even_points.push(point);
-    // }
-    //
-    // pub fn break_even(&self) -> Vec<PositiveF64> {
-    //     vec![]
-    // }
-    //
-    // pub fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
-    //     self.legs
-    //         .iter()
-    //         .map(|leg| leg.pnl_at_expiration(Some(price)))
-    //         .sum()
-    // }
 }
 
-// impl Graph for Strategy {
-//     fn title(&self) -> String {
-//         let strategy_title = format!("Strategy: {} - {:?}", self.name, self.kind);
-//         let leg_titles: Vec<String> = self.legs.iter().map(|leg| leg.title()).collect();
-//
-//         if leg_titles.is_empty() {
-//             strategy_title
-//         } else {
-//             format!("{}\n{}", strategy_title, leg_titles.join("\n"))
-//         }
-//     }
-//
-//     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<PositiveF64, f64>> {
-//         let vertical_lines = vec![ChartVerticalLine {
-//             x_coordinate: PZERO,
-//             y_range: (-50000.0, 50000.0),
-//             label: "Break Even".to_string(),
-//             label_offset: (5.0, 5.0),
-//             line_color: BLACK,
-//             label_color: BLACK,
-//             line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-//             font_size: 18,
-//         }];
-//
-//         vertical_lines
-//     }
-// }
 
 pub trait Strategies {
-    fn add_leg(&mut self, position: Position);
+    fn add_leg(&mut self, _position: Position){
+        panic!("Add leg is not applicable for this strategy");
+    }
 
-    fn break_even(&self) -> Vec<PositiveF64>;
+    fn get_legs(&self) -> Vec<Position> {
+        panic!("Legs is not applicable for this strategy");
+    }
 
-    fn max_profit(&self) -> f64;
+    fn break_even(&self) -> Vec<PositiveF64> {
+        panic!("Break even is not applicable for this strategy");
+    }
 
-    fn max_loss(&self) -> f64;
+    fn max_profit(&self) -> f64 {
+        ZERO
+    }
 
-    fn total_cost(&self) -> f64;
+    fn max_loss(&self) -> f64 {
+        ZERO
+    }
 
-    fn net_premium_received(&self) -> f64;
+    fn total_cost(&self) -> f64 {
+        ZERO
+    }
 
-    fn fees(&self) -> f64;
+    fn net_premium_received(&self) -> f64 {
+        panic!("Net premium received is not applicable");
+    }
+
+    fn fees(&self) -> f64 {
+        panic!("Fees is not applicable for this strategy");
+    }
 
     fn profit_area(&self) -> f64 {
-        f64::infinity()
+        ZERO
     }
 
     fn profit_ratio(&self) -> f64 {
-        f64::infinity()
+        ZERO
     }
 
     fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
@@ -160,4 +124,21 @@ pub trait Strategies {
     fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
         None
     }
+
+    fn strikes(&self) -> Vec<PositiveF64> {
+        self.get_legs().iter()
+            .map(|leg| leg.option.strike_price)
+            .collect()
+    }
+
+    fn max_min_strikes(&self) -> (PositiveF64, PositiveF64) {
+        let strikes = self.strikes();
+
+        let max = strikes.iter().cloned().fold(PositiveF64::new(0.0).unwrap(), PositiveF64::max);
+        let min = strikes.iter().cloned().fold(PositiveF64::new(f64::INFINITY).unwrap(), PositiveF64::min);
+
+        (min, max)
+    }
+
+
 }
