@@ -29,15 +29,17 @@
 */
 
 use super::base::{Strategies, StrategyType};
-use crate::constants::ZERO;
+use crate::constants::{DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use crate::pricing::payoff::Profit;
-use crate::visualization::model::ChartVerticalLine;
+use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::full_palette::ORANGE;
+use crate::strategies::utils::calculate_price_range;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -181,7 +183,25 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn profit_area(&self) -> f64 {
-        f64::INFINITY
+        let base = (self.short_call.option.strike_price
+            - (self.short_call.option.strike_price - self.max_profit()))
+            .value();
+        let high = self.max_profit();
+        base * high / 200.0
+    }
+
+    fn profit_ratio(&self) -> f64 {
+        (self.max_profit() / self.max_loss()).abs() * 100.0
+    }
+
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = (
+            self.long_call.option.clone(),
+            self.short_call.option.clone(),
+        );
+        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
     }
 }
 
@@ -223,16 +243,71 @@ impl Graph for PoorMansCoveredCall {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: ZERO, // TODO: underlying price
+            x_coordinate: self.short_call.option.underlying_price.value(),
             y_range: (-50000.0, 50000.0),
-            label: "Break Even".to_string(),
+            label: format!("Current Price: {}", self.short_call.option.underlying_price),
             label_offset: (5.0, 5.0),
-            line_color: BLACK,
-            label_color: BLACK,
-            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+            line_color: ORANGE,
+            label_color: ORANGE,
+            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
             font_size: 18,
         }];
 
         vertical_lines
+    }
+
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[0].value(), 0.0),
+            label: format!("Break Even\n\n{}", self.break_even_points[0]),
+            label_offset: (-30.0, 15.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            self.short_call.option.strike_price.value() / 2000.0,
+            self.max_profit() / 10.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (
+                self.short_call.option.strike_price.value(),
+                self.max_profit(),
+            ),
+            label: format!(
+                "Max Profit {:.2} at {:.0}",
+                self.max_profit(),
+                self.short_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: DARK_GREEN,
+            label_color: DARK_GREEN,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            self.long_call.option.strike_price.value() / 2000.0,
+            -self.max_loss() / 50.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (self.long_call.option.strike_price.value(), -self.max_loss()),
+            label: format!(
+                "Max Loss {:.2} at {:.0}",
+                self.max_loss(),
+                self.long_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points
     }
 }
