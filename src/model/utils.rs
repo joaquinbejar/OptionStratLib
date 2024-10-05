@@ -9,10 +9,9 @@ use crate::pos;
 use chrono::{NaiveDateTime, TimeZone, Utc};
 
 #[allow(dead_code)]
-pub  fn positive_f64_to_f64(vec: Vec<PositiveF64>) -> Vec<f64> {
+pub fn positive_f64_to_f64(vec: Vec<PositiveF64>) -> Vec<f64> {
     vec.into_iter().map(|pos_f64| pos_f64.value()).collect()
 }
-
 
 #[allow(dead_code)]
 pub(crate) fn create_sample_option(
@@ -137,5 +136,4 @@ mod tests_positive_f64_to_f64 {
         // Esto provocará un panic ya que estamos intentando crear un `PositiveF64` con un valor negativo
         PositiveF64::new(-10.0).unwrap();
     }
-
 }

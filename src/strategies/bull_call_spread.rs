@@ -10,7 +10,10 @@ Key characteristics:
 - Lower cost than buying a call option outright
 */
 use super::base::{Strategies, StrategyType};
-use crate::constants::{DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO};
+use crate::constants::{
+    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER,
+    STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+};
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -21,7 +24,7 @@ use crate::strategies::utils::{calculate_price_range, FindOptimalSide, Optimizat
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::prelude::{ShapeStyle};
+use plotters::prelude::ShapeStyle;
 use plotters::style::full_palette::ORANGE;
 use plotters::style::RED;
 use tracing::{debug, error};
@@ -398,10 +401,7 @@ impl Graph for BullCallSpread {
             -self.max_loss() / 50.0,
         );
         points.push(ChartPoint {
-            coordinates: (
-                self.long_call.option.strike_price.value(),
-                -self.max_loss(),
-            ),
+            coordinates: (self.long_call.option.strike_price.value(), -self.max_loss()),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
                 self.max_loss(),

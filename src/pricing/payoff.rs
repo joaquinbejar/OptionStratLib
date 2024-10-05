@@ -1,5 +1,5 @@
-use tracing::{ trace};
 use crate::model::types::{OptionStyle, PositiveF64, Side, PZERO};
+use tracing::trace;
 
 pub trait Payoff {
     fn payoff(&self, info: &PayoffInfo) -> f64;
@@ -61,9 +61,12 @@ impl PayoffInfo {
 /// - For a call option: Max(spot price - strike price, 0)
 /// - For a put option: Max(strike price - spot price, 0)
 pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
-    trace!("standard_payoff - spot: {}", info.spot );
-    trace!("standard_payoff - info.strike: {}", info.strike );
-    trace!("standard_payoff - (info.spot - info.strike): {}", info.spot - info.strike);
+    trace!("standard_payoff - spot: {}", info.spot);
+    trace!("standard_payoff - info.strike: {}", info.strike);
+    trace!(
+        "standard_payoff - (info.spot - info.strike): {}",
+        info.spot - info.strike
+    );
     let payoff = match info.style {
         OptionStyle::Call => (info.spot - info.strike).max(PZERO).into(),
         OptionStyle::Put => (info.strike - info.spot).max(PZERO).into(),
@@ -79,12 +82,11 @@ pub trait Profit {
     fn calculate_profit_at(&self, price: PositiveF64) -> f64;
 }
 
-
 #[cfg(test)]
 mod tests_standard_payoff {
+    use super::*;
     use crate::model::types::OptionType;
     use crate::pos;
-    use super::*;
 
     #[test]
     fn test_call_option_in_the_money() {

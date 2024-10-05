@@ -90,8 +90,6 @@ impl fmt::Debug for PositiveF64 {
     }
 }
 
-
-
 impl Serialize for PositiveF64 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -291,7 +289,6 @@ impl Add<PositiveF64> for f64 {
         self + rhs.0
     }
 }
-
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -1004,7 +1001,6 @@ mod tests_positive_f64 {
         assert_eq!(format!("{:.3}", pos), "4.579");
         assert_eq!(format!("{:.0}", pos), "5");
     }
-
 
     #[test]
     fn test_positive_f64_add() {

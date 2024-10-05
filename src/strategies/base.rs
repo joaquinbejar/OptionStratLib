@@ -3,11 +3,11 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+use crate::constants::ZERO;
 use crate::model::chain::OptionChain;
 use crate::model::position::Position;
 use crate::model::types::PositiveF64;
 use crate::strategies::utils::FindOptimalSide;
-use crate::constants::ZERO;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -67,9 +67,8 @@ impl Strategy {
     }
 }
 
-
 pub trait Strategies {
-    fn add_leg(&mut self, _position: Position){
+    fn add_leg(&mut self, _position: Position) {
         panic!("Add leg is not applicable for this strategy");
     }
 
@@ -126,7 +125,8 @@ pub trait Strategies {
     }
 
     fn strikes(&self) -> Vec<PositiveF64> {
-        self.get_legs().iter()
+        self.get_legs()
+            .iter()
             .map(|leg| leg.option.strike_price)
             .collect()
     }
@@ -134,11 +134,15 @@ pub trait Strategies {
     fn max_min_strikes(&self) -> (PositiveF64, PositiveF64) {
         let strikes = self.strikes();
 
-        let max = strikes.iter().cloned().fold(PositiveF64::new(0.0).unwrap(), PositiveF64::max);
-        let min = strikes.iter().cloned().fold(PositiveF64::new(f64::INFINITY).unwrap(), PositiveF64::min);
+        let max = strikes
+            .iter()
+            .cloned()
+            .fold(PositiveF64::new(0.0).unwrap(), PositiveF64::max);
+        let min = strikes
+            .iter()
+            .cloned()
+            .fold(PositiveF64::new(f64::INFINITY).unwrap(), PositiveF64::min);
 
         (min, max)
     }
-
-
 }

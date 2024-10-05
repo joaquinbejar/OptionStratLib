@@ -201,10 +201,14 @@ impl Strategies for IronCondor {
     }
 
     fn max_loss(&self) -> f64 {
-        let call_wing_width = (self.long_call.option.strike_price - self.short_call.option.strike_price).value()
-            * self.long_call.option.quantity.value() - self.net_premium_received();
-        let put_wing_width = (self.short_put.option.strike_price - self.long_put.option.strike_price).value()
-            * self.short_put.option.quantity.value() - self.net_premium_received();
+        let call_wing_width =
+            (self.long_call.option.strike_price - self.short_call.option.strike_price).value()
+                * self.long_call.option.quantity.value()
+                - self.net_premium_received();
+        let put_wing_width =
+            (self.short_put.option.strike_price - self.long_put.option.strike_price).value()
+                * self.short_put.option.quantity.value()
+                - self.net_premium_received();
 
         call_wing_width.max(put_wing_width)
     }
@@ -270,9 +274,9 @@ impl Graph for IronCondor {
             format!("Long Call: ${}", self.long_call.option.strike_price),
             format!("Expire: {}", self.short_put.option.expiration_date),
         ]
-            .iter()
-            .map(|leg| leg.to_string())
-            .collect();
+        .iter()
+        .map(|leg| leg.to_string())
+        .collect();
 
         if leg_titles.is_empty() {
             strategy_title
@@ -303,8 +307,8 @@ impl Graph for IronCondor {
 mod tests_iron_condor {
     use super::*;
     use crate::model::types::SIZE_ONE;
-    use chrono::{TimeZone, Utc};
     use crate::pos;
+    use chrono::{TimeZone, Utc};
 
     #[test]
     fn test_iron_condor_creation() {

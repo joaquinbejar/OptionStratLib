@@ -213,24 +213,28 @@ pub fn theta(option: &Options) -> f64 {
         / (2.0 * option.expiration_date.get_years().sqrt());
 
     match option.option_style {
-        OptionStyle::Call => common_term
-            - option.risk_free_rate
-                * option.strike_price.value()
-                * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
-                * big_n(d2)
-            + option.dividend_yield
-                * option.underlying_price.value()
-                * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                * big_n(d1),
-        OptionStyle::Put => common_term
-            + option.risk_free_rate
-                * option.strike_price.value()
-                * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
-                * big_n(-d2)
-            - option.dividend_yield
-                * option.underlying_price.value()
-                * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                * big_n(-d1),
+        OptionStyle::Call => {
+            common_term
+                - option.risk_free_rate
+                    * option.strike_price.value()
+                    * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
+                    * big_n(d2)
+                + option.dividend_yield
+                    * option.underlying_price.value()
+                    * (-option.dividend_yield * option.expiration_date.get_years()).exp()
+                    * big_n(d1)
+        }
+        OptionStyle::Put => {
+            common_term
+                + option.risk_free_rate
+                    * option.strike_price.value()
+                    * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
+                    * big_n(-d2)
+                - option.dividend_yield
+                    * option.underlying_price.value()
+                    * (-option.dividend_yield * option.expiration_date.get_years()).exp()
+                    * big_n(-d1)
+        }
     }
 }
 

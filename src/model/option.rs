@@ -12,7 +12,7 @@ use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
-use tracing::{error};
+use tracing::error;
 
 #[derive(Clone, Default, Debug)]
 pub struct ExoticParams {
@@ -517,7 +517,10 @@ mod tests_valid_option {
             pos!(-10.0);
         });
 
-        assert!(result.is_err(), "PositiveF64 value must be positive, got -10");
+        assert!(
+            result.is_err(),
+            "PositiveF64 value must be positive, got -10"
+        );
 
         // Proceed with assignment after the panic check
         if result.is_ok() {
@@ -546,7 +549,6 @@ mod tests_valid_option {
         assert!(!option.validate());
     }
 
-
     #[test]
     fn test_negative_underlying_price() {
         let mut option = create_valid_option();
@@ -557,7 +559,10 @@ mod tests_valid_option {
             pos!(-10.0);
         });
 
-        assert!(result.is_err(), "PositiveF64 value must be positive, got -10");
+        assert!(
+            result.is_err(),
+            "PositiveF64 value must be positive, got -10"
+        );
 
         // Proceed with assignment after the panic check
         if result.is_ok() {
@@ -582,11 +587,11 @@ mod tests_valid_option {
 
 #[cfg(test)]
 mod tests_time_value {
-    use tracing::{debug};
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
     use crate::pos;
     use crate::utils::logger::setup_logger;
+    use tracing::debug;
 
     #[test]
     fn test_calculate_time_value_long_call() {
@@ -600,7 +605,8 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_short_call() {
-        let option = create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
+        let option =
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
         let time_value = option.time_value();
         assert!(time_value > ZERO);
         assert!(time_value <= option.calculate_price_black_scholes().abs());
@@ -617,7 +623,8 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_short_put() {
-        let option = create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
+        let option =
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
         let time_value = option.time_value();
         assert!(time_value > ZERO);
         assert!(time_value <= option.calculate_price_black_scholes().abs());
