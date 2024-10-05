@@ -33,10 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.96,      // close_fee
     );
 
-    let price_range: Vec<PositiveF64> = (2450..=2950)
-        .map(|x| PositiveF64::new(x as f64).unwrap())
-        .collect();
-
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());
