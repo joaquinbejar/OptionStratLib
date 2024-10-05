@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 1/8/24
 ******************************************************************************/
+extern crate core;
+
 pub mod backtesting;
 pub mod constants;
 mod curves;

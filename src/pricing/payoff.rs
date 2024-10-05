@@ -1,5 +1,5 @@
-use crate::constants::ZERO;
-use crate::model::types::{OptionStyle, Side};
+use crate::model::types::{OptionStyle, PositiveF64, Side, PZERO};
+use tracing::trace;
 
 pub trait Payoff {
     fn payoff(&self, info: &PayoffInfo) -> f64;
@@ -18,8 +18,8 @@ pub trait Payoff {
 ///
 #[derive(Debug)]
 pub struct PayoffInfo {
-    pub spot: f64,
-    pub strike: f64,
+    pub spot: PositiveF64,
+    pub strike: PositiveF64,
     pub style: OptionStyle,
     pub side: Side,
     pub spot_prices: Option<Vec<f64>>, // Asian
@@ -30,8 +30,8 @@ pub struct PayoffInfo {
 impl Default for PayoffInfo {
     fn default() -> Self {
         PayoffInfo {
-            spot: ZERO,
-            strike: ZERO,
+            spot: PZERO,
+            strike: PZERO,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -61,12 +61,120 @@ impl PayoffInfo {
 /// - For a call option: Max(spot price - strike price, 0)
 /// - For a put option: Max(strike price - spot price, 0)
 pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
+    trace!("standard_payoff - spot: {}", info.spot);
+    trace!("standard_payoff - info.strike: {}", info.strike);
+    trace!(
+        "standard_payoff - (info.spot - info.strike): {}",
+        info.spot - info.strike
+    );
     let payoff = match info.style {
-        OptionStyle::Call => (info.spot - info.strike).max(ZERO),
-        OptionStyle::Put => (info.strike - info.spot).max(ZERO),
+        OptionStyle::Call => (info.spot - info.strike).max(PZERO).into(),
+        OptionStyle::Put => (info.strike - info.spot).max(PZERO).into(),
     };
+
     match info.side {
         Side::Long => payoff,
         Side::Short => -payoff,
+    }
+}
+
+pub trait Profit {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64;
+}
+
+#[cfg(test)]
+mod tests_standard_payoff {
+    use super::*;
+    use crate::model::types::OptionType;
+    use crate::pos;
+
+    #[test]
+    fn test_call_option_in_the_money() {
+        let option_type = OptionType::European;
+        let info = PayoffInfo {
+            spot: pos!(110.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        assert_eq!(option_type.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_call_option_at_the_money() {
+        let option_type = OptionType::European;
+        let info = PayoffInfo {
+            spot: pos!(100.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        assert_eq!(option_type.payoff(&info), 0.0);
+    }
+
+    #[test]
+    fn test_call_option_out_of_the_money() {
+        let option_type = OptionType::European;
+        let info = PayoffInfo {
+            spot: pos!(90.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        assert_eq!(option_type.payoff(&info), 0.0);
+    }
+
+    #[test]
+    fn test_put_option_in_the_money() {
+        let option_type = OptionType::European;
+        let info = PayoffInfo {
+            spot: pos!(90.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        assert_eq!(option_type.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_put_option_at_the_money() {
+        let option_type = OptionType::European;
+        let info = PayoffInfo {
+            spot: pos!(100.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        assert_eq!(option_type.payoff(&info), 0.0);
+    }
+
+    #[test]
+    fn test_put_option_out_of_the_money() {
+        let option_type = OptionType::European;
+        let info = PayoffInfo {
+            spot: pos!(110.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        assert_eq!(option_type.payoff(&info), 0.0);
     }
 }

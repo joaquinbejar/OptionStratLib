@@ -16,13 +16,13 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = 5781.88;
+    let underlying_price = pos!(5781.88);
 
     let strategy = BullCallSpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        5750.0,           // long_strike_itm
-        5820.0,           // short_strike
+        pos!(5750.0),     // long_strike_itm
+        pos!(5820.0),     // short_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
@@ -36,8 +36,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.73,      // close_fee_short
     );
 
-    let price_range = strategy.best_range_to_show(1.0).unwrap();
-    let range = strategy.break_even_points[1] - strategy.break_even_points[0];
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let (min, max) = strategy.max_min_strikes();
+    let range = max - min;
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

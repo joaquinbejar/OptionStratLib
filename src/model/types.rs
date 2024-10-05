@@ -1,8 +1,12 @@
 use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
+use approx::{AbsDiffEq, RelativeEq};
 use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::cmp::Ordering;
 use std::fmt;
-use std::ops::{Add, Div, Mul};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
+use std::str::FromStr;
 
 pub const PZERO: PositiveF64 = PositiveF64(ZERO);
 pub const SIZE_ONE: PositiveF64 = PositiveF64(1.0);
@@ -17,6 +21,13 @@ macro_rules! pos {
     };
 }
 
+#[macro_export]
+macro_rules! spos {
+    ($val:expr) => {
+        Some(PositiveF64::new($val).unwrap())
+    };
+}
+
 impl PositiveF64 {
     pub fn new(value: f64) -> Result<Self, String> {
         if value >= ZERO {
@@ -28,6 +39,22 @@ impl PositiveF64 {
 
     pub fn value(&self) -> f64 {
         self.0
+    }
+
+    pub fn max(self, other: PositiveF64) -> PositiveF64 {
+        if self.0 > other.0 {
+            self
+        } else {
+            other
+        }
+    }
+
+    pub fn min(self, other: PositiveF64) -> PositiveF64 {
+        if self.0 < other.0 {
+            self
+        } else {
+            other
+        }
     }
 }
 
@@ -45,13 +72,40 @@ impl PartialEq<f64> for PositiveF64 {
 
 impl fmt::Display for PositiveF64 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        if let Some(precision) = f.precision() {
+            write!(f, "{:.1$}", self.0, precision)
+        } else {
+            write!(f, "{}", self.0)
+        }
     }
 }
 
 impl fmt::Debug for PositiveF64 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        if let Some(precision) = f.precision() {
+            write!(f, "{:.1$}", self.0, precision)
+        } else {
+            write!(f, "{:?}", self.0)
+        }
+    }
+}
+
+impl Serialize for PositiveF64 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_f64(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for PositiveF64 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = f64::deserialize(deserializer)?;
+        PositiveF64::new(value).map_err(serde::de::Error::custom)
     }
 }
 
@@ -63,11 +117,47 @@ impl Add for PositiveF64 {
     }
 }
 
+impl Sub for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        PositiveF64(self.0 - rhs.0)
+    }
+}
+
 impl Div for PositiveF64 {
     type Output = PositiveF64;
 
     fn div(self, other: PositiveF64) -> PositiveF64 {
         PositiveF64(self.0 / other.0)
+    }
+}
+
+impl Add<f64> for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn add(self, rhs: f64) -> PositiveF64 {
+        PositiveF64(self.0 + rhs)
+    }
+}
+
+impl Sub<f64> for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn sub(self, rhs: f64) -> PositiveF64 {
+        PositiveF64(self.0 - rhs)
+    }
+}
+
+impl AddAssign for PositiveF64 {
+    fn add_assign(&mut self, other: PositiveF64) {
+        self.0 += other.0;
+    }
+}
+
+impl MulAssign<f64> for PositiveF64 {
+    fn mul_assign(&mut self, rhs: f64) {
+        self.0 *= rhs;
     }
 }
 
@@ -79,11 +169,25 @@ impl Div<f64> for PositiveF64 {
     }
 }
 
-impl Mul<PositiveF64> for f64 {
-    type Output = f64;
+impl PartialOrd for PositiveF64 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
 
-    fn mul(self, rhs: PositiveF64) -> f64 {
-        self * rhs.0
+    fn le(&self, other: &Self) -> bool {
+        self.0 <= other.0
+    }
+
+    fn ge(&self, other: &Self) -> bool {
+        self.0 >= other.0
+    }
+}
+
+impl Neg for PositiveF64 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        panic!("Cannot negate a PositiveF64 value!");
     }
 }
 
@@ -109,11 +213,80 @@ impl Default for PositiveF64 {
     }
 }
 
+impl FromStr for PositiveF64 {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.parse::<f64>() {
+            Ok(value) if value > 0.0 => Ok(PositiveF64(value)),
+            Ok(value) => Err(format!("Value must be positive, got {}", value)),
+            Err(e) => Err(format!("Failed to parse as f64: {}", e)),
+        }
+    }
+}
+
+impl From<f64> for PositiveF64 {
+    fn from(value: f64) -> Self {
+        PositiveF64::new(value).expect("Value must be positive")
+    }
+}
+
+impl AbsDiffEq for PositiveF64 {
+    type Epsilon = f64;
+
+    fn default_epsilon() -> Self::Epsilon {
+        f64::default_epsilon()
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        f64::abs_diff_eq(&self.0, &other.0, epsilon)
+    }
+}
+
+impl RelativeEq for PositiveF64 {
+    fn default_max_relative() -> Self::Epsilon {
+        f64::default_max_relative()
+    }
+
+    fn relative_eq(
+        &self,
+        other: &Self,
+        epsilon: Self::Epsilon,
+        max_relative: Self::Epsilon,
+    ) -> bool {
+        f64::relative_eq(&self.0, &other.0, epsilon, max_relative)
+    }
+}
+
 impl Div<PositiveF64> for f64 {
     type Output = f64;
 
     fn div(self, rhs: PositiveF64) -> f64 {
         self / rhs.0
+    }
+}
+
+impl Sub<PositiveF64> for f64 {
+    type Output = f64;
+
+    fn sub(self, rhs: PositiveF64) -> Self::Output {
+        self - rhs.0
+    }
+}
+
+impl Mul<PositiveF64> for f64 {
+    type Output = f64;
+
+    fn mul(self, rhs: PositiveF64) -> f64 {
+        self * rhs.0
+    }
+}
+
+impl Add<PositiveF64> for f64 {
+    type Output = f64;
+
+    fn add(self, rhs: PositiveF64) -> f64 {
+        self + rhs.0
     }
 }
 
@@ -357,17 +530,19 @@ impl Payoff for OptionType {
                 LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
             },
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
-            OptionType::Chooser { .. } => {
-                ((info.spot - info.strike).max(ZERO)).max((info.strike - info.spot).max(ZERO))
-            }
+            OptionType::Chooser { .. } => ((info.spot - info.strike).max(PZERO))
+                .max((info.strike - info.spot).max(PZERO))
+                .value(),
             OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
             | OptionType::Exchange { .. } => standard_payoff(info),
             OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
             OptionType::Power { exponent } => match info.style {
-                OptionStyle::Call => (info.spot.powf(*exponent) - info.strike).max(ZERO),
-                OptionStyle::Put => (info.strike - info.spot.powf(*exponent)).max(ZERO),
+                OptionStyle::Call => (info.spot.value().powf(*exponent) - info.strike).max(ZERO),
+                OptionStyle::Put => (info.strike - info.spot.value().powf(*exponent))
+                    .max(PZERO)
+                    .value(),
             },
         }
     }
@@ -386,7 +561,7 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
     };
     match info.style {
         OptionStyle::Call => (average - info.strike).max(ZERO),
-        OptionStyle::Put => (info.strike - average).max(ZERO),
+        OptionStyle::Put => (info.strike.value() - average).max(ZERO),
     }
 }
 
@@ -396,8 +571,8 @@ fn calculate_barrier_payoff(
     info: &PayoffInfo,
 ) -> f64 {
     let barrier_condition = match barrier_type {
-        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
-        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
+        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot.value() >= *barrier_level,
+        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot.value() <= *barrier_level,
     };
     let std_payoff = standard_payoff(info);
     match barrier_type {
@@ -433,7 +608,7 @@ fn calculate_binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> f64 {
         }
         BinaryType::AssetOrNothing => {
             if is_in_the_money {
-                info.spot
+                info.spot.value()
             } else {
                 0.0
             }
@@ -447,7 +622,7 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
         OptionStyle::Put => info.spot_max,
     };
     match info.style {
-        OptionStyle::Call => info.spot - extremum.unwrap_or(ZERO),
+        OptionStyle::Call => info.spot.value() - extremum.unwrap_or(ZERO),
         OptionStyle::Put => extremum.unwrap_or(ZERO) - info.spot,
     }
 }
@@ -460,8 +635,8 @@ mod tests_payoff {
     fn test_european_call() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: 110.0,
-            strike: 100.0,
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -473,8 +648,8 @@ mod tests_payoff {
     fn test_european_put() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: 90.0,
-            strike: 100.0,
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -488,8 +663,8 @@ mod tests_payoff {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 100.0,
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -505,8 +680,8 @@ mod tests_payoff {
             barrier_level: 120.0,
         };
         let info = PayoffInfo {
-            spot: 130.0,
-            strike: 100.0,
+            spot: pos!(130.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -520,8 +695,8 @@ mod tests_payoff {
             binary_type: BinaryType::CashOrNothing,
         };
         let info = PayoffInfo {
-            spot: 110.0,
-            strike: 100.0,
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -535,8 +710,8 @@ mod tests_payoff {
             lookback_type: LookbackType::FixedStrike,
         };
         let info = PayoffInfo {
-            spot: 90.0,
-            strike: 100.0,
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -548,8 +723,8 @@ mod tests_payoff {
     fn test_quanto_call() {
         let option = OptionType::Quanto { exchange_rate: 1.5 };
         let info = PayoffInfo {
-            spot: 110.0,
-            strike: 100.0,
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -561,8 +736,8 @@ mod tests_payoff {
     fn test_power_call() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
-            spot: 10.0,
-            strike: 90.0,
+            spot: pos!(10.0),
+            strike: pos!(90.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -693,8 +868,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0, // Not used in floating strike
+            spot: pos!(100.0),
+            strike: pos!(0.0), // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -707,8 +882,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -721,8 +896,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -735,8 +910,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -749,8 +924,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -763,8 +938,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
-            spot: 100.0,
-            strike: 0.0,
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -817,6 +992,14 @@ mod tests_positive_f64 {
     fn test_positive_f64_debug() {
         let pos = PositiveF64::new(4.5).unwrap();
         assert_eq!(format!("{:?}", pos), "4.5");
+    }
+
+    #[test]
+    fn test_positive_f64_display_decimal_fix() {
+        let pos = PositiveF64::new(4.578923789423789).unwrap();
+        assert_eq!(format!("{:.2}", pos), "4.58");
+        assert_eq!(format!("{:.3}", pos), "4.579");
+        assert_eq!(format!("{:.0}", pos), "5");
     }
 
     #[test]

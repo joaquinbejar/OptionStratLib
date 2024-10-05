@@ -5,8 +5,8 @@
 ******************************************************************************/
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::chain::OptionChain;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::model::types::PositiveF64;
+use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
@@ -24,9 +24,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut strategy = CallButterfly::new(
         "".to_string(),
         underlying_price, // underlying_price
-        ZERO,             // long_strike_itm
-        ZERO,             // long_strike_otm
-        ZERO,             // short_strike
+        PZERO,            // long_strike_itm
+        PZERO,            // long_strike_otm
+        PZERO,            // short_strike
         ExpirationDate::Days(2.0),
         ZERO,      // implied_volatility
         0.05,      // risk_free_rate
@@ -42,8 +42,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.73,      // close_fee_short
     );
 
-    strategy.best_ratio(&option_chain, FindOptimalSide::Range(5700.0, 5900.0));
-    let price_range = strategy.best_range_to_show(1.0).unwrap();
+    strategy.best_ratio(
+        &option_chain,
+        FindOptimalSide::Range(pos!(5700.0), pos!(5900.0)),
+    );
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

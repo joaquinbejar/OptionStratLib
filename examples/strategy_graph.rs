@@ -17,9 +17,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
-        2505.8,
-        2460.0,
-        2515.0,
+        pos!(2505.8),
+        pos!(2460.0),
+        pos!(2515.0),
         ExpirationDate::Days(30.0),
         0.2,
         0.05,
@@ -32,9 +32,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.55,
         0.54,
     );
-    let price_range: Vec<f64> = (2400..2600).map(|x| x as f64).collect();
+    let price_range: Vec<PositiveF64> = (2400..2600)
+        .map(|x| PositiveF64::new(x as f64).unwrap())
+        .collect();
     info!("Title: {}", strategy.title());
-    info!("Break Even {}", strategy.break_even());
+    info!("Break Even {:?}", strategy.break_even());
     info!("Net Premium Received: {}", strategy.net_premium_received());
     info!("Max Profit: {}", strategy.max_profit());
     info!("Max Loss: {}", strategy.max_loss());

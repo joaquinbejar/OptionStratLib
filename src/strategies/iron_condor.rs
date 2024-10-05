@@ -13,6 +13,7 @@ use super::base::{Strategies, StrategyType};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::Utc;
@@ -28,7 +29,7 @@ pub struct IronCondor {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<f64>,
+    pub break_even_points: Vec<PositiveF64>,
     short_call: Position,
     short_put: Position,
     long_call: Position,
@@ -39,11 +40,11 @@ impl IronCondor {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: f64,
-        short_call_strike: f64,
-        short_put_strike: f64,
-        long_call_strike: f64,
-        long_put_strike: f64,
+        underlying_price: PositiveF64,
+        short_call_strike: PositiveF64,
+        short_put_strike: PositiveF64,
+        long_call_strike: PositiveF64,
+        long_put_strike: PositiveF64,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
@@ -190,16 +191,9 @@ impl Strategies for IronCondor {
         }
     }
 
-    fn break_even(&self) -> f64 {
+    fn break_even(&self) -> Vec<PositiveF64> {
         // Iron Condor has two break-even points, we'll return the lower one
-        self.break_even_points[0]
-    }
-
-    fn calculate_profit_at(&self, price: f64) -> f64 {
-        self.short_call.pnl_at_expiration(Some(price))
-            + self.short_put.pnl_at_expiration(Some(price))
-            + self.long_call.pnl_at_expiration(Some(price))
-            + self.long_put.pnl_at_expiration(Some(price))
+        self.break_even_points.clone()
     }
 
     fn max_profit(&self) -> f64 {
@@ -207,14 +201,14 @@ impl Strategies for IronCondor {
     }
 
     fn max_loss(&self) -> f64 {
-        let call_wing_width = (self.long_call.option.strike_price
-            - self.short_call.option.strike_price)
-            * self.long_call.option.quantity
-            - self.net_premium_received();
-        let put_wing_width = (self.short_put.option.strike_price
-            - self.long_put.option.strike_price)
-            * self.short_put.option.quantity
-            - self.net_premium_received();
+        let call_wing_width =
+            (self.long_call.option.strike_price - self.short_call.option.strike_price).value()
+                * self.long_call.option.quantity.value()
+                - self.net_premium_received();
+        let put_wing_width =
+            (self.short_put.option.strike_price - self.long_put.option.strike_price).value()
+                * self.short_put.option.quantity.value()
+                - self.net_premium_received();
 
         call_wing_width.max(put_wing_width)
     }
@@ -244,14 +238,26 @@ impl Strategies for IronCondor {
     }
 
     fn profit_area(&self) -> f64 {
-        let inner_width = self.short_call.option.strike_price - self.short_put.option.strike_price;
-        let outer_width = self.long_call.option.strike_price - self.long_put.option.strike_price;
+        let inner_width =
+            (self.short_call.option.strike_price - self.short_put.option.strike_price).value();
+        let outer_width =
+            (self.long_call.option.strike_price - self.long_put.option.strike_price).value();
         let height = self.max_profit();
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
-        (inner_area + outer_triangles) / self.short_call.option.underlying_price
+        (inner_area + outer_triangles) / self.short_call.option.underlying_price.value()
+    }
+}
+
+impl Profit for IronCondor {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+        let price = Some(price);
+        self.short_call.pnl_at_expiration(&price)
+            + self.short_put.pnl_at_expiration(&price)
+            + self.long_call.pnl_at_expiration(&price)
+            + self.long_put.pnl_at_expiration(&price)
     }
 }
 
@@ -279,17 +285,11 @@ impl Graph for IronCondor {
         }
     }
 
-    fn get_values(&self, data: &[f64]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
-    }
-
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let mut vertical_lines: Vec<ChartVerticalLine<f64, f64>> = vec![];
         for break_even_point in self.break_even_points.clone() {
             vertical_lines.push(ChartVerticalLine {
-                x_coordinate: break_even_point,
+                x_coordinate: break_even_point.value(),
                 y_range: (-50000.0, 50000.0),
                 label: "Break Even".to_string(),
                 label_offset: (5.0, 5.0),
@@ -307,6 +307,7 @@ impl Graph for IronCondor {
 mod tests_iron_condor {
     use super::*;
     use crate::model::types::SIZE_ONE;
+    use crate::pos;
     use chrono::{TimeZone, Utc};
 
     #[test]
@@ -314,11 +315,11 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            150.0,
-            155.0,
-            145.0,
-            160.0,
-            140.0,
+            pos!(150.0),
+            pos!(155.0),
+            pos!(145.0),
+            pos!(160.0),
+            pos!(140.0),
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -347,11 +348,11 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            150.0,
-            120.0,
-            110.0,
-            130.0,
-            100.0,
+            pos!(150.0),
+            pos!(120.0),
+            pos!(110.0),
+            pos!(130.0),
+            pos!(100.0),
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -373,11 +374,11 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            150.0,
-            155.0,
-            145.0,
-            160.0,
-            140.0,
+            pos!(150.0),
+            pos!(155.0),
+            pos!(145.0),
+            pos!(160.0),
+            pos!(140.0),
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -400,11 +401,11 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            150.0,
-            155.0,
-            145.0,
-            160.0,
-            140.0,
+            pos!(150.0),
+            pos!(155.0),
+            pos!(145.0),
+            pos!(160.0),
+            pos!(140.0),
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -418,7 +419,10 @@ mod tests_iron_condor {
             5.0,
         );
 
-        assert_eq!(iron_condor.break_even(), iron_condor.break_even_points[0]);
+        assert_eq!(
+            iron_condor.break_even()[0],
+            iron_condor.break_even_points[0]
+        );
     }
 
     #[test]
@@ -426,11 +430,11 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            150.0,
-            155.0,
-            145.0,
-            160.0,
-            140.0,
+            pos!(150.0),
+            pos!(155.0),
+            pos!(145.0),
+            pos!(160.0),
+            pos!(140.0),
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -460,11 +464,11 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            150.0,
-            155.0,
-            145.0,
-            160.0,
-            140.0,
+            pos!(150.0),
+            pos!(155.0),
+            pos!(145.0),
+            pos!(160.0),
+            pos!(140.0),
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -478,11 +482,11 @@ mod tests_iron_condor {
             5.0,
         );
 
-        let price = 150.0;
-        let expected_profit = iron_condor.short_call.pnl_at_expiration(Some(price))
-            + iron_condor.short_put.pnl_at_expiration(Some(price))
-            + iron_condor.long_call.pnl_at_expiration(Some(price))
-            + iron_condor.long_put.pnl_at_expiration(Some(price));
+        let price = pos!(150.0);
+        let expected_profit = iron_condor.short_call.pnl_at_expiration(&Some(price))
+            + iron_condor.short_put.pnl_at_expiration(&Some(price))
+            + iron_condor.long_call.pnl_at_expiration(&Some(price))
+            + iron_condor.long_put.pnl_at_expiration(&Some(price));
         assert_eq!(iron_condor.calculate_profit_at(price), expected_profit);
     }
 }

@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
+use crate::model::types::{PositiveF64, PZERO};
+use crate::pos;
 use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -13,11 +15,11 @@ use std::fs::File;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct OptionData {
-    pub(crate) strike_price: f64,
-    pub(crate) call_bid: f64,
-    pub(crate) call_ask: f64,
-    put_bid: f64,
-    put_ask: f64,
+    pub(crate) strike_price: PositiveF64,
+    pub(crate) call_bid: f64, // TODO: Change to PositiveF64
+    pub(crate) call_ask: f64, // TODO: Change to PositiveF64
+    put_bid: f64,             // TODO: Change to PositiveF64
+    put_ask: f64,             // TODO: Change to PositiveF64
     pub(crate) implied_volatility: f64,
 }
 
@@ -33,8 +35,8 @@ impl Eq for OptionData {}
 impl Ord for OptionData {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or_else(|| {
-            if self.strike_price.is_nan() {
-                if other.strike_price.is_nan() {
+            if self.strike_price.value().is_nan() {
+                if other.strike_price.value().is_nan() {
                     Ordering::Equal
                 } else {
                     Ordering::Greater
@@ -49,13 +51,13 @@ impl Ord for OptionData {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OptionChain {
     pub(crate) symbol: String,
-    pub underlying_price: f64,
+    pub underlying_price: PositiveF64,
     expiration_date: String,
     pub(crate) options: BTreeSet<OptionData>,
 }
 
 impl OptionChain {
-    pub fn new(symbol: &str, underlying_price: f64, expiration_date: String) -> Self {
+    pub fn new(symbol: &str, underlying_price: PositiveF64, expiration_date: String) -> Self {
         OptionChain {
             symbol: symbol.to_string(),
             underlying_price,
@@ -66,7 +68,7 @@ impl OptionChain {
 
     pub fn add_option(
         &mut self,
-        strike_price: f64,
+        strike_price: PositiveF64,
         call_bid: f64,
         call_ask: f64,
         put_bid: f64,
@@ -108,7 +110,7 @@ impl OptionChain {
         let underlying_price_str = parts[4].replace(",", ".");
 
         match underlying_price_str.parse::<f64>() {
-            Ok(price) => self.underlying_price = price,
+            Ok(price) => self.underlying_price = pos!(price),
             Err(_) => panic!("Invalid underlying price format in file name"),
         }
     }
@@ -164,7 +166,7 @@ impl OptionChain {
 
         let mut option_chain = OptionChain {
             symbol: "unknown".to_string(),
-            underlying_price: 0.0,
+            underlying_price: PZERO,
             expiration_date: "unknown".to_string(),
             options,
         };
@@ -188,8 +190,8 @@ impl OptionChain {
             let mut current_price = first.strike_price;
 
             while current_price <= last.strike_price {
-                range.push(current_price);
-                current_price += step;
+                range.push(current_price.value());
+                current_price += pos!(step);
             }
 
             Some(range)
@@ -241,7 +243,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_new_option_chain() {
-        let chain = OptionChain::new("SP500", 5781.88, "18-oct-2024".to_string());
+        let chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.underlying_price, 5781.88);
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -250,8 +252,8 @@ mod tests_chain_base {
 
     #[test]
     fn test_add_option() {
-        let mut chain = OptionChain::new("SP500", 5781.88, "18-oct-2024".to_string());
-        chain.add_option(5520.0, 274.26, 276.06, 13.22, 14.90, 16.31);
+        let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
+        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
         assert_eq!(chain.options.len(), 1);
         // first option in the chain
         let option = chain.options.iter().next().unwrap();
@@ -261,19 +263,19 @@ mod tests_chain_base {
 
     #[test]
     fn test_get_title_i() {
-        let chain = OptionChain::new("SP500", 5781.88, "18-oct-2024".to_string());
+        let chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
         assert_eq!(chain.get_title(), "SP500-18-oct-2024-5781.88");
     }
 
     #[test]
     fn test_get_title_ii() {
-        let chain = OptionChain::new("SP500", 5781.88, "18 oct 2024".to_string());
+        let chain = OptionChain::new("SP500", pos!(5781.88), "18 oct 2024".to_string());
         assert_eq!(chain.get_title(), "SP500-18-oct-2024-5781.88");
     }
 
     #[test]
     fn test_set_from_title_i() {
-        let mut chain = OptionChain::new("", 0.0, "".to_string());
+        let mut chain = OptionChain::new("", PZERO, "".to_string());
         chain.set_from_title("SP500-18-oct-2024-5781.88.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -282,7 +284,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_ii() {
-        let mut chain = OptionChain::new("", 0.0, "".to_string());
+        let mut chain = OptionChain::new("", PZERO, "".to_string());
         chain.set_from_title("path/SP500-18-oct-2024-5781.88.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -291,7 +293,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_iii() {
-        let mut chain = OptionChain::new("", 0.0, "".to_string());
+        let mut chain = OptionChain::new("", PZERO, "".to_string());
         chain.set_from_title("path/SP500-18-oct-2024-5781.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -300,7 +302,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_iv() {
-        let mut chain = OptionChain::new("", 0.0, "".to_string());
+        let mut chain = OptionChain::new("", PZERO, "".to_string());
         chain.set_from_title("path/SP500-18-oct-2024-5781.88.json");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -309,7 +311,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_v() {
-        let mut chain = OptionChain::new("", 0.0, "".to_string());
+        let mut chain = OptionChain::new("", PZERO, "".to_string());
         chain.set_from_title("path/SP500-18-oct-2024-5781.json");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -318,8 +320,8 @@ mod tests_chain_base {
 
     #[test]
     fn test_save_to_csv() {
-        let mut chain = OptionChain::new("SP500", 5781.88, "18-oct-2024".to_string());
-        chain.add_option(5520.0, 274.26, 276.06, 13.22, 14.90, 16.31);
+        let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
+        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
         let result = chain.save_to_csv(".");
         assert!(result.is_ok());
         let file_name = "./SP500-18-oct-2024-5781.88.csv".to_string();
@@ -329,8 +331,8 @@ mod tests_chain_base {
 
     #[test]
     fn test_save_to_json() {
-        let mut chain = OptionChain::new("SP500", 5781.88, "18-oct-2024".to_string());
-        chain.add_option(5520.0, 274.26, 276.06, 13.22, 14.90, 16.31);
+        let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
+        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
         let result = chain.save_to_json(".");
         assert!(result.is_ok());
 
@@ -341,8 +343,8 @@ mod tests_chain_base {
 
     #[test]
     fn test_load_from_csv() {
-        let mut chain = OptionChain::new("SP500", 5781.89, "18-oct-2024".to_string());
-        chain.add_option(5520.0, 274.26, 276.06, 13.22, 14.90, 16.31);
+        let mut chain = OptionChain::new("SP500", pos!(5781.89), "18-oct-2024".to_string());
+        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
         let result = chain.save_to_csv(".");
         assert!(result.is_ok());
 
@@ -360,8 +362,8 @@ mod tests_chain_base {
 
     #[test]
     fn test_load_from_json() {
-        let mut chain = OptionChain::new("SP500", 5781.9, "18-oct-2024".to_string());
-        chain.add_option(5520.0, 274.26, 276.06, 13.22, 14.90, 16.31);
+        let mut chain = OptionChain::new("SP500", pos!(5781.9), "18-oct-2024".to_string());
+        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
         let result = chain.save_to_json(".");
         assert!(result.is_ok());
 

@@ -3,9 +3,10 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-
+use crate::constants::ZERO;
 use crate::model::option::Options;
-use crate::utils::decimal::FloatLike;
+use crate::model::types::{PositiveF64, PZERO};
+use core::f64;
 use num_traits::Float;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
@@ -34,13 +35,13 @@ use std::f64::consts::PI;
 /// # Qualifications
 ///
 /// This function requires that the generic type `T` implements the `Float` trait, which provides the methods `T::infinity()`, `T::neg_infinity()`, and `T::zero()`. These methods return positive infinity, negative infinity, and zero respectively, appropriate to the type `T`.
-fn handle_zero<T: FloatLike>(underlying_price: T, strike_price: T) -> T {
+fn handle_zero(underlying_price: PositiveF64, strike_price: PositiveF64) -> f64 {
     if underlying_price > strike_price {
-        T::infinity()
+        f64::INFINITY
     } else if underlying_price < strike_price {
-        T::neg_infinity()
+        f64::NEG_INFINITY
     } else {
-        T::zero()
+        ZERO
     }
 }
 
@@ -66,29 +67,25 @@ fn handle_zero<T: FloatLike>(underlying_price: T, strike_price: T) -> T {
 /// the price of options. It takes into account factors such as the current stock
 /// price, risk-free rate, time to expiration, and stock volatility to produce
 /// an important intermediate result.
-pub(crate) fn d1<T>(
-    underlying_price: T,
-    strike_price: T,
-    risk_free_rate: T,
-    expiration_date: T,
-    implied_volatility: T,
-) -> T
-where
-    T: FloatLike + Clone,
-{
-    let zero = <T as FloatLike>::zero();
-    if strike_price == zero {
-        return <T as FloatLike>::infinity();
+pub(crate) fn d1(
+    underlying_price: PositiveF64,
+    strike_price: PositiveF64,
+    risk_free_rate: f64,
+    expiration_date: f64,
+    implied_volatility: f64,
+) -> f64 {
+    if strike_price == PZERO {
+        return f64::INFINITY;
     }
 
-    if implied_volatility == zero || expiration_date == zero {
+    if implied_volatility == ZERO || expiration_date == ZERO {
         return handle_zero(underlying_price, strike_price);
     }
 
-    let implied_volatility_squared = implied_volatility.clone().pow_two();
-    let ln_price_ratio = (underlying_price / strike_price).ln();
-    let rate_vol_term = risk_free_rate + implied_volatility_squared / T::two();
-    let numerator = ln_price_ratio + rate_vol_term * expiration_date.clone();
+    let implied_volatility_squared = implied_volatility.powi(2);
+    let ln_price_ratio = (underlying_price / strike_price).value().ln();
+    let rate_vol_term = risk_free_rate + implied_volatility_squared / 2.0;
+    let numerator = ln_price_ratio + rate_vol_term * expiration_date;
     let denominator = implied_volatility * expiration_date.sqrt();
 
     numerator / denominator
@@ -127,19 +124,14 @@ where
 /// (i.e., the stock price will be above the strike price for a call option or below the strike price
 /// for a put option at expiration).
 ///
-pub(crate) fn d2<T>(
-    underlying_price: T,
-    strike_price: T,
-    risk_free_rate: T,
-    expiration_date: T,
-    implied_volatility: T,
-) -> T
-where
-    T: FloatLike + Clone,
-{
-    let zero = <T as FloatLike>::zero();
-
-    if implied_volatility == zero || expiration_date == zero {
+pub(crate) fn d2(
+    underlying_price: PositiveF64,
+    strike_price: PositiveF64,
+    risk_free_rate: f64,
+    expiration_date: f64,
+    implied_volatility: f64,
+) -> f64 {
+    if implied_volatility == ZERO || expiration_date == ZERO {
         return handle_zero(underlying_price, strike_price);
     }
 
@@ -147,8 +139,8 @@ where
         underlying_price,
         strike_price,
         risk_free_rate,
-        expiration_date.clone(),
-        implied_volatility.clone(),
+        expiration_date,
+        implied_volatility,
     );
 
     d1_value - implied_volatility * expiration_date.sqrt()
@@ -261,10 +253,7 @@ where
 ///     - `d1_value`: The calculated d1 value.
 ///     - `d2_value`: The calculated d2 value.
 ///
-pub(crate) fn calculate_d_values<T>(option: &Options) -> (T, T)
-where
-    T: FloatLike + Clone,
-{
+pub(crate) fn calculate_d_values(option: &Options) -> (f64, f64) {
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
@@ -279,95 +268,47 @@ where
         option.expiration_date.get_years(),
         option.implied_volatility,
     );
-    (T::get(d1_value), T::get(d2_value))
+    (d1_value, d2_value)
 }
 
 #[cfg(test)]
 mod tests_handle_zero {
     use super::*;
-    use rust_decimal::Decimal;
-    use std::str::FromStr;
-
-    #[test]
-    fn test_underlying_greater_than_strike() {
-        let underlying = Decimal::from_str("100.50").unwrap();
-        let strike = Decimal::from_str("100.00").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::infinity());
-    }
+    use crate::pos;
 
     #[test]
     fn test_underlying_greater_than_strike_f64() {
-        let underlying = 100.50;
-        let strike = 100.00;
-        assert_eq!(
-            handle_zero(underlying, strike),
-            <f64 as FloatLike>::infinity()
-        );
-    }
-
-    #[test]
-    fn test_underlying_less_than_strike() {
-        let underlying = Decimal::from_str("99.50").unwrap();
-        let strike = Decimal::from_str("100.00").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::MIN);
+        let underlying = pos!(100.50);
+        let strike = pos!(100.0);
+        assert_eq!(handle_zero(underlying, strike), f64::INFINITY);
     }
 
     #[test]
     fn test_underlying_less_than_strike_f64() {
-        let underlying = 99.50;
-        let strike = 100.00;
-        assert_eq!(
-            handle_zero(underlying, strike),
-            <f64 as FloatLike>::neg_infinity()
-        );
-    }
-
-    #[test]
-    fn test_underlying_equal_to_strike() {
-        let underlying = Decimal::from_str("100.00").unwrap();
-        let strike = Decimal::from_str("100.00").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::ZERO);
+        let underlying = pos!(99.50);
+        let strike = pos!(100.0);
+        assert_eq!(handle_zero(underlying, strike), f64::NEG_INFINITY);
     }
 
     #[test]
     fn test_underlying_equal_to_strike_f64() {
-        let underlying = 100.00;
-        let strike = 100.00;
-        assert_eq!(handle_zero(underlying, strike), <f64 as FloatLike>::zero());
-    }
-
-    #[test]
-    fn test_with_large_numbers() {
-        let underlying = Decimal::from_str("1000000.01").unwrap();
-        let strike = Decimal::from_str("1000000.00").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::MAX);
+        let underlying = pos!(100.0);
+        let strike = pos!(100.00);
+        assert_eq!(handle_zero(underlying, strike), ZERO);
     }
 
     #[test]
     fn test_with_large_numbers_f64() {
-        let underlying = 1000000.01;
-        let strike = 1000000.00;
-        assert_eq!(
-            handle_zero(underlying, strike),
-            <f64 as FloatLike>::infinity()
-        );
-    }
-
-    #[test]
-    fn test_with_small_numbers() {
-        let underlying = Decimal::from_str("0.000001").unwrap();
-        let strike = Decimal::from_str("0.000002").unwrap();
-        assert_eq!(handle_zero(underlying, strike), Decimal::MIN);
+        let underlying = pos!(1000000.01);
+        let strike = pos!(1000000.0);
+        assert_eq!(handle_zero(underlying, strike), f64::INFINITY);
     }
 
     #[test]
     fn test_with_small_numbers_f64() {
-        let underlying = 0.000001;
-        let strike = 0.000002;
-        assert_eq!(
-            handle_zero(underlying, strike),
-            <f64 as FloatLike>::neg_infinity()
-        );
+        let underlying = pos!(0.000001);
+        let strike = pos!(0.000002);
+        assert_eq!(handle_zero(underlying, strike), f64::NEG_INFINITY);
     }
 }
 
@@ -386,8 +327,8 @@ mod tests_calculate_d_values {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "".to_string(),
-            strike_price: 110.0,
-            underlying_price: 100.0,
+            strike_price: pos!(110.0),
+            underlying_price: pos!(100.0),
             risk_free_rate: 0.05,
             implied_volatility: 10.12,
             expiration_date: Default::default(),
@@ -407,14 +348,16 @@ mod tests_calculate_d_values {
 mod tests_src_greeks_utils {
     use super::*;
     use crate::constants::ZERO;
+    use crate::pos;
     use approx::assert_relative_eq;
+    use num_traits::abs;
     use statrs::distribution::ContinuousCDF;
     use statrs::distribution::Normal;
 
     #[test]
     fn test_d1() {
-        let s = 100.0;
-        let k = 100.0;
+        let s = pos!(100.0);
+        let k = pos!(100.0);
         let r = 0.05;
         let t = 1.0;
         let sigma = 0.2;
@@ -428,8 +371,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d1_zero_sigma() {
-        let s = 100.0;
-        let k = 100.0;
+        let s = pos!(100.0);
+        let k = pos!(100.0);
         let r = 0.05;
         let t = 1.0;
         let sigma = 0.0;
@@ -439,8 +382,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d1_zero_t() {
-        let s = 100.0;
-        let k = 100.0;
+        let s = pos!(100.0);
+        let k = pos!(100.0);
         let r = 0.05;
         let t = 0.0;
         let sigma = 0.01;
@@ -450,8 +393,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2() {
-        let s = 100.0;
-        let k = 100.0;
+        let s = pos!(100.0);
+        let k = pos!(100.0);
         let r = 0.05;
         let t = 1.0;
         let sigma = 0.2;
@@ -466,8 +409,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2_bis_i() {
-        let s = 100.0;
-        let k = 110.0;
+        let s = pos!(100.0);
+        let k = pos!(110.0);
         let r = 0.05;
         let t = 2.0;
         let sigma = 0.2;
@@ -479,8 +422,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2_bis_ii() {
-        let s = 100.0;
-        let k = 95.0;
+        let s = pos!(100.0);
+        let k = pos!(95.0);
         let r = 0.15;
         let t = 1.0;
         let sigma = 0.2;
@@ -492,8 +435,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2_zero_sigma() {
-        let s = 100.0;
-        let k = 100.0;
+        let s = pos!(100.0);
+        let k = pos!(100.0);
         let r = 0.0;
         let t = 1.0;
         let sigma = 0.0;
@@ -505,8 +448,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2_zero_t() {
-        let s = 100.0;
-        let k = 100.0;
+        let s = pos!(100.0);
+        let k = pos!(100.0);
         let r = 0.02;
         let t = 0.0;
         let sigma = 0.01;
@@ -535,7 +478,7 @@ mod tests_src_greeks_utils {
         let expected_n_prime = 0.0;
         let computed_n_prime = n_prime(x);
         assert!(
-            FloatLike::abs(computed_n_prime - expected_n_prime) < 1e-10,
+            abs(computed_n_prime - expected_n_prime) < 1e-10,
             "n_prime function failed"
         );
 
@@ -572,13 +515,14 @@ mod tests_src_greeks_utils {
 #[cfg(test)]
 mod calculate_d1_values {
     use super::*;
+    use crate::pos;
     use approx::assert_relative_eq;
 
     #[test]
     fn test_d1_zero_volatility() {
         // Case where volatility (sigma) is zero
-        let underlying_price = 100.0;
-        let strike_price = 100.0;
+        let underlying_price = pos!(100.0);
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 0.0;
@@ -602,8 +546,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_zero_time_to_expiry() {
         // Case where time to expiry is zero
-        let underlying_price = 100.0;
-        let strike_price = 100.0;
+        let underlying_price = pos!(100.0);
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 0.0;
         let implied_volatility = 0.2;
@@ -627,8 +571,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_high_volatility() {
         // Case with extremely high volatility
-        let underlying_price = 100.0;
-        let strike_price = 100.0;
+        let underlying_price = pos!(100.0);
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 100.0; // Very high volatility
@@ -652,8 +596,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_high_underlying_price() {
         // Case with extremely high underlying price
-        let underlying_price = f64::MAX; // Very high stock price
-        let strike_price = 100.0;
+        let underlying_price = pos!(f64::MAX); // Very high stock price
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 0.2;
@@ -677,8 +621,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_low_underlying_price() {
         // Case with extremely low underlying price (near zero)
-        let underlying_price = 0.01; // Very low stock price
-        let strike_price = 100.0;
+        let underlying_price = pos!(0.01); // Very low stock price
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 0.2;
@@ -706,8 +650,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_zero_strike_price() {
         // Case where strike price is zero
-        let underlying_price = 100.0;
-        let strike_price = 0.0; // Strike price set to zero
+        let underlying_price = pos!(100.0);
+        let strike_price = PZERO;
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 0.2;
@@ -728,8 +672,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_infinite_risk_free_rate() {
         // Case where risk-free rate is very high (infinite-like)
-        let underlying_price = 100.0;
-        let strike_price = 100.0;
+        let underlying_price = pos!(100.0);
+        let strike_price = pos!(100.0);
         let risk_free_rate = f64::MAX; // Very high risk-free rate
         let expiration_date = 1.0;
         let implied_volatility = 0.2;
@@ -752,163 +696,16 @@ mod calculate_d1_values {
 }
 
 #[cfg(test)]
-mod calculate_d1_values_decimal {
-    use super::*;
-    use approx::assert_relative_eq;
-    use num_traits::ToPrimitive;
-    use rust_decimal::Decimal;
-    use rust_decimal_macros::dec;
-
-    #[test]
-    fn test_d1_zero_volatility() {
-        let underlying_price = dec!(100.0);
-        let strike_price = dec!(100.0);
-        let risk_free_rate = dec!(0.05);
-        let expiration_date = dec!(1.0);
-        let implied_volatility = dec!(0.0);
-
-        let calculated_d1 = d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        );
-
-        let expected_d1 = handle_zero(underlying_price, strike_price);
-
-        assert_relative_eq!(
-            calculated_d1.to_f64().unwrap(),
-            expected_d1.to_f64().unwrap(),
-            epsilon = 1e-4
-        );
-    }
-
-    #[test]
-    fn test_d1_zero_time_to_expiry() {
-        let underlying_price = dec!(100.0);
-        let strike_price = dec!(100.0);
-        let risk_free_rate = dec!(0.05);
-        let expiration_date = dec!(0.0);
-        let implied_volatility = dec!(0.2);
-
-        let calculated_d1 = d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        );
-
-        let expected_d1 = handle_zero(underlying_price, strike_price);
-
-        assert_relative_eq!(
-            calculated_d1.to_f64().unwrap(),
-            expected_d1.to_f64().unwrap(),
-            epsilon = 1e-4
-        );
-    }
-
-    #[test]
-    fn test_d1_high_volatility() {
-        let underlying_price = dec!(100.0);
-        let strike_price = dec!(100.0);
-        let risk_free_rate = dec!(0.05);
-        let expiration_date = dec!(1.0);
-        let implied_volatility = dec!(100.0);
-
-        let calculated_d1 = d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        );
-
-        assert!(
-            !calculated_d1.is_infinite(),
-            "d1 should not be infinite for high volatility"
-        );
-    }
-
-    #[test]
-    fn test_d1_high_underlying_price() {
-        let underlying_price = Decimal::MAX;
-        let strike_price = dec!(100.0);
-        let risk_free_rate = dec!(0.05);
-        let expiration_date = dec!(1.0);
-        let implied_volatility = dec!(0.2);
-
-        let calculated_d1 = d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        );
-
-        assert!(
-            !calculated_d1.is_infinite(),
-            "d1 should not be infinite for high underlying price"
-        );
-    }
-
-    #[test]
-    fn test_d1_low_underlying_price() {
-        let underlying_price = dec!(0.01);
-        let strike_price = dec!(100.0);
-        let risk_free_rate = dec!(0.05);
-        let expiration_date = dec!(1.0);
-        let implied_volatility = dec!(0.2);
-
-        let calculated_d1 = d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        );
-
-        assert!(
-            !calculated_d1.is_infinite(),
-            "d1 should not be infinite for low underlying price"
-        );
-        assert!(
-            calculated_d1.is_sign_negative(),
-            "d1 should be negative for very low underlying price"
-        );
-    }
-
-    #[test]
-    fn test_d1_zero_strike_price() {
-        let underlying_price = dec!(100.0);
-        let strike_price = dec!(0.0);
-        let risk_free_rate = dec!(0.05);
-        let expiration_date = dec!(1.0);
-        let implied_volatility = dec!(0.2);
-
-        let calculated_d1 = d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        );
-
-        assert!(calculated_d1.is_infinite() && calculated_d1.is_sign_positive(), "d1 should return positive infinity when strike price is zero and underlying is greater.");
-    }
-}
-
-#[cfg(test)]
 mod calculate_d2_values {
     use super::*;
+    use crate::pos;
     use approx::assert_relative_eq;
 
     #[test]
     fn test_d2_zero_volatility() {
         // Case where volatility (implied_volatility) is zero
-        let underlying_price = 100.0;
-        let strike_price = 100.0;
+        let underlying_price = pos!(100.0);
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 0.0;
@@ -932,8 +729,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_zero_time_to_expiry() {
         // Case where time to expiration is zero
-        let underlying_price = 100.0;
-        let strike_price = 100.0;
+        let underlying_price = pos!(100.0);
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 0.0;
         let implied_volatility = 0.2;
@@ -957,8 +754,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_high_volatility() {
         // Case with extremely high volatility
-        let underlying_price = 100.0;
-        let strike_price = 100.0;
+        let underlying_price = pos!(100.0);
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 100.0; // Very high volatility
@@ -982,8 +779,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_high_underlying_price() {
         // Case with extremely high underlying price
-        let underlying_price = f64::MAX; // Very high stock price
-        let strike_price = 100.0;
+        let underlying_price = pos!(f64::MAX);
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 0.2;
@@ -1007,8 +804,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_low_underlying_price() {
         // Case with extremely low underlying price (near zero)
-        let underlying_price = 0.01; // Very low stock price
-        let strike_price = 100.0;
+        let underlying_price = pos!(0.01);
+        let strike_price = pos!(100.0);
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 0.2;
@@ -1036,8 +833,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_zero_strike_price() {
         // Case where strike price is zero
-        let underlying_price = 100.0;
-        let strike_price = 0.0; // Strike price set to zero
+        let underlying_price = pos!(100.0);
+        let strike_price = PZERO;
         let risk_free_rate = 0.05;
         let expiration_date = 1.0;
         let implied_volatility = 0.2;
@@ -1058,8 +855,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_infinite_risk_free_rate() {
         // Case where risk-free rate is very high (infinite-like)
-        let underlying_price = 100.0;
-        let strike_price = 100.0;
+        let underlying_price = pos!(100.0);
+        let strike_price = pos!(100.0);
         let risk_free_rate = f64::MAX; // Very high risk-free rate
         let expiration_date = 1.0;
         let implied_volatility = 0.2;

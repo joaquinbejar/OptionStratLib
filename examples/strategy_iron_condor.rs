@@ -11,15 +11,15 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = 2646.9;
+    let underlying_price = pos!(2646.9);
 
     let strategy = IronCondor::new(
         "GOLD".to_string(),
         underlying_price, // underlying_price
-        2725.0,           // short_call_strike
-        2560.0,           // short_put_strike
-        2800.0,           // long_call_strike
-        2500.0,           // long_put_strike
+        pos!(2725.0),     // short_call_strike
+        pos!(2560.0),     // short_put_strike
+        pos!(2800.0),     // long_call_strike
+        pos!(2500.0),     // long_put_strike
         ExpirationDate::Days(30.0),
         0.1548,    // implied_volatility
         0.05,      // risk_free_rate
@@ -33,7 +33,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.96,      // close_fee
     );
 
-    let price_range: Vec<f64> = (2450..=2950).map(|x| x as f64).collect();
+    let price_range: Vec<PositiveF64> = (2450..=2950)
+        .map(|x| PositiveF64::new(x as f64).unwrap())
+        .collect();
+
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());

@@ -11,17 +11,22 @@ Key characteristics:
 */
 use super::base::{Strategies, StrategyType};
 use crate::constants::{
-    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER,
+    STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
 };
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::pos;
+use crate::pricing::payoff::Profit;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::ChartVerticalLine;
+use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::ShapeStyle;
+use plotters::style::full_palette::ORANGE;
+use plotters::style::RED;
 use tracing::{debug, error};
 
 const DESCRIPTION: &str = "A bull call spread involves buying a call option with a lower strike \
@@ -33,7 +38,7 @@ pub struct BullCallSpread {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<f64>,
+    pub break_even_points: Vec<PositiveF64>,
     long_call: Position,
     short_call: Position,
 }
@@ -42,9 +47,9 @@ impl BullCallSpread {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: f64,
-        lower_strike: f64,
-        higher_strike: f64,
+        underlying_price: PositiveF64,
+        lower_strike: PositiveF64,
+        higher_strike: PositiveF64,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
@@ -88,7 +93,6 @@ impl BullCallSpread {
             close_fee_long_call,
         );
         strategy.add_leg(lower_call.clone());
-        strategy.break_even_points.push(lower_call.break_even());
 
         // Add the short call option with higher strike
         let higher_call_option = Options::new(
@@ -113,7 +117,9 @@ impl BullCallSpread {
             close_fee_short_call,
         );
         strategy.add_leg(higher_call.clone());
-        strategy.break_even_points.push(higher_call.break_even());
+
+        let break_even = strategy.short_call.option.strike_price - strategy.max_profit() / quantity;
+        strategy.break_even_points.push(break_even);
 
         strategy.validate();
         strategy
@@ -231,15 +237,16 @@ impl Strategies for BullCallSpread {
         }
     }
 
-    fn break_even(&self) -> f64 {
-        self.short_call.option.strike_price
-            - self.calculate_profit_at(self.short_call.option.strike_price)
-                / self.long_call.option.quantity
+    fn get_legs(&self) -> Vec<Position> {
+        vec![self.long_call.clone(), self.short_call.clone()]
     }
 
-    fn calculate_profit_at(&self, price: f64) -> f64 {
-        self.long_call.pnl_at_expiration(Some(price))
-            + self.short_call.pnl_at_expiration(Some(price))
+    fn break_even(&self) -> Vec<PositiveF64> {
+        vec![
+            self.short_call.option.strike_price
+                - pos!(self.calculate_profit_at(self.short_call.option.strike_price))
+                    / self.long_call.option.quantity,
+        ]
     }
 
     fn max_profit(&self) -> f64 {
@@ -267,7 +274,9 @@ impl Strategies for BullCallSpread {
     }
 
     fn profit_area(&self) -> f64 {
-        (self.short_call.option.strike_price - self.break_even()) * self.max_profit() / 100.0
+        // TODO: Implement this
+        // (self.short_call.option.strike_price - self.break_even()) * self.max_profit() / 100.0
+        ZERO
     }
 
     fn profit_ratio(&self) -> f64 {
@@ -294,7 +303,7 @@ impl Strategies for BullCallSpread {
             return false;
         }
 
-        if self.long_call.option.underlying_price <= 0.0 {
+        if self.long_call.option.underlying_price <= PZERO {
             error!("Underlying price must be greater than zero");
             return false;
         }
@@ -305,7 +314,7 @@ impl Strategies for BullCallSpread {
         true
     }
 
-    fn best_range_to_show(&self, step: f64) -> Option<Vec<f64>> {
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
         let (first_option, last_option) = (
             self.long_call.option.clone(),
             self.short_call.option.clone(),
@@ -313,6 +322,13 @@ impl Strategies for BullCallSpread {
         let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
         let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
         Some(calculate_price_range(start_price, end_price, step))
+    }
+}
+
+impl Profit for BullCallSpread {
+    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+        let price = Some(price);
+        self.short_call.pnl_at_expiration(&price) + self.long_call.pnl_at_expiration(&price)
     }
 }
 
@@ -331,25 +347,74 @@ impl Graph for BullCallSpread {
         }
     }
 
-    fn get_values(&self, data: &[f64]) -> Vec<f64> {
-        data.iter()
-            .map(|&price| self.calculate_profit_at(price))
-            .collect()
-    }
-
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.break_even(),
+            x_coordinate: self.short_call.option.underlying_price.value(),
             y_range: (-50000.0, 50000.0),
-            label: "Break Even".to_string(),
+            label: format!("Current Price: {}", self.short_call.option.underlying_price),
             label_offset: (5.0, 5.0),
-            line_color: BLACK,
-            label_color: BLACK,
-            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+            line_color: ORANGE,
+            label_color: ORANGE,
+            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
             font_size: 18,
         }];
 
         vertical_lines
+    }
+
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[0].value(), 0.0),
+            label: format!("Break Even\n\n{}", self.break_even_points[0]),
+            label_offset: (5.0, 5.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            self.short_call.option.strike_price.value() / 2000.0,
+            self.max_profit() / 5.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (
+                self.short_call.option.strike_price.value(),
+                self.max_profit(),
+            ),
+            label: format!(
+                "Max Profit {:.2} at {:.0}",
+                self.max_profit(),
+                self.short_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: DARK_GREEN,
+            label_color: DARK_GREEN,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            self.long_call.option.strike_price.value() / 2000.0,
+            -self.max_loss() / 50.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (self.long_call.option.strike_price.value(), -self.max_loss()),
+            label: format!(
+                "Max Loss {:.2} at {:.0}",
+                self.max_loss(),
+                self.long_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points
     }
 }
 
@@ -363,9 +428,9 @@ mod tests_create_bull_call_spread {
     fn create_sample_bull_call_spread() -> BullCallSpread {
         BullCallSpread::new(
             "GOLD".to_string(),
-            100.0,
-            90.0,
-            110.0,
+            pos!(100.0),
+            pos!(90.0),
+            pos!(110.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.0,
@@ -413,8 +478,8 @@ mod tests_create_bull_call_spread {
     #[test]
     fn test_bull_call_spread_break_even() {
         let strategy = create_sample_bull_call_spread();
-        assert_eq!(strategy.break_even_points.len(), 2);
-        assert_relative_eq!(strategy.break_even_points[0], 97.71, epsilon = 1e-6);
+        assert_eq!(strategy.break_even_points.len(), 1);
+        assert_relative_eq!(strategy.break_even_points[0].value(), 94.0, epsilon = 1e-6);
     }
 
     #[test]
@@ -436,8 +501,8 @@ mod tests_create_bull_call_spread {
     #[test]
     fn test_bull_call_spread_trait_strategies() {
         let strategy = create_sample_bull_call_spread();
-        assert_eq!(strategy.break_even(), 94.0);
-        assert_eq!(strategy.calculate_profit_at(100.0), 6.0);
+        assert_eq!(strategy.break_even()[0], 94.0);
+        assert_eq!(strategy.calculate_profit_at(pos!(100.0)), 6.0);
         assert_eq!(strategy.max_profit(), 16.0);
         assert_eq!(strategy.max_loss(), 4.0);
         assert_eq!(strategy.total_cost(), 4.0);
@@ -455,9 +520,9 @@ mod tests_create_bull_call_spread_gold {
     fn create_sample_bull_call_spread() -> BullCallSpread {
         BullCallSpread::new(
             "GOLD".to_string(),
-            2505.8,
-            2460.0,
-            2515.0,
+            pos!(2505.8),
+            pos!(2460.0),
+            pos!(2515.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.05,
@@ -505,8 +570,12 @@ mod tests_create_bull_call_spread_gold {
     #[test]
     fn test_bull_call_spread_break_even() {
         let strategy = create_sample_bull_call_spread();
-        assert_eq!(strategy.break_even_points.len(), 2);
-        assert_relative_eq!(strategy.break_even_points[0], 2488.42, epsilon = 1e-6);
+        assert_eq!(strategy.break_even_points.len(), 1);
+        assert_relative_eq!(
+            strategy.break_even_points[0].value(),
+            2484.19,
+            epsilon = 1e-6
+        );
     }
 
     #[test]
@@ -528,9 +597,9 @@ mod tests_create_bull_call_spread_gold {
     #[test]
     fn test_bull_call_spread_trait_strategies() {
         let strategy = create_sample_bull_call_spread();
-        assert_eq!(strategy.break_even(), 2484.19);
+        assert_eq!(strategy.break_even()[0], 2484.19);
         assert_relative_eq!(
-            strategy.calculate_profit_at(2500.0),
+            strategy.calculate_profit_at(pos!(2500.0)),
             31.620000,
             epsilon = 1e-6
         );

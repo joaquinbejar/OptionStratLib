@@ -17,13 +17,13 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = 2703.3;
+    let underlying_price = pos!(2703.3);
 
     let strategy = PoorMansCoveredCall::new(
         "GOLD".to_string(),          // underlying_symbol
         underlying_price,            // underlying_price
-        2600.0,                      // long_call_strike
-        2800.0,                      // short_call_strike OTM
+        pos!(2600.0),                // long_call_strike
+        pos!(2800.0),                // short_call_strike OTM
         ExpirationDate::Days(120.0), // long_call_expiration
         ExpirationDate::Days(30.0),  // short_call_expiration 30-45 days delta 0.30 or less
         0.17,                        // implied_volatility
@@ -38,7 +38,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.85,                        // close_fee_short_put
     );
 
-    let price_range: Vec<f64> = (2530..=2930).map(|x| x as f64).collect();
+    let price_range: Vec<PositiveF64> = (2530..=2930)
+        .map(|x| PositiveF64::new(x as f64).unwrap())
+        .collect();
+
     // let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());

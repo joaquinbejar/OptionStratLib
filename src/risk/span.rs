@@ -5,6 +5,8 @@
 ******************************************************************************/
 
 use crate::model::position::Position;
+use crate::model::types::PositiveF64;
+use crate::pos;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -46,7 +48,7 @@ impl SPANMargin {
         let mut risk_array = Vec::new();
         let option = &position.option;
 
-        let price_scenarios = self.generate_price_scenarios(option.underlying_price);
+        let price_scenarios = self.generate_price_scenarios(option.underlying_price.value());
         let volatility_scenarios = self.generate_volatility_scenarios(option.implied_volatility);
 
         for &price in &price_scenarios {
@@ -85,7 +87,7 @@ impl SPANMargin {
         let current_price = option.calculate_price_black_scholes();
 
         let mut scenario_option = option.clone();
-        scenario_option.underlying_price = scenario_price;
+        scenario_option.underlying_price = pos!(scenario_price);
         scenario_option.implied_volatility = scenario_volatility;
         let scenario_price = scenario_option.calculate_price_black_scholes();
 
@@ -118,8 +120,14 @@ mod tests_span {
     #[test]
     fn test_span_margin() {
         setup_logger();
-        let option =
-            create_sample_option(OptionStyle::Call, Side::Short, 155.0, pos!(1.0), 150.0, 0.2);
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(155.0),
+            pos!(1.0),
+            pos!(150.0),
+            0.2,
+        );
 
         let position = Position {
             option,

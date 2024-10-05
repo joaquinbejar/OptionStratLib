@@ -43,7 +43,7 @@ fn monte_carlo_option_pricing(
             st *= 1.0 + option.risk_free_rate * dt + option.implied_volatility * w;
         }
         // Calculate the payoff for a call option
-        let payoff = f64::max(st - option.strike_price, ZERO);
+        let payoff = f64::max(st.value() - option.strike_price.value(), ZERO);
         payoff_sum += payoff;
     }
     // Average value of the payoffs discounted to present value
@@ -64,11 +64,11 @@ mod tests {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
-            strike_price: 100.0,
+            strike_price: pos!(100.0),
             expiration_date: ExpirationDate::Days(365.0), // 1 year
             implied_volatility: 0.2,
             quantity: pos!(1.0),
-            underlying_price: 100.0,
+            underlying_price: pos!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_out_of_the_money() {
         let mut option = create_test_option();
-        option.strike_price = 120.0;
+        option.strike_price = pos!(120.0);
         let price = monte_carlo_option_pricing(&option, 252, 10000);
         // The price should be lower for an out-of-the-money option
         assert!(price < 5.0);
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_in_the_money() {
         let mut option = create_test_option();
-        option.strike_price = 80.0;
+        option.strike_price = pos!(80.0);
         let price = monte_carlo_option_pricing(&option, 252, 10000);
         // The price should be higher for an in-the-money option
         assert!(price > 20.0);
@@ -109,7 +109,8 @@ mod tests {
         option.implied_volatility = 0.0;
         let price = monte_carlo_option_pricing(&option, 252, 10000);
         let expected_price = f64::max(
-            option.underlying_price - option.strike_price * (-option.risk_free_rate * 1.0).exp(),
+            option.underlying_price.value()
+                - option.strike_price.value() * (-option.risk_free_rate * 1.0).exp(),
             ZERO,
         );
         assert_relative_eq!(price, expected_price, epsilon = 0.1);
