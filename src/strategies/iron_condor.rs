@@ -236,8 +236,8 @@ impl Strategies for IronCondor {
 
     fn net_premium_received(&self) -> f64 {
         self.short_call.net_premium_received() + self.short_put.net_premium_received()
-            // - self.short_call.total_cost() - self.short_put.total_cost()
-            - self.long_put.total_cost() - self.long_call.total_cost()
+            - self.long_put.total_cost()
+            - self.long_call.total_cost()
     }
 
     fn fees(&self) -> f64 {

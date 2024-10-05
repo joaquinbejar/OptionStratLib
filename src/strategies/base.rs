@@ -6,7 +6,7 @@
 use crate::constants::ZERO;
 use crate::model::chain::OptionChain;
 use crate::model::position::Position;
-use crate::model::types::PositiveF64;
+use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::FindOptimalSide;
 
 /// This enum represents different types of trading strategies.
@@ -132,6 +132,9 @@ pub trait Strategies {
     }
 
     fn max_min_strikes(&self) -> (PositiveF64, PositiveF64) {
+        if self.strikes().is_empty() {
+            return (PZERO, PZERO);
+        }
         let strikes = self.strikes();
 
         let max = strikes

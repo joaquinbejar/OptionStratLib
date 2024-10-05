@@ -4,12 +4,15 @@
    Date: 2/10/24
 ******************************************************************************/
 
-use crate::constants::ZERO;
+use crate::constants::{
+    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+};
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Strategies, StrategyType};
+use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use plotters::prelude::full_palette::ORANGE;
@@ -148,6 +151,10 @@ impl Strategies for CustomStrategy {
         self.calculate_break_even_points();
     }
 
+    fn get_legs(&self) -> Vec<Position> {
+        self.positions.clone()
+    }
+
     fn break_even(&self) -> Vec<PositiveF64> {
         if self.break_even_points.is_empty() {
             panic!("No break-even points found");
@@ -247,15 +254,30 @@ impl Strategies for CustomStrategy {
     }
 
     fn net_premium_received(&self) -> f64 {
-        panic!("Not implemented yet");
+        self.positions
+            .iter()
+            .map(|position| position.net_premium_received())
+            .sum::<f64>()
     }
 
     fn fees(&self) -> f64 {
-        panic!("Not implemented yet");
+        self.positions
+            .iter()
+            .map(|position| position.open_fee + position.close_fee)
+            .sum::<f64>()
     }
 
     fn profit_area(&self) -> f64 {
-        panic!("Not implemented yet");
+        // TODO: Implement the calculation of the profit area
+        ZERO
+    }
+
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = self.max_min_strikes();
+
+        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
     }
 }
 
