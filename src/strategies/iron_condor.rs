@@ -10,17 +10,19 @@ Key characteristics:
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
 use super::base::{Strategies, StrategyType};
+use crate::constants::{
+    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
+};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use crate::pricing::payoff::Profit;
+use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::prelude::{ShapeStyle, RED};
 use plotters::prelude::full_palette::ORANGE;
-use crate::constants::{DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
-use crate::strategies::utils::calculate_price_range;
+use plotters::prelude::{ShapeStyle, RED};
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -263,10 +265,8 @@ impl Strategies for IronCondor {
     }
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = (
-            self.long_put.option.clone(),
-            self.long_call.option.clone(),
-        );
+        let (first_option, last_option) =
+            (self.long_put.option.clone(), self.long_call.option.clone());
         let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
         let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
         Some(calculate_price_range(start_price, end_price, step))
@@ -296,9 +296,9 @@ impl Graph for IronCondor {
             format!("Long Call: ${}", self.long_call.option.strike_price),
             format!("Expire: {}", self.short_put.option.expiration_date),
         ]
-            .iter()
-            .map(|leg| leg.to_string())
-            .collect();
+        .iter()
+        .map(|leg| leg.to_string())
+        .collect();
 
         if leg_titles.is_empty() {
             strategy_title
@@ -396,8 +396,7 @@ impl Graph for IronCondor {
             coordinates: (self.long_call.option.strike_price.value(), loss),
             label: format!(
                 "Right Max Loss {:.2} at {:.0}",
-                loss,
-                self.long_call.option.strike_price
+                loss, self.long_call.option.strike_price
             ),
             label_offset: coordiantes,
             point_color: RED,
@@ -415,8 +414,7 @@ impl Graph for IronCondor {
             coordinates: (self.long_put.option.strike_price.value(), loss),
             label: format!(
                 "Left Max Loss {:.2} at {:.0}",
-                loss,
-                self.long_put.option.strike_price
+                loss, self.long_put.option.strike_price
             ),
             label_offset: coordiantes,
             point_color: RED,
