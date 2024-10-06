@@ -190,7 +190,7 @@ impl Profit for ShortStrangle {
 
 impl Graph for ShortStrangle {
     fn title(&self) -> String {
-        let strategy_title = format!("Short Strangle Strategy: {:?}", self.kind);
+        let strategy_title = format!("Short {:?} Strategy: ", self.kind);
         let leg_titles: Vec<String> = [self.short_call.title(), self.short_put.title()]
             .iter()
             .map(|leg| leg.to_string())
@@ -443,7 +443,7 @@ impl Profit for LongStrangle {
 
 impl Graph for LongStrangle {
     fn title(&self) -> String {
-        let strategy_title = format!("Long Strangle Strategy: {:?}", self.kind);
+        let strategy_title = format!("Long {:?} Strategy: ", self.kind);
         let leg_titles: Vec<String> = [self.long_call.title(), self.long_put.title()]
             .iter()
             .map(|leg| leg.to_string())
