@@ -416,6 +416,8 @@ impl Graph for BullCallSpread {
             font_size: 18,
         });
 
+        points.push(self.get_point_at_price(self.long_call.option.underlying_price));
+
         points
     }
 }

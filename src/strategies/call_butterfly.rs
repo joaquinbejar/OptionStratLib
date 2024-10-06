@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use super::base::{Strategies, StrategyType};
+use super::base::{Optimizable, Strategies, StrategyType};
 use crate::constants::DARK_GREEN;
 use crate::constants::{
     DARK_BLUE, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
@@ -158,65 +158,6 @@ impl CallButterfly {
         strategy.break_even_points.push(second_bep);
 
         strategy
-    }
-
-    fn find_optimal(
-        &mut self,
-        option_chain: &OptionChain,
-        side: FindOptimalSide,
-        criteria: OptimizationCriteria,
-    ) {
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
-        let mut best_value = f64::NEG_INFINITY;
-
-        for short_index in 1..options.len() - 1 {
-            let short_option = &options[short_index];
-            if !self.is_valid_short_option(short_option, &side) {
-                debug!("Skipping short option: {}", short_option.strike_price);
-                continue;
-            }
-
-            for long_itm_index in 0..short_index {
-                let long_otm_index = short_index + (short_index - long_itm_index);
-
-                if long_otm_index >= options.len() {
-                    continue;
-                }
-
-                let long_itm = &options[long_itm_index];
-                let long_otm = &options[long_otm_index];
-
-                if !self.are_valid_prices(long_itm, long_otm, short_option) {
-                    continue;
-                }
-
-                let strategy = self.create_strategy(option_chain, long_itm, long_otm, short_option);
-
-                if !strategy.validate() {
-                    panic!("Invalid strategy");
-                }
-
-                let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                    OptimizationCriteria::Area => strategy.profit_area(),
-                };
-
-                debug!(
-                    "{}: {:.2}%",
-                    if matches!(criteria, OptimizationCriteria::Ratio) {
-                        "Ratio"
-                    } else {
-                        "Area"
-                    },
-                    current_value
-                );
-
-                if current_value > best_value {
-                    best_value = current_value;
-                    self.clone_from(&strategy);
-                }
-            }
-        }
     }
 
     fn is_valid_short_option(&self, short_option: &OptionData, side: &FindOptimalSide) -> bool {
@@ -403,6 +344,67 @@ impl Strategies for CallButterfly {
     }
 }
 
+impl Optimizable for CallButterfly {
+    fn find_optimal(
+        &mut self,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
+    ) {
+        let options: Vec<&OptionData> = option_chain.options.iter().collect();
+        let mut best_value = f64::NEG_INFINITY;
+
+        for short_index in 1..options.len() - 1 {
+            let short_option = &options[short_index];
+            if !self.is_valid_short_option(short_option, &side) {
+                debug!("Skipping short option: {}", short_option.strike_price);
+                continue;
+            }
+
+            for long_itm_index in 0..short_index {
+                let long_otm_index = short_index + (short_index - long_itm_index);
+
+                if long_otm_index >= options.len() {
+                    continue;
+                }
+
+                let long_itm = &options[long_itm_index];
+                let long_otm = &options[long_otm_index];
+
+                if !self.are_valid_prices(long_itm, long_otm, short_option) {
+                    continue;
+                }
+
+                let strategy = self.create_strategy(option_chain, long_itm, long_otm, short_option);
+
+                if !strategy.validate() {
+                    panic!("Invalid strategy");
+                }
+
+                let current_value = match criteria {
+                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                    OptimizationCriteria::Area => strategy.profit_area(),
+                };
+
+                debug!(
+                    "{}: {:.2}%",
+                    if matches!(criteria, OptimizationCriteria::Ratio) {
+                        "Ratio"
+                    } else {
+                        "Area"
+                    },
+                    current_value
+                );
+
+                if current_value > best_value {
+                    best_value = current_value;
+                    self.clone_from(&strategy);
+                }
+            }
+        }
+    }
+}
+
 impl Profit for CallButterfly {
     fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
         let price = Some(price);
@@ -505,6 +507,8 @@ impl Graph for CallButterfly {
             point_size: 5,
             font_size: 18,
         });
+
+        points.push(self.get_point_at_price(self.underlying_price));
 
         points
     }
