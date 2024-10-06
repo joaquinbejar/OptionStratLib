@@ -30,9 +30,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.0,       // dividend_yield
         pos!(1.0), // long quantity
         pos!(2.0), // short_quantity
-        85.04,     // premium_long
-        31.65,     // premium_short
-        53.04,     // open_fee_long
+        85.04,     // premium_long_itm
+        31.65,     // premium_long_otm
+        53.04,     // premium_short
         0.78,      // open_fee_long
         0.78,      // close_fee_long
         0.73,      // close_fee_short
