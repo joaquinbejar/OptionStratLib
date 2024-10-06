@@ -3,11 +3,12 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+
 use crate::constants::ZERO;
 use crate::model::chain::OptionChain;
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
-use crate::strategies::utils::FindOptimalSide;
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -84,8 +85,16 @@ pub trait Strategies {
         ZERO
     }
 
+    fn max_profit_iter(&mut self) -> f64 {
+        self.max_profit()
+    }
+
     fn max_loss(&self) -> f64 {
         ZERO
+    }
+
+    fn max_loss_iter(&mut self) -> f64 {
+        self.max_loss()
     }
 
     fn total_cost(&self) -> f64 {
@@ -147,5 +156,16 @@ pub trait Strategies {
             .fold(PositiveF64::new(f64::INFINITY).unwrap(), PositiveF64::min);
 
         (min, max)
+    }
+}
+
+pub(crate) trait Optimizable {
+    fn find_optimal(
+        &mut self,
+        _option_chain: &OptionChain,
+        _side: FindOptimalSide,
+        _criteria: OptimizationCriteria,
+    ) {
+        panic!("Find optimal is not applicable for this strategy");
     }
 }

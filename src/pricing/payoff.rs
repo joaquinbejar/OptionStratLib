@@ -1,4 +1,7 @@
+use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::types::{OptionStyle, PositiveF64, Side, PZERO};
+use crate::visualization::model::ChartPoint;
+use plotters::prelude::RED;
 use tracing::trace;
 
 pub trait Payoff {
@@ -80,6 +83,24 @@ pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
 
 pub trait Profit {
     fn calculate_profit_at(&self, price: PositiveF64) -> f64;
+
+    fn get_point_at_price(&self, price: PositiveF64) -> ChartPoint<(f64, f64)> {
+        let value_at_current_price = self.calculate_profit_at(price);
+        let color = if value_at_current_price >= ZERO {
+            DARK_GREEN
+        } else {
+            RED
+        };
+        ChartPoint {
+            coordinates: (price.value(), value_at_current_price),
+            label: format!("{:.2}", value_at_current_price),
+            label_offset: (4.0, 1.0),
+            point_color: color,
+            label_color: color,
+            point_size: 5,
+            font_size: 18,
+        }
+    }
 }
 
 #[cfg(test)]
