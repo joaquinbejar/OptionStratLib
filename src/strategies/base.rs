@@ -315,3 +315,204 @@ mod tests_strategies {
         assert_eq!(strategy.max_min_strikes(), (PositiveF64::new(100.0).unwrap(), PositiveF64::new(100.0).unwrap()));
     }
 }
+
+#[cfg(test)]
+mod tests_strategies_extended {
+    use super::*;
+    use crate::model::types::{OptionStyle, PositiveF64, Side};
+    use crate::model::position::Position;
+    use crate::model::utils::create_sample_option_simplest;
+    use crate::pos;
+
+    #[test]
+    fn test_strategy_enum() {
+        assert_ne!(StrategyType::BullCallSpread, StrategyType::BearCallSpread);
+        assert_eq!(StrategyType::Custom, StrategyType::Custom);
+    }
+
+    #[test]
+    fn test_strategy_new_with_legs() {
+        let mut strategy = Strategy::new(
+            "Test Strategy".to_string(),
+            StrategyType::BullCallSpread,
+            "Test Description".to_string(),
+        );
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
+        strategy.legs.push(position);
+
+        assert_eq!(strategy.legs.len(), 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Legs is not applicable for this strategy")]
+    fn test_strategies_get_legs_panic() {
+        struct PanicStrategy;
+        impl Strategies for PanicStrategy {}
+
+        let strategy = PanicStrategy;
+        strategy.get_legs();
+    }
+
+    #[test]
+    #[should_panic(expected = "Break even is not applicable for this strategy")]
+    fn test_strategies_break_even_panic() {
+        struct PanicStrategy;
+        impl Strategies for PanicStrategy {}
+
+        let strategy = PanicStrategy;
+        strategy.break_even();
+    }
+
+    #[test]
+    #[should_panic(expected = "Net premium received is not applicable")]
+    fn test_strategies_net_premium_received_panic() {
+        struct PanicStrategy;
+        impl Strategies for PanicStrategy {}
+
+        let strategy = PanicStrategy;
+        strategy.net_premium_received();
+    }
+
+    #[test]
+    #[should_panic(expected = "Fees is not applicable for this strategy")]
+    fn test_strategies_fees_panic() {
+        struct PanicStrategy;
+        impl Strategies for PanicStrategy {}
+
+        let strategy = PanicStrategy;
+        strategy.fees();
+    }
+
+    #[test]
+    #[should_panic(expected = "Best ratio is not applicable for this strategy")]
+    fn test_strategies_best_ratio_panic() {
+        struct PanicStrategy;
+        impl Strategies for PanicStrategy {}
+
+        let mut strategy = PanicStrategy;
+
+        let option_chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            Default::default(),
+        );
+
+        strategy.best_ratio(&option_chain, FindOptimalSide::All);
+    }
+
+    #[test]
+    #[should_panic(expected = "Best area is not applicable for this strategy")]
+    fn test_strategies_best_area_panic() {
+        struct PanicStrategy;
+        impl Strategies for PanicStrategy {}
+
+        let mut strategy = PanicStrategy;
+
+        let option_chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            Default::default(),
+        );
+
+
+        strategy.best_area(&option_chain, FindOptimalSide::All);
+    }
+
+    #[test]
+    fn test_strategies_max_profit_iter() {
+        struct TestStrategy;
+        impl Strategies for TestStrategy {
+            fn max_profit(&self) -> f64 {
+                100.0
+            }
+        }
+
+        let mut strategy = TestStrategy;
+        assert_eq!(strategy.max_profit_iter(), 100.0);
+    }
+
+    #[test]
+    fn test_strategies_max_loss_iter() {
+        struct TestStrategy;
+        impl Strategies for TestStrategy {
+            fn max_loss(&self) -> f64 {
+                50.0
+            }
+        }
+
+        let mut strategy = TestStrategy;
+        assert_eq!(strategy.max_loss_iter(), 50.0);
+    }
+
+    #[test]
+    fn test_strategies_empty_strikes() {
+        struct EmptyStrategy;
+        impl Strategies for EmptyStrategy {
+            fn get_legs(&self) -> Vec<Position> {
+                vec![]
+            }
+        }
+
+        let strategy = EmptyStrategy;
+        assert_eq!(strategy.strikes(), Vec::<PositiveF64>::new());
+        assert_eq!(strategy.max_min_strikes(), (PZERO, PZERO));
+    }
+
+}
+
+#[cfg(test)]
+mod tests_strategy_type {
+    use super::*;
+
+    #[test]
+    fn test_strategy_type_equality() {
+        assert_eq!(StrategyType::BullCallSpread, StrategyType::BullCallSpread);
+        assert_ne!(StrategyType::BullCallSpread, StrategyType::BearCallSpread);
+    }
+
+    #[test]
+    fn test_strategy_type_clone() {
+        let strategy = StrategyType::IronCondor;
+        let cloned = strategy.clone();
+        assert_eq!(strategy, cloned);
+    }
+
+    #[test]
+    fn test_strategy_type_debug() {
+        let strategy = StrategyType::Straddle;
+        let debug_string = format!("{:?}", strategy);
+        assert_eq!(debug_string, "Straddle");
+    }
+
+    #[test]
+    fn test_all_strategy_types() {
+        let strategies = [StrategyType::BullCallSpread,
+            StrategyType::BearCallSpread,
+            StrategyType::BullPutSpread,
+            StrategyType::BearPutSpread,
+            StrategyType::IronCondor,
+            StrategyType::Straddle,
+            StrategyType::Strangle,
+            StrategyType::CoveredCall,
+            StrategyType::ProtectivePut,
+            StrategyType::Collar,
+            StrategyType::LongCall,
+            StrategyType::LongPut,
+            StrategyType::ShortCall,
+            StrategyType::ShortPut,
+            StrategyType::PoorMansCoveredCall,
+            StrategyType::CallButterfly,
+            StrategyType::Custom];
+
+        for (i, strategy) in strategies.iter().enumerate() {
+            for (j, other_strategy) in strategies.iter().enumerate() {
+                if i == j {
+                    assert_eq!(strategy, other_strategy);
+                } else {
+                    assert_ne!(strategy, other_strategy);
+                }
+            }
+        }
+    }
+}

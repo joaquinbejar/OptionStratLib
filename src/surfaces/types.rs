@@ -101,3 +101,81 @@ pub enum SurfaceError {
     AnalysisError(String),
     // Other types of errors as needed
 }
+
+#[cfg(test)]
+mod tests_surfaces {
+    use super::*;
+
+    #[test]
+    fn test_point_creation() {
+        let point = Point {
+            strike: 100.0,
+            maturity: 1.0,
+            value: 0.2,
+        };
+        assert_eq!(point.strike, 100.0);
+        assert_eq!(point.maturity, 1.0);
+        assert_eq!(point.value, 0.2);
+    }
+
+    #[test]
+    fn test_surface_creation() {
+        let points = vec![
+            Point { strike: 90.0, maturity: 0.5, value: 0.15 },
+            Point { strike: 100.0, maturity: 1.0, value: 0.2 },
+            Point { strike: 110.0, maturity: 1.5, value: 0.25 },
+        ];
+        let surface = Surface::new(points);
+        assert_eq!(surface.points.len(), 3);
+        assert_eq!(surface.strike_range, (90.0, 110.0));
+        assert_eq!(surface.maturity_range, (0.5, 1.5));
+    }
+
+    #[test]
+    fn test_surface_range_calculation() {
+        let range = Surface::calculate_range(vec![1.0, 2.0, 3.0, 4.0, 5.0].into_iter());
+        assert_eq!(range, (1.0, 5.0));
+    }
+
+    #[test]
+    fn test_surface_config() {
+        let mut extra_params = HashMap::new();
+        extra_params.insert("param1".to_string(), 1.0);
+        extra_params.insert("param2".to_string(), 2.0);
+
+        let config = SurfaceConfig {
+            surface_type: SurfaceType::Volatility,
+            interpolation: InterpolationType::Linear,
+            construction_method: SurfaceConstructionMethod::FromData,
+            extra_params,
+        };
+
+        assert_eq!(config.extra_params.len(), 2);
+        assert_eq!(config.extra_params.get("param1"), Some(&1.0));
+    }
+
+    #[test]
+    fn test_surface_analysis_result() {
+        let analysis = SurfaceAnalysisResult {
+            mean: 0.2,
+            median: 0.19,
+            std_dev: 0.05,
+            skew: 0.1,
+            kurtosis: 3.0,
+        };
+        assert_eq!(analysis.mean, 0.2);
+        assert_eq!(analysis.median, 0.19);
+        assert_eq!(analysis.std_dev, 0.05);
+        assert_eq!(analysis.skew, 0.1);
+        assert_eq!(analysis.kurtosis, 3.0);
+    }
+
+    #[test]
+    fn test_surface_error() {
+        let error = SurfaceError::InterpolationError("Test error".to_string());
+        match error {
+            SurfaceError::InterpolationError(msg) => assert_eq!(msg, "Test error"),
+            _ => panic!("Unexpected error type"),
+        }
+    }
+}
