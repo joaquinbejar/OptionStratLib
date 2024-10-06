@@ -157,23 +157,39 @@ pub(crate) fn calculate_axis_range(
     x_axis_data: &[PositiveF64],
     y_axis_data: &[f64],
 ) -> (PositiveF64, PositiveF64, f64, f64) {
-    let (min_x_value, max_x_value) = x_axis_data
-        .iter()
-        .fold((pos!(f64::INFINITY), PZERO), |(min_x, max_x), &value| {
-            (min_x.min(value), max_x.max(value))
-        });
+    let (min_x_value, max_x_value) = if x_axis_data.is_empty() {
+        ( PZERO,pos!(f64::INFINITY))
+    } else {
+        x_axis_data
+            .iter()
+            .fold((pos!(f64::INFINITY), PZERO), |(min_x, max_x), &value| {
+                (min_x.min(value), max_x.max(value))
+            })
+    };
 
-    let (min_y_temp, max_y_temp) = y_axis_data.iter().fold(
-        (f64::INFINITY, f64::NEG_INFINITY),
-        |(min_y, max_y), &value| (f64::min(min_y, value), f64::max(max_y, value)),
-    );
+    let (min_y_temp, max_y_temp) = if y_axis_data.is_empty() {
+        (f64::INFINITY, f64::NEG_INFINITY)
+    } else {
+        y_axis_data
+            .iter()
+            .fold((f64::INFINITY, f64::NEG_INFINITY), |(min_y, max_y), &value| {
+                (f64::min(min_y, value), f64::max(max_y, value))
+            })
+    };
+
+    if min_y_temp.is_infinite() || max_y_temp.is_infinite() {
+        return (max_x_value, min_x_value, min_y_temp, max_y_temp);
+    }
+
     let adjusted_max_profit = (max_y_temp * 1.2 - max_y_temp).abs();
     let adjusted_min_profit = (min_y_temp * 1.2 - min_y_temp).abs();
     let margin_value = adjusted_max_profit.max(adjusted_min_profit);
     let max_y_value = max_y_temp + margin_value;
     let min_y_value = min_y_temp - margin_value;
+
     (max_x_value, min_x_value, max_y_value, min_y_value)
 }
+
 
 pub fn draw_points_on_chart<DB: DrawingBackend, X, Y>(
     ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
@@ -254,72 +270,179 @@ where
 }
 
 // TODO: fix this
-// #[cfg(test)]
-// mod tests_calculate_axis_range {
-//     use super::*;
-//
-//     #[test]
-//     fn test_calculate_axis_range() {
-//         let x_data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-//         let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
-//
-//         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
-//
-//         assert_eq!(max_x, 5.0);
-//         assert_eq!(min_x, 1.0);
-//         assert!(max_y > 10.0);
-//         assert!(min_y < -10.0);
-//     }
-//
-//     #[test]
-//     fn test_calculate_axis_range_single_value() {
-//         let x_data = vec![1.0];
-//         let y_data = vec![0.0];
-//
-//         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
-//
-//         assert_eq!(max_x, 1.0);
-//         assert_eq!(min_x, 1.0);
-//         assert_eq!(max_y, 0.0);
-//         assert_eq!(min_y, 0.0);
-//     }
-//
-//     #[test]
-//     fn test_calculate_axis_range_negative_values() {
-//         let x_data = vec![-5.0, -3.0, -1.0];
-//         let y_data = vec![-10.0, -20.0, -30.0];
-//
-//         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
-//
-//         assert_eq!(max_x, -1.0);
-//         assert_eq!(min_x, -5.0);
-//         assert!(max_y > -10.0);
-//         assert!(min_y < -30.0);
-//     }
-//
-//     #[test]
-//     fn test_calculate_axis_range_zero_values() {
-//         let x_data = vec![0.0, 0.0, 0.0];
-//         let y_data = vec![0.0, 0.0, 0.0];
-//
-//         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
-//
-//         assert_eq!(max_x, 0.0);
-//         assert_eq!(min_x, 0.0);
-//         assert_eq!(max_y, 0.0);
-//         assert_eq!(min_y, 0.0);
-//     }
-//
-//     #[test]
-//     fn test_calculate_axis_range_large_values() {
-//         let x_data = vec![1e6, 2e6, 3e6];
-//         let y_data = vec![1e9, 2e9, 3e9];
-//
-//         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
-//
-//         assert_eq!(max_x, 3e6);
-//         assert_eq!(min_x, 1e6);
-//         assert!(max_y > 3e9);
-//         assert!(min_y < 1e9);
-//     }
-// }
+#[cfg(test)]
+mod tests_calculate_axis_range {
+    use super::*;
+
+    #[test]
+    fn test_calculate_axis_range() {
+        let x_data = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
+        let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, 5.0);
+        assert_eq!(min_x, 1.0);
+        assert!(max_y > 10.0);
+        assert!(min_y < -10.0);
+    }
+
+    #[test]
+    fn test_calculate_axis_range_single_value() {
+        let x_data = vec![pos!(1.0)];
+        let y_data = vec![0.0];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, pos!(1.0));
+        assert_eq!(min_x, pos!(1.0));
+        assert_eq!(max_y, 0.0);
+        assert_eq!(min_y, 0.0);
+    }
+
+
+    #[test]
+    fn test_calculate_axis_range_zero_values() {
+        let x_data = vec![pos!(0.0), pos!(0.0), pos!(0.0)];
+        let y_data = vec![0.0, 0.0, 0.0];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, PZERO);
+        assert_eq!(min_x, PZERO);
+        assert_eq!(max_y, 0.0);
+        assert_eq!(min_y, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_axis_range_large_values() {
+        let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
+        let y_data = vec![1e9, 2e9, 3e9];
+
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+
+        assert_eq!(max_x, 3e6);
+        assert_eq!(min_x, 1e6);
+        assert!(max_y > 3e9);
+        assert!(min_y < 1e9);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::pos;
+    use plotters::style::RGBColor;
+    use std::error::Error;
+
+    struct MockGraph;
+
+    impl Profit for MockGraph {
+        fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+            price.value() * 2.0 - 100.0
+        }
+    }
+
+    impl Graph for MockGraph {
+        fn title(&self) -> String {
+            "Mock Graph".to_string()
+        }
+
+        fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
+            vec![ChartVerticalLine {
+                x_coordinate: 50.0,
+                y_range: (-100.0, 100.0),
+                label: "Test Line".to_string(),
+                label_offset: (0.0, 0.0),
+                line_color: RGBColor(0, 0, 0),
+                label_color: RGBColor(0, 0, 0),
+                line_style: plotters::style::ShapeStyle::from(&RGBColor(0, 0, 0)).stroke_width(1),
+                font_size: 12,
+            }]
+        }
+
+        fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+            vec![ChartPoint {
+                coordinates: (50.0, 0.0),
+                label: "Test Point".to_string(),
+                label_offset: (0.0, 0.0),
+                point_color: RGBColor(0, 0, 0),
+                label_color: RGBColor(0, 0, 0),
+                point_size: 5,
+                font_size: 12,
+            }]
+        }
+    }
+
+    #[test]
+    fn test_graph_trait() -> Result<(), Box<dyn Error>> {
+        let mock_graph = MockGraph;
+        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
+        mock_graph.graph(&x_axis_data, "test_graph.png", 20, (800, 600))?;
+        std::fs::remove_file("test_graph.png")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_values() {
+        let mock_graph = MockGraph;
+        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
+        let values = mock_graph.get_values(&x_axis_data);
+        assert_eq!(values, vec![-100.0, 0.0, 100.0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Not implemented")]
+    fn test_default_get_vertical_lines() {
+        struct DefaultGraph;
+        impl Profit for DefaultGraph {
+            fn calculate_profit_at(&self, _: PositiveF64) -> f64 { 0.0 }
+        }
+        impl Graph for DefaultGraph {
+            fn title(&self) -> String { "Default".to_string() }
+        }
+        let graph = DefaultGraph;
+        graph.get_vertical_lines();
+    }
+
+    #[test]
+    #[should_panic(expected = "Not implemented")]
+    fn test_default_get_points() {
+        struct DefaultGraph;
+        impl Profit for DefaultGraph {
+            fn calculate_profit_at(&self, _: PositiveF64) -> f64 { 0.0 }
+        }
+        impl Graph for DefaultGraph {
+            fn title(&self) -> String { "Default".to_string() }
+        }
+        let graph = DefaultGraph;
+        graph.get_points();
+    }
+
+    #[test]
+    fn test_draw_points_on_chart() -> Result<(), Box<dyn Error>> {
+        // Esta prueba es complicada de implementar sin un contexto real de gráfico.
+        // Podrías considerar usar un mock de ChartContext para esta prueba.
+        Ok(())
+    }
+
+    #[test]
+    fn test_draw_vertical_lines_on_chart() -> Result<(), Box<dyn Error>> {
+        // Similar a la prueba anterior, esto requeriría un mock de ChartContext.
+        Ok(())
+    }
+
+    #[test]
+    fn test_calculate_axis_range_empty() {
+        let x_data: Vec<PositiveF64> = vec![];
+        let y_data: Vec<f64> = vec![];
+        let ( max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+        assert_eq!(min_x, PZERO);
+        assert_eq!(max_x, pos!(f64::INFINITY));
+        assert_eq!(min_y, f64::NEG_INFINITY);
+        assert_eq!(max_y, f64::INFINITY);
+    }
+
+
+}

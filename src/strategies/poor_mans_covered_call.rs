@@ -315,3 +315,147 @@ impl Graph for PoorMansCoveredCall {
         points
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+    use crate::pos;
+
+    fn create_pmcc_strategy() -> PoorMansCoveredCall {
+        let underlying_symbol = "AAPL".to_string();
+        let underlying_price = pos!(150.0);
+        let long_call_strike = pos!(140.0);
+        let short_call_strike = pos!(160.0);
+        let long_call_expiration = ExpirationDate::Days(365.0);
+        let short_call_expiration = ExpirationDate::Days(30.0);
+        let implied_volatility = 0.20;
+        let risk_free_rate = 0.01;
+        let dividend_yield = 0.005;
+        let quantity = pos!(1.0);
+        let premium_long_call = 15.0;
+        let premium_short_call = 5.0;
+        let open_fee_long_call = 1.0;
+        let close_fee_long_call = 1.0;
+        let open_fee_short_call = 0.5;
+        let close_fee_short_call = 0.5;
+
+        PoorMansCoveredCall::new(
+            underlying_symbol,
+            underlying_price,
+            long_call_strike,
+            short_call_strike,
+            long_call_expiration,
+            short_call_expiration,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            quantity,
+            premium_long_call,
+            premium_short_call,
+            open_fee_long_call,
+            close_fee_long_call,
+            open_fee_short_call,
+            close_fee_short_call,
+        )
+    }
+
+    #[test]
+    fn test_create_pmcc_strategy() {
+        let pmcc = create_pmcc_strategy();
+        assert_eq!(pmcc.name, "Poor Man's Covered Call");
+        assert_eq!(pmcc.long_call.option.strike_price, pos!(140.0));
+        assert_eq!(pmcc.short_call.option.strike_price, pos!(160.0));
+    }
+
+    #[test]
+    fn test_max_profit() {
+        let pmcc = create_pmcc_strategy();
+        let max_profit = pmcc.max_profit();
+        assert!(max_profit > 0.0);
+    }
+
+    #[test]
+    fn test_max_loss() {
+        let pmcc = create_pmcc_strategy();
+        let max_loss = pmcc.max_loss();
+        assert!(max_loss > 0.0);
+    }
+
+    #[test]
+    fn test_break_even() {
+        let pmcc = create_pmcc_strategy();
+        let break_even = pmcc.break_even();
+        assert_eq!(break_even.len(), 1);
+        assert!(break_even[0].value() > 0.0);
+    }
+
+    #[test]
+    fn test_total_cost() {
+        let pmcc = create_pmcc_strategy();
+        let total_cost = pmcc.total_cost();
+        assert!(total_cost > 0.0);
+    }
+
+    #[test]
+    fn test_fees() {
+        let pmcc = create_pmcc_strategy();
+        let fees = pmcc.fees();
+        assert!(fees > 0.0);
+    }
+
+    #[test]
+    fn test_profit_area() {
+        let pmcc = create_pmcc_strategy();
+        let profit_area = pmcc.profit_area();
+        assert!(profit_area > 0.0);
+    }
+
+    #[test]
+    fn test_profit_ratio() {
+        let pmcc = create_pmcc_strategy();
+        let profit_ratio = pmcc.profit_ratio();
+        assert!(profit_ratio > 0.0);
+    }
+
+    #[test]
+    fn test_best_range_to_show() {
+        let pmcc = create_pmcc_strategy();
+        let step = pos!(1.0);
+        let range = pmcc.best_range_to_show(step);
+        assert!(range.is_some());
+        let range_values = range.unwrap();
+        assert!(!range_values.is_empty());
+    }
+
+    #[test]
+    fn test_calculate_profit_at() {
+        let pmcc = create_pmcc_strategy();
+        let profit = pmcc.calculate_profit_at(pos!(150.0));
+        assert!(profit >= -pmcc.max_loss() && profit <= pmcc.max_profit());
+    }
+
+    #[test]
+    fn test_graph_title() {
+        let pmcc = create_pmcc_strategy();
+        let title = pmcc.title();
+        assert!(title.contains("PoorMansCoveredCall Strategy"));
+    }
+
+
+
+    #[test]
+    fn test_vertical_lines() {
+        let pmcc = create_pmcc_strategy();
+        let vertical_lines = pmcc.get_vertical_lines();
+        assert_eq!(vertical_lines.len(), 1);
+        assert_eq!(vertical_lines[0].x_coordinate, 150.0);
+    }
+
+    #[test]
+    fn test_graph_points() {
+        let pmcc = create_pmcc_strategy();
+        let points = pmcc.get_points();
+        assert!(!points.is_empty());
+    }
+}
