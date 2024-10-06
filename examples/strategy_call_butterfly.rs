@@ -30,18 +30,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.0,       // dividend_yield
         pos!(1.0), // long quantity
         pos!(2.0), // short_quantity
-        85.04,     // premium_long
-        31.65,     // premium_short
-        53.04,     // open_fee_long
+        85.04,     // premium_long_itm
+        31.65,     // premium_long_otm
+        53.04,     // premium_short
         0.78,      // open_fee_long
         0.78,      // close_fee_long
         0.73,      // close_fee_short
         0.73,      // close_fee_short
     );
 
-    let price_range: Vec<PositiveF64> = (5681..=5881)
-        .map(|x| PositiveF64::new(x as f64).unwrap())
-        .collect();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());
@@ -59,6 +57,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         (range / 2.0) / underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
 
     // Generate the profit/loss graph
     strategy.graph(

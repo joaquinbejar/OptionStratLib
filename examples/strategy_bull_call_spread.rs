@@ -37,8 +37,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let (min, max) = strategy.max_min_strikes();
-    let range = max - min;
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
@@ -49,11 +47,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Max Profit: ${:.2}", strategy.max_profit());
     info!("Max Loss: ${:0.2}", strategy.max_loss());
     info!("Total Fees: ${:.2}", strategy.fees());
-    info!(
-        "Range of Profit: ${:.2} {:.2}%",
-        range,
-        (range / 2.0) / underlying_price * 100.0
-    );
     info!("Profit Area: {:.2}%", strategy.profit_area());
     info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
 

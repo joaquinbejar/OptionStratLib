@@ -38,17 +38,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.85,                        // close_fee_short_put
     );
 
-    let price_range: Vec<PositiveF64> = (2530..=2930)
-        .map(|x| PositiveF64::new(x as f64).unwrap())
-        .collect();
-
-    // let range = strategy.break_even_points[1] - strategy.break_even_points[0];
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!("Max Profit: ${:.2}", strategy.max_profit());
     info!("Max Loss: ${}", strategy.max_loss());
     info!("Total Fees: ${:.2}", strategy.fees());
+    info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
 
     // Generate the profit/loss graph
     strategy.graph(

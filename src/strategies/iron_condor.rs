@@ -10,14 +10,19 @@ Key characteristics:
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
 use super::base::{Strategies, StrategyType};
+use crate::constants::{
+    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
+};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use crate::pricing::payoff::Profit;
-use crate::visualization::model::ChartVerticalLine;
+use crate::strategies::utils::calculate_price_range;
+use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::full_palette::ORANGE;
+use plotters::prelude::{ShapeStyle, RED};
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -191,6 +196,15 @@ impl Strategies for IronCondor {
         }
     }
 
+    fn get_legs(&self) -> Vec<Position> {
+        vec![
+            self.short_call.clone(),
+            self.short_put.clone(),
+            self.long_call.clone(),
+            self.long_put.clone(),
+        ]
+    }
+
     fn break_even(&self) -> Vec<PositiveF64> {
         // Iron Condor has two break-even points, we'll return the lower one
         self.break_even_points.clone()
@@ -222,8 +236,8 @@ impl Strategies for IronCondor {
 
     fn net_premium_received(&self) -> f64 {
         self.short_call.net_premium_received() + self.short_put.net_premium_received()
-            // - self.short_call.total_cost() - self.short_put.total_cost()
-            - self.long_put.total_cost() - self.long_call.total_cost()
+            - self.long_put.total_cost()
+            - self.long_call.total_cost()
     }
 
     fn fees(&self) -> f64 {
@@ -248,6 +262,14 @@ impl Strategies for IronCondor {
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
         (inner_area + outer_triangles) / self.short_call.option.underlying_price.value()
+    }
+
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) =
+            (self.long_put.option.clone(), self.long_call.option.clone());
+        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
     }
 }
 
@@ -286,20 +308,124 @@ impl Graph for IronCondor {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let mut vertical_lines: Vec<ChartVerticalLine<f64, f64>> = vec![];
-        for break_even_point in self.break_even_points.clone() {
-            vertical_lines.push(ChartVerticalLine {
-                x_coordinate: break_even_point.value(),
-                y_range: (-50000.0, 50000.0),
-                label: "Break Even".to_string(),
-                label_offset: (5.0, 5.0),
-                line_color: BLACK,
-                label_color: BLACK,
-                line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-                font_size: 18,
-            });
-        }
+        let vertical_lines = vec![ChartVerticalLine {
+            x_coordinate: self.short_call.option.underlying_price.value(),
+            y_range: (-50000.0, 50000.0),
+            label: format!("Current Price: {}", self.short_call.option.underlying_price),
+            label_offset: (5.0, 5.0),
+            line_color: ORANGE,
+            label_color: ORANGE,
+            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
+            font_size: 18,
+        }];
+
         vertical_lines
+    }
+
+    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[0].value(), 0.0),
+            label: format!("Left Break Even\n\n{}", self.break_even_points[0]),
+            label_offset: (5.0, 5.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points.push(ChartPoint {
+            coordinates: (self.break_even_points[1].value(), 0.0),
+            label: format!("Right Break Even\n\n{}", self.break_even_points[1]),
+            label_offset: (5.0, 5.0),
+            point_color: DARK_BLUE,
+            label_color: DARK_BLUE,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            self.short_call.option.strike_price.value() / 2000.0,
+            self.max_profit() / 5.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (
+                self.short_call.option.strike_price.value(),
+                self.max_profit(),
+            ),
+            label: format!(
+                "High Max Profit {:.2} at {:.0}",
+                self.max_profit(),
+                self.short_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: DARK_GREEN,
+            label_color: DARK_GREEN,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let coordiantes: (f64, f64) = (
+            self.short_put.option.strike_price.value() / 2000.0,
+            self.max_profit() / 5.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (
+                self.short_put.option.strike_price.value(),
+                self.max_profit(),
+            ),
+            label: format!(
+                "Low Max Profit {:.2} at {:.0}",
+                self.max_profit(),
+                self.short_put.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: DARK_GREEN,
+            label_color: DARK_GREEN,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let loss = self.calculate_profit_at(self.long_call.option.strike_price);
+        let coordiantes: (f64, f64) = (
+            self.long_call.option.strike_price.value() / 2000.0,
+            loss / 50.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (self.long_call.option.strike_price.value(), loss),
+            label: format!(
+                "Right Max Loss {:.2} at {:.0}",
+                loss, self.long_call.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        let loss = self.calculate_profit_at(self.long_put.option.strike_price);
+        let coordiantes: (f64, f64) = (
+            self.long_put.option.strike_price.value() / 2000.0,
+            loss / 50.0,
+        );
+        points.push(ChartPoint {
+            coordinates: (self.long_put.option.strike_price.value(), loss),
+            label: format!(
+                "Left Max Loss {:.2} at {:.0}",
+                loss, self.long_put.option.strike_price
+            ),
+            label_offset: coordiantes,
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size: 18,
+        });
+
+        points.push(self.get_point_at_price(self.long_call.option.underlying_price));
+
+        points
     }
 }
 

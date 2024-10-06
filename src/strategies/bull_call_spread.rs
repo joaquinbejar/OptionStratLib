@@ -274,9 +274,11 @@ impl Strategies for BullCallSpread {
     }
 
     fn profit_area(&self) -> f64 {
-        // TODO: Implement this
-        // (self.short_call.option.strike_price - self.break_even()) * self.max_profit() / 100.0
-        ZERO
+        let base = (self.short_call.option.strike_price
+            - (self.short_call.option.strike_price - self.max_profit()))
+        .value();
+        let high = self.max_profit();
+        base * high / 200.0
     }
 
     fn profit_ratio(&self) -> f64 {
@@ -413,6 +415,8 @@ impl Graph for BullCallSpread {
             point_size: 5,
             font_size: 18,
         });
+
+        points.push(self.get_point_at_price(self.long_call.option.underlying_price));
 
         points
     }
