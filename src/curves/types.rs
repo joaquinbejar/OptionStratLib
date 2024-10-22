@@ -138,7 +138,10 @@ mod tests_curves {
         };
         assert!(matches!(config.curve_type, CurveType::Volatility));
         assert!(matches!(config.interpolation, InterpolationType::Linear));
-        assert!(matches!(config.construction_method, CurveConstructionMethod::FromData));
+        assert!(matches!(
+            config.construction_method,
+            CurveConstructionMethod::FromData
+        ));
     }
 
     #[test]
