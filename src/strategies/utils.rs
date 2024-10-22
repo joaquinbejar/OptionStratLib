@@ -33,9 +33,9 @@ pub(crate) fn calculate_price_range(
 
 #[cfg(test)]
 mod tests_strategies_utils {
-    use approx::assert_relative_eq;
     use super::*;
     use crate::pos;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_find_optimal_side_variants() {
