@@ -6,7 +6,7 @@
 use super::base::{Optimizable, Strategies, StrategyType};
 use crate::constants::DARK_GREEN;
 use crate::constants::{
-    DARK_BLUE, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+    DARK_BLUE, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
@@ -177,7 +177,7 @@ impl CallButterfly {
         long_otm: &OptionData,
         short_option: &OptionData,
     ) -> bool {
-        long_itm.call_ask > ZERO && long_otm.call_ask > ZERO && short_option.call_bid > ZERO
+        long_itm.call_ask > PZERO && long_otm.call_ask > PZERO && short_option.call_bid > PZERO
     }
 
     fn create_strategy(
@@ -194,14 +194,14 @@ impl CallButterfly {
             long_otm.strike_price,
             short_option.strike_price,
             self.short_call.option.expiration_date.clone(),
-            short_option.implied_volatility,
+            short_option.implied_volatility.value(),
             self.long_call_itm.option.risk_free_rate,
             self.long_call_itm.option.dividend_yield,
             self.long_call_itm.option.quantity,
             self.short_call.option.quantity,
-            long_itm.call_ask,
-            long_otm.call_ask,
-            short_option.call_bid,
+            long_itm.call_ask.value(),
+            long_otm.call_ask.value(),
+            short_option.call_bid.value(),
             self.long_call_itm.open_fee,
             self.long_call_itm.close_fee,
             self.short_call.open_fee,
