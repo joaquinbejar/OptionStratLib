@@ -3,7 +3,6 @@
     Email: jb@taunais.com 
     Date: 22/10/24
  ******************************************************************************/
-use std::error::Error;
 use plotters::prelude::RGBColor;
 use rand::distributions::Distribution;
 use rand::thread_rng;
