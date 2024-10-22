@@ -11,8 +11,7 @@ Key characteristics:
 */
 use super::base::{Strategies, StrategyType};
 use crate::constants::{
-    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER,
-    STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
 use crate::model::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
@@ -200,7 +199,7 @@ impl BullCallSpread {
     }
 
     fn are_valid_prices(&self, long_option: &OptionData, short_option: &OptionData) -> bool {
-        long_option.call_ask > ZERO && short_option.call_bid > ZERO
+        long_option.call_ask > PZERO && short_option.call_bid > PZERO
     }
 
     fn create_strategy(
@@ -215,12 +214,12 @@ impl BullCallSpread {
             long_option.strike_price,
             short_option.strike_price,
             self.short_call.option.expiration_date.clone(),
-            short_option.implied_volatility,
+            short_option.implied_volatility.value(),
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long_option.call_ask,
-            short_option.call_bid,
+            long_option.call_ask.value(),
+            short_option.call_bid.value(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
