@@ -203,6 +203,7 @@ impl Strategies for CustomStrategy {
             }
             current_price += pos!(step);
         }
+        debug!("Max Loss: {:.2}", max_loss);
         max_loss
     }
 
@@ -270,7 +271,7 @@ impl Strategies for CustomStrategy {
             Some(loss) => {
                 if loss.1 >= ZERO {
                     error!("Max loss point is not valid");
-                    return false;
+                    return true;
                 }
             }
             None => {
