@@ -12,15 +12,33 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
+use tracing::debug;
 
+/// Struct representing a row in an option chain.
+///
+/// # Fields
+///
+/// * `strike_price` - The strike price of the option, represented as a positive floating-point number.
+/// * `call_bid` - The bid price for the call option, represented as a positive floating-point number.
+/// * `call_ask` - The ask price for the call option, represented as a positive floating-point number.
+/// * `put_bid` - The bid price for the put option, represented as a positive floating-point number.
+/// * `put_ask` - The ask price for the put option, represented as a positive floating-point number.
+/// * `implied_volatility` - The implied volatility of the option, represented as a positive floating-point number.
+/// * `delta` - The delta of the option, represented as a floating-point number. This measures the sensitivity of the option's price to changes in the price of the underlying asset.
+/// * `volume` - The volume of the option traded, represented as an optional positive floating-point number. It might be `None` if the data is not available.
+/// * `open_interest` - The open interest of the option, represented as an optional unsigned integer. This represents the total number of outstanding option contracts that have not yet been settled or closed.
+///
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct OptionData {
     pub(crate) strike_price: PositiveF64,
-    pub(crate) call_bid: f64, // TODO: Change to PositiveF64
-    pub(crate) call_ask: f64, // TODO: Change to PositiveF64
-    put_bid: f64,             // TODO: Change to PositiveF64
-    put_ask: f64,             // TODO: Change to PositiveF64
-    pub(crate) implied_volatility: f64,
+    pub(crate) call_bid: PositiveF64,
+    pub(crate) call_ask: PositiveF64,
+    put_bid: PositiveF64,
+    put_ask: PositiveF64,
+    pub(crate) implied_volatility: PositiveF64,
+    delta: f64,
+    volume: Option<PositiveF64>,
+    open_interest: Option<u64>,
 }
 
 #[allow(clippy::non_canonical_partial_ord_impl)]
@@ -66,14 +84,18 @@ impl OptionChain {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn add_option(
         &mut self,
         strike_price: PositiveF64,
-        call_bid: f64,
-        call_ask: f64,
-        put_bid: f64,
-        put_ask: f64,
-        implied_volatility: f64,
+        call_bid: PositiveF64,
+        call_ask: PositiveF64,
+        put_bid: PositiveF64,
+        put_ask: PositiveF64,
+        implied_volatility: PositiveF64,
+        delta: f64,
+        volume: Option<PositiveF64>,
+        open_interest: Option<u64>,
     ) {
         let option_data = OptionData {
             strike_price,
@@ -82,6 +104,9 @@ impl OptionChain {
             put_bid,
             put_ask,
             implied_volatility,
+            delta,
+            volume,
+            open_interest,
         };
         self.options.insert(option_data);
     }
@@ -125,6 +150,9 @@ impl OptionChain {
             "Put Bid",
             "Put Ask",
             "Implied Volatility",
+            "Delta",
+            "Volume",
+            "Open Interest",
         ])?;
         for option in &self.options {
             wtr.write_record(&[
@@ -134,6 +162,13 @@ impl OptionChain {
                 option.put_bid.to_string(),
                 option.put_ask.to_string(),
                 option.implied_volatility.to_string(),
+                option.delta.to_string(),
+                option
+                    .volume
+                    .map_or_else(|| "".to_string(), |v| v.to_string()),
+                option
+                    .open_interest
+                    .map_or_else(|| "".to_string(), |oi| oi.to_string()),
             ])?;
         }
 
@@ -153,6 +188,8 @@ impl OptionChain {
         let mut options = BTreeSet::new();
         for result in rdr.records() {
             let record = result?;
+            debug!("To CSV: {:?}", record);
+            let delta = record[6].parse().unwrap_or(0.0);
             let option_data = OptionData {
                 strike_price: record[0].parse()?,
                 call_bid: record[1].parse()?,
@@ -160,6 +197,9 @@ impl OptionChain {
                 put_bid: record[3].parse()?,
                 put_ask: record[4].parse()?,
                 implied_volatility: record[5].parse()?,
+                delta,
+                volume: Some(record[7].parse()?),
+                open_interest: Some(record[8].parse()?),
             };
             options.insert(option_data);
         }
@@ -239,6 +279,8 @@ impl fmt::Display for OptionChain {
 #[cfg(test)]
 mod tests_chain_base {
     use super::*;
+    use crate::spos;
+    use crate::utils::logger::setup_logger;
     use std::fs;
 
     #[test]
@@ -253,7 +295,17 @@ mod tests_chain_base {
     #[test]
     fn test_add_option() {
         let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
-        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
+        chain.add_option(
+            pos!(5520.0),
+            pos!(274.26),
+            pos!(276.06),
+            pos!(13.22),
+            pos!(14.90),
+            pos!(16.31),
+            0.5,
+            spos!(100.0),
+            Some(100),
+        );
         assert_eq!(chain.options.len(), 1);
         // first option in the chain
         let option = chain.options.iter().next().unwrap();
@@ -321,7 +373,17 @@ mod tests_chain_base {
     #[test]
     fn test_save_to_csv() {
         let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
-        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
+        chain.add_option(
+            pos!(5520.0),
+            pos!(274.26),
+            pos!(276.06),
+            pos!(13.22),
+            pos!(14.90),
+            pos!(16.31),
+            0.5,
+            spos!(100.0),
+            Some(100),
+        );
         let result = chain.save_to_csv(".");
         assert!(result.is_ok());
         let file_name = "./SP500-18-oct-2024-5781.88.csv".to_string();
@@ -332,7 +394,17 @@ mod tests_chain_base {
     #[test]
     fn test_save_to_json() {
         let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
-        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
+        chain.add_option(
+            pos!(5520.0),
+            pos!(274.26),
+            pos!(276.06),
+            pos!(13.22),
+            pos!(14.90),
+            pos!(16.31),
+            0.5,
+            spos!(100.0),
+            Some(100),
+        );
         let result = chain.save_to_json(".");
         assert!(result.is_ok());
 
@@ -343,8 +415,19 @@ mod tests_chain_base {
 
     #[test]
     fn test_load_from_csv() {
+        setup_logger();
         let mut chain = OptionChain::new("SP500", pos!(5781.89), "18-oct-2024".to_string());
-        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
+        chain.add_option(
+            pos!(5520.0),
+            pos!(274.26),
+            pos!(276.06),
+            pos!(13.22),
+            pos!(14.90),
+            pos!(16.31),
+            0.5,
+            spos!(100.0),
+            Some(100),
+        );
         let result = chain.save_to_csv(".");
         assert!(result.is_ok());
 
@@ -363,7 +446,17 @@ mod tests_chain_base {
     #[test]
     fn test_load_from_json() {
         let mut chain = OptionChain::new("SP500", pos!(5781.9), "18-oct-2024".to_string());
-        chain.add_option(pos!(5520.0), 274.26, 276.06, 13.22, 14.90, 16.31);
+        chain.add_option(
+            pos!(5520.0),
+            pos!(274.26),
+            pos!(276.06),
+            pos!(13.22),
+            pos!(14.90),
+            pos!(16.31),
+            0.5,
+            spos!(100.0),
+            Some(100),
+        );
         let result = chain.save_to_json(".");
         assert!(result.is_ok());
 
