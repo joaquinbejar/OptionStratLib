@@ -442,8 +442,6 @@ mod tests {
         assert!(title.contains("PoorMansCoveredCall Strategy"));
     }
 
-
-
     #[test]
     fn test_vertical_lines() {
         let pmcc = create_pmcc_strategy();
