@@ -18,4 +18,4 @@ pub mod surfaces;
 pub mod utils;
 pub mod visualization;
 pub mod volatility;
-mod simulation;
+pub mod simulation;

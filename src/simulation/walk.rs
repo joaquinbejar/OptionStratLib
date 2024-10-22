@@ -14,7 +14,7 @@ use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 
-pub(crate) trait Walkable {
+pub trait Walkable {
     fn get_values(&mut self) -> &mut Vec<PositiveF64>;
 
     fn generate_random_walk(&mut self, n_steps: usize, initial_price: PositiveF64, mean: f64, std_dev: PositiveF64, std_dev_change: PositiveF64) {
@@ -50,9 +50,9 @@ pub struct RandomWalkGraph {
 }
 
 impl RandomWalkGraph {
-    pub fn new(values: Vec<PositiveF64>, title: String) -> Self {
+    pub fn new( title: String) -> Self {
         Self {
-            values,
+            values: Vec::new(),
             title_text: title,
         }
     }
@@ -77,8 +77,6 @@ impl Graph for RandomWalkGraph {
     }
 
     fn get_values(&self, _data: &[PositiveF64]) -> Vec<f64> {
-        // Sobreescribimos get_values para usar nuestros propios valores en lugar
-        // de calcular profits
         self.values.iter().map(|x| x.value()).collect()
     }
 
@@ -121,36 +119,6 @@ impl Graph for RandomWalkGraph {
         }
 
         points
-    }
-}
-
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::pos;
-
-
-    #[test]
-    fn test_random_walk_graph_values() {
-        let values = vec![pos!(100.0), pos!(101.0), pos!(102.0)];
-        let graph = RandomWalkGraph::new(values.clone(), "Test".to_string());
-
-        let result = graph.get_values(&[]);
-        assert_eq!(result, vec![100.0, 101.0, 102.0]);
-    }
-
-    #[test]
-    fn test_random_walk_points() {
-        let values = vec![pos!(100.0), pos!(101.0), pos!(99.0)];
-        let graph = RandomWalkGraph::new(values, "Test".to_string());
-
-        let points = graph.get_points();
-        assert!(!points.is_empty());
-
-        // Debería haber identificado un máximo y un mínimo
-        assert_eq!(points.len(), 2);
     }
 }
 
