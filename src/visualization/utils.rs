@@ -158,7 +158,7 @@ pub(crate) fn calculate_axis_range(
     y_axis_data: &[f64],
 ) -> (PositiveF64, PositiveF64, f64, f64) {
     let (min_x_value, max_x_value) = if x_axis_data.is_empty() {
-        ( PZERO,pos!(f64::INFINITY))
+        (PZERO, pos!(f64::INFINITY))
     } else {
         x_axis_data
             .iter()
@@ -170,11 +170,10 @@ pub(crate) fn calculate_axis_range(
     let (min_y_temp, max_y_temp) = if y_axis_data.is_empty() {
         (f64::INFINITY, f64::NEG_INFINITY)
     } else {
-        y_axis_data
-            .iter()
-            .fold((f64::INFINITY, f64::NEG_INFINITY), |(min_y, max_y), &value| {
-                (f64::min(min_y, value), f64::max(max_y, value))
-            })
+        y_axis_data.iter().fold(
+            (f64::INFINITY, f64::NEG_INFINITY),
+            |(min_y, max_y), &value| (f64::min(min_y, value), f64::max(max_y, value)),
+        )
     };
 
     if min_y_temp.is_infinite() || max_y_temp.is_infinite() {
@@ -189,7 +188,6 @@ pub(crate) fn calculate_axis_range(
 
     (max_x_value, min_x_value, max_y_value, min_y_value)
 }
-
 
 pub fn draw_points_on_chart<DB: DrawingBackend, X, Y>(
     ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
@@ -300,7 +298,6 @@ mod tests_calculate_axis_range {
         assert_eq!(min_y, 0.0);
     }
 
-
     #[test]
     fn test_calculate_axis_range_zero_values() {
         let x_data = vec![pos!(0.0), pos!(0.0), pos!(0.0)];
@@ -397,10 +394,14 @@ mod tests {
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: PositiveF64) -> f64 { 0.0 }
+            fn calculate_profit_at(&self, _: PositiveF64) -> f64 {
+                0.0
+            }
         }
         impl Graph for DefaultGraph {
-            fn title(&self) -> String { "Default".to_string() }
+            fn title(&self) -> String {
+                "Default".to_string()
+            }
         }
         let graph = DefaultGraph;
         graph.get_vertical_lines();
@@ -411,10 +412,14 @@ mod tests {
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: PositiveF64) -> f64 { 0.0 }
+            fn calculate_profit_at(&self, _: PositiveF64) -> f64 {
+                0.0
+            }
         }
         impl Graph for DefaultGraph {
-            fn title(&self) -> String { "Default".to_string() }
+            fn title(&self) -> String {
+                "Default".to_string()
+            }
         }
         let graph = DefaultGraph;
         graph.get_points();
@@ -437,12 +442,10 @@ mod tests {
     fn test_calculate_axis_range_empty() {
         let x_data: Vec<PositiveF64> = vec![];
         let y_data: Vec<f64> = vec![];
-        let ( max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
         assert_eq!(min_x, PZERO);
         assert_eq!(max_x, pos!(f64::INFINITY));
         assert_eq!(min_y, f64::NEG_INFINITY);
         assert_eq!(max_y, f64::INFINITY);
     }
-
-
 }
