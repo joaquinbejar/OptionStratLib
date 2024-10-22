@@ -48,8 +48,8 @@ pub trait PnLCalculator {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use chrono::Utc;
     use crate::pos;
+    use chrono::Utc;
 
     #[test]
     fn test_pnl_new() {
