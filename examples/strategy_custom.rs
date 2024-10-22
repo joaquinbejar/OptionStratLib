@@ -13,96 +13,125 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(5780.0);
-    let underlying_symbol = "SP500".to_string();
-    let expiration = ExpirationDate::Days(60.0);
-    let implied_volatility = 0.18;
+    let underlying_price = pos!(2340.0);
+    let underlying_symbol = "GAS".to_string();
+    let expiration = ExpirationDate::Days(6.0);
+    let implied_volatility = 0.73;
     let risk_free_rate = 0.05;
     let dividend_yield = 0.0;
 
-    // Short Call
-    let short_strike = pos!(5800.0);
-    let short_quantity = pos!(2.0);
-    let premium_short = 53.04;
-    let open_fee_short = 0.78;
-    let close_fee_short = 0.78;
+    // Short Call 1
+    let short_strike_1_strike = pos!(2100.0);
+    let short_strike_1_quantity = pos!(2.0);
+    let short_strike_1_premium = 192.0;
+    let short_strike_1_open_fee = 7.51;
+    let short_strike_1_close_fee = 7.51;
 
-    // Long Call ITM
-    let long_strike_itm = pos!(5750.0);
-    let long_quantity = pos!(1.0);
-    let premium_long_itm = 85.04;
-    let open_fee_long = 0.78;
-    let close_fee_long = 0.78;
+    // Short Call 2
+    let short_strike_2_strike = pos!(2250.0);
+    let short_strike_2_quantity = pos!(2.0);
+    let short_strike_2_premium = 88.0;
+    let short_strike_2_open_fee = 6.68;
+    let short_strike_2_close_fee = 6.68;
 
-    // Long Call OTM
-    let long_strike_otm = pos!(5850.0);
-    let premium_long_otm = 31.65;
+    // Short Put
+    let short_put_strike = pos!(2500.0);
+    let short_put_premium = 55.0;
+    let short_put_quantity = pos!(1.0);
+    let short_put_open_fee = 6.68;
+    let short_put_close_fee = 6.68;
 
-    let short_call = Position::new(
+    let short_strike_1 = Position::new(
         Options::new(
             OptionType::European,
             Side::Short,
             underlying_symbol.clone(),
-            short_strike,
+            short_strike_1_strike,
             expiration.clone(),
             implied_volatility,
-            short_quantity,
+            short_strike_1_quantity,
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
             dividend_yield,
             None,
         ),
-        premium_short,
+        short_strike_1_premium,
         Utc::now(),
-        open_fee_short,
-        close_fee_short,
+        short_strike_1_open_fee,
+        short_strike_1_close_fee,
     );
 
-    let long_call_itm = Position::new(
+    let short_strike_2 = Position::new(
         Options::new(
             OptionType::European,
-            Side::Long,
+            Side::Short,
             underlying_symbol.clone(),
-            long_strike_itm,
+            short_strike_2_strike,
             expiration.clone(),
             implied_volatility,
-            long_quantity,
+            short_strike_2_quantity,
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
             dividend_yield,
             None,
         ),
-        premium_long_itm,
+        short_strike_2_premium,
         Utc::now(),
-        open_fee_long,
-        close_fee_long,
+        short_strike_2_open_fee,
+        short_strike_2_close_fee,
     );
 
-    let long_call_otm = Position::new(
+    let short_put = Position::new(
         Options::new(
             OptionType::European,
-            Side::Long,
+            Side::Short,
             underlying_symbol.clone(),
-            long_strike_otm,
+            short_put_strike,
             expiration.clone(),
             implied_volatility,
-            long_quantity,
+            short_put_quantity,
             underlying_price,
             risk_free_rate,
-            OptionStyle::Call,
+            OptionStyle::Put,
             dividend_yield,
             None,
         ),
-        premium_long_otm,
+        short_put_premium,
         Utc::now(),
-        open_fee_long,
-        close_fee_long,
+        short_put_open_fee,
+        short_put_close_fee,
     );
 
-    let positions: Vec<Position> = vec![short_call, long_call_itm, long_call_otm];
-    // let positions: Vec<Position> = vec![short_call, long_call_itm];
+    let extra_strike = pos!(2150.0);
+    let extra_quantity = pos!(2.5);
+    let extra_premium = 21.0;
+    let extra_open_fee = 4.91;
+    let extra_close_fee = 4.91;
+
+    let extra = Position::new(
+        Options::new(
+            OptionType::European,
+            Side::Short,
+            underlying_symbol.clone(),
+            extra_strike,
+            expiration.clone(),
+            implied_volatility,
+            extra_quantity,
+            underlying_price,
+            risk_free_rate,
+            OptionStyle::Put,
+            dividend_yield,
+            None,
+        ),
+        extra_premium,
+        Utc::now(),
+        extra_open_fee,
+        extra_close_fee,
+    );
+
+    let positions: Vec<Position> = vec![short_strike_1, short_strike_2, short_put, extra];
 
     let mut strategy = CustomStrategy::new(
         "Custom Strategy".to_string(),
