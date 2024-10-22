@@ -121,9 +121,21 @@ mod tests_surfaces {
     #[test]
     fn test_surface_creation() {
         let points = vec![
-            Point { strike: 90.0, maturity: 0.5, value: 0.15 },
-            Point { strike: 100.0, maturity: 1.0, value: 0.2 },
-            Point { strike: 110.0, maturity: 1.5, value: 0.25 },
+            Point {
+                strike: 90.0,
+                maturity: 0.5,
+                value: 0.15,
+            },
+            Point {
+                strike: 100.0,
+                maturity: 1.0,
+                value: 0.2,
+            },
+            Point {
+                strike: 110.0,
+                maturity: 1.5,
+                value: 0.25,
+            },
         ];
         let surface = Surface::new(points);
         assert_eq!(surface.points.len(), 3);
