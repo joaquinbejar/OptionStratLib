@@ -124,52 +124,13 @@ impl Graph for RandomWalkGraph {
     }
 }
 
-pub fn visualize_random_walk(
-    values: Vec<PositiveF64>,
-    title: &str,
-    file_path: &str,
-    title_size: u32,
-    canvas_size: (u32, u32),
-) -> Result<(), Box<dyn Error>> {
-    let x_axis_data: Vec<PositiveF64> = (0..values.len())
-        .map(|i| pos!(i as f64))
-        .collect();
 
-    let graph = RandomWalkGraph::new(values, title.to_string());
-    graph.graph(&x_axis_data, file_path, title_size, canvas_size)
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::pos;
 
-    #[test]
-    fn test_random_walk_visualization() -> Result<(), Box<dyn Error>> {
-        let values = vec![
-            pos!(100.0),
-            pos!(102.0),
-            pos!(101.0),
-            pos!(103.0),
-            pos!(105.0),
-        ];
-
-        visualize_random_walk(
-            values,
-            "Test Random Walk",
-            "test_random_walk.png",
-            20,
-            (800, 600),
-        )?;
-
-        // Verificar que el archivo se creó
-        assert!(std::path::Path::new("test_random_walk.png").exists());
-
-        // Limpiar
-        std::fs::remove_file("test_random_walk.png")?;
-
-        Ok(())
-    }
 
     #[test]
     fn test_random_walk_graph_values() {
