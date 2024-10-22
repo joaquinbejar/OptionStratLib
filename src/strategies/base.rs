@@ -173,8 +173,8 @@ pub(crate) trait Optimizable {
 #[cfg(test)]
 mod tests_strategies {
     use super::*;
-    use crate::model::types::{OptionStyle, PositiveF64, Side};
     use crate::model::position::Position;
+    use crate::model::types::{OptionStyle, PositiveF64, Side};
     use crate::model::utils::create_sample_option_simplest;
 
     #[test]
@@ -251,7 +251,10 @@ mod tests_strategies {
         // assert_eq!(mock_strategy.get_legs(), vec![position]);
 
         // Test other methods
-        assert_eq!(mock_strategy.break_even(), vec![PositiveF64::new(100.0).unwrap()]);
+        assert_eq!(
+            mock_strategy.break_even(),
+            vec![PositiveF64::new(100.0).unwrap()]
+        );
         assert_eq!(mock_strategy.max_profit(), 1000.0);
         assert_eq!(mock_strategy.max_loss(), 500.0);
         assert_eq!(mock_strategy.total_cost(), 200.0);
@@ -274,7 +277,10 @@ mod tests_strategies {
         assert_eq!(strategy.profit_area(), ZERO);
         assert_eq!(strategy.profit_ratio(), ZERO);
         assert!(strategy.validate());
-        assert_eq!(strategy.best_range_to_show(PositiveF64::new(1.0).unwrap()), None);
+        assert_eq!(
+            strategy.best_range_to_show(PositiveF64::new(1.0).unwrap()),
+            None
+        );
     }
 
     #[test]
@@ -311,16 +317,28 @@ mod tests_strategies {
             ],
         };
 
-        assert_eq!(strategy.strikes(), vec![PositiveF64::new(100.0).unwrap(), PositiveF64::new(100.0).unwrap()]);
-        assert_eq!(strategy.max_min_strikes(), (PositiveF64::new(100.0).unwrap(), PositiveF64::new(100.0).unwrap()));
+        assert_eq!(
+            strategy.strikes(),
+            vec![
+                PositiveF64::new(100.0).unwrap(),
+                PositiveF64::new(100.0).unwrap()
+            ]
+        );
+        assert_eq!(
+            strategy.max_min_strikes(),
+            (
+                PositiveF64::new(100.0).unwrap(),
+                PositiveF64::new(100.0).unwrap()
+            )
+        );
     }
 }
 
 #[cfg(test)]
 mod tests_strategies_extended {
     use super::*;
-    use crate::model::types::{OptionStyle, PositiveF64, Side};
     use crate::model::position::Position;
+    use crate::model::types::{OptionStyle, PositiveF64, Side};
     use crate::model::utils::create_sample_option_simplest;
     use crate::pos;
 
@@ -392,11 +410,7 @@ mod tests_strategies_extended {
 
         let mut strategy = PanicStrategy;
 
-        let option_chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            Default::default(),
-        );
+        let option_chain = OptionChain::new("TEST", pos!(100.0), Default::default());
 
         strategy.best_ratio(&option_chain, FindOptimalSide::All);
     }
@@ -409,12 +423,7 @@ mod tests_strategies_extended {
 
         let mut strategy = PanicStrategy;
 
-        let option_chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            Default::default(),
-        );
-
+        let option_chain = OptionChain::new("TEST", pos!(100.0), Default::default());
 
         strategy.best_area(&option_chain, FindOptimalSide::All);
     }
@@ -458,7 +467,6 @@ mod tests_strategies_extended {
         assert_eq!(strategy.strikes(), Vec::<PositiveF64>::new());
         assert_eq!(strategy.max_min_strikes(), (PZERO, PZERO));
     }
-
 }
 
 #[cfg(test)]
@@ -487,7 +495,8 @@ mod tests_strategy_type {
 
     #[test]
     fn test_all_strategy_types() {
-        let strategies = [StrategyType::BullCallSpread,
+        let strategies = [
+            StrategyType::BullCallSpread,
             StrategyType::BearCallSpread,
             StrategyType::BullPutSpread,
             StrategyType::BearPutSpread,
@@ -503,7 +512,8 @@ mod tests_strategy_type {
             StrategyType::ShortPut,
             StrategyType::PoorMansCoveredCall,
             StrategyType::CallButterfly,
-            StrategyType::Custom];
+            StrategyType::Custom,
+        ];
 
         for (i, strategy) in strategies.iter().enumerate() {
             for (j, other_strategy) in strategies.iter().enumerate() {
