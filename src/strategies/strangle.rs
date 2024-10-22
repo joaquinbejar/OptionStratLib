@@ -290,7 +290,6 @@ impl Graph for ShortStrangle {
         });
         points.push(self.get_point_at_price(self.short_put.option.underlying_price));
 
-
         points
     }
 }
