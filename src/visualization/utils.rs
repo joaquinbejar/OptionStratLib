@@ -82,7 +82,7 @@ macro_rules! draw_line_segments {
 pub trait Graph: Profit {
     fn graph(
         &self,
-        x_axis_data: &[PositiveF64],
+        x_axis_data: &[PositiveF64], // TODO: it should be Optional
         file_path: &str,
         title_size: u32,         // 15
         canvas_size: (u32, u32), // (1200, 800)
