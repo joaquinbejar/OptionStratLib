@@ -8,6 +8,7 @@ use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
 use crate::model::option::Options;
 use std::f64;
 use tracing::debug;
+use crate::utils::time::TimeFrame;
 
 /// Calculates the constant volatility from a series of returns.
 ///
@@ -313,6 +314,108 @@ pub fn uncertain_volatility_bounds(
     let upper_bound = upper_bound_option.calculate_price_black_scholes();
 
     (lower_bound, upper_bound)
+}
+
+
+/// Annualizes a volatility value from a specific timeframe.
+///
+/// # Arguments
+///
+/// * `volatility` - The volatility value to annualize
+/// * `timeframe` - The timeframe of the input volatility
+///
+/// # Returns
+///
+/// The annualized volatility as f64
+///
+/// # Formula
+///
+/// The annualization is performed using the square root of time rule:
+/// annualized_vol = vol * sqrt(periods_per_year)
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::utils::time::TimeFrame;
+/// use optionstratlib::volatility::utils::{annualize_volatility};
+/// let daily_vol = 0.01; // 1% daily volatility
+/// let annual_vol = annualize_volatility(daily_vol, TimeFrame::Day);
+/// // annual_vol ≈ 0.1587 or about 15.87%
+/// ```
+pub fn annualize_volatility(volatility: f64, timeframe: TimeFrame) -> f64 {
+    volatility * (timeframe.periods_per_year()).sqrt()
+}
+
+/// De-annualizes a volatility value to a specific timeframe.
+///
+/// # Arguments
+///
+/// * `annual_volatility` - The annualized volatility value
+/// * `timeframe` - The target timeframe
+///
+/// # Returns
+///
+/// The de-annualized volatility as f64
+///
+/// # Formula
+///
+/// The de-annualization is performed using:
+/// timeframe_vol = annual_vol / sqrt(periods_per_year)
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::volatility::utils::{de_annualize_volatility, TimeFrame};
+/// let annual_vol = 0.20; // 20% annual volatility
+/// let daily_vol = de_annualize_volatility(annual_vol, TimeFrame::Day);
+/// // daily_vol ≈ 0.0126 or about 1.26%
+/// ```
+pub fn de_annualize_volatility(annual_volatility: f64, timeframe: TimeFrame) -> f64 {
+    annual_volatility / (timeframe.periods_per_year()).sqrt()
+}
+
+#[cfg(test)]
+mod tests_annualize_volatility {
+    use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn test_annualize_daily_volatility() {
+        let daily_vol = 0.01; // 1% daily volatility
+        let annual_vol = annualize_volatility(daily_vol, TimeFrame::Day);
+        assert_relative_eq!(annual_vol, 0.01 * (252.0_f64).sqrt(), epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_deannualize_annual_volatility() {
+        let annual_vol = 0.20; // 20% annual volatility
+        let daily_vol = de_annualize_volatility(annual_vol, TimeFrame::Day);
+        assert_relative_eq!(daily_vol, 0.20 / (252.0_f64).sqrt(), epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_custom_timeframe() {
+        let custom_periods = 100.0;
+        let vol = 0.05;
+        let annual_vol = annualize_volatility(vol, TimeFrame::Custom(custom_periods));
+        assert_relative_eq!(annual_vol, 0.05 * (100.0_f64).sqrt(), epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_conversion_roundtrip() {
+        let original_vol = 0.15;
+        let annualized = annualize_volatility(original_vol, TimeFrame::Day);
+        let roundtrip = de_annualize_volatility(annualized, TimeFrame::Day);
+        assert_relative_eq!(original_vol, roundtrip, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_different_timeframes() {
+        let daily_vol = 0.01;
+        let weekly_vol = annualize_volatility(daily_vol, TimeFrame::Day);
+        let monthly_vol = de_annualize_volatility(weekly_vol, TimeFrame::Month);
+        assert!(monthly_vol > daily_vol); // Monthly vol should be higher than daily
+    }
 }
 
 #[cfg(test)]
