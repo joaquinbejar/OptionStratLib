@@ -51,7 +51,6 @@ macro_rules! configure_chart_and_draw_mesh {
             .x_labels($x_labels)
             .y_labels($y_labels)
             .draw()?;
-
         // Draw a horizontal line at y = 0
         $chart.draw_series(LineSeries::new(vec![($min_x, 0.0), ($max_x, 0.0)], &BLACK))?;
     }};
@@ -60,7 +59,7 @@ macro_rules! configure_chart_and_draw_mesh {
 #[macro_export]
 macro_rules! draw_line_segments {
     ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr) => {{
-        let mut last_point: Option<(PositiveF64, f64)> = None;  // Anotación de tipo explícita para last_point
+        let mut last_point: Option<(PositiveF64, f64)> = None;
         for (&price, &value) in $x_axis_data.iter().zip($y_axis_data.iter()) {
             if let Some((last_price, last_profit)) = last_point {
                 let color = if value > 0.0 {
@@ -69,16 +68,14 @@ macro_rules! draw_line_segments {
                     &$dark_red
                 };
 
-                let points: Vec<(f64, f64)> = vec![
-                    (last_price.value(), last_profit),
-                    (price.value(), value),
-                ];
+                let points: Vec<(f64, f64)> =
+                    vec![(last_price.value(), last_profit), (price.value(), value)];
 
                 $chart.draw_series(LineSeries::new(points, color))?;
             }
             last_point = Some((price, value));
         }
-         let _ = Ok::<(), Box<dyn std::error::Error>>(());
+        let _ = Ok::<(), Box<dyn std::error::Error>>(());
     }};
 }
 
@@ -93,9 +90,17 @@ pub trait Graph: Profit {
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
 
+        let x_axis_point = if x_axis_data.is_empty() {
+            &mut (0..y_axis_data.len())
+                .map(|i| pos!(i as f64))
+                .collect::<Vec<PositiveF64>>()
+        } else {
+            x_axis_data
+        };
+
         // Determine the range for the X and Y axes
         let (max_x_value, min_x_value, max_y_value, min_y_value) =
-            calculate_axis_range(x_axis_data, &y_axis_data);
+            calculate_axis_range(x_axis_point, &y_axis_data);
 
         // Set up the drawing area with a 1200x800 pixel canvas
         let root = create_drawing_area!(file_path, canvas_size.0, canvas_size.1);
@@ -109,10 +114,8 @@ pub trait Graph: Profit {
             min_y_value,
             max_y_value
         );
-
         configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value.value(), max_x_value.value());
-
-        draw_line_segments!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED);
+        draw_line_segments!(chart, x_axis_point, y_axis_data, DARK_GREEN, DARK_RED);
 
         draw_points_on_chart(&mut chart, &self.get_points())?;
         draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
@@ -129,11 +132,11 @@ pub trait Graph: Profit {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        panic!("Not implemented");
+        Vec::new()
     }
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        panic!("Not implemented");
+        Vec::new()
     }
 }
 
@@ -390,7 +393,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Not implemented")]
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -408,7 +410,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Not implemented")]
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
