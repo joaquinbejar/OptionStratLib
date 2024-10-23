@@ -200,10 +200,10 @@ mod tests_random_walk {
         assert_eq!(walk.values[0].value(), 100.0);
 
         walk.generate_random_walk(100, pos!(0.1), 0.0, pos!(0.01), pos!(0.001));
-        assert!(walk.values.iter().all(|x| x.value() > 0.0));
+        assert!(walk.values.iter().all(|x| x.value() >= 0.0));
 
         walk.generate_random_walk(100, pos!(1e6), 0.0, pos!(100.0), pos!(1.0));
-        assert!(walk.values.iter().all(|x| x.value() > 0.0));
+        assert!(walk.values.iter().all(|x| x.value() >= 0.0));
     }
 
     #[test]

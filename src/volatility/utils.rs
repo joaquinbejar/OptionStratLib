@@ -6,9 +6,9 @@
 
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
 use crate::model::option::Options;
+use crate::utils::time::TimeFrame;
 use std::f64;
 use tracing::debug;
-use crate::utils::time::TimeFrame;
 
 /// Calculates the constant volatility from a series of returns.
 ///
@@ -316,7 +316,6 @@ pub fn uncertain_volatility_bounds(
     (lower_bound, upper_bound)
 }
 
-
 /// Annualizes a volatility value from a specific timeframe.
 ///
 /// # Arguments
@@ -365,7 +364,8 @@ pub fn annualize_volatility(volatility: f64, timeframe: TimeFrame) -> f64 {
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::volatility::utils::{de_annualize_volatility, TimeFrame};
+/// use optionstratlib::utils::time::TimeFrame;
+/// use optionstratlib::volatility::utils::{de_annualize_volatility};
 /// let annual_vol = 0.20; // 20% annual volatility
 /// let daily_vol = de_annualize_volatility(annual_vol, TimeFrame::Day);
 /// // daily_vol ≈ 0.0126 or about 1.26%
