@@ -4,11 +4,11 @@
    Date: 25/9/24
 ******************************************************************************/
 use super::base::{Optimizable, Strategies, StrategyType};
+use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::DARK_GREEN;
 use crate::constants::{
     DARK_BLUE, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
-use crate::chains::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
@@ -177,7 +177,12 @@ impl CallButterfly {
         long_otm: &OptionData,
         short_option: &OptionData,
     ) -> bool {
-        long_itm.call_ask > PZERO && long_otm.call_ask > PZERO && short_option.call_bid > PZERO
+        if !long_itm.validate() || !long_otm.validate() || !short_option.validate() {
+            return false;
+        };
+        long_itm.call_ask.unwrap() > PZERO
+            && long_itm.call_ask.unwrap() > PZERO
+            && short_option.call_bid.unwrap() > PZERO
     }
 
     fn create_strategy(
@@ -187,6 +192,9 @@ impl CallButterfly {
         long_otm: &OptionData,
         short_option: &OptionData,
     ) -> CallButterfly {
+        if !short_option.validate() || !long_itm.validate() || !long_otm.validate() {
+            panic!("Invalid options");
+        }
         CallButterfly::new(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
@@ -194,14 +202,14 @@ impl CallButterfly {
             long_otm.strike_price,
             short_option.strike_price,
             self.short_call.option.expiration_date.clone(),
-            short_option.implied_volatility.value(),
+            short_option.implied_volatility.unwrap().value(),
             self.long_call_itm.option.risk_free_rate,
             self.long_call_itm.option.dividend_yield,
             self.long_call_itm.option.quantity,
             self.short_call.option.quantity,
-            long_itm.call_ask.value(),
-            long_otm.call_ask.value(),
-            short_option.call_bid.value(),
+            long_itm.call_ask.unwrap().value(),
+            long_otm.call_ask.unwrap().value(),
+            short_option.call_bid.unwrap().value(),
             self.long_call_itm.open_fee,
             self.long_call_itm.close_fee,
             self.short_call.open_fee,
