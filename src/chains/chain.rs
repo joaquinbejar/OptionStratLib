@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
-use crate::chains::utils::{adjust_volatility, default_empty_string, generate_list_of_strikes, parse};
+use crate::chains::utils::{
+    adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
+};
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use crate::{pos, spos};
 use csv::WriterBuilder;
@@ -169,6 +171,7 @@ impl OptionChain {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn build_chain(
         symbol: &str,
         underlying_price: PositiveF64,
@@ -187,15 +190,22 @@ impl OptionChain {
             options: BTreeSet::new(),
         };
         // TODO: Implement black_scholes
-        let strikes = generate_list_of_strikes(underlying_price,
-                                               chain_size,
-                                               strike_interval);
+        let strikes = generate_list_of_strikes(underlying_price, chain_size, strike_interval);
         for strike in strikes {
             let atm_distance = strike.value() - underlying_price.value();
-            let adjusted_volatility = spos!(adjust_volatility(volatility,
-                                                                skew_factor,
-                                                                atm_distance)            );
-            option_chain.add_option(strike, None, None, None, None, adjusted_volatility, None, None, None);
+            let adjusted_volatility =
+                spos!(adjust_volatility(volatility, skew_factor, atm_distance));
+            option_chain.add_option(
+                strike,
+                None,
+                None,
+                None,
+                None,
+                adjusted_volatility,
+                None,
+                None,
+                None,
+            );
         }
 
         option_chain
@@ -384,7 +394,7 @@ impl Display for OptionChain {
         )?;
 
         for option in &self.options {
-            writeln!(f, "{}", option, )?;
+            writeln!(f, "{}", option,)?;
         }
         Ok(())
     }

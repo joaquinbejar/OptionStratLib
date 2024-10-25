@@ -28,8 +28,11 @@ pub(crate) fn generate_list_of_strikes(
     strikes
 }
 
-pub(crate) fn adjust_volatility(volatility: PositiveF64, skew_factor:f64,  atm_distance: f64) -> f64 {
-
+pub(crate) fn adjust_volatility(
+    volatility: PositiveF64,
+    skew_factor: f64,
+    atm_distance: f64,
+) -> f64 {
     let skew = skew_factor * atm_distance.abs();
     let smile = skew_factor * atm_distance.powi(2);
 
