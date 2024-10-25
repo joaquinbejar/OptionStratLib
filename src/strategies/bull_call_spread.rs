@@ -10,10 +10,10 @@ Key characteristics:
 - Lower cost than buying a call option outright
 */
 use super::base::{Strategies, StrategyType};
+use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{
     DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
-use crate::chains::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
@@ -184,6 +184,9 @@ impl BullCallSpread {
     }
 
     fn is_valid_short_option(&self, short_option: &OptionData, side: &FindOptimalSide) -> bool {
+        if !short_option.validate() {
+            return false;
+        }
         match side {
             FindOptimalSide::Upper => {
                 short_option.strike_price >= self.short_call.option.underlying_price
@@ -199,7 +202,10 @@ impl BullCallSpread {
     }
 
     fn are_valid_prices(&self, long_option: &OptionData, short_option: &OptionData) -> bool {
-        long_option.call_ask > PZERO && short_option.call_bid > PZERO
+        if !long_option.validate() || !short_option.validate() {
+            return false;
+        }
+        long_option.call_ask.unwrap() > PZERO && short_option.call_bid.unwrap() > PZERO
     }
 
     fn create_strategy(
@@ -208,18 +214,21 @@ impl BullCallSpread {
         long_option: &OptionData,
         short_option: &OptionData,
     ) -> BullCallSpread {
+        if !long_option.validate() || !short_option.validate() {
+            panic!("Invalid options");
+        }
         BullCallSpread::new(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
             long_option.strike_price,
             short_option.strike_price,
             self.short_call.option.expiration_date.clone(),
-            short_option.implied_volatility.value(),
+            short_option.implied_volatility.unwrap().value(),
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long_option.call_ask.value(),
-            short_option.call_bid.value(),
+            long_option.call_ask.unwrap().value(),
+            short_option.call_bid.unwrap().value(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
