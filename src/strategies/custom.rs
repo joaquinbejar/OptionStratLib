@@ -8,7 +8,7 @@ use crate::constants::{
     DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER,
     STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
 };
-use crate::model::chain::OptionChain;
+use crate::chains::chain::OptionChain;
 use crate::model::position::Position;
 use crate::model::types::PositiveF64;
 use crate::pos;
