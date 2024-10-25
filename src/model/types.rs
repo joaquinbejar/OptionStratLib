@@ -171,7 +171,7 @@ impl Div<f64> for PositiveF64 {
 
 impl PartialOrd for PositiveF64 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        Some(self.cmp(other))
     }
 
     fn le(&self, other: &Self) -> bool {
@@ -180,6 +180,13 @@ impl PartialOrd for PositiveF64 {
 
     fn ge(&self, other: &Self) -> bool {
         self.0 >= other.0
+    }
+}
+
+impl Eq for PositiveF64 {}
+impl Ord for PositiveF64 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.partial_cmp(&other.0).unwrap()
     }
 }
 
