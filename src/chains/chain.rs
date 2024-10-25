@@ -31,12 +31,12 @@ use tracing::debug;
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct OptionData {
     pub(crate) strike_price: PositiveF64,
-    pub(crate) call_bid: PositiveF64,
-    pub(crate) call_ask: PositiveF64,
-    put_bid: PositiveF64,
-    put_ask: PositiveF64,
-    pub(crate) implied_volatility: PositiveF64,
-    delta: f64,
+    call_bid: Option<PositiveF64>,
+    call_ask: Option<PositiveF64>,
+    put_bid: Option<PositiveF64>,
+    put_ask: Option<PositiveF64>,
+    implied_volatility: Option<PositiveF64>,
+    delta: Option<f64>,
     volume: Option<PositiveF64>,
     open_interest: Option<u64>,
 }
@@ -76,6 +76,20 @@ pub struct OptionChain {
 
 impl OptionChain {
     pub fn new(symbol: &str, underlying_price: PositiveF64, expiration_date: String) -> Self {
+        OptionChain {
+            symbol: symbol.to_string(),
+            underlying_price,
+            expiration_date,
+            options: BTreeSet::new(),
+        }
+    }
+
+    pub fn build_chain(symbol: &str,
+                       underlying_price: PositiveF64,
+                       expiration_date: String,
+                       volatility: f64,
+                       size: u8,
+    ) -> Self {
         OptionChain {
             symbol: symbol.to_string(),
             underlying_price,
