@@ -4,7 +4,7 @@
    Date: 25/9/24
 ******************************************************************************/
 use optionstratlib::constants::ZERO;
-use optionstratlib::model::chain::OptionChain;
+use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
