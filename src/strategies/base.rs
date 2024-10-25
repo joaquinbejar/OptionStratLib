@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 use crate::constants::ZERO;
-use crate::model::chain::OptionChain;
+use crate::chains::chain::OptionChain;
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
