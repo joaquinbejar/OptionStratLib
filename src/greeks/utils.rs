@@ -36,12 +36,10 @@ use std::f64::consts::PI;
 ///
 /// This function requires that the generic type `T` implements the `Float` trait, which provides the methods `T::infinity()`, `T::neg_infinity()`, and `T::zero()`. These methods return positive infinity, negative infinity, and zero respectively, appropriate to the type `T`.
 fn handle_zero(underlying_price: PositiveF64, strike_price: PositiveF64) -> f64 {
-    if underlying_price > strike_price {
-        f64::INFINITY
-    } else if underlying_price < strike_price {
-        f64::NEG_INFINITY
-    } else {
-        ZERO
+    match underlying_price {
+        _ if underlying_price > strike_price => f64::INFINITY,
+        _ if underlying_price < strike_price => f64::NEG_INFINITY,
+        _ => ZERO,
     }
 }
 
