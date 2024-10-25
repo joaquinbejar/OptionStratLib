@@ -147,14 +147,23 @@ mod tests_parse {
         assert_eq!(result, spos!(42.01));
     }
 }
+
 #[cfg(test)]
 mod tests_default_empty_string {
     use super::*;
+
     #[test]
     fn test_default_empty_string_with_some_value() {
         let input = Some(42);
         let result = default_empty_string(input);
         assert_eq!(result, "42");
+    }
+
+    #[test]
+    fn test_default_empty_string_with_float() {
+        let input = Some(42.01223);
+        let result = default_empty_string(input);
+        assert_eq!(result, "42.01223");
     }
 
     #[test]

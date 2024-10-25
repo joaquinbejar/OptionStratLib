@@ -21,8 +21,8 @@ fn main() {
         spos!(14.90),
         spos!(16.31),
         Some(0.5),
-        None,
-        None,
+        spos!(1.0),
+        Some(300),
     );
     chain.add_option(
         pos!(5525.0),

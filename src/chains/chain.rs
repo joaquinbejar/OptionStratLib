@@ -12,6 +12,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
+use std::fmt::Display;
 use std::fs::File;
 use tracing::debug;
 
@@ -71,11 +72,22 @@ impl OptionData {
 
     pub(crate) fn validate(&self) -> bool {
         self.strike_price > PZERO
+            && self.implied_volatility.is_some()
+            && (self.valid_call() || self.valid_put())
+    }
+
+    pub(crate) fn valid_call(&self) -> bool {
+        self.strike_price > PZERO
+            && self.implied_volatility.is_some()
             && self.call_bid.is_some()
             && self.call_ask.is_some()
+    }
+
+    pub(crate) fn valid_put(&self) -> bool {
+        self.strike_price > PZERO
+            && self.implied_volatility.is_some()
             && self.put_bid.is_some()
             && self.put_ask.is_some()
-            && self.implied_volatility.is_some()
     }
 }
 
@@ -117,6 +129,25 @@ impl Ord for OptionData {
                 Ordering::Less
             }
         })
+    }
+}
+
+impl Display for OptionData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<13} {:<10} {:<10} {:<10}",
+            self.strike_price.to_string(),
+            default_empty_string(self.call_bid),
+            default_empty_string(self.call_ask),
+            default_empty_string(self.put_bid),
+            default_empty_string(self.put_ask),
+            default_empty_string(self.implied_volatility),
+            default_empty_string(self.delta),
+            default_empty_string(self.volume),
+            default_empty_string(self.open_interest),
+        )?;
+        Ok(())
     }
 }
 
@@ -306,47 +337,37 @@ impl OptionChain {
     }
 }
 
-impl fmt::Display for OptionChain {
+impl Display for OptionChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Symbol: {}", self.symbol)?; // Cambiado de {:.1} a {}
         writeln!(f, "Underlying Price: {:.1}", self.underlying_price)?;
         writeln!(f, "Expiration Date: {}", self.expiration_date)?;
         writeln!(
             f,
-            "------------------------------------------------------------------"
+            "-------------------------------------------------------------------------------\
+            ---------------------------"
         )?;
         writeln!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<15} {:<10} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<13} {:<10} {:<10} {:<10}",
             "Strike",
             "Call Bid",
             "Call Ask",
             "Put Bid",
             "Put Ask",
-            "Implied Vol",
+            "Implied Vol.",
             "Delta",
             "Volume",
             "Open Interest"
         )?;
         writeln!(
             f,
-            "------------------------------------------------------------------"
+            "----------------------------------------------------------------------------------\
+            ------------------------"
         )?;
 
         for option in &self.options {
-            writeln!(
-                f,
-                "{:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<15.3} {:<10.3} {:<10} {:<10}",
-                option.strike_price,
-                option.call_bid.unwrap(),
-                option.call_ask.unwrap(),
-                option.put_bid.unwrap(),
-                option.put_ask.unwrap(),
-                option.implied_volatility.unwrap(),
-                option.delta.unwrap(),
-                option.volume.unwrap(),
-                option.open_interest.unwrap(),
-            )?;
+            writeln!(f, "{}", option,)?;
         }
         Ok(())
     }
