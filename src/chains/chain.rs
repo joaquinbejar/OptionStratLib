@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
+use crate::chains::utils::{default_empty_string, parse};
 use crate::model::types::{PositiveF64, PZERO};
 use crate::pos;
 use csv::WriterBuilder;
@@ -31,14 +32,67 @@ use tracing::debug;
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct OptionData {
     pub(crate) strike_price: PositiveF64,
-    call_bid: Option<PositiveF64>,
-    call_ask: Option<PositiveF64>,
+    pub(crate) call_bid: Option<PositiveF64>,
+    pub(crate) call_ask: Option<PositiveF64>,
     put_bid: Option<PositiveF64>,
     put_ask: Option<PositiveF64>,
-    implied_volatility: Option<PositiveF64>,
+    pub(crate) implied_volatility: Option<PositiveF64>,
     delta: Option<f64>,
     volume: Option<PositiveF64>,
     open_interest: Option<u64>,
+}
+
+impl OptionData {
+    #[allow(dead_code)]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn new(
+        strike_price: PositiveF64,
+        call_bid: Option<PositiveF64>,
+        call_ask: Option<PositiveF64>,
+        put_bid: Option<PositiveF64>,
+        put_ask: Option<PositiveF64>,
+        implied_volatility: Option<PositiveF64>,
+        delta: Option<f64>,
+        volume: Option<PositiveF64>,
+        open_interest: Option<u64>,
+    ) -> Self {
+        OptionData {
+            strike_price,
+            call_bid,
+            call_ask,
+            put_bid,
+            put_ask,
+            implied_volatility,
+            delta,
+            volume,
+            open_interest,
+        }
+    }
+
+    pub(crate) fn validate(&self) -> bool {
+        self.strike_price > PZERO
+            && self.call_bid.is_some()
+            && self.call_ask.is_some()
+            && self.put_bid.is_some()
+            && self.put_ask.is_some()
+            && self.implied_volatility.is_some()
+    }
+}
+
+impl Default for OptionData {
+    fn default() -> Self {
+        OptionData {
+            strike_price: PZERO,
+            call_bid: None,
+            call_ask: None,
+            put_bid: None,
+            put_ask: None,
+            implied_volatility: None,
+            delta: None,
+            volume: None,
+            open_interest: None,
+        }
+    }
 }
 
 #[allow(clippy::non_canonical_partial_ord_impl)]
@@ -84,11 +138,12 @@ impl OptionChain {
         }
     }
 
-    pub fn build_chain(symbol: &str,
-                       underlying_price: PositiveF64,
-                       expiration_date: String,
-                       volatility: f64,
-                       size: u8,
+    pub fn build_chain(
+        symbol: &str,
+        underlying_price: PositiveF64,
+        expiration_date: String,
+        _volatility: f64,
+        _size: u8,
     ) -> Self {
         OptionChain {
             symbol: symbol.to_string(),
@@ -102,12 +157,12 @@ impl OptionChain {
     pub fn add_option(
         &mut self,
         strike_price: PositiveF64,
-        call_bid: PositiveF64,
-        call_ask: PositiveF64,
-        put_bid: PositiveF64,
-        put_ask: PositiveF64,
-        implied_volatility: PositiveF64,
-        delta: f64,
+        call_bid: Option<PositiveF64>,
+        call_ask: Option<PositiveF64>,
+        put_bid: Option<PositiveF64>,
+        put_ask: Option<PositiveF64>,
+        implied_volatility: Option<PositiveF64>,
+        delta: Option<f64>,
         volume: Option<PositiveF64>,
         open_interest: Option<u64>,
     ) {
@@ -171,18 +226,14 @@ impl OptionChain {
         for option in &self.options {
             wtr.write_record(&[
                 option.strike_price.to_string(),
-                option.call_bid.to_string(),
-                option.call_ask.to_string(),
-                option.put_bid.to_string(),
-                option.put_ask.to_string(),
-                option.implied_volatility.to_string(),
-                option.delta.to_string(),
-                option
-                    .volume
-                    .map_or_else(|| "".to_string(), |v| v.to_string()),
-                option
-                    .open_interest
-                    .map_or_else(|| "".to_string(), |oi| oi.to_string()),
+                default_empty_string(option.call_bid),
+                default_empty_string(option.call_ask),
+                default_empty_string(option.put_bid),
+                default_empty_string(option.put_ask),
+                default_empty_string(option.implied_volatility),
+                default_empty_string(option.delta),
+                default_empty_string(option.volume),
+                default_empty_string(option.open_interest),
             ])?;
         }
 
@@ -203,17 +254,17 @@ impl OptionChain {
         for result in rdr.records() {
             let record = result?;
             debug!("To CSV: {:?}", record);
-            let delta = record[6].parse().unwrap_or(0.0);
+
             let option_data = OptionData {
                 strike_price: record[0].parse()?,
-                call_bid: record[1].parse()?,
-                call_ask: record[2].parse()?,
-                put_bid: record[3].parse()?,
-                put_ask: record[4].parse()?,
-                implied_volatility: record[5].parse()?,
-                delta,
-                volume: Some(record[7].parse()?),
-                open_interest: Some(record[8].parse()?),
+                call_bid: parse(&record[1]),
+                call_ask: parse(&record[2]),
+                put_bid: parse(&record[3]),
+                put_ask: parse(&record[4]),
+                implied_volatility: parse(&record[5]),
+                delta: parse(&record[6]),
+                volume: parse(&record[7]),
+                open_interest: parse(&record[8]),
             };
             options.insert(option_data);
         }
@@ -266,8 +317,16 @@ impl fmt::Display for OptionChain {
         )?;
         writeln!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<15}",
-            "Strike", "Call Bid", "Call Ask", "Put Bid", "Put Ask", "Implied Vol"
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<15} {:<10} {:<10} {:<10}",
+            "Strike",
+            "Call Bid",
+            "Call Ask",
+            "Put Bid",
+            "Put Ask",
+            "Implied Vol",
+            "Delta",
+            "Volume",
+            "Open Interest"
         )?;
         writeln!(
             f,
@@ -277,13 +336,16 @@ impl fmt::Display for OptionChain {
         for option in &self.options {
             writeln!(
                 f,
-                "{:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<15.3}",
+                "{:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<15.3} {:<10.3} {:<10} {:<10}",
                 option.strike_price,
-                option.call_bid,
-                option.call_ask,
-                option.put_bid,
-                option.put_ask,
-                option.implied_volatility
+                option.call_bid.unwrap(),
+                option.call_ask.unwrap(),
+                option.put_bid.unwrap(),
+                option.put_ask.unwrap(),
+                option.implied_volatility.unwrap(),
+                option.delta.unwrap(),
+                option.volume.unwrap(),
+                option.open_interest.unwrap(),
             )?;
         }
         Ok(())
@@ -311,12 +373,12 @@ mod tests_chain_base {
         let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
         chain.add_option(
             pos!(5520.0),
-            pos!(274.26),
-            pos!(276.06),
-            pos!(13.22),
-            pos!(14.90),
-            pos!(16.31),
-            0.5,
+            spos!(274.26),
+            spos!(276.06),
+            spos!(13.22),
+            spos!(14.90),
+            spos!(16.31),
+            Some(0.5),
             spos!(100.0),
             Some(100),
         );
@@ -324,7 +386,8 @@ mod tests_chain_base {
         // first option in the chain
         let option = chain.options.iter().next().unwrap();
         assert_eq!(option.strike_price, 5520.0);
-        assert_eq!(option.call_bid, 274.26);
+        assert!(option.call_bid.is_some());
+        assert_eq!(option.call_bid.unwrap(), 274.26);
     }
 
     #[test]
@@ -389,12 +452,12 @@ mod tests_chain_base {
         let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
         chain.add_option(
             pos!(5520.0),
-            pos!(274.26),
-            pos!(276.06),
-            pos!(13.22),
-            pos!(14.90),
-            pos!(16.31),
-            0.5,
+            spos!(274.26),
+            spos!(276.06),
+            spos!(13.22),
+            spos!(14.90),
+            spos!(16.31),
+            Some(0.5),
             spos!(100.0),
             Some(100),
         );
@@ -410,12 +473,12 @@ mod tests_chain_base {
         let mut chain = OptionChain::new("SP500", pos!(5781.88), "18-oct-2024".to_string());
         chain.add_option(
             pos!(5520.0),
-            pos!(274.26),
-            pos!(276.06),
-            pos!(13.22),
-            pos!(14.90),
-            pos!(16.31),
-            0.5,
+            spos!(274.26),
+            spos!(276.06),
+            spos!(13.22),
+            spos!(14.90),
+            spos!(16.31),
+            Some(0.5),
             spos!(100.0),
             Some(100),
         );
@@ -433,12 +496,12 @@ mod tests_chain_base {
         let mut chain = OptionChain::new("SP500", pos!(5781.89), "18-oct-2024".to_string());
         chain.add_option(
             pos!(5520.0),
-            pos!(274.26),
-            pos!(276.06),
-            pos!(13.22),
-            pos!(14.90),
-            pos!(16.31),
-            0.5,
+            spos!(274.26),
+            spos!(276.06),
+            spos!(13.22),
+            spos!(14.90),
+            spos!(16.31),
+            Some(0.5),
             spos!(100.0),
             Some(100),
         );
@@ -462,12 +525,12 @@ mod tests_chain_base {
         let mut chain = OptionChain::new("SP500", pos!(5781.9), "18-oct-2024".to_string());
         chain.add_option(
             pos!(5520.0),
-            pos!(274.26),
-            pos!(276.06),
-            pos!(13.22),
-            pos!(14.90),
-            pos!(16.31),
-            0.5,
+            spos!(274.26),
+            spos!(276.06),
+            spos!(13.22),
+            spos!(14.90),
+            spos!(16.31),
+            Some(0.5),
             spos!(100.0),
             Some(100),
         );
