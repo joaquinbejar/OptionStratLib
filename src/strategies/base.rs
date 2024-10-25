@@ -4,8 +4,8 @@
    Date: 21/8/24
 ******************************************************************************/
 
-use crate::constants::ZERO;
 use crate::chains::chain::OptionChain;
+use crate::constants::ZERO;
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
