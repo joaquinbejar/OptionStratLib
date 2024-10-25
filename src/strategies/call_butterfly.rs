@@ -177,7 +177,7 @@ impl CallButterfly {
         long_otm: &OptionData,
         short_option: &OptionData,
     ) -> bool {
-        if !long_itm.validate() || !long_otm.validate() || !short_option.validate() {
+        if !long_itm.valid_call() || !long_otm.valid_call() || !short_option.valid_call() {
             return false;
         };
         long_itm.call_ask.unwrap() > PZERO
