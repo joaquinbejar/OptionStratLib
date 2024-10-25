@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::constants::ZERO;
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::constants::ZERO;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
