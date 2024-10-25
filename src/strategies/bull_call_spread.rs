@@ -184,7 +184,7 @@ impl BullCallSpread {
     }
 
     fn is_valid_short_option(&self, short_option: &OptionData, side: &FindOptimalSide) -> bool {
-        if !short_option.validate() {
+        if !short_option.valid_call() {
             return false;
         }
         match side {
@@ -202,7 +202,7 @@ impl BullCallSpread {
     }
 
     fn are_valid_prices(&self, long_option: &OptionData, short_option: &OptionData) -> bool {
-        if !long_option.validate() || !short_option.validate() {
+        if !long_option.valid_call() || !short_option.valid_call() {
             return false;
         }
         long_option.call_ask.unwrap() > PZERO && short_option.call_bid.unwrap() > PZERO
@@ -214,7 +214,7 @@ impl BullCallSpread {
         long_option: &OptionData,
         short_option: &OptionData,
     ) -> BullCallSpread {
-        if !long_option.validate() || !short_option.validate() {
+        if !long_option.valid_call() || !short_option.valid_call() {
             panic!("Invalid options");
         }
         BullCallSpread::new(
