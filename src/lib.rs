@@ -6,6 +6,7 @@
 extern crate core;
 
 pub mod backtesting;
+pub mod chains;
 pub mod constants;
 mod curves;
 pub mod greeks;
@@ -19,4 +20,3 @@ pub mod surfaces;
 pub mod utils;
 pub mod visualization;
 pub mod volatility;
-pub mod chains;
