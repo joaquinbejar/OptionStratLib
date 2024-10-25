@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
-use optionstratlib::model::chain::OptionChain;
+use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::pos;
 use optionstratlib::utils::logger::setup_logger;
