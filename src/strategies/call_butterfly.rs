@@ -8,7 +8,7 @@ use crate::constants::DARK_GREEN;
 use crate::constants::{
     DARK_BLUE, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
-use crate::model::chain::{OptionChain, OptionData};
+use crate::chains::chain::{OptionChain, OptionData};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
