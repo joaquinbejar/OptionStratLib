@@ -3,9 +3,9 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
-use crate::chains::utils::{default_empty_string, parse};
-use crate::model::types::{PositiveF64, PZERO};
-use crate::pos;
+use crate::chains::utils::{adjust_volatility, default_empty_string, generate_list_of_strikes, parse};
+use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
+use crate::{pos, spos};
 use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -173,15 +173,32 @@ impl OptionChain {
         symbol: &str,
         underlying_price: PositiveF64,
         expiration_date: String,
-        _volatility: f64,
+        volatility: PositiveF64,
         _size: u8,
+        _expire: ExpirationDate,
+        chain_size: usize,
+        strike_interval: PositiveF64,
+        skew_factor: f64,
     ) -> Self {
-        OptionChain {
+        let mut option_chain = OptionChain {
             symbol: symbol.to_string(),
             underlying_price,
             expiration_date,
             options: BTreeSet::new(),
+        };
+        // TODO: Implement black_scholes
+        let strikes = generate_list_of_strikes(underlying_price,
+                                               chain_size,
+                                               strike_interval);
+        for strike in strikes {
+            let atm_distance = strike.value() - underlying_price.value();
+            let adjusted_volatility = spos!(adjust_volatility(volatility,
+                                                                skew_factor,
+                                                                atm_distance)            );
+            option_chain.add_option(strike, None, None, None, None, adjusted_volatility, None, None, None);
         }
+
+        option_chain
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -367,7 +384,7 @@ impl Display for OptionChain {
         )?;
 
         for option in &self.options {
-            writeln!(f, "{}", option,)?;
+            writeln!(f, "{}", option, )?;
         }
         Ok(())
     }

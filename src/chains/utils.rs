@@ -7,7 +7,7 @@ use crate::model::types::PositiveF64;
 use std::collections::BTreeSet;
 
 #[allow(dead_code)]
-fn generate_list_of_strikes(
+pub(crate) fn generate_list_of_strikes(
     reference_price: PositiveF64,
     chain_size: usize,
     strike_interval: PositiveF64,
@@ -26,6 +26,14 @@ fn generate_list_of_strikes(
         }
     }
     strikes
+}
+
+pub(crate) fn adjust_volatility(volatility: PositiveF64, skew_factor:f64,  atm_distance: f64) -> f64 {
+
+    let skew = skew_factor * atm_distance.abs();
+    let smile = skew_factor * atm_distance.powi(2);
+
+    volatility.value() * (1.0 + skew + smile)
 }
 
 pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
