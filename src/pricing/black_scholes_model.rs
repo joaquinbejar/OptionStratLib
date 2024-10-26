@@ -169,6 +169,15 @@ fn calculate_put_option_price(option: &Options, d1: f64, d2: f64, t: f64) -> f64
         - option.underlying_price.value() * big_n(-d1)
 }
 
+pub trait BlackScholes {
+    fn get_option(&self) -> &Options;
+    fn calculate_price_black_scholes(&self) -> f64 {
+        let option = self.get_option();
+
+        black_scholes(option)
+    }
+}
+
 #[cfg(test)]
 mod tests_black_scholes {
     use super::*;
@@ -418,5 +427,399 @@ mod tests_black_scholes {
         let price = black_scholes(&option);
 
         assert_relative_eq!(price, 5.5735260, epsilon = 0.001);
+    }
+}
+
+#[cfg(test)]
+mod tests_black_scholes_trait {
+    use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::model::utils::create_sample_option;
+    use crate::pos;
+    use approx::assert_relative_eq;
+
+    // Mock struct to implement BlackScholes trait
+    struct MockOption {
+        option: Options,
+    }
+
+    impl MockOption {
+        fn new(option: Options) -> Self {
+            MockOption { option }
+        }
+    }
+
+    impl BlackScholes for MockOption {
+        fn get_option(&self) -> &Options {
+            &self.option
+        }
+    }
+
+    #[test]
+    fn test_at_the_money_call() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            0.2,         // volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, 2.4933768, epsilon = 1e-7);
+    }
+
+    #[test]
+    fn test_in_the_money_call() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(90.0),  // strike price
+            0.2,         // volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, 10.427673877, epsilon = 1e-7);
+    }
+
+    #[test]
+    fn test_out_of_the_money_call() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(110.0), // strike price
+            0.2,         // volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, 0.14256994168, epsilon = 1e-7);
+    }
+
+    #[test]
+    fn test_at_the_money_put() {
+        let option = create_sample_option(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            0.2,         // volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, 2.08326119582, epsilon = 1e-7);
+    }
+
+    #[test]
+    fn test_high_volatility() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            0.5,         // high volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, 5.9094479287, epsilon = 1e-7);
+    }
+
+    #[test]
+    fn test_zero_volatility() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            0.0,         // zero volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, 0.2050578117, epsilon = 1e-7);
+    }
+
+    #[test]
+    fn test_short_call() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            0.2,         // volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, -2.49337681940, epsilon = 1e-7);
+    }
+
+    #[test]
+    fn test_short_put() {
+        let option = create_sample_option(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            0.2,         // volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, -2.0832611958, epsilon = 1e-7);
+    }
+
+    #[test]
+    fn test_with_different_quantity() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(10.0),  // quantity
+            pos!(100.0), // strike price
+            0.2,         // volatility
+        );
+        let mock = MockOption::new(option);
+        let price = mock.calculate_price_black_scholes();
+        assert_relative_eq!(price, 2.4933768194037, epsilon = 1e-7);
+    }
+}
+
+#[cfg(test)]
+mod tests_black_scholes_trait_bis {
+    use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::model::utils::create_sample_option;
+    use crate::pos;
+    use approx::assert_relative_eq;
+
+    struct MockOption {
+        option: Options,
+    }
+
+    impl MockOption {
+        fn new(option: Options) -> Self {
+            MockOption { option }
+        }
+    }
+
+    impl BlackScholes for MockOption {
+        fn get_option(&self) -> &Options {
+            &self.option
+        }
+    }
+
+    #[test]
+    fn test_call_put_parity() {
+        let call_option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.2,
+        );
+
+        let put_option = create_sample_option(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.2,
+        );
+
+        let call_mock = MockOption::new(call_option);
+        let put_mock = MockOption::new(put_option);
+
+        let call_price = call_mock.calculate_price_black_scholes();
+        let put_price = put_mock.calculate_price_black_scholes();
+
+        let r: f64 = 0.05;
+        let t: f64 = 30.0 / 365.0;
+        let s: f64 = 100.0;
+        let k: f64 = 100.0;
+
+        let parity_value = call_price - put_price;
+        let theoretical_value = s - k * f64::exp(-r * t);
+
+        assert_relative_eq!(parity_value, theoretical_value, epsilon = 0.01);
+    }
+
+    #[test]
+    fn test_call_put_parity_short() {
+        let call_option = create_sample_option(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.2,
+        );
+
+        let put_option = create_sample_option(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.2,
+        );
+
+        let call_mock = MockOption::new(call_option);
+        let put_mock = MockOption::new(put_option);
+
+        let call_price = call_mock.calculate_price_black_scholes();
+        let put_price = put_mock.calculate_price_black_scholes();
+
+        let r: f64 = 0.05;
+        let t: f64 = 30.0 / 365.0;
+        let s: f64 = 100.0;
+        let k: f64 = 100.0;
+
+        let parity_value = call_price - put_price;
+        let theoretical_value = s - k * f64::exp(-r * t);
+
+        assert_relative_eq!(parity_value, -theoretical_value, epsilon = 0.01);
+    }
+
+    #[test]
+    fn test_monotonicity_with_strike() {
+        let call1 = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(90.0),
+            0.2,
+        ));
+
+        let call2 = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.2,
+        ));
+
+        let call3 = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(110.0),
+            0.2,
+        ));
+
+        let price1 = call1.calculate_price_black_scholes();
+        let price2 = call2.calculate_price_black_scholes();
+        let price3 = call3.calculate_price_black_scholes();
+
+        assert!(price1 > price2);
+        assert!(price2 > price3);
+    }
+
+    #[test]
+    fn test_zero_volatility_call() {
+        let option = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(95.0),
+            0.0,
+        ));
+
+        let price = option.calculate_price_black_scholes();
+        let r: f64 = 0.05;
+        let t: f64 = 30.0 / 365.0;
+        let s: f64 = 100.0;
+        let k: f64 = 95.0;
+
+        let theoretical_price = 0.0f64.max(s - k * f64::exp(-r * t));
+        assert_relative_eq!(price, theoretical_price, epsilon = 0.01);
+    }
+
+    #[test]
+    fn test_deep_itm_call() {
+        let option = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.2,
+        ));
+
+        let price = option.calculate_price_black_scholes();
+        let r: f64 = 0.05;
+        let t: f64 = 30.0 / 365.0;
+        let s: f64 = 150.0;
+        let k: f64 = 100.0;
+
+        let intrinsic_value = s - k * f64::exp(-r * t);
+        assert!(price > intrinsic_value);
+        assert_relative_eq!(price, intrinsic_value, epsilon = 5.0);
+    }
+
+    #[test]
+    fn test_deep_otm_call() {
+        let option = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(200.0),
+            0.2,
+        ));
+
+        let price = option.calculate_price_black_scholes();
+        assert!(price < 0.1);
+    }
+
+    #[test]
+    fn test_monotonicity_with_volatility() {
+        let call1 = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.1,
+        ));
+
+        let call2 = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.2,
+        ));
+
+        let call3 = MockOption::new(create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.3,
+        ));
+
+        let price1 = call1.calculate_price_black_scholes();
+        let price2 = call2.calculate_price_black_scholes();
+        let price3 = call3.calculate_price_black_scholes();
+
+        assert!(price1 < price2);
+        assert!(price2 < price3);
     }
 }

@@ -6,7 +6,9 @@
 use crate::chains::utils::{
     adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
 };
-use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
+use crate::model::option::Options;
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::pricing::black_scholes_model::black_scholes;
 use crate::{pos, spos};
 use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
@@ -90,6 +92,93 @@ impl OptionData {
             && self.implied_volatility.is_some()
             && self.put_bid.is_some()
             && self.put_ask.is_some()
+    }
+
+    pub fn calculate_prices(
+        &mut self,
+        underlying_price: PositiveF64,
+        expiration_date: ExpirationDate,
+        implied_volatility: Option<PositiveF64>,
+        mut risk_free_rate: Option<f64>,
+        mut dividend_yield: Option<f64>,
+    ) -> Result<(), String> {
+        if risk_free_rate.is_none() {
+            risk_free_rate = Some(0.0);
+        }
+        if dividend_yield.is_none() {
+            dividend_yield = Some(0.0);
+        }
+
+        let implied_volatility = match (implied_volatility, self.implied_volatility) {
+            (Some(iv), None) => Some(iv),
+            (None, Some(iv)) => Some(iv),
+            (Some(a), Some(_)) => Some(a),
+            _ => {
+                return Err("Implied volatility is missing".to_string());
+            }
+        };
+
+        let mut option: Options = Options::new(
+            OptionType::European,
+            Side::Long,
+            "OptionData".to_string(),
+            self.strike_price,
+            expiration_date,
+            implied_volatility.unwrap().value(),
+            pos!(1.0),
+            underlying_price,
+            risk_free_rate.unwrap(),
+            OptionStyle::Call,
+            dividend_yield.unwrap(),
+            None,
+        );
+        self.call_ask = spos!(black_scholes(&option).abs());
+        option.side = Side::Short;
+        self.call_bid = spos!(black_scholes(&option).abs());
+        option.option_style = OptionStyle::Put;
+        self.put_bid = spos!(black_scholes(&option).abs());
+        option.side = Side::Long;
+        self.put_ask = spos!(black_scholes(&option).abs());
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn apply_spread(&mut self, spread: PositiveF64, decimal_places: i32) {
+        fn round_to_decimal(
+            number: PositiveF64,
+            decimal_places: i32,
+            shift: f64,
+        ) -> Option<PositiveF64> {
+            let multiplier = 10_f64.powi(decimal_places);
+            spos!(((number.value() * multiplier).round() / multiplier) + shift)
+        }
+
+        let half_spread = spread / 2.0;
+
+        if let Some(call_ask) = self.call_ask {
+            if call_ask < half_spread {
+                panic!("Call bid is less than half the spread");
+            }
+            self.call_ask = round_to_decimal(call_ask, decimal_places, half_spread.value());
+        }
+        if let Some(call_bid) = self.call_bid {
+            if call_bid < half_spread {
+                panic!("Call ask is less than half the spread");
+            }
+            self.call_bid = round_to_decimal(call_bid, decimal_places, -half_spread.value());
+        }
+        if let Some(put_ask) = self.put_ask {
+            if put_ask < half_spread {
+                panic!("Put bid is less than half the spread");
+            }
+            self.put_ask = round_to_decimal(put_ask, decimal_places, half_spread.value());
+        }
+        if let Some(put_bid) = self.put_bid {
+            if put_bid < half_spread {
+                panic!("Put ask is less than half the spread");
+            }
+            self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread.value());
+        }
     }
 }
 
@@ -175,27 +264,27 @@ impl OptionChain {
     pub fn build_chain(
         symbol: &str,
         underlying_price: PositiveF64,
-        expiration_date: String,
         volatility: PositiveF64,
-        _size: u8,
-        _expire: ExpirationDate,
+        volume: Option<PositiveF64>,
+        expire: ExpirationDate,
         chain_size: usize,
         strike_interval: PositiveF64,
         skew_factor: f64,
+        risk_free_rate: Option<f64>,
+        dividend_yield: Option<f64>,
     ) -> Self {
         let mut option_chain = OptionChain {
             symbol: symbol.to_string(),
             underlying_price,
-            expiration_date,
+            expiration_date: expire.get_date().to_string(),
             options: BTreeSet::new(),
         };
-        // TODO: Implement black_scholes
         let strikes = generate_list_of_strikes(underlying_price, chain_size, strike_interval);
         for strike in strikes {
             let atm_distance = strike.value() - underlying_price.value();
             let adjusted_volatility =
                 spos!(adjust_volatility(volatility, skew_factor, atm_distance));
-            option_chain.add_option(
+            let mut option_data = OptionData::new(
                 strike,
                 None,
                 None,
@@ -203,9 +292,19 @@ impl OptionChain {
                 None,
                 adjusted_volatility,
                 None,
-                None,
+                volume,
                 None,
             );
+            option_data
+                .calculate_prices(
+                    underlying_price,
+                    expire.clone(),
+                    None,
+                    risk_free_rate,
+                    dividend_yield,
+                )
+                .expect("Error calculating prices");
+            option_chain.options.insert(option_data);
         }
 
         option_chain
@@ -595,5 +694,227 @@ mod tests_chain_base {
         let file_name = "./SP500-18-oct-2024-5781.9.json".to_string();
         let remove_result = fs::remove_file(file_name);
         assert!(remove_result.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_option_data {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+    use crate::pos;
+    use crate::spos;
+    use crate::utils::logger::setup_logger;
+    use tracing::info;
+
+    fn create_valid_option_data() -> OptionData {
+        OptionData::new(
+            pos!(100.0),   // strike_price
+            spos!(9.5),    // call_bid
+            spos!(10.0),   // call_ask
+            spos!(8.5),    // put_bid
+            spos!(9.0),    // put_ask
+            spos!(0.2),    // implied_volatility
+            Some(-0.3),    // delta
+            spos!(1000.0), // volume
+            Some(500),     // open_interest
+        )
+    }
+
+    #[test]
+    fn test_new_option_data() {
+        let option_data = create_valid_option_data();
+        assert_eq!(option_data.strike_price, pos!(100.0));
+        assert_eq!(option_data.call_bid, spos!(9.5));
+        assert_eq!(option_data.call_ask, spos!(10.0));
+        assert_eq!(option_data.put_bid, spos!(8.5));
+        assert_eq!(option_data.put_ask, spos!(9.0));
+        assert_eq!(option_data.implied_volatility, spos!(0.2));
+        assert_eq!(option_data.delta, Some(-0.3));
+        assert_eq!(option_data.volume, spos!(1000.0));
+        assert_eq!(option_data.open_interest, Some(500));
+    }
+
+    #[test]
+    fn test_validate_valid_option() {
+        let option_data = create_valid_option_data();
+        assert!(option_data.validate());
+    }
+
+    #[test]
+    fn test_validate_zero_strike() {
+        let mut option_data = create_valid_option_data();
+        option_data.strike_price = PZERO;
+        assert!(!option_data.validate());
+    }
+
+    #[test]
+    fn test_validate_no_implied_volatility() {
+        let mut option_data = create_valid_option_data();
+        option_data.implied_volatility = None;
+        assert!(!option_data.validate());
+    }
+
+    #[test]
+    fn test_validate_missing_both_sides() {
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        assert!(!option_data.validate());
+    }
+
+    #[test]
+    fn test_valid_call() {
+        let option_data = create_valid_option_data();
+        assert!(option_data.valid_call());
+    }
+
+    #[test]
+    fn test_valid_call_missing_bid() {
+        let mut option_data = create_valid_option_data();
+        option_data.call_bid = None;
+        assert!(!option_data.valid_call());
+    }
+
+    #[test]
+    fn test_valid_call_missing_ask() {
+        let mut option_data = create_valid_option_data();
+        option_data.call_ask = None;
+        assert!(!option_data.valid_call());
+    }
+
+    #[test]
+    fn test_valid_put() {
+        let option_data = create_valid_option_data();
+        assert!(option_data.valid_put());
+    }
+
+    #[test]
+    fn test_valid_put_missing_bid() {
+        let mut option_data = create_valid_option_data();
+        option_data.put_bid = None;
+        assert!(!option_data.valid_put());
+    }
+
+    #[test]
+    fn test_valid_put_missing_ask() {
+        let mut option_data = create_valid_option_data();
+        option_data.put_ask = None;
+        assert!(!option_data.valid_put());
+    }
+
+    #[test]
+    fn test_calculate_prices_success() {
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+
+        let result = option_data.calculate_prices(
+            pos!(100.0),                // underlying_price
+            ExpirationDate::Days(30.0), // expiration_date
+            None,                       // implied_volatility
+            None,                       // risk_free_rate
+            None,                       // dividend_yield
+        );
+
+        assert!(result.is_ok());
+        assert!(option_data.call_ask.is_some());
+        assert!(option_data.call_bid.is_some());
+        assert!(option_data.put_ask.is_some());
+        assert!(option_data.put_bid.is_some());
+    }
+
+    #[test]
+    fn test_calculate_prices_missing_volatility() {
+        let mut option_data =
+            OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None);
+
+        let result =
+            option_data.calculate_prices(pos!(100.0), ExpirationDate::Days(30.0), None, None, None);
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Implied volatility is missing");
+    }
+
+    #[test]
+    fn test_calculate_prices_override_volatility() {
+        setup_logger();
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+
+        let result = option_data.calculate_prices(
+            pos!(110.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.3),
+            None,
+            None,
+        );
+
+        assert!(result.is_ok());
+
+        info!("{}", option_data);
+        assert_eq!(option_data.call_ask, spos!(10.60868934159474));
+        assert_eq!(option_data.call_bid, spos!(10.60868934159474));
+        assert_eq!(option_data.put_ask, spos!(0.608689341594749));
+        assert_eq!(option_data.put_bid, spos!(0.608689341594749));
+        option_data.apply_spread(pos!(0.02), 2);
+        info!("{}", option_data);
+        assert_eq!(option_data.call_ask, spos!(10.62));
+        assert_eq!(option_data.call_bid, spos!(10.6));
+        assert_eq!(option_data.put_ask, spos!(0.62));
+        assert_eq!(option_data.put_bid, spos!(0.6));
+    }
+
+    #[test]
+    fn test_calculate_prices_with_all_parameters() {
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+
+        let result = option_data.calculate_prices(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.2),
+            Some(0.05),
+            Some(0.01),
+        );
+
+        assert!(result.is_ok());
+        assert!(option_data.call_ask.is_some());
+        assert!(option_data.call_bid.is_some());
+        assert!(option_data.put_ask.is_some());
+        assert!(option_data.put_bid.is_some());
     }
 }
