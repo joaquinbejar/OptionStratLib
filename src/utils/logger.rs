@@ -31,6 +31,27 @@ pub fn setup_logger() {
     });
 }
 
+pub fn setup_logger_with_level(log_level: &str) {
+    INIT.call_once(|| {
+        let log_level = log_level.to_uppercase();
+
+        let level = match log_level.as_str() {
+            "DEBUG" => Level::DEBUG,
+            "ERROR" => Level::ERROR,
+            "WARN" => Level::WARN,
+            "TRACE" => Level::TRACE,
+            _ => Level::INFO,
+        };
+
+        let subscriber = FmtSubscriber::builder().with_max_level(level).finish();
+
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("Error setting default subscriber");
+
+        tracing::debug!("Log level set to: {}", level);
+    });
+}
+
 #[cfg(test)]
 mod tests_setup_logger {
     use super::setup_logger;
