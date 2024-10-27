@@ -4,7 +4,7 @@
    Date: 26/9/24
 ******************************************************************************/
 use crate::chains::utils::{
-    adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
+    adjust_volatility, default_empty_string, generate_list_of_strikes, parse, OptionDataPriceParams,
 };
 use crate::greeks::equations::delta;
 use crate::model::option::Options;
@@ -95,61 +95,35 @@ impl OptionData {
             && self.put_ask.is_some()
     }
 
-    fn get_option(
-        &self,
-        underlying_price: PositiveF64,
-        expiration_date: ExpirationDate,
-        implied_volatility: PositiveF64,
-        risk_free_rate: Option<f64>,
-        dividend_yield: Option<f64>,
-    ) -> Options {
+    fn get_option(&self, price_params: &OptionDataPriceParams) -> Options {
+        let implied_volatility = match price_params.implied_volatility {
+            Some(iv) => iv.value(),
+            None => match self.implied_volatility {
+                Some(iv) => iv.value(),
+                None => {
+                    panic!("Implied volatility is missing");
+                }
+            },
+        };
+
         Options::new(
             OptionType::European,
             Side::Long,
             "OptionData".to_string(),
             self.strike_price,
-            expiration_date,
-            implied_volatility.value(),
+            price_params.expiration_date.clone(),
+            implied_volatility,
             pos!(1.0),
-            underlying_price,
-            risk_free_rate.unwrap(),
+            price_params.underlying_price,
+            price_params.risk_free_rate,
             OptionStyle::Call,
-            dividend_yield.unwrap(),
+            price_params.dividend_yield,
             None,
         )
     }
 
-    pub fn calculate_prices(
-        &mut self,
-        underlying_price: PositiveF64,
-        expiration_date: ExpirationDate,
-        implied_volatility: Option<PositiveF64>,
-        mut risk_free_rate: Option<f64>,
-        mut dividend_yield: Option<f64>,
-    ) -> Result<(), String> {
-        if risk_free_rate.is_none() {
-            risk_free_rate = Some(0.0);
-        }
-        if dividend_yield.is_none() {
-            dividend_yield = Some(0.0);
-        }
-
-        let implied_volatility = match (implied_volatility, self.implied_volatility) {
-            (Some(iv), None) => Some(iv),
-            (None, Some(iv)) => Some(iv),
-            (Some(a), Some(_)) => Some(a),
-            _ => {
-                return Err("Implied volatility is missing".to_string());
-            }
-        };
-
-        let mut option: Options = self.get_option(
-            underlying_price,
-            expiration_date,
-            implied_volatility.unwrap(),
-            risk_free_rate,
-            dividend_yield,
-        );
+    pub fn calculate_prices(&mut self, price_params: &OptionDataPriceParams) -> Result<(), String> {
+        let mut option: Options = self.get_option(price_params);
         self.call_ask = spos!(black_scholes(&option).abs());
         option.side = Side::Short;
         self.call_bid = spos!(black_scholes(&option).abs());
@@ -203,21 +177,8 @@ impl OptionData {
         }
     }
 
-    pub fn calculate_delta(
-        &mut self,
-        underlying_price: PositiveF64,
-        expiration_date: ExpirationDate,
-        implied_volatility: PositiveF64,
-        risk_free_rate: Option<f64>,
-        dividend_yield: Option<f64>,
-    ) {
-        let option: Options = self.get_option(
-            underlying_price,
-            expiration_date,
-            implied_volatility,
-            risk_free_rate,
-            dividend_yield,
-        );
+    pub fn calculate_delta(&mut self, price_params: &OptionDataPriceParams) {
+        let option: Options = self.get_option(price_params);
         self.delta = Some(delta(&option));
     }
 }
@@ -312,8 +273,8 @@ impl OptionChain {
         chain_size: usize,
         strike_interval: PositiveF64,
         skew_factor: f64,
-        risk_free_rate: Option<f64>,
-        dividend_yield: Option<f64>,
+        risk_free_rate: f64,
+        dividend_yield: f64,
         spread: PositiveF64,
         decimal_places: i32,
     ) -> Self {
@@ -339,23 +300,19 @@ impl OptionChain {
                 volume,
                 None,
             );
-            option_data
-                .calculate_prices(
-                    underlying_price,
-                    expire.clone(),
-                    None,
-                    risk_free_rate,
-                    dividend_yield,
-                )
-                .expect("Error calculating prices");
-            option_data.apply_spread(spread, decimal_places);
-            option_data.calculate_delta(
+
+            let price_params = OptionDataPriceParams::new(
                 underlying_price,
                 expire.clone(),
-                adjusted_volatility.unwrap(),
+                adjusted_volatility,
                 risk_free_rate,
                 dividend_yield,
             );
+            option_data
+                .calculate_prices(&price_params)
+                .expect("Error calculating prices");
+            option_data.apply_spread(spread, decimal_places);
+            option_data.calculate_delta(&price_params);
             option_chain.options.insert(option_data);
         }
 
@@ -580,8 +537,8 @@ mod tests_chain_base {
             10,
             pos!(1.0),
             0.0,
-            Some(0.05),
-            Some(0.0),
+            0.05,
+            0.0,
             pos!(0.02),
             2,
         );
@@ -614,8 +571,8 @@ mod tests_chain_base {
             25,
             pos!(20.0),
             0.0000005,
-            Some(0.05),
-            Some(0.0),
+            0.05,
+            0.0,
             pos!(0.02),
             2,
         );
@@ -821,6 +778,7 @@ mod tests_chain_base {
 #[cfg(test)]
 mod tests_option_data {
     use super::*;
+    use crate::constants::ZERO;
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::spos;
@@ -944,14 +902,15 @@ mod tests_option_data {
             None,
             None,
         );
-
-        let result = option_data.calculate_prices(
-            pos!(100.0),                // underlying_price
-            ExpirationDate::Days(30.0), // expiration_date
-            None,                       // implied_volatility
-            None,                       // risk_free_rate
-            None,                       // dividend_yield
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.2),
+            ZERO,
+            ZERO,
         );
+
+        let result = option_data.calculate_prices(&price_params);
 
         assert!(result.is_ok());
         assert!(option_data.call_ask.is_some());
@@ -961,15 +920,14 @@ mod tests_option_data {
     }
 
     #[test]
+    #[should_panic]
     fn test_calculate_prices_missing_volatility() {
         let mut option_data =
             OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None);
 
-        let result =
-            option_data.calculate_prices(pos!(100.0), ExpirationDate::Days(30.0), None, None, None);
-
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Implied volatility is missing");
+        let price_params =
+            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, ZERO, ZERO);
+        let _ = option_data.calculate_prices(&price_params);
     }
 
     #[test]
@@ -987,27 +945,27 @@ mod tests_option_data {
             None,
         );
 
-        let result = option_data.calculate_prices(
+        let price_params = OptionDataPriceParams::new(
             pos!(110.0),
             ExpirationDate::Days(30.0),
-            spos!(0.3),
-            None,
-            None,
+            spos!(0.12),
+            0.05,
+            0.01,
         );
+        let result = option_data.calculate_prices(&price_params);
 
         assert!(result.is_ok());
-
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.60868934159474));
-        assert_eq!(option_data.call_bid, spos!(10.60868934159474));
-        assert_eq!(option_data.put_ask, spos!(0.608689341594749));
-        assert_eq!(option_data.put_bid, spos!(0.608689341594749));
+        assert_eq!(option_data.call_ask, spos!(10.412135042233558));
+        assert_eq!(option_data.call_bid, spos!(10.412135042233558));
+        assert_eq!(option_data.put_ask, spos!(0.002019418653974231));
+        assert_eq!(option_data.put_bid, spos!(0.002019418653974231));
         option_data.apply_spread(pos!(0.02), 2);
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.62));
-        assert_eq!(option_data.call_bid, spos!(10.6));
-        assert_eq!(option_data.put_ask, spos!(0.62));
-        assert_eq!(option_data.put_bid, spos!(0.6));
+        assert_eq!(option_data.call_ask, spos!(10.42));
+        assert_eq!(option_data.call_bid, spos!(10.4));
+        assert_eq!(option_data.put_ask, None);
+        assert_eq!(option_data.put_bid, None);
     }
 
     #[test]
@@ -1023,14 +981,15 @@ mod tests_option_data {
             None,
             None,
         );
-
-        let result = option_data.calculate_prices(
+        let price_params = OptionDataPriceParams::new(
             pos!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
-            Some(0.05),
-            Some(0.01),
+            0.05,
+            0.01,
         );
+
+        let result = option_data.calculate_prices(&price_params);
 
         assert!(result.is_ok());
         assert!(option_data.call_ask.is_some());
