@@ -3,8 +3,47 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
-use crate::model::types::PositiveF64;
+use crate::constants::ZERO;
+use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use std::collections::BTreeSet;
+
+pub(crate) struct OptionDataPriceParams {
+    pub(crate) underlying_price: PositiveF64,
+    pub(crate) expiration_date: ExpirationDate,
+    pub(crate) implied_volatility: Option<PositiveF64>,
+    pub(crate) risk_free_rate: f64,
+    pub(crate) dividend_yield: f64,
+}
+
+impl OptionDataPriceParams {
+    pub(crate) fn new(
+        underlying_price: PositiveF64,
+        expiration_date: ExpirationDate,
+        implied_volatility: Option<PositiveF64>,
+        risk_free_rate: f64,
+        dividend_yield: f64,
+    ) -> Self {
+        Self {
+            underlying_price,
+            expiration_date,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+        }
+    }
+}
+
+impl Default for OptionDataPriceParams {
+    fn default() -> Self {
+        Self {
+            underlying_price: PZERO,
+            expiration_date: ExpirationDate::Days(0.0),
+            implied_volatility: None,
+            risk_free_rate: ZERO,
+            dividend_yield: ZERO,
+        }
+    }
+}
 
 #[allow(dead_code)]
 pub(crate) fn generate_list_of_strikes(
