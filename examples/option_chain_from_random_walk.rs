@@ -1,8 +1,11 @@
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
-   Date: 22/10/24
+   Date: 27/10/24
 ******************************************************************************/
+
+use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::chains::utils::OptionChainBuildParams;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::pos;
 use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
@@ -32,10 +35,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         initial_volatility,
     );
     random_walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
-    let _ = random_walk.graph(&[], "Draws/Simulation/random_walk.png", 20, (1200, 800));
+    let _ = random_walk.graph(
+        &[],
+        "Draws/Simulation/option_chain_from_random_walk.png",
+        20,
+        (1200, 800),
+    );
 
     for (i, price_params) in random_walk.enumerate() {
-        info!("Step {}: Params: {}", i, price_params,);
+        let option_chain_build_params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            pos!(5.0),
+            0.0,
+            pos!(0.02),
+            2,
+            price_params,
+        );
+        let chain = OptionChain::build_chain(&option_chain_build_params);
+
+        info!("Step {}: Chain: {}", i, chain,);
     }
     Ok(())
 }
