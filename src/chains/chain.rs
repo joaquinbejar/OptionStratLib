@@ -4,11 +4,12 @@
    Date: 26/9/24
 ******************************************************************************/
 use crate::chains::utils::{
-    adjust_volatility, default_empty_string, generate_list_of_strikes, parse, OptionDataPriceParams,
+    adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
+    OptionChainBuildParams, OptionDataPriceParams,
 };
 use crate::greeks::equations::delta;
 use crate::model::option::Options;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::types::{OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::{pos, spos};
 use csv::WriterBuilder;
@@ -263,32 +264,26 @@ impl OptionChain {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn build_chain(
-        symbol: &str,
-        underlying_price: PositiveF64,
-        volatility: PositiveF64,
-        volume: Option<PositiveF64>,
-        expire: ExpirationDate,
-        chain_size: usize,
-        strike_interval: PositiveF64,
-        skew_factor: f64,
-        risk_free_rate: f64,
-        dividend_yield: f64,
-        spread: PositiveF64,
-        decimal_places: i32,
-    ) -> Self {
-        let mut option_chain = OptionChain {
-            symbol: symbol.to_string(),
-            underlying_price,
-            expiration_date: expire.get_date().to_string(),
-            options: BTreeSet::new(),
-        };
-        let strikes = generate_list_of_strikes(underlying_price, chain_size, strike_interval);
+    pub fn build_chain(params: &OptionChainBuildParams) -> Self {
+        let mut option_chain = OptionChain::new(
+            &params.symbol,
+            params.price_params.underlying_price,
+            params.price_params.expiration_date.get_date().to_string(),
+        );
+
+        let strikes = generate_list_of_strikes(
+            params.price_params.underlying_price,
+            params.chain_size,
+            params.strike_interval,
+        );
+
         for strike in strikes {
-            let atm_distance = strike.value() - underlying_price.value();
-            let adjusted_volatility =
-                spos!(adjust_volatility(volatility, skew_factor, atm_distance));
+            let atm_distance = strike.value() - params.price_params.underlying_price.value();
+            let adjusted_volatility = spos!(adjust_volatility(
+                params.price_params.implied_volatility.unwrap(),
+                params.skew_factor,
+                atm_distance
+            ));
             let mut option_data = OptionData::new(
                 strike,
                 None,
@@ -297,21 +292,21 @@ impl OptionChain {
                 None,
                 adjusted_volatility,
                 None,
-                volume,
+                params.volume,
                 None,
             );
 
             let price_params = OptionDataPriceParams::new(
-                underlying_price,
-                expire.clone(),
+                params.price_params.underlying_price,
+                params.price_params.expiration_date.clone(),
                 adjusted_volatility,
-                risk_free_rate,
-                dividend_yield,
+                params.price_params.risk_free_rate,
+                params.price_params.dividend_yield,
             );
             option_data
                 .calculate_prices(&price_params)
                 .expect("Error calculating prices");
-            option_data.apply_spread(spread, decimal_places);
+            option_data.apply_spread(params.spread, params.decimal_places);
             option_data.calculate_delta(&price_params);
             option_chain.options.insert(option_data);
         }
@@ -511,6 +506,7 @@ impl Display for OptionChain {
 #[cfg(test)]
 mod tests_chain_base {
     use super::*;
+    use crate::model::types::ExpirationDate;
     use crate::spos;
     use crate::utils::logger::setup_logger;
     use std::fs;
@@ -528,69 +524,76 @@ mod tests_chain_base {
     #[test]
     fn test_new_option_chain_build_chain() {
         setup_logger();
-        let chain = OptionChain::build_chain(
-            "SP500",
-            pos!(100.0),
-            pos!(0.12),
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
             None,
-            ExpirationDate::Days(30.0),
             10,
             pos!(1.0),
             0.0,
-            0.05,
-            0.0,
             pos!(0.02),
             2,
+            OptionDataPriceParams::new(
+                pos!(100.0),
+                ExpirationDate::Days(30.0),
+                spos!(0.17),
+                0.0,
+                0.05,
+            ),
         );
+
+        let chain = OptionChain::build_chain(&params);
 
         assert_eq!(chain.symbol, "SP500");
         info!("{}", chain);
         assert_eq!(chain.options.len(), 21);
         assert_eq!(chain.underlying_price, pos!(100.0));
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 10.38);
-        assert_eq!(first.call_bid.unwrap(), 10.36);
-        assert_eq!(first.put_ask, None);
-        assert_eq!(first.put_bid, None);
+        assert_eq!(first.call_ask.unwrap(), 10.04);
+        assert_eq!(first.call_bid.unwrap(), 10.02);
+        assert_eq!(first.put_ask, spos!(0.04));
+        assert_eq!(first.put_bid, spos!(0.02));
         let last = chain.options.iter().next_back().unwrap();
-        assert_eq!(last.call_ask, None);
-        assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(9.56));
-        assert_eq!(last.put_bid, spos!(9.54));
+        assert_eq!(last.call_ask, spos!(0.06));
+        assert_eq!(last.call_bid, spos!(0.04));
+        assert_eq!(last.put_ask, spos!(10.06));
+        assert_eq!(last.put_bid, spos!(10.04));
     }
 
     #[test]
     fn test_new_option_chain_build_chain_long() {
         setup_logger();
-        let chain = OptionChain::build_chain(
-            "SP500",
-            pos!(5878.10),
-            pos!(0.06),
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
             None,
-            ExpirationDate::Days(60.0),
             25,
-            pos!(20.0),
-            0.0000005,
-            0.05,
-            0.0,
+            pos!(25.0),
+            0.000002,
             pos!(0.02),
             2,
+            OptionDataPriceParams::new(
+                pos!(5878.10),
+                ExpirationDate::Days(60.0),
+                spos!(0.03),
+                0.0,
+                0.05,
+            ),
         );
+        let chain = OptionChain::build_chain(&params);
 
         assert_eq!(chain.symbol, "SP500");
         info!("{}", chain);
         assert_eq!(chain.options.len(), 51);
         assert_eq!(chain.underlying_price, pos!(5878.10));
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 544.04);
-        assert_eq!(first.call_bid.unwrap(), 544.02);
+        assert_eq!(first.call_ask.unwrap(), 625.01);
+        assert_eq!(first.call_bid.unwrap(), 624.99);
         assert_eq!(first.put_ask, None);
         assert_eq!(first.put_bid, None);
         let last = chain.options.iter().next_back().unwrap();
-        assert_eq!(last.call_ask, spos!(0.2));
-        assert_eq!(last.call_bid, spos!(0.18));
-        assert_eq!(last.put_ask, spos!(447.99));
-        assert_eq!(last.put_bid, spos!(447.97));
+        assert_eq!(last.call_ask, None);
+        assert_eq!(last.call_bid, None);
+        assert_eq!(last.put_ask, spos!(625.01));
+        assert_eq!(last.put_bid, spos!(624.99));
     }
 
     #[test]
