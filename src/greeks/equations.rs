@@ -7,7 +7,7 @@ use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::option::Options;
 use crate::model::types::OptionStyle;
-use tracing::info;
+use tracing::trace;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -91,7 +91,7 @@ pub fn delta(option: &Options) -> f64 {
 
     match option.option_style {
         OptionStyle::Call => {
-            info!("{}", d1);
+            trace!("{}", d1);
             sign * big_n(d1) * (-option.dividend_yield * option.time_to_expiration()).exp()
         }
         OptionStyle::Put => {
@@ -429,6 +429,7 @@ mod tests_delta_equations {
     use crate::pos;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
+    use tracing::info;
 
     #[test]
     fn test_delta_no_volatility_itm() {
@@ -646,6 +647,7 @@ mod tests_gamma_equations {
     use crate::pos;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
+    use tracing::info;
 
     #[test]
     fn test_gamma_deep_in_the_money_call() {
