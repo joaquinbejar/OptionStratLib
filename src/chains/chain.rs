@@ -6,6 +6,7 @@
 use crate::chains::utils::{
     adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
 };
+use crate::greeks::equations::delta;
 use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pricing::black_scholes_model::black_scholes;
@@ -94,6 +95,30 @@ impl OptionData {
             && self.put_ask.is_some()
     }
 
+    fn get_option(
+        &self,
+        underlying_price: PositiveF64,
+        expiration_date: ExpirationDate,
+        implied_volatility: PositiveF64,
+        risk_free_rate: Option<f64>,
+        dividend_yield: Option<f64>,
+    ) -> Options {
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "OptionData".to_string(),
+            self.strike_price,
+            expiration_date,
+            implied_volatility.value(),
+            pos!(1.0),
+            underlying_price,
+            risk_free_rate.unwrap(),
+            OptionStyle::Call,
+            dividend_yield.unwrap(),
+            None,
+        )
+    }
+
     pub fn calculate_prices(
         &mut self,
         underlying_price: PositiveF64,
@@ -118,19 +143,12 @@ impl OptionData {
             }
         };
 
-        let mut option: Options = Options::new(
-            OptionType::European,
-            Side::Long,
-            "OptionData".to_string(),
-            self.strike_price,
-            expiration_date,
-            implied_volatility.unwrap().value(),
-            pos!(1.0),
+        let mut option: Options = self.get_option(
             underlying_price,
-            risk_free_rate.unwrap(),
-            OptionStyle::Call,
-            dividend_yield.unwrap(),
-            None,
+            expiration_date,
+            implied_volatility.unwrap(),
+            risk_free_rate,
+            dividend_yield,
         );
         self.call_ask = spos!(black_scholes(&option).abs());
         option.side = Side::Short;
@@ -150,35 +168,57 @@ impl OptionData {
             shift: f64,
         ) -> Option<PositiveF64> {
             let multiplier = 10_f64.powi(decimal_places);
-            spos!(((number.value() * multiplier).round() / multiplier) + shift)
+            spos!(((number.value() + shift) * multiplier).round() / multiplier)
         }
 
         let half_spread = spread / 2.0;
 
         if let Some(call_ask) = self.call_ask {
             if call_ask < half_spread {
-                panic!("Call bid is less than half the spread");
+                self.call_ask = None;
+            } else {
+                self.call_ask = round_to_decimal(call_ask, decimal_places, half_spread.value());
             }
-            self.call_ask = round_to_decimal(call_ask, decimal_places, half_spread.value());
         }
         if let Some(call_bid) = self.call_bid {
             if call_bid < half_spread {
-                panic!("Call ask is less than half the spread");
+                self.call_bid = None;
+            } else {
+                self.call_bid = round_to_decimal(call_bid, decimal_places, -half_spread.value());
             }
-            self.call_bid = round_to_decimal(call_bid, decimal_places, -half_spread.value());
         }
         if let Some(put_ask) = self.put_ask {
             if put_ask < half_spread {
-                panic!("Put bid is less than half the spread");
+                self.put_ask = None;
+            } else {
+                self.put_ask = round_to_decimal(put_ask, decimal_places, half_spread.value());
             }
-            self.put_ask = round_to_decimal(put_ask, decimal_places, half_spread.value());
         }
         if let Some(put_bid) = self.put_bid {
             if put_bid < half_spread {
-                panic!("Put ask is less than half the spread");
+                self.put_bid = None;
+            } else {
+                self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread.value());
             }
-            self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread.value());
         }
+    }
+
+    pub fn calculate_delta(
+        &mut self,
+        underlying_price: PositiveF64,
+        expiration_date: ExpirationDate,
+        implied_volatility: PositiveF64,
+        risk_free_rate: Option<f64>,
+        dividend_yield: Option<f64>,
+    ) {
+        let option: Options = self.get_option(
+            underlying_price,
+            expiration_date,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+        );
+        self.delta = Some(delta(&option));
     }
 }
 
@@ -227,14 +267,16 @@ impl Display for OptionData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<13} {:<10} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<8} {:<10} {:<10}",
             self.strike_price.to_string(),
             default_empty_string(self.call_bid),
             default_empty_string(self.call_ask),
             default_empty_string(self.put_bid),
             default_empty_string(self.put_ask),
-            default_empty_string(self.implied_volatility),
-            default_empty_string(self.delta),
+            self.implied_volatility.unwrap_or(pos!(0.0)),
+            " ".to_string(),
+            self.delta.unwrap_or(0.0),
+            " ".to_string(),
             default_empty_string(self.volume),
             default_empty_string(self.open_interest),
         )?;
@@ -272,6 +314,8 @@ impl OptionChain {
         skew_factor: f64,
         risk_free_rate: Option<f64>,
         dividend_yield: Option<f64>,
+        spread: PositiveF64,
+        decimal_places: i32,
     ) -> Self {
         let mut option_chain = OptionChain {
             symbol: symbol.to_string(),
@@ -304,6 +348,14 @@ impl OptionChain {
                     dividend_yield,
                 )
                 .expect("Error calculating prices");
+            option_data.apply_spread(spread, decimal_places);
+            option_data.calculate_delta(
+                underlying_price,
+                expire.clone(),
+                adjusted_volatility.unwrap(),
+                risk_free_rate,
+                dividend_yield,
+            );
             option_chain.options.insert(option_data);
         }
 
@@ -505,6 +557,7 @@ mod tests_chain_base {
     use crate::spos;
     use crate::utils::logger::setup_logger;
     use std::fs;
+    use tracing::info;
 
     #[test]
     fn test_new_option_chain() {
@@ -513,6 +566,74 @@ mod tests_chain_base {
         assert_eq!(chain.underlying_price, 5781.88);
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert!(chain.options.is_empty());
+    }
+
+    #[test]
+    fn test_new_option_chain_build_chain() {
+        setup_logger();
+        let chain = OptionChain::build_chain(
+            "SP500",
+            pos!(100.0),
+            pos!(0.12),
+            None,
+            ExpirationDate::Days(30.0),
+            10,
+            pos!(1.0),
+            0.0,
+            Some(0.05),
+            Some(0.0),
+            pos!(0.02),
+            2,
+        );
+
+        assert_eq!(chain.symbol, "SP500");
+        info!("{}", chain);
+        assert_eq!(chain.options.len(), 21);
+        assert_eq!(chain.underlying_price, pos!(100.0));
+        let first = chain.options.iter().next().unwrap();
+        assert_eq!(first.call_ask.unwrap(), 10.38);
+        assert_eq!(first.call_bid.unwrap(), 10.36);
+        assert_eq!(first.put_ask, None);
+        assert_eq!(first.put_bid, None);
+        let last = chain.options.iter().next_back().unwrap();
+        assert_eq!(last.call_ask, None);
+        assert_eq!(last.call_bid, None);
+        assert_eq!(last.put_ask, spos!(9.56));
+        assert_eq!(last.put_bid, spos!(9.54));
+    }
+
+    #[test]
+    fn test_new_option_chain_build_chain_long() {
+        setup_logger();
+        let chain = OptionChain::build_chain(
+            "SP500",
+            pos!(5878.10),
+            pos!(0.06),
+            None,
+            ExpirationDate::Days(60.0),
+            25,
+            pos!(20.0),
+            0.0000005,
+            Some(0.05),
+            Some(0.0),
+            pos!(0.02),
+            2,
+        );
+
+        assert_eq!(chain.symbol, "SP500");
+        info!("{}", chain);
+        assert_eq!(chain.options.len(), 51);
+        assert_eq!(chain.underlying_price, pos!(5878.10));
+        let first = chain.options.iter().next().unwrap();
+        assert_eq!(first.call_ask.unwrap(), 544.04);
+        assert_eq!(first.call_bid.unwrap(), 544.02);
+        assert_eq!(first.put_ask, None);
+        assert_eq!(first.put_bid, None);
+        let last = chain.options.iter().next_back().unwrap();
+        assert_eq!(last.call_ask, spos!(0.2));
+        assert_eq!(last.call_bid, spos!(0.18));
+        assert_eq!(last.put_ask, spos!(447.99));
+        assert_eq!(last.put_bid, spos!(447.97));
     }
 
     #[test]
