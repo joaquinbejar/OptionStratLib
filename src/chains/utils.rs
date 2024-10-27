@@ -6,8 +6,9 @@
 use crate::constants::ZERO;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use std::collections::BTreeSet;
+use std::fmt::Display;
 
-pub(crate) struct OptionDataPriceParams {
+pub struct OptionDataPriceParams {
     pub(crate) underlying_price: PositiveF64,
     pub(crate) expiration_date: ExpirationDate,
     pub(crate) implied_volatility: Option<PositiveF64>,
@@ -42,6 +43,20 @@ impl Default for OptionDataPriceParams {
             risk_free_rate: ZERO,
             dividend_yield: ZERO,
         }
+    }
+}
+
+impl Display for OptionDataPriceParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Underlying Price: {:.3}, Expiration: {:.4} Years, Implied Volatility: {:.3}, Risk-Free Rate: {:.2}, Dividend Yield: {:.2}",
+            self.underlying_price,
+            self.expiration_date.get_years(),
+            self.implied_volatility.unwrap_or(PZERO).value(),
+            self.risk_free_rate,
+            self.dividend_yield
+        )
     }
 }
 
