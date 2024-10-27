@@ -8,6 +8,42 @@ use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use std::collections::BTreeSet;
 use std::fmt::Display;
 
+pub struct OptionChainBuildParams {
+    pub(crate) symbol: String,
+    pub(crate) volume: Option<PositiveF64>,
+    pub(crate) chain_size: usize,
+    pub(crate) strike_interval: PositiveF64,
+    pub(crate) skew_factor: f64,
+    pub(crate) spread: PositiveF64,
+    pub(crate) decimal_places: i32,
+    pub(crate) price_params: OptionDataPriceParams,
+}
+
+#[allow(clippy::too_many_arguments)]
+impl OptionChainBuildParams {
+    pub fn new(
+        symbol: String,
+        volume: Option<PositiveF64>,
+        chain_size: usize,
+        strike_interval: PositiveF64,
+        skew_factor: f64,
+        spread: PositiveF64,
+        decimal_places: i32,
+        price_params: OptionDataPriceParams,
+    ) -> Self {
+        Self {
+            symbol,
+            volume,
+            chain_size,
+            strike_interval,
+            skew_factor,
+            spread,
+            decimal_places,
+            price_params,
+        }
+    }
+}
+
 pub struct OptionDataPriceParams {
     pub(crate) underlying_price: PositiveF64,
     pub(crate) expiration_date: ExpirationDate,
@@ -17,7 +53,7 @@ pub struct OptionDataPriceParams {
 }
 
 impl OptionDataPriceParams {
-    pub(crate) fn new(
+    pub fn new(
         underlying_price: PositiveF64,
         expiration_date: ExpirationDate,
         implied_volatility: Option<PositiveF64>,
