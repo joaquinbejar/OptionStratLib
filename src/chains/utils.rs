@@ -5,9 +5,9 @@
 ******************************************************************************/
 use crate::constants::ZERO;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
+use crate::pos;
 use std::collections::BTreeSet;
 use std::fmt::Display;
-use crate::pos;
 
 pub struct OptionChainBuildParams {
     pub(crate) symbol: String,
@@ -151,15 +151,16 @@ pub(crate) fn default_empty_string<T: ToString>(input: Option<T>) -> String {
     input.map_or_else(|| "".to_string(), |v| v.to_string())
 }
 
-
 pub(crate) fn rounder(reference_price: PositiveF64, strike_interval: PositiveF64) -> PositiveF64 {
+    if strike_interval == PZERO {
+        return reference_price;
+    }
     let price = reference_price.value();
     let interval = strike_interval.value();
 
     let remainder = price % interval;
     let base = price - remainder;
 
-    // Si el remainder es mayor que la mitad del intervalo, redondea hacia arriba
     let rounded = if remainder >= interval / 2.0 {
         base + interval
     } else {
