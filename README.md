@@ -164,13 +164,53 @@ classDiagram
     class Options {
         +option_type: OptionType
         +side: Side
+        +underlying_symbol: String
         +strike_price: PositiveF64
         +expiration_date: ExpirationDate
         +implied_volatility: f64
+        +quantity: PositiveF64
+        +underlying_price: PositiveF64
+        +risk_free_rate: f64
+        +option_style: OptionStyle
+        +dividend_yield: f64
+        +exotic_params: Option~ExoticParams~
         +calculate_price_black_scholes()
         +calculate_price_binomial()
-        +calculate_delta()
-        +payoff()
+        +time_to_expiration()
+        +is_long()
+        +is_short()
+        +validate()
+    }
+
+    class OptionType {
+        <<enumeration>>
+        European
+        American
+        Bermuda
+        Asian
+        Barrier
+        Binary
+        Lookback
+        Compound
+        Chooser
+        Cliquet
+        Rainbow
+        Spread
+        Quanto
+        Exchange
+        Power
+    }
+
+    class Side {
+        <<enumeration>>
+        Long
+        Short
+    }
+
+    class OptionStyle {
+        <<enumeration>>
+        Call
+        Put
     }
 
     class Position {
@@ -182,76 +222,86 @@ classDiagram
         +total_cost()
         +unrealized_pnl()
         +days_held()
+        +days_to_expiration()
+        +is_long()
+        +is_short()
+        +break_even()
     }
 
-    class OptionChain {
-        +symbol: String
-        +underlying_price: PositiveF64
-        +options: BTreeSet<OptionData>
-        +build_chain()
-        +add_option()
-        +save_to_csv()
-        +load_from_csv()
-    }
-
-    class Strategy {
-        <<Interface>>
+    class Strategies {
+        <<interface>>
         +add_leg()
         +get_legs()
         +break_even()
         +max_profit()
         +max_loss()
         +total_cost()
+        +net_premium_received()
+        +fees()
     }
 
     class BullCallSpread {
         +long_call: Position
         +short_call: Position
-        +break_even_points: Vec<f64>
-        +calculate_profit_at()
+        +break_even()
+        +max_profit()
+        +max_loss()
     }
 
     class CallButterfly {
         +long_call_itm: Position
-        +long_call_otm: Position  
         +short_call: Position
-        +break_even_points: Vec<f64>
-    }
-
-    class Graph {
-        <<Interface>>
-        +title()
-        +get_values()
-        +get_vertical_lines()
-        +get_points()
-    }
-
-    class Profit {
-        <<Interface>>
-        +calculate_profit_at()
+        +long_call_otm: Position
+        +break_even()
+        +max_profit()
+        +max_loss()
     }
 
     class Greeks {
-        <<Interface>>
+        <<interface>>
         +delta()
         +gamma()
         +theta()
         +vega()
+        +rho()
+        +rho_d()
     }
 
-    Position o-- Options
-    Strategy <|.. BullCallSpread
-    Strategy <|.. CallButterfly
-    Graph <|.. Options
-    Graph <|.. Position 
-    Graph <|.. Strategy
-    Profit <|.. Options
-    Profit <|.. Position
-    Profit <|.. Strategy
-    Greeks <|.. Options
-    OptionChain o-- Options
-    BullCallSpread o-- Position
-    CallButterfly o-- Position
+    class Profit {
+        <<interface>>
+        +calculate_profit_at()
+    }
+
+    class Graph {
+        <<interface>>
+        +graph()
+        +title()
+        +get_values()
+    }
+
+    class PnLCalculator {
+        <<interface>>
+        +calculate_pnl()
+        +calculate_pnl_at_expiration()
+    }
+
+    Options --|> Greeks
+    Options --|> Profit
+    Options --|> Graph
+    Position *-- Options
+    Position --|> Greeks
+    Position --|> Profit
+    Position --|> Graph
+    Position --|> PnLCalculator
+    BullCallSpread --|> Strategies
+    BullCallSpread --|> Profit
+    BullCallSpread --|> Graph
+    CallButterfly --|> Strategies
+    CallButterfly --|> Profit
+    CallButterfly --|> Graph
+    Options o-- OptionType
+    Options o-- Side
+    Options o-- OptionStyle
 ```
 
 ### Strategy Structure
