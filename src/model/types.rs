@@ -56,11 +56,21 @@ impl PositiveF64 {
             other
         }
     }
+
+    pub fn floor(&self) -> PositiveF64 {
+        PositiveF64(self.0.floor())
+    }
 }
 
 impl From<PositiveF64> for f64 {
     fn from(pos_f64: PositiveF64) -> Self {
         pos_f64.0
+    }
+}
+
+impl From<PositiveF64> for u64 {
+    fn from(pos_u64: PositiveF64) -> Self {
+        pos_u64.0 as u64
     }
 }
 
@@ -331,6 +341,12 @@ impl ExpirationDate {
             ExpirationDate::DateTime(datetime) => *datetime,
         }
     }
+
+    pub(crate) fn get_date_string(&self) -> String {
+        let date = self.get_date();
+        date.format("%Y-%m-%d").to_string()
+    }
+
 }
 
 impl Default for ExpirationDate {
