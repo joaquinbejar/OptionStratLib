@@ -346,7 +346,6 @@ impl ExpirationDate {
         let date = self.get_date();
         date.format("%Y-%m-%d").to_string()
     }
-
 }
 
 impl Default for ExpirationDate {
