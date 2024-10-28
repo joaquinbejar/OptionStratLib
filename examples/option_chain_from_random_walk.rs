@@ -26,6 +26,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dividend_yield = Some(0.02);
     let volatility_window = 20;
     let initial_volatility = Some(std_dev);
+
+    let chain_symbol = "SP500".to_string();
+    let chain_volume = None;
+    let chain_size = 10;
+    let chain_strike_interval = pos!(5.0);
+    let chain_skew_factor = 0.0001;
+    let chain_spread = pos!(0.02);
+    let chain_decimal_places = 2;
+
     let mut random_walk = RandomWalkGraph::new(
         "Random Walk".to_string(),
         risk_free_rate,
@@ -44,13 +53,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (i, price_params) in random_walk.enumerate() {
         let option_chain_build_params = OptionChainBuildParams::new(
-            "SP500".to_string(),
-            None,
-            10,
-            pos!(5.0),
-            0.0,
-            pos!(0.02),
-            2,
+            chain_symbol.clone(),
+            chain_volume,
+            chain_size,
+            chain_strike_interval,
+            chain_skew_factor,
+            chain_spread,
+            chain_decimal_places,
             price_params,
         );
         let chain = OptionChain::build_chain(&option_chain_build_params);
