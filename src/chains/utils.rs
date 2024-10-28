@@ -7,6 +7,7 @@ use crate::constants::ZERO;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use std::collections::BTreeSet;
 use std::fmt::Display;
+use crate::pos;
 
 pub struct OptionChainBuildParams {
     pub(crate) symbol: String,
@@ -103,13 +104,14 @@ pub(crate) fn generate_list_of_strikes(
     strike_interval: PositiveF64,
 ) -> BTreeSet<PositiveF64> {
     let mut strikes = BTreeSet::new();
+    let reference_price_rounded = rounder(reference_price, strike_interval);
 
     for i in 0..=chain_size {
-        let lower_strike = reference_price - (i as f64 * strike_interval);
-        let upper_strike = reference_price + (i as f64 * strike_interval);
+        let lower_strike = (reference_price_rounded - (i as f64 * strike_interval)).floor();
+        let upper_strike = (reference_price_rounded + (i as f64 * strike_interval)).floor();
 
         if i == 0 {
-            strikes.insert(reference_price);
+            strikes.insert(reference_price_rounded);
         } else {
             strikes.insert(lower_strike);
             strikes.insert(upper_strike);
@@ -119,14 +121,16 @@ pub(crate) fn generate_list_of_strikes(
 }
 
 pub(crate) fn adjust_volatility(
-    volatility: PositiveF64,
+    volatility: Option<PositiveF64>,
     skew_factor: f64,
     atm_distance: f64,
-) -> f64 {
+) -> Option<PositiveF64> {
+    volatility?;
     let skew = skew_factor * atm_distance.abs();
     let smile = skew_factor * atm_distance.powi(2);
 
-    volatility.value() * (1.0 + skew + smile)
+    let volatility_skew = volatility.unwrap() * (1.0 + skew + smile);
+    Some(volatility_skew)
 }
 
 pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
@@ -145,6 +149,51 @@ pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
 
 pub(crate) fn default_empty_string<T: ToString>(input: Option<T>) -> String {
     input.map_or_else(|| "".to_string(), |v| v.to_string())
+}
+
+
+pub(crate) fn rounder(reference_price: PositiveF64, strike_interval: PositiveF64) -> PositiveF64 {
+    let price = reference_price.value();
+    let interval = strike_interval.value();
+
+    let remainder = price % interval;
+    let base = price - remainder;
+
+    // Si el remainder es mayor que la mitad del intervalo, redondea hacia arriba
+    let rounded = if remainder >= interval / 2.0 {
+        base + interval
+    } else {
+        base
+    };
+
+    pos!(rounded)
+}
+
+#[cfg(test)]
+mod tests_rounder {
+    use super::*;
+    use crate::pos;
+
+    #[test]
+    fn test_rounder() {
+        // Pruebas con intervalo de 5
+        assert_eq!(rounder(pos!(151.0), pos!(5.0)), pos!(150.0));
+        assert_eq!(rounder(pos!(154.0), pos!(5.0)), pos!(155.0));
+        assert_eq!(rounder(pos!(152.5), pos!(5.0)), pos!(155.0));
+        assert_eq!(rounder(pos!(152.4), pos!(5.0)), pos!(150.0));
+
+        // Pruebas con intervalo de 10
+        assert_eq!(rounder(pos!(151.0), pos!(10.0)), pos!(150.0));
+        assert_eq!(rounder(pos!(156.0), pos!(10.0)), pos!(160.0));
+        assert_eq!(rounder(pos!(155.0), pos!(10.0)), pos!(160.0));
+        assert_eq!(rounder(pos!(154.9), pos!(10.0)), pos!(150.0));
+
+        // Pruebas con intervalo de 15
+        assert_eq!(rounder(pos!(17.0), pos!(15.0)), pos!(15.0));
+        assert_eq!(rounder(pos!(43.0), pos!(15.0)), pos!(45.0));
+        assert_eq!(rounder(pos!(37.5), pos!(15.0)), pos!(45.0));
+        assert_eq!(rounder(pos!(37.4), pos!(15.0)), pos!(30.0));
+    }
 }
 
 #[cfg(test)]
