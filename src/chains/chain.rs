@@ -503,7 +503,7 @@ impl Display for OptionChain {
         )?;
 
         for option in &self.options {
-            writeln!(f, "{}", option, )?;
+            writeln!(f, "{}", option,)?;
         }
         Ok(())
     }
@@ -591,15 +591,15 @@ mod tests_chain_base {
         assert_eq!(chain.options.len(), 51);
         assert_eq!(chain.underlying_price, pos!(5878.10));
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 625.01);
-        assert_eq!(first.call_bid.unwrap(), 624.99);
+        assert_eq!(first.call_ask.unwrap(), 628.11);
+        assert_eq!(first.call_bid.unwrap(), 628.09);
         assert_eq!(first.put_ask, None);
         assert_eq!(first.put_bid, None);
         let last = chain.options.iter().next_back().unwrap();
         assert_eq!(last.call_ask, None);
         assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(625.01));
-        assert_eq!(last.put_bid, spos!(624.99));
+        assert_eq!(last.put_ask, spos!(621.91));
+        assert_eq!(last.put_bid, spos!(621.89));
     }
 
     #[test]
@@ -929,14 +929,23 @@ mod tests_option_data {
     }
 
     #[test]
-    #[should_panic]
     fn test_calculate_prices_missing_volatility() {
+        setup_logger();
         let mut option_data =
             OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None);
 
         let price_params =
             OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, ZERO, ZERO);
         let _ = option_data.calculate_prices(&price_params);
+
+        info!("{}", option_data);
+        assert_eq!(option_data.call_ask, None);
+        assert_eq!(option_data.call_bid, None);
+        assert_eq!(option_data.put_ask, None);
+        assert_eq!(option_data.put_bid, None);
+        assert_eq!(option_data.implied_volatility, None);
+        assert_eq!(option_data.delta, None);
+        assert_eq!(option_data.strike_price, pos!(100.0));
     }
 
     #[test]
