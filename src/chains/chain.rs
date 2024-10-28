@@ -96,18 +96,18 @@ impl OptionData {
             && self.put_ask.is_some()
     }
 
-    fn get_option(&self, price_params: &OptionDataPriceParams) -> Options {
+    fn get_option(&self, price_params: &OptionDataPriceParams) -> Result<Options, String> {
         let implied_volatility = match price_params.implied_volatility {
             Some(iv) => iv.value(),
             None => match self.implied_volatility {
                 Some(iv) => iv.value(),
                 None => {
-                    panic!("Implied volatility is missing");
+                    return Err("Implied volatility not found".to_string());
                 }
             },
         };
 
-        Options::new(
+        Ok(Options::new(
             OptionType::European,
             Side::Long,
             "OptionData".to_string(),
@@ -120,11 +120,12 @@ impl OptionData {
             OptionStyle::Call,
             price_params.dividend_yield,
             None,
-        )
+        ))
     }
 
     pub fn calculate_prices(&mut self, price_params: &OptionDataPriceParams) -> Result<(), String> {
-        let mut option: Options = self.get_option(price_params);
+        let mut option: Options = self.get_option(price_params)?;
+
         self.call_ask = spos!(black_scholes(&option).abs());
         option.side = Side::Short;
         self.call_bid = spos!(black_scholes(&option).abs());
@@ -179,7 +180,12 @@ impl OptionData {
     }
 
     pub fn calculate_delta(&mut self, price_params: &OptionDataPriceParams) {
-        let option: Options = self.get_option(price_params);
+        let option: Options = match self.get_option(price_params) {
+            Ok(option) => option,
+            Err(_) => {
+                return;
+            }
+        };
         self.delta = Some(delta(&option));
     }
 }
@@ -268,7 +274,7 @@ impl OptionChain {
         let mut option_chain = OptionChain::new(
             &params.symbol,
             params.price_params.underlying_price,
-            params.price_params.expiration_date.get_date().to_string(),
+            params.price_params.expiration_date.get_date_string(),
         );
 
         let strikes = generate_list_of_strikes(
@@ -279,11 +285,11 @@ impl OptionChain {
 
         for strike in strikes {
             let atm_distance = strike.value() - params.price_params.underlying_price.value();
-            let adjusted_volatility = spos!(adjust_volatility(
-                params.price_params.implied_volatility.unwrap(),
+            let adjusted_volatility = adjust_volatility(
+                params.price_params.implied_volatility,
                 params.skew_factor,
-                atm_distance
-            ));
+                atm_distance,
+            );
             let mut option_data = OptionData::new(
                 strike,
                 None,
@@ -303,11 +309,11 @@ impl OptionChain {
                 params.price_params.risk_free_rate,
                 params.price_params.dividend_yield,
             );
-            option_data
-                .calculate_prices(&price_params)
-                .expect("Error calculating prices");
-            option_data.apply_spread(params.spread, params.decimal_places);
-            option_data.calculate_delta(&price_params);
+            if option_data.calculate_prices(&price_params).is_ok() {
+                option_data.apply_spread(params.spread, params.decimal_places);
+                option_data.calculate_delta(&price_params);
+            }
+
             option_chain.options.insert(option_data);
         }
 
@@ -497,7 +503,7 @@ impl Display for OptionChain {
         )?;
 
         for option in &self.options {
-            writeln!(f, "{}", option,)?;
+            writeln!(f, "{}", option, )?;
         }
         Ok(())
     }
