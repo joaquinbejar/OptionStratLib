@@ -158,6 +158,103 @@ The project is organized into the following key modules:
 
 ## Relationships
 
+### Base Structure
+```mermaid
+classDiagram
+    class Options {
+        +option_type: OptionType
+        +side: Side
+        +strike_price: PositiveF64
+        +expiration_date: ExpirationDate
+        +implied_volatility: f64
+        +calculate_price_black_scholes()
+        +calculate_price_binomial()
+        +calculate_delta()
+        +payoff()
+    }
+
+    class Position {
+        +option: Options
+        +premium: f64
+        +date: DateTime
+        +open_fee: f64
+        +close_fee: f64
+        +total_cost()
+        +unrealized_pnl()
+        +days_held()
+    }
+
+    class OptionChain {
+        +symbol: String
+        +underlying_price: PositiveF64
+        +options: BTreeSet<OptionData>
+        +build_chain()
+        +add_option()
+        +save_to_csv()
+        +load_from_csv()
+    }
+
+    class Strategy {
+        <<Interface>>
+        +add_leg()
+        +get_legs()
+        +break_even()
+        +max_profit()
+        +max_loss()
+        +total_cost()
+    }
+
+    class BullCallSpread {
+        +long_call: Position
+        +short_call: Position
+        +break_even_points: Vec<f64>
+        +calculate_profit_at()
+    }
+
+    class CallButterfly {
+        +long_call_itm: Position
+        +long_call_otm: Position  
+        +short_call: Position
+        +break_even_points: Vec<f64>
+    }
+
+    class Graph {
+        <<Interface>>
+        +title()
+        +get_values()
+        +get_vertical_lines()
+        +get_points()
+    }
+
+    class Profit {
+        <<Interface>>
+        +calculate_profit_at()
+    }
+
+    class Greeks {
+        <<Interface>>
+        +delta()
+        +gamma()
+        +theta()
+        +vega()
+    }
+
+    Position o-- Options
+    Strategy <|.. BullCallSpread
+    Strategy <|.. CallButterfly
+    Graph <|.. Options
+    Graph <|.. Position 
+    Graph <|.. Strategy
+    Profit <|.. Options
+    Profit <|.. Position
+    Profit <|.. Strategy
+    Greeks <|.. Options
+    OptionChain o-- Options
+    BullCallSpread o-- Position
+    CallButterfly o-- Position
+```
+
+### Strategy Structure
 ```mermaid
 classDiagram
     class Options {
