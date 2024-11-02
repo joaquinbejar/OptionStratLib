@@ -58,23 +58,22 @@ pub trait Greeks {
 /// This function will not panic if the input `Options` struct adheres to the expected format and all methods
 /// (like `get_years`) function correctly.
 #[allow(dead_code)]
-
 pub fn delta(option: &Options) -> f64 {
     if option.implied_volatility == ZERO {
         let sign = if option.is_long() { 1.0 } else { -1.0 };
-        match option.option_style {
+        return match option.option_style {
             OptionStyle::Call => {
                 if option.underlying_price >= option.strike_price {
-                    return sign; // Delta is 1 for Call in-the-money
+                    sign // Delta is 1 for Call in-the-money
                 } else {
-                    return 0.0; // Delta is 0 for Call out-of-the-money
+                    0.0 // Delta is 0 for Call out-of-the-money
                 }
             }
             OptionStyle::Put => {
                 if option.underlying_price <= option.strike_price {
-                    return sign * -1.0; // Delta is -1 for Put in-the-money
+                    sign * -1.0 // Delta is -1 for Put in-the-money
                 } else {
-                    return 0.0; // Delta is 0 for Put out-of-the-money
+                    0.0 // Delta is 0 for Put out-of-the-money
                 }
             }
         }
