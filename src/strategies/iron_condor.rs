@@ -296,9 +296,9 @@ impl Graph for IronCondor {
             format!("Long Call: ${}", self.long_call.option.strike_price),
             format!("Expire: {}", self.short_put.option.expiration_date),
         ]
-        .iter()
-        .map(|leg| leg.to_string())
-        .collect();
+            .iter()
+            .map(|leg| leg.to_string())
+            .collect();
 
         if leg_titles.is_empty() {
             strategy_title
@@ -463,10 +463,10 @@ mod tests_iron_condor {
         assert_eq!(iron_condor.description, IRON_CONDOR_DESCRIPTION.to_string());
         assert_eq!(iron_condor.kind, StrategyType::IronCondor);
         assert_eq!(iron_condor.break_even_points.len(), 2);
-        assert!(iron_condor.short_call.option.strike_price == 155.0);
-        assert!(iron_condor.short_put.option.strike_price == 145.0);
-        assert!(iron_condor.long_call.option.strike_price == 160.0);
-        assert!(iron_condor.long_put.option.strike_price == 140.0);
+        assert_eq!(iron_condor.short_call.option.strike_price, 155.0);
+        assert_eq!(iron_condor.short_put.option.strike_price, 145.0);
+        assert_eq!(iron_condor.long_call.option.strike_price, 160.0);
+        assert_eq!(iron_condor.long_put.option.strike_price, 140.0);
     }
 
     #[test]
