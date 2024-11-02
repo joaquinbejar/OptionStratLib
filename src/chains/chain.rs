@@ -475,7 +475,7 @@ impl OptionChain {
 
 impl Display for OptionChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Symbol: {}", self.symbol)?; // Cambiado de {:.1} a {}
+        writeln!(f, "Symbol: {}", self.symbol)?;
         writeln!(f, "Underlying Price: {:.1}", self.underlying_price)?;
         writeln!(f, "Expiration Date: {}", self.expiration_date)?;
         writeln!(
