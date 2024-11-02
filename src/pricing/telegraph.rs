@@ -103,7 +103,7 @@ impl TelegraphProcess {
     ///
     /// A new TelegraphProcess with a randomly chosen initial state.
     pub fn new(lambda_up: f64, lambda_down: f64) -> Self {
-        let initial_state = if rand::random::<f64>() < 0.5 { 1 } else { -1 };
+        let initial_state = if random::<f64>() < 0.5 { 1 } else { -1 };
         TelegraphProcess {
             lambda_up,
             lambda_down,
@@ -227,7 +227,7 @@ pub fn telegraph(
         let drift = option.risk_free_rate - 0.5 * option.implied_volatility.powi(2);
         let volatility = option.implied_volatility * state as f64;
 
-        price *= (drift * dt + volatility * (dt.sqrt() * rand::random::<f64>())).exp();
+        price *= (drift * dt + volatility * (dt.sqrt() * random::<f64>())).exp();
     }
 
     let payoff = option.payoff_at_price(price.into());
