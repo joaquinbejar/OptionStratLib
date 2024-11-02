@@ -552,7 +552,7 @@ impl Payoff for OptionType {
                 LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
             },
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
-            OptionType::Chooser { .. } => ((info.spot - info.strike).max(PZERO))
+            OptionType::Chooser { .. } => (info.spot - info.strike).max(PZERO)
                 .max((info.strike - info.spot).max(PZERO))
                 .value(),
             OptionType::Cliquet { .. } => standard_payoff(info),
