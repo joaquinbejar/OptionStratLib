@@ -342,7 +342,7 @@ pub fn uncertain_volatility_bounds(
 /// // annual_vol ≈ 0.1587 or about 15.87%
 /// ```
 pub fn annualized_volatility(volatility: f64, timeframe: TimeFrame) -> f64 {
-    volatility * (timeframe.periods_per_year()).sqrt()
+    volatility * timeframe.periods_per_year().sqrt()
 }
 
 /// De-annualizes a volatility value to a specific timeframe.
@@ -371,7 +371,7 @@ pub fn annualized_volatility(volatility: f64, timeframe: TimeFrame) -> f64 {
 /// // daily_vol ≈ 0.0126 or about 1.26%
 /// ```
 pub fn de_annualized_volatility(annual_volatility: f64, timeframe: TimeFrame) -> f64 {
-    annual_volatility / (timeframe.periods_per_year()).sqrt()
+    annual_volatility / timeframe.periods_per_year().sqrt()
 }
 
 #[cfg(test)]
@@ -383,14 +383,14 @@ mod tests_annualize_volatility {
     fn test_annualize_daily_volatility() {
         let daily_vol = 0.01; // 1% daily volatility
         let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day);
-        assert_relative_eq!(annual_vol, 0.01 * (252.0_f64).sqrt(), epsilon = 1e-10);
+        assert_relative_eq!(annual_vol, 0.01 * 252.0_f64.sqrt(), epsilon = 1e-10);
     }
 
     #[test]
     fn test_deannualize_annual_volatility() {
         let annual_vol = 0.20; // 20% annual volatility
         let daily_vol = de_annualized_volatility(annual_vol, TimeFrame::Day);
-        assert_relative_eq!(daily_vol, 0.20 / (252.0_f64).sqrt(), epsilon = 1e-10);
+        assert_relative_eq!(daily_vol, 0.20 / 252.0_f64.sqrt(), epsilon = 1e-10);
     }
 
     #[test]
@@ -398,7 +398,7 @@ mod tests_annualize_volatility {
         let custom_periods = 100.0;
         let vol = 0.05;
         let annual_vol = annualized_volatility(vol, TimeFrame::Custom(custom_periods));
-        assert_relative_eq!(annual_vol, 0.05 * (100.0_f64).sqrt(), epsilon = 1e-10);
+        assert_relative_eq!(annual_vol, 0.05 * 100.0_f64.sqrt(), epsilon = 1e-10);
     }
 
     #[test]
