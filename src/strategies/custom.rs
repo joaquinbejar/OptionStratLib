@@ -459,7 +459,7 @@ mod tests_custom_strategy {
         assert_eq!(strategy.description, "Test Description");
         assert_eq!(strategy.underlying_price, 100.0);
         assert!(!strategy.break_even_points.is_empty());
-        assert!(strategy.positions.len() == 1);
+        assert_eq!(strategy.positions.len(), 1);
     }
 
     #[test]
