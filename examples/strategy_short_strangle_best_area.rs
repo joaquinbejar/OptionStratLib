@@ -52,14 +52,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         (range / 2.0) / underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area());
-    debug!("Strategy:  {:#?}", strategy);
 
-    strategy.graph(
-        &price_range,
-        "Draws/Strategy/short_strangle_profit_loss_chart_best_area.png",
-        20,
-        (1400, 933),
-    )?;
+    if strategy.profit_area() > ZERO {
+        debug!("Strategy:  {:#?}", strategy);
+        strategy.graph(
+            &price_range,
+            "Draws/Strategy/short_strangle_profit_loss_chart_best_area.png",
+            20,
+            (1400, 933),
+        )?;
+    }
+
 
     Ok(())
 }

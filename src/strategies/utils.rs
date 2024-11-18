@@ -3,13 +3,26 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+use std::fmt::Display;
 use crate::model::types::PositiveF64;
 
+#[derive(Debug, Clone, Copy)]
 pub enum FindOptimalSide {
     Upper,
     Lower,
     All,
     Range(PositiveF64, PositiveF64),
+}
+
+impl Display for FindOptimalSide {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FindOptimalSide::Upper => write!(f, "Upper"),
+            FindOptimalSide::Lower => write!(f, "Lower"),
+            FindOptimalSide::All => write!(f, "All"),
+            FindOptimalSide::Range(start, end) => write!(f, "Range: {} - {}", start, end),
+        }
+    }
 }
 
 pub(crate) enum OptimizationCriteria {

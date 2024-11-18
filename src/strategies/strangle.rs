@@ -22,6 +22,7 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use tracing::{debug, error};
 use crate::chains::chain::{OptionChain, OptionData};
 
 
@@ -211,24 +212,31 @@ impl Optimizable for ShortStrangle {
         let mut best_value = f64::NEG_INFINITY;
 
         for put_index in 0..options.len() {
+
             let put_option = &options[put_index];
 
             for call_index in 0..put_index {
+                debug!("Put Index: {}, Call Index: {}", put_index, call_index);
                 let call_option = &options[call_index];
-
+                // debug!("Call Option: {:#?}", call_option);
+                // debug!("Put Option: {:#?}", put_option);
                 if call_option.strike_price >= put_option.strike_price {
+                    error!("Invalid strike prices {:#?} {:#?}", call_option, put_option);
                     continue;
                 }
 
                 if !self.is_valid_short_option(put_option, &side) ||
                     !self.is_valid_short_option(call_option, &side) {
+                    error!("Invalid options {:#?} {:#?} side: {}", call_option, put_option, side);
                     continue;
                 }
 
                 if !self.are_valid_prices(call_option, put_option) {
+                    error!("Invalid prices {:#?} {:#?}", call_option, put_option);
                     continue;
                 }
 
+                debug!("Creating Strategy");
                 let strategy: ShortStrangle = self.create_strategy(option_chain, call_option, put_option);
 
                 if !strategy.validate() {
@@ -246,6 +254,7 @@ impl Optimizable for ShortStrangle {
                 }
             }
         }
+        debug!("Best Value: {}", best_value);
     }
 
     fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
