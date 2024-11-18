@@ -4,11 +4,12 @@
    Date: 21/8/24
 ******************************************************************************/
 
-use crate::chains::chain::OptionChain;
+use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::ZERO;
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use std::any::Any;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -68,7 +69,7 @@ impl Strategy {
     }
 }
 
-pub trait Strategies {
+pub trait Strategies : Validable + Any {
     fn add_leg(&mut self, _position: Position) {
         panic!("Add leg is not applicable for this strategy");
     }
@@ -125,10 +126,6 @@ pub trait Strategies {
         panic!("Best area is not applicable for this strategy");
     }
 
-    fn validate(&self) -> bool {
-        true
-    }
-
     fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
         None
     }
@@ -159,7 +156,15 @@ pub trait Strategies {
     }
 }
 
-pub(crate) trait Optimizable {
+pub trait Validable {
+    fn validate(&self) -> bool {
+        panic!("Validate is not applicable for this strategy");
+    }
+}
+
+pub(crate) trait Optimizable : Validable {
+    type Strategy: Strategies;
+
     fn find_optimal(
         &mut self,
         _option_chain: &OptionChain,
@@ -167,6 +172,27 @@ pub(crate) trait Optimizable {
         _criteria: OptimizationCriteria,
     ) {
         panic!("Find optimal is not applicable for this strategy");
+    }
+
+    fn is_valid_short_option(&self, _option: &OptionData, _side: &FindOptimalSide) -> bool {
+        panic!("Is valid short option is not applicable for this strategy");
+    }
+
+    fn is_valid_long_option(&self, _option: &OptionData, _side: &FindOptimalSide) -> bool {
+        panic!("Is valid long option is not applicable for this strategy");
+    }
+
+    fn are_valid_prices(&self, _call: &OptionData, _put: &OptionData) -> bool {
+        panic!("Are valid prices is not applicable for this strategy");
+    }
+
+    fn create_strategy(
+        &self,
+        _chain: &OptionChain,
+        _call: &OptionData,
+        _put: &OptionData
+    ) -> Self::Strategy {
+        panic!("Create strategy is not applicable for this strategy");
     }
 }
 

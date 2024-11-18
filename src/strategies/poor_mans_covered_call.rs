@@ -28,7 +28,7 @@
     and risk associated with traditional covered call strategies.
 */
 
-use super::base::{Strategies, StrategyType};
+use super::base::{Strategies, StrategyType, Validable};
 use crate::constants::{
     DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
@@ -142,6 +142,12 @@ impl PoorMansCoveredCall {
             .break_even_points
             .push(long_call_strike + net_debit);
         strategy
+    }
+}
+
+impl Validable for PoorMansCoveredCall {
+    fn validate(&self) -> bool {
+        self.short_call.validate() && self.long_call.validate()
     }
 }
 

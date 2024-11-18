@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use super::base::{Optimizable, Strategies, StrategyType};
+use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::DARK_GREEN;
 use crate::constants::{
@@ -21,6 +21,7 @@ use chrono::Utc;
 use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
 use tracing::{debug, error};
+
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -315,6 +316,19 @@ impl Strategies for CallButterfly {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = (
+            self.long_call_itm.option.clone(),
+            self.long_call_otm.option.clone(),
+        );
+        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
+    }
+}
+
+
+impl Validable for CallButterfly {
     fn validate(&self) -> bool {
         if self.name.is_empty() {
             error!("Symbol is required");
@@ -340,19 +354,10 @@ impl Strategies for CallButterfly {
         }
         true
     }
-
-    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = (
-            self.long_call_itm.option.clone(),
-            self.long_call_otm.option.clone(),
-        );
-        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        Some(calculate_price_range(start_price, end_price, step))
-    }
 }
 
 impl Optimizable for CallButterfly {
+    type Strategy = CallButterfly;
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,

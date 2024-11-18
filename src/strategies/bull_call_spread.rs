@@ -9,7 +9,7 @@ Key characteristics:
 - Limited risk
 - Lower cost than buying a call option outright
 */
-use super::base::{Strategies, StrategyType};
+use super::base::{Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{
     DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
@@ -253,7 +253,7 @@ impl Strategies for BullCallSpread {
         vec![
             self.short_call.option.strike_price
                 - pos!(self.calculate_profit_at(self.short_call.option.strike_price))
-                    / self.long_call.option.quantity,
+                / self.long_call.option.quantity,
         ]
     }
 
@@ -284,7 +284,7 @@ impl Strategies for BullCallSpread {
     fn profit_area(&self) -> f64 {
         let base = (self.short_call.option.strike_price
             - (self.short_call.option.strike_price - self.max_profit()))
-        .value();
+            .value();
         let high = self.max_profit();
         base * high / 200.0
     }
@@ -301,6 +301,18 @@ impl Strategies for BullCallSpread {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = (
+            self.long_call.option.clone(),
+            self.short_call.option.clone(),
+        );
+        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
+    }
+}
+
+impl Validable for BullCallSpread {
     fn validate(&self) -> bool {
         if self.name.is_empty() {
             error!("Symbol is required");
@@ -322,16 +334,6 @@ impl Strategies for BullCallSpread {
             return false;
         }
         true
-    }
-
-    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = (
-            self.long_call.option.clone(),
-            self.short_call.option.clone(),
-        );
-        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        Some(calculate_price_range(start_price, end_price, step))
     }
 }
 

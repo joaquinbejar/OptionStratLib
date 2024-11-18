@@ -9,25 +9,28 @@ Key characteristics:
 - Lower cost than a straddle
 - Requires a larger price move to become profitable
 */
-use super::base::{Strategies, StrategyType};
+use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
-use crate::strategies::utils::calculate_price_range;
+use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use crate::chains::chain::{OptionChain, OptionData};
+
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
 is expected and the underlying asset's price is anticipated to remain stable.";
 
+#[derive(Clone, Debug)]
 pub struct ShortStrangle {
     pub name: String,
     pub kind: StrategyType,
@@ -173,11 +176,125 @@ impl Strategies for ShortStrangle {
         self.max_profit() / break_even_diff * 100.0
     }
 
+    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
+    }
+
+    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+    }
+
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
         let start_price = first_option - self.max_profit();
         let end_price = last_option + self.max_profit();
         Some(calculate_price_range(start_price, end_price, step))
+    }
+}
+
+impl Validable for ShortStrangle {
+    fn validate(&self) -> bool {
+        self.short_call.validate() && self.short_put.validate()
+    }
+}
+
+impl Optimizable for ShortStrangle {
+    type Strategy = ShortStrangle;
+
+    fn find_optimal(
+        &mut self,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
+    ) {
+        let options: Vec<&OptionData> = option_chain.options.iter().collect();
+        let mut best_value = f64::NEG_INFINITY;
+
+        for put_index in 0..options.len() {
+            let put_option = &options[put_index];
+
+            for call_index in 0..put_index {
+                let call_option = &options[call_index];
+
+                if call_option.strike_price >= put_option.strike_price {
+                    continue;
+                }
+
+                if !self.is_valid_short_option(put_option, &side) ||
+                    !self.is_valid_short_option(call_option, &side) {
+                    continue;
+                }
+
+                if !self.are_valid_prices(call_option, put_option) {
+                    continue;
+                }
+
+                let strategy: ShortStrangle = self.create_strategy(option_chain, call_option, put_option);
+
+                if !strategy.validate() {
+                    continue;
+                }
+
+                let current_value = match criteria {
+                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                    OptimizationCriteria::Area => strategy.profit_area(),
+                };
+
+                if current_value > best_value {
+                    best_value = current_value;
+                    *self = strategy.clone();
+                }
+            }
+        }
+    }
+
+    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
+        if !self.short_call.option.validate() {
+            return false;
+        }
+        match side {
+            FindOptimalSide::Upper => option.strike_price >= self.short_call.option.underlying_price,
+            FindOptimalSide::Lower => option.strike_price <= self.short_call.option.underlying_price,
+            FindOptimalSide::All => true,
+            FindOptimalSide::Range(start, end) => {
+                option.strike_price >= *start && option.strike_price <= *end
+            }
+        }
+    }
+
+    fn are_valid_prices(&self, call: &OptionData, put: &OptionData) -> bool {
+        if !call.valid_call() || !put.valid_put() {
+            return false;
+        }
+        call.call_bid.unwrap() > PZERO && put.put_bid.unwrap() > PZERO
+    }
+
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        call: &OptionData,
+        put: &OptionData,
+    ) -> ShortStrangle {
+        if !call.validate() || !put.validate() {
+            panic!("Invalid options");
+        }
+        ShortStrangle::new(
+            chain.symbol.clone(),
+            chain.underlying_price,
+            call.strike_price,
+            put.strike_price,
+            self.short_call.option.expiration_date.clone(),
+            call.implied_volatility.unwrap().value(),
+            self.short_call.option.risk_free_rate,
+            self.short_call.option.dividend_yield,
+            self.short_call.option.quantity,
+            call.call_bid.unwrap().value(),
+            put.put_bid.unwrap().value(),
+            self.short_call.open_fee,
+            self.short_call.close_fee,
+            self.short_put.open_fee,
+            self.short_put.close_fee,
+        )
     }
 }
 
@@ -300,6 +417,7 @@ out-of-the-money put with the same expiration date. This strategy is used when h
 is expected and a significant move in the underlying asset's price is anticipated, but the \
 direction is uncertain.";
 
+#[derive(Clone, Debug)]
 pub struct LongStrangle {
     pub name: String,
     pub kind: StrategyType,
@@ -430,6 +548,116 @@ impl Strategies for LongStrangle {
             + self.long_call.close_fee
             + self.long_put.open_fee
             + self.long_put.close_fee
+    }
+
+    fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
+        panic!("Best ratio is not applicable for this strategy");
+    }
+
+    fn best_area(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
+        panic!("Best area is not applicable for this strategy");
+    }
+}
+
+impl Validable for LongStrangle {
+    fn validate(&self) -> bool {
+        self.long_call.validate() && self.long_put.validate()
+    }
+}
+
+impl Optimizable for LongStrangle {
+    type Strategy = LongStrangle;
+    fn find_optimal(
+        &mut self,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
+    ) {
+        let options: Vec<&OptionData> = option_chain.options.iter().collect();
+        let mut best_value = f64::NEG_INFINITY;
+
+        for put_index in 0..options.len() {
+            let put_option = &options[put_index];
+
+            for call_index in 0..put_index {
+                let call_option = &options[call_index];
+
+                if call_option.strike_price >= put_option.strike_price {
+                    continue;
+                }
+
+                if !self.is_valid_long_option(put_option, &side) ||
+                    !self.is_valid_long_option(call_option, &side) {
+                    continue;
+                }
+
+                if !self.are_valid_prices(call_option, put_option) {
+                    continue;
+                }
+
+                let strategy: LongStrangle = self.create_strategy(option_chain, call_option, put_option);
+
+                if !strategy.validate() {
+                    continue;
+                }
+
+                let current_value = match criteria {
+                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                    OptimizationCriteria::Area => strategy.profit_area(),
+                };
+
+                if current_value > best_value {
+                    best_value = current_value;
+                    *self = strategy.clone();
+                }
+            }
+        }
+    }
+
+    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
+        if !self.long_call.option.validate() {
+            return false;
+        }
+        match side {
+            FindOptimalSide::Upper => option.strike_price >= self.long_call.option.underlying_price,
+            FindOptimalSide::Lower => option.strike_price <= self.long_call.option.underlying_price,
+            FindOptimalSide::All => true,
+            FindOptimalSide::Range(start, end) => {
+                option.strike_price >= *start && option.strike_price <= *end
+            }
+        }
+    }
+
+    fn are_valid_prices(&self, call: &OptionData, put: &OptionData) -> bool {
+        if !call.valid_call() || !put.valid_put() {
+            return false;
+        }
+        call.call_bid.unwrap() > PZERO && put.put_bid.unwrap() > PZERO
+    }
+
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        call: &OptionData,
+        put: &OptionData,
+    ) -> LongStrangle {
+        LongStrangle::new(
+            chain.symbol.clone(),
+            chain.underlying_price,
+            call.strike_price,
+            put.strike_price,
+            self.long_call.option.expiration_date.clone(),
+            call.implied_volatility.unwrap().value(),
+            self.long_call.option.risk_free_rate,
+            self.long_call.option.dividend_yield,
+            self.long_call.option.quantity,
+            call.call_bid.unwrap().value(),
+            put.put_bid.unwrap().value(),
+            self.long_call.open_fee,
+            self.long_call.close_fee,
+            self.long_put.open_fee,
+            self.long_put.close_fee,
+        )
     }
 }
 

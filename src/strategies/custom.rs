@@ -13,7 +13,7 @@ use crate::model::position::Position;
 use crate::model::types::PositiveF64;
 use crate::pos;
 use crate::pricing::payoff::Profit;
-use crate::strategies::base::{Optimizable, Strategies, StrategyType};
+use crate::strategies::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
@@ -261,6 +261,18 @@ impl Strategies for CustomStrategy {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
+
+
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = self.max_min_strikes();
+
+        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
+    }
+}
+
+impl Validable for CustomStrategy {
     fn validate(&self) -> bool {
         if self.positions.is_empty() {
             error!("No positions found");
@@ -282,17 +294,11 @@ impl Strategies for CustomStrategy {
 
         self.positions.iter().all(|position| position.validate())
     }
-
-    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = self.max_min_strikes();
-
-        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        Some(calculate_price_range(start_price, end_price, step))
-    }
 }
 
 impl Optimizable for CustomStrategy {
+    type Strategy = CustomStrategy;
+
     fn find_optimal(
         &mut self,
         _option_chain: &OptionChain,

@@ -9,7 +9,7 @@ Key characteristics:
 - Limited risk
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
-use super::base::{Strategies, StrategyType};
+use super::base::{Strategies, StrategyType, Validable};
 use crate::constants::{
     DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
@@ -180,6 +180,15 @@ impl IronCondor {
             .push(short_call_strike - net_credit);
 
         strategy
+    }
+}
+
+impl Validable for IronCondor {
+    fn validate(&self) -> bool {
+        self.short_call.validate()
+            && self.short_put.validate()
+            && self.long_call.validate()
+            && self.long_put.validate()
     }
 }
 
