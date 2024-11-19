@@ -261,8 +261,6 @@ impl Strategies for CustomStrategy {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
-
-
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
         let (first_option, last_option) = self.max_min_strikes();
 

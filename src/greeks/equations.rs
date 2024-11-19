@@ -76,7 +76,7 @@ pub fn delta(option: &Options) -> f64 {
                     0.0 // Delta is 0 for Put out-of-the-money
                 }
             }
-        }
+        };
     }
 
     let d1 = d1(
