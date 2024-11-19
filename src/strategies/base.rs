@@ -9,7 +9,6 @@ use crate::constants::ZERO;
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use std::any::Any;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -69,7 +68,7 @@ impl Strategy {
     }
 }
 
-pub trait Strategies : Validable + Any {
+pub trait Strategies: Validable {
     fn add_leg(&mut self, _position: Position) {
         panic!("Add leg is not applicable for this strategy");
     }
@@ -162,7 +161,7 @@ pub trait Validable {
     }
 }
 
-pub(crate) trait Optimizable : Validable {
+pub(crate) trait Optimizable: Validable {
     type Strategy: Strategies;
 
     fn find_optimal(
@@ -190,7 +189,7 @@ pub(crate) trait Optimizable : Validable {
         &self,
         _chain: &OptionChain,
         _call: &OptionData,
-        _put: &OptionData
+        _put: &OptionData,
     ) -> Self::Strategy {
         panic!("Create strategy is not applicable for this strategy");
     }
@@ -223,6 +222,8 @@ mod tests_strategies {
     struct MockStrategy {
         legs: Vec<Position>,
     }
+
+    impl Validable for MockStrategy {}
 
     impl Strategies for MockStrategy {
         fn add_leg(&mut self, position: Position) {
@@ -293,6 +294,11 @@ mod tests_strategies {
     #[test]
     fn test_strategies_default_methods() {
         struct DefaultStrategy;
+        impl Validable for DefaultStrategy {
+            fn validate(&self) -> bool {
+                true
+            }
+        }
         impl Strategies for DefaultStrategy {}
 
         let strategy = DefaultStrategy;
@@ -313,6 +319,7 @@ mod tests_strategies {
     #[should_panic(expected = "Add leg is not applicable for this strategy")]
     fn test_strategies_add_leg_panic() {
         struct PanicStrategy;
+        impl Validable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let mut strategy = PanicStrategy;
@@ -327,6 +334,7 @@ mod tests_strategies {
             legs: Vec<Position>,
         }
 
+        impl Validable for StrikeStrategy {}
         impl Strategies for StrikeStrategy {
             fn get_legs(&self) -> Vec<Position> {
                 self.legs.clone()
@@ -392,6 +400,7 @@ mod tests_strategies_extended {
     #[should_panic(expected = "Legs is not applicable for this strategy")]
     fn test_strategies_get_legs_panic() {
         struct PanicStrategy;
+        impl Validable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -402,6 +411,7 @@ mod tests_strategies_extended {
     #[should_panic(expected = "Break even is not applicable for this strategy")]
     fn test_strategies_break_even_panic() {
         struct PanicStrategy;
+        impl Validable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -412,6 +422,7 @@ mod tests_strategies_extended {
     #[should_panic(expected = "Net premium received is not applicable")]
     fn test_strategies_net_premium_received_panic() {
         struct PanicStrategy;
+        impl Validable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -422,6 +433,7 @@ mod tests_strategies_extended {
     #[should_panic(expected = "Fees is not applicable for this strategy")]
     fn test_strategies_fees_panic() {
         struct PanicStrategy;
+        impl Validable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -432,6 +444,7 @@ mod tests_strategies_extended {
     #[should_panic(expected = "Best ratio is not applicable for this strategy")]
     fn test_strategies_best_ratio_panic() {
         struct PanicStrategy;
+        impl Validable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let mut strategy = PanicStrategy;
@@ -445,6 +458,7 @@ mod tests_strategies_extended {
     #[should_panic(expected = "Best area is not applicable for this strategy")]
     fn test_strategies_best_area_panic() {
         struct PanicStrategy;
+        impl Validable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let mut strategy = PanicStrategy;
@@ -457,6 +471,7 @@ mod tests_strategies_extended {
     #[test]
     fn test_strategies_max_profit_iter() {
         struct TestStrategy;
+        impl Validable for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_profit(&self) -> f64 {
                 100.0
@@ -470,6 +485,7 @@ mod tests_strategies_extended {
     #[test]
     fn test_strategies_max_loss_iter() {
         struct TestStrategy;
+        impl Validable for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_loss(&self) -> f64 {
                 50.0
@@ -483,6 +499,7 @@ mod tests_strategies_extended {
     #[test]
     fn test_strategies_empty_strikes() {
         struct EmptyStrategy;
+        impl Validable for EmptyStrategy {}
         impl Strategies for EmptyStrategy {
             fn get_legs(&self) -> Vec<Position> {
                 vec![]
