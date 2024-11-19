@@ -253,7 +253,7 @@ impl Strategies for BullCallSpread {
         vec![
             self.short_call.option.strike_price
                 - pos!(self.calculate_profit_at(self.short_call.option.strike_price))
-                / self.long_call.option.quantity,
+                    / self.long_call.option.quantity,
         ]
     }
 
@@ -284,7 +284,7 @@ impl Strategies for BullCallSpread {
     fn profit_area(&self) -> f64 {
         let base = (self.short_call.option.strike_price
             - (self.short_call.option.strike_price - self.max_profit()))
-            .value();
+        .value();
         let high = self.max_profit();
         base * high / 200.0
     }

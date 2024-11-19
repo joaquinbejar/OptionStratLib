@@ -305,9 +305,9 @@ impl Graph for IronCondor {
             format!("Long Call: ${}", self.long_call.option.strike_price),
             format!("Expire: {}", self.short_put.option.expiration_date),
         ]
-            .iter()
-            .map(|leg| leg.to_string())
-            .collect();
+        .iter()
+        .map(|leg| leg.to_string())
+        .collect();
 
         if leg_titles.is_empty() {
             strategy_title

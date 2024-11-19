@@ -22,7 +22,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
 use tracing::{debug, error};
 
-
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
     at a higher strike price. This strategy is used when a moderate rise in the underlying \
@@ -326,7 +325,6 @@ impl Strategies for CallButterfly {
         Some(calculate_price_range(start_price, end_price, step))
     }
 }
-
 
 impl Validable for CallButterfly {
     fn validate(&self) -> bool {
