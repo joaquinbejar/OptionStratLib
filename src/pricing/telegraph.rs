@@ -244,8 +244,8 @@ mod tests_telegraph_process_basis {
     #[test]
     fn test_telegraph_process_new() {
         let tp = TelegraphProcess::new(0.5, 0.3);
-        assert_eq!(tp.lambda_up , 0.5);
-        assert_eq!(tp.lambda_down , 0.3);
+        assert_eq!(tp.lambda_up, 0.5);
+        assert_eq!(tp.lambda_down, 0.3);
         assert!(tp.current_state == 1 || tp.current_state == -1);
     }
 

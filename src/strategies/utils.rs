@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use std::fmt::Display;
 use crate::model::types::PositiveF64;
+use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy)]
 pub enum FindOptimalSide {

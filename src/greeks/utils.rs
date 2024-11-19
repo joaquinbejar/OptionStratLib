@@ -11,7 +11,6 @@ use num_traits::Float;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
 
-
 /// Evaluates the option payoff based on comparative values of the underlying price and strike price.
 ///
 /// This function assesses the value of an option by comparing the current price of the underlying asset (`underlying_price`) to the strike price of the option (`strike_price`). The function returns distinct values based on the comparison:
