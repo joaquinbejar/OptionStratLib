@@ -212,14 +212,10 @@ impl Optimizable for ShortStrangle {
         let mut best_value = f64::NEG_INFINITY;
 
         for put_index in 0..options.len() {
-
             let put_option = &options[put_index];
 
             for call_index in 0..put_index {
-                debug!("Put Index: {}, Call Index: {}", put_index, call_index);
                 let call_option = &options[call_index];
-                // debug!("Call Option: {:#?}", call_option);
-                // debug!("Put Option: {:#?}", put_option);
                 if call_option.strike_price >= put_option.strike_price {
                     error!("Invalid strike prices {:#?} {:#?}", call_option, put_option);
                     continue;
@@ -227,7 +223,6 @@ impl Optimizable for ShortStrangle {
 
                 if !self.is_valid_short_option(put_option, &side) ||
                     !self.is_valid_short_option(call_option, &side) {
-                    error!("Invalid options {:#?} {:#?} side: {}", call_option, put_option, side);
                     continue;
                 }
 
@@ -258,15 +253,38 @@ impl Optimizable for ShortStrangle {
     }
 
     fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        if !self.short_call.option.validate() {
+        let underlying_price = match (self.short_put.option.underlying_price, self.short_call.option.underlying_price) {
+            (PZERO, PZERO) => PZERO,
+            (PZERO, call) => call,
+            (put, _) => put,
+        };
+        if underlying_price == PZERO {
+            error!("Invalid underlying_price option");
             return false;
         }
+
         match side {
-            FindOptimalSide::Upper => option.strike_price >= self.short_call.option.underlying_price,
-            FindOptimalSide::Lower => option.strike_price <= self.short_call.option.underlying_price,
+            FindOptimalSide::Upper => {
+                let valid = option.strike_price >= underlying_price;
+                if !valid {
+                    debug!("Option is out of range: {} <= {}", option.strike_price, underlying_price);
+                }
+                valid
+            }
+            FindOptimalSide::Lower => {
+                let valid = option.strike_price <= underlying_price;
+                if !valid {
+                    debug!("Option is out of range: {} >= {}", option.strike_price, underlying_price);
+                }
+                valid
+            }
             FindOptimalSide::All => true,
             FindOptimalSide::Range(start, end) => {
-                option.strike_price >= *start && option.strike_price <= *end
+                let valid = option.strike_price >= *start && option.strike_price <= *end;
+                if !valid {
+                    debug!("Option is out of range: {} >= {} && {} <= {}", option.strike_price, *start, option.strike_price, *end);
+                }
+                valid
             }
         }
     }
@@ -275,7 +293,7 @@ impl Optimizable for ShortStrangle {
         if !call.valid_call() || !put.valid_put() {
             return false;
         }
-        call.call_bid.unwrap() > PZERO && put.put_bid.unwrap() > PZERO
+        call.call_ask.unwrap() > PZERO && put.put_ask.unwrap() > PZERO
     }
 
     fn create_strategy(
@@ -297,8 +315,8 @@ impl Optimizable for ShortStrangle {
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            call.call_bid.unwrap().value(),
-            put.put_bid.unwrap().value(),
+            call.call_ask.unwrap().value(),
+            put.put_ask.unwrap().value(),
             self.short_call.open_fee,
             self.short_call.close_fee,
             self.short_put.open_fee,
@@ -559,12 +577,39 @@ impl Strategies for LongStrangle {
             + self.long_put.close_fee
     }
 
-    fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
-        panic!("Best ratio is not applicable for this strategy");
+    fn profit_area(&self) -> f64 {
+        let strike_diff = self.long_call.option.strike_price - self.long_put.option.strike_price;
+        let inner_square = strike_diff * self.max_loss();
+        let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
+        let outer_square = break_even_diff * self.max_loss();
+        let triangles = (outer_square - inner_square) / 2.0;
+        let loss_area = ((inner_square + triangles) / self.long_call.option.underlying_price).value();
+        1.0 / loss_area // Invert the value to get the profit area: the lower, the better
     }
 
-    fn best_area(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
-        panic!("Best area is not applicable for this strategy");
+    fn profit_ratio(&self) -> f64 {
+        let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
+        let ratio = self.max_loss() / break_even_diff * 100.0;
+        1.0 / ratio // Invert the value to get the profit ratio: the lower, the better
+    }
+
+    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
+    }
+
+    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+    }
+
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
+        let diff = last_option - first_option;
+        debug!("First break even point: {} Last break even point: {}", first_option, last_option);
+        let start_price = first_option - diff;
+        debug!("Start price: {}", start_price);
+        let end_price = last_option + diff;
+        debug!("End price: {}", end_price);
+        Some(calculate_price_range(start_price, end_price, step))
     }
 }
 
@@ -624,15 +669,38 @@ impl Optimizable for LongStrangle {
     }
 
     fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        if !self.long_call.option.validate() {
+        let underlying_price = match (self.long_put.option.underlying_price, self.long_call.option.underlying_price) {
+            (PZERO, PZERO) => PZERO,
+            (PZERO, call) => call,
+            (put, _) => put,
+        };
+        if underlying_price == PZERO {
+            error!("Invalid underlying_price option");
             return false;
         }
+
         match side {
-            FindOptimalSide::Upper => option.strike_price >= self.long_call.option.underlying_price,
-            FindOptimalSide::Lower => option.strike_price <= self.long_call.option.underlying_price,
+            FindOptimalSide::Upper => {
+                let valid = option.strike_price >= underlying_price;
+                if !valid {
+                    debug!("Option is out of range: {} <= {}", option.strike_price, underlying_price);
+                }
+                valid
+            }
+            FindOptimalSide::Lower => {
+                let valid = option.strike_price <= underlying_price;
+                if !valid {
+                    debug!("Option is out of range: {} >= {}", option.strike_price, underlying_price);
+                }
+                valid
+            }
             FindOptimalSide::All => true,
             FindOptimalSide::Range(start, end) => {
-                option.strike_price >= *start && option.strike_price <= *end
+                let valid = option.strike_price >= *start && option.strike_price <= *end;
+                if !valid {
+                    debug!("Option is out of range: {} >= {} && {} <= {}", option.strike_price, *start, option.strike_price, *end);
+                }
+                valid
             }
         }
     }

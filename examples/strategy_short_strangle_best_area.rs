@@ -2,7 +2,7 @@ use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
-use optionstratlib::strategies::strangle::ShortStrangle;
+use optionstratlib::strategies::strangle::{ShortStrangle};
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
@@ -34,8 +34,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.82,      // open_fee_short_put
         0.82,      // close_fee_short_put
     );
-    strategy.best_area(&option_chain, FindOptimalSide::Upper);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(5700.0), pos!(6100.0)));
+    strategy.best_area(&option_chain, FindOptimalSide::All);
+    debug!("Strategy:  {:#?}", strategy);
+    let price_range = strategy.best_range_to_show(pos!(1.0))
+        .unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
