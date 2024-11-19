@@ -10,6 +10,7 @@ Key characteristics:
 - Requires a larger price move to become profitable
 */
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -23,8 +24,6 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, error};
-use crate::chains::chain::{OptionChain, OptionData};
-
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -214,15 +213,15 @@ impl Optimizable for ShortStrangle {
         for put_index in 0..options.len() {
             let put_option = &options[put_index];
 
-            for call_index in 0..put_index {
-                let call_option = &options[call_index];
+            for call_option in &options[..put_index] {
                 if call_option.strike_price >= put_option.strike_price {
                     error!("Invalid strike prices {:#?} {:#?}", call_option, put_option);
                     continue;
                 }
 
-                if !self.is_valid_short_option(put_option, &side) ||
-                    !self.is_valid_short_option(call_option, &side) {
+                if !self.is_valid_short_option(put_option, &side)
+                    || !self.is_valid_short_option(call_option, &side)
+                {
                     continue;
                 }
 
@@ -232,7 +231,8 @@ impl Optimizable for ShortStrangle {
                 }
 
                 debug!("Creating Strategy");
-                let strategy: ShortStrangle = self.create_strategy(option_chain, call_option, put_option);
+                let strategy: ShortStrangle =
+                    self.create_strategy(option_chain, call_option, put_option);
 
                 if !strategy.validate() {
                     continue;
@@ -253,7 +253,10 @@ impl Optimizable for ShortStrangle {
     }
 
     fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price = match (self.short_put.option.underlying_price, self.short_call.option.underlying_price) {
+        let underlying_price = match (
+            self.short_put.option.underlying_price,
+            self.short_call.option.underlying_price,
+        ) {
             (PZERO, PZERO) => PZERO,
             (PZERO, call) => call,
             (put, _) => put,
@@ -267,14 +270,20 @@ impl Optimizable for ShortStrangle {
             FindOptimalSide::Upper => {
                 let valid = option.strike_price >= underlying_price;
                 if !valid {
-                    debug!("Option is out of range: {} <= {}", option.strike_price, underlying_price);
+                    debug!(
+                        "Option is out of range: {} <= {}",
+                        option.strike_price, underlying_price
+                    );
                 }
                 valid
             }
             FindOptimalSide::Lower => {
                 let valid = option.strike_price <= underlying_price;
                 if !valid {
-                    debug!("Option is out of range: {} >= {}", option.strike_price, underlying_price);
+                    debug!(
+                        "Option is out of range: {} >= {}",
+                        option.strike_price, underlying_price
+                    );
                 }
                 valid
             }
@@ -282,7 +291,10 @@ impl Optimizable for ShortStrangle {
             FindOptimalSide::Range(start, end) => {
                 let valid = option.strike_price >= *start && option.strike_price <= *end;
                 if !valid {
-                    debug!("Option is out of range: {} >= {} && {} <= {}", option.strike_price, *start, option.strike_price, *end);
+                    debug!(
+                        "Option is out of range: {} >= {} && {} <= {}",
+                        option.strike_price, *start, option.strike_price, *end
+                    );
                 }
                 valid
             }
@@ -583,7 +595,8 @@ impl Strategies for LongStrangle {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
         let outer_square = break_even_diff * self.max_loss();
         let triangles = (outer_square - inner_square) / 2.0;
-        let loss_area = ((inner_square + triangles) / self.long_call.option.underlying_price).value();
+        let loss_area =
+            ((inner_square + triangles) / self.long_call.option.underlying_price).value();
         1.0 / loss_area // Invert the value to get the profit area: the lower, the better
     }
 
@@ -604,7 +617,10 @@ impl Strategies for LongStrangle {
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
         let diff = last_option - first_option;
-        debug!("First break even point: {} Last break even point: {}", first_option, last_option);
+        debug!(
+            "First break even point: {} Last break even point: {}",
+            first_option, last_option
+        );
         let start_price = first_option - diff;
         debug!("Start price: {}", start_price);
         let end_price = last_option + diff;
@@ -633,15 +649,14 @@ impl Optimizable for LongStrangle {
         for put_index in 0..options.len() {
             let put_option = &options[put_index];
 
-            for call_index in 0..put_index {
-                let call_option = &options[call_index];
-
+            for call_option in &options[..put_index] {
                 if call_option.strike_price >= put_option.strike_price {
                     continue;
                 }
 
-                if !self.is_valid_long_option(put_option, &side) ||
-                    !self.is_valid_long_option(call_option, &side) {
+                if !self.is_valid_long_option(put_option, &side)
+                    || !self.is_valid_long_option(call_option, &side)
+                {
                     continue;
                 }
 
@@ -649,7 +664,8 @@ impl Optimizable for LongStrangle {
                     continue;
                 }
 
-                let strategy: LongStrangle = self.create_strategy(option_chain, call_option, put_option);
+                let strategy: LongStrangle =
+                    self.create_strategy(option_chain, call_option, put_option);
 
                 if !strategy.validate() {
                     continue;
@@ -669,7 +685,10 @@ impl Optimizable for LongStrangle {
     }
 
     fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price = match (self.long_put.option.underlying_price, self.long_call.option.underlying_price) {
+        let underlying_price = match (
+            self.long_put.option.underlying_price,
+            self.long_call.option.underlying_price,
+        ) {
             (PZERO, PZERO) => PZERO,
             (PZERO, call) => call,
             (put, _) => put,
@@ -683,14 +702,20 @@ impl Optimizable for LongStrangle {
             FindOptimalSide::Upper => {
                 let valid = option.strike_price >= underlying_price;
                 if !valid {
-                    debug!("Option is out of range: {} <= {}", option.strike_price, underlying_price);
+                    debug!(
+                        "Option is out of range: {} <= {}",
+                        option.strike_price, underlying_price
+                    );
                 }
                 valid
             }
             FindOptimalSide::Lower => {
                 let valid = option.strike_price <= underlying_price;
                 if !valid {
-                    debug!("Option is out of range: {} >= {}", option.strike_price, underlying_price);
+                    debug!(
+                        "Option is out of range: {} >= {}",
+                        option.strike_price, underlying_price
+                    );
                 }
                 valid
             }
@@ -698,7 +723,10 @@ impl Optimizable for LongStrangle {
             FindOptimalSide::Range(start, end) => {
                 let valid = option.strike_price >= *start && option.strike_price <= *end;
                 if !valid {
-                    debug!("Option is out of range: {} >= {} && {} <= {}", option.strike_price, *start, option.strike_price, *end);
+                    debug!(
+                        "Option is out of range: {} >= {} && {} <= {}",
+                        option.strike_price, *start, option.strike_price, *end
+                    );
                 }
                 valid
             }
