@@ -14,7 +14,7 @@ use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::error;
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
     pub spot_prices: Option<Vec<f64>>, // Asian
     pub spot_min: Option<f64>,         // Lookback
@@ -22,7 +22,7 @@ pub struct ExoticParams {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Options {
     pub option_type: OptionType,
     pub side: Side,
