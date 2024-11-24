@@ -11,30 +11,26 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(2646.9);
+    let underlying_price = pos!(7138.5);
 
     let strategy = LongStrangle::new(
-        "GOLD".to_string(),
+        "CL".to_string(),
         underlying_price, // underlying_price
-        pos!(2725.0),     // call_strike
-        pos!(2560.0),     // put_strike
-        ExpirationDate::Days(60.0),
-        0.1548,    // implied_volatility
+        pos!(7450.0),     // call_strike
+        pos!(7050.0),     // put_strike
+        ExpirationDate::Days(45.0),
+        0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(2.0), // quantity
-        38.8,      // premium_short_call
-        30.4,      // premium_short_put
-        0.96,      // open_fee_short_call
-        0.96,      // close_fee_short_call
-        0.96,      // open_fee_short_put
-        0.96,      // close_fee_short_put
+        pos!(1.0), // quantity
+        84.2,      // premium_short_call
+        353.2,     // premium_short_put
+        7.01,      // open_fee_short_call
+        7.01,      // close_fee_short_call
+        7.01,      // open_fee_short_put
+        7.01,      // close_fee_short_put
     );
-
-    let price_range: Vec<PositiveF64> = (2450..=2850)
-        .map(|x| PositiveF64::new(x as f64).unwrap())
-        .collect();
-
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());
@@ -44,14 +40,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         strategy.net_premium_received()
     );
     info!("Max Profit: ${:.2}", strategy.max_profit());
-    info!("Max Loss: ${:.2}", strategy.max_loss());
+    info!("Max Loss: ${}", strategy.max_loss());
     info!("Total Fees: ${:.2}", strategy.fees());
     info!(
-        "Range of Loss: ${:.2} {:.2}%",
+        "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
 
     // Generate the profit/loss graph
     strategy.graph(
