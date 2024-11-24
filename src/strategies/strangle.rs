@@ -23,7 +23,8 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, error, trace};
+use std::f64;
+use tracing::{debug, error, info, trace};
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -45,8 +46,8 @@ impl ShortStrangle {
     pub fn new(
         underlying_symbol: String,
         underlying_price: PositiveF64,
-        call_strike: PositiveF64,
-        put_strike: PositiveF64,
+        mut call_strike: PositiveF64,
+        mut put_strike: PositiveF64,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
@@ -59,6 +60,12 @@ impl ShortStrangle {
         open_fee_short_put: f64,
         close_fee_short_put: f64,
     ) -> Self {
+        if call_strike == PZERO {
+            call_strike = underlying_price * 1.1;
+        }
+        if put_strike == PZERO {
+            put_strike = underlying_price * 0.9;
+        }
         let mut strategy = ShortStrangle {
             name: "Short Strangle".to_string(),
             kind: StrategyType::Strangle,
@@ -218,7 +225,10 @@ impl Optimizable for ShortStrangle {
 
             for put_option in &options[..call_index] {
                 if call_option.strike_price <= put_option.strike_price {
-                    error!("Invalid strike prices CALL: {:#?} PUT: {:#?}", call_option.strike_price, put_option.strike_price);
+                    error!(
+                        "Invalid strike prices CALL: {:#?} PUT: {:#?}",
+                        call_option.strike_price, put_option.strike_price
+                    );
                     continue;
                 }
 
@@ -229,7 +239,11 @@ impl Optimizable for ShortStrangle {
                 }
 
                 if !self.are_valid_prices(call_option, put_option) {
-                    error!("Invalid prices {:#?} {:#?}", call_option, put_option);
+                    error!("Invalid Bid prices  Put({}): {:?} Call({}): {:?} ", 
+                        put_option.strike_price,
+                        put_option.put_bid.unwrap_or(PZERO), 
+                        call_option.strike_price,
+                        call_option.call_bid.unwrap_or(PZERO));
                     continue;
                 }
 
@@ -305,10 +319,7 @@ impl Optimizable for ShortStrangle {
     }
 
     fn are_valid_prices(&self, call: &OptionData, put: &OptionData) -> bool {
-        if !call.valid_call() || !put.valid_put() {
-            return false;
-        }
-        call.call_ask.unwrap() > PZERO && put.put_ask.unwrap() > PZERO
+        call.call_bid.unwrap() > PZERO && put.put_bid.unwrap() > PZERO
     }
 
     fn create_strategy(
@@ -330,8 +341,8 @@ impl Optimizable for ShortStrangle {
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            call.call_ask.unwrap().value(),
-            put.put_ask.unwrap().value(),
+            call.call_bid.unwrap().value(),
+            put.put_bid.unwrap().value(),
             self.short_call.open_fee,
             self.short_call.close_fee,
             self.short_put.open_fee,
@@ -483,8 +494,8 @@ impl LongStrangle {
     pub fn new(
         underlying_symbol: String,
         underlying_price: PositiveF64,
-        call_strike: PositiveF64,
-        put_strike: PositiveF64,
+        mut call_strike: PositiveF64,
+        mut put_strike: PositiveF64,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
@@ -497,6 +508,12 @@ impl LongStrangle {
         open_fee_long_put: f64,
         close_fee_long_put: f64,
     ) -> Self {
+        if call_strike == PZERO {
+            call_strike = underlying_price * 1.1;
+        }
+        if put_strike == PZERO {
+            put_strike = underlying_price * 0.9;
+        }
         let mut strategy = LongStrangle {
             name: "Long Strangle".to_string(),
             kind: StrategyType::Strangle,
@@ -557,6 +574,7 @@ impl LongStrangle {
         strategy
             .break_even_points
             .push(put_strike - strategy.total_cost() / net_quantity);
+
         strategy
             .break_even_points
             .push(call_strike + strategy.total_cost() / net_quantity);
@@ -628,6 +646,7 @@ impl Strategies for LongStrangle {
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
+        info!("First: {} Last: {}", first_option, last_option);
         let diff = last_option - first_option;
         debug!(
             "First break even point: {} Last break even point: {}",
@@ -646,6 +665,7 @@ impl Validable for LongStrangle {
         self.long_call.validate()
             && self.long_put.validate()
             && self.long_call.option.strike_price > self.long_put.option.strike_price
+            && self.long_put.option.strike_price > PZERO
     }
 }
 
@@ -660,28 +680,39 @@ impl Optimizable for LongStrangle {
         let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = f64::NEG_INFINITY;
 
-        for put_index in 0..options.len() {
-            let put_option = &options[put_index];
-
-            for call_option in &options[..put_index] {
-                if call_option.strike_price >= put_option.strike_price {
+        for call_index in 0..options.len() {
+            let call_option = &options[call_index];
+            
+            for put_option in &options[..call_index] {
+                trace!("Call: {:#?} Put: {:#?}", call_option.strike_price, put_option.strike_price);
+                if call_option.strike_price <= put_option.strike_price {
+                    error!(
+                        "Invalid strike prices Put: {:#?} Call: {:#?} ", 
+                        put_option.strike_price, 
+                        call_option.strike_price);
                     continue;
                 }
 
                 if !self.is_valid_long_option(put_option, &side)
                     || !self.is_valid_long_option(call_option, &side)
                 {
+                    error!("Invalid option");
                     continue;
                 }
 
                 if !self.are_valid_prices(call_option, put_option) {
+                    error!("Invalid Ask prices Put: {:#?} Call: {:#?} ", 
+                        put_option.put_ask, 
+                        call_option.call_ask);
                     continue;
                 }
 
                 let strategy: LongStrangle =
                     self.create_strategy(option_chain, call_option, put_option);
 
+
                 if !strategy.validate() {
+                    error!("Invalid strategy");
                     continue;
                 }
 
@@ -748,10 +779,7 @@ impl Optimizable for LongStrangle {
     }
 
     fn are_valid_prices(&self, call: &OptionData, put: &OptionData) -> bool {
-        if !call.valid_call() || !put.valid_put() {
-            return false;
-        }
-        call.call_bid.unwrap() > PZERO && put.put_bid.unwrap() > PZERO
+        call.call_ask.unwrap() > PZERO && put.put_ask.unwrap() > PZERO
     }
 
     fn create_strategy(
@@ -770,8 +798,8 @@ impl Optimizable for LongStrangle {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            call.call_bid.unwrap().value(),
-            put.put_bid.unwrap().value(),
+            call.call_ask.unwrap().value(),
+            put.put_ask.unwrap().value(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.long_put.open_fee,
@@ -803,8 +831,8 @@ impl Graph for LongStrangle {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let max_value = self.max_loss() * 1.2;
-        let min_value = self.max_loss() * -1.2;
+        let max_value = f64::INFINITY;
+        let min_value = f64::NEG_INFINITY;
 
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.long_call.option.underlying_price.value(),
@@ -853,7 +881,7 @@ impl Graph for LongStrangle {
                 self.max_loss(),
                 self.long_call.option.strike_price
             ),
-            label_offset: (0.0, -10.0),
+            label_offset: (0.0, -20.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -867,7 +895,7 @@ impl Graph for LongStrangle {
                 self.max_loss(),
                 self.long_put.option.strike_price
             ),
-            label_offset: (0.0, -10.0),
+            label_offset: (-500.0, -20.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -882,8 +910,8 @@ impl Graph for LongStrangle {
 
 #[cfg(test)]
 mod tests_short_strangle {
-    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use super::*;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::{pos, spos};
 
     fn setup() -> ShortStrangle {
@@ -1029,7 +1057,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
         assert!(title.contains("Put"));
     }
 
-
     #[test]
     fn test_add_leg() {
         let mut strategy = setup();
@@ -1089,16 +1116,16 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let option_data = option_chain.options.first().unwrap();
         let min_strike = option_chain.options.first().unwrap().strike_price;
         let max_strike = option_chain.options.last().unwrap().strike_price;
-    
+
         // Test FindOptimalSide::Upper
         assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Upper));
-    
+
         // Test FindOptimalSide::Lower
         assert!(!strategy.is_valid_short_option(&option_data, &FindOptimalSide::Lower));
-    
+
         // Test FindOptimalSide::All
         assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::All));
-    
+
         // Test FindOptimalSide::Range
         assert!(strategy.is_valid_short_option(
             &option_data,
@@ -1112,9 +1139,9 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let option_chain = create_test_option_chain();
         let call_option = option_chain.options.last().unwrap();
         let put_option = option_chain.options.first().unwrap();
-        
+
         assert!(strategy.are_valid_prices(&call_option, &put_option));
-    
+
         let mut invalid_call = call_option.clone();
         invalid_call.call_ask = Some(pos!(0.0));
         assert!(!strategy.are_valid_prices(&invalid_call, &put_option));
@@ -1146,14 +1173,10 @@ is expected and the underlying asset's price is anticipated to remain stable."
         assert_eq!(points.len(), 5);
 
         // Verificar que los puntos de break-even están presentes
-        let break_even_points: Vec<f64> = points[0..2]
-            .iter()
-            .map(|p| p.coordinates.0)
-            .collect();
+        let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
         assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
         assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
     }
-
 
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
@@ -1163,15 +1186,16 @@ is expected and the underlying asset's price is anticipated to remain stable."
             0.01,
             0.02,
         );
-        let option_chain_build_params = 
-            OptionChainBuildParams::new("AAPL".to_string(), 
-                                        spos!(1.0),
-                10,
-                                        pos!(10.0),
-                0.00001,
-                pos!(0.01),
-                2,
-                                        option_data_price_params);
+        let option_chain_build_params = OptionChainBuildParams::new(
+            "AAPL".to_string(),
+            spos!(1.0),
+            10,
+            pos!(10.0),
+            0.00001,
+            pos!(0.01),
+            2,
+            option_data_price_params,
+        );
         OptionChain::build_chain(&option_chain_build_params)
     }
 }
@@ -1179,7 +1203,8 @@ is expected and the underlying asset's price is anticipated to remain stable."
 #[cfg(test)]
 mod tests_long_strangle {
     use super::*;
-    use crate::pos;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use crate::{pos, spos};
 
     #[test]
     fn test_long_strangle_new() {
@@ -1253,38 +1278,249 @@ mod tests_long_strangle {
     }
 
     fn setup_long_strangle() -> LongStrangle {
-        let underlying_symbol = "AAPL".to_string();
-        let underlying_price = pos!(150.0);
-        let call_strike = pos!(160.0);
-        let put_strike = pos!(140.0);
-        let expiration = ExpirationDate::default();
-        let implied_volatility = 0.25;
-        let risk_free_rate = 0.01;
-        let dividend_yield = 0.02;
-        let quantity = pos!(10.0);
-        let premium_long_call = 5.0;
-        let premium_long_put = 5.0;
-        let open_fee_long_call = 0.5;
-        let close_fee_long_call = 0.5;
-        let open_fee_long_put = 0.5;
-        let close_fee_long_put = 0.5;
-
         LongStrangle::new(
-            underlying_symbol,
-            underlying_price,
-            call_strike,
-            put_strike,
-            expiration,
-            implied_volatility,
-            risk_free_rate,
-            dividend_yield,
-            quantity,
-            premium_long_call,
-            premium_long_put,
-            open_fee_long_call,
-            close_fee_long_call,
-            open_fee_long_put,
-            close_fee_long_put,
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(160.0),
+            pos!(140.0),
+            ExpirationDate::Days(30.0),
+            0.25,
+            0.01,
+            0.02,
+            pos!(10.0),
+            5.0,
+            5.0,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
         )
+    }
+
+    fn wrong_setup_long_strangle() -> LongStrangle {
+        // Setup with put strike higher than call strike
+        LongStrangle::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(140.0), // Call strike lower than put
+            pos!(160.0), // Put strike higher than call
+            ExpirationDate::Days(30.0),
+            0.25,
+            0.01,
+            0.02,
+            pos!(10.0),
+            5.0,
+            5.0,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+        )
+    }
+
+    #[test]
+    fn test_new() {
+        let strategy = setup_long_strangle();
+        assert_eq!(strategy.name, "Long Strangle");
+        assert_eq!(strategy.kind, StrategyType::Strangle);
+        assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
+    }
+
+    #[test]
+    fn test_validate() {
+        let strategy = setup_long_strangle();
+        let wrong_strategy = wrong_setup_long_strangle();
+        assert!(strategy.validate());
+        assert!(!wrong_strategy.validate());
+    }
+
+    #[test]
+    fn test_max_profit() {
+        let strategy = setup_long_strangle();
+        assert_eq!(strategy.max_profit(), f64::INFINITY);
+    }
+
+    #[test]
+    fn test_max_loss() {
+        let strategy = setup_long_strangle();
+        assert_eq!(strategy.max_loss(), strategy.total_cost());
+    }
+
+    #[test]
+    fn test_fees() {
+        let strategy = setup_long_strangle();
+        let expected_fees = 2.0; // 0.5 * 4 fees
+        assert_eq!(strategy.fees(), expected_fees);
+    }
+
+    #[test]
+    fn test_net_premium_received() {
+        let strategy = setup_long_strangle();
+        assert_eq!(strategy.net_premium_received(), 0.0);
+    }
+
+    #[test]
+    fn test_profit_area() {
+        let strategy = setup_long_strangle();
+        let area = strategy.profit_area();
+        assert!(area > 0.0);
+    }
+
+    #[test]
+    fn test_profit_ratio() {
+        let strategy = setup_long_strangle();
+        let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
+        let expected_ratio = 1.0 / (strategy.max_loss() / break_even_diff * 100.0);
+        assert_eq!(strategy.profit_ratio(), expected_ratio);
+    }
+
+    #[test]
+    fn test_add_leg() {
+        let mut strategy = setup_long_strangle();
+        let original_call = strategy.long_call.clone();
+        let original_put = strategy.long_put.clone();
+
+        strategy.add_leg(original_call.clone());
+        assert_eq!(strategy.long_call, original_call);
+
+        strategy.add_leg(original_put.clone());
+        assert_eq!(strategy.long_put, original_put);
+    }
+
+    #[test]
+    fn test_graph_methods() {
+        let strategy = setup_long_strangle();
+
+        // Test vertical lines
+        let vertical_lines = strategy.get_vertical_lines();
+        assert_eq!(vertical_lines.len(), 1);
+        assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
+
+        // Test values calculation
+        let data = vec![
+            pos!(130.0),
+            pos!(140.0),
+            pos!(150.0),
+            pos!(160.0),
+            pos!(170.0),
+        ];
+        let values = strategy.get_values(&data);
+        for (i, &price) in data.iter().enumerate() {
+            assert_eq!(values[i], strategy.calculate_profit_at(price));
+        }
+
+        // Test title
+        let title = strategy.title();
+        assert!(title.contains("Long Strangle Strategy"));
+        assert!(title.contains("Call"));
+        assert!(title.contains("Put"));
+    }
+
+    #[test]
+    fn test_best_ratio() {
+        let mut strategy = setup_long_strangle();
+        let option_chain = create_test_option_chain();
+
+        strategy.best_ratio(&option_chain, FindOptimalSide::All);
+        assert!(strategy.validate());
+    }
+
+    #[test]
+    fn test_best_area() {
+        let mut strategy = setup_long_strangle();
+        let option_chain = create_test_option_chain();
+
+        strategy.best_area(&option_chain, FindOptimalSide::All);
+        assert!(strategy.validate());
+    }
+
+    #[test]
+    fn test_best_range_to_show() {
+        let strategy = setup_long_strangle();
+        let step = pos!(1.0);
+
+        let range = strategy.best_range_to_show(step).unwrap();
+        assert!(!range.is_empty());
+        assert!(range[0] <= strategy.break_even_points[0]);
+        assert!(*range.last().unwrap() >= strategy.break_even_points[1]);
+    }
+
+    #[test]
+    fn test_is_valid_long_option() {
+        let strategy = setup_long_strangle();
+        let option_chain = create_test_option_chain();
+        let option_data = option_chain.options.last().unwrap();
+        let min_strike = option_chain.options.first().unwrap().strike_price;
+        let max_strike = option_chain.options.last().unwrap().strike_price;
+
+        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Upper));
+        assert!(!strategy.is_valid_long_option(&option_data, &FindOptimalSide::Lower));
+        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::All));
+        assert!(strategy.is_valid_long_option(
+            &option_data,
+            &FindOptimalSide::Range(min_strike, max_strike)
+        ));
+    }
+
+    #[test]
+    fn test_are_valid_prices() {
+        let strategy = setup_long_strangle();
+        let option_chain = create_test_option_chain();
+        let call_option = option_chain.options.first().unwrap();
+        let put_option = option_chain.options.last().unwrap();
+
+        assert!(strategy.are_valid_prices(&call_option, &put_option));
+
+        let mut invalid_call = call_option.clone();
+        invalid_call.call_ask = Some(pos!(0.0));
+        assert!(!strategy.are_valid_prices(&invalid_call, &put_option));
+    }
+
+    #[test]
+    fn test_create_strategy() {
+        let strategy = setup_long_strangle();
+        let chain = create_test_option_chain();
+        let call_option = chain.options.first().unwrap();
+        let put_option = chain.options.last().unwrap();
+        let new_strategy = strategy.create_strategy(&chain, &call_option, &put_option);
+        assert!(!new_strategy.validate());
+        let call_option = chain.options.last().unwrap();
+        let put_option = chain.options.first().unwrap();
+        let new_strategy = strategy.create_strategy(&chain, &call_option, &put_option);
+        assert!(new_strategy.validate());
+    }
+
+    #[test]
+    fn test_get_points() {
+        let strategy = setup_long_strangle();
+        let points = strategy.get_points();
+
+        // Should have 5 points: 2 break-even, 2 max loss, 1 current price
+        assert_eq!(points.len(), 5);
+
+        let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
+        assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
+        assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
+    }
+
+    fn create_test_option_chain() -> OptionChain {
+        let option_data_price_params = OptionDataPriceParams::new(
+            pos!(150.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.65),
+            0.01,
+            0.02,
+        );
+        let option_chain_build_params = OptionChainBuildParams::new(
+            "AAPL".to_string(),
+            spos!(1.0),
+            10,
+            pos!(5.0),
+            0.00001,
+            pos!(0.01),
+            2,
+            option_data_price_params,
+        );
+        OptionChain::build_chain(&option_chain_build_params)
     }
 }

@@ -35,6 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.82,      // close_fee_short_put
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
+    debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
