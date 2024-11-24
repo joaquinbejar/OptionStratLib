@@ -46,7 +46,7 @@ use plotters::prelude::{ShapeStyle, BLACK};
 ///
 /// The `Greeks` trait is also implemented for the `Position` struct, allowing
 /// calculations related to options' sensitivities (e.g., Delta, Gamma).
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Position {
     pub option: Options,
     pub premium: f64, // per contract
