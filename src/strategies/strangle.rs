@@ -239,11 +239,13 @@ impl Optimizable for ShortStrangle {
                 }
 
                 if !self.are_valid_prices(call_option, put_option) {
-                    error!("Invalid Bid prices  Put({}): {:?} Call({}): {:?} ", 
+                    error!(
+                        "Invalid Bid prices  Put({}): {:?} Call({}): {:?} ",
                         put_option.strike_price,
-                        put_option.put_bid.unwrap_or(PZERO), 
+                        put_option.put_bid.unwrap_or(PZERO),
                         call_option.strike_price,
-                        call_option.call_bid.unwrap_or(PZERO));
+                        call_option.call_bid.unwrap_or(PZERO)
+                    );
                     continue;
                 }
 
@@ -355,8 +357,8 @@ impl Profit for ShortStrangle {
     fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
         let price = Some(price);
         trace!(
-            "Price: {:.2} Strike: {} Call: {:.2} Strike: {} Put: {:.2} Profit: {:.2}",
-            price.unwrap(),
+            "Price: {:?} Strike: {} Call: {:.2} Strike: {} Put: {:.2} Profit: {:.2}",
+            price,
             self.short_call.option.strike_price,
             self.short_call.pnl_at_expiration(&price),
             self.short_put.option.strike_price,
@@ -682,14 +684,18 @@ impl Optimizable for LongStrangle {
 
         for call_index in 0..options.len() {
             let call_option = &options[call_index];
-            
+
             for put_option in &options[..call_index] {
-                trace!("Call: {:#?} Put: {:#?}", call_option.strike_price, put_option.strike_price);
+                trace!(
+                    "Call: {:#?} Put: {:#?}",
+                    call_option.strike_price,
+                    put_option.strike_price
+                );
                 if call_option.strike_price <= put_option.strike_price {
                     error!(
-                        "Invalid strike prices Put: {:#?} Call: {:#?} ", 
-                        put_option.strike_price, 
-                        call_option.strike_price);
+                        "Invalid strike prices Put: {:#?} Call: {:#?} ",
+                        put_option.strike_price, call_option.strike_price
+                    );
                     continue;
                 }
 
@@ -701,15 +707,15 @@ impl Optimizable for LongStrangle {
                 }
 
                 if !self.are_valid_prices(call_option, put_option) {
-                    error!("Invalid Ask prices Put: {:#?} Call: {:#?} ", 
-                        put_option.put_ask, 
-                        call_option.call_ask);
+                    error!(
+                        "Invalid Ask prices Put: {:#?} Call: {:#?} ",
+                        put_option.put_ask, call_option.call_ask
+                    );
                     continue;
                 }
 
                 let strategy: LongStrangle =
                     self.create_strategy(option_chain, call_option, put_option);
-
 
                 if !strategy.validate() {
                     error!("Invalid strategy");
@@ -1118,19 +1124,17 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let max_strike = option_chain.options.last().unwrap().strike_price;
 
         // Test FindOptimalSide::Upper
-        assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Upper));
+        assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::Upper));
 
         // Test FindOptimalSide::Lower
-        assert!(!strategy.is_valid_short_option(&option_data, &FindOptimalSide::Lower));
+        assert!(!strategy.is_valid_short_option(option_data, &FindOptimalSide::Lower));
 
         // Test FindOptimalSide::All
-        assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::All));
+        assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::All));
 
         // Test FindOptimalSide::Range
-        assert!(strategy.is_valid_short_option(
-            &option_data,
-            &FindOptimalSide::Range(min_strike, max_strike)
-        ));
+        assert!(strategy
+            .is_valid_short_option(option_data, &FindOptimalSide::Range(min_strike, max_strike)));
     }
 
     #[test]
@@ -1140,11 +1144,11 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let call_option = option_chain.options.last().unwrap();
         let put_option = option_chain.options.first().unwrap();
 
-        assert!(strategy.are_valid_prices(&call_option, &put_option));
+        assert!(strategy.are_valid_prices(call_option, put_option));
 
         let mut invalid_call = call_option.clone();
-        invalid_call.call_ask = Some(pos!(0.0));
-        assert!(!strategy.are_valid_prices(&invalid_call, &put_option));
+        invalid_call.call_bid = Some(pos!(0.0));
+        assert!(!strategy.are_valid_prices(&invalid_call, put_option));
     }
 
     #[test]
@@ -1154,13 +1158,13 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let call_option = chain.options.first().unwrap();
         let put_option = chain.options.last().unwrap();
 
-        let new_strategy = strategy.create_strategy(&chain, &call_option, &put_option);
+        let new_strategy = strategy.create_strategy(&chain, call_option, put_option);
         assert!(!new_strategy.validate());
 
         let call_option = chain.options.last().unwrap();
         let put_option = chain.options.first().unwrap();
 
-        let new_strategy = strategy.create_strategy(&chain, &call_option, &put_option);
+        let new_strategy = strategy.create_strategy(&chain, call_option, put_option);
         assert!(new_strategy.validate());
     }
 
@@ -1453,13 +1457,11 @@ mod tests_long_strangle {
         let min_strike = option_chain.options.first().unwrap().strike_price;
         let max_strike = option_chain.options.last().unwrap().strike_price;
 
-        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Upper));
-        assert!(!strategy.is_valid_long_option(&option_data, &FindOptimalSide::Lower));
-        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::All));
-        assert!(strategy.is_valid_long_option(
-            &option_data,
-            &FindOptimalSide::Range(min_strike, max_strike)
-        ));
+        assert!(strategy.is_valid_long_option(option_data, &FindOptimalSide::Upper));
+        assert!(!strategy.is_valid_long_option(option_data, &FindOptimalSide::Lower));
+        assert!(strategy.is_valid_long_option(option_data, &FindOptimalSide::All));
+        assert!(strategy
+            .is_valid_long_option(option_data, &FindOptimalSide::Range(min_strike, max_strike)));
     }
 
     #[test]
@@ -1469,11 +1471,11 @@ mod tests_long_strangle {
         let call_option = option_chain.options.first().unwrap();
         let put_option = option_chain.options.last().unwrap();
 
-        assert!(strategy.are_valid_prices(&call_option, &put_option));
+        assert!(strategy.are_valid_prices(call_option, put_option));
 
         let mut invalid_call = call_option.clone();
         invalid_call.call_ask = Some(pos!(0.0));
-        assert!(!strategy.are_valid_prices(&invalid_call, &put_option));
+        assert!(!strategy.are_valid_prices(&invalid_call, put_option));
     }
 
     #[test]
@@ -1482,11 +1484,11 @@ mod tests_long_strangle {
         let chain = create_test_option_chain();
         let call_option = chain.options.first().unwrap();
         let put_option = chain.options.last().unwrap();
-        let new_strategy = strategy.create_strategy(&chain, &call_option, &put_option);
+        let new_strategy = strategy.create_strategy(&chain, call_option, put_option);
         assert!(!new_strategy.validate());
         let call_option = chain.options.last().unwrap();
         let put_option = chain.options.first().unwrap();
-        let new_strategy = strategy.create_strategy(&chain, &call_option, &put_option);
+        let new_strategy = strategy.create_strategy(&chain, call_option, put_option);
         assert!(new_strategy.validate());
     }
 
