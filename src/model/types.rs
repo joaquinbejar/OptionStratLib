@@ -308,7 +308,7 @@ impl Add<PositiveF64> for f64 {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum ExpirationDate {
     Days(f64),
     DateTime(DateTime<Utc>),
@@ -362,14 +362,14 @@ pub enum Side {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum OptionStyle {
     Call,
     Put,
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 /// Represents the type of option in a financial context.
 /// Options can be categorized into various types based on their characteristics and the conditions under which they can be exercised.
 pub enum OptionType {
@@ -492,7 +492,7 @@ pub enum OptionType {
 
 /// Describes how the average price is calculated for Asian options.
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AsianAveragingType {
     /// Arithmetic averaging calculates the average of the prices in a straightforward manner.
     /// This is the most common type of averaging for Asian options.
@@ -504,7 +504,7 @@ pub enum AsianAveragingType {
 
 /// Describes the type of barrier for Barrier options.
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BarrierType {
     /// The option becomes active only if the underlying asset price goes above a certain level.
     UpAndIn,
@@ -518,7 +518,7 @@ pub enum BarrierType {
 
 /// Describes the type of binary option.
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BinaryType {
     /// The option pays a fixed amount of cash if the underlying asset is above or below a certain level.
     CashOrNothing,
@@ -528,7 +528,7 @@ pub enum BinaryType {
 
 /// Describes the type of lookback option.
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum LookbackType {
     /// The strike price is fixed at the beginning, and the payoff is based on the maximum or minimum price of the underlying asset during the option's life.
     FixedStrike,
