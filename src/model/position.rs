@@ -74,6 +74,20 @@ impl Position {
         }
     }
 
+    /// Calculates the total cost of the position based on the option's side and fees.
+    ///
+    /// Depending on whether the position is long or short, different components
+    /// contribute to the total cost calculation:
+    ///
+    /// - For a long position, the total cost includes the premium, open fee, and close fee
+    ///   multiplied by the option's quantity.
+    /// - For a short position, the total cost includes only the open fee and close fee
+    ///   multiplied by the option's quantity.
+    ///
+    /// # Returns
+    ///
+    /// A `f64` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE 
+    ///
     pub fn total_cost(&self) -> f64 {
         match self.option.side {
             Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
@@ -146,6 +160,20 @@ impl Position {
         }
     }
 
+    /// Calculates the net cost of the position based on the option's side and fees.
+    ///
+    /// This method calculates the net cost of a position by determining whether the position
+    /// is long or short and then computing the respective costs:
+    ///
+    /// - For a long position, the net cost is equivalent to the `total_cost()` of the position.
+    /// - For a short position, the net cost is calculated by subtracting the premium from the
+    ///   sum of the open and close fees, and then multiplying the result by the option's quantity.
+    ///
+    /// # Returns
+    ///
+    /// A `f64` representing the net cost of the position.
+    /// The value should be positive but if the fee is higher than the premium it will be negative
+    /// in short positions
     pub(crate) fn net_cost(&self) -> f64 {
         match self.option.side {
             Side::Long => self.total_cost(),
