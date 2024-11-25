@@ -69,6 +69,11 @@ impl Strategy {
 }
 
 pub trait Strategies: Validable {
+    
+    fn get_underlying_price(&self) -> PositiveF64 {
+        panic!("Underlying price is not applicable for this strategy");
+    }
+    
     fn add_leg(&mut self, _position: Position) {
         panic!("Add leg is not applicable for this strategy");
     }
@@ -140,16 +145,29 @@ pub trait Strategies: Validable {
         if self.strikes().is_empty() {
             return (PZERO, PZERO);
         }
-        let strikes = self.strikes();
 
-        let max = strikes
-            .iter()
-            .cloned()
-            .fold(PositiveF64::new(0.0).unwrap(), PositiveF64::max);
-        let min = strikes
+        let strikes = self.strikes();
+        let mut min = strikes
             .iter()
             .cloned()
             .fold(PositiveF64::new(f64::INFINITY).unwrap(), PositiveF64::min);
+        let mut max = strikes
+            .iter()
+            .cloned()
+            .fold(PositiveF64::new(0.0).unwrap(), PositiveF64::max);
+
+        // If underlying_price is not PZERO, adjust min and max values
+        let underlying_price = self.get_underlying_price();
+        if underlying_price != PZERO {
+            // If min is greater than underlying_price, use underlying_price as min
+            if min > underlying_price {
+                min = underlying_price;
+            }
+            // If underlying_price is greater than max, use underlying_price as max
+            if underlying_price > max {
+                max = underlying_price;
+            }
+        }
 
         (min, max)
     }
@@ -567,5 +585,132 @@ mod tests_strategy_type {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_max_min_strikes {
+    use crate::pos;
+    use super::*;
+
+    struct TestStrategy {
+        strikes: Vec<PositiveF64>,
+        underlying_price: PositiveF64,
+    }
+
+    impl TestStrategy {
+        fn new(strikes: Vec<PositiveF64>, underlying_price: PositiveF64) -> Self {
+            Self {
+                strikes,
+                underlying_price,
+            }
+        }
+    }
+
+    impl Validable for TestStrategy {
+        fn validate(&self) -> bool {
+            true
+        }
+    }
+
+    impl Strategies for TestStrategy {
+        fn strikes(&self) -> Vec<PositiveF64> {
+            self.strikes.clone()
+        }
+
+        fn get_underlying_price(&self) -> PositiveF64 {
+            self.underlying_price
+        }
+
+        // Implement other required methods with default behavior
+        fn add_leg(&mut self, _position: Position) { }
+        fn break_even(&self) -> Vec<PositiveF64> { vec![] }
+        fn max_profit(&self) -> f64 { 0.0 }
+        fn max_loss(&self) -> f64 { 0.0 }
+        fn total_cost(&self) -> f64 { 0.0 }
+        fn net_premium_received(&self) -> f64 { 0.0 }
+        fn fees(&self) -> f64 { 0.0 }
+        fn profit_area(&self) -> f64 { 0.0 }
+        fn profit_ratio(&self) -> f64 { 0.0 }
+        fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) { }
+        fn best_area(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) { }
+        fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> { None }
+    }
+
+    #[test]
+    fn test_empty_strikes() {
+        let strategy = TestStrategy::new(vec![], PZERO);
+        assert_eq!(strategy.max_min_strikes(), (PZERO, PZERO));
+    }
+
+    #[test]
+    fn test_single_strike() {
+        let strike = pos!(100.0);
+        let strategy = TestStrategy::new(vec![strike], PZERO);
+        assert_eq!(strategy.max_min_strikes(), (strike, strike));
+    }
+
+    #[test]
+    fn test_multiple_strikes_no_underlying() {
+        let strikes = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
+        let strategy = TestStrategy::new(strikes.clone(), PZERO);
+        assert_eq!(
+            strategy.max_min_strikes(),
+            (*strikes.first().unwrap(), *strikes.last().unwrap())
+        );
+    }
+
+    #[test]
+    fn test_underlying_price_between_strikes() {
+        let strikes = vec![pos!(90.0), pos!(110.0)];
+        let underlying = pos!(100.0);
+        let strategy = TestStrategy::new(strikes, underlying);
+        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(110.0)));
+    }
+
+    #[test]
+    fn test_underlying_price_below_min_strike() {
+        let strikes = vec![pos!(100.0), pos!(110.0)];
+        let underlying = pos!(90.0);
+        let strategy = TestStrategy::new(strikes, underlying);
+        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(110.0)));
+    }
+
+    #[test]
+    fn test_underlying_price_above_max_strike() {
+        let strikes = vec![pos!(90.0), pos!(100.0)];
+        let underlying = pos!(110.0);
+        let strategy = TestStrategy::new(strikes, underlying);
+        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(110.0)));
+    }
+
+    #[test]
+    fn test_strikes_with_duplicates() {
+        let strikes = vec![pos!(100.0), pos!(100.0), pos!(110.0)];
+        let strategy = TestStrategy::new(strikes, PZERO);
+        assert_eq!(strategy.max_min_strikes(), (pos!(100.0), pos!(110.0)));
+    }
+
+    #[test]
+    fn test_underlying_equals_min_strike() {
+        let strikes = vec![pos!(100.0), pos!(110.0)];
+        let underlying = pos!(100.0);
+        let strategy = TestStrategy::new(strikes, underlying);
+        assert_eq!(strategy.max_min_strikes(), (pos!(100.0), pos!(110.0)));
+    }
+
+    #[test]
+    fn test_underlying_equals_max_strike() {
+        let strikes = vec![pos!(90.0), pos!(100.0)];
+        let underlying = pos!(100.0);
+        let strategy = TestStrategy::new(strikes, underlying);
+        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(100.0)));
+    }
+
+    #[test]
+    fn test_unordered_strikes() {
+        let strikes = vec![pos!(110.0), pos!(90.0), pos!(100.0)];
+        let strategy = TestStrategy::new(strikes, PZERO);
+        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(110.0)));
     }
 }
