@@ -10,7 +10,7 @@ use crate::constants::{
     STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
 };
 use crate::model::position::Position;
-use crate::model::types::PositiveF64;
+use crate::model::types::{PositiveF64, Side};
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Strategies, StrategyType, Validable};
@@ -148,6 +148,10 @@ impl CustomStrategy {
 }
 
 impl Strategies for CustomStrategy {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.underlying_price
+    }
+
     fn add_leg(&mut self, position: Position) {
         self.positions.push(position);
         self.max_loss_iter();
@@ -208,7 +212,10 @@ impl Strategies for CustomStrategy {
     }
 
     fn total_cost(&self) -> f64 {
-        panic!("Not implemented yet");
+        if self.positions.is_empty() {
+            return ZERO;
+        }
+        self.positions.iter().map(Position::total_cost).sum()
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -263,7 +270,6 @@ impl Strategies for CustomStrategy {
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
         let (first_option, last_option) = self.max_min_strikes();
-
         let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
         let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
         Some(calculate_price_range(start_price, end_price, step))
@@ -897,5 +903,277 @@ mod tests_max_loss {
 
         let max_loss = strategy.max_loss_iter();
         assert!(max_loss < ZERO);
+    }
+}
+
+#[cfg(test)]
+mod tests_total_cost {
+    use super::*;
+    use crate::model::option::Options;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
+    use crate::pos;
+    use chrono::Utc;
+
+    fn create_test_position(side: Side, premium: f64, fees: f64) -> Position {
+        Position::new(
+            Options::new(
+                OptionType::European,
+                side,
+                "TEST".to_string(),
+                pos!(100.0),
+                ExpirationDate::Days(30.0),
+                0.2,
+                pos!(1.0),
+                pos!(100.0),
+                0.01,
+                OptionStyle::Call,
+                0.0,
+                None,
+            ),
+            premium,
+            Utc::now(),
+            fees, // open fee
+            fees, // close fee
+        )
+    }
+
+    #[test]
+    fn test_total_cost_only_long_positions() {
+        let positions = vec![
+            create_test_position(Side::Long, 5.0, 0.5), // net cost = 6.0 (premium + fees)
+            create_test_position(Side::Long, 3.0, 0.5), // net cost = 4.0 (premium + fees)
+        ];
+
+        let strategy = CustomStrategy::new(
+            "Test".to_string(),
+            "TEST".to_string(),
+            "Test description".to_string(),
+            pos!(100.0),
+            positions,
+            0.001,
+            100,
+            1.0,
+        );
+
+        assert_eq!(strategy.total_cost(), 10.0); // 6.0 + 4.0
+    }
+
+    #[test]
+    fn test_total_cost_only_short_positions() {
+        let position_1 = create_test_position(Side::Short, 5.0, 0.5);
+        let position_2 = create_test_position(Side::Short, 3.0, 0.5);
+
+        assert_eq!(position_1.total_cost(), 1.0);
+        assert_eq!(position_2.total_cost(), 1.0);
+
+        let positions = vec![position_1, position_2];
+
+        let strategy = CustomStrategy::new(
+            "Test".to_string(),
+            "TEST".to_string(),
+            "Test description".to_string(),
+            pos!(100.0),
+            positions,
+            0.001,
+            100,
+            1.0,
+        );
+
+        assert_eq!(strategy.total_cost(), 2.0);
+    }
+
+    #[test]
+    fn test_total_cost_mixed_positions() {
+        let positions = vec![
+            create_test_position(Side::Long, 5.0, 0.5), // net cost = 6.0
+            create_test_position(Side::Short, 3.0, 0.5), // net cost = 1.0
+            create_test_position(Side::Long, 4.0, 0.5), // net cost = 5.0
+            create_test_position(Side::Short, 2.0, 0.75), // net cost = 1.5
+        ];
+
+        let strategy = CustomStrategy::new(
+            "Test".to_string(),
+            "TEST".to_string(),
+            "Test description".to_string(),
+            pos!(100.0),
+            positions,
+            0.001,
+            100,
+            1.0,
+        );
+
+        assert_eq!(strategy.total_cost(), 13.5); // 6.0 + 1.0 + 5.0 + 1.5
+    }
+
+    #[test]
+    fn test_total_cost_with_different_premiums_and_fees() {
+        let positions = vec![
+            create_test_position(Side::Long, 10.0, 1.0), // net cost = 12.0
+            create_test_position(Side::Short, 5.0, 0.5), // net cost = 1.0
+            create_test_position(Side::Long, 7.0, 0.75), // net cost = 8.5
+            create_test_position(Side::Short, 3.0, 0.25), // net cost = 0.5
+        ];
+
+        let strategy = CustomStrategy::new(
+            "Test".to_string(),
+            "TEST".to_string(),
+            "Test description".to_string(),
+            pos!(100.0),
+            positions,
+            0.001,
+            100,
+            1.0,
+        );
+
+        assert_eq!(strategy.total_cost(), 22.0); // 12.0 + 1.0 + 8.5 + 0.5
+    }
+}
+
+#[cfg(test)]
+mod tests_best_range_to_show {
+    use super::*;
+    use chrono::Utc;
+    use crate::model::option::Options;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
+
+    fn create_test_position(strike: PositiveF64, side: Side) -> Position {
+        Position::new(
+            Options::new(
+                OptionType::European,
+                side,
+                "SP500".to_string(),
+                strike,
+                ExpirationDate::Days(60.0),
+                0.18,
+                pos!(2.0),
+                pos!(5780.0),
+                0.05,
+                OptionStyle::Call,
+                0.0,
+                None,
+            ),
+            53.04,
+            Utc::now(),
+            0.78,
+            0.78,
+        )
+    }
+
+    fn create_test_strategy_with_strikes(strikes: Vec<PositiveF64>) -> CustomStrategy {
+        let positions: Vec<Position> = strikes
+            .into_iter()
+            .map(|strike| create_test_position(strike, Side::Short))
+            .collect();
+
+        CustomStrategy::new(
+            "Test Strategy".to_string(),
+            "SP500".to_string(),
+            "Test Description".to_string(),
+            pos!(5780.0),
+            positions,
+            1e-16,
+            1000,
+            0.1,
+        )
+    }
+
+
+
+    #[test]
+    fn test_best_range_single_strike() {
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0)]);
+        let step = pos!(10.0);
+        let range = strategy.best_range_to_show(step).unwrap();
+
+        let expected_start = (pos!(5780.0) * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
+
+        assert_eq!(range.first().unwrap().value(), expected_start);
+        assert_eq!(range.last().unwrap().value(), 5914.4);
+
+        // Check step size
+        for i in 0..range.len() - 1 {
+            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+        }
+    }
+
+    #[test]
+    fn test_best_range_multiple_strikes() {
+        let strategy =
+            create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5800.0), pos!(5900.0)]);
+        let step = pos!(50.0);
+        let range = strategy.best_range_to_show(step).unwrap();
+
+        let expected_start = (pos!(5700.0) * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
+
+        assert_eq!(range.first().unwrap().value(), expected_start);
+        assert_eq!(range.last().unwrap().value(), 5986.0);
+
+        // Verify step size
+        for i in 0..range.len() - 1 {
+            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+        }
+    }
+
+    #[test]
+    fn test_best_range_with_small_step() {
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0), pos!(5850.0)]);
+        let step = pos!(5.0);
+        let range = strategy.best_range_to_show(step).unwrap();
+
+        // Verify granular steps
+        for i in 0..range.len() - 1 {
+            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+        }
+    }
+
+    #[test]
+    fn test_best_range_with_underlying() {
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5900.0)]);
+        let range = strategy.best_range_to_show(pos!(10.0)).unwrap();
+
+        // Verify range includes underlying price (5780.0)
+        assert!(range.iter().any(|&price| price <= pos!(5780.0)));
+        assert!(range.iter().any(|&price| price >= pos!(5780.0)));
+    }
+
+    #[test]
+    fn test_best_range_with_large_step() {
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(6000.0)]);
+        let step = pos!(100.0);
+        let range = strategy.best_range_to_show(step).unwrap();
+
+        // Verify minimum points
+        assert!(range.len() >= 3);
+
+        // Verify step size
+        for i in 0..range.len() - 1 {
+            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+        }
+    }
+
+    #[test]
+    fn test_best_range_strike_bounds() {
+        let min_strike = pos!(5600.0);
+        let max_strike = pos!(6000.0);
+        let strategy = create_test_strategy_with_strikes(vec![min_strike, max_strike]);
+        let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
+
+        let expected_min = (min_strike * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
+        
+        assert!(range.first().unwrap().value() <= expected_min);
+        assert!(range.last().unwrap().value() >= max_strike.value());
+    }
+
+    #[test]
+    fn test_best_range_unordered_strikes() {
+        let strategy =
+            create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(5700.0), pos!(5100.0)]);
+        let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
+
+        let expected_start = (pos!(5100.0) * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
+
+
+        assert_eq!(range.first().unwrap().value(), expected_start);
+        assert_eq!(range.last().unwrap().value(), 5848.0);
     }
 }
