@@ -5,16 +5,13 @@
 ******************************************************************************/
 
 use crate::chains::chain::OptionChain;
-use crate::constants::{
-    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER,
-    STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
-};
+use crate::constants::{DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, ZERO};
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, Side};
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Strategies, StrategyType, Validable};
-use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use plotters::prelude::full_palette::ORANGE;
@@ -138,13 +135,6 @@ impl CustomStrategy {
             );
         }
     }
-
-    fn range_to_show(&self) -> (PositiveF64, PositiveF64) {
-        let (first_option, last_option) = self.max_min_strikes();
-        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        (start_price, end_price)
-    }
 }
 
 impl Strategies for CustomStrategy {
@@ -266,13 +256,6 @@ impl Strategies for CustomStrategy {
 
     fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
-    }
-
-    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = self.max_min_strikes();
-        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        Some(calculate_price_range(start_price, end_price, step))
     }
 }
 
@@ -1032,9 +1015,9 @@ mod tests_total_cost {
 #[cfg(test)]
 mod tests_best_range_to_show {
     use super::*;
-    use chrono::Utc;
     use crate::model::option::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
+    use chrono::Utc;
 
     fn create_test_position(strike: PositiveF64, side: Side) -> Position {
         Position::new(
@@ -1076,8 +1059,6 @@ mod tests_best_range_to_show {
             0.1,
         )
     }
-
-
 
     #[test]
     fn test_best_range_single_strike() {
@@ -1159,7 +1140,7 @@ mod tests_best_range_to_show {
         let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
 
         let expected_min = (min_strike * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
-        
+
         assert!(range.first().unwrap().value() <= expected_min);
         assert!(range.last().unwrap().value() >= max_strike.value());
     }
@@ -1171,7 +1152,6 @@ mod tests_best_range_to_show {
         let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
 
         let expected_start = (pos!(5100.0) * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
-
 
         assert_eq!(range.first().unwrap().value(), expected_start);
         assert_eq!(range.last().unwrap().value(), 5848.0);

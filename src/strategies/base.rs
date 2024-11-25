@@ -5,10 +5,10 @@
 ******************************************************************************/
 
 use crate::chains::chain::{OptionChain, OptionData};
-use crate::constants::ZERO;
+use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO};
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -135,8 +135,18 @@ pub trait Strategies: Validable {
         panic!("Best area is not applicable for this strategy");
     }
 
-    fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        None
+    fn range_to_show(&self) -> (PositiveF64, PositiveF64) {
+        let (first_option, last_option) = self.max_min_strikes();
+        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        (start_price, end_price)
+    }
+
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = self.max_min_strikes();
+        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
     }
 
     fn strikes(&self) -> Vec<PositiveF64> {
