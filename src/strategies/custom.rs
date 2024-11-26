@@ -4,7 +4,7 @@
    Date: 2/10/24
 ******************************************************************************/
 
-use crate::chains::chain::OptionChain;
+use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, ZERO};
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, Side};
@@ -16,8 +16,11 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
+use crate::strategies::strangle::LongStrangle;
+use crate::utils::others::process_n_times_iter;
 
+#[derive(Clone, Debug)]
 pub struct CustomStrategy {
     pub name: String,
     pub symbol: String,
@@ -288,11 +291,27 @@ impl Optimizable for CustomStrategy {
 
     fn find_optimal(
         &mut self,
-        _option_chain: &OptionChain,
-        _side: FindOptimalSide,
-        _criteria: OptimizationCriteria,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
     ) {
-        todo!("Implement this method");
+        let positions = self.positions.clone();
+        let options: Vec<&OptionData> = option_chain.options.iter().collect();
+        let mut best_value = f64::NEG_INFINITY;
+
+        let new_positions = process_n_times_iter(&positions, |i| {
+            info!("Iteration: {:?} {:?}", i, positions.clone());
+            i.iter().map(|&x| x.clone()).collect()
+        });
+    }
+
+    fn create_strategy(
+        &self,
+        _chain: &OptionChain,
+        _call: &OptionData,
+        _put: &OptionData,
+    ) -> Self::Strategy {
+        panic!("Create strategy is not applicable for this strategy");
     }
 }
 
