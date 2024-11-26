@@ -3,12 +3,18 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
-use crate::chains::utils::{adjust_volatility, default_empty_string, generate_list_of_strikes, parse, OptionChainBuildParams, OptionDataPriceParams, RandomPositionsParams};
+use crate::chains::utils::{
+    adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
+    OptionChainBuildParams, OptionDataPriceParams, RandomPositionsParams,
+};
 use crate::greeks::equations::delta;
 use crate::model::option::Options;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::position::Position;
+use crate::model::types::{OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pricing::black_scholes_model::black_scholes;
+use crate::utils::others::get_random_element;
 use crate::{pos, spos};
+use chrono::Utc;
 use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -17,10 +23,7 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
-use chrono::Utc;
 use tracing::debug;
-use crate::model::position::Position;
-use crate::utils::others::get_random_element;
 
 /// Struct representing a row in an option chain.
 ///
@@ -49,8 +52,8 @@ pub(crate) struct OptionData {
     open_interest: Option<u64>,
 }
 
+#[allow(dead_code)]
 impl OptionData {
-    #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         strike_price: PositiveF64,
@@ -95,19 +98,19 @@ impl OptionData {
             && self.put_bid.is_some()
             && self.put_ask.is_some()
     }
-    
+
     pub fn get_call_buy_price(&self) -> Option<PositiveF64> {
         self.call_ask
     }
-    
+
     pub fn get_call_sell_price(&self) -> Option<PositiveF64> {
         self.call_bid
     }
-    
+
     pub fn get_put_buy_price(&self) -> Option<PositiveF64> {
         self.put_ask
     }
-    
+
     pub fn get_put_sell_price(&self) -> Option<PositiveF64> {
         self.put_bid
     }
@@ -152,7 +155,6 @@ impl OptionData {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn apply_spread(&mut self, spread: PositiveF64, decimal_places: i32) {
         fn round_to_decimal(
             number: PositiveF64,
@@ -204,7 +206,6 @@ impl OptionData {
         };
         self.delta = Some(delta(&option));
     }
-    
 }
 
 impl Default for OptionData {
@@ -540,7 +541,7 @@ impl OptionChain {
             }
         }
 
-        // Add short put positions 
+        // Add short put positions
         if let Some(qty) = params.qty_puts_short {
             for _ in 0..qty {
                 if let Some(option) = get_random_element(&self.options) {
@@ -1178,30 +1179,25 @@ mod tests_option_data {
 #[cfg(test)]
 mod tests_get_random_positions {
     use super::*;
-    use crate::model::types::{PositiveF64};
+    use crate::model::types::{ExpirationDate, PositiveF64};
     use crate::pos;
     use crate::utils::logger::setup_logger;
 
-
     fn create_test_chain() -> OptionChain {
         // Create a sample option chain
-        let mut chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            "2024-01-01".to_string(),
-        );
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
 
         // Add some test options with different strikes
         chain.add_option(
-            pos!(95.0),  // strike_price
-            spos!(4.0),  // call_bid
-            spos!(4.2),  // call_ask
-            spos!(3.0),  // put_bid
-            spos!(3.2),  // put_ask
-            spos!(0.2),  // implied_volatility
-            Some(0.5),   // delta
+            pos!(95.0),   // strike_price
+            spos!(4.0),   // call_bid
+            spos!(4.2),   // call_ask
+            spos!(3.0),   // put_bid
+            spos!(3.2),   // put_ask
+            spos!(0.2),   // implied_volatility
+            Some(0.5),    // delta
             spos!(100.0), // volume
-            Some(50),    // open_interest
+            Some(50),     // open_interest
         );
 
         chain.add_option(
@@ -1247,7 +1243,7 @@ mod tests_get_random_positions {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         let result = chain.get_random_positions(params);
 
@@ -1274,7 +1270,7 @@ mod tests_get_random_positions {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         let result = chain.get_random_positions(params);
 
@@ -1306,7 +1302,7 @@ mod tests_get_random_positions {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         let result = chain.get_random_positions(params);
 
@@ -1338,7 +1334,7 @@ mod tests_get_random_positions {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         let result = chain.get_random_positions(params);
 
@@ -1370,7 +1366,7 @@ mod tests_get_random_positions {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         let result = chain.get_random_positions(params);
 
@@ -1402,7 +1398,7 @@ mod tests_get_random_positions {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         let result = chain.get_random_positions(params);
 
@@ -1448,7 +1444,7 @@ mod tests_get_random_positions {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         let result = chain.get_random_positions(params);
 
@@ -1456,5 +1452,4 @@ mod tests_get_random_positions {
         let positions = result.unwrap();
         assert!(positions.is_empty());
     }
-    
 }

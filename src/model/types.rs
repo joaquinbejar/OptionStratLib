@@ -194,6 +194,7 @@ impl PartialOrd for PositiveF64 {
 }
 
 impl Eq for PositiveF64 {}
+
 impl Ord for PositiveF64 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0.partial_cmp(&other.0).unwrap()

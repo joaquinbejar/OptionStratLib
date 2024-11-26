@@ -160,10 +160,10 @@ impl RandomPositionsParams {
 
     /// Returns the total number of positions to generate
     pub fn total_positions(&self) -> usize {
-        self.qty_puts_long.unwrap_or(0) +
-            self.qty_puts_short.unwrap_or(0) +
-            self.qty_calls_long.unwrap_or(0) +
-            self.qty_calls_short.unwrap_or(0)
+        self.qty_puts_long.unwrap_or(0)
+            + self.qty_puts_short.unwrap_or(0)
+            + self.qty_calls_long.unwrap_or(0)
+            + self.qty_calls_short.unwrap_or(0)
     }
 }
 
@@ -239,8 +239,6 @@ pub(crate) fn rounder(reference_price: PositiveF64, strike_interval: PositiveF64
 
     pos!(rounded)
 }
-
-
 
 #[cfg(test)]
 mod tests_rounder {
@@ -422,7 +420,7 @@ mod tests_random_positions_params {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         )
     }
 
@@ -459,7 +457,7 @@ mod tests_random_positions_params {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         assert_eq!(params.total_positions(), 5);
 
@@ -475,7 +473,7 @@ mod tests_random_positions_params {
             1.0,
             1.0,
             1.0,
-            1.0
+            1.0,
         );
         assert_eq!(params.total_positions(), 0);
     }

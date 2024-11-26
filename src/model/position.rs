@@ -86,7 +86,7 @@ impl Position {
     ///
     /// # Returns
     ///
-    /// A `f64` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE 
+    /// A `f64` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE
     ///
     pub fn total_cost(&self) -> f64 {
         match self.option.side {

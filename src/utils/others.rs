@@ -3,9 +3,9 @@
    Email: jb@taunais.com
    Date: 27/9/24
 ******************************************************************************/
-use std::collections::BTreeSet;
 use crate::constants::TOLERANCE;
 use itertools::Itertools;
+use std::collections::BTreeSet;
 
 #[allow(dead_code)]
 pub(crate) fn approx_equal(a: f64, b: f64) -> bool {
@@ -59,10 +59,7 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 /// # Errors:
 /// This function will return an error if the `positions` slice is empty.
 ///
-pub fn process_n_times_iter<T, F>(
-    positions: &[T],
-    process_combination: F
-) -> Result<Vec<T>, String>
+pub fn process_n_times_iter<T, F>(positions: &[T], process_combination: F) -> Result<Vec<T>, String>
 where
     F: Fn(&[&T]) -> Vec<T>,
     T: Clone,
@@ -74,8 +71,7 @@ where
     Ok(positions
         .iter()
         .combinations_with_replacement(positions.len())
-        .map(|combination| process_combination(&combination))
-        .flatten()
+        .flat_map(|combination| process_combination(&combination))
         .collect())
 }
 
@@ -291,10 +287,7 @@ mod tests_process_n_times_iter {
             value: i32,
         }
 
-        let vec = vec![
-            TestStruct { value: 1 },
-            TestStruct { value: 2 },
-        ];
+        let vec = vec![TestStruct { value: 1 }, TestStruct { value: 2 }];
 
         let result = process_n_times_iter(&vec, |combination| {
             combination.iter().map(|&x| x.clone()).collect()
@@ -396,10 +389,7 @@ mod tests_process_n_times_iter_bis {
             value: i32,
         }
 
-        let vec = vec![
-            TestStruct { value: 1 },
-            TestStruct { value: 2 },
-        ];
+        let vec = vec![TestStruct { value: 1 }, TestStruct { value: 2 }];
 
         let result = process_n_times_iter(&vec, |combination| {
             combination.iter().map(|&x| x.clone()).collect()

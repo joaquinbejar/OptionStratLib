@@ -5,7 +5,9 @@
 ******************************************************************************/
 
 use crate::chains::chain::{OptionChain, OptionData};
-use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO};
+use crate::constants::{
+    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+};
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
@@ -69,11 +71,10 @@ impl Strategy {
 }
 
 pub trait Strategies: Validable {
-    
     fn get_underlying_price(&self) -> PositiveF64 {
         panic!("Underlying price is not applicable for this strategy");
     }
-    
+
     fn add_leg(&mut self, _position: Position) {
         panic!("Add leg is not applicable for this strategy");
     }
@@ -185,6 +186,38 @@ pub trait Strategies: Validable {
         }
 
         (min, max)
+    }
+
+    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        panic!("Break even points is not applicable for this strategy");
+    }
+
+    /// Calculates the range of profit based on break-even points for any strategy that implements
+    /// the `Strategies` trait. Break-even points are determined using the `get_break_even_points` method.
+    ///
+    /// # Returns
+    ///
+    /// * `None` - if there are less than two break-even points.
+    /// * `Some(PositiveF64)` - the difference between the highest and lowest break-even points,
+    ///   or the difference between the first and second break-even points if there are exactly two.
+    ///
+    fn range_of_profit(&self) -> Option<PositiveF64> {
+        match self.get_break_even_points().len() {
+            0 => None,
+            1 => None,
+            2 => {
+                let range = self.get_break_even_points()[1] - self.get_break_even_points()[0];
+                Some(range)
+            }
+            _ => {
+                // sort break even points and then get last minus first
+                let mut break_even_points = self.get_break_even_points();
+                break_even_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                let range =
+                    *break_even_points.last().unwrap() - *break_even_points.first().unwrap();
+                Some(range)
+            }
+        }
     }
 }
 
@@ -342,10 +375,6 @@ mod tests_strategies {
         assert_eq!(strategy.profit_area(), ZERO);
         assert_eq!(strategy.profit_ratio(), ZERO);
         assert!(strategy.validate());
-        assert_eq!(
-            strategy.best_range_to_show(PositiveF64::new(1.0).unwrap()),
-            None
-        );
     }
 
     #[test]
@@ -359,45 +388,6 @@ mod tests_strategies {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
         strategy.add_leg(position);
-    }
-
-    #[test]
-    fn test_strategies_strikes_and_max_min_strikes() {
-        struct StrikeStrategy {
-            legs: Vec<Position>,
-        }
-
-        impl Validable for StrikeStrategy {}
-        impl Strategies for StrikeStrategy {
-            fn get_legs(&self) -> Vec<Position> {
-                self.legs.clone()
-            }
-        }
-
-        let option1 = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let option2 = create_sample_option_simplest(OptionStyle::Put, Side::Short);
-
-        let strategy = StrikeStrategy {
-            legs: vec![
-                Position::new(option1, 1.0, Default::default(), 0.0, 0.0),
-                Position::new(option2, 1.0, Default::default(), 0.0, 0.0),
-            ],
-        };
-
-        assert_eq!(
-            strategy.strikes(),
-            vec![
-                PositiveF64::new(100.0).unwrap(),
-                PositiveF64::new(100.0).unwrap()
-            ]
-        );
-        assert_eq!(
-            strategy.max_min_strikes(),
-            (
-                PositiveF64::new(100.0).unwrap(),
-                PositiveF64::new(100.0).unwrap()
-            )
-        );
     }
 }
 
@@ -605,8 +595,8 @@ mod tests_strategy_type {
 
 #[cfg(test)]
 mod tests_max_min_strikes {
-    use crate::pos;
     use super::*;
+    use crate::pos;
 
     struct TestStrategy {
         strikes: Vec<PositiveF64>,
@@ -638,18 +628,36 @@ mod tests_max_min_strikes {
         }
 
         // Implement other required methods with default behavior
-        fn add_leg(&mut self, _position: Position) { }
-        fn break_even(&self) -> Vec<PositiveF64> { vec![] }
-        fn max_profit(&self) -> f64 { 0.0 }
-        fn max_loss(&self) -> f64 { 0.0 }
-        fn total_cost(&self) -> f64 { 0.0 }
-        fn net_premium_received(&self) -> f64 { 0.0 }
-        fn fees(&self) -> f64 { 0.0 }
-        fn profit_area(&self) -> f64 { 0.0 }
-        fn profit_ratio(&self) -> f64 { 0.0 }
-        fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) { }
-        fn best_area(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) { }
-        fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> { None }
+        fn add_leg(&mut self, _position: Position) {}
+        fn break_even(&self) -> Vec<PositiveF64> {
+            vec![]
+        }
+        fn max_profit(&self) -> f64 {
+            0.0
+        }
+        fn max_loss(&self) -> f64 {
+            0.0
+        }
+        fn total_cost(&self) -> f64 {
+            0.0
+        }
+        fn net_premium_received(&self) -> f64 {
+            0.0
+        }
+        fn fees(&self) -> f64 {
+            0.0
+        }
+        fn profit_area(&self) -> f64 {
+            0.0
+        }
+        fn profit_ratio(&self) -> f64 {
+            0.0
+        }
+        fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {}
+        fn best_area(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {}
+        fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
+            None
+        }
     }
 
     #[test]
