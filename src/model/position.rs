@@ -6,7 +6,7 @@
 use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
-use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64, Side, PZERO};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pos;
 use crate::pricing::payoff::Profit;
@@ -14,6 +14,8 @@ use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
+use tracing::{error, trace};
+use crate::chains::chain::OptionData;
 
 /// The `Position` struct represents a financial position in an options market.
 /// It includes various attributes related to the option, such as its cost,
@@ -72,6 +74,28 @@ impl Position {
             open_fee,
             close_fee,
         }
+    }
+    
+    pub fn update_from_option_data(&mut self, option_data: &OptionData) {
+        self.date = Utc::now();
+        self.option.strike_price = option_data.strike_price;
+        self.option.implied_volatility = option_data.implied_volatility.unwrap_or(PZERO).value();
+        
+        match (self.option.side.clone(), self.option.option_style.clone()) { 
+            (Side::Long, OptionStyle::Call) => {
+                self.premium = option_data.call_ask.unwrap().value();
+            },
+            (Side::Long, OptionStyle::Put) => {
+                self.premium = option_data.put_ask.unwrap().value();
+            },
+            (Side::Short, OptionStyle::Call) => {
+                self.premium = option_data.call_bid.unwrap().value();
+            },
+            (Side::Short, OptionStyle::Put) => {
+                self.premium = option_data.put_bid.unwrap().value();
+            },
+        }
+        trace!("Updated position: {:#?}", self);
     }
 
     /// Calculates the total cost of the position based on the option's side and fees.
@@ -229,16 +253,20 @@ impl Position {
     }
 
     pub(crate) fn validate(&self) -> bool {
-        if self.premium <= ZERO {
+        if self.premium < ZERO {
+            error!("Premium must be greater than zero.");
             return false;
         }
         if self.open_fee < ZERO {
+            error!("Open fee must be greater than zero.");
             return false;
         }
         if self.close_fee < ZERO {
+            error!("Close fee must be greater than zero.");
             return false;
         }
         if !self.option.validate() {
+            error!("Option is not valid.");
             return false;
         }
         true
