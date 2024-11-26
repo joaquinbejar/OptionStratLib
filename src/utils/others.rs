@@ -59,9 +59,9 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 /// # Errors:
 /// This function will return an error if the `positions` slice is empty.
 ///
-pub fn process_n_times_iter<T, F>(positions: &[T], process_combination: F) -> Result<Vec<T>, String>
+pub fn process_n_times_iter<T, Y, F>(positions: &[T], n: usize, mut process_combination: F) -> Result<Vec<Y>, String>
 where
-    F: Fn(&[&T]) -> Vec<T>,
+    F: FnMut(&[&T]) -> Vec<Y>,
     T: Clone,
 {
     if positions.is_empty() {
@@ -70,7 +70,7 @@ where
 
     Ok(positions
         .iter()
-        .combinations_with_replacement(positions.len())
+        .combinations_with_replacement(n)
         .flat_map(|combination| process_combination(&combination))
         .collect())
 }
