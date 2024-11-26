@@ -24,6 +24,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
 use tracing::debug;
+use crate::strategies::utils::FindOptimalSide;
 
 /// Struct representing a row in an option chain.
 ///
@@ -336,6 +337,22 @@ impl OptionChain {
         }
 
         option_chain
+    }
+    
+    pub  fn filter_option_data(&self, side: FindOptimalSide) -> Vec<&OptionData> {
+        self.options
+            .iter()
+            .filter(|option| {
+                match side {
+                    FindOptimalSide::Upper => option.strike_price > self.underlying_price,
+                    FindOptimalSide::Lower => option.strike_price < self.underlying_price,
+                    FindOptimalSide::All => true,
+                    FindOptimalSide::Range(start, end) => {
+                        option.strike_price >= start && option.strike_price <= end
+                    }
+                }
+            })
+            .collect()
     }
 
     #[allow(clippy::too_many_arguments)]
