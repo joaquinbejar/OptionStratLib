@@ -73,6 +73,16 @@ impl CustomStrategy {
         strategy
     }
 
+    fn update_positions(&mut self, new_positions: Vec<Position>) {
+        self.positions = new_positions;
+        if !self.validate() {
+            panic!("Invalid strategy");
+        }
+        self.max_loss_iter();
+        self.max_profit_iter();
+        self.calculate_break_even_points();
+    }
+
     fn calculate_break_even_points(&mut self) {
         self.break_even_points = Vec::new();
         let step = self.step_by;
@@ -131,7 +141,7 @@ impl CustomStrategy {
         if self.break_even_points.is_empty() {
             info!("No break-even points found");
         } else {
-            info!(
+            debug!(
                 "Break Even Points found: {}",
                 self.break_even_points
                     .iter()
@@ -307,25 +317,103 @@ impl Validable for CustomStrategy {
 impl Optimizable for CustomStrategy {
     type Strategy = CustomStrategy;
 
+    // fn find_optimal(
+    //     &mut self,
+    //     option_chain: &OptionChain,
+    //     _side: FindOptimalSide,
+    //     criteria: OptimizationCriteria,
+    // ) {
+    //     let positions = self.positions.clone();
+    //     let options: Vec<&OptionData> = option_chain.options.iter().collect();
+    //     let mut best_value = f64::NEG_INFINITY;
+    //     let mut best_positions = positions.clone();
+    //
+    //     let new_positions: Vec<Position> =
+    //         process_n_times_iter(&options, positions.len(), |vec_option_data| {
+    //             // TODO: Implement the optimization algorithm
+    //             // en vec_option_data tengo un vector de OptionData de longitud igual a la cantidad de posiciones
+    //             // en positions tengo las posiciones actuales que tengo que reemplazar por las nuevas
+    //             // y devolver un nuevo vector de posiciones
+    //             // como convierto un OptionData en Position?
+    //             // si la Position original es ej: Short Call, tengo que crear una nueva Position con el mismo
+    //             // Side, Symbol, Quantity, etc. pero el strike y los precios del OptionData
+    //             // puedo usar el metodo get_option() de OptionData para obtener el Option y luego usar
+    //             // Position::new con premium: f64,
+    //             //         date: DateTime<Utc>,
+    //             //         open_fee: f64,
+    //             //         close_fee: f64,
+    //             for (mut position, &option_data) in positions.iter().zip(vec_option_data.iter()) {
+    //                 position.update_from_option_data(option_data);
+    //             }
+    //             self.update_positions(positions.clone());
+    //             let current_value = match criteria {
+    //                 OptimizationCriteria::Ratio => self.profit_ratio(),
+    //                 OptimizationCriteria::Area => self.profit_area(),
+    //             };
+    //
+    //             if current_value > best_value {
+    //                 best_value = current_value;
+    //                 best_positions = positions.clone();
+    //             }
+    //             best_positions
+    //         })
+    //         .unwrap();
+    //     // info!("New Positions: {:?}", new_positions);
+    //     let _ = new_positions
+    //         .iter()
+    //         .map(|position| info!("Position: {:?}", position));
+    //     self.update_positions(new_positions);
+    // }
+
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,
-        _side: FindOptimalSide,
-        _criteria: OptimizationCriteria,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
     ) {
         let positions = self.positions.clone();
-        let _options: Vec<&OptionData> = option_chain.options.iter().collect();
-        let mut _best_value = f64::NEG_INFINITY;
+        let options: Vec<&OptionData> = option_chain.filter_option_data(side);
 
-        let new_positions = process_n_times_iter(&positions, |i| {
-            // TODO: Implement the optimization algorithm
-            i.iter().map(|&x| x.clone()).collect()
+        let mut best_value = f64::NEG_INFINITY;
+        let mut best_positions = positions.clone();
+
+        debug!("Starting optimization with {} positions", positions.len());
+
+        let result = process_n_times_iter(&options, positions.len(), |combination| {
+            let mut current_positions = positions.clone();
+
+            // Update each position with the new data
+            for (position, option_data) in current_positions.iter_mut().zip(combination.iter()) {
+                position.update_from_option_data(option_data)
+            }
+
+            // Evaluate the current combination
+            self.update_positions(current_positions.clone());
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => self.profit_ratio(),
+                OptimizationCriteria::Area => self.profit_area(),
+            };
+
+
+            if current_value > best_value {
+                info!("Found better value: {} > {}", current_value, best_value);
+                best_value = current_value;
+                best_positions = current_positions.clone();
+            } else { 
+                info!("Current value: {} <= {}", current_value, best_value); 
+            }
+
+            best_positions.clone()
         })
         .unwrap();
-        // info!("New Positions: {:?}", new_positions);
-        let _ = new_positions
-            .iter()
-            .map(|position| info!("Position: {:?}", position));
+
+        if best_value == f64::NEG_INFINITY {
+            error!("No valid combinations found");
+        }
+
+        debug!("Optimization completed. Best value: {}", best_value);
+        info!("Best positions length: {:?}", result.len());
+        self.update_positions(best_positions);
     }
 
     fn create_strategy(

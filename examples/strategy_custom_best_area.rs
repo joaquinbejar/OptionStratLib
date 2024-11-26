@@ -22,9 +22,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let params = RandomPositionsParams::new(
         Some(1),
-        None,
-        Some(2),
-        None,
+        Some(1),
+        Some(1),
+        Some(1),
         ExpirationDate::Days(30.0),
         pos!(1.0),
         0.05,
