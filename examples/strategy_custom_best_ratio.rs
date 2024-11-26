@@ -1,17 +1,16 @@
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::constants::ZERO;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::model::types::{ExpirationDate, PZERO};
+use optionstratlib::model::position::Position;
+use optionstratlib::model::types::{ExpirationDate, PositiveF64};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
-use optionstratlib::strategies::strangle::LongStrangle;
+use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::{debug, info};
-use optionstratlib::model::position::Position;
-use optionstratlib::strategies::custom::CustomStrategy;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -19,14 +18,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     let underlying_price = option_chain.underlying_price;
-    
-    
-    let positions: Vec<Position> = option_chain.get_random_positions(
+
+    let params = RandomPositionsParams::new(
         Some(1),
-        Some(1),
-        Some(1),
-        Some(1),
-    )?;
+        None,
+        Some(2),
+        None,
+        ExpirationDate::Days(30.0),
+        pos!(1.0),
+        0.05,
+        0.02,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+    );
+    let positions: Vec<Position> = option_chain.get_random_positions(params)?;
 
     let mut strategy = CustomStrategy::new(
         "Custom Strategy".to_string(),
@@ -38,9 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         100,
         0.1,
     );
-    
-    strategy.best_ratio(&option_chain, FindOptimalSide::All);
-    debug!("Strategy:  {:#?}", strategy);
+    strategy.best_area(&option_chain, FindOptimalSide::All);
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
     info!("Title: {}", strategy.title());
