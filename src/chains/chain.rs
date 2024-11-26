@@ -3,13 +3,10 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
-use crate::chains::utils::{
-    adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
-    OptionChainBuildParams, OptionDataPriceParams,
-};
+use crate::chains::utils::{adjust_volatility, default_empty_string, generate_list_of_strikes, parse, OptionChainBuildParams, OptionDataPriceParams, RandomPositionsParams};
 use crate::greeks::equations::delta;
 use crate::model::option::Options;
-use crate::model::types::{OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::{pos, spos};
 use csv::WriterBuilder;
@@ -20,7 +17,10 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
+use chrono::Utc;
 use tracing::debug;
+use crate::model::position::Position;
+use crate::utils::others::get_random_element;
 
 /// Struct representing a row in an option chain.
 ///
@@ -94,6 +94,22 @@ impl OptionData {
             && self.implied_volatility.is_some()
             && self.put_bid.is_some()
             && self.put_ask.is_some()
+    }
+    
+    pub fn get_call_buy_price(&self) -> Option<PositiveF64> {
+        self.call_ask
+    }
+    
+    pub fn get_call_sell_price(&self) -> Option<PositiveF64> {
+        self.call_bid
+    }
+    
+    pub fn get_put_buy_price(&self) -> Option<PositiveF64> {
+        self.put_ask
+    }
+    
+    pub fn get_put_sell_price(&self) -> Option<PositiveF64> {
+        self.put_bid
     }
 
     fn get_option(&self, price_params: &OptionDataPriceParams) -> Result<Options, String> {
@@ -188,6 +204,7 @@ impl OptionData {
         };
         self.delta = Some(delta(&option));
     }
+    
 }
 
 impl Default for OptionData {
@@ -470,6 +487,147 @@ impl OptionChain {
         } else {
             None
         }
+    }
+
+    /// Creates random positions based on specified quantities of puts and calls
+    ///
+    /// # Arguments
+    ///
+    /// * `qty_puts_long` - Number of long put positions to create
+    /// * `qty_puts_short` - Number of short put positions to create  
+    /// * `qty_calls_long` - Number of long call positions to create
+    /// * `qty_calls_short` - Number of short call positions to create
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Position>, String>` - Vector of created positions or error message
+    pub fn get_random_positions(
+        &self,
+        params: RandomPositionsParams,
+    ) -> Result<Vec<Position>, String> {
+        if params.total_positions() == 0 {
+            return Err("The sum of the quantities must be greater than 0".to_string());
+        }
+
+        let mut positions = Vec::with_capacity(params.total_positions());
+
+        // Add long put positions
+        if let Some(qty) = params.qty_puts_long {
+            for _ in 0..qty {
+                if let Some(option) = get_random_element(&self.options) {
+                    let position = Position::new(
+                        Options::new(
+                            OptionType::European,
+                            Side::Long,
+                            self.symbol.clone(),
+                            option.strike_price,
+                            params.expiration_date.clone(),
+                            option.implied_volatility.unwrap_or(pos!(0.0)).value(),
+                            params.option_qty,
+                            self.underlying_price,
+                            params.risk_free_rate,
+                            OptionStyle::Put,
+                            params.dividend_yield,
+                            None,
+                        ),
+                        option.put_ask.unwrap_or(pos!(0.0)).value(),
+                        Utc::now(),
+                        params.open_put_fee,
+                        params.close_put_fee,
+                    );
+                    positions.push(position);
+                }
+            }
+        }
+
+        // Add short put positions 
+        if let Some(qty) = params.qty_puts_short {
+            for _ in 0..qty {
+                if let Some(option) = get_random_element(&self.options) {
+                    let position = Position::new(
+                        Options::new(
+                            OptionType::European,
+                            Side::Short,
+                            self.symbol.clone(),
+                            option.strike_price,
+                            params.expiration_date.clone(),
+                            option.implied_volatility.unwrap_or(pos!(0.0)).value(),
+                            params.option_qty,
+                            self.underlying_price,
+                            params.risk_free_rate,
+                            OptionStyle::Put,
+                            params.dividend_yield,
+                            None,
+                        ),
+                        option.put_bid.unwrap_or(pos!(0.0)).value(),
+                        Utc::now(),
+                        params.open_put_fee,
+                        params.close_put_fee,
+                    );
+                    positions.push(position);
+                }
+            }
+        }
+
+        // Add long call positions
+        if let Some(qty) = params.qty_calls_long {
+            for _ in 0..qty {
+                if let Some(option) = get_random_element(&self.options) {
+                    let position = Position::new(
+                        Options::new(
+                            OptionType::European,
+                            Side::Long,
+                            self.symbol.clone(),
+                            option.strike_price,
+                            params.expiration_date.clone(),
+                            option.implied_volatility.unwrap_or(pos!(0.0)).value(),
+                            params.option_qty,
+                            self.underlying_price,
+                            params.risk_free_rate,
+                            OptionStyle::Call,
+                            params.dividend_yield,
+                            None,
+                        ),
+                        option.call_ask.unwrap_or(pos!(0.0)).value(),
+                        Utc::now(),
+                        params.open_call_fee,
+                        params.close_call_fee,
+                    );
+                    positions.push(position);
+                }
+            }
+        }
+
+        // Add short call positions
+        if let Some(qty) = params.qty_calls_short {
+            for _ in 0..qty {
+                if let Some(option) = get_random_element(&self.options) {
+                    let position = Position::new(
+                        Options::new(
+                            OptionType::European,
+                            Side::Short,
+                            self.symbol.clone(),
+                            option.strike_price,
+                            params.expiration_date.clone(),
+                            option.implied_volatility.unwrap_or(pos!(0.0)).value(),
+                            params.option_qty,
+                            self.underlying_price,
+                            params.risk_free_rate,
+                            OptionStyle::Call,
+                            params.dividend_yield,
+                            None,
+                        ),
+                        option.call_bid.unwrap_or(pos!(0.0)).value(),
+                        Utc::now(),
+                        params.open_call_fee,
+                        params.close_call_fee,
+                    );
+                    positions.push(position);
+                }
+            }
+        }
+
+        Ok(positions)
     }
 }
 
@@ -1015,4 +1173,288 @@ mod tests_option_data {
         assert!(option_data.put_ask.is_some());
         assert!(option_data.put_bid.is_some());
     }
+}
+
+#[cfg(test)]
+mod tests_get_random_positions {
+    use super::*;
+    use crate::model::types::{PositiveF64};
+    use crate::pos;
+    use crate::utils::logger::setup_logger;
+
+
+    fn create_test_chain() -> OptionChain {
+        // Create a sample option chain
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-01-01".to_string(),
+        );
+
+        // Add some test options with different strikes
+        chain.add_option(
+            pos!(95.0),  // strike_price
+            spos!(4.0),  // call_bid
+            spos!(4.2),  // call_ask
+            spos!(3.0),  // put_bid
+            spos!(3.2),  // put_ask
+            spos!(0.2),  // implied_volatility
+            Some(0.5),   // delta
+            spos!(100.0), // volume
+            Some(50),    // open_interest
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(0.2),
+            Some(0.5),
+            spos!(100.0),
+            Some(50),
+        );
+
+        chain.add_option(
+            pos!(105.0),
+            spos!(2.0),
+            spos!(2.2),
+            spos!(4.0),
+            spos!(4.2),
+            spos!(0.2),
+            Some(0.5),
+            spos!(100.0),
+            Some(50),
+        );
+
+        chain
+    }
+
+    #[test]
+    fn test_zero_quantity() {
+        setup_logger();
+        let chain = create_test_chain();
+        let params = RandomPositionsParams::new(
+            None,
+            None,
+            None,
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        let result = chain.get_random_positions(params);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "The sum of the quantities must be greater than 0".to_string()
+        );
+    }
+
+    #[test]
+    fn test_long_puts_only() {
+        setup_logger();
+        let chain = create_test_chain();
+        let params = RandomPositionsParams::new(
+            Some(2),
+            None,
+            None,
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        let result = chain.get_random_positions(params);
+
+        assert!(result.is_ok());
+        let positions = result.unwrap();
+        assert_eq!(positions.len(), 2);
+
+        for position in positions {
+            assert_eq!(position.option.option_style, OptionStyle::Put);
+            assert_eq!(position.option.side, Side::Long);
+            // Premium should be ask price for long positions
+            assert!(position.premium > 0.0);
+        }
+    }
+
+    #[test]
+    fn test_short_puts_only() {
+        setup_logger();
+        let chain = create_test_chain();
+        let params = RandomPositionsParams::new(
+            None,
+            Some(2),
+            None,
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        let result = chain.get_random_positions(params);
+
+        assert!(result.is_ok());
+        let positions = result.unwrap();
+        assert_eq!(positions.len(), 2);
+
+        for position in positions {
+            assert_eq!(position.option.option_style, OptionStyle::Put);
+            assert_eq!(position.option.side, Side::Short);
+            // Premium should be bid price for short positions
+            assert!(position.premium > 0.0);
+        }
+    }
+
+    #[test]
+    fn test_long_calls_only() {
+        setup_logger();
+        let chain = create_test_chain();
+        let params = RandomPositionsParams::new(
+            None,
+            None,
+            Some(2),
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        let result = chain.get_random_positions(params);
+
+        assert!(result.is_ok());
+        let positions = result.unwrap();
+        assert_eq!(positions.len(), 2);
+
+        for position in positions {
+            assert_eq!(position.option.option_style, OptionStyle::Call);
+            assert_eq!(position.option.side, Side::Long);
+            // Premium should be ask price for long positions
+            assert!(position.premium > 0.0);
+        }
+    }
+
+    #[test]
+    fn test_short_calls_only() {
+        setup_logger();
+        let chain = create_test_chain();
+        let params = RandomPositionsParams::new(
+            None,
+            None,
+            None,
+            Some(2),
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        let result = chain.get_random_positions(params);
+
+        assert!(result.is_ok());
+        let positions = result.unwrap();
+        assert_eq!(positions.len(), 2);
+
+        for position in positions {
+            assert_eq!(position.option.option_style, OptionStyle::Call);
+            assert_eq!(position.option.side, Side::Short);
+            // Premium should be bid price for short positions
+            assert!(position.premium > 0.0);
+        }
+    }
+
+    #[test]
+    fn test_mixed_positions() {
+        setup_logger();
+        let chain = create_test_chain();
+        let params = RandomPositionsParams::new(
+            Some(1),
+            Some(1),
+            Some(1),
+            Some(1),
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        let result = chain.get_random_positions(params);
+
+        assert!(result.is_ok());
+        let positions = result.unwrap();
+        assert_eq!(positions.len(), 4);
+
+        let mut long_puts = 0;
+        let mut short_puts = 0;
+        let mut long_calls = 0;
+        let mut short_calls = 0;
+
+        for position in positions {
+            match (position.option.option_style, position.option.side) {
+                (OptionStyle::Put, Side::Long) => long_puts += 1,
+                (OptionStyle::Put, Side::Short) => short_puts += 1,
+                (OptionStyle::Call, Side::Long) => long_calls += 1,
+                (OptionStyle::Call, Side::Short) => short_calls += 1,
+            }
+            // All premiums should be positive
+            assert!(position.premium > 0.0);
+        }
+
+        assert_eq!(long_puts, 1);
+        assert_eq!(short_puts, 1);
+        assert_eq!(long_calls, 1);
+        assert_eq!(short_calls, 1);
+    }
+
+    #[test]
+    fn test_empty_chain() {
+        setup_logger();
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        let params = RandomPositionsParams::new(
+            Some(1),
+            None,
+            None,
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        let result = chain.get_random_positions(params);
+
+        assert!(result.is_ok());
+        let positions = result.unwrap();
+        assert!(positions.is_empty());
+    }
+    
 }

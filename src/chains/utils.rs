@@ -97,6 +97,76 @@ impl Display for OptionDataPriceParams {
     }
 }
 
+/// Parameters for generating random positions in an option chain
+#[derive(Clone, Debug)]
+pub struct RandomPositionsParams {
+    /// Number of long put positions to generate
+    pub qty_puts_long: Option<usize>,
+    /// Number of short put positions to generate  
+    pub qty_puts_short: Option<usize>,
+    /// Number of long call positions to generate
+    pub qty_calls_long: Option<usize>,
+    /// Number of short call positions to generate
+    pub qty_calls_short: Option<usize>,
+    /// Expiration date for the options
+    pub expiration_date: ExpirationDate,
+    /// Quantity for each option position
+    pub option_qty: PositiveF64,
+    /// Risk free interest rate
+    pub risk_free_rate: f64,
+    /// Dividend yield of the underlying
+    pub dividend_yield: f64,
+    /// Fee for opening put positions
+    pub open_put_fee: f64,
+    /// Fee for opening call positions
+    pub open_call_fee: f64,
+    /// Fee for closing put positions
+    pub close_put_fee: f64,
+    /// Fee for closing call positions
+    pub close_call_fee: f64,
+}
+
+impl RandomPositionsParams {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        qty_puts_long: Option<usize>,
+        qty_puts_short: Option<usize>,
+        qty_calls_long: Option<usize>,
+        qty_calls_short: Option<usize>,
+        expiration_date: ExpirationDate,
+        option_qty: PositiveF64,
+        risk_free_rate: f64,
+        dividend_yield: f64,
+        open_put_fee: f64,
+        open_call_fee: f64,
+        close_put_fee: f64,
+        close_call_fee: f64,
+    ) -> Self {
+        Self {
+            qty_puts_long,
+            qty_puts_short,
+            qty_calls_long,
+            qty_calls_short,
+            expiration_date,
+            option_qty,
+            risk_free_rate,
+            dividend_yield,
+            open_put_fee,
+            open_call_fee,
+            close_put_fee,
+            close_call_fee,
+        }
+    }
+
+    /// Returns the total number of positions to generate
+    pub fn total_positions(&self) -> usize {
+        self.qty_puts_long.unwrap_or(0) +
+            self.qty_puts_short.unwrap_or(0) +
+            self.qty_calls_long.unwrap_or(0) +
+            self.qty_calls_short.unwrap_or(0)
+    }
+}
+
 #[allow(dead_code)]
 pub(crate) fn generate_list_of_strikes(
     reference_price: PositiveF64,
@@ -169,6 +239,8 @@ pub(crate) fn rounder(reference_price: PositiveF64, strike_interval: PositiveF64
 
     pos!(rounded)
 }
+
+
 
 #[cfg(test)]
 mod tests_rounder {
@@ -329,5 +401,96 @@ mod tests_default_empty_string {
         let input = Some("Hello");
         let result = default_empty_string(input);
         assert_eq!(result, "Hello");
+    }
+}
+
+#[cfg(test)]
+mod tests_random_positions_params {
+    use super::*;
+    use crate::pos;
+
+    fn create_test_params() -> RandomPositionsParams {
+        RandomPositionsParams::new(
+            Some(1),
+            Some(1),
+            Some(1),
+            Some(1),
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        )
+    }
+
+    #[test]
+    fn test_new_params() {
+        let params = create_test_params();
+        assert_eq!(params.qty_puts_long, Some(1));
+        assert_eq!(params.qty_puts_short, Some(1));
+        assert_eq!(params.qty_calls_long, Some(1));
+        assert_eq!(params.qty_calls_short, Some(1));
+        assert_eq!(params.option_qty, 1.0);
+        assert_eq!(params.risk_free_rate, 0.05);
+        assert_eq!(params.dividend_yield, 0.02);
+        assert_eq!(params.open_put_fee, 1.0);
+        assert_eq!(params.close_put_fee, 1.0);
+        assert_eq!(params.open_call_fee, 1.0);
+        assert_eq!(params.close_call_fee, 1.0);
+    }
+
+    #[test]
+    fn test_total_positions() {
+        let params = create_test_params();
+        assert_eq!(params.total_positions(), 4);
+
+        let params = RandomPositionsParams::new(
+            Some(2),
+            None,
+            Some(3),
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        assert_eq!(params.total_positions(), 5);
+
+        let params = RandomPositionsParams::new(
+            None,
+            None,
+            None,
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        );
+        assert_eq!(params.total_positions(), 0);
+    }
+
+    #[test]
+    fn test_clone() {
+        let params = create_test_params();
+        let cloned = params.clone();
+        assert_eq!(params.total_positions(), cloned.total_positions());
+    }
+
+    #[test]
+    fn test_debug() {
+        let params = create_test_params();
+        let debug_output = format!("{:?}", params);
+        assert!(debug_output.contains("RandomPositionsParams"));
     }
 }
