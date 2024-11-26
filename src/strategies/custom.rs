@@ -5,20 +5,22 @@
 ******************************************************************************/
 
 use crate::chains::chain::{OptionChain, OptionData};
-use crate::constants::{DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, ZERO};
+use crate::constants::{
+    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER,
+    STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+};
 use crate::model::position::Position;
-use crate::model::types::{PositiveF64, Side};
+use crate::model::types::{PositiveF64, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Strategies, StrategyType, Validable};
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
+use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, error, info, trace};
-use crate::strategies::strangle::LongStrangle;
-use crate::utils::others::process_n_times_iter;
+use tracing::{debug, error, info};
 
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
@@ -75,7 +77,8 @@ impl CustomStrategy {
         self.break_even_points = Vec::new();
         let step = self.step_by;
 
-        let (mut current_price, max_search_price) = self.range_to_show();
+        let mut current_price = PZERO;
+        let (_, max_search_price) = self.range_to_show();
         let mut last_profit = self.calculate_profit_at(current_price);
 
         while current_price < max_search_price {
@@ -240,7 +243,6 @@ impl Strategies for CustomStrategy {
             current_price += pos!(self.step_by);
         }
         total_profit / current_price.value()
-        // ZERO
     }
 
     fn profit_ratio(&self) -> f64 {
@@ -259,6 +261,22 @@ impl Strategies for CustomStrategy {
 
     fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+    }
+
+    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let (first_option, last_option) = self.max_min_strikes();
+        let mut break_even_points = self.break_even_points.clone();
+        break_even_points.push(first_option);
+        break_even_points.push(last_option);
+        break_even_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        let start_price = *break_even_points.first().unwrap() * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = *break_even_points.last().unwrap() * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        Some(calculate_price_range(start_price, end_price, step))
+    }
+
+    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        self.break_even_points.clone()
     }
 }
 
@@ -292,17 +310,22 @@ impl Optimizable for CustomStrategy {
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,
-        side: FindOptimalSide,
-        criteria: OptimizationCriteria,
+        _side: FindOptimalSide,
+        _criteria: OptimizationCriteria,
     ) {
         let positions = self.positions.clone();
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
-        let mut best_value = f64::NEG_INFINITY;
+        let _options: Vec<&OptionData> = option_chain.options.iter().collect();
+        let mut _best_value = f64::NEG_INFINITY;
 
         let new_positions = process_n_times_iter(&positions, |i| {
-            info!("Iteration: {:?} {:?}", i, positions.clone());
+            // TODO: Implement the optimization algorithm
             i.iter().map(|&x| x.clone()).collect()
-        });
+        })
+        .unwrap();
+        // info!("New Positions: {:?}", new_positions);
+        let _ = new_positions
+            .iter()
+            .map(|position| info!("Position: {:?}", position));
     }
 
     fn create_strategy(
@@ -912,7 +935,7 @@ mod tests_max_loss {
 mod tests_total_cost {
     use super::*;
     use crate::model::option::Options;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::pos;
     use chrono::Utc;
 
@@ -1035,7 +1058,7 @@ mod tests_total_cost {
 mod tests_best_range_to_show {
     use super::*;
     use crate::model::option::Options;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use chrono::Utc;
 
     fn create_test_position(strike: PositiveF64, side: Side) -> Position {
@@ -1088,7 +1111,7 @@ mod tests_best_range_to_show {
         let expected_start = (pos!(5780.0) * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
 
         assert_eq!(range.first().unwrap().value(), expected_start);
-        assert_eq!(range.last().unwrap().value(), 5914.4);
+        assert_eq!(range.last().unwrap().value(), 5964.4);
 
         // Check step size
         for i in 0..range.len() - 1 {
