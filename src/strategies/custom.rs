@@ -1382,8 +1382,6 @@ mod tests_best_ratio {
     fn test_shorts() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, Some(1)).unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-        // assert_eq!(strategy.profit_area(), 25.335552666208102);
-        // assert_eq!(strategy.profit_ratio(), 111.18000061235148);
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5830 Short Put European Option\n\tUnderlying: SP500 @ $5840 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 2);
         assert_eq!(
