@@ -3,24 +3,22 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-
-use crate::chains::chain::OptionChain;
-use crate::constants::{
-    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER,
-    STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
-};
+use crate::chains::chain::{OptionChain, OptionData};
+use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::position::Position;
-use crate::model::types::PositiveF64;
+use crate::model::types::{PositiveF64, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Strategies, StrategyType, Validable};
-use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
+#[derive(Clone, Debug)]
 pub struct CustomStrategy {
     pub name: String,
     pub symbol: String,
@@ -71,11 +69,22 @@ impl CustomStrategy {
         strategy
     }
 
+    fn update_positions(&mut self, new_positions: Vec<Position>) {
+        self.positions = new_positions;
+        if !self.validate() {
+            panic!("Invalid strategy");
+        }
+        self.max_loss_iter();
+        self.max_profit_iter();
+        self.calculate_break_even_points();
+    }
+
     fn calculate_break_even_points(&mut self) {
         self.break_even_points = Vec::new();
         let step = self.step_by;
 
-        let (mut current_price, max_search_price) = self.range_to_show();
+        let mut current_price = PZERO;
+        let (_, max_search_price) = self.range_to_show();
         let mut last_profit = self.calculate_profit_at(current_price);
 
         while current_price < max_search_price {
@@ -126,9 +135,9 @@ impl CustomStrategy {
         }
 
         if self.break_even_points.is_empty() {
-            info!("No break-even points found");
+            debug!("No break-even points found");
         } else {
-            info!(
+            debug!(
                 "Break Even Points found: {}",
                 self.break_even_points
                     .iter()
@@ -138,16 +147,13 @@ impl CustomStrategy {
             );
         }
     }
-
-    fn range_to_show(&self) -> (PositiveF64, PositiveF64) {
-        let (first_option, last_option) = self.max_min_strikes();
-        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        (start_price, end_price)
-    }
 }
 
 impl Strategies for CustomStrategy {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.underlying_price
+    }
+
     fn add_leg(&mut self, position: Position) {
         self.positions.push(position);
         self.max_loss_iter();
@@ -208,7 +214,10 @@ impl Strategies for CustomStrategy {
     }
 
     fn total_cost(&self) -> f64 {
-        panic!("Not implemented yet");
+        if self.positions.is_empty() {
+            return ZERO;
+        }
+        self.positions.iter().map(Position::total_cost).sum()
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -239,18 +248,11 @@ impl Strategies for CustomStrategy {
             }
             current_price += pos!(self.step_by);
         }
-        total_profit / current_price.value()
-        // ZERO
+        total_profit / self.underlying_price.value()
     }
 
     fn profit_ratio(&self) -> f64 {
-        let max_profit = self.max_profit_point.unwrap().1;
-        let max_loss = self.max_loss_point.unwrap().1.abs();
-        if max_loss == ZERO {
-            f64::INFINITY
-        } else {
-            (max_profit / max_loss) * 100.0
-        }
+        (self.max_profit_point.unwrap().1 / self.max_loss_point.unwrap().1).abs() * 100.0
     }
 
     fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
@@ -261,12 +263,8 @@ impl Strategies for CustomStrategy {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
-    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = self.max_min_strikes();
-
-        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        Some(calculate_price_range(start_price, end_price, step))
+    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        self.break_even_points.clone()
     }
 }
 
@@ -299,11 +297,58 @@ impl Optimizable for CustomStrategy {
 
     fn find_optimal(
         &mut self,
-        _option_chain: &OptionChain,
-        _side: FindOptimalSide,
-        _criteria: OptimizationCriteria,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
     ) {
-        todo!("Implement this method");
+        let positions = self.positions.clone();
+        let options: Vec<&OptionData> = option_chain.filter_option_data(side);
+
+        let mut best_value = f64::NEG_INFINITY;
+        let mut best_positions = positions.clone();
+
+        debug!("Starting optimization with {} positions", positions.len());
+
+        let _result = process_n_times_iter(&options, positions.len(), |combination| {
+            let mut current_positions = positions.clone();
+
+            // Update each position with the new data
+            for (position, option_data) in current_positions.iter_mut().zip(combination.iter()) {
+                position.update_from_option_data(option_data)
+            }
+
+            // Evaluate the current combination
+            self.update_positions(current_positions.clone());
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => self.profit_ratio(),
+                OptimizationCriteria::Area => self.profit_area(),
+            };
+
+            if current_value > best_value {
+                debug!("Found better value: {} > {}", current_value, best_value);
+                best_value = current_value;
+                best_positions = current_positions.clone();
+            }
+
+            best_positions.clone()
+        })
+        .unwrap();
+
+        if best_value == f64::NEG_INFINITY {
+            error!("No valid combinations found");
+        }
+
+        debug!("Optimization completed. Best value: {}", best_value);
+        self.update_positions(best_positions);
+    }
+
+    fn create_strategy(
+        &self,
+        _chain: &OptionChain,
+        _call: &OptionData,
+        _put: &OptionData,
+    ) -> Self::Strategy {
+        panic!("Create strategy is not applicable for this strategy");
     }
 }
 
@@ -897,5 +942,459 @@ mod tests_max_loss {
 
         let max_loss = strategy.max_loss_iter();
         assert!(max_loss < ZERO);
+    }
+}
+
+#[cfg(test)]
+mod tests_total_cost {
+    use super::*;
+    use crate::model::option::Options;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
+    use chrono::Utc;
+
+    fn create_test_position(side: Side, premium: f64, fees: f64) -> Position {
+        Position::new(
+            Options::new(
+                OptionType::European,
+                side,
+                "TEST".to_string(),
+                pos!(100.0),
+                ExpirationDate::Days(30.0),
+                0.2,
+                pos!(1.0),
+                pos!(100.0),
+                0.01,
+                OptionStyle::Call,
+                0.0,
+                None,
+            ),
+            premium,
+            Utc::now(),
+            fees, // open fee
+            fees, // close fee
+        )
+    }
+
+    #[test]
+    fn test_total_cost_only_long_positions() {
+        let positions = vec![
+            create_test_position(Side::Long, 5.0, 0.5), // net cost = 6.0 (premium + fees)
+            create_test_position(Side::Long, 3.0, 0.5), // net cost = 4.0 (premium + fees)
+        ];
+
+        let strategy = CustomStrategy::new(
+            "Test".to_string(),
+            "TEST".to_string(),
+            "Test description".to_string(),
+            pos!(100.0),
+            positions,
+            0.001,
+            100,
+            1.0,
+        );
+
+        assert_eq!(strategy.total_cost(), 10.0); // 6.0 + 4.0
+    }
+
+    #[test]
+    fn test_total_cost_only_short_positions() {
+        let position_1 = create_test_position(Side::Short, 5.0, 0.5);
+        let position_2 = create_test_position(Side::Short, 3.0, 0.5);
+
+        assert_eq!(position_1.total_cost(), 1.0);
+        assert_eq!(position_2.total_cost(), 1.0);
+
+        let positions = vec![position_1, position_2];
+
+        let strategy = CustomStrategy::new(
+            "Test".to_string(),
+            "TEST".to_string(),
+            "Test description".to_string(),
+            pos!(100.0),
+            positions,
+            0.001,
+            100,
+            1.0,
+        );
+
+        assert_eq!(strategy.total_cost(), 2.0);
+    }
+
+    #[test]
+    fn test_total_cost_mixed_positions() {
+        let positions = vec![
+            create_test_position(Side::Long, 5.0, 0.5), // net cost = 6.0
+            create_test_position(Side::Short, 3.0, 0.5), // net cost = 1.0
+            create_test_position(Side::Long, 4.0, 0.5), // net cost = 5.0
+            create_test_position(Side::Short, 2.0, 0.75), // net cost = 1.5
+        ];
+
+        let strategy = CustomStrategy::new(
+            "Test".to_string(),
+            "TEST".to_string(),
+            "Test description".to_string(),
+            pos!(100.0),
+            positions,
+            0.001,
+            100,
+            1.0,
+        );
+
+        assert_eq!(strategy.total_cost(), 13.5); // 6.0 + 1.0 + 5.0 + 1.5
+    }
+
+    #[test]
+    fn test_total_cost_with_different_premiums_and_fees() {
+        let positions = vec![
+            create_test_position(Side::Long, 10.0, 1.0), // net cost = 12.0
+            create_test_position(Side::Short, 5.0, 0.5), // net cost = 1.0
+            create_test_position(Side::Long, 7.0, 0.75), // net cost = 8.5
+            create_test_position(Side::Short, 3.0, 0.25), // net cost = 0.5
+        ];
+
+        let strategy = CustomStrategy::new(
+            "Test".to_string(),
+            "TEST".to_string(),
+            "Test description".to_string(),
+            pos!(100.0),
+            positions,
+            0.001,
+            100,
+            1.0,
+        );
+
+        assert_eq!(strategy.total_cost(), 22.0); // 12.0 + 1.0 + 8.5 + 0.5
+    }
+}
+
+#[cfg(test)]
+mod tests_best_range_to_show {
+    use super::*;
+    use crate::constants::STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+    use crate::model::option::Options;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use chrono::Utc;
+
+    fn create_test_position(strike: PositiveF64, side: Side) -> Position {
+        Position::new(
+            Options::new(
+                OptionType::European,
+                side,
+                "SP500".to_string(),
+                strike,
+                ExpirationDate::Days(60.0),
+                0.18,
+                pos!(2.0),
+                pos!(5780.0),
+                0.05,
+                OptionStyle::Call,
+                0.0,
+                None,
+            ),
+            53.04,
+            Utc::now(),
+            0.78,
+            0.78,
+        )
+    }
+
+    fn create_test_strategy_with_strikes(strikes: Vec<PositiveF64>) -> CustomStrategy {
+        let positions: Vec<Position> = strikes
+            .into_iter()
+            .map(|strike| create_test_position(strike, Side::Short))
+            .collect();
+
+        CustomStrategy::new(
+            "Test Strategy".to_string(),
+            "SP500".to_string(),
+            "Test Description".to_string(),
+            pos!(5780.0),
+            positions,
+            1e-16,
+            1000,
+            0.1,
+        )
+    }
+
+    #[test]
+    fn test_best_range_single_strike() {
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0)]);
+        let step = pos!(10.0);
+        let range = strategy.best_range_to_show(step).unwrap();
+
+        assert_eq!(range.first().unwrap().value(), 5644.8);
+        assert_eq!(range.last().unwrap().value(), 5964.8);
+
+        // Check step size
+        for i in 0..range.len() - 1 {
+            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+        }
+    }
+
+    #[test]
+    fn test_best_range_multiple_strikes() {
+        let strategy =
+            create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5800.0), pos!(5900.0)]);
+        let step = pos!(50.0);
+        let range = strategy.best_range_to_show(step).unwrap();
+
+        assert_eq!(range.first().unwrap().value(), 5546.8);
+        assert_eq!(range.last().unwrap().value(), 5996.8);
+
+        // Verify step size
+        for i in 0..range.len() - 1 {
+            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+        }
+    }
+
+    #[test]
+    fn test_best_range_with_small_step() {
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0), pos!(5850.0)]);
+        let step = pos!(5.0);
+        let range = strategy.best_range_to_show(step).unwrap();
+
+        // Verify granular steps
+        for i in 0..range.len() - 1 {
+            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+        }
+    }
+
+    #[test]
+    fn test_best_range_with_underlying() {
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5900.0)]);
+        let range = strategy.best_range_to_show(pos!(10.0)).unwrap();
+
+        // Verify range includes underlying price (5780.0)
+        assert!(range.iter().any(|&price| price <= pos!(5780.0)));
+        assert!(range.iter().any(|&price| price >= pos!(5780.0)));
+    }
+
+    #[test]
+    fn test_best_range_with_large_step() {
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(6000.0)]);
+        let step = pos!(100.0);
+        let range = strategy.best_range_to_show(step).unwrap();
+
+        // Verify minimum points
+        assert!(range.len() >= 3);
+
+        // Verify step size
+        for i in 0..range.len() - 1 {
+            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+        }
+    }
+
+    #[test]
+    fn test_best_range_strike_bounds() {
+        let min_strike = pos!(5600.0);
+        let max_strike = pos!(6000.0);
+        let strategy = create_test_strategy_with_strikes(vec![min_strike, max_strike]);
+        let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
+
+        let expected_min = (min_strike * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
+
+        assert!(range.first().unwrap().value() <= expected_min);
+        assert!(range.last().unwrap().value() >= max_strike.value());
+    }
+
+    #[test]
+    fn test_best_range_unordered_strikes() {
+        let strategy =
+            create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(5700.0), pos!(5100.0)]);
+        let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
+
+        assert_eq!(range.first().unwrap().value(), 4998.0);
+        assert_eq!(range.last().unwrap().value(), 6548.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_best_area {
+    use super::*;
+    use crate::chains::utils::RandomPositionsParams;
+    use crate::model::types::ExpirationDate;
+    use crate::utils::logger::setup_logger;
+
+    fn set_up(
+        qty_puts_long: Option<usize>,
+        qty_puts_short: Option<usize>,
+        qty_calls_long: Option<usize>,
+        qty_calls_short: Option<usize>,
+    ) -> Result<(CustomStrategy, OptionChain), String> {
+        setup_logger();
+        let option_chain =
+            OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
+                .unwrap();
+        let underlying_price = option_chain.underlying_price;
+        let params = RandomPositionsParams::new(
+            qty_puts_long,
+            qty_puts_short,
+            qty_calls_long,
+            qty_calls_short,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+        );
+        let positions: Vec<Position> = option_chain.get_random_positions(params)?;
+        let strategy = CustomStrategy::new(
+            "Custom Strategy".to_string(),
+            "SP500".to_string(),
+            "Example of a custom strategy".to_string(),
+            underlying_price,
+            positions,
+            0.01,
+            100,
+            0.1,
+        );
+        Ok((strategy, option_chain))
+    }
+
+    #[test]
+    fn test_calls() {
+        let (mut strategy, option_chain) = set_up(None, None, Some(1), Some(1)).unwrap();
+        strategy.best_area(&option_chain, FindOptimalSide::All);
+        assert_eq!(strategy.profit_area(), 224.11824527848214);
+        assert_eq!(strategy.profit_ratio(), 142.80511319003074);
+        assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5520 Long Call European Option\n\tUnderlying: SP500 @ $6200 Short Call European Option");
+        assert_eq!(strategy.get_break_even_points().len(), 1);
+        assert_eq!(
+            strategy.get_break_even_points()[0].value(),
+            5800.050000003569
+        );
+        assert_eq!(strategy.max_profit_iter(), 399.94000000000005);
+        assert_eq!(strategy.max_loss_iter(), -280.06);
+        assert_eq!(strategy.total_cost(), 280.06);
+        assert_eq!(strategy.net_premium_received(), -2.0);
+        assert_eq!(strategy.fees(), 4.0);
+    }
+
+    #[test]
+    fn test_shorts() {
+        let (mut strategy, option_chain) = set_up(None, Some(1), None, Some(1)).unwrap();
+        strategy.best_area(&option_chain, FindOptimalSide::Upper);
+        assert_eq!(strategy.profit_area(), 221.89686378937657);
+        assert_eq!(strategy.profit_ratio(), 77.52140605296867);
+        assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6200 Short Put European Option\n\tUnderlying: SP500 @ $6200 Short Call European Option");
+        assert_eq!(strategy.get_break_even_points().len(), 1);
+        assert_eq!(
+            strategy.get_break_even_points()[0].value(),
+            5787.975000003526
+        );
+        assert_eq!(strategy.max_profit_iter(), 412.0148000034326);
+        assert_eq!(strategy.max_loss_iter(), -531.4851999999998);
+        assert_eq!(strategy.total_cost(), 4.0);
+        assert_eq!(strategy.net_premium_received(), 412.03);
+        assert_eq!(strategy.fees(), 4.0);
+    }
+
+    #[test]
+    fn test_put() {
+        let (mut strategy, option_chain) = set_up(None, Some(1), None, None).unwrap();
+        strategy.best_area(&option_chain, FindOptimalSide::Upper);
+        assert_eq!(strategy.profit_area(), 237.05879174440312);
+        assert_eq!(strategy.profit_ratio(), 78.1948201762769);
+        assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6200 Short Put European Option");
+        assert_eq!(strategy.get_break_even_points().len(), 1);
+        assert_eq!(
+            strategy.get_break_even_points()[0].value(),
+            5785.975000003518
+        );
+        assert_eq!(strategy.max_profit_iter(), 414.03);
+        assert_eq!(strategy.max_loss_iter(), -529.4851999999998);
+        assert_eq!(strategy.total_cost(), 2.0);
+        assert_eq!(strategy.net_premium_received(), 414.03);
+        assert_eq!(strategy.fees(), 2.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_best_ratio {
+    use super::*;
+    use crate::chains::utils::RandomPositionsParams;
+    use crate::model::types::ExpirationDate;
+    use crate::utils::logger::setup_logger;
+
+    fn set_up(
+        qty_puts_long: Option<usize>,
+        qty_puts_short: Option<usize>,
+        qty_calls_long: Option<usize>,
+        qty_calls_short: Option<usize>,
+    ) -> Result<(CustomStrategy, OptionChain), String> {
+        setup_logger();
+        let option_chain =
+            OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
+                .unwrap();
+        let underlying_price = option_chain.underlying_price;
+        let params = RandomPositionsParams::new(
+            qty_puts_long,
+            qty_puts_short,
+            qty_calls_long,
+            qty_calls_short,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+        );
+        let positions: Vec<Position> = option_chain.get_random_positions(params)?;
+        let strategy = CustomStrategy::new(
+            "Custom Strategy".to_string(),
+            "SP500".to_string(),
+            "Example of a custom strategy".to_string(),
+            underlying_price,
+            positions,
+            0.01,
+            100,
+            0.1,
+        );
+        Ok((strategy, option_chain))
+    }
+
+    #[test]
+    fn test_calls() {
+        let (mut strategy, option_chain) = set_up(None, None, Some(1), Some(1)).unwrap();
+        strategy.best_ratio(&option_chain, FindOptimalSide::All);
+        assert_eq!(strategy.profit_area(), 48.795428477341034);
+        assert_eq!(strategy.profit_ratio(), 2375.247524752475);
+        assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6050 Long Call European Option\n\tUnderlying: SP500 @ $6200 Short Call European Option");
+        assert_eq!(strategy.get_break_even_points().len(), 1);
+        assert_eq!(
+            strategy.get_break_even_points()[0].value(),
+            6056.0500000045
+        );
+        assert_eq!(strategy.max_profit_iter(), 143.94);
+        assert_eq!(strategy.max_loss_iter(), -6.0600000000000005);
+        assert_eq!(strategy.total_cost(), 6.0600000000000005);
+        assert_eq!(strategy.net_premium_received(), -2.0);
+        assert_eq!(strategy.fees(), 4.0);
+    }
+    
+
+    #[test]
+    fn test_put() {
+        let (mut strategy, option_chain) = set_up(None, Some(1), None, None).unwrap();
+        strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
+        assert_eq!(strategy.profit_area(), 237.05879174440312);
+        assert_eq!(strategy.profit_ratio(), 78.1948201762769);
+        assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6200 Short Put European Option");
+        assert_eq!(strategy.get_break_even_points().len(), 1);
+        assert_eq!(
+            strategy.get_break_even_points()[0].value(),
+            5785.975000003518
+        );
+        assert_eq!(strategy.max_profit_iter(), 414.03);
+        assert_eq!(strategy.max_loss_iter(), -529.4851999999998);
+        assert_eq!(strategy.total_cost(), 2.0);
+        assert_eq!(strategy.net_premium_received(), 414.03);
+        assert_eq!(strategy.fees(), 2.0);
     }
 }

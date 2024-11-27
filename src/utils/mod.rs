@@ -1,5 +1,5 @@
 pub(crate) mod error;
 pub mod logger;
-mod others;
+pub mod others;
 pub(crate) mod tests;
 pub mod time;
