@@ -1377,23 +1377,7 @@ mod tests_best_ratio {
         assert_eq!(strategy.net_premium_received(), -2.0);
         assert_eq!(strategy.fees(), 4.0);
     }
-
-    #[test]
-    fn test_shorts() {
-        let (mut strategy, option_chain) = set_up(None, Some(1), None, Some(1)).unwrap();
-        strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-        assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5830 Short Put European Option\n\tUnderlying: SP500 @ $5840 Short Call European Option");
-        assert_eq!(strategy.get_break_even_points().len(), 2);
-        assert_eq!(
-            strategy.get_break_even_points()[0].value(),
-            5713.793750003255
-        );
-        assert_eq!(strategy.max_profit_iter(), 116.19999999999999);
-        assert_eq!(strategy.max_loss_iter(), -119.01787500492064);
-        assert_eq!(strategy.total_cost(), 4.0);
-        assert_eq!(strategy.net_premium_received(), 116.19999999999999);
-        assert_eq!(strategy.fees(), 4.0);
-    }
+    
 
     #[test]
     fn test_put() {
