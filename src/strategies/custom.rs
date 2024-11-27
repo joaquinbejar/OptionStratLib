@@ -1367,17 +1367,13 @@ mod tests_best_ratio {
         assert_eq!(strategy.profit_ratio(), 2375.247524752475);
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6050 Long Call European Option\n\tUnderlying: SP500 @ $6200 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
-        assert_eq!(
-            strategy.get_break_even_points()[0].value(),
-            6056.0500000045
-        );
+        assert_eq!(strategy.get_break_even_points()[0].value(), 6056.0500000045);
         assert_eq!(strategy.max_profit_iter(), 143.94);
         assert_eq!(strategy.max_loss_iter(), -6.0600000000000005);
         assert_eq!(strategy.total_cost(), 6.0600000000000005);
         assert_eq!(strategy.net_premium_received(), -2.0);
         assert_eq!(strategy.fees(), 4.0);
     }
-    
 
     #[test]
     fn test_put() {

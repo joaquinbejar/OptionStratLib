@@ -894,9 +894,7 @@ mod tests_expiration_date {
             let today = Utc::now();
             let expiration = ExpirationDate::Days(30.0);
             let date_str = expiration.get_date_string();
-            let expected_date = (today + Duration::days(30))
-                .format("%Y-%m-%d")
-                .to_string();
+            let expected_date = (today + Duration::days(30)).format("%Y-%m-%d").to_string();
             assert_eq!(date_str, expected_date);
         }
 
@@ -1204,13 +1202,13 @@ mod tests_option_type {
         };
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(95.0),  
+            strike: pos!(95.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
             ..Default::default()
         };
-        
+
         let expected_payoff = 4.67;
         assert!((option.payoff(&info) - expected_payoff).abs() < 0.01);
     }

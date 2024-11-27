@@ -834,9 +834,8 @@ mod tests_best_range_to_show {
         let step = pos!(5.0);
         let range = strategy.best_range_to_show(step).unwrap();
 
-
         for i in 1..range.len() {
-            assert_eq!(range[i] - range[i-1], step);
+            assert_eq!(range[i] - range[i - 1], step);
         }
     }
 
@@ -849,7 +848,7 @@ mod tests_best_range_to_show {
             vec![pos!(95.0), pos!(105.0)],
         );
         let range = strategy.best_range_to_show(pos!(5.0)).unwrap();
-        
+
         assert!(range.iter().any(|&price| price <= underlying_price));
         assert!(range.iter().any(|&price| price >= underlying_price));
     }

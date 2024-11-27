@@ -1570,7 +1570,7 @@ mod tests_option_data_display {
         let display_string = format!("{}", data);
 
         assert!(display_string.contains("0.0"));
-        assert!(display_string.contains(""));  // Para campos None
+        assert!(display_string.contains("")); // Para campos None
     }
 }
 
@@ -1604,7 +1604,9 @@ mod tests_filter_option_data {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Upper);
         assert_eq!(filtered.len(), 2);
-        assert!(filtered.iter().all(|opt| opt.strike_price > chain.underlying_price));
+        assert!(filtered
+            .iter()
+            .all(|opt| opt.strike_price > chain.underlying_price));
     }
 
     #[test]
@@ -1612,7 +1614,9 @@ mod tests_filter_option_data {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Lower);
         assert_eq!(filtered.len(), 2);
-        assert!(filtered.iter().all(|opt| opt.strike_price < chain.underlying_price));
+        assert!(filtered
+            .iter()
+            .all(|opt| opt.strike_price < chain.underlying_price));
     }
 
     #[test]
@@ -1627,9 +1631,9 @@ mod tests_filter_option_data {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Range(pos!(95.0), pos!(105.0)));
         assert_eq!(filtered.len(), 3);
-        assert!(filtered.iter().all(|opt|
-            opt.strike_price >= pos!(95.0) && opt.strike_price <= pos!(105.0)
-        ));
+        assert!(filtered
+            .iter()
+            .all(|opt| opt.strike_price >= pos!(95.0) && opt.strike_price <= pos!(105.0)));
     }
 }
 
@@ -1700,7 +1704,7 @@ mod tests_strike_price_range_vec {
             );
         }
         let range = chain.strike_price_range_vec(2.0).unwrap();
-        assert_eq!(range.len(), 6);  // [90, 92, 94, 96, 98, 100]
+        assert_eq!(range.len(), 6); // [90, 92, 94, 96, 98, 100]
         assert_eq!(range[1] - range[0], 2.0);
     }
 }

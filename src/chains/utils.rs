@@ -576,13 +576,8 @@ mod tests_option_data_price_params {
 
     #[test]
     fn test_display_price_params_no_volatility() {
-        let params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(30.0),
-            None,
-            0.05,
-            0.02,
-        );
+        let params =
+            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
         let display_string = format!("{}", params);
         assert!(display_string.contains("Implied Volatility: 0.000"));
     }

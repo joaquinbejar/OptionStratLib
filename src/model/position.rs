@@ -9,8 +9,8 @@ use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64, Side, PZERO};
 use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::spos;
 use crate::pricing::payoff::Profit;
+use crate::spos;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
@@ -215,7 +215,7 @@ impl Position {
     }
 
     pub fn break_even(&self) -> Option<PositiveF64> {
-        if self.option.quantity == ZERO { 
+        if self.option.quantity == ZERO {
             return None;
         }
         let total_cost_per_contract = self.total_cost() / self.option.quantity;
@@ -349,7 +349,7 @@ impl Graph for Position {
                 }];
 
                 vertical_lines
-            },
+            }
             None => vec![],
         }
     }
@@ -1264,13 +1264,15 @@ mod tests_update_from_option_data {
 
 #[cfg(test)]
 mod tests_premium {
-    use crate::pos;
     use super::*;
+    use crate::pos;
 
     fn setup_basic_position(side: Side) -> Position {
-        let mut option = Options::default();
-        option.side = side;
-        option.quantity = pos!(1.0);
+        let option = Options {
+            side,
+            quantity: pos!(1.0),
+            ..Default::default()
+        };
 
         Position::new(option, 5.0, Utc::now(), 1.0, 1.0)
     }
@@ -1301,9 +1303,12 @@ mod tests_premium {
 
     #[test]
     fn test_premium_received_with_quantity() {
-        let mut option = Options::default();
-        option.side = Side::Short;
-        option.quantity = pos!(10.0);
+        let side = Side::Short;
+        let option = Options {
+            side,
+            quantity: pos!(10.0),
+            ..Default::default()
+        };
 
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.premium_received(), 50.0);
@@ -1316,12 +1321,14 @@ mod tests_pnl_calculator {
     use crate::pos;
 
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {
-        let mut option = Options::default();
-        option.side = side;
-        option.option_style = option_style;
-        option.strike_price = pos!(100.0);
-        option.quantity = pos!(1.0);
-        option.underlying_price = pos!(100.0);
+        let option = Options {
+            side,
+            option_style,
+            strike_price: pos!(100.0),
+            quantity: pos!(1.0),
+            underlying_price: pos!(100.0),
+            ..Default::default()
+        };
 
         Position::new(option, 5.0, Utc::now(), 1.0, 1.0)
     }
@@ -1331,9 +1338,9 @@ mod tests_pnl_calculator {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position.calculate_pnl(Utc::now(), pos!(7.0));
 
-        assert_eq!(pnl.unrealized.unwrap(), -0.0);  // 7.0 - 7.0 (premium + fees)
-        assert_eq!(position.total_cost(), 7.0);  
-        assert_eq!(position.premium_received(), 0.0);  
+        assert_eq!(pnl.unrealized.unwrap(), -0.0); // 7.0 - 7.0 (premium + fees)
+        assert_eq!(position.total_cost(), 7.0);
+        assert_eq!(position.premium_received(), 0.0);
     }
 
     #[test]
@@ -1341,8 +1348,8 @@ mod tests_pnl_calculator {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position.calculate_pnl(Utc::now(), pos!(3.0));
 
-        assert_eq!(pnl.unrealized.unwrap(), 0.0);  // 5.0 - 3.0 - 2.0 (fees)
-        assert_eq!(position.total_cost(), 2.0);  
+        assert_eq!(pnl.unrealized.unwrap(), 0.0); // 5.0 - 3.0 - 2.0 (fees)
+        assert_eq!(position.total_cost(), 2.0);
         assert_eq!(position.premium_received(), 5.0);
     }
 
@@ -1351,7 +1358,7 @@ mod tests_pnl_calculator {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position.calculate_pnl_at_expiration(Some(pos!(110.0)));
 
-        assert_eq!(pnl.realized.unwrap(), 3.0);  // 10.0 - 7.0 (total cost)
+        assert_eq!(pnl.realized.unwrap(), 3.0); // 10.0 - 7.0 (total cost)
         assert_eq!(position.total_cost(), 7.0);
         assert_eq!(position.premium_received(), 0.0);
     }
@@ -1361,7 +1368,7 @@ mod tests_pnl_calculator {
         let position = setup_test_position(Side::Short, OptionStyle::Put);
         let pnl = position.calculate_pnl_at_expiration(Some(pos!(90.0)));
 
-        assert_eq!(pnl.realized.unwrap(), -7.0);  // -10.0 + 5.0 (premium) - 2.0 (fees)
+        assert_eq!(pnl.realized.unwrap(), -7.0); // -10.0 + 5.0 (premium) - 2.0 (fees)
         assert_eq!(position.total_cost(), 2.0);
         assert_eq!(position.premium_received(), 5.0);
     }
@@ -1371,7 +1378,7 @@ mod tests_pnl_calculator {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position.calculate_pnl_at_expiration(None);
 
-        assert_eq!(pnl.realized.unwrap(), -7.0); 
+        assert_eq!(pnl.realized.unwrap(), -7.0);
         assert_eq!(position.total_cost(), 7.0);
         assert_eq!(position.premium_received(), 0.0);
     }
@@ -1381,7 +1388,7 @@ mod tests_pnl_calculator {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position.calculate_pnl(Utc::now(), pos!(0.0));
 
-        assert_eq!(pnl.unrealized.unwrap(), -7.0);  
+        assert_eq!(pnl.unrealized.unwrap(), -7.0);
         assert_eq!(position.total_cost(), 7.0);
         assert_eq!(position.premium_received(), 0.0);
     }
@@ -1389,8 +1396,8 @@ mod tests_pnl_calculator {
 
 #[cfg(test)]
 mod tests_graph {
-    use crate::pos;
     use super::*;
+    use crate::pos;
 
     #[test]
     fn test_title() {
