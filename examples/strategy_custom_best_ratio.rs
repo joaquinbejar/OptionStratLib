@@ -2,7 +2,7 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{ExpirationDate, PositiveF64};
+use optionstratlib::model::types::{ExpirationDate, PositiveF64, PZERO};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::custom::CustomStrategy;
@@ -20,10 +20,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
 
     let params = RandomPositionsParams::new(
-        Some(1),
-        None,
-        Some(2),
-        None,
+        None,    // qty_puts_long
+        Some(1), // qty_puts_short
+        None,    // qty_calls_long
+        Some(1), // qty_calls_short
         ExpirationDate::Days(30.0),
         pos!(1.0),
         0.05,
@@ -45,17 +45,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         100,
         0.1,
     );
-    strategy.best_area(&option_chain, FindOptimalSide::All);
+    strategy.best_ratio(&option_chain, FindOptimalSide::All);
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let range = strategy.break_even_points[1] - strategy.break_even_points[0];
+    let range = strategy.range_of_profit().unwrap_or(PZERO);
+    info!(
+        "Range of analysis: {} - {}",
+        price_range.first().unwrap(),
+        price_range.last().unwrap()
+    );
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit());
-    info!("Max Loss: ${:0.2}", strategy.max_loss());
+    info!("Max Profit: ${:.2}", strategy.max_profit_iter());
+    info!("Max Loss: ${:0.2}", strategy.max_loss_iter());
     info!("Total Fees: ${:.2}", strategy.fees());
     info!(
         "Range of Profit: ${:.2} {:.2}%",
@@ -68,7 +73,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,
-            "Draws/Strategy/long_strangle_profit_loss_chart_best_ratio.png",
+            "Draws/Strategy/custom_profit_loss_chart_best_ratio.png",
             20,
             (1400, 933),
         )?;

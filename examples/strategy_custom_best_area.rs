@@ -21,10 +21,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
 
     let params = RandomPositionsParams::new(
-        Some(1),
-        Some(1),
-        Some(1),
-        Some(1),
+        None,    // qty_puts_long
+        None,    // qty_puts_short
+        Some(1), // qty_calls_long
+        Some(1), // qty_calls_short
         ExpirationDate::Days(30.0),
         pos!(1.0),
         0.05,
@@ -47,7 +47,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.1,
     );
     strategy.best_area(&option_chain, FindOptimalSide::All);
-    // info!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     info!(
@@ -62,8 +61,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit());
-    info!("Max Loss: ${:0.2}", strategy.max_loss());
+    info!("Max Profit: ${:.2}", strategy.max_profit_iter());
+    info!("Max Loss: ${:0.2}", strategy.max_loss_iter());
     info!("Total Fees: ${:.2}", strategy.fees());
     info!(
         "Range of Profit: ${:.2} {:.2}%",
