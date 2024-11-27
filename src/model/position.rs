@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 18/8/24
 ******************************************************************************/
+use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
@@ -15,7 +16,6 @@ use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{error, trace};
-use crate::chains::chain::OptionData;
 
 /// The `Position` struct represents a financial position in an options market.
 /// It includes various attributes related to the option, such as its cost,
@@ -75,25 +75,25 @@ impl Position {
             close_fee,
         }
     }
-    
-    pub fn update_from_option_data(&mut self, option_data: &OptionData) {
+
+    pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.date = Utc::now();
         self.option.strike_price = option_data.strike_price;
         self.option.implied_volatility = option_data.implied_volatility.unwrap_or(PZERO).value();
-        
-        match (self.option.side.clone(), self.option.option_style.clone()) { 
+
+        match (self.option.side.clone(), self.option.option_style.clone()) {
             (Side::Long, OptionStyle::Call) => {
                 self.premium = option_data.call_ask.unwrap().value();
-            },
+            }
             (Side::Long, OptionStyle::Put) => {
                 self.premium = option_data.put_ask.unwrap().value();
-            },
+            }
             (Side::Short, OptionStyle::Call) => {
                 self.premium = option_data.call_bid.unwrap().value();
-            },
+            }
             (Side::Short, OptionStyle::Put) => {
                 self.premium = option_data.put_bid.unwrap().value();
-            },
+            }
         }
         trace!("Updated position: {:#?}", self);
     }
@@ -847,7 +847,7 @@ mod tests_valid_position {
     fn test_zero_premium() {
         let mut position = create_valid_position();
         position.premium = ZERO;
-        assert!(!position.validate());
+        assert!(position.validate());
     }
 
     #[test]

@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{
     STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
@@ -11,6 +10,8 @@ use crate::constants::{
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
+use crate::{pos, spos};
+use std::f64;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -83,8 +84,9 @@ pub trait Strategies: Validable {
         panic!("Legs is not applicable for this strategy");
     }
 
+    // Maintained for Back-compatibility
     fn break_even(&self) -> Vec<PositiveF64> {
-        panic!("Break even is not applicable for this strategy");
+        self.get_break_even_points()
     }
 
     fn max_profit(&self) -> f64 {
@@ -137,16 +139,28 @@ pub trait Strategies: Validable {
     }
 
     fn range_to_show(&self) -> (PositiveF64, PositiveF64) {
-        let (first_option, last_option) = self.max_min_strikes();
-        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        let mut all_points = self.get_break_even_points();
+        let (first_strike, last_strike) = self.max_min_strikes();
+        let underlying_price = self.get_underlying_price();
+
+        // Calculate the largest difference from the underlying price
+        let max_diff = pos!((last_strike.value() - underlying_price.value())
+            .abs()
+            .max((first_strike.value() - underlying_price.value()).abs()));
+
+        // Calculate limits in a single step
+        all_points
+            .push(pos!((underlying_price.value() - max_diff.value()).max(0.0)).min(first_strike));
+        all_points.push(pos!(underlying_price.value() + max_diff.value()).max(last_strike));
+        all_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        let start_price = *all_points.first().unwrap() * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = *all_points.last().unwrap() * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
         (start_price, end_price)
     }
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = self.max_min_strikes();
-        let start_price = first_option * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        let (start_price, end_price) = self.range_to_show();
         Some(calculate_price_range(start_price, end_price, step))
     }
 
@@ -204,18 +218,13 @@ pub trait Strategies: Validable {
     fn range_of_profit(&self) -> Option<PositiveF64> {
         match self.get_break_even_points().len() {
             0 => None,
-            1 => None,
-            2 => {
-                let range = self.get_break_even_points()[1] - self.get_break_even_points()[0];
-                Some(range)
-            }
+            1 => spos!(f64::INFINITY),
+            2 => Some(self.get_break_even_points()[1] - self.get_break_even_points()[0]),
             _ => {
                 // sort break even points and then get last minus first
                 let mut break_even_points = self.get_break_even_points();
                 break_even_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
-                let range =
-                    *break_even_points.last().unwrap() - *break_even_points.first().unwrap();
-                Some(range)
+                Some(*break_even_points.last().unwrap() - *break_even_points.first().unwrap())
             }
         }
     }
@@ -431,7 +440,7 @@ mod tests_strategies_extended {
     }
 
     #[test]
-    #[should_panic(expected = "Break even is not applicable for this strategy")]
+    #[should_panic(expected = "Break even points is not applicable for this strategy")]
     fn test_strategies_break_even_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}

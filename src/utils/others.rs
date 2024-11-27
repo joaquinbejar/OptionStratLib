@@ -59,7 +59,11 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 /// # Errors:
 /// This function will return an error if the `positions` slice is empty.
 ///
-pub fn process_n_times_iter<T, Y, F>(positions: &[T], n: usize, mut process_combination: F) -> Result<Vec<Y>, String>
+pub fn process_n_times_iter<T, Y, F>(
+    positions: &[T],
+    n: usize,
+    mut process_combination: F,
+) -> Result<Vec<Y>, String>
 where
     F: FnMut(&[&T]) -> Vec<Y>,
     T: Clone,
@@ -220,7 +224,6 @@ mod tests_get_random_element {
         }
     }
 }
-
 #[cfg(test)]
 mod tests_process_n_times_iter {
     use super::*;
@@ -228,56 +231,58 @@ mod tests_process_n_times_iter {
     #[test]
     fn test_empty_vector() {
         let empty_vec: Vec<i32> = vec![];
-        let result = process_n_times_iter(&empty_vec, |_| vec![]);
+        let result = process_n_times_iter(&empty_vec, 1, |_| vec![42]);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Vector empty".to_string());
     }
 
     #[test]
-    fn test_single_element() {
+    fn test_single_element_single_combination() {
         let vec = vec![1];
-        let result = process_n_times_iter(&vec, |combination| {
-            combination.iter().cloned().cloned().collect()
-        });
+        let result = process_n_times_iter(&vec, 1, |combination| vec![*combination[0] * 2]);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![1]);
+        assert_eq!(result.unwrap(), vec![2]);
     }
 
     #[test]
-    fn test_multiple_elements() {
-        let vec = vec![1, 2];
-        let result = process_n_times_iter(&vec, |combination| {
-            combination.iter().cloned().cloned().collect()
-        });
-        assert!(result.is_ok());
-        let result = result.unwrap();
-        // Para 2 elementos, esperamos todas las combinaciones posibles con repetición
-        assert_eq!(result, vec![1, 1, 1, 2, 2, 2]);
-    }
-
-    #[test]
-    fn test_with_strings() {
-        let vec = vec!["a".to_string(), "b".to_string()];
-        let result = process_n_times_iter(&vec, |combination| {
-            combination.iter().map(|&x| x.clone()).collect()
-        });
-        assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(result.contains(&"a".to_string()));
-        assert!(result.contains(&"b".to_string()));
-    }
-
-    #[test]
-    fn test_custom_processing() {
+    fn test_multiple_elements_single_output() {
         let vec = vec![1, 2, 3];
-        let result = process_n_times_iter(&vec, |combination| {
-            // Multiplicar cada elemento por 2
-            combination.iter().map(|&&x| x * 2).collect()
+        let result =
+            process_n_times_iter(&vec, 2, |combination| vec![combination[0] + combination[1]]);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.len(), 6); // número de combinaciones con repetición
+        assert!(result.contains(&2)); // 1 + 1
+        assert!(result.contains(&3)); // 1 + 2
+        assert!(result.contains(&4)); // 2 + 2
+    }
+
+    #[test]
+    fn test_type_conversion() {
+        let vec = vec![1, 2];
+        let result = process_n_times_iter(&vec, 1, |combination| vec![combination[0].to_string()]);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result, vec!["1", "2"]);
+    }
+
+    #[test]
+    fn test_multiple_outputs_per_combination() {
+        let vec = vec![1, 2];
+        let result = process_n_times_iter(&vec, 1, |combination| {
+            vec![combination[0] * 2, combination[0] * 3]
         });
         assert!(result.is_ok());
         let result = result.unwrap();
-        // Verificar que todos los elementos son pares
-        assert!(result.iter().all(|&x| x % 2 == 0));
+        assert_eq!(result, vec![2, 3, 4, 6]);
+    }
+
+    #[test]
+    fn test_empty_output() {
+        let vec = vec![1, 2];
+        let result = process_n_times_iter(&vec, 1, |_| Vec::<i32>::new());
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
     }
 
     #[test]
@@ -289,152 +294,60 @@ mod tests_process_n_times_iter {
 
         let vec = vec![TestStruct { value: 1 }, TestStruct { value: 2 }];
 
-        let result = process_n_times_iter(&vec, |combination| {
-            combination.iter().map(|&x| x.clone()).collect()
+        let result = process_n_times_iter(&vec, 2, |combination| {
+            vec![TestStruct {
+                value: combination[0].value + combination[1].value,
+            }]
         });
 
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert!(result.contains(&TestStruct { value: 1 }));
-        assert!(result.contains(&TestStruct { value: 2 }));
+        assert!(result.contains(&TestStruct { value: 2 })); // 1 + 1
+        assert!(result.contains(&TestStruct { value: 3 })); // 1 + 2
+        assert!(result.contains(&TestStruct { value: 4 })); // 2 + 2
     }
 
     #[test]
-    fn test_filter_and_process() {
-        let vec = vec![1, 2, 3, 4];
-        let result = process_n_times_iter(&vec, |combination| {
-            combination
-                .iter()
-                .filter(|&&x| x % 2 == 0)
-                .map(|&&x| x)
-                .collect()
-        });
-        assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(result.iter().all(|&x| x % 2 == 0));
-    }
-
-    #[test]
-    fn test_empty_result_from_callback() {
-        let vec = vec![1, 2, 3];
-        let result = process_n_times_iter(&vec, |_| Vec::new());
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
-    }
-}
-
-#[cfg(test)]
-mod tests_process_n_times_iter_bis {
-    use super::*;
-
-    #[test]
-    fn test_empty_vector() {
-        let empty_vec: Vec<i32> = vec![];
-        let result = process_n_times_iter(&empty_vec, |_| vec![]);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Vector empty".to_string());
-    }
-
-    #[test]
-    fn test_single_element() {
-        let vec = vec![1];
-        let result = process_n_times_iter(&vec, |combination| {
-            combination.iter().cloned().cloned().collect()
-        });
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![1]);
-    }
-
-    #[test]
-    fn test_multiple_elements() {
+    fn test_combination_size_larger_than_input() {
         let vec = vec![1, 2];
-        let result = process_n_times_iter(&vec, |combination| {
-            combination.iter().cloned().cloned().collect()
+        let result = process_n_times_iter(&vec, 3, |combination| {
+            let sum = combination.iter().copied().sum::<i32>();
+            vec![sum]
         });
+
         assert!(result.is_ok());
         let result = result.unwrap();
-        // Para 2 elementos, esperamos todas las combinaciones posibles con repetición
-        assert_eq!(result, vec![1, 1, 1, 2, 2, 2]);
-    }
+        assert!(!result.is_empty());
 
-    #[test]
-    fn test_with_strings() {
-        let vec = vec!["a".to_string(), "b".to_string()];
-        let result = process_n_times_iter(&vec, |combination| {
-            combination.iter().map(|&x| x.clone()).collect()
-        });
-        assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(result.contains(&"a".to_string()));
-        assert!(result.contains(&"b".to_string()));
-    }
-
-    #[test]
-    fn test_custom_processing() {
-        let vec = vec![1, 2, 3];
-        let result = process_n_times_iter(&vec, |combination| {
-            // Multiplicar cada elemento por 2
-            combination.iter().map(|&&x| x * 2).collect()
-        });
-        assert!(result.is_ok());
-        let result = result.unwrap();
-        // Verificar que todos los elementos son pares
-        assert!(result.iter().all(|&x| x % 2 == 0));
-    }
-
-    #[test]
-    fn test_with_custom_struct() {
-        #[derive(Clone, Debug, PartialEq)]
-        struct TestStruct {
-            value: i32,
+        let expected_sums = vec![3, 4, 5, 6]; // 1+1+1, 1+1+2, 1+2+2, 2+2+2
+        for sum in expected_sums {
+            assert!(result.contains(&sum));
         }
-
-        let vec = vec![TestStruct { value: 1 }, TestStruct { value: 2 }];
-
-        let result = process_n_times_iter(&vec, |combination| {
-            combination.iter().map(|&x| x.clone()).collect()
-        });
-
-        assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(result.contains(&TestStruct { value: 1 }));
-        assert!(result.contains(&TestStruct { value: 2 }));
     }
 
     #[test]
-    fn test_modified_elements() {
+    fn test_mutable_state() {
         let vec = vec![1, 2];
-        let result = process_n_times_iter(&vec, |combination| {
-            // Multiplicar cada elemento por 10
-            combination.iter().map(|&&x| x * 10).collect()
+        let mut sum = 0;
+        let result = process_n_times_iter(&vec, 1, |combination| {
+            sum += combination[0];
+            vec![sum]
         });
         assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(result.contains(&10));
-        assert!(result.contains(&20));
     }
 
     #[test]
-    fn test_filter_and_process() {
+    fn test_filter_combinations() {
         let vec = vec![1, 2, 3, 4];
-        let result = process_n_times_iter(&vec, |combination| {
-            // Solo procesar números pares
-            combination
-                .iter()
-                .filter(|&&x| x % 2 == 0)
-                .map(|&&x| x)
-                .collect()
+        let result = process_n_times_iter(&vec, 2, |combination| {
+            if combination[0] + combination[1] > 5 {
+                vec![combination[0] + combination[1]]
+            } else {
+                vec![]
+            }
         });
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert!(result.iter().all(|&x| x % 2 == 0));
-    }
-
-    #[test]
-    fn test_empty_result_from_callback() {
-        let vec = vec![1, 2, 3];
-        let result = process_n_times_iter(&vec, |_| Vec::new());
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+        assert!(result.iter().all(|&x| x > 5));
     }
 }

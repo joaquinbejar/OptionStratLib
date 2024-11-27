@@ -12,6 +12,7 @@ use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pricing::black_scholes_model::black_scholes;
+use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
 use crate::{pos, spos};
 use chrono::Utc;
@@ -24,7 +25,6 @@ use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
 use tracing::debug;
-use crate::strategies::utils::FindOptimalSide;
 
 /// Struct representing a row in an option chain.
 ///
@@ -338,18 +338,16 @@ impl OptionChain {
 
         option_chain
     }
-    
-    pub  fn filter_option_data(&self, side: FindOptimalSide) -> Vec<&OptionData> {
+
+    pub(crate) fn filter_option_data(&self, side: FindOptimalSide) -> Vec<&OptionData> {
         self.options
             .iter()
-            .filter(|option| {
-                match side {
-                    FindOptimalSide::Upper => option.strike_price > self.underlying_price,
-                    FindOptimalSide::Lower => option.strike_price < self.underlying_price,
-                    FindOptimalSide::All => true,
-                    FindOptimalSide::Range(start, end) => {
-                        option.strike_price >= start && option.strike_price <= end
-                    }
+            .filter(|option| match side {
+                FindOptimalSide::Upper => option.strike_price > self.underlying_price,
+                FindOptimalSide::Lower => option.strike_price < self.underlying_price,
+                FindOptimalSide::All => true,
+                FindOptimalSide::Range(start, end) => {
+                    option.strike_price >= start && option.strike_price <= end
                 }
             })
             .collect()
