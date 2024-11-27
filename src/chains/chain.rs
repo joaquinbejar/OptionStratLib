@@ -1468,3 +1468,239 @@ mod tests_get_random_positions {
         assert!(positions.is_empty());
     }
 }
+
+#[cfg(test)]
+mod tests_option_data_get_prices {
+    use super::*;
+    use crate::pos;
+    use crate::spos;
+
+    fn create_test_option_data() -> OptionData {
+        OptionData::new(
+            pos!(100.0),
+            spos!(9.5),
+            spos!(10.0),
+            spos!(8.5),
+            spos!(9.0),
+            spos!(0.2),
+            Some(-0.3),
+            spos!(1000.0),
+            Some(500),
+        )
+    }
+
+    #[test]
+    fn test_get_call_buy_price() {
+        let data = create_test_option_data();
+        assert_eq!(data.get_call_buy_price(), spos!(10.0));
+    }
+
+    #[test]
+    fn test_get_call_sell_price() {
+        let data = create_test_option_data();
+        assert_eq!(data.get_call_sell_price(), spos!(9.5));
+    }
+
+    #[test]
+    fn test_get_put_buy_price() {
+        let data = create_test_option_data();
+        assert_eq!(data.get_put_buy_price(), spos!(9.0));
+    }
+
+    #[test]
+    fn test_get_put_sell_price() {
+        let data = create_test_option_data();
+        assert_eq!(data.get_put_sell_price(), spos!(8.5));
+    }
+
+    #[test]
+    fn test_get_prices_with_none_values() {
+        let data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        assert_eq!(data.get_call_buy_price(), None);
+        assert_eq!(data.get_call_sell_price(), None);
+        assert_eq!(data.get_put_buy_price(), None);
+        assert_eq!(data.get_put_sell_price(), None);
+    }
+}
+
+#[cfg(test)]
+mod tests_option_data_display {
+    use super::*;
+    use crate::pos;
+    use crate::spos;
+
+    #[test]
+    fn test_display_full_data() {
+        let data = OptionData::new(
+            pos!(100.0),
+            spos!(9.5),
+            spos!(10.0),
+            spos!(8.5),
+            spos!(9.0),
+            spos!(0.2),
+            Some(-0.3),
+            spos!(1000.0),
+            Some(500),
+        );
+        let display_string = format!("{}", data);
+        assert!(display_string.contains("100"));
+        assert!(display_string.contains("9.5"));
+        assert!(display_string.contains("10"));
+        assert!(display_string.contains("8.5"));
+        assert!(display_string.contains("9"));
+        assert!(display_string.contains("0.200"));
+        assert!(display_string.contains("-0.300"));
+        assert!(display_string.contains("1000"));
+        assert!(display_string.contains("500"));
+    }
+
+    #[test]
+    fn test_display_empty_data() {
+        let data = OptionData::default();
+        let display_string = format!("{}", data);
+
+        assert!(display_string.contains("0.0"));
+        assert!(display_string.contains(""));  // Para campos None
+    }
+}
+
+#[cfg(test)]
+mod tests_filter_option_data {
+    use super::*;
+    use crate::pos;
+
+    fn create_test_chain() -> OptionChain {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+
+        // Añadir opciones con diferentes strikes
+        for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
+            chain.add_option(
+                pos!(*strike),
+                None,
+                None,
+                None,
+                None,
+                spos!(0.2),
+                None,
+                None,
+                None,
+            );
+        }
+        chain
+    }
+
+    #[test]
+    fn test_filter_upper() {
+        let chain = create_test_chain();
+        let filtered = chain.filter_option_data(FindOptimalSide::Upper);
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().all(|opt| opt.strike_price > chain.underlying_price));
+    }
+
+    #[test]
+    fn test_filter_lower() {
+        let chain = create_test_chain();
+        let filtered = chain.filter_option_data(FindOptimalSide::Lower);
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().all(|opt| opt.strike_price < chain.underlying_price));
+    }
+
+    #[test]
+    fn test_filter_all() {
+        let chain = create_test_chain();
+        let filtered = chain.filter_option_data(FindOptimalSide::All);
+        assert_eq!(filtered.len(), 5);
+    }
+
+    #[test]
+    fn test_filter_range() {
+        let chain = create_test_chain();
+        let filtered = chain.filter_option_data(FindOptimalSide::Range(pos!(95.0), pos!(105.0)));
+        assert_eq!(filtered.len(), 3);
+        assert!(filtered.iter().all(|opt|
+            opt.strike_price >= pos!(95.0) && opt.strike_price <= pos!(105.0)
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests_strike_price_range_vec {
+    use super::*;
+    use crate::pos;
+
+    #[test]
+    fn test_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        assert_eq!(chain.strike_price_range_vec(5.0), None);
+    }
+
+    #[test]
+    fn test_single_option() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        chain.add_option(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        let range = chain.strike_price_range_vec(5.0).unwrap();
+        assert_eq!(range.len(), 1);
+        assert_eq!(range[0], 100.0);
+    }
+
+    #[test]
+    fn test_multiple_options() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        for strike in [90.0, 95.0, 100.0].iter() {
+            chain.add_option(
+                pos!(*strike),
+                None,
+                None,
+                None,
+                None,
+                spos!(0.2),
+                None,
+                None,
+                None,
+            );
+        }
+        let range = chain.strike_price_range_vec(5.0).unwrap();
+        assert_eq!(range, vec![90.0, 95.0, 100.0]);
+    }
+
+    #[test]
+    fn test_step_size() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        for strike in [90.0, 100.0].iter() {
+            chain.add_option(
+                pos!(*strike),
+                None,
+                None,
+                None,
+                None,
+                spos!(0.2),
+                None,
+                None,
+                None,
+            );
+        }
+        let range = chain.strike_price_range_vec(2.0).unwrap();
+        assert_eq!(range.len(), 6);  // [90, 92, 94, 96, 98, 100]
+        assert_eq!(range[1] - range[0], 2.0);
+    }
+}

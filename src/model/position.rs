@@ -9,7 +9,7 @@ use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64, Side, PZERO};
 use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pos;
+use crate::spos;
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
@@ -214,20 +214,23 @@ impl Position {
         premium
     }
 
-    pub fn break_even(&self) -> PositiveF64 {
+    pub fn break_even(&self) -> Option<PositiveF64> {
+        if self.option.quantity == ZERO { 
+            return None;
+        }
         let total_cost_per_contract = self.total_cost() / self.option.quantity;
         match (&self.option.side, &self.option.option_style) {
             (Side::Long, OptionStyle::Call) => {
-                pos!(self.option.strike_price.value() + total_cost_per_contract)
+                spos!(self.option.strike_price.value() + total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Call) => {
-                pos!(self.option.strike_price.value() + self.premium - total_cost_per_contract)
+                spos!(self.option.strike_price.value() + self.premium - total_cost_per_contract)
             }
             (Side::Long, OptionStyle::Put) => {
-                pos!(self.option.strike_price.value() - total_cost_per_contract)
+                spos!(self.option.strike_price.value() - total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Put) => {
-                pos!(self.option.strike_price.value() - self.premium + total_cost_per_contract)
+                spos!(self.option.strike_price.value() - self.premium + total_cost_per_contract)
             }
         }
     }
@@ -332,18 +335,23 @@ impl Graph for Position {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.break_even().value(),
-            y_range: (-50000.0, 50000.0),
-            label: "Break Even".to_string(),
-            label_offset: (5.0, 5.0),
-            line_color: BLACK,
-            label_color: BLACK,
-            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-            font_size: 18,
-        }];
+        match self.break_even() {
+            Some(break_even) => {
+                let vertical_lines = vec![ChartVerticalLine {
+                    x_coordinate: break_even.value(),
+                    y_range: (-50000.0, 50000.0),
+                    label: "Break Even".to_string(),
+                    label_offset: (5.0, 5.0),
+                    line_color: BLACK,
+                    label_color: BLACK,
+                    line_style: ShapeStyle::from(&BLACK).stroke_width(1),
+                    font_size: 18,
+                }];
 
-        vertical_lines
+                vertical_lines
+            },
+            None => vec![],
+        }
     }
 }
 
@@ -929,7 +937,7 @@ mod tests_position_break_even {
             30,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.break_even(), 107.0);
+        assert_eq!(position.break_even().unwrap(), 107.0);
     }
 
     #[test]
@@ -943,7 +951,7 @@ mod tests_position_break_even {
             30,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.break_even(), 107.0);
+        assert_eq!(position.break_even().unwrap(), 107.0);
     }
 
     #[test]
@@ -957,7 +965,7 @@ mod tests_position_break_even {
             30,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.break_even(), 103.0);
+        assert_eq!(position.break_even().unwrap(), 103.0);
     }
 
     #[test]
@@ -971,7 +979,7 @@ mod tests_position_break_even {
             30,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.break_even(), 103.0);
+        assert_eq!(position.break_even().unwrap(), 103.0);
     }
 
     #[test]
@@ -985,7 +993,7 @@ mod tests_position_break_even {
             30,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.break_even(), 93.0);
+        assert_eq!(position.break_even().unwrap(), 93.0);
     }
 
     #[test]
@@ -999,7 +1007,7 @@ mod tests_position_break_even {
             30,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.break_even(), 93.0);
+        assert_eq!(position.break_even().unwrap(), 93.0);
     }
 
     #[test]
@@ -1013,7 +1021,7 @@ mod tests_position_break_even {
             30,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.break_even(), 97.0);
+        assert_eq!(position.break_even().unwrap(), 97.0);
     }
 
     #[test]
@@ -1027,7 +1035,7 @@ mod tests_position_break_even {
             30,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.break_even(), 97.0);
+        assert_eq!(position.break_even().unwrap(), 97.0);
     }
 }
 
@@ -1181,5 +1189,229 @@ mod tests_position_max_loss_profit {
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
         assert_relative_eq!(position.max_profit(), 30.0, epsilon = 0.001);
+    }
+}
+
+#[cfg(test)]
+mod tests_update_from_option_data {
+    use super::*;
+    use crate::{pos, spos};
+
+    fn create_test_option_data() -> OptionData {
+        OptionData::new(
+            pos!(110.0),
+            spos!(9.5),
+            spos!(10.0),
+            spos!(8.5),
+            spos!(9.0),
+            spos!(0.25),
+            Some(-0.3),
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_update_long_call() {
+        let mut position = Position::default();
+        position.option.side = Side::Long;
+        position.option.option_style = OptionStyle::Call;
+
+        let option_data = create_test_option_data();
+        position.update_from_option_data(&option_data);
+
+        assert_eq!(position.option.strike_price, pos!(110.0));
+        assert_eq!(position.option.implied_volatility, 0.25);
+        assert_eq!(position.premium, 10.0); // call_ask
+    }
+
+    #[test]
+    fn test_update_short_call() {
+        let mut position = Position::default();
+        position.option.side = Side::Short;
+        position.option.option_style = OptionStyle::Call;
+
+        let option_data = create_test_option_data();
+        position.update_from_option_data(&option_data);
+
+        assert_eq!(position.premium, 9.5); // call_bid
+    }
+
+    #[test]
+    fn test_update_long_put() {
+        let mut position = Position::default();
+        position.option.side = Side::Long;
+        position.option.option_style = OptionStyle::Put;
+
+        let option_data = create_test_option_data();
+        position.update_from_option_data(&option_data);
+
+        assert_eq!(position.premium, 9.0); // put_ask
+    }
+
+    #[test]
+    fn test_update_short_put() {
+        let mut position = Position::default();
+        position.option.side = Side::Short;
+        position.option.option_style = OptionStyle::Put;
+
+        let option_data = create_test_option_data();
+        position.update_from_option_data(&option_data);
+
+        assert_eq!(position.premium, 8.5); // put_bid
+    }
+}
+
+#[cfg(test)]
+mod tests_premium {
+    use crate::pos;
+    use super::*;
+
+    fn setup_basic_position(side: Side) -> Position {
+        let mut option = Options::default();
+        option.side = side;
+        option.quantity = pos!(1.0);
+
+        Position::new(option, 5.0, Utc::now(), 1.0, 1.0)
+    }
+
+    #[test]
+    fn test_premium_received_long() {
+        let position = setup_basic_position(Side::Long);
+        assert_eq!(position.premium_received(), 0.0);
+    }
+
+    #[test]
+    fn test_premium_received_short() {
+        let position = setup_basic_position(Side::Short);
+        assert_eq!(position.premium_received(), 5.0);
+    }
+
+    #[test]
+    fn test_net_premium_received_long() {
+        let position = setup_basic_position(Side::Long);
+        assert_eq!(position.net_premium_received(), 0.0);
+    }
+
+    #[test]
+    fn test_net_premium_received_short() {
+        let position = setup_basic_position(Side::Short);
+        assert_eq!(position.net_premium_received(), 3.0); // 5.0 - 2.0 (fees)
+    }
+
+    #[test]
+    fn test_premium_received_with_quantity() {
+        let mut option = Options::default();
+        option.side = Side::Short;
+        option.quantity = pos!(10.0);
+
+        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        assert_eq!(position.premium_received(), 50.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_pnl_calculator {
+    use super::*;
+    use crate::pos;
+
+    fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {
+        let mut option = Options::default();
+        option.side = side;
+        option.option_style = option_style;
+        option.strike_price = pos!(100.0);
+        option.quantity = pos!(1.0);
+        option.underlying_price = pos!(100.0);
+
+        Position::new(option, 5.0, Utc::now(), 1.0, 1.0)
+    }
+
+    #[test]
+    fn test_calculate_pnl_long_call() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position.calculate_pnl(Utc::now(), pos!(7.0));
+
+        assert_eq!(pnl.unrealized.unwrap(), -0.0);  // 7.0 - 7.0 (premium + fees)
+        assert_eq!(position.total_cost(), 7.0);  
+        assert_eq!(position.premium_received(), 0.0);  
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position.calculate_pnl(Utc::now(), pos!(3.0));
+
+        assert_eq!(pnl.unrealized.unwrap(), 0.0);  // 5.0 - 3.0 - 2.0 (fees)
+        assert_eq!(position.total_cost(), 2.0);  
+        assert_eq!(position.premium_received(), 5.0);
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_long_call() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position.calculate_pnl_at_expiration(Some(pos!(110.0)));
+
+        assert_eq!(pnl.realized.unwrap(), 3.0);  // 10.0 - 7.0 (total cost)
+        assert_eq!(position.total_cost(), 7.0);
+        assert_eq!(position.premium_received(), 0.0);
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_short_put() {
+        let position = setup_test_position(Side::Short, OptionStyle::Put);
+        let pnl = position.calculate_pnl_at_expiration(Some(pos!(90.0)));
+
+        assert_eq!(pnl.realized.unwrap(), -7.0);  // -10.0 + 5.0 (premium) - 2.0 (fees)
+        assert_eq!(position.total_cost(), 2.0);
+        assert_eq!(position.premium_received(), 5.0);
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_no_underlying() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position.calculate_pnl_at_expiration(None);
+
+        assert_eq!(pnl.realized.unwrap(), -7.0); 
+        assert_eq!(position.total_cost(), 7.0);
+        assert_eq!(position.premium_received(), 0.0);
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_zero_price() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position.calculate_pnl(Utc::now(), pos!(0.0));
+
+        assert_eq!(pnl.unrealized.unwrap(), -7.0);  
+        assert_eq!(position.total_cost(), 7.0);
+        assert_eq!(position.premium_received(), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_graph {
+    use crate::pos;
+    use super::*;
+
+    #[test]
+    fn test_title() {
+        let position = Position::default();
+        assert_eq!(position.title(), position.option.title());
+    }
+
+    #[test]
+    fn test_get_values() {
+        let position = Position::default();
+        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
+        let values = position.get_values(&prices);
+
+        assert_eq!(values.len(), 3);
+        assert!(!values.iter().any(|&x| x.is_nan()));
+    }
+
+    #[test]
+    fn test_get_vertical_lines() {
+        let position = Position::default();
+        let lines = position.get_vertical_lines();
+        assert_eq!(lines.len(), 0);
     }
 }

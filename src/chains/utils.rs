@@ -492,3 +492,224 @@ mod tests_random_positions_params {
         assert!(debug_output.contains("RandomPositionsParams"));
     }
 }
+
+#[cfg(test)]
+mod tests_adjust_volatility {
+    use super::*;
+    use crate::spos;
+
+    #[test]
+    fn test_adjust_volatility_none() {
+        let result = adjust_volatility(None, 0.1, 10.0);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_adjust_volatility_zero_skew() {
+        let vol = spos!(0.2);
+        let result = adjust_volatility(vol, 0.0, 10.0);
+        assert_eq!(result, vol);
+    }
+
+    #[test]
+    fn test_adjust_volatility_positive_distance() {
+        let vol = spos!(0.2);
+        let result = adjust_volatility(vol, 0.1, 10.0);
+        assert!(result.is_some());
+        assert!(result.unwrap() > vol.unwrap());
+    }
+
+    #[test]
+    fn test_adjust_volatility_negative_distance() {
+        let vol = spos!(0.2);
+        let result = adjust_volatility(vol, 0.1, -10.0);
+        assert!(result.is_some());
+        assert!(result.unwrap() > vol.unwrap());
+    }
+}
+
+#[cfg(test)]
+mod tests_option_data_price_params {
+    use super::*;
+    use crate::spos;
+
+    #[test]
+    fn test_new_price_params() {
+        let params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.2),
+            0.05,
+            0.02,
+        );
+
+        assert_eq!(params.underlying_price, pos!(100.0));
+        assert_eq!(params.risk_free_rate, 0.05);
+        assert_eq!(params.dividend_yield, 0.02);
+        assert_eq!(params.implied_volatility, spos!(0.2));
+    }
+
+    #[test]
+    fn test_default_price_params() {
+        let params = OptionDataPriceParams::default();
+        assert_eq!(params.underlying_price, PZERO);
+        assert_eq!(params.risk_free_rate, ZERO);
+        assert_eq!(params.dividend_yield, ZERO);
+        assert_eq!(params.implied_volatility, None);
+    }
+
+    #[test]
+    fn test_display_price_params() {
+        let params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.2),
+            0.05,
+            0.02,
+        );
+        let display_string = format!("{}", params);
+        assert!(display_string.contains("Underlying Price: 100.000"));
+        assert!(display_string.contains("Implied Volatility: 0.200"));
+        assert!(display_string.contains("Risk-Free Rate: 0.05"));
+        assert!(display_string.contains("Dividend Yield: 0.02"));
+    }
+
+    #[test]
+    fn test_display_price_params_no_volatility() {
+        let params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            0.05,
+            0.02,
+        );
+        let display_string = format!("{}", params);
+        assert!(display_string.contains("Implied Volatility: 0.000"));
+    }
+}
+
+#[cfg(test)]
+mod tests_option_chain_build_params {
+    use super::*;
+    use crate::spos;
+
+    #[test]
+    fn test_new_chain_build_params() {
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.2),
+            0.05,
+            0.02,
+        );
+
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            spos!(1000.0),
+            10,
+            pos!(5.0),
+            0.1,
+            pos!(0.02),
+            2,
+            price_params,
+        );
+
+        assert_eq!(params.symbol, "TEST");
+        assert_eq!(params.volume, spos!(1000.0));
+        assert_eq!(params.chain_size, 10);
+        assert_eq!(params.strike_interval, pos!(5.0));
+        assert_eq!(params.skew_factor, 0.1);
+        assert_eq!(params.spread, pos!(0.02));
+        assert_eq!(params.decimal_places, 2);
+    }
+
+    #[test]
+    fn test_chain_build_params_without_volume() {
+        let price_params = OptionDataPriceParams::default();
+
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            10,
+            pos!(5.0),
+            0.1,
+            pos!(0.02),
+            2,
+            price_params,
+        );
+
+        assert_eq!(params.volume, None);
+    }
+}
+
+#[cfg(test)]
+mod tests_random_positions_params_extended {
+    use super::*;
+
+    #[test]
+    fn test_partial_positions() {
+        let params = RandomPositionsParams::new(
+            Some(2),
+            None,
+            Some(1),
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+        );
+
+        assert_eq!(params.qty_puts_long, Some(2));
+        assert_eq!(params.qty_puts_short, None);
+        assert_eq!(params.qty_calls_long, Some(1));
+        assert_eq!(params.qty_calls_short, None);
+        assert_eq!(params.total_positions(), 3);
+    }
+
+    #[test]
+    fn test_no_positions() {
+        let params = RandomPositionsParams::new(
+            None,
+            None,
+            None,
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+        );
+
+        assert_eq!(params.total_positions(), 0);
+    }
+
+    #[test]
+    fn test_expiration_date() {
+        let params = RandomPositionsParams::new(
+            None,
+            None,
+            None,
+            None,
+            ExpirationDate::Days(30.0),
+            pos!(1.0),
+            0.05,
+            0.02,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+        );
+
+        match params.expiration_date {
+            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            _ => panic!("Expected ExpirationDate::Days"),
+        }
+    }
+}
