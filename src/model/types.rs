@@ -883,6 +883,30 @@ mod tests_expiration_date {
         let years = expiration.get_years();
         assert_eq!(years, 1.0);
     }
+
+    #[cfg(test)]
+    mod tests_expiration_date_formatting {
+        use super::*;
+        use chrono::TimeZone;
+
+        #[test]
+        fn test_get_date_string_days() {
+            let today = Utc::now();
+            let expiration = ExpirationDate::Days(30.0);
+            let date_str = expiration.get_date_string();
+            let expected_date = (today + Duration::days(30))
+                .format("%Y-%m-%d")
+                .to_string();
+            assert_eq!(date_str, expected_date);
+        }
+
+        #[test]
+        fn test_get_date_string_datetime() {
+            let specific_date = Utc.with_ymd_and_hms(2024, 12, 31, 0, 0, 0).unwrap();
+            let expiration = ExpirationDate::DateTime(specific_date);
+            assert_eq!(expiration.get_date_string(), "2024-12-31");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1089,5 +1113,178 @@ mod tests_positive_f64 {
     fn test_constants() {
         assert_eq!(PZERO.value(), 0.0);
         assert_eq!(SIZE_ONE.value(), 1.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_positive_f64_extended {
+    use super::*;
+
+    #[test]
+    fn test_positive_f64_ordering() {
+        let a = pos!(1.0);
+        let b = pos!(2.0);
+        let c = pos!(2.0);
+
+        assert!(a < b);
+        assert!(b > a);
+        assert!(b >= c);
+        assert!(b <= c);
+    }
+
+    #[test]
+    fn test_positive_f64_add_assign() {
+        let mut a = pos!(1.0);
+        let b = pos!(2.0);
+        a += b;
+        assert_eq!(a.value(), 3.0);
+    }
+
+    #[test]
+    fn test_positive_f64_mul_assign() {
+        let mut a = pos!(2.0);
+        a *= 3.0;
+        assert_eq!(a.value(), 6.0);
+    }
+
+    #[test]
+    fn test_positive_f64_from_string() {
+        assert_eq!(PositiveF64::from_str("1.5").unwrap().value(), 1.5);
+        assert!(PositiveF64::from_str("-1.5").is_err());
+        assert!(PositiveF64::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_positive_f64_max_min() {
+        let a = pos!(1.0);
+        let b = pos!(2.0);
+        assert_eq!(a.max(b).value(), 2.0);
+        assert_eq!(a.min(b).value(), 1.0);
+    }
+
+    #[test]
+    fn test_positive_f64_floor() {
+        let a = pos!(1.7);
+        assert_eq!(a.floor().value(), 1.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Cannot negate a PositiveF64 value!")]
+    fn test_positive_f64_neg() {
+        let a = pos!(1.0);
+        let _ = -a;
+    }
+}
+
+#[cfg(test)]
+mod tests_option_type {
+    use super::*;
+
+    #[test]
+    fn test_asian_geometric_call() {
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Geometric,
+        };
+        let info = PayoffInfo {
+            spot: pos!(100.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: Some(vec![90.0, 100.0, 110.0]),
+            ..Default::default()
+        };
+
+        assert_eq!(option.payoff(&info), 0.0);
+    }
+
+    #[test]
+    fn test_asian_geometric_call_positive_payoff() {
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Geometric,
+        };
+        let info = PayoffInfo {
+            spot: pos!(100.0),
+            strike: pos!(95.0),  
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: Some(vec![90.0, 100.0, 110.0]),
+            ..Default::default()
+        };
+        
+        let expected_payoff = 4.67;
+        assert!((option.payoff(&info) - expected_payoff).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_barrier_down_and_out_put() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::DownAndOut,
+            barrier_level: 90.0,
+        };
+        let info = PayoffInfo {
+            spot: pos!(95.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 5.0);
+    }
+
+    #[test]
+    fn test_binary_asset_or_nothing_put() {
+        let option = OptionType::Binary {
+            binary_type: BinaryType::AssetOrNothing,
+        };
+        let info = PayoffInfo {
+            spot: pos!(90.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 90.0);
+    }
+
+    #[test]
+    fn test_compound_option() {
+        let inner_option = OptionType::European;
+        let option = OptionType::Compound {
+            underlying_option: Box::new(inner_option),
+        };
+        let info = PayoffInfo {
+            spot: pos!(110.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_chooser_option() {
+        let option = OptionType::Chooser { choice_date: 30.0 };
+        let info = PayoffInfo {
+            spot: pos!(110.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_power_put() {
+        let option = OptionType::Power { exponent: 2.0 };
+        let info = PayoffInfo {
+            spot: pos!(8.0),
+            strike: pos!(100.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 36.0);
     }
 }

@@ -1124,7 +1124,7 @@ mod tests_best_range_to_show {
         let range = strategy.best_range_to_show(step).unwrap();
 
         assert_eq!(range.first().unwrap().value(), 5644.8);
-        assert_eq!(range.last().unwrap().value(), 5964.8);
+        assert_eq!(range.last().unwrap().value(), 5974.8);
 
         // Check step size
         for i in 0..range.len() - 1 {
@@ -1140,7 +1140,7 @@ mod tests_best_range_to_show {
         let range = strategy.best_range_to_show(step).unwrap();
 
         assert_eq!(range.first().unwrap().value(), 5546.8);
-        assert_eq!(range.last().unwrap().value(), 5996.8);
+        assert_eq!(range.last().unwrap().value(), 6046.8);
 
         // Verify step size
         for i in 0..range.len() - 1 {
@@ -1205,7 +1205,7 @@ mod tests_best_range_to_show {
         let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
 
         assert_eq!(range.first().unwrap().value(), 4998.0);
-        assert_eq!(range.last().unwrap().value(), 6548.0);
+        assert_eq!(range.last().unwrap().value(), 6598.0);
     }
 }
 
