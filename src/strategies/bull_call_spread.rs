@@ -257,13 +257,15 @@ impl Strategies for BullCallSpread {
         ]
     }
 
-    fn max_profit(&self) -> f64 {
+    fn max_profit(&self) -> PositiveF64 {
         self.calculate_profit_at(self.short_call.option.strike_price)
+            .into()
     }
 
-    fn max_loss(&self) -> f64 {
+    fn max_loss(&self) -> PositiveF64 {
         self.calculate_profit_at(self.long_call.option.strike_price)
             .abs()
+            .into()
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -290,7 +292,7 @@ impl Strategies for BullCallSpread {
     }
 
     fn profit_ratio(&self) -> f64 {
-        (self.max_profit() / self.max_loss()).abs() * 100.0
+        (self.max_profit() / self.max_loss()).value() * 100.0
     }
 
     fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
@@ -389,12 +391,12 @@ impl Graph for BullCallSpread {
 
         let coordiantes: (f64, f64) = (
             self.short_call.option.strike_price.value() / 2000.0,
-            self.max_profit() / 5.0,
+            self.max_profit().value() / 5.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit(),
+                self.max_profit().value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
@@ -410,10 +412,13 @@ impl Graph for BullCallSpread {
 
         let coordiantes: (f64, f64) = (
             self.long_call.option.strike_price.value() / 2000.0,
-            -self.max_loss() / 50.0,
+            -self.max_loss().value() / 50.0,
         );
         points.push(ChartPoint {
-            coordinates: (self.long_call.option.strike_price.value(), -self.max_loss()),
+            coordinates: (
+                self.long_call.option.strike_price.value(),
+                -self.max_loss().value(),
+            ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
                 self.max_loss(),
@@ -480,13 +485,13 @@ mod tests_create_bull_call_spread {
     #[test]
     fn test_bull_call_spread_max_profit() {
         let strategy = create_sample_bull_call_spread();
-        assert_relative_eq!(strategy.max_profit(), 16.0, epsilon = 1e-6);
+        assert_relative_eq!(strategy.max_profit().value(), 16.0, epsilon = 1e-6);
     }
 
     #[test]
     fn test_bull_call_spread_max_loss() {
         let strategy = create_sample_bull_call_spread();
-        assert_relative_eq!(strategy.max_loss(), 4.0, epsilon = 1e-6);
+        assert_relative_eq!(strategy.max_loss().value(), 4.0, epsilon = 1e-6);
     }
 
     #[test]
@@ -572,13 +577,13 @@ mod tests_create_bull_call_spread_gold {
     #[test]
     fn test_bull_call_spread_max_profit() {
         let strategy = create_sample_bull_call_spread();
-        assert_relative_eq!(strategy.max_profit(), 61.62000, epsilon = 1e-6);
+        assert_relative_eq!(strategy.max_profit().value(), 61.62000, epsilon = 1e-6);
     }
 
     #[test]
     fn test_bull_call_spread_max_loss() {
         let strategy = create_sample_bull_call_spread();
-        assert_relative_eq!(strategy.max_loss(), 48.37999999, epsilon = 1e-6);
+        assert_relative_eq!(strategy.max_loss().value(), 48.37999999, epsilon = 1e-6);
     }
 
     #[test]
@@ -617,8 +622,8 @@ mod tests_create_bull_call_spread_gold {
             31.620000,
             epsilon = 1e-6
         );
-        assert_relative_eq!(strategy.max_profit(), 61.6200000, epsilon = 1e-6);
-        assert_relative_eq!(strategy.max_loss(), 48.37999999, epsilon = 1e-6);
+        assert_relative_eq!(strategy.max_profit().value(), 61.6200000, epsilon = 1e-6);
+        assert_relative_eq!(strategy.max_loss().value(), 48.37999999, epsilon = 1e-6);
         assert_relative_eq!(strategy.total_cost().value(), 48.37999999, epsilon = 1e-6);
         assert_relative_eq!(strategy.net_premium_received(), 8.46, epsilon = 1e-6);
     }

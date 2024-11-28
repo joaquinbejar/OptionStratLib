@@ -89,19 +89,19 @@ pub trait Strategies: Validable {
         self.get_break_even_points()
     }
 
-    fn max_profit(&self) -> f64 {
-        ZERO
+    fn max_profit(&self) -> PositiveF64 {
+        PZERO
     }
 
-    fn max_profit_iter(&mut self) -> f64 {
+    fn max_profit_iter(&mut self) -> PositiveF64 {
         self.max_profit()
     }
 
-    fn max_loss(&self) -> f64 {
-        ZERO
+    fn max_loss(&self) -> PositiveF64 {
+        PZERO
     }
 
-    fn max_loss_iter(&mut self) -> f64 {
+    fn max_loss_iter(&mut self) -> PositiveF64 {
         self.max_loss()
     }
 
@@ -313,12 +313,12 @@ mod tests_strategies {
             vec![PositiveF64::new(100.0).unwrap()]
         }
 
-        fn max_profit(&self) -> f64 {
-            1000.0
+        fn max_profit(&self) -> PositiveF64 {
+            pos!(1000.0)
         }
 
-        fn max_loss(&self) -> f64 {
-            500.0
+        fn max_loss(&self) -> PositiveF64 {
+            pos!(500.0)
         }
 
         fn total_cost(&self) -> PositiveF64 {
@@ -505,8 +505,8 @@ mod tests_strategies_extended {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_profit(&self) -> f64 {
-                100.0
+            fn max_profit(&self) -> PositiveF64 {
+                pos!(100.0)
             }
         }
 
@@ -519,8 +519,8 @@ mod tests_strategies_extended {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_loss(&self) -> f64 {
-                50.0
+            fn max_loss(&self) -> PositiveF64 {
+                pos!(50.0)
             }
         }
 
@@ -641,11 +641,11 @@ mod tests_max_min_strikes {
         fn break_even(&self) -> Vec<PositiveF64> {
             vec![]
         }
-        fn max_profit(&self) -> f64 {
-            0.0
+        fn max_profit(&self) -> PositiveF64 {
+            PZERO
         }
-        fn max_loss(&self) -> f64 {
-            0.0
+        fn max_loss(&self) -> PositiveF64 {
+            PZERO
         }
         fn total_cost(&self) -> PositiveF64 {
             PZERO
