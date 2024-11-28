@@ -220,11 +220,11 @@ impl Strategies for IronCondor {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> f64 {
-        self.net_premium_received()
+    fn max_profit(&self) -> PositiveF64 {
+        self.net_premium_received().into()
     }
 
-    fn max_loss(&self) -> f64 {
+    fn max_loss(&self) -> PositiveF64 {
         let call_wing_width =
             (self.long_call.option.strike_price - self.short_call.option.strike_price).value()
                 * self.long_call.option.quantity.value()
@@ -234,7 +234,7 @@ impl Strategies for IronCondor {
                 * self.short_put.option.quantity.value()
                 - self.net_premium_received();
 
-        call_wing_width.max(put_wing_width)
+        call_wing_width.max(put_wing_width).into()
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -359,12 +359,12 @@ impl Graph for IronCondor {
 
         let coordiantes: (f64, f64) = (
             self.short_call.option.strike_price.value() / 2000.0,
-            self.max_profit() / 5.0,
+            self.max_profit().value() / 5.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit(),
+                self.max_profit().value(),
             ),
             label: format!(
                 "High Max Profit {:.2} at {:.0}",
@@ -380,12 +380,12 @@ impl Graph for IronCondor {
 
         let coordiantes: (f64, f64) = (
             self.short_put.option.strike_price.value() / 2000.0,
-            self.max_profit() / 5.0,
+            self.max_profit().value() / 5.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_put.option.strike_price.value(),
-                self.max_profit(),
+                self.max_profit().value(),
             ),
             label: format!(
                 "Low Max Profit {:.2} at {:.0}",
@@ -522,12 +522,12 @@ mod tests_iron_condor {
             0.01,
             0.02,
             SIZE_ONE,
-            1.5,
-            1.0,
-            2.0,
-            1.8,
-            5.0,
-            5.0,
+            3.5,
+            3.3,
+            3.0,
+            2.8,
+            0.07,
+            0.07,
         );
 
         let expected_profit = iron_condor.net_premium_received();

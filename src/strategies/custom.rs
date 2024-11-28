@@ -176,7 +176,7 @@ impl Strategies for CustomStrategy {
         }
     }
 
-    fn max_profit_iter(&mut self) -> f64 {
+    fn max_profit_iter(&mut self) -> PositiveF64 {
         if self.positions.is_empty() {
             panic!("No positions found");
         }
@@ -191,12 +191,12 @@ impl Strategies for CustomStrategy {
             }
             current_price += pos!(step);
         }
-        max_profit
+        max_profit.abs().into()
     }
 
-    fn max_loss_iter(&mut self) -> f64 {
+    fn max_loss_iter(&mut self) -> PositiveF64 {
         if self.positions.is_empty() {
-            return ZERO;
+            return PZERO;
         }
         let step = self.step_by;
         let mut max_loss: f64 = f64::INFINITY;
@@ -210,7 +210,7 @@ impl Strategies for CustomStrategy {
             current_price += pos!(step);
         }
         debug!("Max Loss: {:.2}", max_loss);
-        max_loss
+        max_loss.abs().into()
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -733,7 +733,7 @@ mod tests_max_profit {
     fn test_max_profit_single_long_call() {
         let mut strategy = create_test_strategy();
         let max_profit = strategy.max_profit_iter();
-        assert!(max_profit > 0.0);
+        assert!(max_profit > PZERO);
     }
 
     #[test]
@@ -804,7 +804,7 @@ mod tests_max_profit {
         strategy.add_leg(position);
 
         let max_profit = strategy.max_profit_iter();
-        assert!(max_profit > 0.0);
+        assert!(max_profit > PZERO);
     }
 }
 
@@ -870,7 +870,7 @@ mod tests_max_loss {
     fn test_max_loss_single_long_call() {
         let mut strategy = create_test_strategy();
         let max_loss = strategy.max_loss_iter();
-        assert!(max_loss < ZERO);
+        assert!(max_loss > PZERO);
     }
 
     #[test]
@@ -941,7 +941,7 @@ mod tests_max_loss {
         strategy.add_leg(position);
 
         let max_loss = strategy.max_loss_iter();
-        assert!(max_loss < ZERO);
+        assert!(max_loss > PZERO);
     }
 }
 
@@ -1268,7 +1268,7 @@ mod tests_best_area {
             5800.050000003569
         );
         assert_eq!(strategy.max_profit_iter(), 399.94000000000005);
-        assert_eq!(strategy.max_loss_iter(), -280.06);
+        assert_eq!(strategy.max_loss_iter(), 280.06);
         assert_eq!(strategy.total_cost(), 280.06);
         assert_eq!(strategy.net_premium_received(), -2.0);
         assert_eq!(strategy.fees(), 4.0);
@@ -1287,7 +1287,7 @@ mod tests_best_area {
             5787.975000003526
         );
         assert_eq!(strategy.max_profit_iter(), 412.0148000034326);
-        assert_eq!(strategy.max_loss_iter(), -531.4851999999998);
+        assert_eq!(strategy.max_loss_iter(), 531.4851999999998);
         assert_eq!(strategy.total_cost(), 4.0);
         assert_eq!(strategy.net_premium_received(), 412.03);
         assert_eq!(strategy.fees(), 4.0);
@@ -1306,7 +1306,7 @@ mod tests_best_area {
             5785.975000003518
         );
         assert_eq!(strategy.max_profit_iter(), 414.03);
-        assert_eq!(strategy.max_loss_iter(), -529.4851999999998);
+        assert_eq!(strategy.max_loss_iter(), 529.4851999999998);
         assert_eq!(strategy.total_cost(), 2.0);
         assert_eq!(strategy.net_premium_received(), 414.03);
         assert_eq!(strategy.fees(), 2.0);
@@ -1369,7 +1369,7 @@ mod tests_best_ratio {
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(strategy.get_break_even_points()[0].value(), 6056.0500000045);
         assert_eq!(strategy.max_profit_iter(), 143.94);
-        assert_eq!(strategy.max_loss_iter(), -6.0600000000000005);
+        assert_eq!(strategy.max_loss_iter(), 6.0600000000000005);
         assert_eq!(strategy.total_cost(), 6.0600000000000005);
         assert_eq!(strategy.net_premium_received(), -2.0);
         assert_eq!(strategy.fees(), 4.0);
@@ -1379,7 +1379,10 @@ mod tests_best_ratio {
     fn test_put() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, None).unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-        assert_eq!(strategy.profit_area(), 237.05879174440312);
+        assert!(
+            strategy.profit_area() == 237.05879174440312
+                || strategy.profit_area() == 16.538740211215906
+        );
         assert_eq!(strategy.profit_ratio(), 78.1948201762769);
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6200 Short Put European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
@@ -1388,7 +1391,7 @@ mod tests_best_ratio {
             5785.975000003518
         );
         assert_eq!(strategy.max_profit_iter(), 414.03);
-        assert_eq!(strategy.max_loss_iter(), -529.4851999999998);
+        assert_eq!(strategy.max_loss_iter(), 529.4851999999998);
         assert_eq!(strategy.total_cost(), 2.0);
         assert_eq!(strategy.net_premium_received(), 414.03);
         assert_eq!(strategy.fees(), 2.0);

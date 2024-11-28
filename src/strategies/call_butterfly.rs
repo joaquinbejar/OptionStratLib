@@ -269,15 +269,22 @@ impl Strategies for CallButterfly {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> f64 {
+    fn max_profit(&self) -> PositiveF64 {
+        // TODO: Calculate max profit
         self.calculate_profit_at(self.short_call.option.strike_price)
+            .abs()
+            .into()
     }
 
-    fn max_loss(&self) -> f64 {
-        let lower_loss = self.calculate_profit_at(self.long_call_itm.option.strike_price);
-        let upper_loss = self.calculate_profit_at(self.long_call_otm.option.strike_price);
+    fn max_loss(&self) -> PositiveF64 {
+        let lower_loss = self
+            .calculate_profit_at(self.long_call_itm.option.strike_price)
+            .abs();
+        let upper_loss = self
+            .calculate_profit_at(self.long_call_otm.option.strike_price)
+            .abs();
 
-        lower_loss.min(upper_loss)
+        lower_loss.min(upper_loss).into()
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -307,7 +314,7 @@ impl Strategies for CallButterfly {
     }
 
     fn profit_ratio(&self) -> f64 {
-        self.max_profit() / self.max_loss().abs() * 100.0
+        (self.max_profit() / self.max_loss() * 100.0).value()
     }
 
     fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
@@ -448,7 +455,7 @@ impl Graph for CallButterfly {
 
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price.value(),
-            y_range: (min_value, max_value),
+            y_range: (min_value.value(), max_value.value()),
             label: format!(
                 "Current Price: {:.2}",
                 self.short_call.option.underlying_price
@@ -489,7 +496,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit(),
+                self.max_profit().value(),
             ),
             label: format!("Max Profit\n\n{:.2}", self.max_profit()),
             label_offset: (2.0, 1.0),
@@ -531,6 +538,7 @@ impl Graph for CallButterfly {
 #[cfg(test)]
 mod tests_call_butterfly {
     use super::*;
+    use crate::constants::ZERO;
     use approx::assert_relative_eq;
 
     fn setup() -> CallButterfly {
@@ -546,13 +554,13 @@ mod tests_call_butterfly {
             0.02,
             pos!(1.0),
             pos!(2.0),
-            3.0,
-            1.5,
-            2.0,
+            30.0,
+            20.5,
+            20.0,
             0.1,
             0.1,
             0.1,
-            0.0,
+            0.1,
         )
     }
 
@@ -569,26 +577,26 @@ mod tests_call_butterfly {
     #[test]
     fn test_break_even() {
         let strategy = setup();
-        assert_eq!(strategy.break_even()[0], 156.1);
+        assert_eq!(strategy.break_even()[0], 166.3);
     }
 
     #[test]
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 157.0;
-        assert!(strategy.calculate_profit_at(pos!(price)) > 0.0);
+        assert!(strategy.calculate_profit_at(pos!(price)) < ZERO);
     }
 
     #[test]
     fn test_max_profit() {
         let strategy = setup();
-        assert!(strategy.max_profit() > 0.0);
+        assert!(strategy.max_profit() > PZERO);
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup();
-        assert_eq!(strategy.max_loss().abs(), strategy.total_cost().value());
+        assert_eq!(strategy.max_loss(), strategy.total_cost());
     }
 
     #[test]
@@ -600,13 +608,13 @@ mod tests_call_butterfly {
     #[test]
     fn test_net_premium_received() {
         let strategy = setup();
-        assert_eq!(strategy.net_premium_received(), 3.8);
+        assert_eq!(strategy.net_premium_received(), 39.6);
     }
 
     #[test]
     fn test_fees() {
         let strategy = setup();
-        assert_relative_eq!(strategy.fees(), 0.6, epsilon = f64::EPSILON);
+        assert_relative_eq!(strategy.fees(), 0.8, epsilon = f64::EPSILON);
     }
 
     #[test]

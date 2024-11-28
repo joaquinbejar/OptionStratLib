@@ -146,12 +146,12 @@ impl Strategies for ShortStrangle {
         vec![self.short_put.option.strike_price + self.net_premium_received()]
     }
 
-    fn max_profit(&self) -> f64 {
-        self.net_premium_received()
+    fn max_profit(&self) -> PositiveF64 {
+        pos!(self.net_premium_received())
     }
 
-    fn max_loss(&self) -> f64 {
-        f64::INFINITY // Theoretically unlimited
+    fn max_loss(&self) -> PositiveF64 {
+        f64::INFINITY.into()
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -181,7 +181,7 @@ impl Strategies for ShortStrangle {
     fn profit_ratio(&self) -> f64 {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
         // info!("Max Profit: {} Break Even Diff: {}, Ratio: {}", self.max_profit(), break_even_diff, self.max_profit() / break_even_diff * 100.0);
-        self.max_profit() / break_even_diff * 100.0
+        self.max_profit().value() / break_even_diff * 100.0
     }
 
     fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
@@ -390,7 +390,7 @@ impl Graph for ShortStrangle {
 
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price.value(),
-            y_range: (min_value, max_value),
+            y_range: (min_value.into(), max_value.into()),
             label: format!(
                 "Current Price: {:.2}",
                 self.short_call.option.underlying_price
@@ -430,12 +430,12 @@ impl Graph for ShortStrangle {
 
         let coordiantes: (f64, f64) = (
             self.short_put.option.strike_price.value() / 250.0,
-            self.max_profit() / 15.0,
+            self.max_profit().value() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit(),
+                self.max_profit().value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
@@ -451,12 +451,12 @@ impl Graph for ShortStrangle {
 
         let coordiantes: (f64, f64) = (
             -self.short_put.option.strike_price.value() / 30.0,
-            self.max_profit() / 15.0,
+            self.max_profit().value() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_put.option.strike_price.value(),
-                self.max_profit(),
+                self.max_profit().value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
@@ -598,12 +598,12 @@ impl Strategies for LongStrangle {
         vec![self.long_put.option.strike_price - self.total_cost()]
     }
 
-    fn max_profit(&self) -> f64 {
-        f64::INFINITY // Theoretically unlimited
+    fn max_profit(&self) -> PositiveF64 {
+        f64::INFINITY.into() // Theoretically unlimited
     }
 
-    fn max_loss(&self) -> f64 {
-        self.total_cost().value()
+    fn max_loss(&self) -> PositiveF64 {
+        self.total_cost()
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -881,7 +881,10 @@ impl Graph for LongStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.long_call.option.strike_price.value(), -self.max_loss()),
+            coordinates: (
+                self.long_call.option.strike_price.value(),
+                -self.max_loss().value(),
+            ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
                 self.max_loss(),
@@ -895,7 +898,10 @@ impl Graph for LongStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.long_put.option.strike_price.value(), -self.max_loss()),
+            coordinates: (
+                self.long_put.option.strike_price.value(),
+                -self.max_loss().value(),
+            ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
                 self.max_loss(),
@@ -1083,7 +1089,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
         let expected_ratio = strategy.max_profit() / break_even_diff * 100.0;
-        assert_eq!(strategy.profit_ratio(), expected_ratio);
+        assert_eq!(strategy.profit_ratio(), expected_ratio.value());
     }
 
     #[test]

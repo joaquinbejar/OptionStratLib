@@ -168,13 +168,13 @@ impl Strategies for PoorMansCoveredCall {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> f64 {
+    fn max_profit(&self) -> PositiveF64 {
         let max_profit_price = self.short_call.option.strike_price;
-        self.calculate_profit_at(max_profit_price)
+        self.calculate_profit_at(max_profit_price).into()
     }
 
-    fn max_loss(&self) -> f64 {
-        self.long_call.max_loss() - self.short_call.max_profit()
+    fn max_loss(&self) -> PositiveF64 {
+        pos!(self.long_call.max_loss() - self.short_call.max_profit())
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -200,7 +200,7 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn profit_ratio(&self) -> f64 {
-        (self.max_profit() / self.max_loss()).abs() * 100.0
+        (self.max_profit() / self.max_loss()).value() * 100.0
     }
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
@@ -280,12 +280,12 @@ impl Graph for PoorMansCoveredCall {
 
         let coordiantes: (f64, f64) = (
             self.short_call.option.strike_price.value() / 2000.0,
-            self.max_profit() / 10.0,
+            self.max_profit().value() / 10.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit(),
+                self.max_profit().value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
@@ -301,10 +301,13 @@ impl Graph for PoorMansCoveredCall {
 
         let coordiantes: (f64, f64) = (
             self.long_call.option.strike_price.value() / 2000.0,
-            -self.max_loss() / 50.0,
+            -self.max_loss().value() / 50.0,
         );
         points.push(ChartPoint {
-            coordinates: (self.long_call.option.strike_price.value(), -self.max_loss()),
+            coordinates: (
+                self.long_call.option.strike_price.value(),
+                -self.max_loss().value(),
+            ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
                 self.max_loss(),
@@ -379,14 +382,14 @@ mod tests {
     fn test_max_profit() {
         let pmcc = create_pmcc_strategy();
         let max_profit = pmcc.max_profit();
-        assert!(max_profit > 0.0);
+        assert!(max_profit > PZERO);
     }
 
     #[test]
     fn test_max_loss() {
         let pmcc = create_pmcc_strategy();
         let max_loss = pmcc.max_loss();
-        assert!(max_loss > 0.0);
+        assert!(max_loss > PZERO);
     }
 
     #[test]
@@ -439,7 +442,7 @@ mod tests {
     fn test_calculate_profit_at() {
         let pmcc = create_pmcc_strategy();
         let profit = pmcc.calculate_profit_at(pos!(150.0));
-        assert!(profit >= -pmcc.max_loss() && profit <= pmcc.max_profit());
+        assert!(profit >= -pmcc.max_loss().value() && profit <= pmcc.max_profit().value());
     }
 
     #[test]
