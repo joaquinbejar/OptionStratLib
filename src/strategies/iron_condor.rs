@@ -16,6 +16,7 @@ use crate::constants::{
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
@@ -23,7 +24,6 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use crate::pos;
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -238,10 +238,12 @@ impl Strategies for IronCondor {
     }
 
     fn total_cost(&self) -> PositiveF64 {
-        pos!(self.short_call.net_cost()
-            + self.short_put.net_cost()
-            + self.long_call.net_cost()
-            + self.long_put.net_cost())
+        pos!(
+            self.short_call.net_cost()
+                + self.short_put.net_cost()
+                + self.long_call.net_cost()
+                + self.long_put.net_cost()
+        )
     }
 
     fn net_premium_received(&self) -> f64 {

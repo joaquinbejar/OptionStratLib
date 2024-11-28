@@ -603,7 +603,7 @@ impl Strategies for LongStrangle {
     }
 
     fn max_loss(&self) -> f64 {
-        self.total_cost()
+        self.total_cost().value()
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -1347,7 +1347,7 @@ mod tests_long_strangle {
     #[test]
     fn test_max_loss() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.max_loss(), strategy.total_cost());
+        assert_eq!(strategy.max_loss(), strategy.total_cost().value());
     }
 
     #[test]

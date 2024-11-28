@@ -281,7 +281,10 @@ impl Strategies for CallButterfly {
     }
 
     fn total_cost(&self) -> PositiveF64 {
-        pos!(self.long_call_itm.net_cost() + self.long_call_otm.net_cost() - self.short_call.net_cost())
+        pos!(
+            self.long_call_itm.net_cost() + self.long_call_otm.net_cost()
+                - self.short_call.net_cost()
+        )
     }
 
     fn net_premium_received(&self) -> f64 {

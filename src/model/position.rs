@@ -10,9 +10,9 @@ use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64, Side, PZERO};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
-use crate::{pos, spos};
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
+use crate::{pos, spos};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{error, trace};
@@ -113,7 +113,7 @@ impl Position {
     /// A `f64` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE
     ///
     pub fn total_cost(&self) -> PositiveF64 {
-        let f64_total_cost=match self.option.side {
+        let f64_total_cost = match self.option.side {
             Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
             Side::Short => (self.open_fee + self.close_fee) * self.option.quantity,
         };

@@ -35,6 +35,7 @@ use crate::constants::{
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
@@ -42,7 +43,6 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use crate::pos;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -326,7 +326,7 @@ impl Graph for PoorMansCoveredCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::types::{ExpirationDate, PZERO};
     use crate::pos;
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
@@ -401,7 +401,7 @@ mod tests {
     fn test_total_cost() {
         let pmcc = create_pmcc_strategy();
         let total_cost = pmcc.total_cost();
-        assert!(total_cost > 0.0);
+        assert!(total_cost > PZERO);
     }
 
     #[test]
