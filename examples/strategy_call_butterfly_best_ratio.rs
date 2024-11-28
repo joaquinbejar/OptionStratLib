@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     strategy.best_ratio(
         &option_chain,
-        FindOptimalSide::Range(pos!(5700.0), pos!(5900.0)),
+        FindOptimalSide::Range(pos!(5700.0), pos!(6000.0)),
     );
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
