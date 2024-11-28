@@ -154,8 +154,8 @@ impl Strategies for ShortStrangle {
         f64::INFINITY // Theoretically unlimited
     }
 
-    fn total_cost(&self) -> f64 {
-        self.short_call.net_cost() + self.short_put.net_cost()
+    fn total_cost(&self) -> PositiveF64 {
+        pos!(self.short_call.net_cost() + self.short_put.net_cost())
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -603,11 +603,11 @@ impl Strategies for LongStrangle {
     }
 
     fn max_loss(&self) -> f64 {
-        self.total_cost()
+        self.total_cost().value()
     }
 
-    fn total_cost(&self) -> f64 {
-        self.long_call.net_cost() + self.long_put.net_cost()
+    fn total_cost(&self) -> PositiveF64 {
+        pos!(self.long_call.net_cost() + self.long_put.net_cost())
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -1347,7 +1347,7 @@ mod tests_long_strangle {
     #[test]
     fn test_max_loss() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.max_loss(), strategy.total_cost());
+        assert_eq!(strategy.max_loss(), strategy.total_cost().value());
     }
 
     #[test]

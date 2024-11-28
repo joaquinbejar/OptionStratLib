@@ -213,9 +213,9 @@ impl Strategies for CustomStrategy {
         max_loss
     }
 
-    fn total_cost(&self) -> f64 {
+    fn total_cost(&self) -> PositiveF64 {
         if self.positions.is_empty() {
-            return ZERO;
+            return PZERO;
         }
         self.positions.iter().map(Position::total_cost).sum()
     }

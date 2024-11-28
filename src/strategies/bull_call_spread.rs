@@ -266,8 +266,8 @@ impl Strategies for BullCallSpread {
             .abs()
     }
 
-    fn total_cost(&self) -> f64 {
-        self.long_call.net_cost() - self.short_call.net_cost()
+    fn total_cost(&self) -> PositiveF64 {
+        pos!(self.long_call.net_cost() - self.short_call.net_cost())
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -619,7 +619,7 @@ mod tests_create_bull_call_spread_gold {
         );
         assert_relative_eq!(strategy.max_profit(), 61.6200000, epsilon = 1e-6);
         assert_relative_eq!(strategy.max_loss(), 48.37999999, epsilon = 1e-6);
-        assert_relative_eq!(strategy.total_cost(), 48.37999999, epsilon = 1e-6);
+        assert_relative_eq!(strategy.total_cost().value(), 48.37999999, epsilon = 1e-6);
         assert_relative_eq!(strategy.net_premium_received(), 8.46, epsilon = 1e-6);
     }
 }

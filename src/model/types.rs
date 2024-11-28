@@ -5,6 +5,7 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt;
+use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
 
@@ -273,6 +274,20 @@ impl RelativeEq for PositiveF64 {
         max_relative: Self::Epsilon,
     ) -> bool {
         f64::relative_eq(&self.0, &other.0, epsilon, max_relative)
+    }
+}
+
+impl Sum for PositiveF64 {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let sum = iter.fold(0.0, |acc, x| acc + x.value());
+        PositiveF64::new(sum).unwrap_or(PZERO)
+    }
+}
+
+impl<'a> Sum<&'a PositiveF64> for PositiveF64 {
+    fn sum<I: Iterator<Item = &'a PositiveF64>>(iter: I) -> Self {
+        let sum = iter.fold(0.0, |acc, x| acc + x.value());
+        PositiveF64::new(sum).unwrap_or(PZERO)
     }
 }
 
@@ -1284,5 +1299,31 @@ mod tests_option_type {
             ..Default::default()
         };
         assert_eq!(option.payoff(&info), 36.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_positive_f64_sum {
+    use super::*;
+
+    #[test]
+    fn test_sum_owned_values() {
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let sum: PositiveF64 = values.into_iter().sum();
+        assert_eq!(sum.value(), 6.0);
+    }
+
+    #[test]
+    fn test_sum_referenced_values() {
+        let values = [pos!(1.0), pos!(2.0), pos!(3.0)];
+        let sum: PositiveF64 = values.iter().sum();
+        assert_eq!(sum.value(), 6.0);
+    }
+
+    #[test]
+    fn test_sum_empty_iterator() {
+        let values: Vec<PositiveF64> = vec![];
+        let sum: PositiveF64 = values.into_iter().sum();
+        assert_eq!(sum.value(), 0.0);
     }
 }

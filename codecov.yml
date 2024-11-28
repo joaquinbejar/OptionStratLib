@@ -1,0 +1,21 @@
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  status:
+    project:
+      default:
+        target: 75%    # the required coverage value
+        threshold: 1%  # the leniency in hitting the target
+    patch:
+      default:
+        target: 75%
+        threshold: 1%
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no

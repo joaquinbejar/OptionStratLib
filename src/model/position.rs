@@ -10,9 +10,9 @@ use crate::model::option::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64, Side, PZERO};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
-use crate::spos;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
+use crate::{pos, spos};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{error, trace};
@@ -112,11 +112,12 @@ impl Position {
     ///
     /// A `f64` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE
     ///
-    pub fn total_cost(&self) -> f64 {
-        match self.option.side {
+    pub fn total_cost(&self) -> PositiveF64 {
+        let f64_total_cost = match self.option.side {
             Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
             Side::Short => (self.open_fee + self.close_fee) * self.option.quantity,
-        }
+        };
+        pos!(f64_total_cost)
     }
 
     pub fn premium_received(&self) -> f64 {
@@ -200,7 +201,7 @@ impl Position {
     /// in short positions
     pub(crate) fn net_cost(&self) -> f64 {
         match self.option.side {
-            Side::Long => self.total_cost(),
+            Side::Long => self.total_cost().value(),
             Side::Short => {
                 (self.open_fee + self.close_fee - self.premium).abs() * self.option.quantity
             }
@@ -245,7 +246,7 @@ impl Position {
     #[allow(dead_code)]
     pub(crate) fn max_loss(&self) -> f64 {
         match self.option.side {
-            Side::Long => self.total_cost(),
+            Side::Long => self.total_cost().value(),
             Side::Short => f64::INFINITY,
         }
     }
@@ -299,7 +300,7 @@ impl PnLCalculator for Position {
         PnL::new(
             None,
             Some(self.unrealized_pnl(market_price)),
-            self.total_cost(),
+            self.total_cost().value(),
             self.premium_received(),
             date_time,
         )
@@ -309,7 +310,7 @@ impl PnLCalculator for Position {
         PnL::new(
             Some(self.pnl_at_expiration(&underlying_price)),
             None,
-            self.total_cost(),
+            self.total_cost().value(),
             self.premium_received(),
             self.option.expiration_date.get_date(),
         )

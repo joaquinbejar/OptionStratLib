@@ -16,6 +16,7 @@ use crate::constants::{
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
@@ -236,11 +237,13 @@ impl Strategies for IronCondor {
         call_wing_width.max(put_wing_width)
     }
 
-    fn total_cost(&self) -> f64 {
-        self.short_call.net_cost()
-            + self.short_put.net_cost()
-            + self.long_call.net_cost()
-            + self.long_put.net_cost()
+    fn total_cost(&self) -> PositiveF64 {
+        pos!(
+            self.short_call.net_cost()
+                + self.short_put.net_cost()
+                + self.long_call.net_cost()
+                + self.long_put.net_cost()
+        )
     }
 
     fn net_premium_received(&self) -> f64 {

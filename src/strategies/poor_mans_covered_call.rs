@@ -35,6 +35,7 @@ use crate::constants::{
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
@@ -176,8 +177,8 @@ impl Strategies for PoorMansCoveredCall {
         self.long_call.max_loss() - self.short_call.max_profit()
     }
 
-    fn total_cost(&self) -> f64 {
-        self.long_call.net_cost() + self.short_call.net_cost()
+    fn total_cost(&self) -> PositiveF64 {
+        pos!(self.long_call.net_cost() + self.short_call.net_cost())
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -325,7 +326,7 @@ impl Graph for PoorMansCoveredCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::types::{ExpirationDate, PZERO};
     use crate::pos;
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
@@ -400,7 +401,7 @@ mod tests {
     fn test_total_cost() {
         let pmcc = create_pmcc_strategy();
         let total_cost = pmcc.total_cost();
-        assert!(total_cost > 0.0);
+        assert!(total_cost > PZERO);
     }
 
     #[test]

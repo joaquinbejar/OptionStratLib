@@ -280,8 +280,11 @@ impl Strategies for CallButterfly {
         lower_loss.min(upper_loss)
     }
 
-    fn total_cost(&self) -> f64 {
-        self.long_call_itm.net_cost() + self.long_call_otm.net_cost() - self.short_call.net_cost()
+    fn total_cost(&self) -> PositiveF64 {
+        pos!(
+            self.long_call_itm.net_cost() + self.long_call_otm.net_cost()
+                - self.short_call.net_cost()
+        )
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -585,13 +588,13 @@ mod tests_call_butterfly {
     #[test]
     fn test_max_loss() {
         let strategy = setup();
-        assert_eq!(strategy.max_loss().abs(), strategy.total_cost());
+        assert_eq!(strategy.max_loss().abs(), strategy.total_cost().value());
     }
 
     #[test]
     fn test_total_cost() {
         let strategy = setup();
-        assert!(strategy.total_cost() > 0.0);
+        assert!(strategy.total_cost() > PZERO);
     }
 
     #[test]
