@@ -23,6 +23,7 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use crate::pos;
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -236,11 +237,11 @@ impl Strategies for IronCondor {
         call_wing_width.max(put_wing_width)
     }
 
-    fn total_cost(&self) -> f64 {
-        self.short_call.net_cost()
+    fn total_cost(&self) -> PositiveF64 {
+        pos!(self.short_call.net_cost()
             + self.short_put.net_cost()
             + self.long_call.net_cost()
-            + self.long_put.net_cost()
+            + self.long_put.net_cost())
     }
 
     fn net_premium_received(&self) -> f64 {

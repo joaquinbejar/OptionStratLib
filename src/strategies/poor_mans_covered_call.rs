@@ -42,6 +42,7 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use crate::pos;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -176,8 +177,8 @@ impl Strategies for PoorMansCoveredCall {
         self.long_call.max_loss() - self.short_call.max_profit()
     }
 
-    fn total_cost(&self) -> f64 {
-        self.long_call.net_cost() + self.short_call.net_cost()
+    fn total_cost(&self) -> PositiveF64 {
+        pos!(self.long_call.net_cost() + self.short_call.net_cost())
     }
 
     fn net_premium_received(&self) -> f64 {

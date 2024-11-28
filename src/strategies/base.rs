@@ -110,8 +110,8 @@ pub trait Strategies: Validable {
     /// # Returns
     /// `f64` - The total cost will be zero if the strategy is not applicable.
     ///
-    fn total_cost(&self) -> f64 {
-        ZERO
+    fn total_cost(&self) -> PositiveF64 {
+        PZERO
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -321,8 +321,8 @@ mod tests_strategies {
             500.0
         }
 
-        fn total_cost(&self) -> f64 {
-            200.0
+        fn total_cost(&self) -> PositiveF64 {
+            pos!(200.0)
         }
 
         fn net_premium_received(&self) -> f64 {
@@ -647,8 +647,8 @@ mod tests_max_min_strikes {
         fn max_loss(&self) -> f64 {
             0.0
         }
-        fn total_cost(&self) -> f64 {
-            0.0
+        fn total_cost(&self) -> PositiveF64 {
+            PZERO
         }
         fn net_premium_received(&self) -> f64 {
             0.0
