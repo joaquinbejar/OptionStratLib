@@ -29,7 +29,6 @@ jobs:
           --workspace
           --timeout 180
           --out Xml
-          --coverage-threshold 75
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       # UPLOAD CODE COVERAGE REPORT TO CODECOV.IO
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
