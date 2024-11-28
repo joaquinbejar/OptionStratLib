@@ -5,16 +5,14 @@
 ******************************************************************************/
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
-use crate::constants::DARK_GREEN;
-use crate::constants::{
-    DARK_BLUE, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
-};
+use crate::constants::DARK_BLUE;
+use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
-use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
@@ -244,6 +242,10 @@ impl Default for CallButterfly {
 }
 
 impl Strategies for CallButterfly {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.underlying_price
+    }
+
     fn add_leg(&mut self, position: Position) {
         match position.option.side {
             Side::Long => {
@@ -270,21 +272,20 @@ impl Strategies for CallButterfly {
     }
 
     fn max_profit(&self) -> PositiveF64 {
-        // TODO: Calculate max profit
         self.calculate_profit_at(self.short_call.option.strike_price)
             .abs()
             .into()
     }
 
     fn max_loss(&self) -> PositiveF64 {
-        let lower_loss = self
-            .calculate_profit_at(self.long_call_itm.option.strike_price)
-            .abs();
-        let upper_loss = self
-            .calculate_profit_at(self.long_call_otm.option.strike_price)
-            .abs();
-
-        lower_loss.min(upper_loss).into()
+        let lower_loss = self.calculate_profit_at(self.long_call_itm.option.strike_price);
+        let upper_loss = self.calculate_profit_at(self.long_call_otm.option.strike_price);
+        match (lower_loss > ZERO, upper_loss > ZERO) {
+            (true, true) => PZERO,
+            (true, false) => upper_loss.abs().into(),
+            (false, true) => lower_loss.abs().into(),
+            (false, false) => lower_loss.abs().max(upper_loss.abs()).into(),
+        }
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -325,14 +326,18 @@ impl Strategies for CallButterfly {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
-    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = (
-            self.long_call_itm.option.clone(),
-            self.long_call_otm.option.clone(),
-        );
-        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        Some(calculate_price_range(start_price, end_price, step))
+    // fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+    //     let (first_option, last_option) = (
+    //         self.long_call_itm.option.clone(),
+    //         self.long_call_otm.option.clone(),
+    //     );
+    //     let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+    //     let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+    //     Some(calculate_price_range(start_price, end_price, step))
+    // }
+
+    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        self.break_even_points.clone()
     }
 }
 
@@ -450,12 +455,9 @@ impl Graph for CallButterfly {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let max_value = self.max_profit() * 1.2;
-        let min_value = self.max_loss() * 1.4;
-
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price.value(),
-            y_range: (min_value.value(), max_value.value()),
+            y_range: (f64::NEG_INFINITY, f64::INFINITY),
             label: format!(
                 "Current Price: {:.2}",
                 self.short_call.option.underlying_price
@@ -640,5 +642,282 @@ mod tests_call_butterfly {
         let title = strategy.title();
         assert!(title.contains("Ratio Call Spread Strategy"));
         assert!(title.contains("Call"));
+    }
+}
+
+#[cfg(test)]
+mod tests_call_butterfly_validation {
+    use super::*;
+
+    fn setup_basic_strategy() -> CallButterfly {
+        CallButterfly::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(145.0),
+            pos!(155.0),
+            pos!(150.0),
+            ExpirationDate::Days(30.0),
+            0.2,
+            0.01,
+            0.02,
+            pos!(1.0),
+            pos!(2.0),
+            5.0,
+            3.0,
+            4.0,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+        )
+    }
+
+    #[test]
+    fn test_validate_empty_symbol() {
+        let mut strategy = setup_basic_strategy();
+        strategy.name = "".to_string();
+        assert!(!strategy.validate());
+    }
+
+    #[test]
+    fn test_validate_invalid_underlying_price() {
+        let mut strategy = setup_basic_strategy();
+        strategy.underlying_price = PZERO;
+        assert!(!strategy.validate());
+    }
+
+    #[test]
+    fn test_validate_invalid_quantity_ratio() {
+        let mut strategy = setup_basic_strategy();
+        strategy.short_call.option.quantity = pos!(1.0); // Should be 2x long quantity
+        assert!(!strategy.validate());
+    }
+
+    #[test]
+    fn test_validate_valid_strategy() {
+        let strategy = setup_basic_strategy();
+        assert!(strategy.validate());
+    }
+}
+
+#[cfg(test)]
+mod tests_call_butterfly_optimization {
+    use super::*;
+    use crate::spos;
+
+    fn create_test_option_chain() -> OptionChain {
+        let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string());
+
+        // Add options at various strikes
+        for strike in [145.0, 147.5, 150.0, 152.5, 155.0].iter() {
+            chain.add_option(
+                pos!(*strike),
+                spos!(3.0),
+                spos!(3.2),
+                spos!(2.8),
+                spos!(3.0),
+                spos!(0.2),
+                Some(0.5),
+                spos!(100.0),
+                Some(50),
+            );
+        }
+        chain
+    }
+
+    #[test]
+    fn test_is_valid_short_option_upper() {
+        let strategy = CallButterfly::default();
+        let option = OptionData::new(
+            pos!(155.0),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(2.8),
+            spos!(3.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        assert!(strategy.is_valid_short_option(&option, &FindOptimalSide::Upper));
+    }
+
+    #[test]
+    fn test_are_valid_prices() {
+        let strategy = CallButterfly::default();
+        let long_itm = OptionData::new(
+            pos!(145.0),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(2.8),
+            spos!(3.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        let long_otm = OptionData::new(
+            pos!(155.0),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(2.8),
+            spos!(3.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        let short = OptionData::new(
+            pos!(150.0),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(2.8),
+            spos!(3.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        assert!(strategy.are_valid_prices(&long_itm, &long_otm, &short));
+    }
+
+    #[test]
+    fn test_find_optimal_ratio() {
+        let mut strategy = CallButterfly::default();
+        let chain = create_test_option_chain();
+        strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        assert!(strategy.validate());
+    }
+
+    #[test]
+    fn test_find_optimal_area() {
+        let mut strategy = CallButterfly::default();
+        let chain = create_test_option_chain();
+        strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        assert!(strategy.validate());
+    }
+}
+
+#[cfg(test)]
+mod tests_call_butterfly_pnl {
+    use super::*;
+
+    fn setup_test_strategy() -> CallButterfly {
+        CallButterfly::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(145.0),
+            pos!(155.0),
+            pos!(150.0),
+            ExpirationDate::Days(30.0),
+            0.2,
+            0.01,
+            0.02,
+            pos!(1.0),
+            pos!(2.0),
+            5.0,
+            3.0,
+            4.0,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+        )
+    }
+
+    #[test]
+    fn test_profit_at_max_point() {
+        let strategy = setup_test_strategy();
+        let profit = strategy.calculate_profit_at(strategy.short_call.option.strike_price);
+        assert_eq!(profit, strategy.max_profit().value());
+    }
+
+    #[test]
+    fn test_profit_below_lower_strike() {
+        let strategy = setup_test_strategy();
+        let profit = strategy.calculate_profit_at(pos!(140.0));
+        assert!(profit <= 0.0);
+    }
+
+    #[test]
+    fn test_profit_above_upper_strike() {
+        let strategy = setup_test_strategy();
+        let profit = strategy.calculate_profit_at(pos!(160.0));
+        assert!(profit <= 0.0);
+    }
+
+    #[test]
+    fn test_profit_ratio() {
+        let strategy = setup_test_strategy();
+        let ratio = strategy.profit_ratio();
+        assert!(ratio > 0.0);
+    }
+
+    #[test]
+    fn test_profit_area() {
+        let strategy = setup_test_strategy();
+        let area = strategy.profit_area();
+        assert!(area > 0.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_call_butterfly_graph {
+    use super::*;
+
+    fn setup_test_strategy() -> CallButterfly {
+        CallButterfly::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(145.0),
+            pos!(155.0),
+            pos!(150.0),
+            ExpirationDate::Days(30.0),
+            0.2,
+            0.01,
+            0.02,
+            pos!(1.0),
+            pos!(2.0),
+            5.0,
+            3.0,
+            4.0,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+        )
+    }
+
+    #[test]
+    fn test_get_points() {
+        let strategy = setup_test_strategy();
+        let points = strategy.get_points();
+        assert!(!points.is_empty());
+
+        // Verifica los puntos críticos
+        let has_break_even = points.iter().any(|p| p.label.contains("Break Even"));
+        let has_max_profit = points.iter().any(|p| p.label.contains("Max Profit"));
+        let has_low_point = points.iter().any(|p| p.label.contains("Low"));
+
+        assert!(has_break_even);
+        assert!(has_max_profit);
+        assert!(has_low_point);
+    }
+
+    #[test]
+    fn test_get_vertical_lines() {
+        let strategy = setup_test_strategy();
+        let lines = strategy.get_vertical_lines();
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].label.contains("Current Price"));
+    }
+
+    #[test]
+    fn test_best_range_to_show() {
+        let strategy = setup_test_strategy();
+        let range = strategy.best_range_to_show(pos!(5.0)).unwrap();
+        assert!(!range.is_empty());
+        assert!(range[0] < strategy.long_call_itm.option.strike_price);
+        assert!(range[range.len() - 1] > strategy.long_call_otm.option.strike_price);
     }
 }

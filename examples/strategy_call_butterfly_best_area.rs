@@ -42,7 +42,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.73,      // close_fee_short
     );
 
-    strategy.best_area(&option_chain, FindOptimalSide::Upper);
+    strategy.best_area(
+        &option_chain,
+        FindOptimalSide::Range(pos!(5700.0), pos!(6300.0)),
+    );
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
     info!("Title: {}", strategy.title());
