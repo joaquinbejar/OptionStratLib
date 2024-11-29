@@ -7,7 +7,7 @@ use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
-use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64, Side, PZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
@@ -15,7 +15,7 @@ use crate::visualization::utils::Graph;
 use crate::{pos, spos};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
-use tracing::{error, trace};
+use tracing::{debug, error, trace};
 
 /// The `Position` struct represents a financial position in an options market.
 /// It includes various attributes related to the option, such as its cost,
@@ -78,8 +78,7 @@ impl Position {
 
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.date = Utc::now();
-        self.option.strike_price = option_data.strike_price;
-        self.option.implied_volatility = option_data.implied_volatility.unwrap_or(PZERO).value();
+        self.option.update_from_option_data(option_data);
 
         match (self.option.side.clone(), self.option.option_style.clone()) {
             (Side::Long, OptionStyle::Call) => {
@@ -257,16 +256,26 @@ impl Position {
     }
 
     pub(crate) fn validate(&self) -> bool {
+        if self.option.side == Side::Short {
+            if self.premium == ZERO {
+                debug!("Premium must be greater than zero for short positions.");
+                return false;
+            }
+            if self.premium < self.open_fee + self.close_fee {
+                debug!("Premium must be greater than the sum of the fees.");
+                return false;
+            }
+        }
         if self.premium < ZERO {
-            error!("Premium must be greater than zero.");
+            debug!("Premium must be greater than zero.");
             return false;
         }
         if self.open_fee < ZERO {
-            error!("Open fee must be greater than zero.");
+            debug!("Open fee must be greater than zero.");
             return false;
         }
         if self.close_fee < ZERO {
-            error!("Close fee must be greater than zero.");
+            debug!("Close fee must be greater than zero.");
             return false;
         }
         if !self.option.validate() {
