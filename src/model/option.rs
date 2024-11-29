@@ -1,3 +1,4 @@
+use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
@@ -13,7 +14,6 @@ use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{error, trace};
-use crate::chains::chain::OptionData;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
