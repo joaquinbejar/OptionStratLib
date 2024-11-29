@@ -28,21 +28,22 @@
     and risk associated with traditional covered call strategies.
 */
 
-use super::base::{Strategies, StrategyType, Validable};
-use crate::constants::{
-    DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
-};
+use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
-use crate::strategies::utils::calculate_price_range;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use tracing::{debug, error};
+use crate::chains::chain::{OptionChain, OptionData};
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -50,6 +51,7 @@ const PMCC_DESCRIPTION: &str =
     It involves buying a long-term in-the-money call option and selling a short-term out-of-the-money call option. \
     This strategy aims to generate income while reducing the capital required compared to a traditional covered call.";
 
+#[derive(Clone, Debug)]
 pub struct PoorMansCoveredCall {
     pub name: String,
     pub kind: StrategyType,
@@ -153,6 +155,11 @@ impl Validable for PoorMansCoveredCall {
 }
 
 impl Strategies for PoorMansCoveredCall {
+    
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.long_call.option.underlying_price
+    }
+
     fn add_leg(&mut self, position: Position) {
         match (
             position.option.option_style.clone(),
@@ -164,17 +171,22 @@ impl Strategies for PoorMansCoveredCall {
         }
     }
 
+    fn get_legs(&self) -> Vec<Position> {
+        vec![self.long_call.clone(), self.short_call.clone()]
+    }
+
     fn break_even(&self) -> Vec<PositiveF64> {
         self.break_even_points.clone()
     }
 
     fn max_profit(&self) -> PositiveF64 {
-        let max_profit_price = self.short_call.option.strike_price;
-        self.calculate_profit_at(max_profit_price).into()
+        let profit = self.calculate_profit_at(self.short_call.option.strike_price);
+        if profit <= ZERO { PZERO } else { profit.into() }
     }
 
     fn max_loss(&self) -> PositiveF64 {
-        pos!(self.long_call.max_loss() - self.short_call.max_profit())
+        let loss = self.calculate_profit_at(self.long_call.option.strike_price);
+        if loss >= ZERO { PZERO } else { loss.abs().into() }
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -182,7 +194,7 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn net_premium_received(&self) -> f64 {
-        panic!("Net premium received is not applicable");
+        self.long_call.net_premium_received() + self.short_call.net_premium_received()
     }
 
     fn fees(&self) -> f64 {
@@ -203,15 +215,192 @@ impl Strategies for PoorMansCoveredCall {
         (self.max_profit() / self.max_loss()).value() * 100.0
     }
 
-    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-        let (first_option, last_option) = (
-            self.long_call.option.clone(),
-            self.short_call.option.clone(),
-        );
-        let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        Some(calculate_price_range(start_price, end_price, step))
+    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
     }
+
+    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+    }
+    
+    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        self.break_even_points.clone()
+    }
+}
+
+impl Optimizable for PoorMansCoveredCall {
+    
+    type Strategy = PoorMansCoveredCall;
+
+    fn find_optimal(
+        &mut self,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
+    ) {
+        let options: Vec<&OptionData> = option_chain.options.iter().collect();
+        let mut best_value = f64::NEG_INFINITY;
+
+        for long_call_index in 0..options.len() {
+            let long_call_option = &options[long_call_index];
+            for short_call_option in &options[(long_call_index + 1)..] {
+                debug!(
+                    "Long: {:#?} Short: {:#?}",
+                    long_call_option.strike_price,
+                    short_call_option.strike_price
+                );
+                if long_call_option.strike_price >= short_call_option.strike_price {
+                    debug!(
+                        "Invalid strike prices long call option: {:#?} short call option: {:#?} ",
+                        long_call_option.strike_price, short_call_option.strike_price
+                    );
+                    continue;
+                }
+
+                if !self.is_valid_short_option(short_call_option, &side)
+                    || !self.is_valid_long_option(long_call_option, &side)
+                {
+                    debug!("Invalid option");
+                    continue;
+                }
+
+                
+                let strategy: PoorMansCoveredCall =
+                    self.create_strategy(option_chain, long_call_option, short_call_option);
+
+                if !strategy.validate() {
+                    debug!("Invalid strategy");
+                    continue;
+                }
+
+                let current_value = match criteria {
+                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                    OptimizationCriteria::Area => strategy.profit_area(),
+                };
+
+                if current_value > best_value {
+                    best_value = current_value;
+                    *self = strategy.clone();
+                }
+            }
+        }
+    }
+
+    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
+        let underlying_price= self.short_call.option.underlying_price;
+        if underlying_price == PZERO {
+            error!("Invalid underlying_price option");
+            return false;
+        }
+
+        match side {
+            FindOptimalSide::Upper => {
+                let valid = option.strike_price >= underlying_price;
+                if !valid {
+                    debug!(
+                        "Short Option is out of range: {} <= {}",
+                        option.strike_price, underlying_price
+                    );
+                }
+                valid
+            }
+            FindOptimalSide::Lower => {
+                let valid = option.strike_price <= underlying_price;
+                if !valid {
+                    debug!(
+                        "Short Option is out of range: {} >= {}",
+                        option.strike_price, underlying_price
+                    );
+                }
+                valid
+            }
+            FindOptimalSide::All => true,
+            FindOptimalSide::Range(start, end) => {
+                let valid = option.strike_price >= *start && option.strike_price <= *end;
+                if !valid {
+                    debug!(
+                        " Short Option is out of range: {} >= {} && {} <= {}",
+                        option.strike_price, *start, option.strike_price, *end
+                    );
+                }
+                valid
+            }
+        }
+    }
+
+    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
+        let underlying_price= self.long_call.option.underlying_price;
+        if underlying_price == PZERO {
+            error!("Invalid underlying_price option");
+            return false;
+        }
+
+        match side {
+            FindOptimalSide::Upper => {
+                let valid = option.strike_price >= underlying_price;
+                if !valid {
+                    debug!(
+                        "Long Option is out of range: {} <= {}",
+                        option.strike_price, underlying_price
+                    );
+                }
+                valid
+            }
+            FindOptimalSide::Lower => {
+                let valid = option.strike_price <= underlying_price;
+                if !valid {
+                    debug!(
+                        "Long Option is out of range: {} >= {}",
+                        option.strike_price, underlying_price
+                    );
+                }
+                valid
+            }
+            FindOptimalSide::All => true,
+            FindOptimalSide::Range(start, end) => {
+                let valid = option.strike_price >= *start && option.strike_price <= *end;
+                if !valid {
+                    debug!(
+                        "Long Option is out of range: {} >= {} && {} <= {}",
+                        option.strike_price, *start, option.strike_price, *end
+                    );
+                }
+                valid
+            }
+        }
+    }
+
+    fn create_strategy(
+        &self,
+        _chain: &OptionChain,
+        long: &OptionData,
+        short: &OptionData,
+    ) -> Self::Strategy {
+        let mut long_call_option = self.long_call.option.clone();
+        long_call_option.update_from_option_data(long);
+        
+        let mut short_call_option = self.short_call.option.clone();
+        short_call_option.update_from_option_data(short);
+        
+        let mut strategy = self.clone();
+        strategy.long_call.update_from_option_data(&long);
+        strategy.short_call.update_from_option_data(&short);
+
+
+        // Calculate break-even point
+        let net_debit =
+            (strategy.long_call.max_loss() - strategy.short_call.max_profit()) 
+                / strategy.long_call.option.quantity;
+
+        if let Some(primer_elemento) = strategy.break_even_points.get_mut(0) {
+            *primer_elemento = long_call_option.strike_price.clone() + net_debit;
+        }
+        
+        strategy
+    }
+
+
+
 }
 
 impl Profit for PoorMansCoveredCall {
