@@ -342,14 +342,6 @@ impl Optimizable for CustomStrategy {
         self.update_positions(best_positions);
     }
 
-    fn create_strategy(
-        &self,
-        _chain: &OptionChain,
-        _call: &OptionData,
-        _put: &OptionData,
-    ) -> Self::Strategy {
-        panic!("Create strategy is not applicable for this strategy");
-    }
 }
 
 impl Profit for CustomStrategy {

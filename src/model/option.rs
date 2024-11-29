@@ -12,7 +12,8 @@ use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
-use tracing::error;
+use tracing::{error, trace};
+use crate::chains::chain::OptionData;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
@@ -68,6 +69,12 @@ impl Options {
             dividend_yield,
             exotic_params,
         }
+    }
+
+    pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
+        self.strike_price = option_data.strike_price;
+        self.implied_volatility = option_data.implied_volatility.unwrap_or(PZERO).value();
+        trace!("Updated Option: {:#?}", self);
     }
 
     pub fn time_to_expiration(&self) -> f64 {
