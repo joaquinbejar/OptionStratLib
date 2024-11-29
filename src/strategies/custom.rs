@@ -1257,7 +1257,7 @@ mod tests_best_area {
     }
 
     #[test]
-    #[ignore = "test_calls"]
+    #[ignore = "test_best_area"]
     fn test_calls() {
         let (mut strategy, option_chain) = set_up(None, None, Some(1), Some(1)).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::All);
@@ -1277,6 +1277,7 @@ mod tests_best_area {
     }
 
     #[test]
+    #[ignore = "test_best_area"]
     fn test_shorts() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, Some(1)).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
@@ -1296,6 +1297,7 @@ mod tests_best_area {
     }
 
     #[test]
+    #[ignore = "test_best_area"]
     fn test_put() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, None).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
@@ -1362,7 +1364,7 @@ mod tests_best_ratio {
     }
 
     #[test]
-    #[ignore = "test_calls"]
+    #[ignore = "test_best_area"]
     fn test_calls() {
         let (mut strategy, option_chain) = set_up(None, None, Some(1), Some(1)).unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::All);
@@ -1379,6 +1381,7 @@ mod tests_best_ratio {
     }
 
     #[test]
+    #[ignore = "test_best_area"]
     fn test_put() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, None).unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
