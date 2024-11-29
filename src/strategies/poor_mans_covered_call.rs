@@ -29,21 +29,20 @@
 */
 
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, error};
-use crate::chains::chain::{OptionChain, OptionData};
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -155,7 +154,6 @@ impl Validable for PoorMansCoveredCall {
 }
 
 impl Strategies for PoorMansCoveredCall {
-    
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call.option.underlying_price
     }
@@ -181,12 +179,20 @@ impl Strategies for PoorMansCoveredCall {
 
     fn max_profit(&self) -> PositiveF64 {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
-        if profit <= ZERO { PZERO } else { profit.into() }
+        if profit <= ZERO {
+            PZERO
+        } else {
+            profit.into()
+        }
     }
 
     fn max_loss(&self) -> PositiveF64 {
         let loss = self.calculate_profit_at(self.long_call.option.strike_price);
-        if loss >= ZERO { PZERO } else { loss.abs().into() }
+        if loss >= ZERO {
+            PZERO
+        } else {
+            loss.abs().into()
+        }
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -222,14 +228,13 @@ impl Strategies for PoorMansCoveredCall {
     fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
-    
+
     fn get_break_even_points(&self) -> Vec<PositiveF64> {
         self.break_even_points.clone()
     }
 }
 
 impl Optimizable for PoorMansCoveredCall {
-    
     type Strategy = PoorMansCoveredCall;
 
     fn find_optimal(
@@ -246,8 +251,7 @@ impl Optimizable for PoorMansCoveredCall {
             for short_call_option in &options[(long_call_index + 1)..] {
                 debug!(
                     "Long: {:#?} Short: {:#?}",
-                    long_call_option.strike_price,
-                    short_call_option.strike_price
+                    long_call_option.strike_price, short_call_option.strike_price
                 );
                 if long_call_option.strike_price >= short_call_option.strike_price {
                     debug!(
@@ -264,7 +268,6 @@ impl Optimizable for PoorMansCoveredCall {
                     continue;
                 }
 
-                
                 let strategy: PoorMansCoveredCall =
                     self.create_strategy(option_chain, long_call_option, short_call_option);
 
@@ -287,7 +290,7 @@ impl Optimizable for PoorMansCoveredCall {
     }
 
     fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price= self.short_call.option.underlying_price;
+        let underlying_price = self.short_call.option.underlying_price;
         if underlying_price == PZERO {
             error!("Invalid underlying_price option");
             return false;
@@ -329,7 +332,7 @@ impl Optimizable for PoorMansCoveredCall {
     }
 
     fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price= self.long_call.option.underlying_price;
+        let underlying_price = self.long_call.option.underlying_price;
         if underlying_price == PZERO {
             error!("Invalid underlying_price option");
             return false;
@@ -378,29 +381,24 @@ impl Optimizable for PoorMansCoveredCall {
     ) -> Self::Strategy {
         let mut long_call_option = self.long_call.option.clone();
         long_call_option.update_from_option_data(long);
-        
+
         let mut short_call_option = self.short_call.option.clone();
         short_call_option.update_from_option_data(short);
-        
-        let mut strategy = self.clone();
-        strategy.long_call.update_from_option_data(&long);
-        strategy.short_call.update_from_option_data(&short);
 
+        let mut strategy = self.clone();
+        strategy.long_call.update_from_option_data(long);
+        strategy.short_call.update_from_option_data(short);
 
         // Calculate break-even point
-        let net_debit =
-            (strategy.long_call.max_loss() - strategy.short_call.max_profit()) 
-                / strategy.long_call.option.quantity;
+        let net_debit = (strategy.long_call.max_loss() - strategy.short_call.max_profit())
+            / strategy.long_call.option.quantity;
 
         if let Some(primer_elemento) = strategy.break_even_points.get_mut(0) {
-            *primer_elemento = long_call_option.strike_price.clone() + net_debit;
+            *primer_elemento = long_call_option.strike_price + net_debit;
         }
-        
+
         strategy
     }
-
-
-
 }
 
 impl Profit for PoorMansCoveredCall {
@@ -654,5 +652,541 @@ mod tests {
         let pmcc = create_pmcc_strategy();
         let points = pmcc.get_points();
         assert!(!points.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod tests_pmcc_validation {
+    use super::*;
+
+    fn create_basic_strategy() -> PoorMansCoveredCall {
+        PoorMansCoveredCall::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(140.0),
+            pos!(160.0),
+            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(30.0),
+            0.20,
+            0.01,
+            0.005,
+            pos!(1.0),
+            15.0,
+            5.0,
+            1.0,
+            1.0,
+            0.5,
+            0.5,
+        )
+    }
+
+    #[test]
+    fn test_validate_valid_strategy() {
+        let strategy = create_basic_strategy();
+        assert!(strategy.validate());
+    }
+
+    #[test]
+    fn test_add_leg_long_call() {
+        let mut strategy = create_basic_strategy();
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "AAPL".to_string(),
+            pos!(140.0),
+            ExpirationDate::Days(365.0),
+            0.2,
+            pos!(1.0),
+            pos!(150.0),
+            0.01,
+            OptionStyle::Call,
+            0.005,
+            None,
+        );
+        let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
+        strategy.add_leg(position.clone());
+        assert_eq!(strategy.long_call, position);
+    }
+
+    #[test]
+    fn test_add_leg_short_call() {
+        let mut strategy = create_basic_strategy();
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "AAPL".to_string(),
+            pos!(160.0),
+            ExpirationDate::Days(30.0),
+            0.2,
+            pos!(1.0),
+            pos!(150.0),
+            0.01,
+            OptionStyle::Call,
+            0.005,
+            None,
+        );
+        let position = Position::new(option, 5.0, Utc::now(), 0.5, 0.5);
+        strategy.add_leg(position.clone());
+        assert_eq!(strategy.short_call, position);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid option type for Poor Man's Covered Call strategy")]
+    fn test_add_leg_invalid_option() {
+        let mut strategy = create_basic_strategy();
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "AAPL".to_string(),
+            pos!(140.0),
+            ExpirationDate::Days(365.0),
+            0.2,
+            pos!(1.0),
+            pos!(150.0),
+            0.01,
+            OptionStyle::Put,
+            0.005,
+            None,
+        );
+        let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
+        strategy.add_leg(position);
+    }
+}
+
+#[cfg(test)]
+mod tests_pmcc_optimization {
+    use super::*;
+    use crate::spos;
+
+    fn create_test_option_chain() -> OptionChain {
+        let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string());
+
+        // Add options at various strikes
+        for strike in [140.0, 145.0, 150.0, 155.0, 160.0].iter() {
+            chain.add_option(
+                pos!(*strike),
+                spos!(5.0),
+                spos!(5.2),
+                spos!(4.8),
+                spos!(5.0),
+                spos!(0.2),
+                Some(0.5),
+                spos!(100.0),
+                Some(50),
+            );
+        }
+        chain
+    }
+
+    fn create_base_strategy() -> PoorMansCoveredCall {
+        PoorMansCoveredCall::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(140.0),
+            pos!(160.0),
+            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(30.0),
+            0.20,
+            0.01,
+            0.005,
+            pos!(1.0),
+            15.0,
+            5.0,
+            1.0,
+            1.0,
+            0.5,
+            0.5,
+        )
+    }
+
+    #[test]
+    fn test_is_valid_short_option() {
+        let strategy = create_base_strategy();
+        let option = OptionData::new(
+            pos!(160.0),
+            spos!(5.0),
+            spos!(5.2),
+            spos!(4.8),
+            spos!(5.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        assert!(strategy.is_valid_short_option(&option, &FindOptimalSide::Upper));
+    }
+
+    #[test]
+    fn test_is_valid_long_option() {
+        let strategy = create_base_strategy();
+        let option = OptionData::new(
+            pos!(140.0),
+            spos!(5.0),
+            spos!(5.2),
+            spos!(4.8),
+            spos!(5.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        assert!(strategy.is_valid_long_option(&option, &FindOptimalSide::Lower));
+    }
+
+    #[test]
+    fn test_find_optimal_ratio() {
+        let mut strategy = create_base_strategy();
+        let chain = create_test_option_chain();
+        strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        assert!(strategy.validate());
+    }
+
+    #[test]
+    fn test_find_optimal_area() {
+        let mut strategy = create_base_strategy();
+        let chain = create_test_option_chain();
+        strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        assert!(strategy.validate());
+    }
+
+    #[test]
+    fn test_invalid_short_option_zero_underlying() {
+        let mut strategy = create_base_strategy();
+        strategy.short_call.option.underlying_price = PZERO;
+        let option = OptionData::new(
+            pos!(160.0),
+            spos!(5.0),
+            spos!(5.2),
+            spos!(4.8),
+            spos!(5.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        assert!(!strategy.is_valid_short_option(&option, &FindOptimalSide::Upper));
+    }
+
+    #[test]
+    fn test_invalid_long_option_zero_underlying() {
+        let mut strategy = create_base_strategy();
+        strategy.long_call.option.underlying_price = PZERO;
+        let option = OptionData::new(
+            pos!(140.0),
+            spos!(5.0),
+            spos!(5.2),
+            spos!(4.8),
+            spos!(5.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+        );
+        assert!(!strategy.is_valid_long_option(&option, &FindOptimalSide::Lower));
+    }
+}
+
+#[cfg(test)]
+mod tests_pmcc_pnl {
+    use super::*;
+
+    fn create_test_strategy() -> PoorMansCoveredCall {
+        PoorMansCoveredCall::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(140.0),
+            pos!(160.0),
+            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(30.0),
+            0.20,
+            0.01,
+            0.005,
+            pos!(1.0),
+            15.0,
+            5.0,
+            1.0,
+            1.0,
+            0.5,
+            0.5,
+        )
+    }
+
+    #[test]
+    fn test_calculate_profit_at_various_prices() {
+        let strategy = create_test_strategy();
+
+        // Below long strike
+        let profit_below = strategy.calculate_profit_at(pos!(130.0));
+        assert!(profit_below < 0.0);
+
+        // Between strikes
+        let profit_middle = strategy.calculate_profit_at(pos!(150.0));
+        assert!(profit_middle > profit_below);
+
+        // At short strike
+        let profit_short = strategy.calculate_profit_at(strategy.short_call.option.strike_price);
+        assert_eq!(profit_short, strategy.max_profit().value());
+
+        // Above short strike
+        let profit_above = strategy.calculate_profit_at(pos!(170.0));
+        assert_eq!(profit_above, profit_above);
+    }
+
+    #[test]
+    fn test_break_even_point() {
+        let strategy = create_test_strategy();
+        assert_eq!(strategy.break_even_points.len(), 1);
+        let break_even = strategy.break_even_points[0];
+        let profit_at_be = strategy.calculate_profit_at(break_even);
+        assert!(profit_at_be.abs() < 0.01);
+    }
+
+    #[test]
+    fn test_net_premium() {
+        let strategy = create_test_strategy();
+        let net_premium = strategy.net_premium_received();
+        assert_eq!(net_premium, strategy.short_call.net_premium_received());
+    }
+
+    #[test]
+    fn test_max_profit_max_loss_relationship() {
+        let strategy = create_test_strategy();
+        assert!(strategy.max_profit() > PZERO);
+        assert!(strategy.max_loss() > PZERO);
+        assert!(strategy.max_loss() > strategy.max_profit());
+    }
+}
+
+#[cfg(test)]
+mod tests_pmcc_graph {
+    use super::*;
+
+    fn create_test_strategy() -> PoorMansCoveredCall {
+        PoorMansCoveredCall::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(140.0),
+            pos!(160.0),
+            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(30.0),
+            0.20,
+            0.01,
+            0.005,
+            pos!(1.0),
+            15.0,
+            5.0,
+            1.0,
+            1.0,
+            0.5,
+            0.5,
+        )
+    }
+
+    #[test]
+    fn test_title_format() {
+        let strategy = create_test_strategy();
+        let title = strategy.title();
+        assert!(title.contains("PoorMansCoveredCall Strategy"));
+        assert!(title.contains("AAPL"));
+        assert!(title.contains("Long Call (LEAPS)"));
+        assert!(title.contains("Short Call"));
+    }
+
+    #[test]
+    fn test_vertical_lines_format() {
+        let strategy = create_test_strategy();
+        let lines = strategy.get_vertical_lines();
+
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].x_coordinate, 150.0);
+        assert!(lines[0].label.contains("Current Price"));
+    }
+
+    #[test]
+    fn test_points_format() {
+        let strategy = create_test_strategy();
+        let points = strategy.get_points();
+
+        assert!(points.iter().any(|p| p.label.contains("Break Even")));
+        assert!(points.iter().any(|p| p.label.contains("Max Profit")));
+        assert!(points.iter().any(|p| p.label.contains("Max Loss")));
+
+        let break_even_point = points
+            .iter()
+            .find(|p| p.label.contains("Break Even"))
+            .unwrap();
+        assert_eq!(break_even_point.coordinates.1, 0.0);
+    }
+
+    #[test]
+    fn test_point_colors() {
+        let strategy = create_test_strategy();
+        let points = strategy.get_points();
+
+        let max_profit_point = points
+            .iter()
+            .find(|p| p.label.contains("Max Profit"))
+            .unwrap();
+        assert_eq!(max_profit_point.point_color, DARK_GREEN);
+
+        let max_loss_point = points
+            .iter()
+            .find(|p| p.label.contains("Max Loss"))
+            .unwrap();
+        assert_eq!(max_loss_point.point_color, RED);
+    }
+}
+
+#[cfg(test)]
+mod tests_pmcc_best_area {
+    use super::*;
+    use crate::utils::logger::setup_logger;
+
+    fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
+        setup_logger();
+        let option_chain =
+            OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
+                .unwrap();
+        let underlying_price = option_chain.underlying_price;
+
+        let strategy = PoorMansCoveredCall::new(
+            "SP500".to_string(),
+            underlying_price,
+            pos!(5700.0), // long strike ITM
+            pos!(5900.0), // short strike OTM
+            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(30.0),
+            0.20,
+            0.01,
+            0.005,
+            pos!(1.0),
+            15.0,
+            5.0,
+            1.0,
+            1.0,
+            0.5,
+            0.5,
+        );
+
+        Ok((strategy, option_chain))
+    }
+
+    #[test]
+    fn test_best_area_all() {
+        let (mut strategy, option_chain) = set_up().unwrap();
+        strategy.best_area(&option_chain, FindOptimalSide::All);
+
+        // Verifica las propiedades clave de la estrategia optimizada
+        assert!(strategy.profit_area() > 0.0);
+        assert!(strategy.profit_ratio() > 0.0);
+        assert_eq!(strategy.break_even_points.len(), 1);
+        assert!(strategy.total_cost() > PZERO);
+        assert!(strategy.fees() > 0.0);
+
+        // Verifica que las posiciones tienen strikes válidos
+        assert!(strategy.long_call.option.strike_price < strategy.short_call.option.strike_price);
+    }
+
+    #[test]
+    fn test_best_area_upper() {
+        let (mut strategy, option_chain) = set_up().unwrap();
+        strategy.best_area(&option_chain, FindOptimalSide::Upper);
+
+        // Verifica que los strikes están por encima del precio subyacente
+        assert!(strategy.long_call.option.strike_price >= strategy.get_underlying_price());
+        assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
+
+        // Verifica otras propiedades
+        assert!(strategy.profit_area() > 0.0);
+        assert!(strategy.max_profit() > PZERO);
+    }
+
+    #[test]
+    fn test_best_area_lower() {
+        let (mut strategy, option_chain) = set_up().unwrap();
+        strategy.best_area(&option_chain, FindOptimalSide::Lower);
+
+        // Verifica que los strikes están por debajo del precio subyacente
+        assert!(strategy.long_call.option.strike_price <= strategy.get_underlying_price());
+        assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
+
+        assert!(strategy.profit_area() > 0.0);
+        assert!(strategy.validate());
+    }
+}
+
+#[cfg(test)]
+mod tests_pmcc_best_ratio {
+    use super::*;
+    use crate::utils::logger::setup_logger;
+
+    fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
+        setup_logger();
+        let option_chain =
+            OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
+                .unwrap();
+        let underlying_price = option_chain.underlying_price;
+
+        let strategy = PoorMansCoveredCall::new(
+            "SP500".to_string(),
+            underlying_price,
+            pos!(5700.0),
+            pos!(5900.0),
+            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(30.0),
+            0.20,
+            0.01,
+            0.005,
+            pos!(1.0),
+            15.0,
+            5.0,
+            1.0,
+            1.0,
+            0.5,
+            0.5,
+        );
+
+        Ok((strategy, option_chain))
+    }
+
+    #[test]
+    fn test_best_ratio_all() {
+        let (mut strategy, option_chain) = set_up().unwrap();
+        strategy.best_ratio(&option_chain, FindOptimalSide::All);
+
+        assert!(strategy.profit_ratio() > 0.0);
+        assert_eq!(strategy.break_even_points.len(), 1);
+        assert!(strategy.max_profit() > PZERO);
+        assert!(strategy.max_loss() > PZERO);
+        assert!(strategy.fees() > 0.0);
+    }
+
+    #[test]
+    fn test_best_ratio_upper() {
+        let (mut strategy, option_chain) = set_up().unwrap();
+        strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
+
+        // Verifica que los strikes están por encima del precio subyacente
+        assert!(strategy.long_call.option.strike_price >= strategy.get_underlying_price());
+        assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
+
+        assert!(strategy.profit_ratio() > 0.0);
+        assert!(strategy.validate());
+    }
+
+    #[test]
+    fn test_best_ratio_with_range() {
+        let (mut strategy, option_chain) = set_up().unwrap();
+        strategy.best_ratio(
+            &option_chain,
+            FindOptimalSide::Range(pos!(5750.0), pos!(5850.0)),
+        );
+
+        // Verifica que los strikes están dentro del rango especificado
+        assert!(strategy.long_call.option.strike_price >= pos!(5750.0));
+        assert!(strategy.short_call.option.strike_price <= pos!(5850.0));
+
+        assert!(strategy.profit_ratio() > 0.0);
+        assert!(strategy.validate());
     }
 }

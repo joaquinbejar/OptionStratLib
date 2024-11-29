@@ -4,12 +4,12 @@ use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
+use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::{debug, info};
-use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -18,17 +18,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     let underlying_price = option_chain.underlying_price;
     let mut strategy = PoorMansCoveredCall::new(
-        "SP500".to_string(),          // underlying_symbol
+        "SP500".to_string(),         // underlying_symbol
         underlying_price,            // underlying_price
-        PZERO,                // long_call_strike
-        PZERO,                // short_call_strike OTM
+        PZERO,                       // long_call_strike
+        PZERO,                       // short_call_strike OTM
         ExpirationDate::Days(120.0), // long_call_expiration
         ExpirationDate::Days(30.0),  // short_call_expiration 30-45 days delta 0.30 or less
         ZERO,                        // implied_volatility
         ZERO,                        // risk_free_rate
-        ZERO,                         // dividend_yield
+        ZERO,                        // dividend_yield
         pos!(2.0),                   // quantity
-        ZERO,                       // premium_short_call
+        ZERO,                        // premium_short_call
         ZERO,                        // premium_short_put
         1.74,                        // open_fee_short_call
         1.74,                        // close_fee_short_call
