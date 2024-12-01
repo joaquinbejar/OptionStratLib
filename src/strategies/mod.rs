@@ -13,9 +13,8 @@ mod covered_call;
 pub mod custom;
 pub mod iron_condor;
 pub mod poor_mans_covered_call;
+mod probabilities;
 mod protective_put;
 mod straddle;
 pub mod strangle;
 pub mod utils;
-mod probabilities;
-
