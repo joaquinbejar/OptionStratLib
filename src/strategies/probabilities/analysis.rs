@@ -1,8 +1,8 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 30/11/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 30/11/24
+******************************************************************************/
 use crate::model::types::PositiveF64;
 
 #[allow(dead_code)]
@@ -21,4 +21,3 @@ pub struct StrategyProbabilityAnalysis {
     /// Risk-reward ratio
     pub risk_reward_ratio: PositiveF64,
 }
-
