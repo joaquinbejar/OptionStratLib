@@ -31,8 +31,8 @@ pub trait ProbabilityAnalysis: Strategies {
 
             return Ok(StrategyProbabilityAnalysis {
                 probability_of_profit,
-                probability_of_max_profit: PZERO,  // Default value when no volatility adjustment
-                probability_of_max_loss: PZERO,    // Default value when no volatility adjustment
+                probability_of_max_profit: PZERO, // Default value when no volatility adjustment
+                probability_of_max_loss: PZERO,   // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
                 risk_reward_ratio: pos!(self.profit_ratio()),
@@ -139,7 +139,6 @@ pub trait ProbabilityAnalysis: Strategies {
                 let first = &ranges[0];
                 let last = &ranges[ranges.len() - 1];
 
-                
                 match (first.lower_bound, last.upper_bound) {
                     (Some(lower), Some(upper)) => {
                         let (prob_below, _) = calculate_single_point_probability(
@@ -173,7 +172,6 @@ pub trait ProbabilityAnalysis: Strategies {
     fn get_expiration(&self) -> Result<ExpirationDate, String>;
     fn get_profit_ranges(&self) -> Result<Vec<ProfitRange>, String>;
 }
-
 
 #[cfg(test)]
 mod tests_probability_analysis {
@@ -235,7 +233,7 @@ mod tests_probability_analysis {
                     lower_bound: Some(pos!(90.0)),
                     upper_bound: Some(pos!(110.0)),
                     probability: pos!(0.6),
-                }
+                },
             ],
             break_even_points: vec![pos!(95.0), pos!(105.0)],
         }
@@ -273,7 +271,7 @@ mod tests_probability_analysis {
         // For single range case, we need only one bound defined
         strategy.profit_ranges = vec![ProfitRange {
             lower_bound: Some(pos!(90.0)),
-            upper_bound: None,  // Single range should have only one bound defined
+            upper_bound: None, // Single range should have only one bound defined
             probability: pos!(0.7),
         }];
 

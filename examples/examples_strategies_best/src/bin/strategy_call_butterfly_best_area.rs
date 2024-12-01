@@ -13,6 +13,7 @@ use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use std::env;
 use std::error::Error;
 use tracing::{debug, info};
 

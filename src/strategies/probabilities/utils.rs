@@ -105,6 +105,7 @@ pub fn calculate_single_point_probability(
 /// * Time to expiry is not positive
 /// * Volatility parameters are invalid
 /// * Trend confidence is not between 0 and 1
+#[allow(dead_code)]
 pub fn calculate_price_probability(
     current_price: PositiveF64,
     lower_bound: PositiveF64,
@@ -174,6 +175,7 @@ pub fn calculate_price_probability(
 /// * Time to expiry is not positive
 /// * Volatility parameters are invalid
 /// * Trend confidence is not between 0 and 1
+#[allow(dead_code)]
 pub fn calculate_bounds_probability(
     current_price: PositiveF64,
     bounds: Vec<PositiveF64>,
