@@ -1,8 +1,8 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 30/11/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 30/11/24
+******************************************************************************/
 use crate::model::types::PositiveF64;
 
 /// Represents a price range where a strategy is profitable
@@ -83,48 +83,28 @@ mod tests_profit_range {
 
     #[test]
     fn test_profit_range_creation() {
-        let range = ProfitRange::new(
-            Some(pos!(100.0)),
-            Some(pos!(110.0)),
-            pos!(0.5),
-        );
+        let range = ProfitRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5));
         assert!(range.is_ok());
     }
 
     #[test]
     fn test_invalid_bounds() {
-        let range = ProfitRange::new(
-            Some(pos!(110.0)),
-            Some(pos!(100.0)),
-            pos!(0.5),
-        );
+        let range = ProfitRange::new(Some(pos!(110.0)), Some(pos!(100.0)), pos!(0.5));
         assert!(range.is_err());
     }
 
     #[test]
     fn test_infinite_bounds() {
-        let range = ProfitRange::new(
-            None,
-            Some(pos!(100.0)),
-            pos!(0.5),
-        );
+        let range = ProfitRange::new(None, Some(pos!(100.0)), pos!(0.5));
         assert!(range.is_ok());
 
-        let range = ProfitRange::new(
-            Some(pos!(100.0)),
-            None,
-            pos!(0.5),
-        );
+        let range = ProfitRange::new(Some(pos!(100.0)), None, pos!(0.5));
         assert!(range.is_ok());
     }
 
     #[test]
     fn test_contains() {
-        let range = ProfitRange::new(
-            Some(pos!(100.0)),
-            Some(pos!(110.0)),
-            pos!(0.5),
-        ).unwrap();
+        let range = ProfitRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5)).unwrap();
 
         assert!(!range.contains(pos!(99.0)));
         assert!(range.contains(pos!(100.0)));
@@ -135,19 +115,11 @@ mod tests_profit_range {
 
     #[test]
     fn test_contains_infinite_bounds() {
-        let lower_infinite = ProfitRange::new(
-            None,
-            Some(pos!(100.0)),
-            pos!(0.5),
-        ).unwrap();
+        let lower_infinite = ProfitRange::new(None, Some(pos!(100.0)), pos!(0.5)).unwrap();
         assert!(lower_infinite.contains(pos!(50.0)));
         assert!(!lower_infinite.contains(pos!(101.0)));
 
-        let upper_infinite = ProfitRange::new(
-            Some(pos!(100.0)),
-            None,
-            pos!(0.5),
-        ).unwrap();
+        let upper_infinite = ProfitRange::new(Some(pos!(100.0)), None, pos!(0.5)).unwrap();
         assert!(!upper_infinite.contains(pos!(99.0)));
         assert!(upper_infinite.contains(pos!(150.0)));
     }
