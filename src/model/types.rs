@@ -336,7 +336,6 @@ impl Add<PositiveF64> for f64 {
     }
 }
 
-
 #[allow(dead_code)]
 #[derive(Clone, PartialEq)]
 pub enum ExpirationDate {
@@ -1375,10 +1374,7 @@ mod tests_vec_collection {
     #[test]
     fn test_collect_from_filter() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0)];
-        let collected: Vec<PositiveF64> = values
-            .into_iter()
-            .filter(|x| x.value() > 2.0)
-            .collect();
+        let collected: Vec<PositiveF64> = values.into_iter().filter(|x| x.value() > 2.0).collect();
         assert_eq!(collected.len(), 2);
         assert_eq!(collected[0], pos!(3.0));
         assert_eq!(collected[1], pos!(4.0));
@@ -1387,10 +1383,8 @@ mod tests_vec_collection {
     #[test]
     fn test_collect_from_map() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
-        let collected: Vec<PositiveF64> = values
-            .into_iter()
-            .map(|x| pos!(x.value() * 2.0))
-            .collect();
+        let collected: Vec<PositiveF64> =
+            values.into_iter().map(|x| pos!(x.value() * 2.0)).collect();
         assert_eq!(collected.len(), 3);
         assert_eq!(collected[0], pos!(2.0));
         assert_eq!(collected[1], pos!(4.0));
@@ -1401,10 +1395,7 @@ mod tests_vec_collection {
     fn test_collect_from_chain() {
         let values1 = vec![pos!(1.0), pos!(2.0)];
         let values2 = vec![pos!(3.0), pos!(4.0)];
-        let collected: Vec<PositiveF64> = values1
-            .into_iter()
-            .chain(values2)
-            .collect();
+        let collected: Vec<PositiveF64> = values1.into_iter().chain(values2).collect();
         assert_eq!(collected.len(), 4);
         assert_eq!(collected[0], pos!(1.0));
         assert_eq!(collected[1], pos!(2.0));
