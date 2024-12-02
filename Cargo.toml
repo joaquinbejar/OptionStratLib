@@ -11,6 +11,7 @@ homepage = "https://github.com/joaquinbejar/OptionStratLib"
 keywords = ["finance", "options", "trading"]
 categories = ["finance", "data-structures"]
 
+
 include = [
     "src/**/*.rs",
     "Cargo.toml",
@@ -48,3 +49,16 @@ path = "tests/unit/mod.rs"
 name = "optionstratlib"
 path = "src/lib.rs"
 
+[workspace]
+members = [
+    "examples/examples_simulation",
+    "examples/examples_strategies_best",
+    "examples/examples_strategies",
+    "examples/examples_visualization",
+    "examples/examples_chain",
+    "examples/examples_volatility",
+]
+
+[workspace.dependencies]
+optionstratlib = { path = "." }
+tracing = "0.1.41"

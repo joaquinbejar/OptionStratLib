@@ -11,6 +11,7 @@ use std::str::FromStr;
 
 pub const PZERO: PositiveF64 = PositiveF64(ZERO);
 pub const SIZE_ONE: PositiveF64 = PositiveF64(1.0);
+pub const P_INFINITY: PositiveF64 = PositiveF64(f64::INFINITY);
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct PositiveF64(f64);
@@ -166,6 +167,12 @@ impl AddAssign for PositiveF64 {
     }
 }
 
+impl AddAssign<f64> for PositiveF64 {
+    fn add_assign(&mut self, rhs: f64) {
+        self.0 += rhs;
+    }
+}
+
 impl MulAssign<f64> for PositiveF64 {
     fn mul_assign(&mut self, rhs: f64) {
         self.0 *= rhs;
@@ -288,6 +295,12 @@ impl<'a> Sum<&'a PositiveF64> for PositiveF64 {
     fn sum<I: Iterator<Item = &'a PositiveF64>>(iter: I) -> Self {
         let sum = iter.fold(0.0, |acc, x| acc + x.value());
         PositiveF64::new(sum).unwrap_or(PZERO)
+    }
+}
+
+impl AddAssign<PositiveF64> for f64 {
+    fn add_assign(&mut self, rhs: PositiveF64) {
+        *self += rhs.0;
     }
 }
 
@@ -1325,5 +1338,68 @@ mod tests_positive_f64_sum {
         let values: Vec<PositiveF64> = vec![];
         let sum: PositiveF64 = values.into_iter().sum();
         assert_eq!(sum.value(), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_vec_collection {
+    use super::*;
+    use crate::pos;
+
+    #[test]
+    fn test_collect_empty_iterator() {
+        let empty_vec: Vec<PositiveF64> = Vec::new();
+        let collected: Vec<PositiveF64> = empty_vec.into_iter().collect();
+        assert!(collected.is_empty());
+    }
+
+    #[test]
+    fn test_collect_single_value() {
+        let values = vec![pos!(1.0)];
+        let collected: Vec<PositiveF64> = values.into_iter().collect();
+        assert_eq!(collected.len(), 1);
+        assert_eq!(collected[0], pos!(1.0));
+    }
+
+    #[test]
+    fn test_collect_multiple_values() {
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let collected: Vec<PositiveF64> = values.into_iter().collect();
+        assert_eq!(collected.len(), 3);
+        assert_eq!(collected[0], pos!(1.0));
+        assert_eq!(collected[1], pos!(2.0));
+        assert_eq!(collected[2], pos!(3.0));
+    }
+
+    #[test]
+    fn test_collect_from_filter() {
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0)];
+        let collected: Vec<PositiveF64> = values.into_iter().filter(|x| x.value() > 2.0).collect();
+        assert_eq!(collected.len(), 2);
+        assert_eq!(collected[0], pos!(3.0));
+        assert_eq!(collected[1], pos!(4.0));
+    }
+
+    #[test]
+    fn test_collect_from_map() {
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let collected: Vec<PositiveF64> =
+            values.into_iter().map(|x| pos!(x.value() * 2.0)).collect();
+        assert_eq!(collected.len(), 3);
+        assert_eq!(collected[0], pos!(2.0));
+        assert_eq!(collected[1], pos!(4.0));
+        assert_eq!(collected[2], pos!(6.0));
+    }
+
+    #[test]
+    fn test_collect_from_chain() {
+        let values1 = vec![pos!(1.0), pos!(2.0)];
+        let values2 = vec![pos!(3.0), pos!(4.0)];
+        let collected: Vec<PositiveF64> = values1.into_iter().chain(values2).collect();
+        assert_eq!(collected.len(), 4);
+        assert_eq!(collected[0], pos!(1.0));
+        assert_eq!(collected[1], pos!(2.0));
+        assert_eq!(collected[2], pos!(3.0));
+        assert_eq!(collected[3], pos!(4.0));
     }
 }

@@ -1,0 +1,9 @@
+[package]
+name = "examples_chain"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+optionstratlib = { path = "../.." }
+tracing = "0.1.41"
+
