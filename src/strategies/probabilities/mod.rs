@@ -5,5 +5,5 @@
 ******************************************************************************/
 
 mod analysis;
-mod core;
-mod utils;
+pub(crate) mod core;
+pub(crate) mod utils;

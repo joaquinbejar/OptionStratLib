@@ -9,6 +9,6 @@ pub mod option;
 pub mod position;
 mod profit_range;
 pub mod types;
-pub(crate) mod utils;
+pub mod utils;
 
-pub use profit_range::ProfitRange;
+pub use profit_range::ProfitLossRange;
