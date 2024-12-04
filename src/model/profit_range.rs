@@ -4,7 +4,9 @@
    Date: 30/11/24
 ******************************************************************************/
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO, P_INFINITY};
-use crate::strategies::probabilities::utils::{calculate_single_point_probability, PriceTrend, VolatilityAdjustment};
+use crate::strategies::probabilities::utils::{
+    calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
+};
 
 /// Represents a price range where a strategy is profitable
 #[derive(Debug, Clone)]
@@ -53,7 +55,8 @@ impl ProfitLossRange {
         })
     }
 
-    pub fn calculate_probability(&mut self,
+    pub fn calculate_probability(
+        &mut self,
         current_price: PositiveF64,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
@@ -82,7 +85,7 @@ impl ProfitLossRange {
             expiration_date,
             risk_free_rate,
         )?;
-        
+
         self.probability = prob_below_upper - prob_below_lower;
         Ok(())
     }
@@ -160,18 +163,13 @@ mod tests_profit_range {
     }
 }
 
-
 #[cfg(test)]
 mod tests_calculate_probability {
     use super::*;
     use crate::pos;
-    
+
     fn create_basic_range() -> ProfitLossRange {
-        ProfitLossRange::new(
-            Some(pos!(90.0)),
-            Some(pos!(110.0)),
-            pos!(0.0)
-        ).unwrap()
+        ProfitLossRange::new(Some(pos!(90.0)), Some(pos!(110.0)), pos!(0.0)).unwrap()
     }
 
     #[test]
@@ -182,9 +180,9 @@ mod tests_calculate_probability {
             None,
             None,
             ExpirationDate::Days(30.0),
-            Some(0.05)
+            Some(0.05),
         );
-        
+
         assert!(result.is_ok());
         assert!(range.probability > PZERO);
         assert!(range.probability <= pos!(1.0));
@@ -193,11 +191,7 @@ mod tests_calculate_probability {
     #[test]
     #[should_panic(expected = "Lower bound must be less than upper bound")]
     fn test_invalid_bounds() {
-        let  _ = ProfitLossRange::new(
-            Some(pos!(110.0)),
-            Some(pos!(90.0)),
-            pos!(0.0)
-        ).unwrap();
+        let _ = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(90.0)), pos!(0.0)).unwrap();
     }
 
     #[test]
@@ -213,7 +207,7 @@ mod tests_calculate_probability {
             vol_adj,
             None,
             ExpirationDate::Days(30.0),
-            Some(0.05)
+            Some(0.05),
         );
 
         assert!(result.is_ok());
@@ -224,7 +218,7 @@ mod tests_calculate_probability {
     fn test_with_upward_trend() {
         let mut range = create_basic_range();
         let trend = Some(PriceTrend {
-            drift_rate: 0.10,  // 10% tendencia alcista anual
+            drift_rate: 0.10, // 10% tendencia alcista anual
             confidence: 0.95,
         });
 
@@ -233,7 +227,7 @@ mod tests_calculate_probability {
             None,
             trend,
             ExpirationDate::Days(30.0),
-            Some(0.05)
+            Some(0.05),
         );
 
         assert!(result.is_ok());
@@ -244,7 +238,7 @@ mod tests_calculate_probability {
     fn test_with_downward_trend() {
         let mut range = create_basic_range();
         let trend = Some(PriceTrend {
-            drift_rate: -0.10,  // 10% tendencia bajista anual
+            drift_rate: -0.10, // 10% tendencia bajista anual
             confidence: 0.95,
         });
 
@@ -253,7 +247,7 @@ mod tests_calculate_probability {
             None,
             trend,
             ExpirationDate::Days(30.0),
-            Some(0.05)
+            Some(0.05),
         );
 
         assert!(result.is_ok());
@@ -262,20 +256,15 @@ mod tests_calculate_probability {
 
     #[test]
     fn test_infinite_lower_bound() {
-        let mut range = ProfitLossRange::new(
-            None,
-            Some(pos!(110.0)),
-            pos!(0.0)
-        ).unwrap();
+        let mut range = ProfitLossRange::new(None, Some(pos!(110.0)), pos!(0.0)).unwrap();
 
         let result = range.calculate_probability(
             pos!(100.0),
             None,
             None,
             ExpirationDate::Days(30.0),
-            Some(0.05)
+            Some(0.05),
         );
-
 
         assert!(result.is_ok());
         assert!(range.probability > PZERO);
@@ -283,20 +272,16 @@ mod tests_calculate_probability {
 
     #[test]
     fn test_infinite_upper_bound() {
-        let mut range = ProfitLossRange::new(
-            Some(pos!(90.0)),
-            None,
-            pos!(0.0)
-        ).unwrap();
+        let mut range = ProfitLossRange::new(Some(pos!(90.0)), None, pos!(0.0)).unwrap();
 
         let result = range.calculate_probability(
             pos!(100.0),
             None,
             None,
             ExpirationDate::Days(30.0),
-            Some(0.05)
+            Some(0.05),
         );
-        
+
         assert!(result.is_ok());
         assert!(range.probability > PZERO);
     }
@@ -318,7 +303,7 @@ mod tests_calculate_probability {
             vol_adj,
             trend,
             ExpirationDate::Days(30.0),
-            Some(0.05)
+            Some(0.05),
         );
 
         assert!(result.is_ok());
@@ -338,13 +323,8 @@ mod tests_calculate_probability {
         ];
 
         for expiration in expirations {
-            let result = range.calculate_probability(
-                pos!(100.0),
-                None,
-                None,
-                expiration,
-                Some(0.05)
-            );
+            let result =
+                range.calculate_probability(pos!(100.0), None, None, expiration, Some(0.05));
 
             assert!(result.is_ok());
             assert!(range.probability > PZERO);
@@ -357,11 +337,7 @@ mod tests_calculate_probability {
         let mut range = create_basic_range();
 
         // Probar con precios actuales extremos
-        let extreme_prices = vec![
-            pos!(1.0),
-            pos!(1000.0),
-            pos!(10000.0),
-        ];
+        let extreme_prices = vec![pos!(1.0), pos!(1000.0), pos!(10000.0)];
 
         for price in extreme_prices {
             let result = range.calculate_probability(
@@ -369,7 +345,7 @@ mod tests_calculate_probability {
                 None,
                 None,
                 ExpirationDate::Days(30.0),
-                Some(0.05)
+                Some(0.05),
             );
 
             assert!(result.is_ok());

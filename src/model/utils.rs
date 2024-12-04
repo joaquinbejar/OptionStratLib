@@ -186,13 +186,22 @@ mod tests_positive_f64_to_f64 {
 #[cfg(test)]
 mod tests_mean_and_std {
     use super::*;
+    use crate::model::types::PZERO;
     use crate::pos;
     use approx::assert_relative_eq;
-    use crate::model::types::PZERO;
 
     #[test]
     fn test_basic_mean_and_std() {
-        let values = vec![pos!(2.0), pos!(4.0), pos!(4.0), pos!(4.0), pos!(5.0), pos!(5.0), pos!(7.0), pos!(9.0)];
+        let values = vec![
+            pos!(2.0),
+            pos!(4.0),
+            pos!(4.0),
+            pos!(4.0),
+            pos!(5.0),
+            pos!(5.0),
+            pos!(7.0),
+            pos!(9.0),
+        ];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.value(), 5.0, epsilon = 0.0001);
@@ -271,11 +280,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_precision() {
-        let values = vec![
-            pos!(1.23456789),
-            pos!(2.34567890),
-            pos!(3.45678901),
-        ];
+        let values = vec![pos!(1.23456789), pos!(2.34567890), pos!(3.45678901)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.value(), 2.34567860, epsilon = 0.00000001);
@@ -284,11 +289,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_precision_bis() {
-        let values = vec![
-            pos!(0.123456789),
-            pos!(0.134567890),
-            pos!(0.145678901),
-        ];
+        let values = vec![pos!(0.123456789), pos!(0.134567890), pos!(0.145678901)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.value(), 0.13456785, epsilon = 0.00000001);

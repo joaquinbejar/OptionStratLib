@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use tracing::warn;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use crate::model::ProfitLossRange;
 use crate::pos;
@@ -13,6 +12,7 @@ use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
 use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
+use tracing::warn;
 
 /// Trait for analyzing probabilities and risk metrics of option strategies
 #[allow(dead_code)]
@@ -97,7 +97,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 };
             }
         }
-        
+
         let step = pos!(self.get_underlying_price().value() / 100.0);
         let range = self.best_range_to_show(step).unwrap();
         let expiration = self.get_expiration()?;
@@ -120,14 +120,19 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             last_prob = prob.0.value();
         }
 
-        let expected_value = range.iter().zip(probabilities.iter())
+        let expected_value = range
+            .iter()
+            .zip(probabilities.iter())
             .fold(0.0, |acc, (price, prob)| {
                 acc + self.calculate_profit_at(*price) * prob
             });
 
         let total_prob: f64 = probabilities.iter().sum();
         if (total_prob - 1.0).abs() > 0.05 {
-            warn!("Sum of probabilities ({}) deviates significantly from 1.0", total_prob);
+            warn!(
+                "Sum of probabilities ({}) deviates significantly from 1.0",
+                total_prob
+            );
         }
 
         if expected_value <= 0.0 {
@@ -187,8 +192,10 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ) -> Result<(PositiveF64, PositiveF64), String> {
         let profit_ranges = self.get_profit_ranges()?;
         let loss_ranges = self.get_loss_ranges()?;
-        
-        let max_profit_range = profit_ranges.iter().find(|range| range.upper_bound.is_none());
+
+        let max_profit_range = profit_ranges
+            .iter()
+            .find(|range| range.upper_bound.is_none());
 
         let max_loss_range = loss_ranges.iter().find(|range| range.lower_bound.is_none());
 
@@ -220,7 +227,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
         Ok((max_profit_prob, max_loss_prob))
     }
-    
+
     fn get_expiration(&self) -> Result<ExpirationDate, String>;
     fn get_risk_free_rate(&self) -> Option<f64>;
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String>;
@@ -232,8 +239,8 @@ mod tests_probability_analysis {
     use super::*;
     use crate::model::types::{ExpirationDate, PositiveF64};
     use crate::pos;
-    use crate::strategies::base::{Strategies, Validable};
     use crate::pricing::payoff::Profit;
+    use crate::strategies::base::{Strategies, Validable};
 
     // Mock struct para testing
     struct MockStrategy {
@@ -254,7 +261,13 @@ mod tests_probability_analysis {
         }
 
         fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
-            Some(vec![pos!(90.0), pos!(95.0), pos!(100.0), pos!(105.0), pos!(110.0)])
+            Some(vec![
+                pos!(90.0),
+                pos!(95.0),
+                pos!(100.0),
+                pos!(105.0),
+                pos!(110.0),
+            ])
         }
 
         fn get_break_even_points(&self) -> Vec<PositiveF64> {
@@ -290,28 +303,16 @@ mod tests_probability_analysis {
         fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
             Ok(vec![
                 // Rango de beneficio entre los break even points
-                ProfitLossRange::new(
-                    Some(pos!(95.0)),
-                    Some(pos!(105.0)),
-                    pos!(0.0)
-                )?,
+                ProfitLossRange::new(Some(pos!(95.0)), Some(pos!(105.0)), pos!(0.0))?,
             ])
         }
 
         fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
             Ok(vec![
                 // Rango de pérdida por debajo del break even point inferior
-                ProfitLossRange::new(
-                    None,
-                    Some(pos!(95.0)),
-                    pos!(0.0)
-                )?,
+                ProfitLossRange::new(None, Some(pos!(95.0)), pos!(0.0))?,
                 // Rango de pérdida por encima del break even point superior
-                ProfitLossRange::new(
-                    Some(pos!(105.0)),
-                    None,
-                    pos!(0.0)
-                )?,
+                ProfitLossRange::new(Some(pos!(105.0)), None, pos!(0.0))?,
             ])
         }
     }
@@ -620,11 +621,7 @@ mod tests_expected_value {
             }
 
             fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
-                Some(vec![
-                    pos!(1.0),
-                    pos!(1000.0),
-                    pos!(10000.0),
-                ])
+                Some(vec![pos!(1.0), pos!(1000.0), pos!(10000.0)])
             }
         }
 
@@ -666,13 +663,19 @@ mod tests_expected_value {
         let strategy = create_test_strategy();
         // Use a very small but positive volatility value
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.0001),  // Very small but non-zero volatility
+            base_volatility: pos!(0.0001), // Very small but non-zero volatility
             std_dev_adjustment: PZERO,
         });
 
         let result = strategy.expected_value(vol_adj, None);
-        assert!(result.is_ok(), "Expected value calculation should succeed with minimal volatility");
-        assert!(result.unwrap() >= PZERO, "Expected value should be non-negative");
+        assert!(
+            result.is_ok(),
+            "Expected value calculation should succeed with minimal volatility"
+        );
+        assert!(
+            result.unwrap() >= PZERO,
+            "Expected value should be non-negative"
+        );
     }
 
     #[test]
@@ -683,10 +686,6 @@ mod tests_expected_value {
             std_dev_adjustment: PZERO,
         });
         let result = strategy.expected_value(vol_adj, None).unwrap();
-        assert_eq!(
-            result,
-            PZERO
-        );
-
+        assert_eq!(result, PZERO);
     }
 }
