@@ -717,7 +717,6 @@ mod tests_calculate_price_probability {
         );
 
         assert!(result.is_ok());
-        println!("{:?}", result);
         let (prob_below, prob_in_range, prob_above) = result.unwrap();
         assert!(prob_below >= PZERO && prob_above <= pos!(1.0));
         assert!(prob_in_range >= PZERO && prob_in_range <= pos!(1.0));

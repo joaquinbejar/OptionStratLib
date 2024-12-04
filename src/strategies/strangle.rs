@@ -485,7 +485,6 @@ impl Graph for ShortStrangle {
 }
 
 impl ProbabilityAnalysis for ShortStrangle {
-    
     fn get_expiration(&self) -> Result<ExpirationDate, String> {
         let option = &self.short_call.option;
         Ok(option.expiration_date.clone())
@@ -503,7 +502,6 @@ impl ProbabilityAnalysis for ShortStrangle {
             pos!(option.implied_volatility),
             pos!(self.short_put.option.implied_volatility),
         ]);
-        
 
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
@@ -521,7 +519,7 @@ impl ProbabilityAnalysis for ShortStrangle {
             self.get_expiration()?,
             self.get_risk_free_rate(),
         )?;
-        
+
         Ok(vec![profit_range])
     }
 
@@ -534,12 +532,8 @@ impl ProbabilityAnalysis for ShortStrangle {
             pos!(self.short_put.option.implied_volatility),
         ]);
 
-        let mut lower_loss_range = ProfitLossRange::new(
-            None,
-            Some(break_even_points[0]),
-            PZERO,
-        )?;
-        
+        let mut lower_loss_range = ProfitLossRange::new(None, Some(break_even_points[0]), PZERO)?;
+
         lower_loss_range.calculate_probability(
             self.get_underlying_price(),
             Some(VolatilityAdjustment {
@@ -551,11 +545,7 @@ impl ProbabilityAnalysis for ShortStrangle {
             self.get_risk_free_rate(),
         )?;
 
-        let mut upper_loss_range = ProfitLossRange::new(
-            Some(break_even_points[1]),
-            None,
-            PZERO,
-        )?;
+        let mut upper_loss_range = ProfitLossRange::new(Some(break_even_points[1]), None, PZERO)?;
 
         upper_loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -567,9 +557,8 @@ impl ProbabilityAnalysis for ShortStrangle {
             self.get_expiration()?,
             self.get_risk_free_rate(),
         )?;
-        
-        
-        Ok(vec![lower_loss_range,upper_loss_range])
+
+        Ok(vec![lower_loss_range, upper_loss_range])
     }
 }
 
@@ -687,7 +676,7 @@ impl Strategies for LongStrangle {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call.option.underlying_price
     }
-    
+
     fn add_leg(&mut self, position: Position) {
         match position.option.option_style {
             OptionStyle::Call => self.long_call = position,
@@ -1024,7 +1013,6 @@ impl Graph for LongStrangle {
 }
 
 impl ProbabilityAnalysis for LongStrangle {
-    
     fn get_expiration(&self) -> Result<ExpirationDate, String> {
         let option = &self.long_call.option;
         Ok(option.expiration_date.clone())
@@ -1043,11 +1031,7 @@ impl ProbabilityAnalysis for LongStrangle {
             pos!(self.long_put.option.implied_volatility),
         ]);
 
-        let mut lower_profit_range = ProfitLossRange::new(
-            None,
-            Some(break_even_points[0]),
-            PZERO,
-        )?;
+        let mut lower_profit_range = ProfitLossRange::new(None, Some(break_even_points[0]), PZERO)?;
 
         lower_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -1060,11 +1044,7 @@ impl ProbabilityAnalysis for LongStrangle {
             self.get_risk_free_rate(),
         )?;
 
-        let mut upper_profit_range = ProfitLossRange::new(
-            Some(break_even_points[1]),
-            None,
-            PZERO,
-        )?;
+        let mut upper_profit_range = ProfitLossRange::new(Some(break_even_points[1]), None, PZERO)?;
 
         upper_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -1077,7 +1057,6 @@ impl ProbabilityAnalysis for LongStrangle {
             self.get_risk_free_rate(),
         )?;
 
-
         Ok(vec![lower_profit_range, upper_profit_range])
     }
 
@@ -1089,7 +1068,6 @@ impl ProbabilityAnalysis for LongStrangle {
             pos!(option.implied_volatility),
             pos!(self.long_call.option.implied_volatility),
         ]);
-
 
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_points[0]),
@@ -1857,14 +1835,13 @@ mod tests_short_strangle_probability {
         assert!(range.upper_bound.is_some(), "Upper bound should be defined");
         assert!(range.probability > PZERO, "Probability should be positive");
     }
-    
 }
 
 #[cfg(test)]
 mod tests_short_strangle_probability_bis {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::{pos, };
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
 
     fn create_test_short_strangle() -> ShortStrangle {
@@ -2006,7 +1983,7 @@ mod tests_short_strangle_probability_bis {
 mod tests_long_strangle_probability {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::{pos, };
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
 
     fn create_test_long_strangle() -> LongStrangle {
