@@ -15,7 +15,7 @@ use crate::constants::{
 };
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::calculate_price_range;
@@ -220,11 +220,11 @@ impl Strategies for IronCondor {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        self.net_premium_received().into()
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        Ok(self.net_premium_received().into())
     }
 
-    fn max_loss(&self) -> PositiveF64 {
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
         let call_wing_width =
             (self.long_call.option.strike_price - self.short_call.option.strike_price).value()
                 * self.long_call.option.quantity.value()
@@ -234,7 +234,7 @@ impl Strategies for IronCondor {
                 * self.short_put.option.quantity.value()
                 - self.net_premium_received();
 
-        call_wing_width.max(put_wing_width).into()
+        Ok(call_wing_width.max(put_wing_width).into())
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -268,7 +268,7 @@ impl Strategies for IronCondor {
             (self.short_call.option.strike_price - self.short_put.option.strike_price).value();
         let outer_width =
             (self.long_call.option.strike_price - self.long_put.option.strike_price).value();
-        let height = self.max_profit();
+        let height = self.max_profit().unwrap_or(PZERO);
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
@@ -336,6 +336,11 @@ impl Graph for IronCondor {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_profit = self.max_profit().unwrap_or(PZERO);
+        let short_call_strike_price = &self.short_call.option.strike_price;
+        let short_put_strike_price = &self.short_put.option.strike_price;
+        let long_call_strike_price = &self.long_call.option.strike_price;
+        let long_put_strike_price = &self.long_put.option.strike_price;
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -358,18 +363,14 @@ impl Graph for IronCondor {
         });
 
         let coordiantes: (f64, f64) = (
-            self.short_call.option.strike_price.value() / 2000.0,
-            self.max_profit().value() / 5.0,
+            short_call_strike_price.value() / 2000.0,
+            max_profit.value() / 5.0,
         );
         points.push(ChartPoint {
-            coordinates: (
-                self.short_call.option.strike_price.value(),
-                self.max_profit().value(),
-            ),
+            coordinates: (short_call_strike_price.value(), max_profit.value()),
             label: format!(
                 "High Max Profit {:.2} at {:.0}",
-                self.max_profit(),
-                self.short_call.option.strike_price
+                max_profit, short_call_strike_price
             ),
             label_offset: coordiantes,
             point_color: DARK_GREEN,
@@ -378,64 +379,54 @@ impl Graph for IronCondor {
             font_size: 18,
         });
 
-        let coordiantes: (f64, f64) = (
-            self.short_put.option.strike_price.value() / 2000.0,
-            self.max_profit().value() / 5.0,
+        let coordinates: (f64, f64) = (
+            short_put_strike_price.value() / 2000.0,
+            max_profit.value() / 5.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_put.option.strike_price.value(),
-                self.max_profit().value(),
+                max_profit.value(),
             ),
             label: format!(
                 "Low Max Profit {:.2} at {:.0}",
-                self.max_profit(),
-                self.short_put.option.strike_price
+                max_profit, self.short_put.option.strike_price
             ),
-            label_offset: coordiantes,
+            label_offset: coordinates,
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
             font_size: 18,
         });
 
-        let loss = self.calculate_profit_at(self.long_call.option.strike_price);
-        let coordiantes: (f64, f64) = (
-            self.long_call.option.strike_price.value() / 2000.0,
-            loss / 50.0,
-        );
+        let loss = self.calculate_profit_at(*long_call_strike_price);
+        let coordinates: (f64, f64) = (short_put_strike_price.value() / 2000.0, loss / 50.0);
         points.push(ChartPoint {
             coordinates: (self.long_call.option.strike_price.value(), loss),
             label: format!(
                 "Right Max Loss {:.2} at {:.0}",
                 loss, self.long_call.option.strike_price
             ),
-            label_offset: coordiantes,
+            label_offset: coordinates,
             point_color: RED,
             label_color: RED,
             point_size: 5,
             font_size: 18,
         });
 
-        let loss = self.calculate_profit_at(self.long_put.option.strike_price);
-        let coordiantes: (f64, f64) = (
-            self.long_put.option.strike_price.value() / 2000.0,
-            loss / 50.0,
-        );
+        let loss = self.calculate_profit_at(*long_put_strike_price);
+        let coordinates: (f64, f64) = (long_put_strike_price.value() / 2000.0, loss / 50.0);
         points.push(ChartPoint {
-            coordinates: (self.long_put.option.strike_price.value(), loss),
-            label: format!(
-                "Left Max Loss {:.2} at {:.0}",
-                loss, self.long_put.option.strike_price
-            ),
-            label_offset: coordiantes,
+            coordinates: (long_put_strike_price.value(), loss),
+            label: format!("Left Max Loss {:.2} at {:.0}", loss, long_put_strike_price),
+            label_offset: coordinates,
             point_color: RED,
             label_color: RED,
             point_size: 5,
             font_size: 18,
         });
 
-        points.push(self.get_point_at_price(self.long_call.option.underlying_price));
+        points.push(self.get_point_at_price(*long_call_strike_price));
 
         points
     }
@@ -504,7 +495,7 @@ mod tests_iron_condor {
             5.0,
         );
 
-        assert_eq!(iron_condor.max_loss(), 51.3);
+        assert_eq!(iron_condor.max_loss().unwrap_or(PZERO), 51.3);
     }
 
     #[test]
@@ -531,7 +522,7 @@ mod tests_iron_condor {
         );
 
         let expected_profit = iron_condor.net_premium_received();
-        assert_eq!(iron_condor.max_profit(), expected_profit);
+        assert_eq!(iron_condor.max_profit().unwrap_or(PZERO), expected_profit);
     }
 
     #[test]
