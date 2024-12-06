@@ -304,25 +304,8 @@ impl Optimizable for BullPutSpread {
         }
     }
 
-    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        self.is_valid_long_option(option, side)
-    }
-
-    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        match side {
-            FindOptimalSide::Upper => option.strike_price >= self.get_underlying_price(),
-            FindOptimalSide::Lower => option.strike_price <= self.get_underlying_price(),
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                option.strike_price >= *start && option.strike_price <= *end
-            }
-        }
-    }
-
     fn are_valid_prices(&self, long: &OptionData, short: &OptionData) -> bool {
-        long.put_ask.unwrap_or(PZERO) > PZERO
-            && short.put_bid.unwrap_or(PZERO) > PZERO
-            && short.put_bid.unwrap() > long.put_ask.unwrap()
+        long.put_ask.unwrap_or(PZERO) > PZERO && short.put_bid.unwrap_or(PZERO) > PZERO
     }
 
     fn create_strategy(
@@ -1082,35 +1065,6 @@ mod tests_bull_put_spread_optimization {
         );
 
         assert!(spread.are_valid_prices(&long_option, &short_option));
-    }
-
-    #[test]
-    fn test_invalid_prices() {
-        let spread = create_base_spread();
-        let long_option = OptionData::new(
-            pos!(90.0),
-            None,
-            None,
-            spos!(4.0), // put_bid mayor que put_bid del short
-            spos!(4.2),
-            spos!(0.2),
-            Some(-0.4),
-            spos!(100.0),
-            Some(50),
-        );
-        let short_option = OptionData::new(
-            pos!(95.0),
-            None,
-            None,
-            spos!(3.0), // put_bid menor que put_ask del long
-            spos!(3.2),
-            spos!(0.2),
-            Some(-0.5),
-            spos!(100.0),
-            Some(50),
-        );
-
-        assert!(!spread.are_valid_prices(&long_option, &short_option));
     }
 
     #[test]
