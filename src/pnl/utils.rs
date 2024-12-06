@@ -75,7 +75,6 @@ mod tests_pnl_calculator {
         assert_eq!(pnl.date_time, now);
     }
 
-
     struct DummyOption;
 
     impl PnLCalculator for DummyOption {

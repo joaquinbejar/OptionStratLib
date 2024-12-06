@@ -301,9 +301,11 @@ mod tests_probability_analysis {
         }
 
         fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
-            Ok(vec![
-                ProfitLossRange::new(Some(pos!(95.0)), Some(pos!(105.0)), pos!(0.0))?,
-            ])
+            Ok(vec![ProfitLossRange::new(
+                Some(pos!(95.0)),
+                Some(pos!(105.0)),
+                pos!(0.0),
+            )?])
         }
 
         fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {

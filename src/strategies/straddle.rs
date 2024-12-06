@@ -1058,8 +1058,8 @@ mod tests_short_straddle {
     fn setup() -> ShortStraddle {
         ShortStraddle::new(
             "AAPL".to_string(),
-            pos!(150.0), 
-            pos!(150.0), 
+            pos!(150.0),
+            pos!(150.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
@@ -1080,7 +1080,7 @@ mod tests_short_straddle {
         let strategy = ShortStraddle::new(
             "AAPL".to_string(),
             underlying_price,
-            PZERO, 
+            PZERO,
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
@@ -1386,8 +1386,8 @@ mod tests_long_straddle {
     fn setup_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "AAPL".to_string(),
-            pos!(150.0), 
-            pos!(150.0), 
+            pos!(150.0),
+            pos!(150.0),
             ExpirationDate::Days(30.0),
             0.25,
             0.01,
@@ -1748,8 +1748,8 @@ mod tests_short_straddle_probability {
     fn test_probability_of_profit_with_downward_trend() {
         let straddle = create_test_short_straddle();
         let trend = PriceTrend {
-            drift_rate: -0.1, 
-            confidence: 0.90, 
+            drift_rate: -0.1,
+            confidence: 0.90,
         };
 
         let result = straddle.probability_of_profit(None, Some(trend));

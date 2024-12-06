@@ -247,18 +247,15 @@ mod tests_rounder {
 
     #[test]
     fn test_rounder() {
-
         assert_eq!(rounder(pos!(151.0), pos!(5.0)), pos!(150.0));
         assert_eq!(rounder(pos!(154.0), pos!(5.0)), pos!(155.0));
         assert_eq!(rounder(pos!(152.5), pos!(5.0)), pos!(155.0));
         assert_eq!(rounder(pos!(152.4), pos!(5.0)), pos!(150.0));
 
-
         assert_eq!(rounder(pos!(151.0), pos!(10.0)), pos!(150.0));
         assert_eq!(rounder(pos!(156.0), pos!(10.0)), pos!(160.0));
         assert_eq!(rounder(pos!(155.0), pos!(10.0)), pos!(160.0));
         assert_eq!(rounder(pos!(154.9), pos!(10.0)), pos!(150.0));
-
 
         assert_eq!(rounder(pos!(17.0), pos!(15.0)), pos!(15.0));
         assert_eq!(rounder(pos!(43.0), pos!(15.0)), pos!(45.0));

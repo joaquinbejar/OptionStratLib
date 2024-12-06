@@ -160,25 +160,25 @@ impl Graph for RandomWalkGraph {
 
 /// Iterator implementation for `RandomWalkGraph` which generates `OptionDataPriceParams`.
 ///
-/// This iterator traverses through a `RandomWalkGraph` object, producing 
+/// This iterator traverses through a `RandomWalkGraph` object, producing
 /// `OptionDataPriceParams` for each element in the underlying vector of price values.
 ///
 /// # Type Alias
 ///
-/// * `type Item` - Specifies the type of item produced by the iterator, 
+/// * `type Item` - Specifies the type of item produced by the iterator,
 ///   which is `OptionDataPriceParams`.
 ///
 /// # Methods
 ///
-/// * `next(&mut self) -> Option<Self::Item>` - Advances the iterator and 
-///   returns the next set of option data parameters. If all values have been 
+/// * `next(&mut self) -> Option<Self::Item>` - Advances the iterator and
+///   returns the next set of option data parameters. If all values have been
 ///   processed, it returns `None`.
 ///
 ///   - Checks if the `current_index` surpasses the length of the `values` vector.
 ///     If true, iteration stops by returning `None`.
-///   - Extracts risk-free rate and dividend yield from their respective options, 
+///   - Extracts risk-free rate and dividend yield from their respective options,
 ///     defaulting to zero if not available.
-///   - Retrieves the current price and calculates the remaining days using 
+///   - Retrieves the current price and calculates the remaining days using
 ///     `get_remaining_time()`.
 ///   - Determines the expiration date based on the remaining days available until expiration.
 ///   - Computes the current implied volatility using `calculate_current_volatility()`.
@@ -188,14 +188,14 @@ impl Graph for RandomWalkGraph {
 /// # Fields
 ///
 /// - `underlying_price`: Current price of the asset.
-/// - `expiration_date`: Date at which the option expires, computed as 
+/// - `expiration_date`: Date at which the option expires, computed as
 ///   a number of days from the current index.
-/// - `implied_volatility`: Estimated volatility of the asset over the 
+/// - `implied_volatility`: Estimated volatility of the asset over the
 ///   remaining time period.
 /// - `risk_free_rate`: Interest rate assumed for risk-free investments.
 /// - `dividend_yield`: Expected return from dividends, if applicable.
 ///
-/// This design is useful for simulations or models where price and 
+/// This design is useful for simulations or models where price and
 /// volatility data need to be processed in a time-series format.
 impl Iterator for RandomWalkGraph {
     type Item = OptionDataPriceParams;

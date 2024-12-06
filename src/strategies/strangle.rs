@@ -1763,8 +1763,8 @@ mod tests_short_strangle_probability {
     fn test_probability_of_profit_with_trend() {
         let strangle = create_test_short_strangle();
         let trend = PriceTrend {
-            drift_rate: 0.1,  
-            confidence: 0.95, 
+            drift_rate: 0.1,
+            confidence: 0.95,
         };
 
         let result = strangle.probability_of_profit(None, Some(trend));
@@ -1782,8 +1782,8 @@ mod tests_short_strangle_probability {
     fn test_probability_of_profit_with_downward_trend() {
         let strangle = create_test_short_strangle();
         let trend = PriceTrend {
-            drift_rate: -0.1, 
-            confidence: 0.90, 
+            drift_rate: -0.1,
+            confidence: 0.90,
         };
 
         let result = strangle.probability_of_profit(None, Some(trend));
