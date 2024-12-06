@@ -255,14 +255,6 @@ impl Strategies for CustomStrategy {
         (self.max_profit_point.unwrap().1 / self.max_loss_point.unwrap().1).abs() * 100.0
     }
 
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
-    }
-
     fn get_break_even_points(&self) -> Vec<PositiveF64> {
         self.break_even_points.clone()
     }

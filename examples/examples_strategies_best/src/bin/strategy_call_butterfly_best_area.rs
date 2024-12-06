@@ -8,7 +8,7 @@ use optionstratlib::constants::ZERO;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
-use optionstratlib::strategies::base::Strategies;
+use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         FindOptimalSide::Range(pos!(5700.0), pos!(6300.0)),
     );
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let range = strategy.break_even_points[1] - strategy.break_even_points[0];
+    let range = strategy.range_of_profit().unwrap_or(PZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(

@@ -11,7 +11,7 @@ Key characteristics:
 */
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
-use crate::constants::{DARK_BLUE, DARK_GREEN};
+use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
@@ -149,12 +149,17 @@ impl Strategies for ShortStrangle {
         }
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        pos!(self.net_premium_received())
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        let max_profit = self.net_premium_received();
+        if max_profit < 0.0 {
+            Err("Invalid max profit")
+        } else {
+            Ok(max_profit.into())
+        }
     }
 
-    fn max_loss(&self) -> PositiveF64 {
-        f64::INFINITY.into()
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
+        Ok(f64::INFINITY.into())
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -173,32 +178,31 @@ impl Strategies for ShortStrangle {
     }
 
     fn profit_area(&self) -> f64 {
+        let max_profit = self.max_profit().unwrap_or(PZERO);
+        if max_profit == PZERO {
+            return ZERO;
+        }
         let strike_diff = self.short_call.option.strike_price - self.short_put.option.strike_price;
-        let inner_square = strike_diff * self.max_profit();
+        let inner_square = strike_diff * max_profit;
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        let outer_square = break_even_diff * self.max_profit();
+        let outer_square = break_even_diff * max_profit;
         let triangles = (outer_square - inner_square) / 2.0;
         ((inner_square + triangles) / self.short_call.option.underlying_price).value()
     }
 
     fn profit_ratio(&self) -> f64 {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        // info!("Max Profit: {} Break Even Diff: {}, Ratio: {}", self.max_profit(), break_even_diff, self.max_profit() / break_even_diff * 100.0);
-        self.max_profit().value() / break_even_diff * 100.0
-    }
-
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+        match self.max_profit() {
+            Ok(max_profit) => max_profit.value() / break_even_diff * 100.0,
+            Err(_) => ZERO,
+        }
     }
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let max_profit = self.max_profit().unwrap_or(PZERO);
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
-        let start_price = first_option - self.max_profit();
-        let end_price = last_option + self.max_profit();
+        let start_price = first_option - max_profit;
+        let end_price = last_option + max_profit;
         Some(calculate_price_range(start_price, end_price, step))
     }
 
@@ -394,12 +398,9 @@ impl Graph for ShortStrangle {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let max_value = self.max_profit() * 1.2;
-        let min_value = self.max_profit() * -1.2;
-
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price.value(),
-            y_range: (min_value.into(), max_value.into()),
+            y_range: (f64::NEG_INFINITY, f64::INFINITY),
             label: format!(
                 "Current Price: {:.2}",
                 self.short_call.option.underlying_price
@@ -416,6 +417,7 @@ impl Graph for ShortStrangle {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_profit = self.max_profit().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -439,17 +441,16 @@ impl Graph for ShortStrangle {
 
         let coordiantes: (f64, f64) = (
             self.short_put.option.strike_price.value() / 250.0,
-            self.max_profit().value() / 15.0,
+            max_profit.value() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit().value(),
+                max_profit.value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
-                self.max_profit(),
-                self.short_call.option.strike_price
+                max_profit, self.short_call.option.strike_price
             ),
             label_offset: coordiantes,
             point_color: DARK_GREEN,
@@ -460,17 +461,16 @@ impl Graph for ShortStrangle {
 
         let coordiantes: (f64, f64) = (
             -self.short_put.option.strike_price.value() / 30.0,
-            self.max_profit().value() / 15.0,
+            max_profit.value() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_put.option.strike_price.value(),
-                self.max_profit().value(),
+                max_profit.value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
-                self.max_profit(),
-                self.short_put.option.strike_price
+                max_profit, self.short_put.option.strike_price
             ),
             label_offset: coordiantes,
             point_color: DARK_GREEN,
@@ -684,12 +684,12 @@ impl Strategies for LongStrangle {
         }
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        f64::INFINITY.into() // Theoretically unlimited
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        Ok(f64::INFINITY.into()) // Theoretically unlimited
     }
 
-    fn max_loss(&self) -> PositiveF64 {
-        self.total_cost()
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
+        Ok(self.total_cost())
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -708,10 +708,14 @@ impl Strategies for LongStrangle {
     }
 
     fn profit_area(&self) -> f64 {
+        let max_loss = self.max_loss().unwrap_or(PZERO);
+        if max_loss == PZERO {
+            return f64::INFINITY;
+        }
         let strike_diff = self.long_call.option.strike_price - self.long_put.option.strike_price;
-        let inner_square = strike_diff * self.max_loss();
+        let inner_square = strike_diff * max_loss;
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        let outer_square = break_even_diff * self.max_loss();
+        let outer_square = break_even_diff * max_loss;
         let triangles = (outer_square - inner_square) / 2.0;
         let loss_area =
             ((inner_square + triangles) / self.long_call.option.underlying_price).value();
@@ -719,17 +723,13 @@ impl Strategies for LongStrangle {
     }
 
     fn profit_ratio(&self) -> f64 {
+        let max_loss = self.max_loss().unwrap_or(PZERO);
+        if max_loss == PZERO {
+            return f64::INFINITY;
+        }
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        let ratio = self.max_loss() / break_even_diff * 100.0;
+        let ratio = max_loss / break_even_diff * 100.0;
         1.0 / ratio // Invert the value to get the profit ratio: the lower, the better
-    }
-
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
@@ -951,6 +951,7 @@ impl Graph for LongStrangle {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_loss = self.max_loss().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -975,12 +976,11 @@ impl Graph for LongStrangle {
         points.push(ChartPoint {
             coordinates: (
                 self.long_call.option.strike_price.value(),
-                -self.max_loss().value(),
+                -max_loss.value(),
             ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
-                self.max_loss(),
-                self.long_call.option.strike_price
+                max_loss, self.long_call.option.strike_price
             ),
             label_offset: (0.0, -20.0),
             point_color: RED,
@@ -990,14 +990,10 @@ impl Graph for LongStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (
-                self.long_put.option.strike_price.value(),
-                -self.max_loss().value(),
-            ),
+            coordinates: (self.long_put.option.strike_price.value(), -max_loss.value()),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
-                self.max_loss(),
-                self.long_put.option.strike_price
+                max_loss, self.long_put.option.strike_price
             ),
             label_offset: (-500.0, -20.0),
             point_color: RED,
@@ -1173,13 +1169,16 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_max_profit() {
         let strategy = setup();
-        assert_eq!(strategy.max_profit(), strategy.net_premium_received());
+        assert_eq!(
+            strategy.max_profit().unwrap_or(PZERO),
+            strategy.net_premium_received()
+        );
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup();
-        assert_eq!(strategy.max_loss(), f64::INFINITY);
+        assert_eq!(strategy.max_loss().unwrap_or(PZERO), f64::INFINITY);
     }
 
     #[test]
@@ -1258,7 +1257,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
-        let expected_ratio = strategy.max_profit() / break_even_diff * 100.0;
+        let expected_ratio = strategy.max_profit().unwrap_or(PZERO) / break_even_diff * 100.0;
         assert_eq!(strategy.profit_ratio(), expected_ratio.value());
     }
 
@@ -1514,13 +1513,16 @@ mod tests_long_strangle {
     #[test]
     fn test_max_profit() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.max_profit(), f64::INFINITY);
+        assert_eq!(strategy.max_profit().unwrap_or(PZERO), f64::INFINITY);
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.max_loss(), strategy.total_cost().value());
+        assert_eq!(
+            strategy.max_loss().unwrap_or(PZERO),
+            strategy.total_cost().value()
+        );
     }
 
     #[test]
@@ -1547,7 +1549,7 @@ mod tests_long_strangle {
     fn test_profit_ratio() {
         let strategy = setup_long_strangle();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
-        let expected_ratio = 1.0 / (strategy.max_loss() / break_even_diff * 100.0);
+        let expected_ratio = 1.0 / (strategy.max_loss().unwrap_or(PZERO) / break_even_diff * 100.0);
         assert_eq!(strategy.profit_ratio(), expected_ratio);
     }
 

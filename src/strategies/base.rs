@@ -89,20 +89,20 @@ pub trait Strategies: Validable {
         self.get_break_even_points()
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        PZERO
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        Err("Max profit is not applicable for this strategy")
     }
 
     fn max_profit_iter(&mut self) -> PositiveF64 {
-        self.max_profit()
+        self.max_profit().unwrap_or(PZERO)
     }
 
-    fn max_loss(&self) -> PositiveF64 {
-        PZERO
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
+        Err("Max loss is not applicable for this strategy")
     }
 
     fn max_loss_iter(&mut self) -> PositiveF64 {
-        self.max_loss()
+        self.max_loss().unwrap_or(PZERO)
     }
 
     /// Calculates the total cost (premium paid [Long] - premium get [short]) of the strategy.
@@ -128,14 +128,6 @@ pub trait Strategies: Validable {
 
     fn profit_ratio(&self) -> f64 {
         ZERO
-    }
-
-    fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
-        panic!("Best ratio is not applicable for this strategy");
-    }
-
-    fn best_area(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {
-        panic!("Best area is not applicable for this strategy");
     }
 
     fn range_to_show(&self) -> (PositiveF64, PositiveF64) {
@@ -236,8 +228,16 @@ pub trait Validable {
     }
 }
 
-pub(crate) trait Optimizable: Validable {
+pub trait Optimizable: Validable {
     type Strategy: Strategies;
+
+    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
+    }
+
+    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+    }
 
     fn find_optimal(
         &mut self,
@@ -313,12 +313,12 @@ mod tests_strategies {
             vec![PositiveF64::new(100.0).unwrap()]
         }
 
-        fn max_profit(&self) -> PositiveF64 {
-            pos!(1000.0)
+        fn max_profit(&self) -> Result<PositiveF64, &str> {
+            Ok(pos!(1000.0))
         }
 
-        fn max_loss(&self) -> PositiveF64 {
-            pos!(500.0)
+        fn max_loss(&self) -> Result<PositiveF64, &str> {
+            Ok(pos!(500.0))
         }
 
         fn total_cost(&self) -> PositiveF64 {
@@ -357,8 +357,8 @@ mod tests_strategies {
             mock_strategy.break_even(),
             vec![PositiveF64::new(100.0).unwrap()]
         );
-        assert_eq!(mock_strategy.max_profit(), 1000.0);
-        assert_eq!(mock_strategy.max_loss(), 500.0);
+        assert_eq!(mock_strategy.max_profit().unwrap_or(PZERO), 1000.0);
+        assert_eq!(mock_strategy.max_loss().unwrap_or(PZERO), 500.0);
         assert_eq!(mock_strategy.total_cost(), 200.0);
         assert_eq!(mock_strategy.net_premium_received(), 300.0);
         assert_eq!(mock_strategy.fees(), 50.0);
@@ -378,8 +378,8 @@ mod tests_strategies {
 
         let strategy = DefaultStrategy;
 
-        assert_eq!(strategy.max_profit(), ZERO);
-        assert_eq!(strategy.max_loss(), ZERO);
+        assert_eq!(strategy.max_profit().unwrap_or(PZERO), ZERO);
+        assert_eq!(strategy.max_loss().unwrap_or(PZERO), ZERO);
         assert_eq!(strategy.total_cost(), ZERO);
         assert_eq!(strategy.profit_area(), ZERO);
         assert_eq!(strategy.profit_ratio(), ZERO);
@@ -473,40 +473,12 @@ mod tests_strategies_extended {
     }
 
     #[test]
-    #[should_panic(expected = "Best ratio is not applicable for this strategy")]
-    fn test_strategies_best_ratio_panic() {
-        struct PanicStrategy;
-        impl Validable for PanicStrategy {}
-        impl Strategies for PanicStrategy {}
-
-        let mut strategy = PanicStrategy;
-
-        let option_chain = OptionChain::new("TEST", pos!(100.0), Default::default());
-
-        strategy.best_ratio(&option_chain, FindOptimalSide::All);
-    }
-
-    #[test]
-    #[should_panic(expected = "Best area is not applicable for this strategy")]
-    fn test_strategies_best_area_panic() {
-        struct PanicStrategy;
-        impl Validable for PanicStrategy {}
-        impl Strategies for PanicStrategy {}
-
-        let mut strategy = PanicStrategy;
-
-        let option_chain = OptionChain::new("TEST", pos!(100.0), Default::default());
-
-        strategy.best_area(&option_chain, FindOptimalSide::All);
-    }
-
-    #[test]
     fn test_strategies_max_profit_iter() {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_profit(&self) -> PositiveF64 {
-                pos!(100.0)
+            fn max_profit(&self) -> Result<PositiveF64, &str> {
+                Ok(pos!(100.0))
             }
         }
 
@@ -519,8 +491,8 @@ mod tests_strategies_extended {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_loss(&self) -> PositiveF64 {
-                pos!(50.0)
+            fn max_loss(&self) -> Result<PositiveF64, &str> {
+                Ok(pos!(50.0))
             }
         }
 
@@ -641,11 +613,11 @@ mod tests_max_min_strikes {
         fn break_even(&self) -> Vec<PositiveF64> {
             vec![]
         }
-        fn max_profit(&self) -> PositiveF64 {
-            PZERO
+        fn max_profit(&self) -> Result<PositiveF64, &str> {
+            Ok(PZERO)
         }
-        fn max_loss(&self) -> PositiveF64 {
-            PZERO
+        fn max_loss(&self) -> Result<PositiveF64, &str> {
+            Ok(PZERO)
         }
         fn total_cost(&self) -> PositiveF64 {
             PZERO
@@ -662,8 +634,6 @@ mod tests_max_min_strikes {
         fn profit_ratio(&self) -> f64 {
             0.0
         }
-        fn best_ratio(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {}
-        fn best_area(&mut self, _option_chain: &OptionChain, _side: FindOptimalSide) {}
         fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
             None
         }
