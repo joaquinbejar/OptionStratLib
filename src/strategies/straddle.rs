@@ -12,7 +12,7 @@ Key characteristics:
 
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
-use crate::constants::{DARK_BLUE, DARK_GREEN};
+use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
@@ -169,12 +169,17 @@ impl Strategies for ShortStraddle {
         vec![self.short_call.clone(), self.short_put.clone()]
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        pos!(self.net_premium_received())
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        let max_profit = self.net_premium_received();
+        if max_profit < ZERO {
+            Err("Max Profit is negative")
+        } else {
+            Ok(max_profit.into())
+        }
     }
 
-    fn max_loss(&self) -> PositiveF64 {
-        f64::INFINITY.into()
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
+        Ok(f64::INFINITY.into())
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -200,24 +205,8 @@ impl Strategies for ShortStraddle {
 
     fn profit_ratio(&self) -> f64 {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        // info!("Max Profit: {} Break Even Diff: {}, Ratio: {}", self.max_profit(), break_even_diff, self.max_profit() / break_even_diff * 100.0);
-        self.max_profit().value() / break_even_diff * 100.0
+        self.max_profit().unwrap_or(PZERO).value() / break_even_diff * 100.0
     }
-
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
-    }
-
-    // fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-    //     let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
-    //     let start_price = first_option - self.max_profit();
-    //     let end_price = last_option + self.max_profit();
-    //     Some(calculate_price_range(start_price, end_price, step))
-    // }
 
     fn get_break_even_points(&self) -> Vec<PositiveF64> {
         let mut break_even_points = self.break_even_points.clone();
@@ -432,6 +421,7 @@ impl Graph for ShortStraddle {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_profit = self.max_profit().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -453,21 +443,20 @@ impl Graph for ShortStraddle {
             font_size: 18,
         });
 
-        let coordiantes: (f64, f64) = (
+        let coordinates: (f64, f64) = (
             -self.short_put.option.strike_price.value() / 30.0,
-            self.max_profit().value() / 15.0,
+            max_profit.value() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_put.option.strike_price.value(),
-                self.max_profit().value(),
+                max_profit.value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
-                self.max_profit(),
-                self.short_put.option.strike_price
+                max_profit, self.short_put.option.strike_price
             ),
-            label_offset: coordiantes,
+            label_offset: coordinates,
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -698,12 +687,12 @@ impl Strategies for LongStraddle {
         vec![self.long_call.clone(), self.long_put.clone()]
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        f64::INFINITY.into() // Theoretically unlimited
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        Ok(f64::INFINITY.into()) // Theoretically unlimited
     }
 
-    fn max_loss(&self) -> PositiveF64 {
-        self.total_cost()
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
+        Ok(self.total_cost())
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -730,15 +719,10 @@ impl Strategies for LongStraddle {
 
     fn profit_ratio(&self) -> f64 {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        ((break_even_diff / self.max_loss()) * 100.0).value()
-    }
-
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+        match self.max_loss() {
+            Ok(max_loss) => ((break_even_diff / max_loss) * 100.0).value(),
+            Err(_) => ZERO,
+        }
     }
 
     fn get_break_even_points(&self) -> Vec<PositiveF64> {
@@ -943,6 +927,7 @@ impl Graph for LongStraddle {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_loss = self.max_loss().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -967,12 +952,11 @@ impl Graph for LongStraddle {
         points.push(ChartPoint {
             coordinates: (
                 self.long_call.option.strike_price.value(),
-                -self.max_loss().value(),
+                -max_loss.value(),
             ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
-                self.max_loss(),
-                self.long_call.option.strike_price
+                max_loss, self.long_call.option.strike_price
             ),
             label_offset: (0.0, -20.0),
             point_color: RED,
@@ -1186,13 +1170,16 @@ mod tests_short_straddle {
     #[test]
     fn test_max_profit() {
         let strategy = setup();
-        assert_eq!(strategy.max_profit(), strategy.net_premium_received());
+        assert_eq!(
+            strategy.max_profit().unwrap_or(PZERO),
+            strategy.net_premium_received()
+        );
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup();
-        assert_eq!(strategy.max_loss(), f64::INFINITY);
+        assert_eq!(strategy.max_loss().unwrap_or(PZERO), f64::INFINITY);
     }
 
     #[test]
@@ -1271,7 +1258,7 @@ mod tests_short_straddle {
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
-        let expected_ratio = strategy.max_profit() / break_even_diff * 100.0;
+        let expected_ratio = strategy.max_profit().unwrap_or(PZERO) / break_even_diff * 100.0;
         assert_eq!(strategy.profit_ratio(), expected_ratio.value());
     }
 
@@ -1500,13 +1487,16 @@ mod tests_long_straddle {
     #[test]
     fn test_max_profit() {
         let strategy = setup_long_straddle();
-        assert_eq!(strategy.max_profit(), f64::INFINITY);
+        assert_eq!(strategy.max_profit().unwrap_or(PZERO), f64::INFINITY);
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup_long_straddle();
-        assert_eq!(strategy.max_loss(), strategy.total_cost().value());
+        assert_eq!(
+            strategy.max_loss().unwrap_or(PZERO),
+            strategy.total_cost().value()
+        );
     }
 
     #[test]
