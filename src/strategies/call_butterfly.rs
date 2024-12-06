@@ -271,21 +271,23 @@ impl Strategies for CallButterfly {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        self.calculate_profit_at(self.short_call.option.strike_price)
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        Ok(self
+            .calculate_profit_at(self.short_call.option.strike_price)
             .abs()
-            .into()
+            .into())
     }
 
-    fn max_loss(&self) -> PositiveF64 {
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
         let lower_loss = self.calculate_profit_at(self.long_call_itm.option.strike_price);
         let upper_loss = self.calculate_profit_at(self.long_call_otm.option.strike_price);
-        match (lower_loss > ZERO, upper_loss > ZERO) {
+        let result = match (lower_loss > ZERO, upper_loss > ZERO) {
             (true, true) => PZERO,
             (true, false) => upper_loss.abs().into(),
             (false, true) => lower_loss.abs().into(),
             (false, false) => lower_loss.abs().max(upper_loss.abs()).into(),
-        }
+        };
+        Ok(result)
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -310,31 +312,16 @@ impl Strategies for CallButterfly {
 
     fn profit_area(&self) -> f64 {
         let range = self.short_call.option.strike_price - self.long_call_itm.option.strike_price;
-        let max_profit = self.max_profit();
+        let max_profit = self.max_profit().unwrap_or(PZERO);
         (range.value() * max_profit / 2.0) / self.underlying_price * 100.0
     }
 
     fn profit_ratio(&self) -> f64 {
-        (self.max_profit() / self.max_loss() * 100.0).value()
+        match (self.max_profit(), self.max_loss()) {
+            (Ok(max_profit), Ok(max_loss)) => (max_profit / max_loss * 100.0).value(),
+            _ => 0.0,
+        }
     }
-
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
-    }
-
-    // fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
-    //     let (first_option, last_option) = (
-    //         self.long_call_itm.option.clone(),
-    //         self.long_call_otm.option.clone(),
-    //     );
-    //     let start_price = first_option.strike_price * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-    //     let end_price = last_option.strike_price * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-    //     Some(calculate_price_range(start_price, end_price, step))
-    // }
 
     fn get_break_even_points(&self) -> Vec<PositiveF64> {
         self.break_even_points.clone()
@@ -474,6 +461,7 @@ impl Graph for CallButterfly {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_profit = self.max_profit().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -498,9 +486,9 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit().value(),
+                max_profit.value(),
             ),
-            label: format!("Max Profit\n\n{:.2}", self.max_profit()),
+            label: format!("Max Profit\n\n{:.2}", max_profit),
             label_offset: (2.0, 1.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
@@ -592,13 +580,13 @@ mod tests_call_butterfly {
     #[test]
     fn test_max_profit() {
         let strategy = setup();
-        assert!(strategy.max_profit() > PZERO);
+        assert!(strategy.max_profit().unwrap_or(PZERO) > PZERO);
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup();
-        assert_eq!(strategy.max_loss(), strategy.total_cost());
+        assert_eq!(strategy.max_loss().unwrap_or(PZERO), strategy.total_cost());
     }
 
     #[test]
@@ -829,7 +817,7 @@ mod tests_call_butterfly_pnl {
     fn test_profit_at_max_point() {
         let strategy = setup_test_strategy();
         let profit = strategy.calculate_profit_at(strategy.short_call.option.strike_price);
-        assert_eq!(profit, strategy.max_profit().value());
+        assert_eq!(profit, strategy.max_profit().unwrap_or(PZERO).value());
     }
 
     #[test]
