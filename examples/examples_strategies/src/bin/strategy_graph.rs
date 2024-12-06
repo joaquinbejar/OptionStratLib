@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
-use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
@@ -38,8 +38,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Title: {}", strategy.title());
     info!("Break Even {:?}", strategy.break_even());
     info!("Net Premium Received: {}", strategy.net_premium_received());
-    info!("Max Profit: {}", strategy.max_profit());
-    info!("Max Loss: {}", strategy.max_loss());
+    info!("Max Profit: {}", strategy.max_profit().unwrap_or(PZERO));
+    info!("Max Loss: {}", strategy.max_loss().unwrap_or(PZERO));
     info!("Total Cost: {}", strategy.total_cost());
 
     // Generate the intrinsic value graph

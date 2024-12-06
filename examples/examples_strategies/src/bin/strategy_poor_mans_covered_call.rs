@@ -4,7 +4,7 @@
    Date: 25/9/24
 ******************************************************************************/
 
-use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
@@ -42,8 +42,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
-    info!("Max Profit: ${:.2}", strategy.max_profit());
-    info!("Max Loss: ${}", strategy.max_loss());
+    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
+    info!("Max Loss: ${}", strategy.max_loss().unwrap_or(PZERO));
     info!("Total Fees: ${:.2}", strategy.fees());
     info!("Profit Area: {:.2}%", strategy.profit_area());
     info!("Profit Ratio: {:.2}%", strategy.profit_ratio());

@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
@@ -48,8 +48,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit());
-    info!("Max Loss: ${:0.2}", strategy.max_loss());
+    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
+    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(PZERO));
     info!("Total Fees: ${:.2}", strategy.fees());
     info!(
         "Range of Profit: ${:.2} {:.2}%",

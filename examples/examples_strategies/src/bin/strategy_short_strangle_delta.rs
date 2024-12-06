@@ -1,4 +1,4 @@
-use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
@@ -31,18 +31,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.96,      // close_fee_short_put
     );
 
-    let price_range: Vec<PositiveF64> = (2450..=2850).map(|x| pos!(x as f64)).collect();
-
-    let range = strategy.break_even_points[1] - strategy.break_even_points[0];
-
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let range = strategy.range_of_profit().unwrap_or(PZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit());
-    info!("Max Loss: ${}", strategy.max_loss());
+    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
+    info!("Max Loss: ${}", strategy.max_loss().unwrap_or(PZERO));
     info!("Total Fees: ${:.2}", strategy.fees());
     info!(
         "Range of Profit: ${:.2} {:.2}%",
