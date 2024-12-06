@@ -238,7 +238,7 @@ mod tests_calculate_probability {
     fn test_with_downward_trend() {
         let mut range = create_basic_range();
         let trend = Some(PriceTrend {
-            drift_rate: -0.10, // 10% tendencia bajista anual
+            drift_rate: -0.10, 
             confidence: 0.95,
         });
 
@@ -314,7 +314,7 @@ mod tests_calculate_probability {
     fn test_different_expiration_dates() {
         let mut range = create_basic_range();
 
-        // Probar con diferentes fechas de vencimiento
+        
         let expirations = vec![
             ExpirationDate::Days(1.0),
             ExpirationDate::Days(30.0),
@@ -336,7 +336,7 @@ mod tests_calculate_probability {
     fn test_extreme_prices() {
         let mut range = create_basic_range();
 
-        // Probar con precios actuales extremos
+       
         let extreme_prices = vec![pos!(1.0), pos!(1000.0), pos!(10000.0)];
 
         for price in extreme_prices {

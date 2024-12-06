@@ -1348,10 +1348,8 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let strategy = setup();
         let points = strategy.get_points();
 
-        // Debería tener 5 puntos: 2 break-even, 2 max profit, 1 current price
         assert_eq!(points.len(), 5);
 
-        // Verificar que los puntos de break-even están presentes
         let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
         assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
         assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
@@ -1765,8 +1763,8 @@ mod tests_short_strangle_probability {
     fn test_probability_of_profit_with_trend() {
         let strangle = create_test_short_strangle();
         let trend = PriceTrend {
-            drift_rate: 0.1,  // 10% annual upward trend
-            confidence: 0.95, // 95% confidence level
+            drift_rate: 0.1,  
+            confidence: 0.95, 
         };
 
         let result = strangle.probability_of_profit(None, Some(trend));
@@ -1784,8 +1782,8 @@ mod tests_short_strangle_probability {
     fn test_probability_of_profit_with_downward_trend() {
         let strangle = create_test_short_strangle();
         let trend = PriceTrend {
-            drift_rate: -0.1, // 10% annual downward trend
-            confidence: 0.90, // 90% confidence level
+            drift_rate: -0.1, 
+            confidence: 0.90, 
         };
 
         let result = strangle.probability_of_profit(None, Some(trend));
@@ -2101,7 +2099,6 @@ mod tests_long_strangle_probability {
         let ev = result.unwrap();
         assert!(ev >= PZERO, "Expected value should be non-negative");
 
-        // Test con volatilidad
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos!(0.25),
             std_dev_adjustment: pos!(0.1),

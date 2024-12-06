@@ -963,8 +963,8 @@ mod tests_total_cost {
             ),
             premium,
             Utc::now(),
-            fees, // open fee
-            fees, // close fee
+            fees, // open fees
+            fees, // closing fees
         )
     }
 

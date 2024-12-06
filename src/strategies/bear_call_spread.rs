@@ -425,7 +425,6 @@ impl Graph for BearCallSpread {
 
 impl ProbabilityAnalysis for BearCallSpread {
     fn get_expiration(&self) -> Result<ExpirationDate, String> {
-        // Ambas opciones tienen la misma fecha de expiración, usamos la del short call
         Ok(self.short_call.option.expiration_date.clone())
     }
 
@@ -434,7 +433,6 @@ impl ProbabilityAnalysis for BearCallSpread {
     }
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
-        // En un Bear Call Spread, la zona de beneficio está por debajo del break-even point
         let break_even_point = self.get_break_even_points()[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
@@ -443,7 +441,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         ]);
 
         let mut profit_range = ProfitLossRange::new(
-            None, // No hay límite inferior
+            None,
             Some(break_even_point),
             pos!(self.max_profit()?.value()),
         )?;
@@ -565,18 +563,12 @@ mod tests_bear_call_spread_graph {
 
         let values = spread.get_values(&test_prices);
         assert_eq!(values.len(), 5);
-
-        // Verificar que los valores son coherentes
         assert_eq!(values[0], spread.calculate_profit_at(pos!(95.0)));
         assert_eq!(values[1], spread.calculate_profit_at(pos!(100.0)));
         assert_eq!(values[2], spread.calculate_profit_at(pos!(105.0)));
         assert_eq!(values[3], spread.calculate_profit_at(pos!(110.0)));
         assert_eq!(values[4], spread.calculate_profit_at(pos!(115.0)));
-
-        // Verificar que el beneficio es máximo por debajo del strike corto
         assert_eq!(values[0], spread.max_profit().unwrap_or(PZERO).value());
-
-        // Verificar que la pérdida es máxima en o por encima del strike largo
         assert_eq!(values[4], -spread.max_loss().unwrap_or(PZERO).value());
     }
 }
@@ -684,7 +676,7 @@ mod tests_bear_call_spread_probability {
     fn test_probability_with_trend() {
         let spread = create_test_spread();
         let trend = Some(PriceTrend {
-            drift_rate: -0.1, // Tendencia bajista
+            drift_rate: -0.1,
             confidence: 0.95,
         });
 

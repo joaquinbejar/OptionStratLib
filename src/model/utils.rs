@@ -178,7 +178,6 @@ mod tests_positive_f64_to_f64 {
     #[test]
     #[should_panic]
     fn test_positive_f64_to_f64_invalid_positivef64() {
-        // Esto provocará un panic ya que estamos intentando crear un `PositiveF64` con un valor negativo
         PositiveF64::new(-10.0).unwrap();
     }
 }

@@ -416,7 +416,6 @@ impl Graph for BullPutSpread {
 
 impl ProbabilityAnalysis for BullPutSpread {
     fn get_expiration(&self) -> Result<ExpirationDate, String> {
-        // Ambas opciones tienen la misma fecha de expiración, usamos la del short put
         Ok(self.short_put.option.expiration_date.clone())
     }
 
@@ -425,7 +424,6 @@ impl ProbabilityAnalysis for BullPutSpread {
     }
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
-        // En un Bull Put Spread, la zona de beneficio está por encima del break-even point
         let break_even_point = self.get_break_even_points()[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
@@ -435,7 +433,7 @@ impl ProbabilityAnalysis for BullPutSpread {
 
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_point),
-            None, // No hay límite superior
+            None, 
             pos!(self.max_profit()?.value()),
         )?;
 
@@ -562,9 +560,6 @@ mod tests_bull_put_spread_strategy {
     fn test_max_profit() {
         let spread = create_test_spread();
         let max_profit = spread.max_profit().unwrap();
-
-        // El beneficio máximo es la prima neta recibida
-        // Premium short put (2.0) - Premium long put (1.0) = 1.0
         assert_eq!(max_profit, pos!(1.0));
     }
 
@@ -572,9 +567,6 @@ mod tests_bull_put_spread_strategy {
     fn test_max_loss() {
         let spread = create_test_spread();
         let max_loss = spread.max_loss().unwrap();
-
-        // La pérdida máxima es la diferencia entre strikes menos la prima neta
-        // (95 - 90) - 1.0 = 4.0
         assert_eq!(max_loss, pos!(4.0));
     }
 
@@ -587,7 +579,6 @@ mod tests_bull_put_spread_strategy {
     #[test]
     fn test_net_premium_received() {
         let spread = create_test_spread();
-        // Prima neta = prima short put - prima long put = 2.0 - 1.0
         assert_eq!(spread.net_premium_received(), 1.0);
     }
 
@@ -611,7 +602,6 @@ mod tests_bull_put_spread_strategy {
             0.5, // close_fee_short_put
         );
 
-        // Fees totales = suma de todos los fees = 2.0
         assert_eq!(spread.fees(), 2.0);
     }
 
@@ -621,7 +611,6 @@ mod tests_bull_put_spread_strategy {
         let break_even_points = spread.get_break_even_points();
 
         assert_eq!(break_even_points.len(), 1);
-        // Break-even = short strike - net premium = 95 - 1 = 94
         assert_eq!(break_even_points[0], pos!(94.0));
     }
 
@@ -629,11 +618,6 @@ mod tests_bull_put_spread_strategy {
     fn test_profit_area() {
         let spread = create_test_spread();
         let area = spread.profit_area();
-
-        // Area = (max_profit * base) / 2
-        // base = short strike - break even = 95 - 94 = 1
-        // max_profit = 1.0
-        // area = (1.0 * 1.0) / 2 = 0.5
         assert!(area > 0.0);
     }
 
@@ -667,7 +651,6 @@ mod tests_bull_put_spread_strategy {
             0.0,
         );
 
-        // Cuando los strikes son PZERO, deben defaultear al underlying_price
         assert_eq!(spread.long_put.option.strike_price, pos!(100.0));
         assert_eq!(spread.short_put.option.strike_price, pos!(100.0));
     }
@@ -677,7 +660,7 @@ mod tests_bull_put_spread_strategy {
         let spread = BullPutSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            pos!(95.0), // long_strike > short_strike (inválido)
+            pos!(95.0), 
             pos!(90.0),
             ExpirationDate::Days(30.0),
             0.20,
@@ -692,7 +675,6 @@ mod tests_bull_put_spread_strategy {
             0.0,
         );
 
-        // La validación debe fallar porque el long strike es mayor que el short strike
         assert!(!spread.validate());
     }
 }
@@ -734,7 +716,7 @@ mod tests_bull_put_spread_validation {
     fn test_invalid_long_put() {
         let mut invalid_long =
             create_valid_position(Side::Long, pos!(90.0), ExpirationDate::Days(30.0));
-        invalid_long.option.quantity = PZERO; // Cantidad inválida
+        invalid_long.option.quantity = PZERO; 
 
         let spread = BullPutSpread {
             name: "Test Bull Put Spread".to_string(),
@@ -755,7 +737,7 @@ mod tests_bull_put_spread_validation {
     fn test_invalid_short_put() {
         let mut invalid_short =
             create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(30.0));
-        invalid_short.option.quantity = PZERO; // Cantidad inválida
+        invalid_short.option.quantity = PZERO; 
 
         let spread = BullPutSpread {
             name: "Test Bull Put Spread".to_string(),
@@ -846,7 +828,6 @@ mod tests_bull_put_spread_optimization {
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string());
 
-        // Añadimos opciones con strikes en 85, 90, 95, 100, 105
         chain.add_option(
             pos!(85.0),   // strike
             None,         // call_bid
@@ -1119,68 +1100,43 @@ mod tests_bull_put_spread_profit {
     #[test]
     fn test_profit_above_short_strike() {
         let spread = create_test_spread();
-        let price = pos!(100.0); // Precio por encima del short strike (95)
-
-        // Por encima del short strike, ambos puts expiran sin valor
-        // Beneficio = prima neta recibida = 4.0 - 2.0 = 2.0
+        let price = pos!(100.0);
         assert_eq!(spread.calculate_profit_at(price), 2.0);
     }
 
     #[test]
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
-        let price = pos!(95.0); // Precio en el short strike
-
-        // En el short strike:
-        // - Short put está ATM (valor 0)
-        // - Long put está OTM (valor 0)
-        // Beneficio = prima neta recibida = 4.0 - 2.0 = 2.0
+        let price = pos!(95.0); 
         assert_eq!(spread.calculate_profit_at(price), 2.0);
     }
 
     #[test]
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
-        let price = pos!(92.5); // Precio entre strikes (90 y 95)
-
-        // Entre strikes:
-        // - Short put ITM: pérdida = 95 - 92.5 = 2.5
-        // - Long put OTM: valor 0
-        // Beneficio total = prima neta - pérdida short = 2.0 - 2.5 = -0.5
+        let price = pos!(92.5);
+        
         assert_eq!(spread.calculate_profit_at(price), -0.5);
     }
 
     #[test]
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
-        let price = pos!(90.0); // Precio en el long strike
-
-        // En el long strike:
-        // - Short put ITM: pérdida = 95 - 90 = 5
-        // - Long put ATM: valor 0
-        // Beneficio total = prima neta - pérdida short = 2.0 - 5.0 = -3.0
+        let price = pos!(90.0); 
         assert_eq!(spread.calculate_profit_at(price), -3.0);
     }
 
     #[test]
     fn test_profit_below_long_strike() {
         let spread = create_test_spread();
-        let price = pos!(85.0); // Precio por debajo del long strike (90)
-
-        // Por debajo del long strike:
-        // - Short put ITM: pérdida = 95 - 85 = 10
-        // - Long put ITM: ganancia = 90 - 85 = 5
-        // Beneficio total = prima neta - pérdida short + ganancia long = 2.0 - 10.0 + 5.0 = -3.0
+        let price = pos!(85.0);
         assert_eq!(spread.calculate_profit_at(price), -3.0);
     }
 
     #[test]
     fn test_profit_at_break_even() {
         let spread = create_test_spread();
-        // Break-even = short strike - prima neta = 95 - 2 = 93
         let price = pos!(93.0);
-
-        // En el break-even el beneficio debería ser cercano a cero
         assert!(spread.calculate_profit_at(price).abs() < 0.001);
     }
 
@@ -1195,7 +1151,7 @@ mod tests_bull_put_spread_profit {
             0.20,
             0.05,
             0.0,
-            pos!(2.0), // quantity = 2 contratos
+            pos!(2.0),
             2.0,
             4.0,
             0.0,
@@ -1205,9 +1161,6 @@ mod tests_bull_put_spread_profit {
         );
 
         let price = pos!(85.0);
-        // Con 2 contratos, la pérdida/ganancia se duplica
-        // Beneficio total = 2 * (prima neta - pérdida short + ganancia long)
-        // = 2 * (2.0 - 10.0 + 5.0) = 2 * (-3.0) = -6.0
         assert_eq!(spread.calculate_profit_at(price), -6.0);
     }
 
@@ -1232,8 +1185,6 @@ mod tests_bull_put_spread_profit {
         );
 
         let price = pos!(100.0);
-        // Por encima del short strike
-        // Beneficio = prima neta - total fees = 2.0 - 2.0 = 0.0
         assert_eq!(spread.calculate_profit_at(price), 0.0);
     }
 }
@@ -1282,7 +1233,7 @@ mod tests_bull_put_spread_graph {
         let spread = create_test_spread();
         let lines = spread.get_vertical_lines();
 
-        assert_eq!(lines.len(), 1); // Solo debe haber una línea vertical (precio actual)
+        assert_eq!(lines.len(), 1); 
 
         let line = &lines[0];
         assert_eq!(line.x_coordinate, 100.0);
@@ -1301,8 +1252,7 @@ mod tests_bull_put_spread_graph {
         let points = spread.get_points();
 
         assert_eq!(points.len(), 4); // Break even, max profit, max loss, current price
-
-        // Verificar punto de break-even
+        
         let break_even = &points[0];
         assert_eq!(break_even.coordinates.1, 0.0);
         assert!(break_even.label.contains("Break Even"));
@@ -1311,18 +1261,16 @@ mod tests_bull_put_spread_graph {
         assert_eq!(break_even.point_size, 5);
         assert_eq!(break_even.font_size, 18);
 
-        // Verificar punto de máximo beneficio
         let max_profit = &points[1];
         assert_eq!(max_profit.coordinates.0, 95.0); // short strike
-        assert_eq!(max_profit.coordinates.1, 2.0); // prima neta
+        assert_eq!(max_profit.coordinates.1, 2.0); 
         assert!(max_profit.label.contains("Max Profit"));
         assert_eq!(max_profit.point_color, DARK_GREEN);
         assert_eq!(max_profit.label_color, DARK_GREEN);
 
-        // Verificar punto de máxima pérdida
         let max_loss = &points[2];
         assert_eq!(max_loss.coordinates.0, 90.0); // long strike
-        assert_eq!(max_loss.coordinates.1, -3.0); // -(diferencia strikes - prima neta)
+        assert_eq!(max_loss.coordinates.1, -3.0); 
         assert!(max_loss.label.contains("Max Loss"));
         assert_eq!(max_loss.point_color, RED);
         assert_eq!(max_loss.label_color, RED);
@@ -1333,7 +1281,6 @@ mod tests_bull_put_spread_graph {
         let spread = create_test_spread();
         let points = spread.get_points();
 
-        // Break-even point: short strike - prima neta = 95 - 2 = 93
         assert_eq!(points[0].coordinates.0, 93.0);
         assert_eq!(points[0].coordinates.1, 0.0);
 
@@ -1368,7 +1315,6 @@ mod tests_bull_put_spread_graph {
         let spread = create_test_spread();
         let points = spread.get_points();
 
-        // Verificar estilos consistentes
         for point in points.iter() {
             assert_eq!(point.point_size, 5);
             assert_eq!(point.font_size, 18);
@@ -1380,7 +1326,6 @@ mod tests_bull_put_spread_graph {
     #[test]
     fn test_graph_with_zero_profits() {
         let mut spread = create_test_spread();
-        // Modificar spread para que tenga beneficio cero
         spread.short_put.premium = 2.0;
         spread.long_put.premium = 2.0;
 
@@ -1414,8 +1359,7 @@ mod tests_bull_put_spread_graph {
         let points = spread.get_points();
         let max_profit_point = &points[1];
         let max_loss_point = &points[2];
-
-        // Los valores deberían ser el doble del caso base
+        
         assert_eq!(max_profit_point.coordinates.1, 4.0); // 2 * 2.0
         assert_eq!(max_loss_point.coordinates.1, -6.0); // 2 * -3.0
     }
@@ -1524,7 +1468,7 @@ mod tests_bull_put_spread_probability {
     fn test_probability_with_trend() {
         let spread = create_test_spread();
         let trend = Some(PriceTrend {
-            drift_rate: 0.1, // Tendencia alcista
+            drift_rate: 0.1,
             confidence: 0.95,
         });
 

@@ -75,7 +75,7 @@ mod tests_pnl_calculator {
         assert_eq!(pnl.date_time, now);
     }
 
-    // Esta estructura es solo para probar el trait PnLCalculator
+
     struct DummyOption;
 
     impl PnLCalculator for DummyOption {

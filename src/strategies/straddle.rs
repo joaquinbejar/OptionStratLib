@@ -1058,8 +1058,8 @@ mod tests_short_straddle {
     fn setup() -> ShortStraddle {
         ShortStraddle::new(
             "AAPL".to_string(),
-            pos!(150.0), // underlying_price
-            pos!(150.0), // strike (mismo para call y put)
+            pos!(150.0), 
+            pos!(150.0), 
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
@@ -1080,7 +1080,7 @@ mod tests_short_straddle {
         let strategy = ShortStraddle::new(
             "AAPL".to_string(),
             underlying_price,
-            PZERO, // Debería defaultear al underlying price
+            PZERO, 
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
@@ -1131,7 +1131,6 @@ mod tests_short_straddle {
             "Strategy should be valid with equal strikes"
         );
 
-        // Crear una estrategia inválida con strikes diferentes
         let valid_strategy = ShortStraddle::new(
             "AAPL".to_string(),
             pos!(150.0),
@@ -1351,7 +1350,6 @@ mod tests_short_straddle {
 
         assert_eq!(points.len(), 4);
 
-        // Verificar que los puntos de break-even están presentes
         let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
         assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
         assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
@@ -1388,8 +1386,8 @@ mod tests_long_straddle {
     fn setup_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "AAPL".to_string(),
-            pos!(150.0), // underlying_price
-            pos!(150.0), // strike (mismo para call y put)
+            pos!(150.0), 
+            pos!(150.0), 
             ExpirationDate::Days(30.0),
             0.25,
             0.01,
@@ -1547,7 +1545,6 @@ mod tests_long_straddle {
         assert_eq!(vertical_lines.len(), 1);
         assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
-        // Test values calculation
         let data = vec![
             pos!(130.0),
             pos!(140.0),
@@ -1732,8 +1729,8 @@ mod tests_short_straddle_probability {
     fn test_probability_of_profit_with_trend() {
         let straddle = create_test_short_straddle();
         let trend = PriceTrend {
-            drift_rate: 0.1,  // 10% annual upward trend
-            confidence: 0.95, // 95% confidence level
+            drift_rate: 0.1,
+            confidence: 0.95,
         };
 
         let result = straddle.probability_of_profit(None, Some(trend));
@@ -1751,8 +1748,8 @@ mod tests_short_straddle_probability {
     fn test_probability_of_profit_with_downward_trend() {
         let straddle = create_test_short_straddle();
         let trend = PriceTrend {
-            drift_rate: -0.1, // 10% annual downward trend
-            confidence: 0.90, // 90% confidence level
+            drift_rate: -0.1, 
+            confidence: 0.90, 
         };
 
         let result = straddle.probability_of_profit(None, Some(trend));
@@ -2064,7 +2061,6 @@ mod tests_long_straddle_probability {
         let ev = result.unwrap();
         assert!(ev >= PZERO, "Expected value should be non-negative");
 
-        // Test con volatilidad
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos!(0.25),
             std_dev_adjustment: pos!(0.1),

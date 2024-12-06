@@ -882,7 +882,6 @@ mod tests_call_butterfly_graph {
         let points = strategy.get_points();
         assert!(!points.is_empty());
 
-        // Verifica los puntos críticos
         let has_break_even = points.iter().any(|p| p.label.contains("Break Even"));
         let has_max_profit = points.iter().any(|p| p.label.contains("Max Profit"));
         let has_low_point = points.iter().any(|p| p.label.contains("Low"));

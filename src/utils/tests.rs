@@ -9,7 +9,6 @@ macro_rules! assert_positivef64_relative_eq {
         let max_abs = left.max(right);
 
         if left == PZERO || right == PZERO {
-            // Si uno es cero, comparamos con el valor no-cero
             let non_zero_value = if left == PZERO { right } else { left };
             assert!(
                 non_zero_value <= epsilon,

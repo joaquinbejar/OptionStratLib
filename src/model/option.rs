@@ -1130,7 +1130,6 @@ mod tests_greek_trait {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let greeks = option.greeks();
 
-        // Comprobamos que los valores de los griegos son consistentes
         assert!(
             greeks.delta >= -1.0 && greeks.delta <= 1.0,
             "Delta should be between -1 and 1"

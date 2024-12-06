@@ -602,7 +602,7 @@ mod tests_single_point_probability {
     fn test_invalid_trend_confidence() {
         let trend = Some(PriceTrend {
             drift_rate: 0.05,
-            confidence: 1.5, // Invalid confidence > 1.0
+            confidence: 1.5, // Invalid
         });
 
         let result = calculate_single_point_probability(

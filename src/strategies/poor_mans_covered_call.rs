@@ -1074,14 +1074,12 @@ mod tests_pmcc_best_area {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::All);
 
-        // Verifica las propiedades clave de la estrategia optimizada
         assert!(strategy.profit_area() > 0.0);
         assert!(strategy.profit_ratio() > 0.0);
         assert_eq!(strategy.break_even_points.len(), 1);
         assert!(strategy.total_cost() > PZERO);
         assert!(strategy.fees() > 0.0);
 
-        // Verifica que las posiciones tienen strikes válidos
         assert!(strategy.long_call.option.strike_price < strategy.short_call.option.strike_price);
     }
 
@@ -1090,11 +1088,9 @@ mod tests_pmcc_best_area {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
 
-        // Verifica que los strikes están por encima del precio subyacente
         assert!(strategy.long_call.option.strike_price >= strategy.get_underlying_price());
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
-        // Verifica otras propiedades
         assert!(strategy.profit_area() > 0.0);
         assert!(strategy.max_profit().unwrap_or(PZERO) > PZERO);
     }
@@ -1104,7 +1100,6 @@ mod tests_pmcc_best_area {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Lower);
 
-        // Verifica que los strikes están por debajo del precio subyacente
         assert!(strategy.long_call.option.strike_price <= strategy.get_underlying_price());
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
@@ -1164,7 +1159,6 @@ mod tests_pmcc_best_ratio {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
 
-        // Verifica que los strikes están por encima del precio subyacente
         assert!(strategy.long_call.option.strike_price >= strategy.get_underlying_price());
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
@@ -1180,7 +1174,6 @@ mod tests_pmcc_best_ratio {
             FindOptimalSide::Range(pos!(5750.0), pos!(5850.0)),
         );
 
-        // Verifica que los strikes están dentro del rango especificado
         assert!(strategy.long_call.option.strike_price >= pos!(5750.0));
         assert!(strategy.short_call.option.strike_price <= pos!(5850.0));
 

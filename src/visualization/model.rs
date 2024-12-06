@@ -20,7 +20,7 @@ pub struct ChartPoint<T> {
 #[derive(Clone)]
 pub struct ChartVerticalLine<X, Y> {
     pub x_coordinate: X,
-    pub y_range: (Y, Y), // (y_start, y_end)
+    pub y_range: (Y, Y),
     pub label: String,
     pub label_offset: (f64, f64),
     pub(crate) line_color: RGBColor,

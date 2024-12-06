@@ -428,14 +428,11 @@ mod tests {
 
     #[test]
     fn test_draw_points_on_chart() -> Result<(), Box<dyn Error>> {
-        // Esta prueba es complicada de implementar sin un contexto real de gráfico.
-        // Podrías considerar usar un mock de ChartContext para esta prueba.
         Ok(())
     }
 
     #[test]
     fn test_draw_vertical_lines_on_chart() -> Result<(), Box<dyn Error>> {
-        // Similar a la prueba anterior, esto requeriría un mock de ChartContext.
         Ok(())
     }
 
