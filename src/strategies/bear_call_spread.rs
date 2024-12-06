@@ -245,12 +245,6 @@ impl Validable for BearCallSpread {
             debug!("Short call strike price must be lower than long call strike price");
             return false;
         }
-        if self.short_call.option.expiration_date.get_date()
-            != self.long_call.option.expiration_date.get_date()
-        {
-            debug!("Short call and long call must have the same expiration date");
-            return false;
-        }
         true
     }
 }
