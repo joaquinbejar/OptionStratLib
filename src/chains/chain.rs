@@ -41,7 +41,7 @@ use tracing::debug;
 /// * `open_interest` - The open interest of the option, represented as an optional unsigned integer. This represents the total number of outstanding option contracts that have not yet been settled or closed.
 ///
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub(crate) struct OptionData {
+pub struct OptionData {
     pub(crate) strike_price: PositiveF64,
     pub(crate) call_bid: Option<PositiveF64>,
     pub(crate) call_ask: Option<PositiveF64>,
