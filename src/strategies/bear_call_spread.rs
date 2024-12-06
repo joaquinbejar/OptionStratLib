@@ -317,25 +317,8 @@ impl Optimizable for BearCallSpread {
         }
     }
 
-    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        match side {
-            FindOptimalSide::Upper => option.strike_price >= self.get_underlying_price(),
-            FindOptimalSide::Lower => option.strike_price <= self.get_underlying_price(),
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                option.strike_price >= *start && option.strike_price <= *end
-            }
-        }
-    }
-
-    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        self.is_valid_short_option(option, side)
-    }
-
     fn are_valid_prices(&self, short: &OptionData, long: &OptionData) -> bool {
-        short.call_bid.unwrap_or(PZERO) > PZERO
-            && long.call_ask.unwrap_or(PZERO) > PZERO
-            && short.call_bid.unwrap() > long.call_ask.unwrap()
+        short.call_bid.unwrap_or(PZERO) > PZERO && long.call_ask.unwrap_or(PZERO) > PZERO
     }
 
     fn create_strategy(

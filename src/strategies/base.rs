@@ -228,7 +228,7 @@ pub trait Validable {
     }
 }
 
-pub trait Optimizable: Validable {
+pub trait Optimizable: Validable + Strategies {
     type Strategy: Strategies;
 
     fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
@@ -248,12 +248,19 @@ pub trait Optimizable: Validable {
         panic!("Find optimal is not applicable for this strategy");
     }
 
-    fn is_valid_short_option(&self, _option: &OptionData, _side: &FindOptimalSide) -> bool {
-        panic!("Is valid short option is not applicable for this strategy");
+    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
+        self.is_valid_long_option(option, side)
     }
 
-    fn is_valid_long_option(&self, _option: &OptionData, _side: &FindOptimalSide) -> bool {
-        panic!("Is valid long option is not applicable for this strategy");
+    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
+        match side {
+            FindOptimalSide::Upper => option.strike_price >= self.get_underlying_price(),
+            FindOptimalSide::Lower => option.strike_price <= self.get_underlying_price(),
+            FindOptimalSide::All => true,
+            FindOptimalSide::Range(start, end) => {
+                option.strike_price >= *start && option.strike_price <= *end
+            }
+        }
     }
 
     fn are_valid_prices(&self, _call: &OptionData, _put: &OptionData) -> bool {
