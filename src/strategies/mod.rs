@@ -4,10 +4,10 @@
    Date: 1/8/24
 ******************************************************************************/
 pub mod base;
-pub mod bear_put_spread;
-pub mod bull_put_spread;
 pub mod bear_call_spread;
+pub mod bear_put_spread;
 pub mod bull_call_spread;
+pub mod bull_put_spread;
 pub mod butterfly_spread;
 pub mod call_butterfly;
 pub mod collar;
@@ -20,4 +20,3 @@ pub mod protective_put;
 pub mod straddle;
 pub mod strangle;
 pub mod utils;
-
