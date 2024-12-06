@@ -251,7 +251,7 @@ mod tests_process_n_times_iter {
             process_n_times_iter(&vec, 2, |combination| vec![combination[0] + combination[1]]);
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert_eq!(result.len(), 6); 
+        assert_eq!(result.len(), 6);
         assert!(result.contains(&2)); // 1 + 1
         assert!(result.contains(&3)); // 1 + 2
         assert!(result.contains(&4)); // 2 + 2

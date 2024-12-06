@@ -695,7 +695,7 @@ mod tests_bull_call_spread_validation {
                 pos!(1.0),
                 pos!(100.0),
                 0.05,
-                OptionStyle::Call, 
+                OptionStyle::Call,
                 0.0,
                 None,
             ),
@@ -724,7 +724,7 @@ mod tests_bull_call_spread_validation {
     fn test_invalid_long_call() {
         let mut invalid_long =
             create_valid_position(Side::Long, pos!(95.0), ExpirationDate::Days(30.0));
-        invalid_long.option.quantity = PZERO; 
+        invalid_long.option.quantity = PZERO;
 
         let spread = BullCallSpread {
             name: "Test Bull Call Spread".to_string(),
@@ -745,7 +745,7 @@ mod tests_bull_call_spread_validation {
     fn test_invalid_short_call() {
         let mut invalid_short =
             create_valid_position(Side::Short, pos!(100.0), ExpirationDate::Days(30.0));
-        invalid_short.option.quantity = PZERO; 
+        invalid_short.option.quantity = PZERO;
 
         let spread = BullCallSpread {
             name: "Test Bull Call Spread".to_string(),

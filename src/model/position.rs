@@ -51,9 +51,9 @@ use tracing::{debug, error, trace};
 #[derive(Clone, PartialEq)]
 pub struct Position {
     pub option: Options,
-    pub premium: f64, 
+    pub premium: f64,
     pub date: DateTime<Utc>,
-    pub open_fee: f64, 
+    pub open_fee: f64,
     pub close_fee: f64,
 }
 
