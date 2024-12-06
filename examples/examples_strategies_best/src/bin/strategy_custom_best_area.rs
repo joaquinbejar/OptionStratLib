@@ -5,7 +5,7 @@ use optionstratlib::model::position::Position;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
-use optionstratlib::strategies::base::Strategies;
+use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
