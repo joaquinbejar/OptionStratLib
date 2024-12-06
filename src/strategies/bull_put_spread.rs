@@ -433,7 +433,7 @@ impl ProbabilityAnalysis for BullPutSpread {
 
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_point),
-            None, 
+            None,
             pos!(self.max_profit()?.value()),
         )?;
 
@@ -660,7 +660,7 @@ mod tests_bull_put_spread_strategy {
         let spread = BullPutSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            pos!(95.0), 
+            pos!(95.0),
             pos!(90.0),
             ExpirationDate::Days(30.0),
             0.20,
@@ -716,7 +716,7 @@ mod tests_bull_put_spread_validation {
     fn test_invalid_long_put() {
         let mut invalid_long =
             create_valid_position(Side::Long, pos!(90.0), ExpirationDate::Days(30.0));
-        invalid_long.option.quantity = PZERO; 
+        invalid_long.option.quantity = PZERO;
 
         let spread = BullPutSpread {
             name: "Test Bull Put Spread".to_string(),
@@ -737,7 +737,7 @@ mod tests_bull_put_spread_validation {
     fn test_invalid_short_put() {
         let mut invalid_short =
             create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(30.0));
-        invalid_short.option.quantity = PZERO; 
+        invalid_short.option.quantity = PZERO;
 
         let spread = BullPutSpread {
             name: "Test Bull Put Spread".to_string(),
@@ -1107,7 +1107,7 @@ mod tests_bull_put_spread_profit {
     #[test]
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
-        let price = pos!(95.0); 
+        let price = pos!(95.0);
         assert_eq!(spread.calculate_profit_at(price), 2.0);
     }
 
@@ -1115,14 +1115,14 @@ mod tests_bull_put_spread_profit {
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
         let price = pos!(92.5);
-        
+
         assert_eq!(spread.calculate_profit_at(price), -0.5);
     }
 
     #[test]
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
-        let price = pos!(90.0); 
+        let price = pos!(90.0);
         assert_eq!(spread.calculate_profit_at(price), -3.0);
     }
 
@@ -1233,7 +1233,7 @@ mod tests_bull_put_spread_graph {
         let spread = create_test_spread();
         let lines = spread.get_vertical_lines();
 
-        assert_eq!(lines.len(), 1); 
+        assert_eq!(lines.len(), 1);
 
         let line = &lines[0];
         assert_eq!(line.x_coordinate, 100.0);
@@ -1252,7 +1252,7 @@ mod tests_bull_put_spread_graph {
         let points = spread.get_points();
 
         assert_eq!(points.len(), 4); // Break even, max profit, max loss, current price
-        
+
         let break_even = &points[0];
         assert_eq!(break_even.coordinates.1, 0.0);
         assert!(break_even.label.contains("Break Even"));
@@ -1263,14 +1263,14 @@ mod tests_bull_put_spread_graph {
 
         let max_profit = &points[1];
         assert_eq!(max_profit.coordinates.0, 95.0); // short strike
-        assert_eq!(max_profit.coordinates.1, 2.0); 
+        assert_eq!(max_profit.coordinates.1, 2.0);
         assert!(max_profit.label.contains("Max Profit"));
         assert_eq!(max_profit.point_color, DARK_GREEN);
         assert_eq!(max_profit.label_color, DARK_GREEN);
 
         let max_loss = &points[2];
         assert_eq!(max_loss.coordinates.0, 90.0); // long strike
-        assert_eq!(max_loss.coordinates.1, -3.0); 
+        assert_eq!(max_loss.coordinates.1, -3.0);
         assert!(max_loss.label.contains("Max Loss"));
         assert_eq!(max_loss.point_color, RED);
         assert_eq!(max_loss.label_color, RED);
@@ -1359,7 +1359,7 @@ mod tests_bull_put_spread_graph {
         let points = spread.get_points();
         let max_profit_point = &points[1];
         let max_loss_point = &points[2];
-        
+
         assert_eq!(max_profit_point.coordinates.1, 4.0); // 2 * 2.0
         assert_eq!(max_loss_point.coordinates.1, -6.0); // 2 * -3.0
     }
