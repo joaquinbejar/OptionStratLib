@@ -1,4 +1,6 @@
 # Makefile for common tasks in a Rust project
+# Detect current branch
+CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 
 # Default target
 .PHONY: all
@@ -79,3 +81,14 @@ coverage-html:
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
 	cargo tarpaulin --all-features --workspace --timeout 120 --out Html
+
+
+
+# Rule to show git log
+git-log:
+	@if [ "$(CURRENT_BRANCH)" = "HEAD" ]; then \
+		echo "You are in a detached HEAD state. Please check out a branch."; \
+		exit 1; \
+	fi; \
+	echo "Showing git log for branch $(CURRENT_BRANCH) against main:"; \
+	git log main..$(CURRENT_BRANCH) --pretty=full
