@@ -25,7 +25,7 @@ impl Display for FindOptimalSide {
     }
 }
 
-pub(crate) enum OptimizationCriteria {
+pub enum OptimizationCriteria {
     Ratio,
     Area,
 }

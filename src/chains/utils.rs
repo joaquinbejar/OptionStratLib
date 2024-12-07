@@ -247,19 +247,16 @@ mod tests_rounder {
 
     #[test]
     fn test_rounder() {
-        // Pruebas con intervalo de 5
         assert_eq!(rounder(pos!(151.0), pos!(5.0)), pos!(150.0));
         assert_eq!(rounder(pos!(154.0), pos!(5.0)), pos!(155.0));
         assert_eq!(rounder(pos!(152.5), pos!(5.0)), pos!(155.0));
         assert_eq!(rounder(pos!(152.4), pos!(5.0)), pos!(150.0));
 
-        // Pruebas con intervalo de 10
         assert_eq!(rounder(pos!(151.0), pos!(10.0)), pos!(150.0));
         assert_eq!(rounder(pos!(156.0), pos!(10.0)), pos!(160.0));
         assert_eq!(rounder(pos!(155.0), pos!(10.0)), pos!(160.0));
         assert_eq!(rounder(pos!(154.9), pos!(10.0)), pos!(150.0));
 
-        // Pruebas con intervalo de 15
         assert_eq!(rounder(pos!(17.0), pos!(15.0)), pos!(15.0));
         assert_eq!(rounder(pos!(43.0), pos!(15.0)), pos!(45.0));
         assert_eq!(rounder(pos!(37.5), pos!(15.0)), pos!(45.0));
@@ -280,10 +277,8 @@ mod tests_generate_list_of_strikes {
 
         let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
 
-        // Verificamos el número total de strikes generados (2 * chain_size + 1)
         assert_eq!(strikes.len(), 7);
 
-        // Verificamos que los valores específicos están presentes
         assert!(strikes.contains(&PositiveF64::new(970.0).unwrap()));
         assert!(strikes.contains(&PositiveF64::new(980.0).unwrap()));
         assert!(strikes.contains(&reference_price));
@@ -299,7 +294,6 @@ mod tests_generate_list_of_strikes {
 
         let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
 
-        // Solo debería contener el precio de referencia
         assert_eq!(strikes.len(), 1);
         assert!(strikes.contains(&reference_price));
     }

@@ -158,6 +158,45 @@ impl Graph for RandomWalkGraph {
     }
 }
 
+/// Iterator implementation for `RandomWalkGraph` which generates `OptionDataPriceParams`.
+///
+/// This iterator traverses through a `RandomWalkGraph` object, producing
+/// `OptionDataPriceParams` for each element in the underlying vector of price values.
+///
+/// # Type Alias
+///
+/// * `type Item` - Specifies the type of item produced by the iterator,
+///   which is `OptionDataPriceParams`.
+///
+/// # Methods
+///
+/// * `next(&mut self) -> Option<Self::Item>` - Advances the iterator and
+///   returns the next set of option data parameters. If all values have been
+///   processed, it returns `None`.
+///
+///   - Checks if the `current_index` surpasses the length of the `values` vector.
+///     If true, iteration stops by returning `None`.
+///   - Extracts risk-free rate and dividend yield from their respective options,
+///     defaulting to zero if not available.
+///   - Retrieves the current price and calculates the remaining days using
+///     `get_remaining_time()`.
+///   - Determines the expiration date based on the remaining days available until expiration.
+///   - Computes the current implied volatility using `calculate_current_volatility()`.
+///   - Increments `current_index` to progress through the `values`.
+///   - Returns a wrapped `Some()` with fields populated in `OptionDataPriceParams`.
+///
+/// # Fields
+///
+/// - `underlying_price`: Current price of the asset.
+/// - `expiration_date`: Date at which the option expires, computed as
+///   a number of days from the current index.
+/// - `implied_volatility`: Estimated volatility of the asset over the
+///   remaining time period.
+/// - `risk_free_rate`: Interest rate assumed for risk-free investments.
+/// - `dividend_yield`: Expected return from dividends, if applicable.
+///
+/// This design is useful for simulations or models where price and
+/// volatility data need to be processed in a time-series format.
 impl Iterator for RandomWalkGraph {
     type Item = OptionDataPriceParams;
 
@@ -168,18 +207,10 @@ impl Iterator for RandomWalkGraph {
 
         let risk_free_rate = self.risk_free_rate.unwrap_or(ZERO);
         let dividend_yield = self.dividend_yield.unwrap_or(ZERO);
-
-        // Obtiene el precio actual
         let price = self.values[self.current_index];
-
-        // Calcula los días restantes hasta el vencimiento
         let remaining_days = self.get_remaining_time();
         let expiration_date = ExpirationDate::Days(remaining_days);
-
-        // Calcula la volatilidad implícita usando el histórico
         let implied_volatility = self.calculate_current_volatility();
-
-        // Incrementa el índice para la siguiente iteración
         self.current_index += 1;
 
         Some(OptionDataPriceParams {

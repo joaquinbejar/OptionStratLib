@@ -11,12 +11,16 @@ Key characteristics:
 */
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
-use crate::constants::{DARK_BLUE, DARK_GREEN};
+use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::utils::mean_and_std;
+use crate::model::ProfitLossRange;
 use crate::pos;
 use crate::pricing::payoff::Profit;
+use crate::strategies::probabilities::core::ProbabilityAnalysis;
+use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
@@ -134,6 +138,10 @@ impl ShortStrangle {
 }
 
 impl Strategies for ShortStrangle {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.short_call.option.underlying_price
+    }
+
     fn add_leg(&mut self, position: Position) {
         match position.option.option_style {
             OptionStyle::Call => self.short_call = position,
@@ -141,17 +149,17 @@ impl Strategies for ShortStrangle {
         }
     }
 
-    fn break_even(&self) -> Vec<PositiveF64> {
-        // Short strangle has two break-even points, we'll return the lower one
-        vec![self.short_put.option.strike_price + self.net_premium_received()]
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        let max_profit = self.net_premium_received();
+        if max_profit < 0.0 {
+            Err("Invalid max profit")
+        } else {
+            Ok(max_profit.into())
+        }
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        pos!(self.net_premium_received())
-    }
-
-    fn max_loss(&self) -> PositiveF64 {
-        f64::INFINITY.into()
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
+        Ok(f64::INFINITY.into())
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -170,33 +178,38 @@ impl Strategies for ShortStrangle {
     }
 
     fn profit_area(&self) -> f64 {
+        let max_profit = self.max_profit().unwrap_or(PZERO);
+        if max_profit == PZERO {
+            return ZERO;
+        }
         let strike_diff = self.short_call.option.strike_price - self.short_put.option.strike_price;
-        let inner_square = strike_diff * self.max_profit();
+        let inner_square = strike_diff * max_profit;
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        let outer_square = break_even_diff * self.max_profit();
+        let outer_square = break_even_diff * max_profit;
         let triangles = (outer_square - inner_square) / 2.0;
         ((inner_square + triangles) / self.short_call.option.underlying_price).value()
     }
 
     fn profit_ratio(&self) -> f64 {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        // info!("Max Profit: {} Break Even Diff: {}, Ratio: {}", self.max_profit(), break_even_diff, self.max_profit() / break_even_diff * 100.0);
-        self.max_profit().value() / break_even_diff * 100.0
-    }
-
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+        match self.max_profit() {
+            Ok(max_profit) => max_profit.value() / break_even_diff * 100.0,
+            Err(_) => ZERO,
+        }
     }
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        let max_profit = self.max_profit().unwrap_or(PZERO);
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
-        let start_price = first_option - self.max_profit();
-        let end_price = last_option + self.max_profit();
+        let start_price = first_option - max_profit;
+        let end_price = last_option + max_profit;
         Some(calculate_price_range(start_price, end_price, step))
+    }
+
+    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        let mut break_even_points = self.break_even_points.clone();
+        break_even_points.sort();
+        break_even_points
     }
 }
 
@@ -385,12 +398,9 @@ impl Graph for ShortStrangle {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let max_value = self.max_profit() * 1.2;
-        let min_value = self.max_profit() * -1.2;
-
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price.value(),
-            y_range: (min_value.into(), max_value.into()),
+            y_range: (f64::NEG_INFINITY, f64::INFINITY),
             label: format!(
                 "Current Price: {:.2}",
                 self.short_call.option.underlying_price
@@ -407,6 +417,7 @@ impl Graph for ShortStrangle {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_profit = self.max_profit().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -430,17 +441,16 @@ impl Graph for ShortStrangle {
 
         let coordiantes: (f64, f64) = (
             self.short_put.option.strike_price.value() / 250.0,
-            self.max_profit().value() / 15.0,
+            max_profit.value() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit().value(),
+                max_profit.value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
-                self.max_profit(),
-                self.short_call.option.strike_price
+                max_profit, self.short_call.option.strike_price
             ),
             label_offset: coordiantes,
             point_color: DARK_GREEN,
@@ -451,17 +461,16 @@ impl Graph for ShortStrangle {
 
         let coordiantes: (f64, f64) = (
             -self.short_put.option.strike_price.value() / 30.0,
-            self.max_profit().value() / 15.0,
+            max_profit.value() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_put.option.strike_price.value(),
-                self.max_profit().value(),
+                max_profit.value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
-                self.max_profit(),
-                self.short_put.option.strike_price
+                max_profit, self.short_put.option.strike_price
             ),
             label_offset: coordiantes,
             point_color: DARK_GREEN,
@@ -472,6 +481,84 @@ impl Graph for ShortStrangle {
         points.push(self.get_point_at_price(self.short_put.option.underlying_price));
 
         points
+    }
+}
+
+impl ProbabilityAnalysis for ShortStrangle {
+    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+        let option = &self.short_call.option;
+        Ok(option.expiration_date.clone())
+    }
+
+    fn get_risk_free_rate(&self) -> Option<f64> {
+        Some(self.short_call.option.risk_free_rate)
+    }
+
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+        let option = &self.short_call.option;
+        let break_even_points = &self.get_break_even_points();
+
+        let (mean_volatility, std_dev) = mean_and_std(vec![
+            pos!(option.implied_volatility),
+            pos!(self.short_put.option.implied_volatility),
+        ]);
+
+        let mut profit_range = ProfitLossRange::new(
+            Some(break_even_points[0]),
+            Some(break_even_points[1]),
+            PZERO,
+        )?;
+
+        profit_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        Ok(vec![profit_range])
+    }
+
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+        let option = &self.short_call.option;
+        let break_even_points = &self.get_break_even_points();
+
+        let (mean_volatility, std_dev) = mean_and_std(vec![
+            pos!(option.implied_volatility),
+            pos!(self.short_put.option.implied_volatility),
+        ]);
+
+        let mut lower_loss_range = ProfitLossRange::new(None, Some(break_even_points[0]), PZERO)?;
+
+        lower_loss_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        let mut upper_loss_range = ProfitLossRange::new(Some(break_even_points[1]), None, PZERO)?;
+
+        upper_loss_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        Ok(vec![lower_loss_range, upper_loss_range])
     }
 }
 
@@ -586,6 +673,10 @@ impl LongStrangle {
 }
 
 impl Strategies for LongStrangle {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.long_call.option.underlying_price
+    }
+
     fn add_leg(&mut self, position: Position) {
         match position.option.option_style {
             OptionStyle::Call => self.long_call = position,
@@ -593,17 +684,12 @@ impl Strategies for LongStrangle {
         }
     }
 
-    fn break_even(&self) -> Vec<PositiveF64> {
-        // Long strangle has two break-even points, we'll return the lower one
-        vec![self.long_put.option.strike_price - self.total_cost()]
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
+        Ok(f64::INFINITY.into()) // Theoretically unlimited
     }
 
-    fn max_profit(&self) -> PositiveF64 {
-        f64::INFINITY.into() // Theoretically unlimited
-    }
-
-    fn max_loss(&self) -> PositiveF64 {
-        self.total_cost()
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
+        Ok(self.total_cost())
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -622,10 +708,14 @@ impl Strategies for LongStrangle {
     }
 
     fn profit_area(&self) -> f64 {
+        let max_loss = self.max_loss().unwrap_or(PZERO);
+        if max_loss == PZERO {
+            return f64::INFINITY;
+        }
         let strike_diff = self.long_call.option.strike_price - self.long_put.option.strike_price;
-        let inner_square = strike_diff * self.max_loss();
+        let inner_square = strike_diff * max_loss;
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        let outer_square = break_even_diff * self.max_loss();
+        let outer_square = break_even_diff * max_loss;
         let triangles = (outer_square - inner_square) / 2.0;
         let loss_area =
             ((inner_square + triangles) / self.long_call.option.underlying_price).value();
@@ -633,17 +723,13 @@ impl Strategies for LongStrangle {
     }
 
     fn profit_ratio(&self) -> f64 {
+        let max_loss = self.max_loss().unwrap_or(PZERO);
+        if max_loss == PZERO {
+            return f64::INFINITY;
+        }
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        let ratio = self.max_loss() / break_even_diff * 100.0;
+        let ratio = max_loss / break_even_diff * 100.0;
         1.0 / ratio // Invert the value to get the profit ratio: the lower, the better
-    }
-
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
     fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
@@ -659,6 +745,12 @@ impl Strategies for LongStrangle {
         let end_price = last_option + diff;
         debug!("End price: {}", end_price);
         Some(calculate_price_range(start_price, end_price, step))
+    }
+
+    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        let mut break_even_points = self.break_even_points.clone();
+        break_even_points.sort();
+        break_even_points
     }
 }
 
@@ -859,6 +951,7 @@ impl Graph for LongStrangle {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_loss = self.max_loss().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -883,12 +976,11 @@ impl Graph for LongStrangle {
         points.push(ChartPoint {
             coordinates: (
                 self.long_call.option.strike_price.value(),
-                -self.max_loss().value(),
+                -max_loss.value(),
             ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
-                self.max_loss(),
-                self.long_call.option.strike_price
+                max_loss, self.long_call.option.strike_price
             ),
             label_offset: (0.0, -20.0),
             point_color: RED,
@@ -898,14 +990,10 @@ impl Graph for LongStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (
-                self.long_put.option.strike_price.value(),
-                -self.max_loss().value(),
-            ),
+            coordinates: (self.long_put.option.strike_price.value(), -max_loss.value()),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
-                self.max_loss(),
-                self.long_put.option.strike_price
+                max_loss, self.long_put.option.strike_price
             ),
             label_offset: (-500.0, -20.0),
             point_color: RED,
@@ -917,6 +1005,84 @@ impl Graph for LongStrangle {
         points.push(self.get_point_at_price(self.long_call.option.underlying_price));
 
         points
+    }
+}
+
+impl ProbabilityAnalysis for LongStrangle {
+    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+        let option = &self.long_call.option;
+        Ok(option.expiration_date.clone())
+    }
+
+    fn get_risk_free_rate(&self) -> Option<f64> {
+        Some(self.long_call.option.risk_free_rate)
+    }
+
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+        let option = &self.long_call.option;
+        let break_even_points = &self.get_break_even_points();
+
+        let (mean_volatility, std_dev) = mean_and_std(vec![
+            pos!(option.implied_volatility),
+            pos!(self.long_put.option.implied_volatility),
+        ]);
+
+        let mut lower_profit_range = ProfitLossRange::new(None, Some(break_even_points[0]), PZERO)?;
+
+        lower_profit_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        let mut upper_profit_range = ProfitLossRange::new(Some(break_even_points[1]), None, PZERO)?;
+
+        upper_profit_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        Ok(vec![lower_profit_range, upper_profit_range])
+    }
+
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+        let option = &self.long_call.option;
+        let break_even_points = &self.get_break_even_points();
+
+        let (mean_volatility, std_dev) = mean_and_std(vec![
+            pos!(option.implied_volatility),
+            pos!(self.long_call.option.implied_volatility),
+        ]);
+
+        let mut loss_range = ProfitLossRange::new(
+            Some(break_even_points[0]),
+            Some(break_even_points[1]),
+            PZERO,
+        )?;
+
+        loss_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        Ok(vec![loss_range])
     }
 }
 
@@ -990,7 +1156,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_break_even() {
         let strategy = setup();
-        assert_eq!(strategy.break_even()[0], 455.0);
+        assert_eq!(strategy.break_even()[0], 141.9);
     }
 
     #[test]
@@ -1003,13 +1169,16 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_max_profit() {
         let strategy = setup();
-        assert_eq!(strategy.max_profit(), strategy.net_premium_received());
+        assert_eq!(
+            strategy.max_profit().unwrap_or(PZERO),
+            strategy.net_premium_received()
+        );
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup();
-        assert_eq!(strategy.max_loss(), f64::INFINITY);
+        assert_eq!(strategy.max_loss().unwrap_or(PZERO), f64::INFINITY);
     }
 
     #[test]
@@ -1088,7 +1257,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
-        let expected_ratio = strategy.max_profit() / break_even_diff * 100.0;
+        let expected_ratio = strategy.max_profit().unwrap_or(PZERO) / break_even_diff * 100.0;
         assert_eq!(strategy.profit_ratio(), expected_ratio.value());
     }
 
@@ -1179,10 +1348,8 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let strategy = setup();
         let points = strategy.get_points();
 
-        // Debería tener 5 puntos: 2 break-even, 2 max profit, 1 current price
         assert_eq!(points.len(), 5);
 
-        // Verificar que los puntos de break-even están presentes
         let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
         assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
         assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
@@ -1263,10 +1430,7 @@ mod tests_long_strangle {
     #[test]
     fn test_break_even() {
         let long_strangle = setup_long_strangle();
-        assert_eq!(
-            long_strangle.break_even()[0],
-            long_strangle.long_put.option.strike_price.value() - long_strangle.total_cost()
-        );
+        assert_eq!(long_strangle.break_even()[0], 128.0);
     }
 
     #[test]
@@ -1347,13 +1511,16 @@ mod tests_long_strangle {
     #[test]
     fn test_max_profit() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.max_profit(), f64::INFINITY);
+        assert_eq!(strategy.max_profit().unwrap_or(PZERO), f64::INFINITY);
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.max_loss(), strategy.total_cost().value());
+        assert_eq!(
+            strategy.max_loss().unwrap_or(PZERO),
+            strategy.total_cost().value()
+        );
     }
 
     #[test]
@@ -1380,7 +1547,7 @@ mod tests_long_strangle {
     fn test_profit_ratio() {
         let strategy = setup_long_strangle();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
-        let expected_ratio = 1.0 / (strategy.max_loss() / break_even_diff * 100.0);
+        let expected_ratio = 1.0 / (strategy.max_loss().unwrap_or(PZERO) / break_even_diff * 100.0);
         assert_eq!(strategy.profit_ratio(), expected_ratio);
     }
 
@@ -1530,5 +1697,426 @@ mod tests_long_strangle {
             option_data_price_params,
         );
         OptionChain::build_chain(&option_chain_build_params)
+    }
+}
+
+#[cfg(test)]
+mod tests_short_strangle_probability {
+    use super::*;
+    use crate::model::types::{ExpirationDate, PositiveF64};
+    use crate::pos;
+    use crate::strategies::probabilities::utils::PriceTrend;
+
+    /// Helper function that creates a basic short strangle for testing purposes
+    /// Returns a ShortStrangle instance with predefined test values
+    fn create_test_short_strangle() -> ShortStrangle {
+        ShortStrangle::new(
+            "TEST".to_string(),
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
+            ExpirationDate::Days(30.0), // expiration
+            0.20,                       // implied_volatility
+            0.05,                       // risk_free_rate
+            0.0,                        // dividend_yield
+            pos!(1.0),                  // quantity
+            2.0,                        // premium_short_call
+            2.0,                        // premium_short_put
+            0.0,                        // open_fee_short_call
+            0.0,                        // close_fee_short_call
+            0.0,                        // open_fee_short_put
+            0.0,                        // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn test_probability_of_profit_basic() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.probability_of_profit(None, None);
+
+        assert!(result.is_ok(), "Probability calculation should succeed");
+        let prob = result.unwrap();
+        assert!(prob > PZERO, "Probability should be positive");
+        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
+    }
+
+    #[test]
+    fn test_probability_of_profit_with_volatility_adjustment() {
+        let strangle = create_test_short_strangle();
+        let vol_adj = VolatilityAdjustment {
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.05),
+        };
+
+        let result = strangle.probability_of_profit(Some(vol_adj), None);
+
+        assert!(
+            result.is_ok(),
+            "Probability calculation with volatility adjustment should succeed"
+        );
+        let prob = result.unwrap();
+        assert!(prob > PZERO, "Probability should be positive");
+        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
+    }
+
+    #[test]
+    fn test_probability_of_profit_with_trend() {
+        let strangle = create_test_short_strangle();
+        let trend = PriceTrend {
+            drift_rate: 0.1,
+            confidence: 0.95,
+        };
+
+        let result = strangle.probability_of_profit(None, Some(trend));
+
+        assert!(
+            result.is_ok(),
+            "Probability calculation with trend should succeed"
+        );
+        let prob = result.unwrap();
+        assert!(prob > PZERO, "Probability should be positive");
+        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
+    }
+
+    #[test]
+    fn test_probability_of_profit_with_downward_trend() {
+        let strangle = create_test_short_strangle();
+        let trend = PriceTrend {
+            drift_rate: -0.1,
+            confidence: 0.90,
+        };
+
+        let result = strangle.probability_of_profit(None, Some(trend));
+
+        assert!(
+            result.is_ok(),
+            "Probability calculation with downward trend should succeed"
+        );
+        let prob = result.unwrap();
+        assert!(prob > PZERO, "Probability should be positive");
+        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
+    }
+
+    #[test]
+    fn test_get_reference_price() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.get_underlying_price();
+
+        assert_eq!(
+            result,
+            pos!(100.0),
+            "Reference price should match underlying price"
+        );
+    }
+
+    #[test]
+    fn test_get_expiration() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.get_expiration();
+
+        assert!(result.is_ok(), "Expiration retrieval should succeed");
+        match result.unwrap() {
+            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            _ => panic!("Expected ExpirationDate::Days"),
+        }
+    }
+
+    #[test]
+    fn test_get_profit_ranges() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.get_profit_ranges();
+
+        assert!(result.is_ok(), "Profit ranges calculation should succeed");
+        let ranges = result.unwrap();
+        assert_eq!(ranges.len(), 1, "Should have exactly one profit range");
+
+        let range = &ranges[0];
+        assert!(range.lower_bound.is_some(), "Lower bound should be defined");
+        assert!(range.upper_bound.is_some(), "Upper bound should be defined");
+        assert!(range.probability > PZERO, "Probability should be positive");
+    }
+}
+
+#[cfg(test)]
+mod tests_short_strangle_probability_bis {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+    use crate::pos;
+    use crate::strategies::probabilities::utils::PriceTrend;
+
+    fn create_test_short_strangle() -> ShortStrangle {
+        ShortStrangle::new(
+            "TEST".to_string(),
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
+            ExpirationDate::Days(30.0), // expiration
+            0.20,                       // implied_volatility
+            0.05,                       // risk_free_rate
+            0.0,                        // dividend_yield
+            pos!(1.0),                  // quantity
+            2.0,                        // premium_short_call
+            2.0,                        // premium_short_put
+            0.0,                        // open_fee_short_call
+            0.0,                        // close_fee_short_call
+            0.0,                        // open_fee_short_put
+            0.0,                        // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn test_get_expiration() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.get_expiration();
+        assert!(result.is_ok());
+        match result.unwrap() {
+            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            _ => panic!("Expected ExpirationDate::Days"),
+        }
+    }
+
+    #[test]
+    fn test_get_risk_free_rate() {
+        let strangle = create_test_short_strangle();
+        assert_eq!(strangle.get_risk_free_rate(), Some(0.05));
+    }
+
+    #[test]
+    fn test_get_profit_ranges() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.get_profit_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+        assert_eq!(ranges.len(), 1); // Short strangle has one profit range
+
+        let range = &ranges[0];
+        assert!(range.lower_bound.is_some());
+        assert!(range.upper_bound.is_some());
+    }
+
+    #[test]
+    fn test_get_loss_ranges() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.get_loss_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+        assert_eq!(ranges.len(), 2); // Short strangle has two loss ranges
+
+        // Verify ranges have correct bounds
+        assert!(ranges[0].lower_bound.is_none()); // First loss range extends to negative infinity
+        assert!(ranges[1].upper_bound.is_none()); // Second loss range extends to positive infinity
+    }
+
+    #[test]
+    fn test_probability_of_profit() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.probability_of_profit(None, None);
+
+        assert!(result.is_ok());
+        let prob = result.unwrap();
+        assert!(prob > PZERO);
+        assert!(prob <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_probability_with_volatility_adjustment() {
+        let strangle = create_test_short_strangle();
+        let vol_adj = Some(VolatilityAdjustment {
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.1),
+        });
+
+        let result = strangle.probability_of_profit(vol_adj, None);
+        assert!(result.is_ok());
+        let prob = result.unwrap();
+        assert!(prob > PZERO);
+        assert!(prob <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_probability_with_trend() {
+        let strangle = create_test_short_strangle();
+        let trend = Some(PriceTrend {
+            drift_rate: 0.1,
+            confidence: 0.95,
+        });
+
+        let result = strangle.probability_of_profit(None, trend);
+        assert!(result.is_ok());
+        let prob = result.unwrap();
+        assert!(prob > PZERO);
+        assert!(prob <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_analyze_probabilities() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.analyze_probabilities(None, None);
+
+        assert!(result.is_ok());
+        let analysis = result.unwrap();
+
+        assert!(analysis.probability_of_profit > PZERO);
+        assert!(analysis.probability_of_max_profit >= PZERO);
+        assert!(analysis.probability_of_max_loss >= PZERO);
+        assert!(analysis.expected_value > PZERO);
+        assert!(!analysis.break_even_points.is_empty());
+        assert!(analysis.risk_reward_ratio > PZERO);
+    }
+
+    #[test]
+    fn test_calculate_extreme_probabilities() {
+        let strangle = create_test_short_strangle();
+        let result = strangle.calculate_extreme_probabilities(None, None);
+
+        assert!(result.is_ok());
+        let (max_profit_prob, max_loss_prob) = result.unwrap();
+        assert!(max_profit_prob >= PZERO);
+        assert!(max_loss_prob >= PZERO);
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_long_strangle_probability {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+    use crate::pos;
+    use crate::strategies::probabilities::utils::PriceTrend;
+
+    fn create_test_long_strangle() -> LongStrangle {
+        LongStrangle::new(
+            "TEST".to_string(),
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
+            ExpirationDate::Days(30.0), // expiration
+            0.20,                       // implied_volatility
+            0.05,                       // risk_free_rate
+            0.0,                        // dividend_yield
+            pos!(1.0),                  // quantity
+            2.0,                        // premium_long_call
+            2.0,                        // premium_long_put
+            0.0,                        // open_fee_long_call
+            0.0,                        // close_fee_long_call
+            0.0,                        // open_fee_long_put
+            0.0,                        // close_fee_long_put
+        )
+    }
+
+    #[test]
+    fn test_get_expiration() {
+        let strangle = create_test_long_strangle();
+        let result = strangle.get_expiration();
+        assert!(result.is_ok());
+        match result.unwrap() {
+            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            _ => panic!("Expected ExpirationDate::Days"),
+        }
+    }
+
+    #[test]
+    fn test_get_risk_free_rate() {
+        let strangle = create_test_long_strangle();
+        assert_eq!(strangle.get_risk_free_rate(), Some(0.05));
+    }
+
+    #[test]
+    fn test_get_profit_ranges() {
+        let strangle = create_test_long_strangle();
+        let result = strangle.get_profit_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+        assert_eq!(ranges.len(), 2); // Long strangle has two profit ranges
+
+        // Verify ranges have correct bounds
+        assert!(ranges[0].upper_bound.is_some());
+        assert!(ranges[1].lower_bound.is_some());
+    }
+
+    #[test]
+    fn test_get_loss_ranges() {
+        let strangle = create_test_long_strangle();
+        let result = strangle.get_loss_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+        assert_eq!(ranges.len(), 1); // Long strangle has one loss range
+        assert!(ranges[0].lower_bound.is_some());
+        assert!(ranges[0].upper_bound.is_some());
+    }
+
+    #[test]
+    fn test_probability_of_profit() {
+        let strangle = create_test_long_strangle();
+        let result = strangle.probability_of_profit(None, None);
+
+        assert!(result.is_ok());
+        let prob = result.unwrap();
+        assert!(prob > PZERO);
+        assert!(prob <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_probability_with_volatility_adjustment() {
+        let strangle = create_test_long_strangle();
+        let vol_adj = Some(VolatilityAdjustment {
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.1),
+        });
+
+        let result = strangle.probability_of_profit(vol_adj, None);
+        assert!(result.is_ok());
+        let prob = result.unwrap();
+        assert!(prob > PZERO);
+        assert!(prob <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_probability_with_trend() {
+        let strangle = create_test_long_strangle();
+        let trend = Some(PriceTrend {
+            drift_rate: 0.1,
+            confidence: 0.95,
+        });
+
+        let result = strangle.probability_of_profit(None, trend);
+        assert!(result.is_ok());
+        let prob = result.unwrap();
+        assert!(prob > PZERO);
+        assert!(prob <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_expected_value_calculation() {
+        let strangle = create_test_long_strangle();
+        let result = strangle.expected_value(None, None);
+
+        assert!(result.is_ok());
+        let ev = result.unwrap();
+        assert!(ev >= PZERO, "Expected value should be non-negative");
+
+        let vol_adj = Some(VolatilityAdjustment {
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.1),
+        });
+        let result_with_vol = strangle.expected_value(vol_adj, None);
+        assert!(result_with_vol.is_ok());
+        assert!(result_with_vol.unwrap() >= PZERO);
+    }
+
+    #[test]
+    fn test_calculate_extreme_probabilities() {
+        let strangle = create_test_long_strangle();
+        let result = strangle.calculate_extreme_probabilities(None, None);
+
+        assert!(result.is_ok());
+        let (max_profit_prob, max_loss_prob) = result.unwrap();
+        assert!(max_profit_prob >= PZERO);
+        assert!(max_loss_prob >= PZERO);
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
     }
 }

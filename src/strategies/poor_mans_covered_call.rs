@@ -177,21 +177,21 @@ impl Strategies for PoorMansCoveredCall {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> PositiveF64 {
+    fn max_profit(&self) -> Result<PositiveF64, &str> {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
         if profit <= ZERO {
-            PZERO
+            Ok(PZERO)
         } else {
-            profit.into()
+            Ok(profit.into())
         }
     }
 
-    fn max_loss(&self) -> PositiveF64 {
+    fn max_loss(&self) -> Result<PositiveF64, &str> {
         let loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if loss >= ZERO {
-            PZERO
+            Ok(PZERO)
         } else {
-            loss.abs().into()
+            Ok(loss.abs().into())
         }
     }
 
@@ -211,22 +211,17 @@ impl Strategies for PoorMansCoveredCall {
 
     fn profit_area(&self) -> f64 {
         let base = (self.short_call.option.strike_price
-            - (self.short_call.option.strike_price - self.max_profit()))
+            - (self.short_call.option.strike_price - self.max_profit().unwrap_or(PZERO)))
         .value();
-        let high = self.max_profit();
+        let high = self.max_profit().unwrap_or(PZERO).value();
         base * high / 200.0
     }
 
     fn profit_ratio(&self) -> f64 {
-        (self.max_profit() / self.max_loss()).value() * 100.0
-    }
-
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
-    }
-
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+        match (self.max_profit(), self.max_loss()) {
+            (Ok(profit), Ok(loss)) => (profit / loss).value() * 100.0,
+            _ => ZERO,
+        }
     }
 
     fn get_break_even_points(&self) -> Vec<PositiveF64> {
@@ -454,6 +449,8 @@ impl Graph for PoorMansCoveredCall {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
+        let max_profit = self.max_profit().unwrap_or(PZERO);
+        let max_loss = self.max_loss().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -467,17 +464,16 @@ impl Graph for PoorMansCoveredCall {
 
         let coordiantes: (f64, f64) = (
             self.short_call.option.strike_price.value() / 2000.0,
-            self.max_profit().value() / 10.0,
+            max_profit.value() / 10.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.short_call.option.strike_price.value(),
-                self.max_profit().value(),
+                max_profit.value(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
-                self.max_profit(),
-                self.short_call.option.strike_price
+                max_profit, self.short_call.option.strike_price
             ),
             label_offset: coordiantes,
             point_color: DARK_GREEN,
@@ -488,17 +484,16 @@ impl Graph for PoorMansCoveredCall {
 
         let coordiantes: (f64, f64) = (
             self.long_call.option.strike_price.value() / 2000.0,
-            -self.max_loss().value() / 50.0,
+            -max_loss.value() / 50.0,
         );
         points.push(ChartPoint {
             coordinates: (
                 self.long_call.option.strike_price.value(),
-                -self.max_loss().value(),
+                -max_loss.value(),
             ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
-                self.max_loss(),
-                self.long_call.option.strike_price
+                max_loss, self.long_call.option.strike_price
             ),
             label_offset: coordiantes,
             point_color: RED,
@@ -568,14 +563,14 @@ mod tests {
     #[test]
     fn test_max_profit() {
         let pmcc = create_pmcc_strategy();
-        let max_profit = pmcc.max_profit();
+        let max_profit = pmcc.max_profit().unwrap_or(PZERO);
         assert!(max_profit > PZERO);
     }
 
     #[test]
     fn test_max_loss() {
         let pmcc = create_pmcc_strategy();
-        let max_loss = pmcc.max_loss();
+        let max_loss = pmcc.max_loss().unwrap_or(PZERO);
         assert!(max_loss > PZERO);
     }
 
@@ -629,7 +624,10 @@ mod tests {
     fn test_calculate_profit_at() {
         let pmcc = create_pmcc_strategy();
         let profit = pmcc.calculate_profit_at(pos!(150.0));
-        assert!(profit >= -pmcc.max_loss().value() && profit <= pmcc.max_profit().value());
+        assert!(
+            profit >= -pmcc.max_loss().unwrap_or(PZERO).value()
+                && profit <= pmcc.max_profit().unwrap_or(PZERO).value()
+        );
     }
 
     #[test]
@@ -925,7 +923,7 @@ mod tests_pmcc_pnl {
 
         // At short strike
         let profit_short = strategy.calculate_profit_at(strategy.short_call.option.strike_price);
-        assert_eq!(profit_short, strategy.max_profit().value());
+        assert_eq!(profit_short, strategy.max_profit().unwrap_or(PZERO).value());
 
         // Above short strike
         let profit_above = strategy.calculate_profit_at(pos!(170.0));
@@ -951,9 +949,9 @@ mod tests_pmcc_pnl {
     #[test]
     fn test_max_profit_max_loss_relationship() {
         let strategy = create_test_strategy();
-        assert!(strategy.max_profit() > PZERO);
-        assert!(strategy.max_loss() > PZERO);
-        assert!(strategy.max_loss() > strategy.max_profit());
+        assert!(strategy.max_profit().unwrap_or(PZERO) > PZERO);
+        assert!(strategy.max_loss().unwrap_or(PZERO) > PZERO);
+        assert!(strategy.max_loss().unwrap_or(PZERO) > strategy.max_profit().unwrap_or(PZERO));
     }
 }
 
@@ -1076,14 +1074,12 @@ mod tests_pmcc_best_area {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::All);
 
-        // Verifica las propiedades clave de la estrategia optimizada
         assert!(strategy.profit_area() > 0.0);
         assert!(strategy.profit_ratio() > 0.0);
         assert_eq!(strategy.break_even_points.len(), 1);
         assert!(strategy.total_cost() > PZERO);
         assert!(strategy.fees() > 0.0);
 
-        // Verifica que las posiciones tienen strikes válidos
         assert!(strategy.long_call.option.strike_price < strategy.short_call.option.strike_price);
     }
 
@@ -1092,13 +1088,11 @@ mod tests_pmcc_best_area {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
 
-        // Verifica que los strikes están por encima del precio subyacente
         assert!(strategy.long_call.option.strike_price >= strategy.get_underlying_price());
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
-        // Verifica otras propiedades
         assert!(strategy.profit_area() > 0.0);
-        assert!(strategy.max_profit() > PZERO);
+        assert!(strategy.max_profit().unwrap_or(PZERO) > PZERO);
     }
 
     #[test]
@@ -1106,7 +1100,6 @@ mod tests_pmcc_best_area {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Lower);
 
-        // Verifica que los strikes están por debajo del precio subyacente
         assert!(strategy.long_call.option.strike_price <= strategy.get_underlying_price());
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
@@ -1156,8 +1149,8 @@ mod tests_pmcc_best_ratio {
 
         assert!(strategy.profit_ratio() > 0.0);
         assert_eq!(strategy.break_even_points.len(), 1);
-        assert!(strategy.max_profit() > PZERO);
-        assert!(strategy.max_loss() > PZERO);
+        assert!(strategy.max_profit().unwrap_or(PZERO) > PZERO);
+        assert!(strategy.max_loss().unwrap_or(PZERO) > PZERO);
         assert!(strategy.fees() > 0.0);
     }
 
@@ -1166,7 +1159,6 @@ mod tests_pmcc_best_ratio {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
 
-        // Verifica que los strikes están por encima del precio subyacente
         assert!(strategy.long_call.option.strike_price >= strategy.get_underlying_price());
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
@@ -1182,7 +1174,6 @@ mod tests_pmcc_best_ratio {
             FindOptimalSide::Range(pos!(5750.0), pos!(5850.0)),
         );
 
-        // Verifica que los strikes están dentro del rango especificado
         assert!(strategy.long_call.option.strike_price >= pos!(5750.0));
         assert!(strategy.short_call.option.strike_price <= pos!(5850.0));
 
