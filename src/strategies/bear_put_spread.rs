@@ -262,7 +262,12 @@ impl Optimizable for BearPutSpread {
                     continue;
                 }
 
-                if !self.are_valid_prices(long_option, short_option) {
+                let legs = StrategyLegs::TwoLegs {
+                    first: long_option,
+                    second: short_option,
+                };
+
+                if !self.are_valid_prices(&legs) {
                     debug!(
                         "Invalid prices - Long({}): {:?} Short({}): {:?}",
                         long_option.strike_price,
@@ -273,10 +278,6 @@ impl Optimizable for BearPutSpread {
                     continue;
                 }
 
-                let legs = StrategyLegs::TwoLegs {
-                    first: long_option,
-                    second: short_option,
-                };
                 let strategy = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
@@ -306,7 +307,11 @@ impl Optimizable for BearPutSpread {
         }
     }
 
-    fn are_valid_prices(&self, long: &OptionData, short: &OptionData) -> bool {
+    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
+        let (long, short) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         long.put_ask.unwrap_or(PZERO) > PZERO && short.put_bid.unwrap_or(PZERO) > PZERO
     }
 
@@ -1020,7 +1025,11 @@ mod tests_bear_put_spread_optimization {
             Some(50),
         );
 
-        assert!(spread.are_valid_prices(&valid_option1, &valid_option2));
+        let legs = StrategyLegs::TwoLegs {
+            first: &valid_option1,
+            second: &valid_option2,
+        };
+        assert!(spread.are_valid_prices(&legs));
 
         // Test with invalid prices (zero or None)
         let invalid_option = OptionData::new(
@@ -1035,8 +1044,17 @@ mod tests_bear_put_spread_optimization {
             Some(50),
         );
 
-        assert!(!spread.are_valid_prices(&invalid_option, &valid_option2));
-        assert!(!spread.are_valid_prices(&valid_option1, &invalid_option));
+        let legs = StrategyLegs::TwoLegs {
+            first: &invalid_option,
+            second: &valid_option2,
+        };
+        assert!(!spread.are_valid_prices(&legs));
+
+        let legs = StrategyLegs::TwoLegs {
+            first: &valid_option1,
+            second: &invalid_option,
+        };
+        assert!(!spread.are_valid_prices(&legs));
     }
 
     #[test]

@@ -264,8 +264,13 @@ pub trait Optimizable: Validable + Strategies {
         }
     }
 
-    fn are_valid_prices(&self, _call: &OptionData, _put: &OptionData) -> bool {
-        panic!("Are valid prices is not applicable for this strategy");
+    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
+        // by default, we assume Options are one long call and one short call
+        let (long, short) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
+        long.call_ask.unwrap_or(PZERO) > PZERO && short.call_bid.unwrap_or(PZERO) > PZERO
     }
 
     fn create_strategy(&self, _chain: &OptionChain, _legs: &StrategyLegs) -> Self::Strategy {
