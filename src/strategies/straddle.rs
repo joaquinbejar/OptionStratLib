@@ -254,7 +254,12 @@ impl Optimizable for ShortStraddle {
                     continue;
                 }
 
-                if !self.are_valid_prices(call_option, put_option) {
+                let legs = StrategyLegs::TwoLegs {
+                    first: call_option,
+                    second: put_option,
+                };
+
+                if !self.are_valid_prices(&legs) {
                     error!(
                         "Invalid Bid prices  Put({}): {:?} Call({}): {:?} ",
                         put_option.strike_price,
@@ -265,10 +270,6 @@ impl Optimizable for ShortStraddle {
                     continue;
                 }
 
-                let legs = StrategyLegs::TwoLegs {
-                    first: call_option,
-                    second: put_option,
-                };
                 debug!("Creating Strategy");
                 let strategy: ShortStraddle = self.create_strategy(option_chain, &legs);
 
@@ -339,7 +340,11 @@ impl Optimizable for ShortStraddle {
         }
     }
 
-    fn are_valid_prices(&self, call: &OptionData, put: &OptionData) -> bool {
+    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
+        let (call, put) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         call.call_bid.unwrap() > PZERO && put.put_bid.unwrap() > PZERO
     }
 
@@ -778,7 +783,12 @@ impl Optimizable for LongStraddle {
                     continue;
                 }
 
-                if !self.are_valid_prices(call_option, put_option) {
+                let legs = StrategyLegs::TwoLegs {
+                    first: call_option,
+                    second: put_option,
+                };
+
+                if !self.are_valid_prices(&legs) {
                     error!(
                         "Invalid Ask prices Put: {:#?} Call: {:#?} ",
                         put_option.put_ask, call_option.call_ask
@@ -786,10 +796,6 @@ impl Optimizable for LongStraddle {
                     continue;
                 }
 
-                let legs = StrategyLegs::TwoLegs {
-                    first: call_option,
-                    second: put_option,
-                };
                 let strategy: LongStraddle = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
@@ -859,7 +865,11 @@ impl Optimizable for LongStraddle {
         }
     }
 
-    fn are_valid_prices(&self, call: &OptionData, put: &OptionData) -> bool {
+    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
+        let (call, put) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         call.call_ask.unwrap() > PZERO && put.put_ask.unwrap() > PZERO
     }
 
@@ -1158,6 +1168,7 @@ mod tests_short_straddle {
             valid_strategy.short_put.option.strike_price
         );
     }
+
     #[test]
     fn test_break_even() {
         let strategy = setup();
@@ -1324,11 +1335,20 @@ mod tests_short_straddle {
         let call_option = option_chain.options.last().unwrap();
         let put_option = option_chain.options.first().unwrap();
 
-        assert!(strategy.are_valid_prices(call_option, put_option));
+        let legs = StrategyLegs::TwoLegs {
+            first: call_option,
+            second: put_option,
+        };
+        assert!(strategy.are_valid_prices(&legs));
 
         let mut invalid_call = call_option.clone();
         invalid_call.call_bid = Some(pos!(0.0));
-        assert!(!strategy.are_valid_prices(&invalid_call, put_option));
+
+        let legs = StrategyLegs::TwoLegs {
+            first: &invalid_call,
+            second: put_option,
+        };
+        assert!(!strategy.are_valid_prices(&legs));
     }
 
     #[test]
@@ -1628,11 +1648,20 @@ mod tests_long_straddle {
         let call_option = option_chain.options.first().unwrap();
         let put_option = option_chain.options.last().unwrap();
 
-        assert!(strategy.are_valid_prices(call_option, put_option));
+        let legs = StrategyLegs::TwoLegs {
+            first: call_option,
+            second: put_option,
+        };
+        assert!(strategy.are_valid_prices(&legs));
 
         let mut invalid_call = call_option.clone();
         invalid_call.call_ask = Some(pos!(0.0));
-        assert!(!strategy.are_valid_prices(&invalid_call, put_option));
+
+        let legs = StrategyLegs::TwoLegs {
+            first: &invalid_call,
+            second: put_option,
+        };
+        assert!(!strategy.are_valid_prices(&legs));
     }
 
     #[test]
