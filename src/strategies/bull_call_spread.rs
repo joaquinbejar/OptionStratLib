@@ -262,7 +262,12 @@ impl Optimizable for BullCallSpread {
                     continue;
                 }
 
-                if !self.are_valid_prices(long_option, short_option) {
+                let legs = StrategyLegs::TwoLegs {
+                    first: long_option,
+                    second: short_option,
+                };
+
+                if !self.are_valid_prices(&legs) {
                     debug!(
                         "Invalid prices - Long({}): {:?} Short({}): {:?}",
                         long_option.strike_price,
@@ -273,10 +278,6 @@ impl Optimizable for BullCallSpread {
                     continue;
                 }
 
-                let legs = StrategyLegs::TwoLegs {
-                    first: long_option,
-                    second: short_option,
-                };
                 let strategy = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
@@ -304,10 +305,6 @@ impl Optimizable for BullCallSpread {
                 }
             }
         }
-    }
-
-    fn are_valid_prices(&self, long: &OptionData, short: &OptionData) -> bool {
-        long.call_ask.unwrap_or(PZERO) > PZERO && short.call_bid.unwrap_or(PZERO) > PZERO
     }
 
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
@@ -1065,7 +1062,11 @@ mod tests_bull_call_spread_optimization {
             Some(50),
         );
 
-        assert!(spread.are_valid_prices(&long_option, &short_option));
+        let legs = StrategyLegs::TwoLegs {
+            first: &long_option,
+            second: &short_option,
+        };
+        assert!(spread.are_valid_prices(&legs));
     }
 
     #[test]
@@ -1094,7 +1095,11 @@ mod tests_bull_call_spread_optimization {
             Some(50),
         );
 
-        assert!(!spread.are_valid_prices(&long_option, &short_option));
+        let legs = StrategyLegs::TwoLegs {
+            first: &long_option,
+            second: &short_option,
+        };
+        assert!(!spread.are_valid_prices(&legs));
     }
 
     #[test]

@@ -278,7 +278,12 @@ impl Optimizable for BearCallSpread {
                     continue;
                 }
 
-                if !self.are_valid_prices(short_option, long_option) {
+                let legs = StrategyLegs::TwoLegs {
+                    first: short_option,
+                    second: long_option,
+                };
+
+                if !self.are_valid_prices(&legs) {
                     debug!(
                         "Invalid prices - Short({}): {:?} Long({}): {:?}",
                         short_option.strike_price,
@@ -288,11 +293,6 @@ impl Optimizable for BearCallSpread {
                     );
                     continue;
                 }
-
-                let legs = StrategyLegs::TwoLegs {
-                    first: short_option,
-                    second: long_option,
-                };
 
                 let strategy = self.create_strategy(option_chain, &legs);
 
@@ -321,10 +321,6 @@ impl Optimizable for BearCallSpread {
                 }
             }
         }
-    }
-
-    fn are_valid_prices(&self, short: &OptionData, long: &OptionData) -> bool {
-        short.call_bid.unwrap_or(PZERO) > PZERO && long.call_ask.unwrap_or(PZERO) > PZERO
     }
 
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
