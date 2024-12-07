@@ -371,33 +371,33 @@ impl Optimizable for PoorMansCoveredCall {
             }
         }
     }
+    
 
-    fn create_strategy(&self, _chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
         let (long, short) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
 
-        let mut long_call_option = self.long_call.option.clone();
-        long_call_option.update_from_option_data(long);
+        PoorMansCoveredCall::new(
+            chain.symbol.clone(),
+            chain.underlying_price,
+            long.strike_price,
+            short.strike_price,
+            self.long_call.option.expiration_date.clone(),
+            self.short_call.option.expiration_date.clone(),
+            short.implied_volatility.unwrap().value() / 100.0,
+            self.short_call.option.risk_free_rate,
+            self.short_call.option.dividend_yield,
+            self.short_call.option.quantity,
+            long.call_ask.unwrap().value(),
+            short.call_bid.unwrap().value(),
+            self.long_call.open_fee,
+            self.long_call.close_fee,
+            self.short_call.open_fee,
+            self.short_call.close_fee,
+        )
 
-        let mut short_call_option = self.short_call.option.clone();
-        short_call_option.update_from_option_data(short);
-
-        let mut strategy = self.clone();
-
-        strategy.long_call.update_from_option_data(long);
-        strategy.short_call.update_from_option_data(short);
-
-        // Calculate break-even point
-        let net_debit = (strategy.long_call.max_loss() - strategy.short_call.max_profit())
-            / strategy.long_call.option.quantity;
-
-        if let Some(primer_elemento) = strategy.break_even_points.get_mut(0) {
-            *primer_elemento = long_call_option.strike_price + net_debit;
-        }
-
-        strategy
     }
 }
 
