@@ -11,6 +11,7 @@ Key characteristics:
 */
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -262,9 +263,12 @@ impl Optimizable for ShortStrangle {
                     continue;
                 }
 
+                let legs = StrategyLegs::TwoLegs {
+                    first: call_option,
+                    second: put_option,
+                };
                 debug!("Creating Strategy");
-                let strategy: ShortStrangle =
-                    self.create_strategy(option_chain, call_option, put_option);
+                let strategy: ShortStrangle = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
                     continue;
@@ -337,12 +341,11 @@ impl Optimizable for ShortStrangle {
         call.call_bid.unwrap() > PZERO && put.put_bid.unwrap() > PZERO
     }
 
-    fn create_strategy(
-        &self,
-        chain: &OptionChain,
-        call: &OptionData,
-        put: &OptionData,
-    ) -> ShortStrangle {
+    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+        let (call, put) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         if !call.validate() || !put.validate() {
             panic!("Invalid options");
         }
@@ -806,8 +809,11 @@ impl Optimizable for LongStrangle {
                     continue;
                 }
 
-                let strategy: LongStrangle =
-                    self.create_strategy(option_chain, call_option, put_option);
+                let legs = StrategyLegs::TwoLegs {
+                    first: call_option,
+                    second: put_option,
+                };
+                let strategy: LongStrangle = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
                     error!("Invalid strategy");
@@ -880,12 +886,11 @@ impl Optimizable for LongStrangle {
         call.call_ask.unwrap() > PZERO && put.put_ask.unwrap() > PZERO
     }
 
-    fn create_strategy(
-        &self,
-        chain: &OptionChain,
-        call: &OptionData,
-        put: &OptionData,
-    ) -> LongStrangle {
+    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+        let (call, put) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         LongStrangle::new(
             chain.symbol.clone(),
             chain.underlying_price,
@@ -1333,13 +1338,23 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let call_option = chain.options.first().unwrap();
         let put_option = chain.options.last().unwrap();
 
-        let new_strategy = strategy.create_strategy(&chain, call_option, put_option);
+        let legs = StrategyLegs::TwoLegs {
+            first: call_option,
+            second: put_option,
+        };
+
+        let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(!new_strategy.validate());
 
         let call_option = chain.options.last().unwrap();
         let put_option = chain.options.first().unwrap();
 
-        let new_strategy = strategy.create_strategy(&chain, call_option, put_option);
+        let legs = StrategyLegs::TwoLegs {
+            first: call_option,
+            second: put_option,
+        };
+
+        let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
     }
 
@@ -1657,11 +1672,20 @@ mod tests_long_strangle {
         let chain = create_test_option_chain();
         let call_option = chain.options.first().unwrap();
         let put_option = chain.options.last().unwrap();
-        let new_strategy = strategy.create_strategy(&chain, call_option, put_option);
+        let legs = StrategyLegs::TwoLegs {
+            first: call_option,
+            second: put_option,
+        };
+        let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(!new_strategy.validate());
         let call_option = chain.options.last().unwrap();
         let put_option = chain.options.first().unwrap();
-        let new_strategy = strategy.create_strategy(&chain, call_option, put_option);
+
+        let legs = StrategyLegs::TwoLegs {
+            first: call_option,
+            second: put_option,
+        };
+        let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
     }
 

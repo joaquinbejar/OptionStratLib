@@ -4,6 +4,7 @@
    Date: 21/8/24
 ******************************************************************************/
 use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::StrategyLegs;
 use crate::constants::{
     STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
 };
@@ -267,12 +268,7 @@ pub trait Optimizable: Validable + Strategies {
         panic!("Are valid prices is not applicable for this strategy");
     }
 
-    fn create_strategy(
-        &self,
-        _chain: &OptionChain,
-        _call: &OptionData,
-        _put: &OptionData,
-    ) -> Self::Strategy {
+    fn create_strategy(&self, _chain: &OptionChain, _legs: &StrategyLegs) -> Self::Strategy {
         panic!("Create strategy is not applicable for this strategy");
     }
 }

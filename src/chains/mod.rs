@@ -5,4 +5,7 @@
 ******************************************************************************/
 pub mod chain;
 
+mod legs;
 pub mod utils;
+
+pub use legs::StrategyLegs;
