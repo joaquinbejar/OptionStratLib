@@ -1,5 +1,5 @@
-use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::model::types::PositiveF64;
+use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::straddle::LongStraddle;

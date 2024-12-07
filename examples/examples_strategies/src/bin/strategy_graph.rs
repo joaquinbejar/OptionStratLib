@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
-use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::model::types::PositiveF64;
+use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
