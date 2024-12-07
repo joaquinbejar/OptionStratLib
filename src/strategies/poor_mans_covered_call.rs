@@ -30,6 +30,7 @@
 
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -263,8 +264,11 @@ impl Optimizable for PoorMansCoveredCall {
                     continue;
                 }
 
-                let strategy: PoorMansCoveredCall =
-                    self.create_strategy(option_chain, long_call_option, short_call_option);
+                let legs = StrategyLegs::TwoLegs {
+                    first: long_call_option,
+                    second: short_call_option,
+                };
+                let strategy: PoorMansCoveredCall = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
                     debug!("Invalid strategy");
@@ -368,12 +372,12 @@ impl Optimizable for PoorMansCoveredCall {
         }
     }
 
-    fn create_strategy(
-        &self,
-        _chain: &OptionChain,
-        long: &OptionData,
-        short: &OptionData,
-    ) -> Self::Strategy {
+    fn create_strategy(&self, _chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+        let (long, short) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
+
         let mut long_call_option = self.long_call.option.clone();
         long_call_option.update_from_option_data(long);
 
@@ -381,6 +385,7 @@ impl Optimizable for PoorMansCoveredCall {
         short_call_option.update_from_option_data(short);
 
         let mut strategy = self.clone();
+
         strategy.long_call.update_from_option_data(long);
         strategy.short_call.update_from_option_data(short);
 

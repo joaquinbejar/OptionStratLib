@@ -30,6 +30,7 @@ Key characteristics:
 
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -288,7 +289,12 @@ impl Optimizable for BearCallSpread {
                     continue;
                 }
 
-                let strategy = self.create_strategy(option_chain, short_option, long_option);
+                let legs = StrategyLegs::TwoLegs {
+                    first: short_option,
+                    second: long_option,
+                };
+
+                let strategy = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
                     debug!("Invalid strategy");
@@ -321,12 +327,11 @@ impl Optimizable for BearCallSpread {
         short.call_bid.unwrap_or(PZERO) > PZERO && long.call_ask.unwrap_or(PZERO) > PZERO
     }
 
-    fn create_strategy(
-        &self,
-        chain: &OptionChain,
-        short: &OptionData,
-        long: &OptionData,
-    ) -> BearCallSpread {
+    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+        let (short, long) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         BearCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,

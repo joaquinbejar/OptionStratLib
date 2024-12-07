@@ -17,6 +17,7 @@ Key characteristics:
 
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -272,7 +273,11 @@ impl Optimizable for BullCallSpread {
                     continue;
                 }
 
-                let strategy = self.create_strategy(option_chain, long_option, short_option);
+                let legs = StrategyLegs::TwoLegs {
+                    first: long_option,
+                    second: short_option,
+                };
+                let strategy = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
                     debug!("Invalid strategy");
@@ -305,12 +310,11 @@ impl Optimizable for BullCallSpread {
         long.call_ask.unwrap_or(PZERO) > PZERO && short.call_bid.unwrap_or(PZERO) > PZERO
     }
 
-    fn create_strategy(
-        &self,
-        chain: &OptionChain,
-        long: &OptionData,
-        short: &OptionData,
-    ) -> BullCallSpread {
+    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+        let (long, short) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         BullCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
@@ -1108,7 +1112,11 @@ mod tests_bull_call_spread_optimization {
             .find(|o| o.strike_price == pos!(100.0))
             .unwrap();
 
-        let new_strategy = spread.create_strategy(&chain, long_option, short_option);
+        let legs = StrategyLegs::TwoLegs {
+            first: long_option,
+            second: short_option,
+        };
+        let new_strategy = spread.create_strategy(&chain, &legs);
 
         assert!(new_strategy.validate());
         assert_eq!(new_strategy.long_call.option.strike_price, pos!(95.0));

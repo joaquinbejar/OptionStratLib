@@ -16,6 +16,7 @@ Key characteristics:
 
 use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -272,7 +273,11 @@ impl Optimizable for BearPutSpread {
                     continue;
                 }
 
-                let strategy = self.create_strategy(option_chain, long_option, short_option);
+                let legs = StrategyLegs::TwoLegs {
+                    first: long_option,
+                    second: short_option,
+                };
+                let strategy = self.create_strategy(option_chain, &legs);
 
                 if !strategy.validate() {
                     debug!("Invalid strategy");
@@ -305,12 +310,11 @@ impl Optimizable for BearPutSpread {
         long.put_ask.unwrap_or(PZERO) > PZERO && short.put_bid.unwrap_or(PZERO) > PZERO
     }
 
-    fn create_strategy(
-        &self,
-        chain: &OptionChain,
-        long: &OptionData,
-        short: &OptionData,
-    ) -> BearPutSpread {
+    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+        let (long, short) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         BearPutSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
@@ -1051,7 +1055,11 @@ mod tests_bear_put_spread_optimization {
             .find(|o| o.strike_price == pos!(95.0))
             .unwrap();
 
-        let new_strategy = spread.create_strategy(&chain, long_option, short_option);
+        let legs = StrategyLegs::TwoLegs {
+            first: long_option,
+            second: short_option,
+        };
+        let new_strategy = spread.create_strategy(&chain, &legs);
 
         assert!(new_strategy.validate());
         assert_eq!(new_strategy.long_put.option.strike_price, pos!(105.0));
