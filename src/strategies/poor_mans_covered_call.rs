@@ -371,7 +371,6 @@ impl Optimizable for PoorMansCoveredCall {
             }
         }
     }
-    
 
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
         let (long, short) = match legs {
@@ -397,7 +396,6 @@ impl Optimizable for PoorMansCoveredCall {
             self.short_call.open_fee,
             self.short_call.close_fee,
         )
-
     }
 }
 
