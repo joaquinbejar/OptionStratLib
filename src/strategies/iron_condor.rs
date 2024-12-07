@@ -9,7 +9,7 @@ Key characteristics:
 - Limited risk
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
-use super::base::{Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::constants::{
     DARK_BLUE, DARK_GREEN, STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
@@ -18,12 +18,14 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
-use crate::strategies::utils::calculate_price_range;
+use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::StrategyLegs;
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -284,6 +286,119 @@ impl Strategies for IronCondor {
         Some(calculate_price_range(start_price, end_price, step))
     }
 }
+
+impl Optimizable for IronCondor {
+    type Strategy = IronCondor;
+
+    fn find_optimal(
+        &mut self,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+        criteria: OptimizationCriteria,
+    ) {
+        let mut best_value = f64::NEG_INFINITY;
+        let options: Vec<&OptionData> = option_chain.options.iter().collect();
+
+        for (i, long_put) in options.iter().enumerate() {
+            for short_put in options.iter().skip(i + 1) {
+                if !self.is_valid_put_spread(long_put, short_put, &side, option_chain.underlying_price) {
+                    continue;
+                }
+
+                for short_call in options.iter().skip(i + 2) {
+                    if !self.is_valid_center_width(short_put, short_call, &side, option_chain.underlying_price) {
+                        continue;
+                    }
+
+                    for long_call in options.iter().skip(i + 3) {
+                        if !self.is_valid_call_spread(short_call, long_call, &side, option_chain.underlying_price) {
+                            continue;
+                        }
+
+                        let legs = StrategyLegs::FourLegs {
+                            first: long_put,
+                            second: short_put,
+                            third: short_call,
+                            fourth: long_call,
+                        };
+                        if !self.are_valid_prices(&legs) {
+                            continue;
+                        }
+
+                        let new_strategy = self.create_strategy(
+                            option_chain,
+                            &legs,
+                        );
+
+                        if !new_strategy.validate() {
+                            continue;
+                        }
+
+                        if new_strategy.max_profit().is_err() || new_strategy.max_loss().is_err() {
+                            continue;
+                        }
+
+                        let current_value = match criteria {
+                            OptimizationCriteria::Ratio => new_strategy.profit_ratio(),
+                            OptimizationCriteria::Area => new_strategy.profit_area(),
+                        };
+
+                        if current_value > best_value {
+                            best_value = current_value;
+                            *self = new_strategy;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn are_valid_prices(
+        &self,
+        legs: &StrategyLegs,
+    ) -> bool {
+        let (long_put, short_put,short_call,long_call) = match legs {
+            StrategyLegs::FourLegs { first, second , third, fourth } => (first, second, third, fourth),
+            _ => panic!("Invalid legs"),
+        };
+        long_put.put_ask.unwrap_or(PZERO) > PZERO
+            && short_put.put_bid.unwrap_or(PZERO) > PZERO
+            && short_call.call_bid.unwrap_or(PZERO) > PZERO
+            && long_call.call_ask.unwrap_or(PZERO) > PZERO
+    }
+
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs
+    ) -> Self::Strategy {
+
+        let (long_put, short_put,short_call,long_call) = match legs {
+            StrategyLegs::FourLegs { first, second , third, fourth } => (first, second, third, fourth),
+            _ => panic!("Invalid legs"),
+        };
+        IronCondor::new(
+            chain.symbol.clone(),
+            chain.underlying_price,
+            short_call.strike_price,
+            short_put.strike_price,
+            long_call.strike_price,
+            long_put.strike_price,
+            self.short_call.option.expiration_date.clone(),
+            short_put.implied_volatility.unwrap().value() / 100.0,
+            self.short_call.option.risk_free_rate,
+            self.short_call.option.dividend_yield,
+            self.short_call.option.quantity,
+            short_call.call_bid.unwrap().value(),
+            short_put.put_bid.unwrap().value(),
+            long_call.call_ask.unwrap().value(),
+            long_put.put_ask.unwrap().value(),
+            self.fees() / 4.0,
+            self.fees() / 4.0,
+        )
+    }
+}
+
 
 impl Profit for IronCondor {
     fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
