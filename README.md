@@ -400,6 +400,128 @@ classDiagram
     CallButterfly o-- Position
 ```
 
+## Strategies Classifications
+
+```mermaid
+graph TD
+    root[Options Strategies]
+    
+    %% First Level - Market Direction
+    root --> bullish[Bullish]
+    root --> bearish[Bearish]
+    root --> neutral[Neutral]
+    
+    %% Bullish Branch
+    bullish --> bull_high[High Vol]
+    bullish --> bull_low[Low Vol]
+    
+    bull_high --> bull_high_lim[Limited Risk]
+    bull_high --> bull_high_unlim[Unlimited Risk]
+    
+    bull_low --> bull_low_lim[Limited Risk]
+    bull_low --> bull_low_unlim[Unlimited Risk]
+    
+    bull_high_lim --> bull_high_lim_opt[Options Only]
+    bull_high_lim --> bull_high_lim_stock[With Stock]
+    
+    bull_high_unlim --> bull_high_unlim_opt[Options Only]
+    bull_high_unlim --> bull_high_unlim_stock[With Stock]
+    
+    bull_low_lim --> bull_low_lim_opt[Options Only]
+    bull_low_lim --> bull_low_lim_stock[With Stock]
+    
+    bull_low_unlim --> bull_low_unlim_opt[Options Only]
+    bull_low_unlim --> bull_low_unlim_stock[With Stock]
+    
+    %% Bullish Strategies
+    bull_high_lim_opt --> bull_call((Bull Call Spread))
+    bull_high_lim_stock --> protective_put((Protective Put))
+    bull_high_unlim_opt --> long_call((Long Call))
+    bull_high_unlim_stock --> pmcc((Poor Man's Covered Call))
+    
+    bull_low_lim_opt --> bull_put((Bull Put Spread))
+    bull_low_lim_stock --> collar((Collar))
+    bull_low_unlim_opt --> naked_put((Naked Put))
+    bull_low_unlim_stock --> covered_call((Covered Call))
+    
+    %% Bearish Branch
+    bearish --> bear_high[High Vol]
+    bearish --> bear_low[Low Vol]
+    
+    bear_high --> bear_high_lim[Limited Risk]
+    bear_high --> bear_high_unlim[Unlimited Risk]
+    
+    bear_low --> bear_low_lim[Limited Risk]
+    bear_low --> bear_low_unlim[Unlimited Risk]
+    
+    bear_high_lim --> bear_high_lim_opt[Options Only]
+    bear_high_lim --> bear_high_lim_stock[With Stock]
+    
+    bear_high_unlim --> bear_high_unlim_opt[Options Only]
+    bear_high_unlim --> bear_high_unlim_stock[With Stock]
+    
+    bear_low_lim --> bear_low_lim_opt[Options Only]
+    bear_low_lim --> bear_low_lim_stock[With Stock]
+    
+    bear_low_unlim --> bear_low_unlim_opt[Options Only]
+    bear_low_unlim --> bear_low_unlim_stock[With Stock]
+    
+    %% Bearish Strategies
+    bear_high_lim_opt --> bear_put((Bear Put Spread))
+    bear_high_lim_stock --> synthetic_put((Synthetic Put))
+    bear_high_unlim_opt --> long_put((Long Put))
+    bear_high_unlim_stock --> covered_put((Covered Put))
+    
+    bear_low_lim_opt --> bear_call((Bear Call Spread))
+    bear_low_lim_stock --> reverse_collar((Reverse Collar))
+    bear_low_unlim_opt --> naked_call((Naked Call))
+    bear_low_unlim_stock --> protective_call((Protective Call))
+    
+    %% Neutral Branch
+    neutral --> neut_high[High Vol]
+    neutral --> neut_low[Low Vol]
+    
+    neut_high --> neut_high_lim[Limited Risk]
+    neut_high --> neut_high_unlim[Unlimited Risk]
+    
+    neut_low --> neut_low_lim[Limited Risk]
+    neut_low --> neut_low_unlim[Unlimited Risk]
+    
+    neut_high_lim --> neut_high_lim_opt[Options Only]
+    neut_high_lim --> neut_high_lim_stock[With Stock]
+    
+    neut_high_unlim --> neut_high_unlim_opt[Options Only]
+    neut_high_unlim --> neut_high_unlim_stock[With Stock]
+    
+    neut_low_lim --> neut_low_lim_opt[Options Only]
+    neut_low_lim --> neut_low_lim_stock[With Stock]
+    
+    neut_low_unlim --> neut_low_unlim_opt[Options Only]
+    neut_low_unlim --> neut_low_unlim_stock[With Stock]
+    
+    %% Neutral Strategies
+    neut_high_lim_opt --> call_butterfly((Call Butterfly))
+    neut_high_lim_opt --> butterfly_spread((Butterfly Spread))
+    neut_high_unlim_opt --> straddle((Straddle))
+    neut_high_unlim_opt --> strangle((Strangle))
+    
+    neut_low_lim_opt --> iron_butterfly((Iron Butterfly))
+    neut_low_lim_opt --> iron_condor((Iron Condor))
+    neut_low_unlim_opt --> calendar_spread((Calendar Spread))
+    neut_low_unlim_opt --> box_spread((Box Spread))
+    
+    neut_high_lim_stock --> conversion((Conversion))
+    neut_high_unlim_stock --> reversal((Reversal))
+    neut_low_lim_stock --> married_combo((Married Combo))
+    neut_low_unlim_stock --> ratio_spread((Ratio Spread))
+    
+    %% Style for better visibility
+    style root fill:#f9f,stroke:#333,stroke-width:4px
+    style bullish fill:#90EE90
+    style bearish fill:#FFB6C1
+    style neutral fill:#ADD8E6
+```
+
 ## Setup Instructions
 
 1. Clone the repository:
