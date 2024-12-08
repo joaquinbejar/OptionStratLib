@@ -1173,7 +1173,7 @@ mod tests_bear_put_spread_profit {
     #[test]
     fn test_profit_at_max_profit() {
         let spread = create_test_spread();
-        let price = pos!(90.0); // Precio por debajo del short strike
+        let price = pos!(90.0);
 
         // Max Profit = Width (105 - 95 = 10) - Net Premium (4 - 2 = 2) = 8
         assert_eq!(spread.calculate_profit_at(price), 8.0);
@@ -1182,7 +1182,7 @@ mod tests_bear_put_spread_profit {
     #[test]
     fn test_profit_at_max_loss() {
         let spread = create_test_spread();
-        let price = pos!(110.0); // Precio por encima del long strike
+        let price = pos!(110.0);
 
         // Max Loss = Net Premium = 4 - 2 = 2
         assert_eq!(spread.calculate_profit_at(price), -2.0);
@@ -1191,7 +1191,7 @@ mod tests_bear_put_spread_profit {
     #[test]
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
-        let price = pos!(95.0); // En el short strike
+        let price = pos!(95.0);
 
         // Profit at short strike = Max Profit = 8
         assert_eq!(spread.calculate_profit_at(price), 8.0);
@@ -1200,7 +1200,7 @@ mod tests_bear_put_spread_profit {
     #[test]
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
-        let price = pos!(105.0); // En el long strike
+        let price = pos!(105.0);
 
         // Loss at long strike = Max Loss = -2
         assert_eq!(spread.calculate_profit_at(price), -2.0);
@@ -1211,19 +1211,18 @@ mod tests_bear_put_spread_profit {
         let spread = create_test_spread();
         let price = pos!(103.0); // Break even = long strike - net premium = 105 - 2
 
-        // En break even el profit debería ser cercano a cero
         assert!(spread.calculate_profit_at(price).abs() < 0.01);
     }
 
     #[test]
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
-        let price = pos!(100.0); // Entre ambos strikes
+        let price = pos!(100.0);
 
         let profit = spread.calculate_profit_at(price);
-        // El profit debería estar entre max profit y max loss
-        assert!(profit > -2.0); // Mayor que max loss
-        assert!(profit < 8.0); // Menor que max profit
+
+        assert!(profit > -2.0);
+        assert!(profit < 8.0);
     }
 
     #[test]
@@ -1288,7 +1287,7 @@ mod tests_bear_put_spread_profit {
     #[test]
     fn test_profit_far_below_strikes() {
         let spread = create_test_spread();
-        let price = pos!(80.0); // Muy por debajo de ambos strikes
+        let price = pos!(80.0);
 
         // El profit debería ser igual al max profit
         assert_eq!(spread.calculate_profit_at(price), 8.0);
@@ -1297,9 +1296,8 @@ mod tests_bear_put_spread_profit {
     #[test]
     fn test_profit_far_above_strikes() {
         let spread = create_test_spread();
-        let price = pos!(120.0); // Muy por encima de ambos strikes
+        let price = pos!(120.0);
 
-        // El profit debería ser igual al max loss
         assert_eq!(spread.calculate_profit_at(price), -2.0);
     }
 }
