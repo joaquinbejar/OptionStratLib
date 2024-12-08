@@ -13,7 +13,7 @@ use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, 
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, RED};
@@ -466,7 +466,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: (-26.0, 2.0),
+            label_offset: LabelOffsetType::Relative(-26.0, 2.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -476,7 +476,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].value(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: (1.0, 2.0),
+            label_offset: LabelOffsetType::Relative(1.0, 2.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -489,7 +489,7 @@ impl Graph for CallButterfly {
                 max_profit.value(),
             ),
             label: format!("Max Profit\n\n{:.2}", max_profit),
-            label_offset: (2.0, 1.0),
+            label_offset: LabelOffsetType::Relative(2.0, 1.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -502,7 +502,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.long_call_itm.option.strike_price.value(), lower_loss),
             label: format!("Left Low {:.2}", lower_loss),
-            label_offset: (0.0, -1.0),
+            label_offset: LabelOffsetType::Relative(0.0, -1.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -512,7 +512,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.long_call_otm.option.strike_price.value(), upper_loss),
             label: format!("Right Low {:.2}", upper_loss),
-            label_offset: (-18.0, -1.0),
+            label_offset: LabelOffsetType::Relative(-18.0, -1.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,

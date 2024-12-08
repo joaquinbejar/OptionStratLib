@@ -19,7 +19,7 @@ use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, 
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
@@ -533,7 +533,7 @@ impl Graph for IronCondor {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Left Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: (5.0, 5.0),
+            label_offset: LabelOffsetType::Relative(5.0, 5.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -543,7 +543,7 @@ impl Graph for IronCondor {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].value(), 0.0),
             label: format!("Right Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: (5.0, 5.0),
+            label_offset: LabelOffsetType::Relative(5.0, 5.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -560,7 +560,7 @@ impl Graph for IronCondor {
                 "High Max Profit {:.2} at {:.0}",
                 max_profit, short_call_strike_price
             ),
-            label_offset: coordiantes,
+            label_offset: LabelOffsetType::Relative(coordiantes.0, coordiantes.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -580,7 +580,7 @@ impl Graph for IronCondor {
                 "Low Max Profit {:.2} at {:.0}",
                 max_profit, self.short_put.option.strike_price
             ),
-            label_offset: coordinates,
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -595,7 +595,7 @@ impl Graph for IronCondor {
                 "Right Max Loss {:.2} at {:.0}",
                 loss, self.long_call.option.strike_price
             ),
-            label_offset: coordinates,
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -608,7 +608,7 @@ impl Graph for IronCondor {
         points.push(ChartPoint {
             coordinates: (long_put_strike_price.value(), loss),
             label: format!("Left Max Loss {:.2} at {:.0}", loss, long_put_strike_price),
-            label_offset: coordinates,
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: RED,
             label_color: RED,
             point_size: 5,

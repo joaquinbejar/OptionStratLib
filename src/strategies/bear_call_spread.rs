@@ -42,7 +42,7 @@ use crate::pricing::payoff::Profit;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
@@ -385,7 +385,7 @@ impl Graph for BearCallSpread {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Break Even {:.2}", self.break_even_points[0]),
-            label_offset: (10.0, -10.0),
+            label_offset: LabelOffsetType::Relative(10.0, -10.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -398,7 +398,7 @@ impl Graph for BearCallSpread {
                 self.max_profit().unwrap_or(PZERO).value(),
             ),
             label: format!("Max Profit {:.2}", self.max_profit().unwrap_or(PZERO)),
-            label_offset: (-60.0, 10.0),
+            label_offset: LabelOffsetType::Relative(-60.0, 10.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -411,7 +411,7 @@ impl Graph for BearCallSpread {
                 -self.max_loss().unwrap_or(PZERO).value(),
             ),
             label: format!("Max Loss -{:.2}", self.max_loss().unwrap_or(PZERO)),
-            label_offset: (10.0, -10.0),
+            label_offset: LabelOffsetType::Relative(10.0, -10.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,

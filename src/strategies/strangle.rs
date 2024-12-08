@@ -23,7 +23,7 @@ use crate::pricing::payoff::Profit;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
@@ -430,7 +430,7 @@ impl Graph for ShortStrangle {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: (0.0, -10.0),
+            label_offset: LabelOffsetType::Relative(0.0, -10.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -440,7 +440,7 @@ impl Graph for ShortStrangle {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].value(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: (-230.0, -10.0),
+            label_offset: LabelOffsetType::Relative(-230.0, -10.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -460,7 +460,7 @@ impl Graph for ShortStrangle {
                 "Max Profit {:.2} at {:.0}",
                 max_profit, self.short_call.option.strike_price
             ),
-            label_offset: coordiantes,
+            label_offset: LabelOffsetType::Relative(coordiantes.0, coordiantes.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -480,7 +480,7 @@ impl Graph for ShortStrangle {
                 "Max Profit {:.2} at {:.0}",
                 max_profit, self.short_put.option.strike_price
             ),
-            label_offset: coordiantes,
+            label_offset: LabelOffsetType::Relative(coordiantes.0, coordiantes.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -970,7 +970,7 @@ impl Graph for LongStrangle {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Low Break Even {}", self.break_even_points[0]),
-            label_offset: (10.0, -10.0),
+            label_offset: LabelOffsetType::Relative(10.0, -10.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -980,7 +980,7 @@ impl Graph for LongStrangle {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].value(), 0.0),
             label: format!("High Break Even {}", self.break_even_points[1]),
-            label_offset: (-60.0, -10.0),
+            label_offset: LabelOffsetType::Relative(-60.0, -10.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -996,7 +996,7 @@ impl Graph for LongStrangle {
                 "Max Loss {:.2} at {:.0}",
                 max_loss, self.long_call.option.strike_price
             ),
-            label_offset: (0.0, -20.0),
+            label_offset: LabelOffsetType::Relative(0.0, -20.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -1009,7 +1009,7 @@ impl Graph for LongStrangle {
                 "Max Loss {:.2} at {:.0}",
                 max_loss, self.long_put.option.strike_price
             ),
-            label_offset: (-500.0, -20.0),
+            label_offset: LabelOffsetType::Relative(-500.0, -20.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,

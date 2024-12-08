@@ -214,7 +214,7 @@ where
 
     for point in points {
         let (x, y) = point.coordinates.clone();
-        let (offset_x, offset_y) = point.label_offset;
+        let (offset_x, offset_y) = point.label_offset.get_offset();
         let label_pos = (x.add(offset_x), y.add(offset_y));
 
         ctx.draw_series(std::iter::once(Text::new(
@@ -333,6 +333,7 @@ mod tests {
     use super::*;
     use crate::model::types::PositiveF64;
     use crate::pos;
+    use crate::visualization::model::LabelOffsetType;
     use plotters::style::RGBColor;
     use std::error::Error;
 
@@ -366,7 +367,7 @@ mod tests {
             vec![ChartPoint {
                 coordinates: (50.0, 0.0),
                 label: "Test Point".to_string(),
-                label_offset: (0.0, 0.0),
+                label_offset: LabelOffsetType::Relative(0.0, 0.0),
                 point_color: RGBColor(0, 0, 0),
                 label_color: RGBColor(0, 0, 0),
                 point_size: 5,
