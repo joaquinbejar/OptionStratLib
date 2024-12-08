@@ -38,7 +38,7 @@ use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, 
 use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
@@ -458,7 +458,7 @@ impl Graph for PoorMansCoveredCall {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: (-30.0, 15.0),
+            label_offset: LabelOffsetType::Relative(-30.0, 15.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -478,7 +478,7 @@ impl Graph for PoorMansCoveredCall {
                 "Max Profit {:.2} at {:.0}",
                 max_profit, self.short_call.option.strike_price
             ),
-            label_offset: coordiantes,
+            label_offset: LabelOffsetType::Relative(coordiantes.0, coordiantes.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -498,7 +498,7 @@ impl Graph for PoorMansCoveredCall {
                 "Max Loss {:.2} at {:.0}",
                 max_loss, self.long_call.option.strike_price
             ),
-            label_offset: coordiantes,
+            label_offset: LabelOffsetType::Relative(coordiantes.0, coordiantes.1),
             point_color: RED,
             label_color: RED,
             point_size: 5,

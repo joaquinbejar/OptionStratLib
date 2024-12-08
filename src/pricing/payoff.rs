@@ -1,6 +1,6 @@
 use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::types::{OptionStyle, PositiveF64, Side, PZERO};
-use crate::visualization::model::ChartPoint;
+use crate::visualization::model::{ChartPoint, LabelOffsetType};
 use plotters::prelude::RED;
 use tracing::trace;
 
@@ -94,7 +94,7 @@ pub trait Profit {
         ChartPoint {
             coordinates: (price.value(), value_at_current_price),
             label: format!("{:.2}", value_at_current_price),
-            label_offset: (4.0, 1.0),
+            label_offset: LabelOffsetType::Relative(4.0, 1.0),
             point_color: color,
             label_color: color,
             point_size: 5,

@@ -12,7 +12,7 @@ use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Strategies, StrategyType, Validable};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -391,7 +391,7 @@ impl Graph for CustomStrategy {
             points.push(ChartPoint {
                 coordinates: (point.value(), 0.0),
                 label: format!("Break Even {:.2}", point),
-                label_offset: (-26.0, 2.0),
+                label_offset: LabelOffsetType::Relative(-26.0, 2.0),
                 point_color: DARK_BLUE,
                 label_color: DARK_BLUE,
                 point_size: 5,
@@ -407,7 +407,7 @@ impl Graph for CustomStrategy {
                 self.max_profit_point.unwrap().1,
             ),
             label: format!("Max Profit {:.2}", self.max_profit_point.unwrap().1),
-            label_offset: (2.0, 1.0),
+            label_offset: LabelOffsetType::Relative(2.0, 1.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -420,7 +420,7 @@ impl Graph for CustomStrategy {
                 self.max_loss_point.unwrap().1,
             ),
             label: format!("Max Loss {:.2}", self.max_loss_point.unwrap().1),
-            label_offset: (-30.0, 2.0),
+            label_offset: LabelOffsetType::Relative(-30.0, 2.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
