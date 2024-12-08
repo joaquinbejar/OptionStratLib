@@ -403,17 +403,13 @@ classDiagram
 ## Strategies Classifications
 
 ```mermaid
-graph TD
-    root[Options Strategies]
+flowchart TD
+    start[Options Strategies] --> bullish[Bullish]
+    start --> bearish[Bearish] 
+    start --> neutral[Neutral]
     
-    %% First Level - Market Direction
-    root --> bullish[Bullish]
-    root --> bearish[Bearish]
-    root --> neutral[Neutral]
-    
-    %% Bullish Branch
-    bullish --> bull_high[High Vol]
-    bullish --> bull_low[Low Vol]
+    bullish --> bull_high[High Volatility]
+    bullish --> bull_low[Low Volatility]
     
     bull_high --> bull_high_lim[Limited Risk]
     bull_high --> bull_high_unlim[Unlimited Risk]
@@ -424,7 +420,7 @@ graph TD
     bull_high_lim --> bull_high_lim_opt[Options Only]
     bull_high_lim --> bull_high_lim_stock[With Stock]
     
-    bull_high_unlim --> bull_high_unlim_opt[Options Only]
+    bull_high_unlim --> bull_high_unlim_opt[Options Only] 
     bull_high_unlim --> bull_high_unlim_stock[With Stock]
     
     bull_low_lim --> bull_low_lim_opt[Options Only]
@@ -433,7 +429,6 @@ graph TD
     bull_low_unlim --> bull_low_unlim_opt[Options Only]
     bull_low_unlim --> bull_low_unlim_stock[With Stock]
     
-    %% Bullish Strategies
     bull_high_lim_opt --> bull_call((Bull Call Spread))
     bull_high_lim_stock --> protective_put((Protective Put))
     bull_high_unlim_opt --> long_call((Long Call))
@@ -444,9 +439,8 @@ graph TD
     bull_low_unlim_opt --> naked_put((Naked Put))
     bull_low_unlim_stock --> covered_call((Covered Call))
     
-    %% Bearish Branch
-    bearish --> bear_high[High Vol]
-    bearish --> bear_low[Low Vol]
+    bearish --> bear_high[High Volatility]
+    bearish --> bear_low[Low Volatility]
     
     bear_high --> bear_high_lim[Limited Risk]
     bear_high --> bear_high_unlim[Unlimited Risk]
@@ -466,7 +460,6 @@ graph TD
     bear_low_unlim --> bear_low_unlim_opt[Options Only]
     bear_low_unlim --> bear_low_unlim_stock[With Stock]
     
-    %% Bearish Strategies
     bear_high_lim_opt --> bear_put((Bear Put Spread))
     bear_high_lim_stock --> synthetic_put((Synthetic Put))
     bear_high_unlim_opt --> long_put((Long Put))
@@ -474,12 +467,11 @@ graph TD
     
     bear_low_lim_opt --> bear_call((Bear Call Spread))
     bear_low_lim_stock --> reverse_collar((Reverse Collar))
-    bear_low_unlim_opt --> naked_call((Naked Call))
+    bear_low_unlim_opt --> naked_call((Naked Call)) 
     bear_low_unlim_stock --> protective_call((Protective Call))
     
-    %% Neutral Branch
-    neutral --> neut_high[High Vol]
-    neutral --> neut_low[Low Vol]
+    neutral --> neut_high[High Volatility]
+    neutral --> neut_low[Low Volatility]
     
     neut_high --> neut_high_lim[Limited Risk]
     neut_high --> neut_high_unlim[Unlimited Risk]
@@ -499,13 +491,14 @@ graph TD
     neut_low_unlim --> neut_low_unlim_opt[Options Only]
     neut_low_unlim --> neut_low_unlim_stock[With Stock]
     
-    %% Neutral Strategies
     neut_high_lim_opt --> call_butterfly((Call Butterfly))
     neut_high_lim_opt --> butterfly_spread((Butterfly Spread))
-    neut_high_unlim_opt --> straddle((Straddle))
-    neut_high_unlim_opt --> strangle((Strangle))
+    neut_high_unlim_opt --> short_straddle((Short Straddle))
+    neut_high_unlim_opt --> short_strangle((Short Strangle)) 
+    neut_high_lim_opt --> long_straddle((Long Straddle))
+    neut_high_lim_opt --> long_strangle((Long Strangle))
     
-    neut_low_lim_opt --> iron_butterfly((Iron Butterfly))
+    neut_low_lim_opt --> iron_butterfly((Iron Butterfly)) 
     neut_low_lim_opt --> iron_condor((Iron Condor))
     neut_low_unlim_opt --> calendar_spread((Calendar Spread))
     neut_low_unlim_opt --> box_spread((Box Spread))
@@ -514,12 +507,6 @@ graph TD
     neut_high_unlim_stock --> reversal((Reversal))
     neut_low_lim_stock --> married_combo((Married Combo))
     neut_low_unlim_stock --> ratio_spread((Ratio Spread))
-    
-    %% Style for better visibility
-    style root fill:#f9f,stroke:#333,stroke-width:4px
-    style bullish fill:#90EE90
-    style bearish fill:#FFB6C1
-    style neutral fill:#ADD8E6
 ```
 
 ## Setup Instructions
