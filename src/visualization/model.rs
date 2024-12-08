@@ -21,11 +21,26 @@ impl LabelOffsetType {
         match self {
             LabelOffsetType::Absolute(x, y) => (*x, *y),
             LabelOffsetType::Relative(x, y) => (*x, *y),
-            LabelOffsetType::Auto => (2.0, 2.0), // valores por defecto
+            LabelOffsetType::Auto => (2.0, 2.0), 
         }
     }
 }
 
+/// Represents a point on a chart, including its coordinates, label, and styling options.
+///
+/// This struct is generic over the type `T` for coordinates, allowing flexibility 
+/// in the type of data used to represent the position of the point.
+///
+/// # Fields
+///
+/// * `coordinates`: The location of the chart point, of generic type `T`.
+/// * `label`: A descriptive label for the chart point.
+/// * `label_offset`: Specifies how the label should be offset relative to the point,
+///   using the `LabelOffsetType` enum.
+/// * `point_color`: The color used to draw the point.
+/// * `label_color`: The color of the label text.
+/// * `point_size`: The size in pixels of the visual representation of the point.
+/// * `font_size`: The size in pixels of the font used for the label.
 #[derive(Clone)]
 pub struct ChartPoint<T> {
     pub coordinates: T,
@@ -106,6 +121,32 @@ impl<T> ChartPoint<T> {
     }
 }
 
+/// `ChartVerticalLine` is a generic structure designed to represent a vertical line in a chart
+/// with specified coordinates, style, and labeling attributes.
+///
+/// # Type Parameters
+///
+/// - `X`: The type representing the x-coordinate. This should be a type implementing
+///   required traits, such as `PartialOrd`, to facilitate comparison of coordinate values.
+/// - `Y`: The type representing the y-coordinate bounds (range). This should also implement
+///   necessary traits for value manipulation and comparison.
+///
+/// # Fields
+///
+/// - `x_coordinate`: The x-coordinate where the vertical line is placed on the chart. It is of
+///   type `X`.
+/// - `y_range`: A tuple representing the range (min and max) on the y-axis for the vertical line.
+///   This is of type `(Y, Y)`.
+/// - `label`: A `String` that serves as the label for the vertical line, providing context or
+///   description within the chart.
+/// - `label_offset`: A tuple of `f64` values indicating the offset for the label positioning
+///   relative to the line.
+/// - `line_color`: A private field representing the color of the line. It is of type `RGBColor`.
+/// - `label_color`: A private field indicating the color of the label. It is also of type `RGBColor`.
+/// - `line_style`: A private field defining the styling attributes of the line, encapsulated
+///   by `ShapeStyle`.
+/// - `font_size`: A private field specifying the font size of the label. It is of type `u32`.
+///
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct ChartVerticalLine<X, Y> {
