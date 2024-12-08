@@ -23,6 +23,7 @@ pub enum StrategyType {
     BullPutSpread,
     BearPutSpread,
     IronCondor,
+    IronButterfly,
     Straddle,
     Strangle,
     CoveredCall,

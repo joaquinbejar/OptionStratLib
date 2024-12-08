@@ -13,6 +13,7 @@ pub mod call_butterfly;
 pub mod collar;
 pub mod covered_call;
 pub mod custom;
+pub mod iron_butterfly;
 pub mod iron_condor;
 pub mod poor_mans_covered_call;
 pub mod probabilities;
