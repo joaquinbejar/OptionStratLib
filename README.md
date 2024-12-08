@@ -403,110 +403,59 @@ classDiagram
 ## Strategies Classifications
 
 ```mermaid
+---
+config:
+  layout: fixed
+---
 flowchart TD
-    start[Options Strategies] --> bullish[Bullish]
-    start --> bearish[Bearish] 
-    start --> neutral[Neutral]
-    
-    bullish --> bull_high[High Volatility]
-    bullish --> bull_low[Low Volatility]
-    
-    bull_high --> bull_high_lim[Limited Risk]
-    bull_high --> bull_high_unlim[Unlimited Risk]
-    
-    bull_low --> bull_low_lim[Limited Risk]
-    bull_low --> bull_low_unlim[Unlimited Risk]
-    
-    bull_high_lim --> bull_high_lim_opt[Options Only]
-    bull_high_lim --> bull_high_lim_stock[With Underlying]
-    
-    bull_high_unlim --> bull_high_unlim_opt[Options Only] 
-    bull_high_unlim --> bull_high_unlim_stock[With Underlying]
-    
-    bull_low_lim --> bull_low_lim_opt[Options Only]
-    bull_low_lim --> bull_low_lim_stock[With Underlying]
-    
-    bull_low_unlim --> bull_low_unlim_opt[Options Only]
-    bull_low_unlim --> bull_low_unlim_stock[With Underlying]
-    
-    bull_high_lim_opt --> bull_call((Bull Call Spread))
-    bull_high_lim_stock --> protective_put((Protective Put))
-    bull_high_unlim_opt --> long_call((Long Call))
-    bull_high_unlim_stock --> pmcc((Poor Man's Covered Call))
-    
-    bull_low_lim_opt --> bull_put((Bull Put Spread))
-    bull_low_lim_stock --> collar((Collar))
-    bull_low_unlim_opt --> naked_put((Naked Put))
-    bull_low_unlim_stock --> covered_call((Covered Call))
-    
-    bearish --> bear_high[High Volatility]
-    bearish --> bear_low[Low Volatility]
-    
-    bear_high --> bear_high_lim[Limited Risk]
-    bear_high --> bear_high_unlim[Unlimited Risk]
-    
-    bear_low --> bear_low_lim[Limited Risk]
-    bear_low --> bear_low_unlim[Unlimited Risk]
-    
-    bear_high_lim --> bear_high_lim_opt[Options Only]
-    bear_high_lim --> bear_high_lim_stock[With Underlying]
-    
-    bear_high_unlim --> bear_high_unlim_opt[Options Only]
-    bear_high_unlim --> bear_high_unlim_stock[With Underlying]
-    
-    bear_low_lim --> bear_low_lim_opt[Options Only]
-    bear_low_lim --> bear_low_lim_stock[With Underlying]
-    
-    bear_low_unlim --> bear_low_unlim_opt[Options Only]
-    bear_low_unlim --> bear_low_unlim_stock[With Underlying]
-    
-    bear_high_lim_opt --> bear_put((Bear Put Spread))
-    bear_high_lim_stock --> synthetic_put((Synthetic Put))
-    bear_high_unlim_opt --> long_put((Long Put))
-    bear_high_unlim_stock --> covered_put((Covered Put))
-    
-    bear_low_lim_opt --> bear_call((Bear Call Spread))
-    bear_low_lim_stock --> reverse_collar((Reverse Collar))
-    bear_low_unlim_opt --> naked_call((Naked Call)) 
-    bear_low_unlim_stock --> protective_call((Protective Call))
-    
-    neutral --> neut_high[High Volatility]
-    neutral --> neut_low[Low Volatility]
-    
-    neut_high --> neut_high_lim[Limited Risk]
-    neut_high --> neut_high_unlim[Unlimited Risk]
-    
-    neut_low --> neut_low_lim[Limited Risk]
-    neut_low --> neut_low_unlim[Unlimited Risk]
-    
-    neut_high_lim --> neut_high_lim_opt[Options Only]
-    neut_high_lim --> neut_high_lim_stock[With Underlying]
-    
-    neut_high_unlim --> neut_high_unlim_opt[Options Only]
-    neut_high_unlim --> neut_high_unlim_stock[With Underlying]
-    
-    neut_low_lim --> neut_low_lim_opt[Options Only]
-    neut_low_lim --> neut_low_lim_stock[With Underlying]
-    
-    neut_low_unlim --> neut_low_unlim_opt[Options Only]
-    neut_low_unlim --> neut_low_unlim_stock[With Underlying]
-    
-    neut_high_lim_opt --> call_butterfly((Call Butterfly))
-    neut_high_lim_opt --> butterfly_spread((Butterfly Spread))
-    neut_high_unlim_opt --> short_straddle((Short Straddle))
-    neut_high_unlim_opt --> short_strangle((Short Strangle)) 
-    neut_high_lim_opt --> long_straddle((Long Straddle))
-    neut_high_lim_opt --> long_strangle((Long Strangle))
-    
-    neut_low_lim_opt --> iron_butterfly((Iron Butterfly)) 
-    neut_low_lim_opt --> iron_condor((Iron Condor))
-    neut_low_unlim_opt --> calendar_spread((Calendar Spread))
-    neut_low_unlim_opt --> box_spread((Box Spread))
-    
-    neut_high_lim_stock --> conversion((Conversion))
-    neut_high_unlim_stock --> reversal((Reversal))
-    neut_low_lim_stock --> married_combo((Married Combo))
-    neut_low_unlim_stock --> ratio_spread((Ratio Spread))
+    start["Options Strategies"] --> bullish["Bullish"] & bearish["Bearish"] & neutral["Neutral"]
+    bullish --> bull_high["High Volatility"] & bull_low["Low Volatility"]
+    bull_high --> bull_high_lim["Limited Risk"] & bull_high_unlim["Unlimited Risk"]
+    bull_low --> bull_low_lim["Limited Risk"] & bull_low_unlim["Unlimited Risk"]
+    bull_high_lim --> bull_high_lim_opt["Options Only"] & bull_high_lim_stock["With Underlying"]
+    bull_high_unlim --> bull_high_unlim_opt["Options Only"] & bull_high_unlim_stock["With Underlying"]
+    bull_low_lim --> bull_low_lim_opt["Options Only"] & bull_low_lim_stock["With Underlying"]
+    bull_low_unlim --> bull_low_unlim_opt["Options Only"] & bull_low_unlim_stock["With Underlying"]
+    bull_high_lim_opt --> bull_call(("Bull Call Spread"))
+    bull_high_lim_stock --> protective_put(("Protective Put"))
+    bull_high_unlim_opt --> long_call(("Long Call"))
+    bull_high_unlim_stock --> pmcc@{ label: "Poor Man's Covered Call" }
+    bull_low_lim_opt --> bull_put(("Bull Put Spread"))
+    bull_low_lim_stock --> collar(("Collar"))
+    bull_low_unlim_opt --> naked_put(("Naked Put"))
+    bull_low_unlim_stock --> covered_call(("Covered Call"))
+    bearish --> bear_high["High Volatility"] & bear_low["Low Volatility"]
+    bear_high --> bear_high_lim["Limited Risk"] & bear_high_unlim["Unlimited Risk"]
+    bear_low --> bear_low_lim["Limited Risk"] & bear_low_unlim["Unlimited Risk"]
+    bear_high_lim --> bear_high_lim_opt["Options Only"] & bear_high_lim_stock["With Underlying"]
+    bear_high_unlim --> bear_high_unlim_opt["Options Only"] & bear_high_unlim_stock["With Underlying"]
+    bear_low_lim --> bear_low_lim_opt["Options Only"] & bear_low_lim_stock["With Underlying"]
+    bear_low_unlim --> bear_low_unlim_opt["Options Only"] & bear_low_unlim_stock["With Underlying"]
+    bear_high_lim_opt --> bear_put(("Bear Put Spread"))
+    bear_high_lim_stock --> synthetic_put(("Synthetic Put"))
+    bear_high_unlim_opt --> long_put(("Long Put"))
+    bear_high_unlim_stock --> covered_put(("Covered Put"))
+    bear_low_lim_opt --> bear_call(("Bear Call Spread"))
+    bear_low_lim_stock --> reverse_collar(("Reverse Collar"))
+    bear_low_unlim_opt --> naked_call(("Naked Call"))
+    bear_low_unlim_stock --> protective_call(("Protective Call"))
+    neutral --> neut_high["High Volatility"] & neut_low["Low Volatility"]
+    neut_high --> neut_high_lim["Limited Risk"] & neut_high_unlim["Unlimited Risk"]
+    neut_low --> neut_low_lim["Limited Risk"] & neut_low_unlim["Unlimited Risk"]
+    neut_high_lim --> neut_high_lim_opt["Options Only"] & neut_high_lim_stock["With Underlying"]
+    neut_high_unlim --> neut_high_unlim_opt["Options Only"] & neut_high_unlim_stock["With Underlying"]
+    neut_low_lim --> neut_low_lim_opt["Options Only"] & neut_low_lim_stock["With Underlying"]
+    neut_low_unlim --> neut_low_unlim_opt["Options Only"] & neut_low_unlim_stock["With Underlying"]
+    neut_high_lim_opt --> call_butterfly(("Call Butterfly")) & butterfly_spread(("Butterfly Spread")) & long_straddle(("Long Straddle")) & long_strangle(("Long Strangle"))
+    neut_high_unlim_opt --> short_straddle(("Short Straddle")) & short_strangle(("Short Strangle"))
+    neut_low_lim_opt --> iron_butterfly(("Iron Butterfly")) & iron_condor(("Iron Condor"))
+    neut_low_unlim_opt --> calendar_spread(("Calendar Spread")) & box_spread(("Box Spread"))
+    neut_high_lim_stock --> conversion(("Conversion"))
+    neut_high_unlim_stock --> reversal(("Reversal"))
+    neut_low_lim_stock --> married_combo(("Married Combo"))
+    neut_low_unlim_stock --> ratio_spread(("Ratio Spread"))
+    pmcc@{ shape: circle}
+
 ```
 
 ## Setup Instructions
