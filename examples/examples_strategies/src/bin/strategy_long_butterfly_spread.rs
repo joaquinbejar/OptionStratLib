@@ -8,33 +8,49 @@ use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
+use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::info;
-use optionstratlib::strategies::butterfly_spread::LongButterfly;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     let underlying_price = pos!(5781.88);
 
-    let strategy = LongButterfly::new(
+    let strategy = LongButterflySpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        pos!(5750.0),     // long_strike_itm
-        pos!(5920.0),     // short_strike
-        pos!(6100.0),     // long_strike_otm
+        pos!(5810.0),     // long_strike_itm
+        pos!(5820.0),     // short_strike
+        pos!(6200.0),     // long_strike_otm
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
         pos!(1.0), // long quantity
-        35.04,     // premium_long
-        45.85,     // premium_short
-        55.0,      // open_fee_long
-        4.0,      // open_fee_long
+        49.65,     // premium_long
+        42.93,     // premium_short
+        1.0,       // open_fee_long
+        4.0,       // open_fee_long
     );
+    // let strategy = LongButterfly::new(
+    //     "SP500".to_string(),
+    //     underlying_price, // underlying_price
+    //     pos!(5730.0),     // long_strike_itm
+    //     pos!(5740.0),     // short_strike
+    //     pos!(5850.0),     // long_strike_otm
+    //     ExpirationDate::Days(2.0),
+    //     0.18,      // implied_volatility
+    //     0.05,      // risk_free_rate
+    //     0.0,       // dividend_yield
+    //     pos!(1.0), // long quantity
+    //     98.79,     // premium_long
+    //     90.02,     // premium_short
+    //     31.65,      // open_fee_long
+    //     4.0,      // open_fee_long
+    // );
 
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
 

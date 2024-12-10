@@ -8,32 +8,32 @@ use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
+use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::info;
-use optionstratlib::strategies::butterfly_spread::ShortButterfly;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(2646.9);
+    let underlying_price = pos!(5781.88);
 
-    let strategy = ShortButterfly::new(
+    let strategy = ShortButterflySpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        pos!(2540.0),     // long_strike_itm
-        pos!(2640.0),     // short_strike
-        pos!(2750.0),     // long_strike_otm
+        pos!(5700.0),     // short_strike_itm
+        pos!(5780.0),     // long_strike
+        pos!(5850.0),     // short_strike_otm
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
         pos!(3.0), // long quantity
-        131.7,     // premium_long
-        70.5,     // premium_short
-        33.6,      // open_fee_long
-        4.0,      // open_fee_long
+        119.01,    // premium_long
+        66.0,      // premium_short
+        29.85,     // open_fee_long
+        4.0,       // open_fee_long
     );
 
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
