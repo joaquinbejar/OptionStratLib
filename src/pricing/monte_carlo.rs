@@ -29,7 +29,7 @@ use crate::pricing::utils::wiener_increment;
 ///     - Add the payoff to the `payoff_sum`.
 /// 4. Return the average payoff discounted to its present value.
 #[allow(dead_code)]
-fn monte_carlo_option_pricing(
+pub fn monte_carlo_option_pricing(
     option: &Options,
     steps: usize,       // Number of time steps
     simulations: usize, // Number of Monte Carlo simulations

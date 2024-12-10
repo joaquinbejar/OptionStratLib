@@ -24,7 +24,7 @@ use statrs::distribution::Normal;
 /// # Returns
 ///
 /// A vector of simulated returns
-pub(crate) fn simulate_returns(mean: f64, std_dev: f64, length: usize, time_step: f64) -> Vec<f64> {
+pub fn simulate_returns(mean: f64, std_dev: f64, length: usize, time_step: f64) -> Vec<f64> {
     let mut rng = rand::thread_rng();
 
     // Adjust mean and standard deviation for the time step

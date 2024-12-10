@@ -107,7 +107,7 @@ pub trait Strategies: Validable {
         self.max_loss().unwrap_or(PZERO)
     }
 
-    /// Calculates the total cost (premium paid [Long] - premium get [short]) of the strategy.
+    /// Calculates the total cost (premium paid Long - premium get short) of the strategy.
     ///
     /// # Returns
     /// `f64` - The total cost will be zero if the strategy is not applicable.
