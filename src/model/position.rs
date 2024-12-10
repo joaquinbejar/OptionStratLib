@@ -15,7 +15,7 @@ use crate::visualization::utils::Graph;
 use crate::{pos, spos};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 /// The `Position` struct represents a financial position in an options market.
 /// It includes various attributes related to the option, such as its cost,
@@ -279,7 +279,7 @@ impl Position {
             return false;
         }
         if !self.option.validate() {
-            error!("Option is not valid.");
+            debug!("Option is not valid.");
             return false;
         }
         true

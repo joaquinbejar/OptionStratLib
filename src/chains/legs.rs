@@ -12,6 +12,11 @@ pub enum StrategyLegs<'a> {
         first: &'a OptionData,
         second: &'a OptionData,
     },
+    ThreeLegs {
+        first: &'a OptionData,
+        second: &'a OptionData,
+        third: &'a OptionData,
+    },
     FourLegs {
         first: &'a OptionData,
         second: &'a OptionData,
@@ -36,6 +41,17 @@ impl Display for StrategyLegs<'_> {
                     f,
                     "Two Legs Strategy:\n1st Leg: {}\n2nd Leg: {}",
                     first, second
+                )
+            }
+            StrategyLegs::ThreeLegs {
+                first,
+                second,
+                third,
+            } => {
+                write!(
+                    f,
+                    "Two Legs Strategy:\n1st Leg: {}\n2nd Leg: {}\n3rd Leg: {}",
+                    first, second, third
                 )
             }
             StrategyLegs::FourLegs {
