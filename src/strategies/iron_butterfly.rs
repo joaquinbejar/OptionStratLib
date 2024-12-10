@@ -398,6 +398,7 @@ impl Optimizable for IronButterfly {
         is_valid_strike
             && option.put_bid.unwrap_or(PZERO) > PZERO
             && option.call_bid.unwrap_or(PZERO) > PZERO
+        // TODO: review this
     }
 
     fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
@@ -412,6 +413,7 @@ impl Optimizable for IronButterfly {
         is_valid_strike
             && option.put_ask.unwrap_or(PZERO) > PZERO
             && option.call_ask.unwrap_or(PZERO) > PZERO
+        // TODO: review this
     }
 
     fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {

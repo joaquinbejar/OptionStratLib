@@ -13,7 +13,7 @@ use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
-use tracing::{error, trace};
+use tracing::{debug, error, trace};
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
@@ -219,7 +219,7 @@ impl Options {
             return false;
         }
         if self.strike_price <= PZERO {
-            error!("Strike price is less than or equal to zero");
+            debug!("Strike price is less than or equal to zero");
             return false;
         }
         if self.implied_volatility < ZERO {
