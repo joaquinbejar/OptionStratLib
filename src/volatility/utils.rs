@@ -336,7 +336,7 @@ pub fn uncertain_volatility_bounds(
 ///
 /// ```
 /// use optionstratlib::utils::time::TimeFrame;
-/// use optionstratlib::volatility::utils::{annualized_volatility};
+/// use optionstratlib::volatility::{annualized_volatility};
 /// let daily_vol = 0.01; // 1% daily volatility
 /// let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day);
 /// // annual_vol ≈ 0.1587 or about 15.87%
@@ -365,7 +365,7 @@ pub fn annualized_volatility(volatility: f64, timeframe: TimeFrame) -> f64 {
 ///
 /// ```
 /// use optionstratlib::utils::time::TimeFrame;
-/// use optionstratlib::volatility::utils::{de_annualized_volatility};
+/// use optionstratlib::volatility::{de_annualized_volatility};
 /// let annual_vol = 0.20; // 20% annual volatility
 /// let daily_vol = de_annualized_volatility(annual_vol, TimeFrame::Day);
 /// // daily_vol ≈ 0.0126 or about 1.26%

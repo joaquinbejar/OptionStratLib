@@ -8,7 +8,7 @@ use itertools::Itertools;
 use std::collections::BTreeSet;
 
 #[allow(dead_code)]
-pub(crate) fn approx_equal(a: f64, b: f64) -> bool {
+pub fn approx_equal(a: f64, b: f64) -> bool {
     (a - b).abs() < TOLERANCE
 }
 

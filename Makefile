@@ -58,7 +58,7 @@ fix:
 	cargo fix --allow-staged --allow-dirty
 
 .PHONY: pre-push
-pre-push: fix fmt lint-fix test
+pre-push: fix fmt lint-fix test readme
 
 .PHONY: doc
 doc:
@@ -83,7 +83,6 @@ coverage-html:
 	cargo tarpaulin --all-features --workspace --timeout 120 --out Html
 
 
-
 # Rule to show git log
 git-log:
 	@if [ "$(CURRENT_BRANCH)" = "HEAD" ]; then \
@@ -92,3 +91,11 @@ git-log:
 	fi; \
 	echo "Showing git log for branch $(CURRENT_BRANCH) against main:"; \
 	git log main..$(CURRENT_BRANCH) --pretty=full
+
+.PHONY: create-doc	
+create-doc:
+	cargo doc --no-deps --document-private-items
+
+.PHONY: readme
+readme: create-doc
+	cargo readme > README.md

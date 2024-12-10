@@ -21,14 +21,14 @@ impl LabelOffsetType {
         match self {
             LabelOffsetType::Absolute(x, y) => (*x, *y),
             LabelOffsetType::Relative(x, y) => (*x, *y),
-            LabelOffsetType::Auto => (2.0, 2.0), 
+            LabelOffsetType::Auto => (2.0, 2.0),
         }
     }
 }
 
 /// Represents a point on a chart, including its coordinates, label, and styling options.
 ///
-/// This struct is generic over the type `T` for coordinates, allowing flexibility 
+/// This struct is generic over the type `T` for coordinates, allowing flexibility
 /// in the type of data used to represent the position of the point.
 ///
 /// # Fields
@@ -213,7 +213,6 @@ mod tests_chart_point {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     // Helper function to compare f64 values with a small epsilon
     fn assert_float_eq(a: f64, b: f64) {
