@@ -43,7 +43,11 @@ impl Display for StrategyLegs<'_> {
                     first, second
                 )
             }
-            StrategyLegs::ThreeLegs { first, second, third } => {
+            StrategyLegs::ThreeLegs {
+                first,
+                second,
+                third,
+            } => {
                 write!(
                     f,
                     "Two Legs Strategy:\n1st Leg: {}\n2nd Leg: {}\n3rd Leg: {}",

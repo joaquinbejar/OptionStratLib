@@ -438,7 +438,7 @@ impl Optimizable for IronButterfly {
             StrategyLegs::FourLegs {
                 first: long_put,
                 second: short_strike,
-                third: _, // No lo usamos porque es el mismo que short_strike
+                third: _,
                 fourth: long_call,
             } => IronButterfly::new(
                 chain.symbol.clone(),
