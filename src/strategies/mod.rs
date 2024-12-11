@@ -116,7 +116,7 @@
 //! ```rust
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::strategies::base::{Strategies, Validable};
+//! use optionstratlib::strategies::base::{Positionable, Strategies, Validable};
 //!
 //! struct MyStrategy {
 //!     legs: Vec<Position>,
@@ -129,15 +129,18 @@
 //!     }
 //! }
 //!
-//! impl Strategies for MyStrategy {
-//!     fn add_leg(&mut self, position: Position) {
-//!         self.legs.push(position);
-//!     }
 //!
-//!     fn get_legs(&self) -> Vec<Position> {
-//!         self.legs.clone()
+//! impl Positionable for MyStrategy {
+//!     fn add_position(&mut self, position: &Position) -> Result<(), String> {
+//!         Ok(self.legs.push(position.clone()))
+//!     }
+//! 
+//!  fn get_positions(&self) -> Result<Vec<&Position>, String> {
+//!         Ok(self.legs.iter().collect())
 //!     }
 //! }
+//!
+//! impl Strategies for MyStrategy {}
 //! ```
 //! //! Example usage of the Iron Condor strategy:
 //!
@@ -193,3 +196,4 @@ pub mod protective_put;
 pub mod straddle;
 pub mod strangle;
 pub mod utils;
+mod delta_neutral;
