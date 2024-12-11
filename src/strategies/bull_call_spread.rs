@@ -15,7 +15,7 @@ Key characteristics:
 - Also known as a vertical call debit spread
 */
 
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -109,7 +109,7 @@ impl BullCallSpread {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_leg(long_call.clone());
+        strategy.add_position(&long_call.clone()).expect("Failed to add long call");
 
         let short_call_option = Options::new(
             OptionType::European,
@@ -132,7 +132,7 @@ impl BullCallSpread {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_leg(short_call.clone());
+        strategy.add_position(&short_call.clone()).expect("Failed to add short call");
 
         strategy.validate();
 
@@ -145,21 +145,30 @@ impl BullCallSpread {
     }
 }
 
+impl Positionable for BullCallSpread {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match position.option.side {
+            Side::Short => {
+                self.short_call = position.clone();
+                Ok(())
+            },
+            Side::Long => {
+                self.long_call = position.clone();
+                Ok(())
+            },
+        }
+    }
+
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.long_call, &self.short_call])
+    }
+}
+
 impl Strategies for BullCallSpread {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call.option.underlying_price
     }
-
-    fn add_leg(&mut self, position: Position) {
-        match position.option.side {
-            Side::Long => self.long_call = position,
-            Side::Short => self.short_call = position,
-        }
-    }
-
-    fn get_legs(&self) -> Vec<Position> {
-        vec![self.long_call.clone(), self.short_call.clone()]
-    }
+    
 
     fn max_profit(&self) -> Result<PositiveF64, &str> {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
@@ -540,14 +549,14 @@ mod tests_bull_call_spread_strategy {
             0.0,
         );
 
-        spread.add_leg(new_long_call.clone());
+        spread.add_position(&new_long_call.clone()).expect("Failed to add long call");
         assert_eq!(spread.long_call.option.strike_price, pos!(90.0));
     }
 
     #[test]
     fn test_get_legs() {
         let spread = create_test_spread();
-        let legs = spread.get_legs();
+        let legs = spread.get_positions().expect("Failed to get positions");
 
         assert_eq!(legs.len(), 2);
         assert_eq!(legs[0].option.side, Side::Long);

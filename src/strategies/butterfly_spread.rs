@@ -16,7 +16,7 @@ Key characteristics:
 - All options must have same expiration date
 */
 
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -81,6 +81,29 @@ impl LongButterflySpread {
             short_calls: Position::default(),
             long_call_high: Position::default(),
         };
+        
+        // Create two short calls at middle strike
+        let short_calls = Options::new(
+            OptionType::European,
+            Side::Short,
+            underlying_symbol.clone(),
+            middle_strike,
+            expiration.clone(),
+            implied_volatility,
+            quantity * 2.0, // Double quantity for middle strike
+            underlying_price,
+            risk_free_rate,
+            OptionStyle::Call,
+            dividend_yield,
+            None,
+        );
+        strategy.short_calls = Position::new(
+            short_calls,
+            premium_middle,
+            Utc::now(),
+            fees / 3.0,
+            fees / 3.0,
+        );
 
         // Create long call at lower strike
         let long_call_low = Options::new(
@@ -100,29 +123,6 @@ impl LongButterflySpread {
         strategy.long_call_low = Position::new(
             long_call_low,
             premium_low,
-            Utc::now(),
-            fees / 3.0,
-            fees / 3.0,
-        );
-
-        // Create two short calls at middle strike
-        let short_calls = Options::new(
-            OptionType::European,
-            Side::Short,
-            underlying_symbol.clone(),
-            middle_strike,
-            expiration.clone(),
-            implied_volatility,
-            quantity * 2.0, // Double quantity for middle strike
-            underlying_price,
-            risk_free_rate,
-            OptionStyle::Call,
-            dividend_yield,
-            None,
-        );
-        strategy.short_calls = Position::new(
-            short_calls,
-            premium_middle,
             Utc::now(),
             fees / 3.0,
             fees / 3.0,
@@ -208,33 +208,36 @@ impl Validable for LongButterflySpread {
     }
 }
 
+impl Positionable for LongButterflySpread {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match &position.option.side {
+            Side::Long  => {
+                // short_calls should be inserted first
+                if position.option.strike_price < self.short_calls.option.strike_price {
+                    self.long_call_low = position.clone();
+                    Ok(())
+                } else {
+                    self.long_call_high = position.clone();
+                    Ok(())
+                }
+            }
+            Side::Short => {
+                self.short_calls = position.clone();
+                Ok(())
+            },
+        }
+    }
+
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.long_call_low, &self.short_calls, &self.long_call_high])
+    }
+}
+
 impl Strategies for LongButterflySpread {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call_low.option.underlying_price
     }
-
-    fn add_leg(&mut self, position: Position) {
-        match (&position.option.side, position.option.quantity) {
-            (Side::Long, q) if q == self.long_call_low.option.quantity => {
-                if position.option.strike_price < self.short_calls.option.strike_price {
-                    self.long_call_low = position;
-                } else {
-                    self.long_call_high = position;
-                }
-            }
-            (Side::Short, _) => self.short_calls = position,
-            _ => debug!("Invalid position for Long Butterfly strategy"),
-        }
-    }
-
-    fn get_legs(&self) -> Vec<Position> {
-        vec![
-            self.long_call_low.clone(),
-            self.short_calls.clone(),
-            self.long_call_high.clone(),
-        ]
-    }
-
+    
     fn max_profit(&self) -> Result<PositiveF64, &str> {
         let profit = self.calculate_profit_at(self.short_calls.option.strike_price);
         if profit > ZERO {
@@ -731,6 +734,29 @@ impl ShortButterflySpread {
             short_call_high: Position::default(),
         };
 
+        // Create two long calls at middle strike
+        let long_calls = Options::new(
+            OptionType::European,
+            Side::Long,
+            underlying_symbol.clone(),
+            middle_strike,
+            expiration.clone(),
+            implied_volatility,
+            quantity * 2.0, // Double quantity for middle strike
+            underlying_price,
+            risk_free_rate,
+            OptionStyle::Call,
+            dividend_yield,
+            None,
+        );
+        strategy.long_calls = Position::new(
+            long_calls,
+            premium_middle,
+            Utc::now(),
+            fees / 3.0,
+            fees / 3.0,
+        );
+
         // Create short call at lower strike
         let short_call_low = Options::new(
             OptionType::European,
@@ -754,28 +780,7 @@ impl ShortButterflySpread {
             fees / 3.0,
         );
 
-        // Create two long calls at middle strike
-        let long_calls = Options::new(
-            OptionType::European,
-            Side::Long,
-            underlying_symbol.clone(),
-            middle_strike,
-            expiration.clone(),
-            implied_volatility,
-            quantity * 2.0, // Double quantity for middle strike
-            underlying_price,
-            risk_free_rate,
-            OptionStyle::Call,
-            dividend_yield,
-            None,
-        );
-        strategy.long_calls = Position::new(
-            long_calls,
-            premium_middle,
-            Utc::now(),
-            fees / 3.0,
-            fees / 3.0,
-        );
+
 
         // Create short call at higher strike
         let short_call_high = Options::new(
@@ -857,31 +862,34 @@ impl Validable for ShortButterflySpread {
     }
 }
 
-impl Strategies for ShortButterflySpread {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.short_call_low.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
-        match (&position.option.side, position.option.quantity) {
-            (Side::Long, _) => self.long_calls = position,
-            (Side::Short, q) if q == self.short_call_low.option.quantity => {
+impl Positionable for ShortButterflySpread {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match &position.option.side {
+            Side::Short  => {
+                // long_calls should be inserted first
                 if position.option.strike_price < self.long_calls.option.strike_price {
-                    self.short_call_low = position;
+                    self.short_call_low = position.clone();
+                    Ok(())
                 } else {
-                    self.short_call_high = position;
+                    self.short_call_high = position.clone();
+                    Ok(())
                 }
             }
-            _ => debug!("Invalid position for Short Butterfly strategy"),
+            Side::Long => {
+                self.long_calls = position.clone();
+                Ok(())
+            },
         }
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        vec![
-            self.short_call_low.clone(),
-            self.long_calls.clone(),
-            self.short_call_high.clone(),
-        ]
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.short_call_low, &self.long_calls, &self.short_call_high])
+    }
+}
+
+impl Strategies for ShortButterflySpread {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.short_call_low.option.underlying_price
     }
 
     fn max_profit(&self) -> Result<PositiveF64, &str> {
@@ -2114,7 +2122,7 @@ mod tests_butterfly_strategies {
             0.0,
         );
 
-        butterfly.add_leg(new_long.clone());
+        butterfly.add_position(&new_long.clone()).expect("Failed to add position");
         assert_eq!(butterfly.long_call_low.option.strike_price, pos!(85.0));
     }
 
@@ -2142,7 +2150,7 @@ mod tests_butterfly_strategies {
             0.0,
         );
 
-        butterfly.add_leg(new_short.clone());
+        butterfly.add_position(&new_short.clone()).expect("Failed to add position");
         assert_eq!(butterfly.short_call_low.option.strike_price, pos!(85.0));
     }
 
@@ -2151,8 +2159,8 @@ mod tests_butterfly_strategies {
         let long_butterfly = create_test_long_butterfly();
         let short_butterfly = create_test_short_butterfly();
 
-        assert_eq!(long_butterfly.get_legs().len(), 3);
-        assert_eq!(short_butterfly.get_legs().len(), 3);
+        assert_eq!(long_butterfly.get_positions().unwrap().len(), 3);
+        assert_eq!(short_butterfly.get_positions().unwrap().len(), 3);
     }
 
     #[test]

@@ -15,7 +15,7 @@ Key characteristics:
 - Also known as a vertical put credit spread
 */
 
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -109,7 +109,7 @@ impl BullPutSpread {
             open_fee_long_put,
             close_fee_long_put,
         );
-        strategy.add_leg(long_put.clone());
+        strategy.add_position(&long_put.clone()).expect("Error adding long put");
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -132,7 +132,7 @@ impl BullPutSpread {
             open_fee_short_put,
             close_fee_short_put,
         );
-        strategy.add_leg(short_put.clone());
+        strategy.add_position(&short_put.clone()).expect("Error adding short put");
 
         strategy.validate();
 
@@ -145,22 +145,30 @@ impl BullPutSpread {
     }
 }
 
+impl Positionable for BullPutSpread {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match position.option.side {
+            Side::Short => {
+                self.short_put = position.clone();
+                Ok(())
+            },
+            Side::Long => {
+                self.long_put = position.clone();
+                Ok(())
+            },
+        }
+    }
+
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.long_put, &self.short_put])
+    }
+}
+
 impl Strategies for BullPutSpread {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.short_put.option.underlying_price
     }
-
-    fn add_leg(&mut self, position: Position) {
-        match position.option.side {
-            Side::Short => self.short_put = position,
-            Side::Long => self.long_put = position,
-        }
-    }
-
-    fn get_legs(&self) -> Vec<Position> {
-        vec![self.long_put.clone(), self.short_put.clone()]
-    }
-
+    
     fn max_profit(&self) -> Result<PositiveF64, &str> {
         let net_premium_received = self.net_premium_received();
         if net_premium_received < ZERO {
@@ -551,14 +559,14 @@ mod tests_bull_put_spread_strategy {
             0.0,
         );
 
-        spread.add_leg(new_long_put.clone());
+        spread.add_position(&new_long_put.clone()).expect("Error adding long put");
         assert_eq!(spread.long_put.option.strike_price, pos!(85.0));
     }
 
     #[test]
     fn test_get_legs() {
         let spread = create_test_spread();
-        let legs = spread.get_legs();
+        let legs = spread.get_positions().expect("Error getting positions");
 
         assert_eq!(legs.len(), 2);
         assert_eq!(legs[0].option.side, Side::Long);

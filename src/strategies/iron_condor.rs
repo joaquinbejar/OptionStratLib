@@ -9,7 +9,7 @@ Key characteristics:
 - Limited risk
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -98,7 +98,7 @@ impl IronCondor {
             open_fee,
             close_fee,
         );
-        strategy.add_leg(short_call.clone());
+        strategy.add_position(&short_call.clone()).expect("Invalid short call");
 
         // Short Put
         let short_put_option = Options::new(
@@ -122,7 +122,7 @@ impl IronCondor {
             open_fee,
             close_fee,
         );
-        strategy.add_leg(short_put.clone());
+        strategy.add_position(&short_put.clone()).expect("Invalid short put");
 
         // Long Call
         let long_call_option = Options::new(
@@ -146,7 +146,7 @@ impl IronCondor {
             open_fee,
             close_fee,
         );
-        strategy.add_leg(long_call.clone());
+        strategy.add_position(&long_call.clone()).expect("Invalid long call");
 
         // Long Put
         let long_put_option = Options::new(
@@ -170,7 +170,7 @@ impl IronCondor {
             open_fee,
             close_fee,
         );
-        strategy.add_leg(long_put.clone());
+        strategy.add_position(&long_put.clone()).expect("Invalid long put");
 
         // Calculate break-even points
         let net_credit = (strategy.long_put.premium + strategy.long_call.premium) + strategy.fees()
@@ -204,30 +204,39 @@ impl Validable for IronCondor {
     }
 }
 
-impl Strategies for IronCondor {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.long_put.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
+impl Positionable for IronCondor {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
         match (
             position.option.option_style.clone(),
             position.option.side.clone(),
         ) {
-            (OptionStyle::Call, Side::Short) => self.short_call = position,
-            (OptionStyle::Put, Side::Short) => self.short_put = position,
-            (OptionStyle::Call, Side::Long) => self.long_call = position,
-            (OptionStyle::Put, Side::Long) => self.long_put = position,
+            (OptionStyle::Call, Side::Short) => {
+                self.short_call = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Put, Side::Short) => {
+                self.short_put = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Call, Side::Long) => {
+                self.long_call = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Put, Side::Long) => {
+                self.long_put = position.clone();
+                Ok(())
+            },
         }
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        vec![
-            self.short_call.clone(),
-            self.short_put.clone(),
-            self.long_call.clone(),
-            self.long_put.clone(),
-        ]
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.short_call, &self.short_put, &self.long_call, &self.long_put])
+    }
+}
+
+impl Strategies for IronCondor {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.long_put.option.underlying_price
     }
 
     fn break_even(&self) -> Vec<PositiveF64> {
@@ -970,7 +979,7 @@ mod tests_iron_condor_strategies {
             0.5,
             0.5,
         );
-        condor.add_leg(new_short_call.clone());
+        condor.add_position(&new_short_call.clone()).expect("Invalid short call");
         assert_eq!(condor.short_call.option.strike_price, pos!(106.0));
 
         // Test adding a long put
@@ -994,14 +1003,14 @@ mod tests_iron_condor_strategies {
             0.5,
             0.5,
         );
-        condor.add_leg(new_long_put.clone());
+        condor.add_position(&new_long_put.clone()).expect("Invalid long put");
         assert_eq!(condor.long_put.option.strike_price, pos!(89.0));
     }
 
     #[test]
     fn test_get_legs() {
         let condor = create_test_condor();
-        let legs = condor.get_legs();
+        let legs = condor.get_positions().expect("Invalid legs");
 
         assert_eq!(legs.len(), 4);
         assert_eq!(legs[0].option.option_style, OptionStyle::Call);

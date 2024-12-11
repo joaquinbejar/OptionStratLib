@@ -10,7 +10,7 @@ Key characteristics:
 - Profitable only with a large move in either direction
 */
 
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -116,7 +116,7 @@ impl ShortStraddle {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_leg(short_call.clone());
+        strategy.add_position(&short_call.clone()).expect("Invalid short call");
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -139,7 +139,7 @@ impl ShortStraddle {
             open_fee_short_put,
             close_fee_short_put,
         );
-        strategy.add_leg(short_put.clone());
+        strategy.add_position(&short_put.clone()).expect("Invalid short put");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
         strategy
@@ -154,20 +154,28 @@ impl ShortStraddle {
     }
 }
 
-impl Strategies for ShortStraddle {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.short_call.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
+impl Positionable for ShortStraddle {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
         match position.option.option_style {
-            OptionStyle::Call => self.short_call = position,
-            OptionStyle::Put => self.short_put = position,
+            OptionStyle::Call => {
+                self.short_call = position.clone();
+                Ok(())
+            },
+            OptionStyle::Put => {
+                self.short_put = position.clone();
+                Ok(())
+            },
         }
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        vec![self.short_call.clone(), self.short_put.clone()]
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.short_call, &self.short_put])
+    }
+}
+
+impl Strategies for ShortStraddle {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.short_call.option.underlying_price
     }
 
     fn max_profit(&self) -> Result<PositiveF64, &str> {
@@ -639,7 +647,7 @@ impl LongStraddle {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_leg(long_call.clone());
+        strategy.add_position(&long_call.clone()).expect("Invalid long call");
 
         let long_put_option = Options::new(
             OptionType::European,
@@ -662,7 +670,7 @@ impl LongStraddle {
             open_fee_long_put,
             close_fee_long_put,
         );
-        strategy.add_leg(long_put.clone());
+        strategy.add_position(&long_put.clone()).expect("Invalid long put");
 
         let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
 
@@ -679,22 +687,30 @@ impl LongStraddle {
     }
 }
 
+impl Positionable for LongStraddle {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match position.option.option_style {
+            OptionStyle::Call => {
+                self.long_call = position.clone();
+                Ok(())
+            },
+            OptionStyle::Put => {
+                self.long_put = position.clone();
+                Ok(())
+            },
+        }
+    }
+
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.long_call, &self.long_put])
+    }
+}
+
 impl Strategies for LongStraddle {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call.option.underlying_price
     }
-
-    fn add_leg(&mut self, position: Position) {
-        match position.option.option_style {
-            OptionStyle::Call => self.long_call = position,
-            OptionStyle::Put => self.long_put = position,
-        }
-    }
-
-    fn get_legs(&self) -> Vec<Position> {
-        vec![self.long_call.clone(), self.long_put.clone()]
-    }
-
+    
     fn max_profit(&self) -> Result<PositiveF64, &str> {
         Ok(f64::INFINITY.into()) // Theoretically unlimited
     }
@@ -1261,11 +1277,11 @@ mod tests_short_straddle {
         let original_put = strategy.short_put.clone();
 
         // Test adding a new call leg
-        strategy.add_leg(original_call.clone());
+        strategy.add_position(&original_call.clone()).expect("Invalid call");
         assert_eq!(strategy.short_call, original_call);
 
         // Test adding a new put leg
-        strategy.add_leg(original_put.clone());
+        strategy.add_position(&original_put.clone()).expect("Invalid put");
         assert_eq!(strategy.short_put, original_put);
     }
 
@@ -1562,10 +1578,10 @@ mod tests_long_straddle {
         let original_call = strategy.long_call.clone();
         let original_put = strategy.long_put.clone();
 
-        strategy.add_leg(original_call.clone());
+        strategy.add_position(&original_call.clone()).expect("Invalid call");
         assert_eq!(strategy.long_call, original_call);
 
-        strategy.add_leg(original_put.clone());
+        strategy.add_position(&original_put.clone()).expect("Invalid put");
         assert_eq!(strategy.long_put, original_put);
     }
 

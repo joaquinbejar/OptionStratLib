@@ -9,7 +9,7 @@ Key characteristics:
 - Lower cost than a straddle
 - Requires a larger price move to become profitable
 */
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -101,7 +101,7 @@ impl ShortStrangle {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_leg(short_call.clone());
+        strategy.add_position(&short_call.clone()).expect("Invalid position");
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -124,7 +124,7 @@ impl ShortStrangle {
             open_fee_short_put,
             close_fee_short_put,
         );
-        strategy.add_leg(short_put.clone());
+        strategy.add_position(&short_put.clone()).expect("Invalid position");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
         strategy
@@ -138,16 +138,30 @@ impl ShortStrangle {
     }
 }
 
+impl Positionable for ShortStrangle {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match (&position.option.option_style, &position.option.side) {
+            (OptionStyle::Call, Side::Short) => {
+                self.short_call = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Put, Side::Short) => {
+                self.short_put = position.clone();
+                Ok(())
+            },
+            _ => Err("Position side is Long, it is not valid for this strategy".to_string()),
+        }
+    }
+
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.short_call, &self.short_put])
+    }
+}
+
+
 impl Strategies for ShortStrangle {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.short_call.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
-        match position.option.option_style {
-            OptionStyle::Call => self.short_call = position,
-            OptionStyle::Put => self.short_put = position,
-        }
     }
 
     fn max_profit(&self) -> Result<PositiveF64, &str> {
@@ -641,7 +655,7 @@ impl LongStrangle {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_leg(long_call.clone());
+        strategy.add_position(&long_call.clone()).expect("Invalid position");
 
         let long_put_option = Options::new(
             OptionType::European,
@@ -664,7 +678,7 @@ impl LongStrangle {
             open_fee_long_put,
             close_fee_long_put,
         );
-        strategy.add_leg(long_put.clone());
+        strategy.add_position(&long_put.clone()).expect("Invalid position");
 
         let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
 
@@ -680,16 +694,29 @@ impl LongStrangle {
     }
 }
 
+impl Positionable for LongStrangle {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match (&position.option.option_style, &position.option.side) {
+            (OptionStyle::Call, Side::Long) => {
+                self.long_call = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Put, Side::Long) => {
+                self.long_put = position.clone();
+                Ok(())
+            },
+            _ => Err("Position side is Short, it is not valid for this strategy".to_string()),
+        }
+    }
+
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.long_call, &self.long_put])
+    }
+}
+
 impl Strategies for LongStrangle {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
-        match position.option.option_style {
-            OptionStyle::Call => self.long_call = position,
-            OptionStyle::Put => self.long_put = position,
-        }
     }
 
     fn max_profit(&self) -> Result<PositiveF64, &str> {
@@ -1259,11 +1286,11 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let original_put = strategy.short_put.clone();
 
         // Test adding a new call leg
-        strategy.add_leg(original_call.clone());
+        strategy.add_position(&original_call.clone()).expect("Invalid position");
         assert_eq!(strategy.short_call, original_call);
 
         // Test adding a new put leg
-        strategy.add_leg(original_put.clone());
+        strategy.add_position(&original_put.clone()).expect("Invalid position");
         assert_eq!(strategy.short_put, original_put);
     }
 
@@ -1590,10 +1617,10 @@ mod tests_long_strangle {
         let original_call = strategy.long_call.clone();
         let original_put = strategy.long_put.clone();
 
-        strategy.add_leg(original_call.clone());
+        strategy.add_position(&original_call.clone()).expect("Invalid position");
         assert_eq!(strategy.long_call, original_call);
 
-        strategy.add_leg(original_put.clone());
+        strategy.add_position(&original_put.clone()).expect("Invalid position");
         assert_eq!(strategy.long_put, original_put);
     }
 

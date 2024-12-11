@@ -28,7 +28,7 @@ Key characteristics:
 - Both options have same expiration date
 */
 
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -122,7 +122,7 @@ impl BearCallSpread {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_leg(short_call.clone());
+        strategy.add_position(&short_call.clone()).expect("Error adding short call");
 
         let long_call_option = Options::new(
             OptionType::European,
@@ -145,7 +145,7 @@ impl BearCallSpread {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_leg(long_call.clone());
+        strategy.add_position(&long_call.clone()).expect("Error adding long call");
 
         strategy.validate();
 
@@ -158,20 +158,28 @@ impl BearCallSpread {
     }
 }
 
+impl Positionable for BearCallSpread {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match position.option.side {
+            Side::Short => {
+                self.short_call = position.clone();
+                Ok(())
+            },
+            Side::Long => {
+                self.long_call = position.clone();
+                Ok(())
+            },
+        }
+    }
+    
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.short_call, &self.long_call])
+    }
+}
+
 impl Strategies for BearCallSpread {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.short_call.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
-        match position.option.side {
-            Side::Short => self.short_call = position,
-            Side::Long => self.long_call = position,
-        }
-    }
-
-    fn get_legs(&self) -> Vec<Position> {
-        vec![self.short_call.clone(), self.long_call.clone()]
     }
 
     fn max_profit(&self) -> Result<PositiveF64, &str> {

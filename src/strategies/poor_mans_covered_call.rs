@@ -28,7 +28,7 @@
     and risk associated with traditional covered call strategies.
 */
 
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -112,7 +112,7 @@ impl PoorMansCoveredCall {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_leg(long_call.clone());
+        strategy.add_position(&long_call.clone()).expect("Invalid long call option");
 
         // Short Call
         let short_call_option = Options::new(
@@ -136,7 +136,7 @@ impl PoorMansCoveredCall {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_leg(short_call.clone());
+        strategy.add_position(&short_call.clone()).expect("Invalid short call option");
 
         // Calculate break-even point
         let net_debit =
@@ -154,24 +154,32 @@ impl Validable for PoorMansCoveredCall {
     }
 }
 
-impl Strategies for PoorMansCoveredCall {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.long_call.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
+impl Positionable for PoorMansCoveredCall {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
         match (
             position.option.option_style.clone(),
             position.option.side.clone(),
         ) {
-            (OptionStyle::Call, Side::Long) => self.long_call = position,
-            (OptionStyle::Call, Side::Short) => self.short_call = position,
-            _ => panic!("Invalid option type for Poor Man's Covered Call strategy"),
+            (OptionStyle::Call, Side::Long) => {
+                self.long_call = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Call, Side::Short) => {
+                self.short_call = position.clone();
+                Ok(())
+            },
+            _ => Err("Invalid option type for Poor Man's Covered Call strategy".to_string()),
         }
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        vec![self.long_call.clone(), self.short_call.clone()]
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.short_call, &self.long_call])
+    }
+}
+
+impl Strategies for PoorMansCoveredCall {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.long_call.option.underlying_price
     }
 
     fn break_even(&self) -> Vec<PositiveF64> {
@@ -705,7 +713,7 @@ mod tests_pmcc_validation {
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
-        strategy.add_leg(position.clone());
+        strategy.add_position(&position.clone()).expect("Invalid long call option");
         assert_eq!(strategy.long_call, position);
     }
 
@@ -727,7 +735,7 @@ mod tests_pmcc_validation {
             None,
         );
         let position = Position::new(option, 5.0, Utc::now(), 0.5, 0.5);
-        strategy.add_leg(position.clone());
+        strategy.add_position(&position.clone()).expect("Invalid short call option");
         assert_eq!(strategy.short_call, position);
     }
 
@@ -750,7 +758,7 @@ mod tests_pmcc_validation {
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid option type");
     }
 }
 

@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::DARK_BLUE;
 use crate::constants::{DARK_GREEN, ZERO};
@@ -90,7 +90,7 @@ impl CallButterfly {
             open_fee_short,
             close_fee_short,
         );
-        strategy.add_leg(short_call.clone());
+        strategy.add_position(&short_call.clone()).expect("Invalid short call");
         strategy.short_call = short_call;
 
         let long_call_itm_option = Options::new(
@@ -114,7 +114,7 @@ impl CallButterfly {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(long_call_itm.clone());
+        strategy.add_position(&long_call_itm.clone()).expect("Invalid long call itm");
         strategy.long_call_itm = long_call_itm;
 
         let long_call_otm_option = Options::new(
@@ -138,7 +138,7 @@ impl CallButterfly {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(long_call_otm.clone());
+        strategy.add_position(&long_call_otm.clone()).expect("Invalid long call otm");
         strategy.long_call_otm = long_call_otm;
 
         // Calculate break-even points
@@ -241,30 +241,33 @@ impl Default for CallButterfly {
     }
 }
 
-impl Strategies for CallButterfly {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
+impl Positionable for CallButterfly {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
         match position.option.side {
             Side::Long => {
                 if position.option.strike_price >= self.short_call.option.strike_price {
-                    self.long_call_otm = position
+                    self.long_call_otm = position.clone();
+                    Ok(())
                 } else {
-                    self.long_call_itm = position
+                    self.long_call_itm = position.clone();
+                    Ok(())
                 }
             }
-            Side::Short => self.short_call = position,
+            Side::Short => {
+                self.short_call = position.clone();
+                Ok(())
+            },
         }
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        vec![
-            self.long_call_itm.clone(),
-            self.long_call_otm.clone(),
-            self.short_call.clone(),
-        ]
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.long_call_itm, &self.long_call_otm, &self.short_call])
+    }
+}
+
+impl Strategies for CallButterfly {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.underlying_price
     }
 
     fn break_even(&self) -> Vec<PositiveF64> {

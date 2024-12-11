@@ -11,7 +11,7 @@ Key characteristics:
 - High probability of small profit
 - Requires very low volatility
 */
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -99,7 +99,7 @@ impl IronButterfly {
             open_fee,
             close_fee,
         );
-        strategy.add_leg(short_call.clone());
+        strategy.add_position(&short_call.clone()).expect("Invalid short call");
 
         // Short Put
         let short_put_option = Options::new(
@@ -123,7 +123,7 @@ impl IronButterfly {
             open_fee,
             close_fee,
         );
-        strategy.add_leg(short_put.clone());
+        strategy.add_position(&short_put.clone()).expect("Invalid short put");
 
         // Long Call
         let long_call_option = Options::new(
@@ -147,7 +147,7 @@ impl IronButterfly {
             open_fee,
             close_fee,
         );
-        strategy.add_leg(long_call.clone());
+        strategy.add_position(&long_call.clone()).expect("Invalid long call");
 
         // Long Put
         let long_put_option = Options::new(
@@ -171,7 +171,7 @@ impl IronButterfly {
             open_fee,
             close_fee,
         );
-        strategy.add_leg(long_put.clone());
+        strategy.add_position(&long_put.clone()).expect("Invalid long put");
 
         // Calculate break-even points
         let net_credit = (strategy.long_put.premium + strategy.long_call.premium) + strategy.fees()
@@ -201,30 +201,39 @@ impl Validable for IronButterfly {
     }
 }
 
-impl Strategies for IronButterfly {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.long_put.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
+impl Positionable for IronButterfly {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
         match (
             position.option.option_style.clone(),
             position.option.side.clone(),
         ) {
-            (OptionStyle::Call, Side::Short) => self.short_call = position,
-            (OptionStyle::Put, Side::Short) => self.short_put = position,
-            (OptionStyle::Call, Side::Long) => self.long_call = position,
-            (OptionStyle::Put, Side::Long) => self.long_put = position,
+            (OptionStyle::Call, Side::Short) => {
+                self.short_call = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Put, Side::Short) => {
+                self.short_put = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Call, Side::Long) => {
+                self.long_call = position.clone();
+                Ok(())
+            },
+            (OptionStyle::Put, Side::Long) => {
+                self.long_put = position.clone();
+                Ok(())
+            },
         }
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        vec![
-            self.short_call.clone(),
-            self.short_put.clone(),
-            self.long_call.clone(),
-            self.long_put.clone(),
-        ]
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.short_call, &self.short_put, &self.long_call, &self.long_put])
+    }
+}
+
+impl Strategies for IronButterfly {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.long_put.option.underlying_price
     }
 
     fn break_even(&self) -> Vec<PositiveF64> {
@@ -969,7 +978,7 @@ mod tests_iron_butterfly_strategies {
             0.5,
             0.5,
         );
-        butterfly.add_leg(new_short_call.clone());
+        butterfly.add_position(&new_short_call.clone()).expect("Failed to add short call");
         assert_eq!(
             butterfly.short_call.option.strike_price,
             butterfly.short_put.option.strike_price
@@ -996,14 +1005,14 @@ mod tests_iron_butterfly_strategies {
             0.5,
             0.5,
         );
-        butterfly.add_leg(new_long_put.clone());
+        butterfly.add_position(&new_long_put.clone()).expect("Failed to add long put");
         assert_eq!(butterfly.long_put.option.strike_price, pos!(90.0));
     }
 
     #[test]
     fn test_get_legs() {
         let butterfly = create_test_butterfly();
-        let legs = butterfly.get_legs();
+        let legs = butterfly.get_positions().expect("Failed to get legs");
 
         assert_eq!(legs.len(), 4);
         assert_eq!(legs[0].option.option_style, OptionStyle::Call);

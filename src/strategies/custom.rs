@@ -9,7 +9,7 @@ use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
-use crate::strategies::base::{Optimizable, Strategies, StrategyType, Validable};
+use crate::strategies::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
@@ -149,23 +149,27 @@ impl CustomStrategy {
     }
 }
 
-impl Strategies for CustomStrategy {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
-        self.positions.push(position);
+impl Positionable for CustomStrategy {
+    
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        self.positions.push(position.clone());
         self.max_loss_iter();
         if !self.validate() {
-            panic!("Invalid position");
+            return Err("Invalid position".to_string());
         }
         self.max_profit_iter();
         self.calculate_break_even_points();
+        Ok(())
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        self.positions.clone()
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(self.positions.iter().collect())
+    }
+}
+
+impl Strategies for CustomStrategy {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.underlying_price
     }
 
     fn break_even(&self) -> Vec<PositiveF64> {
@@ -553,7 +557,7 @@ mod tests_custom_strategy {
             close_fee_long,
         );
 
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
         assert_eq!(strategy.break_even_points.len(), 1);
         assert_relative_eq!(
             strategy.break_even_points[0].value(),
@@ -605,7 +609,7 @@ mod tests_custom_strategy {
             close_fee_long,
         );
 
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let position = Position::new(
             Options::new(
@@ -627,7 +631,7 @@ mod tests_custom_strategy {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         assert_eq!(strategy.positions.len(), 3);
         assert_eq!(strategy.break_even_points.len(), 2);
@@ -771,7 +775,7 @@ mod tests_max_profit {
             close_fee_long,
         );
 
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let position = Position::new(
             Options::new(
@@ -793,7 +797,7 @@ mod tests_max_profit {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let max_profit = strategy.max_profit_iter();
         assert!(max_profit > PZERO);
@@ -908,7 +912,7 @@ mod tests_max_loss {
             close_fee_long,
         );
 
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let position = Position::new(
             Options::new(
@@ -930,7 +934,7 @@ mod tests_max_loss {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let max_loss = strategy.max_loss_iter();
         assert!(max_loss > PZERO);
