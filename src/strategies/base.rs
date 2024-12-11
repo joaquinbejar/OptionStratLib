@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{
@@ -75,17 +76,9 @@ impl Strategy {
     }
 }
 
-pub trait Strategies: Validable {
+pub trait Strategies: Validable + Positionable {
     fn get_underlying_price(&self) -> PositiveF64 {
         panic!("Underlying price is not applicable for this strategy");
-    }
-
-    fn add_leg(&mut self, _position: Position) {
-        panic!("Add leg is not applicable for this strategy");
-    }
-
-    fn get_legs(&self) -> Vec<Position> {
-        panic!("Legs is not applicable for this strategy");
     }
 
     // Maintained for Back-compatibility
@@ -161,7 +154,8 @@ pub trait Strategies: Validable {
     }
 
     fn strikes(&self) -> Vec<PositiveF64> {
-        self.get_legs()
+        self.get_positions()
+            .unwrap_or_default()
             .iter()
             .map(|leg| leg.option.strike_price)
             .collect()
@@ -281,6 +275,18 @@ pub trait Optimizable: Validable + Strategies {
     }
 }
 
+pub trait Positionable {
+    fn add_position(&mut self, _position: &Position) -> Result<(), String> {
+        Err("Add position is not applicable for this strategy".to_string())
+    }
+    
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Err("Get positions is not applicable for this strategy".to_string())
+    }
+    
+
+}
+
 #[cfg(test)]
 mod tests_strategies {
     use super::*;
@@ -311,15 +317,20 @@ mod tests_strategies {
 
     impl Validable for MockStrategy {}
 
+    impl Positionable for MockStrategy {
+
+        fn add_position(&mut self, position: &Position) -> Result<(), String> {
+            self.legs.push(position.clone());
+            Ok(())
+        }
+
+        fn get_positions(&self) -> Result<Vec<&Position>, String> {
+            Ok(self.legs.iter().collect())
+        }
+    }
+
     impl Strategies for MockStrategy {
-        fn add_leg(&mut self, position: Position) {
-            self.legs.push(position);
-        }
-
-        fn get_legs(&self) -> Vec<Position> {
-            self.legs.clone()
-        }
-
+        
         fn break_even(&self) -> Vec<PositiveF64> {
             vec![PositiveF64::new(100.0).unwrap()]
         }
@@ -360,8 +371,7 @@ mod tests_strategies {
         // Test add_leg and get_legs
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
-        mock_strategy.add_leg(position.clone());
-        // assert_eq!(mock_strategy.get_legs(), vec![position]);
+        mock_strategy.add_position(&position.clone()).expect("Error adding position");
 
         // Test other methods
         assert_eq!(
@@ -385,6 +395,7 @@ mod tests_strategies {
                 true
             }
         }
+        impl Positionable for DefaultStrategy {}
         impl Strategies for DefaultStrategy {}
 
         let strategy = DefaultStrategy;
@@ -398,16 +409,16 @@ mod tests_strategies {
     }
 
     #[test]
-    #[should_panic(expected = "Add leg is not applicable for this strategy")]
     fn test_strategies_add_leg_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
+        impl Positionable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let mut strategy = PanicStrategy;
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
-        strategy.add_leg(position);
+        assert!(strategy.add_position(&position).is_err());
     }
 }
 
@@ -440,14 +451,14 @@ mod tests_strategies_extended {
     }
 
     #[test]
-    #[should_panic(expected = "Legs is not applicable for this strategy")]
     fn test_strategies_get_legs_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
+        impl Positionable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
-        strategy.get_legs();
+        assert!(strategy.get_positions().is_err());
     }
 
     #[test]
@@ -455,6 +466,7 @@ mod tests_strategies_extended {
     fn test_strategies_break_even_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
+        impl Positionable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -466,6 +478,7 @@ mod tests_strategies_extended {
     fn test_strategies_net_premium_received_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
+        impl Positionable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -477,6 +490,7 @@ mod tests_strategies_extended {
     fn test_strategies_fees_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
+        impl Positionable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -487,6 +501,7 @@ mod tests_strategies_extended {
     fn test_strategies_max_profit_iter() {
         struct TestStrategy;
         impl Validable for TestStrategy {}
+        impl Positionable for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_profit(&self) -> Result<PositiveF64, &str> {
                 Ok(pos!(100.0))
@@ -501,6 +516,7 @@ mod tests_strategies_extended {
     fn test_strategies_max_loss_iter() {
         struct TestStrategy;
         impl Validable for TestStrategy {}
+        impl Positionable for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_loss(&self) -> Result<PositiveF64, &str> {
                 Ok(pos!(50.0))
@@ -515,10 +531,13 @@ mod tests_strategies_extended {
     fn test_strategies_empty_strikes() {
         struct EmptyStrategy;
         impl Validable for EmptyStrategy {}
-        impl Strategies for EmptyStrategy {
-            fn get_legs(&self) -> Vec<Position> {
-                vec![]
+        impl Positionable for EmptyStrategy {
+            fn get_positions(&self) -> Result<Vec<&Position>, String> {
+                Ok(vec![])
             }
+        }
+        impl Strategies for EmptyStrategy {
+
         }
 
         let strategy = EmptyStrategy;
@@ -610,17 +629,12 @@ mod tests_max_min_strikes {
         }
     }
 
-    impl Strategies for TestStrategy {
-        fn strikes(&self) -> Vec<PositiveF64> {
-            self.strikes.clone()
-        }
+    impl Positionable for TestStrategy {       }
 
+    impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> PositiveF64 {
             self.underlying_price
         }
-
-        // Implement other required methods with default behavior
-        fn add_leg(&mut self, _position: Position) {}
         fn break_even(&self) -> Vec<PositiveF64> {
             vec![]
         }
@@ -647,6 +661,9 @@ mod tests_max_min_strikes {
         }
         fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
             None
+        }
+        fn strikes(&self) -> Vec<PositiveF64> {
+            self.strikes.clone()
         }
     }
 
@@ -754,6 +771,8 @@ mod tests_best_range_to_show {
     }
 
     impl Validable for TestStrategy {}
+
+    impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> PositiveF64 {
@@ -875,6 +894,8 @@ mod tests_range_to_show {
 
     impl Validable for TestStrategy {}
 
+    impl Positionable for TestStrategy {}
+
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> PositiveF64 {
             self.underlying_price
@@ -941,6 +962,8 @@ mod tests_range_of_profit {
     }
 
     impl Validable for TestStrategy {}
+
+    impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
         fn get_break_even_points(&self) -> Vec<PositiveF64> {
