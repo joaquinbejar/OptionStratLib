@@ -1,0 +1,9 @@
+[package]
+name = "examples_strategies_delta"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+optionstratlib = { path = "../.." }
+tracing = "0.1.41"
+chrono = "0.4.38"

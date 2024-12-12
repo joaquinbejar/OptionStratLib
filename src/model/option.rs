@@ -1061,6 +1061,7 @@ mod tests_in_the_money {
 mod tests_greeks {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
+    use crate::pos;
     use approx::assert_relative_eq;
 
     #[test]
@@ -1071,10 +1072,28 @@ mod tests_greeks {
     }
 
     #[test]
+    fn test_delta_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        let expected = delta(&option);
+        assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
+        assert_relative_eq!(option.delta(), 0.5395199 * 2.0, epsilon = 1e-6);
+    }
+
+    #[test]
     fn test_gamma() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let expected = gamma(&option);
         assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn test_gamma_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        let expected = gamma(&option);
+        assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
+        assert_relative_eq!(option.gamma(), 0.1383415, epsilon = 1e-6);
     }
 
     #[test]
@@ -1085,10 +1104,28 @@ mod tests_greeks {
     }
 
     #[test]
+    fn test_theta_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        let expected = theta(&option);
+        assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
+        assert_relative_eq!(option.theta(), -31.739563, epsilon = 1e-6);
+    }
+
+    #[test]
     fn test_vega() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let expected = vega(&option);
         assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn test_vega_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        let expected = vega(&option);
+        assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
+        assert_relative_eq!(option.vega(), 30.9351108, epsilon = 1e-6);
     }
 
     #[test]
@@ -1099,10 +1136,28 @@ mod tests_greeks {
     }
 
     #[test]
+    fn test_rho_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        let expected = rho(&option);
+        assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
+        assert_relative_eq!(option.rho(), 8.46624291, epsilon = 1e-6);
+    }
+
+    #[test]
     fn test_rho_d() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let expected = rho_d(&option);
         assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn test_rho_d_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        let expected = rho_d(&option);
+        assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
+        assert_relative_eq!(option.rho_d(), -8.86882064, epsilon = 1e-6);
     }
 }
 

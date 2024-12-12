@@ -240,7 +240,7 @@ mod tests_probability_analysis {
     use crate::model::types::{ExpirationDate, PositiveF64};
     use crate::pos;
     use crate::pricing::payoff::Profit;
-    use crate::strategies::base::{Strategies, Validable};
+    use crate::strategies::base::{Positionable, Strategies, Validable};
 
     // Mock struct para testing
     struct MockStrategy {
@@ -250,6 +250,8 @@ mod tests_probability_analysis {
     }
 
     impl Validable for MockStrategy {}
+
+    impl Positionable for MockStrategy {}
 
     impl Strategies for MockStrategy {
         fn get_underlying_price(&self) -> PositiveF64 {
@@ -454,7 +456,7 @@ mod tests_probability_analysis {
 #[cfg(test)]
 mod tests_expected_value {
     use super::*;
-    use crate::strategies::base::Validable;
+    use crate::strategies::base::{Positionable, Validable};
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> TestStrategy {
@@ -473,6 +475,8 @@ mod tests_expected_value {
     }
 
     impl Validable for TestStrategy {}
+
+    impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> PositiveF64 {
@@ -614,6 +618,7 @@ mod tests_expected_value {
         }
 
         impl Validable for ExtremeStrategy {}
+        impl Positionable for ExtremeStrategy {}
         impl Strategies for ExtremeStrategy {
             fn get_underlying_price(&self) -> PositiveF64 {
                 self.base.get_underlying_price()

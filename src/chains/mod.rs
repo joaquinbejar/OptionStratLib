@@ -77,4 +77,8 @@ pub mod chain;
 mod legs;
 pub mod utils;
 
+mod options;
+
 pub use legs::StrategyLegs;
+
+pub use options::{DeltasInStrike, OptionsInStrike};
