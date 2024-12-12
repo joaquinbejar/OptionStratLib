@@ -279,12 +279,10 @@ pub trait Positionable {
     fn add_position(&mut self, _position: &Position) -> Result<(), String> {
         Err("Add position is not applicable for this strategy".to_string())
     }
-    
+
     fn get_positions(&self) -> Result<Vec<&Position>, String> {
         Err("Get positions is not applicable for this strategy".to_string())
     }
-    
-
 }
 
 #[cfg(test)]
@@ -318,7 +316,6 @@ mod tests_strategies {
     impl Validable for MockStrategy {}
 
     impl Positionable for MockStrategy {
-
         fn add_position(&mut self, position: &Position) -> Result<(), String> {
             self.legs.push(position.clone());
             Ok(())
@@ -330,7 +327,6 @@ mod tests_strategies {
     }
 
     impl Strategies for MockStrategy {
-        
         fn break_even(&self) -> Vec<PositiveF64> {
             vec![PositiveF64::new(100.0).unwrap()]
         }
@@ -371,7 +367,9 @@ mod tests_strategies {
         // Test add_leg and get_legs
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
-        mock_strategy.add_position(&position.clone()).expect("Error adding position");
+        mock_strategy
+            .add_position(&position.clone())
+            .expect("Error adding position");
 
         // Test other methods
         assert_eq!(
@@ -536,9 +534,7 @@ mod tests_strategies_extended {
                 Ok(vec![])
             }
         }
-        impl Strategies for EmptyStrategy {
-
-        }
+        impl Strategies for EmptyStrategy {}
 
         let strategy = EmptyStrategy;
         assert_eq!(strategy.strikes(), Vec::<PositiveF64>::new());
@@ -629,7 +625,7 @@ mod tests_max_min_strikes {
         }
     }
 
-    impl Positionable for TestStrategy {       }
+    impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> PositiveF64 {

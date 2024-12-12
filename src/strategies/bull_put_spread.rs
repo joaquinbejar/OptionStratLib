@@ -109,7 +109,9 @@ impl BullPutSpread {
             open_fee_long_put,
             close_fee_long_put,
         );
-        strategy.add_position(&long_put.clone()).expect("Error adding long put");
+        strategy
+            .add_position(&long_put.clone())
+            .expect("Error adding long put");
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -132,7 +134,9 @@ impl BullPutSpread {
             open_fee_short_put,
             close_fee_short_put,
         );
-        strategy.add_position(&short_put.clone()).expect("Error adding short put");
+        strategy
+            .add_position(&short_put.clone())
+            .expect("Error adding short put");
 
         strategy.validate();
 
@@ -151,11 +155,11 @@ impl Positionable for BullPutSpread {
             Side::Short => {
                 self.short_put = position.clone();
                 Ok(())
-            },
+            }
             Side::Long => {
                 self.long_put = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
@@ -168,7 +172,7 @@ impl Strategies for BullPutSpread {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.short_put.option.underlying_price
     }
-    
+
     fn max_profit(&self) -> Result<PositiveF64, &str> {
         let net_premium_received = self.net_premium_received();
         if net_premium_received < ZERO {
@@ -559,7 +563,9 @@ mod tests_bull_put_spread_strategy {
             0.0,
         );
 
-        spread.add_position(&new_long_put.clone()).expect("Error adding long put");
+        spread
+            .add_position(&new_long_put.clone())
+            .expect("Error adding long put");
         assert_eq!(spread.long_put.option.strike_price, pos!(85.0));
     }
 

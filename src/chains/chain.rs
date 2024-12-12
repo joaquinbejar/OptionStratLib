@@ -7,6 +7,7 @@ use crate::chains::utils::{
     adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
     OptionChainBuildParams, OptionDataPriceParams, RandomPositionsParams,
 };
+use crate::chains::{DeltasInStrike, OptionsInStrike};
 use crate::greeks::equations::delta;
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -25,7 +26,6 @@ use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
 use tracing::debug;
-use crate::chains::{OptionsInStrike, DeltasInStrike};
 
 /// Struct representing a row in an option chain.
 ///
@@ -142,8 +142,11 @@ impl OptionData {
             None,
         ))
     }
-    
-    fn get_options_in_strike(&self, price_params: &OptionDataPriceParams) -> Result<OptionsInStrike, String> {
+
+    fn get_options_in_strike(
+        &self,
+        price_params: &OptionDataPriceParams,
+    ) -> Result<OptionsInStrike, String> {
         let mut option: Options = self.get_option(price_params)?;
         option.option_style = OptionStyle::Call;
         option.side = Side::Long;
@@ -226,8 +229,11 @@ impl OptionData {
         };
         self.delta = Some(delta(&option));
     }
-    
-    pub fn get_deltas(&self, price_params: &OptionDataPriceParams) -> Result<DeltasInStrike, String> {
+
+    pub fn get_deltas(
+        &self,
+        price_params: &OptionDataPriceParams,
+    ) -> Result<DeltasInStrike, String> {
         let options_in_strike = self.get_options_in_strike(price_params)?;
         let deltas = options_in_strike.deltas();
         Ok(deltas)
@@ -378,7 +384,12 @@ impl OptionChain {
             .collect()
     }
 
-    pub(crate) fn filter_options_in_strike(&self, price_params: &OptionDataPriceParams, side: FindOptimalSide) -> Result<Vec<OptionsInStrike>, String> {
+    #[allow(dead_code)]
+    pub(crate) fn filter_options_in_strike(
+        &self,
+        price_params: &OptionDataPriceParams,
+        side: FindOptimalSide,
+    ) -> Result<Vec<OptionsInStrike>, String> {
         self.options
             .iter()
             .filter(|option| match side {
@@ -1814,13 +1825,8 @@ mod tests_option_data_get_option {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
 
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(30.0),
-            None,
-            0.05,
-            0.02,
-        );
+        let price_params =
+            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
 
         let result = option_data.get_option(&price_params);
         assert!(result.is_err());
@@ -1830,9 +1836,9 @@ mod tests_option_data_get_option {
 
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
-    use approx::assert_relative_eq;
     use super::*;
     use crate::model::types::ExpirationDate;
+    use approx::assert_relative_eq;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
@@ -1888,13 +1894,8 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_using_data_iv() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(30.0),
-            None,
-            0.05,
-            0.02,
-        );
+        let price_params =
+            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
 
         let result = option_data.get_options_in_strike(&price_params);
         assert!(result.is_ok());
@@ -1910,15 +1911,10 @@ mod tests_option_data_get_options_in_strike {
     fn test_get_options_in_strike_missing_iv() {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
-    
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(30.0),
-            None,
-            0.05,
-            0.02,
-        );
-    
+
+        let price_params =
+            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+
         let result = option_data.get_options_in_strike(&price_params);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Implied volatility not found");
@@ -1972,19 +1968,18 @@ mod tests_option_data_get_options_in_strike {
         assert!(result.is_ok());
 
         let options = result.unwrap();
-        
+
         assert_relative_eq!(options.long_call.delta(), 0.844825189, epsilon = 1e-8);
         assert_relative_eq!(options.short_call.delta(), -0.844825189, epsilon = 1e-8);
         assert_relative_eq!(options.long_put.delta(), -0.151483012, epsilon = 1e-8);
         assert_relative_eq!(options.short_put.delta(), 0.151483012, epsilon = 1e-8);
-
     }
 }
 
 #[cfg(test)]
 mod tests_filter_options_in_strike {
-    use crate::model::types::ExpirationDate;
     use super::*;
+    use crate::model::types::ExpirationDate;
     use crate::pos;
 
     fn create_test_chain() -> OptionChain {
@@ -2021,7 +2016,7 @@ mod tests_filter_options_in_strike {
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
-        assert_eq!(filtered_options.len(), 2); 
+        assert_eq!(filtered_options.len(), 2);
 
         for opt in filtered_options {
             assert!(opt.long_call.strike_price > chain.underlying_price);
@@ -2048,7 +2043,7 @@ mod tests_filter_options_in_strike {
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
-        assert_eq!(filtered_options.len(), 2); 
+        assert_eq!(filtered_options.len(), 2);
 
         for opt in filtered_options {
             assert!(opt.long_call.strike_price < chain.underlying_price);
@@ -2070,7 +2065,7 @@ mod tests_filter_options_in_strike {
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
-        assert_eq!(filtered_options.len(), 5); 
+        assert_eq!(filtered_options.len(), 5);
     }
 
     #[test]
@@ -2086,12 +2081,12 @@ mod tests_filter_options_in_strike {
 
         let result = chain.filter_options_in_strike(
             &price_params,
-            FindOptimalSide::Range(pos!(95.0), pos!(105.0))
+            FindOptimalSide::Range(pos!(95.0), pos!(105.0)),
         );
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
-        assert_eq!(filtered_options.len(), 3); 
+        assert_eq!(filtered_options.len(), 3);
 
         for opt in filtered_options {
             assert!(opt.long_call.strike_price >= pos!(95.0));
@@ -2130,12 +2125,12 @@ mod tests_filter_options_in_strike {
 
         let result = chain.filter_options_in_strike(
             &price_params,
-            FindOptimalSide::Range(pos!(200.0), pos!(300.0))
+            FindOptimalSide::Range(pos!(200.0), pos!(300.0)),
         );
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
-        assert!(filtered_options.is_empty()); 
+        assert!(filtered_options.is_empty());
     }
 
     #[test]
@@ -2161,7 +2156,7 @@ mod tests_filter_options_in_strike {
             assert_eq!(opt.short_call.side, Side::Short);
             assert_eq!(opt.long_put.side, Side::Long);
             assert_eq!(opt.short_put.side, Side::Short);
-            
+
             let deltas = opt.deltas();
             assert!(deltas.long_call > 0.0);
             assert!(deltas.short_call < 0.0);

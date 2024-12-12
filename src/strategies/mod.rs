@@ -134,7 +134,7 @@
 //!     fn add_position(&mut self, position: &Position) -> Result<(), String> {
 //!         Ok(self.legs.push(position.clone()))
 //!     }
-//! 
+//!
 //!  fn get_positions(&self) -> Result<Vec<&Position>, String> {
 //!         Ok(self.legs.iter().collect())
 //!     }
@@ -188,6 +188,7 @@ pub mod call_butterfly;
 pub mod collar;
 pub mod covered_call;
 pub mod custom;
+pub mod delta_neutral;
 pub mod iron_butterfly;
 pub mod iron_condor;
 pub mod poor_mans_covered_call;
@@ -196,4 +197,3 @@ pub mod protective_put;
 pub mod straddle;
 pub mod strangle;
 pub mod utils;
-pub mod delta_neutral;

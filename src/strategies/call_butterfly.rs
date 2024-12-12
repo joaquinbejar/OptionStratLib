@@ -90,7 +90,9 @@ impl CallButterfly {
             open_fee_short,
             close_fee_short,
         );
-        strategy.add_position(&short_call.clone()).expect("Invalid short call");
+        strategy
+            .add_position(&short_call.clone())
+            .expect("Invalid short call");
         strategy.short_call = short_call;
 
         let long_call_itm_option = Options::new(
@@ -114,7 +116,9 @@ impl CallButterfly {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_position(&long_call_itm.clone()).expect("Invalid long call itm");
+        strategy
+            .add_position(&long_call_itm.clone())
+            .expect("Invalid long call itm");
         strategy.long_call_itm = long_call_itm;
 
         let long_call_otm_option = Options::new(
@@ -138,7 +142,9 @@ impl CallButterfly {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_position(&long_call_otm.clone()).expect("Invalid long call otm");
+        strategy
+            .add_position(&long_call_otm.clone())
+            .expect("Invalid long call otm");
         strategy.long_call_otm = long_call_otm;
 
         // Calculate break-even points
@@ -256,12 +262,16 @@ impl Positionable for CallButterfly {
             Side::Short => {
                 self.short_call = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, String> {
-        Ok(vec![&self.long_call_itm, &self.long_call_otm, &self.short_call])
+        Ok(vec![
+            &self.long_call_itm,
+            &self.long_call_otm,
+            &self.short_call,
+        ])
     }
 }
 

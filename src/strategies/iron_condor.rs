@@ -98,7 +98,9 @@ impl IronCondor {
             open_fee,
             close_fee,
         );
-        strategy.add_position(&short_call.clone()).expect("Invalid short call");
+        strategy
+            .add_position(&short_call.clone())
+            .expect("Invalid short call");
 
         // Short Put
         let short_put_option = Options::new(
@@ -122,7 +124,9 @@ impl IronCondor {
             open_fee,
             close_fee,
         );
-        strategy.add_position(&short_put.clone()).expect("Invalid short put");
+        strategy
+            .add_position(&short_put.clone())
+            .expect("Invalid short put");
 
         // Long Call
         let long_call_option = Options::new(
@@ -146,7 +150,9 @@ impl IronCondor {
             open_fee,
             close_fee,
         );
-        strategy.add_position(&long_call.clone()).expect("Invalid long call");
+        strategy
+            .add_position(&long_call.clone())
+            .expect("Invalid long call");
 
         // Long Put
         let long_put_option = Options::new(
@@ -170,7 +176,9 @@ impl IronCondor {
             open_fee,
             close_fee,
         );
-        strategy.add_position(&long_put.clone()).expect("Invalid long put");
+        strategy
+            .add_position(&long_put.clone())
+            .expect("Invalid long put");
 
         // Calculate break-even points
         let net_credit = (strategy.long_put.premium + strategy.long_call.premium) + strategy.fees()
@@ -213,24 +221,29 @@ impl Positionable for IronCondor {
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
                 Ok(())
-            },
+            }
             (OptionStyle::Put, Side::Short) => {
                 self.short_put = position.clone();
                 Ok(())
-            },
+            }
             (OptionStyle::Call, Side::Long) => {
                 self.long_call = position.clone();
                 Ok(())
-            },
+            }
             (OptionStyle::Put, Side::Long) => {
                 self.long_put = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, String> {
-        Ok(vec![&self.short_call, &self.short_put, &self.long_call, &self.long_put])
+        Ok(vec![
+            &self.short_call,
+            &self.short_put,
+            &self.long_call,
+            &self.long_put,
+        ])
     }
 }
 
@@ -979,7 +992,9 @@ mod tests_iron_condor_strategies {
             0.5,
             0.5,
         );
-        condor.add_position(&new_short_call.clone()).expect("Invalid short call");
+        condor
+            .add_position(&new_short_call.clone())
+            .expect("Invalid short call");
         assert_eq!(condor.short_call.option.strike_price, pos!(106.0));
 
         // Test adding a long put
@@ -1003,7 +1018,9 @@ mod tests_iron_condor_strategies {
             0.5,
             0.5,
         );
-        condor.add_position(&new_long_put.clone()).expect("Invalid long put");
+        condor
+            .add_position(&new_long_put.clone())
+            .expect("Invalid long put");
         assert_eq!(condor.long_put.option.strike_price, pos!(89.0));
     }
 

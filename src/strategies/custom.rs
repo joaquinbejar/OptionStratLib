@@ -150,7 +150,6 @@ impl CustomStrategy {
 }
 
 impl Positionable for CustomStrategy {
-    
     fn add_position(&mut self, position: &Position) -> Result<(), String> {
         self.positions.push(position.clone());
         self.max_loss_iter();

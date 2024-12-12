@@ -1,8 +1,8 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 12/12/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 12/12/24
+******************************************************************************/
 use crate::model::option::Options;
 
 #[derive(Debug, Clone)]
@@ -27,8 +27,8 @@ impl OptionsInStrike {
             short_put,
         }
     }
-    
-    pub  fn deltas(&self) -> DeltasInStrike {
+
+    pub fn deltas(&self) -> DeltasInStrike {
         DeltasInStrike {
             long_call: self.long_call.delta(),
             short_call: self.short_call.delta(),

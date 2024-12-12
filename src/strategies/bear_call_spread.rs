@@ -122,7 +122,9 @@ impl BearCallSpread {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_position(&short_call.clone()).expect("Error adding short call");
+        strategy
+            .add_position(&short_call.clone())
+            .expect("Error adding short call");
 
         let long_call_option = Options::new(
             OptionType::European,
@@ -145,7 +147,9 @@ impl BearCallSpread {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_position(&long_call.clone()).expect("Error adding long call");
+        strategy
+            .add_position(&long_call.clone())
+            .expect("Error adding long call");
 
         strategy.validate();
 
@@ -164,14 +168,14 @@ impl Positionable for BearCallSpread {
             Side::Short => {
                 self.short_call = position.clone();
                 Ok(())
-            },
+            }
             Side::Long => {
                 self.long_call = position.clone();
                 Ok(())
-            },
+            }
         }
     }
-    
+
     fn get_positions(&self) -> Result<Vec<&Position>, String> {
         Ok(vec![&self.short_call, &self.long_call])
     }

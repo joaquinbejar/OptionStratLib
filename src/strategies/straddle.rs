@@ -116,7 +116,9 @@ impl ShortStraddle {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_position(&short_call.clone()).expect("Invalid short call");
+        strategy
+            .add_position(&short_call.clone())
+            .expect("Invalid short call");
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -139,7 +141,9 @@ impl ShortStraddle {
             open_fee_short_put,
             close_fee_short_put,
         );
-        strategy.add_position(&short_put.clone()).expect("Invalid short put");
+        strategy
+            .add_position(&short_put.clone())
+            .expect("Invalid short put");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
         strategy
@@ -160,11 +164,11 @@ impl Positionable for ShortStraddle {
             OptionStyle::Call => {
                 self.short_call = position.clone();
                 Ok(())
-            },
+            }
             OptionStyle::Put => {
                 self.short_put = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
@@ -647,7 +651,9 @@ impl LongStraddle {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_position(&long_call.clone()).expect("Invalid long call");
+        strategy
+            .add_position(&long_call.clone())
+            .expect("Invalid long call");
 
         let long_put_option = Options::new(
             OptionType::European,
@@ -670,7 +676,9 @@ impl LongStraddle {
             open_fee_long_put,
             close_fee_long_put,
         );
-        strategy.add_position(&long_put.clone()).expect("Invalid long put");
+        strategy
+            .add_position(&long_put.clone())
+            .expect("Invalid long put");
 
         let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
 
@@ -693,11 +701,11 @@ impl Positionable for LongStraddle {
             OptionStyle::Call => {
                 self.long_call = position.clone();
                 Ok(())
-            },
+            }
             OptionStyle::Put => {
                 self.long_put = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
@@ -710,7 +718,7 @@ impl Strategies for LongStraddle {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call.option.underlying_price
     }
-    
+
     fn max_profit(&self) -> Result<PositiveF64, &str> {
         Ok(f64::INFINITY.into()) // Theoretically unlimited
     }
@@ -1277,11 +1285,15 @@ mod tests_short_straddle {
         let original_put = strategy.short_put.clone();
 
         // Test adding a new call leg
-        strategy.add_position(&original_call.clone()).expect("Invalid call");
+        strategy
+            .add_position(&original_call.clone())
+            .expect("Invalid call");
         assert_eq!(strategy.short_call, original_call);
 
         // Test adding a new put leg
-        strategy.add_position(&original_put.clone()).expect("Invalid put");
+        strategy
+            .add_position(&original_put.clone())
+            .expect("Invalid put");
         assert_eq!(strategy.short_put, original_put);
     }
 
@@ -1578,10 +1590,14 @@ mod tests_long_straddle {
         let original_call = strategy.long_call.clone();
         let original_put = strategy.long_put.clone();
 
-        strategy.add_position(&original_call.clone()).expect("Invalid call");
+        strategy
+            .add_position(&original_call.clone())
+            .expect("Invalid call");
         assert_eq!(strategy.long_call, original_call);
 
-        strategy.add_position(&original_put.clone()).expect("Invalid put");
+        strategy
+            .add_position(&original_put.clone())
+            .expect("Invalid put");
         assert_eq!(strategy.long_put, original_put);
     }
 

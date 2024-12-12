@@ -1,14 +1,14 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 10/12/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 10/12/24
+******************************************************************************/
 
 //! # Delta Neutral Strategies Module
-use crate::pos;
-use std::fmt;
 use crate::greeks::equations::Greeks;
 use crate::model::types::{OptionStyle, PositiveF64};
+use crate::pos;
+use std::fmt;
 
 pub const DELTA_THRESHOLD: f64 = 0.005;
 
@@ -43,7 +43,7 @@ pub enum DeltaAdjustment {
 
 /// Contains detailed information about the delta status of a strategy
 #[derive(Debug)]
-pub struct DeltaInfo  {
+pub struct DeltaInfo {
     /// Net delta of the entire strategy
     pub net_delta: f64,
     /// Individual deltas of each component
@@ -61,7 +61,11 @@ impl fmt::Display for DeltaInfo {
         writeln!(f, "Delta Analysis:")?;
         writeln!(f, "  Net Delta: {:.4}", self.net_delta)?;
         writeln!(f, "  Is Neutral: {}", self.is_neutral)?;
-        writeln!(f, "  Neutrality Threshold: {:.4}", self.neutrality_threshold)?;
+        writeln!(
+            f,
+            "  Neutrality Threshold: {:.4}",
+            self.neutrality_threshold
+        )?;
         writeln!(f, "  Underlying Price: {}", self.underlying_price)?;
         writeln!(f, "  Individual Deltas:")?;
         for (i, delta) in self.individual_deltas.iter().enumerate() {
@@ -85,7 +89,7 @@ impl fmt::Display for DeltaInfo {
 /// * `generate_delta_reducing_adjustments`: Produces adjustments required to reduce a positive delta.
 /// * `generate_delta_increasing_adjustments`: Produces adjustments required to increase a negative delta.
 /// * `get_atm_strike`: Retrieves the ATM (At-The-Money) strike price closest to the current underlying asset price.
-pub trait DeltaNeutrality : Greeks {
+pub trait DeltaNeutrality: Greeks {
     /// Calculates the net delta of the strategy and provides detailed information.
     ///
     /// # Returns
@@ -111,7 +115,7 @@ pub trait DeltaNeutrality : Greeks {
     fn is_delta_neutral(&self) -> bool {
         self.calculate_net_delta().net_delta.abs() <= DELTA_THRESHOLD
     }
-    
+
     fn get_atm_strike(&self) -> PositiveF64 {
         panic!("get_atm_strike Not implemented");
     }
@@ -143,7 +147,6 @@ pub trait DeltaNeutrality : Greeks {
             vec![DeltaAdjustment::NoAdjustmentNeeded]
         }
     }
-    
 
     /// Generates adjustments to reduce a positive delta.
     ///
@@ -166,7 +169,7 @@ pub trait DeltaNeutrality : Greeks {
                 option_type: OptionStyle::Put,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!(net_delta.abs()/ 0.5),
+                quantity: pos!(net_delta.abs() / 0.5),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
@@ -243,7 +246,6 @@ mod tests {
         fn get_atm_strike(&self) -> PositiveF64 {
             pos!(100.0)
         }
-        
     }
 
     // Helper function to create a mock strategy
@@ -386,5 +388,4 @@ mod tests {
             ]
         );
     }
-    
 }

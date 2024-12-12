@@ -112,7 +112,9 @@ impl PoorMansCoveredCall {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_position(&long_call.clone()).expect("Invalid long call option");
+        strategy
+            .add_position(&long_call.clone())
+            .expect("Invalid long call option");
 
         // Short Call
         let short_call_option = Options::new(
@@ -136,7 +138,9 @@ impl PoorMansCoveredCall {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_position(&short_call.clone()).expect("Invalid short call option");
+        strategy
+            .add_position(&short_call.clone())
+            .expect("Invalid short call option");
 
         // Calculate break-even point
         let net_debit =
@@ -163,11 +167,11 @@ impl Positionable for PoorMansCoveredCall {
             (OptionStyle::Call, Side::Long) => {
                 self.long_call = position.clone();
                 Ok(())
-            },
+            }
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
                 Ok(())
-            },
+            }
             _ => Err("Invalid option type for Poor Man's Covered Call strategy".to_string()),
         }
     }
@@ -713,7 +717,9 @@ mod tests_pmcc_validation {
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
-        strategy.add_position(&position.clone()).expect("Invalid long call option");
+        strategy
+            .add_position(&position.clone())
+            .expect("Invalid long call option");
         assert_eq!(strategy.long_call, position);
     }
 
@@ -735,7 +741,9 @@ mod tests_pmcc_validation {
             None,
         );
         let position = Position::new(option, 5.0, Utc::now(), 0.5, 0.5);
-        strategy.add_position(&position.clone()).expect("Invalid short call option");
+        strategy
+            .add_position(&position.clone())
+            .expect("Invalid short call option");
         assert_eq!(strategy.short_call, position);
     }
 
@@ -758,7 +766,9 @@ mod tests_pmcc_validation {
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
-        strategy.add_position(&position).expect("Invalid option type");
+        strategy
+            .add_position(&position)
+            .expect("Invalid option type");
     }
 }
 

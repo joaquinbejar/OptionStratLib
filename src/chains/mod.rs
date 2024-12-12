@@ -81,4 +81,4 @@ mod options;
 
 pub use legs::StrategyLegs;
 
-pub use options::{OptionsInStrike, DeltasInStrike};
+pub use options::{DeltasInStrike, OptionsInStrike};

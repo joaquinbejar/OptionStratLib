@@ -1061,8 +1061,8 @@ mod tests_in_the_money {
 mod tests_greeks {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
-    use approx::assert_relative_eq;
     use crate::pos;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_delta() {

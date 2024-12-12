@@ -108,7 +108,9 @@ impl BearPutSpread {
             open_fee_long_put,
             close_fee_long_put,
         );
-        strategy.add_position(&long_put.clone()).expect("Error adding long put");
+        strategy
+            .add_position(&long_put.clone())
+            .expect("Error adding long put");
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -131,7 +133,9 @@ impl BearPutSpread {
             open_fee_short_put,
             close_fee_short_put,
         );
-        strategy.add_position(&short_put.clone()).expect("Error adding short put");
+        strategy
+            .add_position(&short_put.clone())
+            .expect("Error adding short put");
 
         strategy.validate();
 
@@ -150,11 +154,11 @@ impl Positionable for BearPutSpread {
             Side::Short => {
                 self.short_put = position.clone();
                 Ok(())
-            },
+            }
             Side::Long => {
                 self.long_put = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
@@ -556,7 +560,9 @@ mod tests_bear_put_spread_strategy {
             0.0,
         );
 
-        spread.add_position(&new_long_put.clone()).expect("Error adding long put");
+        spread
+            .add_position(&new_long_put.clone())
+            .expect("Error adding long put");
         assert_eq!(spread.long_put.option.strike_price, pos!(110.0));
     }
 

@@ -81,7 +81,7 @@ impl LongButterflySpread {
             short_calls: Position::default(),
             long_call_high: Position::default(),
         };
-        
+
         // Create two short calls at middle strike
         let short_calls = Options::new(
             OptionType::European,
@@ -211,7 +211,7 @@ impl Validable for LongButterflySpread {
 impl Positionable for LongButterflySpread {
     fn add_position(&mut self, position: &Position) -> Result<(), String> {
         match &position.option.side {
-            Side::Long  => {
+            Side::Long => {
                 // short_calls should be inserted first
                 if position.option.strike_price < self.short_calls.option.strike_price {
                     self.long_call_low = position.clone();
@@ -224,12 +224,16 @@ impl Positionable for LongButterflySpread {
             Side::Short => {
                 self.short_calls = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, String> {
-        Ok(vec![&self.long_call_low, &self.short_calls, &self.long_call_high])
+        Ok(vec![
+            &self.long_call_low,
+            &self.short_calls,
+            &self.long_call_high,
+        ])
     }
 }
 
@@ -237,7 +241,7 @@ impl Strategies for LongButterflySpread {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call_low.option.underlying_price
     }
-    
+
     fn max_profit(&self) -> Result<PositiveF64, &str> {
         let profit = self.calculate_profit_at(self.short_calls.option.strike_price);
         if profit > ZERO {
@@ -476,7 +480,8 @@ impl Graph for LongButterflySpread {
             self.long_call_low.option.quantity
         );
 
-        let leg_titles = [format!(
+        let leg_titles = [
+            format!(
                 "Long Call Low Strike: ${}",
                 self.long_call_low.option.strike_price
             ),
@@ -488,7 +493,8 @@ impl Graph for LongButterflySpread {
                 "Long Call High Strike: ${}",
                 self.long_call_high.option.strike_price
             ),
-            format!("Expire: {}", self.long_call_low.option.expiration_date)];
+            format!("Expire: {}", self.long_call_low.option.expiration_date),
+        ];
 
         format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
     }
@@ -780,8 +786,6 @@ impl ShortButterflySpread {
             fees / 3.0,
         );
 
-
-
         // Create short call at higher strike
         let short_call_high = Options::new(
             OptionType::European,
@@ -865,7 +869,7 @@ impl Validable for ShortButterflySpread {
 impl Positionable for ShortButterflySpread {
     fn add_position(&mut self, position: &Position) -> Result<(), String> {
         match &position.option.side {
-            Side::Short  => {
+            Side::Short => {
                 // long_calls should be inserted first
                 if position.option.strike_price < self.long_calls.option.strike_price {
                     self.short_call_low = position.clone();
@@ -878,12 +882,16 @@ impl Positionable for ShortButterflySpread {
             Side::Long => {
                 self.long_calls = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, String> {
-        Ok(vec![&self.short_call_low, &self.long_calls, &self.short_call_high])
+        Ok(vec![
+            &self.short_call_low,
+            &self.long_calls,
+            &self.short_call_high,
+        ])
     }
 }
 
@@ -1123,7 +1131,8 @@ impl Graph for ShortButterflySpread {
             self.short_call_low.option.quantity
         );
 
-        let leg_titles = [format!(
+        let leg_titles = [
+            format!(
                 "Short Call Low Strike: ${}",
                 self.short_call_low.option.strike_price
             ),
@@ -1135,7 +1144,8 @@ impl Graph for ShortButterflySpread {
                 "Short Call High Strike: ${}",
                 self.short_call_high.option.strike_price
             ),
-            format!("Expire: {}", self.short_call_low.option.expiration_date)];
+            format!("Expire: {}", self.short_call_low.option.expiration_date),
+        ];
 
         format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
     }
@@ -2122,7 +2132,9 @@ mod tests_butterfly_strategies {
             0.0,
         );
 
-        butterfly.add_position(&new_long.clone()).expect("Failed to add position");
+        butterfly
+            .add_position(&new_long.clone())
+            .expect("Failed to add position");
         assert_eq!(butterfly.long_call_low.option.strike_price, pos!(85.0));
     }
 
@@ -2150,7 +2162,9 @@ mod tests_butterfly_strategies {
             0.0,
         );
 
-        butterfly.add_position(&new_short.clone()).expect("Failed to add position");
+        butterfly
+            .add_position(&new_short.clone())
+            .expect("Failed to add position");
         assert_eq!(butterfly.short_call_low.option.strike_price, pos!(85.0));
     }
 

@@ -109,7 +109,9 @@ impl BullCallSpread {
             open_fee_long_call,
             close_fee_long_call,
         );
-        strategy.add_position(&long_call.clone()).expect("Failed to add long call");
+        strategy
+            .add_position(&long_call.clone())
+            .expect("Failed to add long call");
 
         let short_call_option = Options::new(
             OptionType::European,
@@ -132,7 +134,9 @@ impl BullCallSpread {
             open_fee_short_call,
             close_fee_short_call,
         );
-        strategy.add_position(&short_call.clone()).expect("Failed to add short call");
+        strategy
+            .add_position(&short_call.clone())
+            .expect("Failed to add short call");
 
         strategy.validate();
 
@@ -151,11 +155,11 @@ impl Positionable for BullCallSpread {
             Side::Short => {
                 self.short_call = position.clone();
                 Ok(())
-            },
+            }
             Side::Long => {
                 self.long_call = position.clone();
                 Ok(())
-            },
+            }
         }
     }
 
@@ -168,7 +172,6 @@ impl Strategies for BullCallSpread {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.long_call.option.underlying_price
     }
-    
 
     fn max_profit(&self) -> Result<PositiveF64, &str> {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
@@ -549,7 +552,9 @@ mod tests_bull_call_spread_strategy {
             0.0,
         );
 
-        spread.add_position(&new_long_call.clone()).expect("Failed to add long call");
+        spread
+            .add_position(&new_long_call.clone())
+            .expect("Failed to add long call");
         assert_eq!(spread.long_call.option.strike_price, pos!(90.0));
     }
 
