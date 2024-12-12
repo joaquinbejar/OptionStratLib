@@ -25,6 +25,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
 use tracing::debug;
+use crate::chains::{OptionsInStrike, DeltasInStrike};
 
 /// Struct representing a row in an option chain.
 ///
@@ -53,7 +54,6 @@ pub struct OptionData {
     open_interest: Option<u64>,
 }
 
-#[allow(dead_code)]
 impl OptionData {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
@@ -142,6 +142,25 @@ impl OptionData {
             None,
         ))
     }
+    
+    fn get_options_in_strike(&self, price_params: &OptionDataPriceParams) -> Result<OptionsInStrike, String> {
+        let mut option: Options = self.get_option(price_params)?;
+        option.option_style = OptionStyle::Call;
+        option.side = Side::Long;
+        let long_call = option.clone();
+        option.side = Side::Short;
+        let short_call = option.clone();
+        option.option_style = OptionStyle::Put;
+        let short_put = option.clone();
+        option.side = Side::Long;
+        let long_put = option.clone();
+        Ok(OptionsInStrike {
+            long_call,
+            short_call,
+            long_put,
+            short_put,
+        })
+    }
 
     pub fn calculate_prices(&mut self, price_params: &OptionDataPriceParams) -> Result<(), String> {
         let mut option: Options = self.get_option(price_params)?;
@@ -206,6 +225,12 @@ impl OptionData {
             }
         };
         self.delta = Some(delta(&option));
+    }
+    
+    pub fn get_deltas(&self, price_params: &OptionDataPriceParams) -> Result<DeltasInStrike, String> {
+        let options_in_strike = self.get_options_in_strike(price_params)?;
+        let deltas = options_in_strike.deltas();
+        Ok(deltas)
     }
 }
 
@@ -1705,5 +1730,238 @@ mod tests_strike_price_range_vec {
         let range = chain.strike_price_range_vec(2.0).unwrap();
         assert_eq!(range.len(), 6); // [90, 92, 94, 96, 98, 100]
         assert_eq!(range[1] - range[0], 2.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_option_data_get_option {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+
+    fn create_test_option_data() -> OptionData {
+        OptionData::new(
+            pos!(100.0),   // strike_price
+            spos!(9.5),    // call_bid
+            spos!(10.0),   // call_ask
+            spos!(8.5),    // put_bid
+            spos!(9.0),    // put_ask
+            spos!(0.2),    // implied_volatility
+            Some(-0.3),    // delta
+            spos!(1000.0), // volume
+            Some(500),     // open_interest
+        )
+    }
+
+    #[test]
+    fn test_get_option_success() {
+        let option_data = create_test_option_data();
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.25),
+            0.05,
+            0.02,
+        );
+
+        let result = option_data.get_option(&price_params);
+        assert!(result.is_ok());
+
+        let option = result.unwrap();
+        assert_eq!(option.strike_price, pos!(100.0));
+        assert_eq!(option.implied_volatility, 0.25); // Uses provided IV
+        assert_eq!(option.underlying_price, pos!(100.0));
+        assert_eq!(option.risk_free_rate, 0.05);
+        assert_eq!(option.dividend_yield, 0.02);
+        assert_eq!(option.side, Side::Long);
+        assert_eq!(option.option_style, OptionStyle::Call);
+    }
+
+    #[test]
+    fn test_get_option_using_data_iv() {
+        let option_data = create_test_option_data();
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None, // No IV provided in params
+            0.05,
+            0.02,
+        );
+
+        let result = option_data.get_option(&price_params);
+        assert!(result.is_ok());
+
+        let option = result.unwrap();
+        assert_eq!(option.implied_volatility, 0.2); // Uses IV from option_data
+    }
+
+    #[test]
+    fn test_get_option_missing_iv() {
+        let mut option_data = create_test_option_data();
+        option_data.implied_volatility = None;
+
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            0.05,
+            0.02,
+        );
+
+        let result = option_data.get_option(&price_params);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Implied volatility not found");
+    }
+}
+
+#[cfg(test)]
+mod tests_option_data_get_options_in_strike {
+    use approx::assert_relative_eq;
+    use super::*;
+    use crate::model::types::ExpirationDate;
+
+    fn create_test_option_data() -> OptionData {
+        OptionData::new(
+            pos!(100.0),   // strike_price
+            spos!(9.5),    // call_bid
+            spos!(10.0),   // call_ask
+            spos!(8.5),    // put_bid
+            spos!(9.0),    // put_ask
+            spos!(0.2),    // implied_volatility
+            Some(-0.3),    // delta
+            spos!(1000.0), // volume
+            Some(500),     // open_interest
+        )
+    }
+
+    #[test]
+    fn test_get_options_in_strike_success() {
+        let option_data = create_test_option_data();
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            spos!(0.25),
+            0.05,
+            0.02,
+        );
+
+        let result = option_data.get_options_in_strike(&price_params);
+        assert!(result.is_ok());
+
+        let options = result.unwrap();
+
+        // Check long call
+        assert_eq!(options.long_call.strike_price, pos!(100.0));
+        assert_eq!(options.long_call.option_style, OptionStyle::Call);
+        assert_eq!(options.long_call.side, Side::Long);
+
+        // Check short call
+        assert_eq!(options.short_call.strike_price, pos!(100.0));
+        assert_eq!(options.short_call.option_style, OptionStyle::Call);
+        assert_eq!(options.short_call.side, Side::Short);
+
+        // Check long put
+        assert_eq!(options.long_put.strike_price, pos!(100.0));
+        assert_eq!(options.long_put.option_style, OptionStyle::Put);
+        assert_eq!(options.long_put.side, Side::Long);
+
+        // Check short put
+        assert_eq!(options.short_put.strike_price, pos!(100.0));
+        assert_eq!(options.short_put.option_style, OptionStyle::Put);
+        assert_eq!(options.short_put.side, Side::Short);
+    }
+
+    #[test]
+    fn test_get_options_in_strike_using_data_iv() {
+        let option_data = create_test_option_data();
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            0.05,
+            0.02,
+        );
+
+        let result = option_data.get_options_in_strike(&price_params);
+        assert!(result.is_ok());
+
+        let options = result.unwrap();
+        assert_eq!(options.long_call.implied_volatility, 0.2);
+        assert_eq!(options.short_call.implied_volatility, 0.2);
+        assert_eq!(options.long_put.implied_volatility, 0.2);
+        assert_eq!(options.short_put.implied_volatility, 0.2);
+    }
+
+    #[test]
+    fn test_get_options_in_strike_missing_iv() {
+        let mut option_data = create_test_option_data();
+        option_data.implied_volatility = None;
+    
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            0.05,
+            0.02,
+        );
+    
+        let result = option_data.get_options_in_strike(&price_params);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Implied volatility not found");
+    }
+
+    #[test]
+    fn test_get_options_in_strike_all_properties() {
+        let option_data = create_test_option_data();
+        let price_params = OptionDataPriceParams::new(
+            pos!(110.0),
+            ExpirationDate::Days(45.0),
+            spos!(0.3),
+            0.06,
+            0.03,
+        );
+
+        let result = option_data.get_options_in_strike(&price_params);
+        assert!(result.is_ok());
+
+        let options = result.unwrap();
+
+        // Verify common properties across all options
+        let check_common_properties = |option: &Options| {
+            assert_eq!(option.strike_price, pos!(100.0));
+            assert_eq!(option.underlying_price, pos!(110.0));
+            assert_eq!(option.implied_volatility, 0.3);
+            assert_eq!(option.risk_free_rate, 0.06);
+            assert_eq!(option.dividend_yield, 0.03);
+            assert_eq!(option.option_type, OptionType::European);
+            assert_eq!(option.quantity, pos!(1.0));
+        };
+
+        check_common_properties(&options.long_call);
+        check_common_properties(&options.short_call);
+        check_common_properties(&options.long_put);
+        check_common_properties(&options.short_put);
+    }
+
+    #[test]
+    fn test_get_options_in_strike_deltas() {
+        let option_data = create_test_option_data();
+        let price_params = OptionDataPriceParams::new(
+            pos!(110.0),
+            ExpirationDate::Days(45.0),
+            spos!(0.3),
+            0.06,
+            0.03,
+        );
+
+        let result = option_data.get_options_in_strike(&price_params);
+        assert!(result.is_ok());
+
+        let options = result.unwrap();
+        
+        assert_relative_eq!(options.long_call.delta(), 0.844825189, epsilon = 1e-8);
+        assert_relative_eq!(options.short_call.delta(), -0.844825189, epsilon = 1e-8);
+        assert_relative_eq!(options.long_put.delta(), -0.151483012, epsilon = 1e-8);
+        assert_relative_eq!(options.short_put.delta(), 0.151483012, epsilon = 1e-8);
+
     }
 }
