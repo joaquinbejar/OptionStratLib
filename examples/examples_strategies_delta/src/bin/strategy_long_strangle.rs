@@ -3,7 +3,7 @@ use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::strangle::ShortStrangle;
+use optionstratlib::strategies::strangle::LongStrangle;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
@@ -14,11 +14,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let underlying_price = pos!(7138.5);
 
-    let strategy = ShortStrangle::new(
+    let strategy = LongStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
         pos!(7450.0),     // call_strike 7450 (delta -0.415981)
-        pos!(7250.0),     // put_strike 7050 (delta 0.417810)
+        pos!(7150.0),     // put_strike 7050 (delta 0.417810)
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
