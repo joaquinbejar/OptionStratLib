@@ -13,11 +13,15 @@ use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
+use crate::strategies::delta_neutral::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
+};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -640,6 +644,111 @@ impl Graph for IronCondor {
         points.push(self.get_point_at_price(*current_price));
 
         points
+    }
+}
+
+impl Greeks for IronCondor {
+    fn greeks(&self) -> Greek {
+        let long_call_greek = self.long_call.greeks();
+        let long_put_greek = self.long_put.greeks();
+        let short_call_greek = self.short_call.greeks();
+        let short_put_greek = self.short_put.greeks();
+
+        Greek {
+            delta: long_call_greek.delta
+                + long_put_greek.delta
+                + short_call_greek.delta
+                + short_put_greek.delta,
+            gamma: long_call_greek.gamma
+                + long_put_greek.gamma
+                + short_call_greek.gamma
+                + short_put_greek.gamma,
+            theta: long_call_greek.theta
+                + long_put_greek.theta
+                + short_call_greek.theta
+                + short_put_greek.theta,
+            vega: long_call_greek.vega
+                + long_put_greek.vega
+                + short_call_greek.vega
+                + short_put_greek.vega,
+            rho: long_call_greek.rho
+                + long_put_greek.rho
+                + short_call_greek.rho
+                + short_put_greek.rho,
+            rho_d: long_call_greek.rho_d
+                + long_put_greek.rho_d
+                + short_call_greek.rho_d
+                + short_put_greek.rho_d,
+        }
+    }
+}
+
+impl DeltaNeutrality for IronCondor {
+    fn calculate_net_delta(&self) -> DeltaInfo {
+        let long_call_delta = self.long_call.option.delta();
+        let long_put_delta = self.long_put.option.delta();
+        let short_call_delta = self.short_call.option.delta();
+        let short_put_delta = self.short_put.option.delta();
+        let threshold = DELTA_THRESHOLD;
+        let delta = long_call_delta + long_put_delta + short_call_delta + short_put_delta;
+        DeltaInfo {
+            net_delta: delta,
+            individual_deltas: vec![
+                long_call_delta,
+                long_put_delta,
+                short_call_delta,
+                short_put_delta,
+            ],
+            is_neutral: (delta).abs() < threshold,
+            underlying_price: self.long_call.option.underlying_price,
+            neutrality_threshold: threshold,
+        }
+    }
+
+    fn get_atm_strike(&self) -> PositiveF64 {
+        self.long_call.option.underlying_price
+    }
+
+    fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
+        let net_delta = self.calculate_net_delta().net_delta;
+        vec![
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!((net_delta.abs() / self.long_put.option.delta()).abs())
+                    * self.long_put.option.quantity,
+                strike: self.long_put.option.strike_price,
+                option_type: OptionStyle::Put,
+            },
+            DeltaAdjustment::SellOptions {
+                quantity: pos!((net_delta.abs() / self.short_call.option.delta()).abs())
+                    * self.short_call.option.quantity,
+                strike: self.short_call.option.strike_price,
+                option_type: OptionStyle::Call,
+            },
+        ]
+    }
+
+    fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
+        let net_delta = self.calculate_net_delta().net_delta;
+
+        println!(
+            "Net Delta: {} long_call: {}",
+            net_delta,
+            self.long_call.option.delta()
+        );
+        vec![
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!((net_delta.abs() / self.long_call.option.delta()).abs())
+                    * self.long_call.option.quantity,
+                strike: self.long_call.option.strike_price,
+                option_type: OptionStyle::Call,
+            },
+            DeltaAdjustment::SellOptions {
+                quantity: pos!((net_delta.abs() / self.short_put.option.delta()).abs())
+                    * self.short_put.option.quantity,
+                strike: self.short_put.option.strike_price,
+                option_type: OptionStyle::Put,
+            },
+        ]
     }
 }
 
@@ -1884,5 +1993,249 @@ mod tests_iron_condor_graph {
 
         let expected_profit = condor.calculate_profit_at(condor.long_call.option.underlying_price);
         assert_eq!(current_price_point.coordinates.1, expected_profit);
+    }
+}
+
+#[cfg(test)]
+mod tests_iron_condor_delta {
+    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::pos;
+    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
+    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::iron_condor::IronCondor;
+    use approx::assert_relative_eq;
+
+    fn get_strategy(underlying_price: PositiveF64) -> IronCondor {
+        IronCondor::new(
+            "GOLD".to_string(),
+            underlying_price, // underlying_price
+            pos!(2725.0),     // short_call_strike
+            pos!(2560.0),     // short_put_strike
+            pos!(2800.0),     // long_call_strike
+            pos!(2500.0),     // long_put_strike
+            ExpirationDate::Days(30.0),
+            0.1548,    // implied_volatility
+            0.0,       // risk_free_rate
+            0.0,       // dividend_yield
+            pos!(1.0), // quantity
+            38.8,      // premium_short_call
+            30.4,      // premium_short_put
+            23.3,      // premium_long_call
+            16.8,      // premium_long_put
+            0.96,      // open_fee
+            0.96,      // close_fee
+        )
+    }
+
+    #[test]
+    fn create_test_short_strangle_reducing_adjustments() {
+        let strategy = get_strategy(pos!(2800.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            -0.2124,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.4175977387296569),
+                strike: pos!(2800.0),
+                option_type: OptionStyle::Call
+            }
+        );
+        assert_eq!(
+            suggestion[1],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(10.312565341673606),
+                strike: pos!(2560.0),
+                option_type: OptionStyle::Put
+            }
+        );
+
+        let mut option = strategy.long_call.option.clone();
+        option.quantity = pos!(0.4175977387296569);
+        assert_relative_eq!(option.delta(), 0.21249, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_short_strangle_increasing_adjustments() {
+        let strategy = get_strategy(pos!(2500.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.18282752,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.3722450887122396),
+                strike: pos!(2500.0),
+                option_type: OptionStyle::Put
+            }
+        );
+        assert_eq!(
+            suggestion[1],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(6.659872649379878),
+                strike: pos!(2725.0),
+                option_type: OptionStyle::Call
+            }
+        );
+
+        let mut option = strategy.long_put.option.clone();
+        option.quantity = pos!(0.3722450887122396);
+        assert_relative_eq!(option.delta(), -0.1828275205, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_short_strangle_no_adjustments() {
+        let strategy = get_strategy(pos!(2100.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+        assert!(strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_iron_condor_delta_size {
+    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::pos;
+    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
+    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::iron_condor::IronCondor;
+    use approx::assert_relative_eq;
+
+    fn get_strategy(underlying_price: PositiveF64) -> IronCondor {
+        IronCondor::new(
+            "GOLD".to_string(),
+            underlying_price, // underlying_price
+            pos!(2725.0),     // short_call_strike
+            pos!(2560.0),     // short_put_strike
+            pos!(2800.0),     // long_call_strike
+            pos!(2500.0),     // long_put_strike
+            ExpirationDate::Days(30.0),
+            0.1548,    // implied_volatility
+            0.0,       // risk_free_rate
+            0.0,       // dividend_yield
+            pos!(2.0), // quantity
+            38.8,      // premium_short_call
+            30.4,      // premium_short_put
+            23.3,      // premium_long_call
+            16.8,      // premium_long_put
+            0.96,      // open_fee
+            0.96,      // close_fee
+        )
+    }
+
+    #[test]
+    fn create_test_short_strangle_reducing_adjustments() {
+        let strategy = get_strategy(pos!(2800.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            -0.4249,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.8351954774593138),
+                strike: pos!(2800.0),
+                option_type: OptionStyle::Call
+            }
+        );
+        assert_eq!(
+            suggestion[1],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(20.625130683347212),
+                strike: pos!(2560.0),
+                option_type: OptionStyle::Put
+            }
+        );
+
+        let mut option = strategy.long_call.option.clone();
+        option.quantity = pos!(0.8351954774593138);
+        assert_relative_eq!(option.delta(), 0.42499, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_short_strangle_increasing_adjustments() {
+        let strategy = get_strategy(pos!(2500.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.3656,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.7444901774244792),
+                strike: pos!(2500.0),
+                option_type: OptionStyle::Put
+            }
+        );
+        assert_eq!(
+            suggestion[1],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(13.319745298759756),
+                strike: pos!(2725.0),
+                option_type: OptionStyle::Call
+            }
+        );
+
+        let mut option = strategy.long_put.option.clone();
+        option.quantity = pos!(0.7444901774244792);
+        assert_relative_eq!(option.delta(), -0.36565, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_short_strangle_no_adjustments() {
+        let strategy = get_strategy(pos!(2100.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+        assert!(strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
     }
 }
