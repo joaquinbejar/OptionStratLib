@@ -2028,7 +2028,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_reducing_adjustments() {
+    fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(2800.0));
 
         assert_relative_eq!(
@@ -2066,7 +2066,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_increasing_adjustments() {
+    fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2500.0));
 
         assert_relative_eq!(
@@ -2104,7 +2104,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_no_adjustments() {
+    fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(2100.0));
 
         assert_relative_eq!(
@@ -2150,7 +2150,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_reducing_adjustments() {
+    fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(2800.0));
 
         assert_relative_eq!(
@@ -2188,7 +2188,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_increasing_adjustments() {
+    fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2500.0));
 
         assert_relative_eq!(
@@ -2226,7 +2226,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_no_adjustments() {
+    fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(2100.0));
 
         assert_relative_eq!(

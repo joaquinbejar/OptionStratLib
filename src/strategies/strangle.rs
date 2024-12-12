@@ -1916,7 +1916,7 @@ mod tests_short_strangle_probability {
 
     /// Helper function that creates a basic short strangle for testing purposes
     /// Returns a ShortStrangle instance with predefined test values
-    fn create_test_short_strangle() -> ShortStrangle {
+    fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
             pos!(100.0),                // underlying_price
@@ -1938,7 +1938,7 @@ mod tests_short_strangle_probability {
 
     #[test]
     fn test_probability_of_profit_basic() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.probability_of_profit(None, None);
 
         assert!(result.is_ok(), "Probability calculation should succeed");
@@ -1949,7 +1949,7 @@ mod tests_short_strangle_probability {
 
     #[test]
     fn test_probability_of_profit_with_volatility_adjustment() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let vol_adj = VolatilityAdjustment {
             base_volatility: pos!(0.25),
             std_dev_adjustment: pos!(0.05),
@@ -1968,7 +1968,7 @@ mod tests_short_strangle_probability {
 
     #[test]
     fn test_probability_of_profit_with_trend() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let trend = PriceTrend {
             drift_rate: 0.1,
             confidence: 0.95,
@@ -1987,7 +1987,7 @@ mod tests_short_strangle_probability {
 
     #[test]
     fn test_probability_of_profit_with_downward_trend() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let trend = PriceTrend {
             drift_rate: -0.1,
             confidence: 0.90,
@@ -2006,7 +2006,7 @@ mod tests_short_strangle_probability {
 
     #[test]
     fn test_get_reference_price() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.get_underlying_price();
 
         assert_eq!(
@@ -2018,7 +2018,7 @@ mod tests_short_strangle_probability {
 
     #[test]
     fn test_get_expiration() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.get_expiration();
 
         assert!(result.is_ok(), "Expiration retrieval should succeed");
@@ -2030,7 +2030,7 @@ mod tests_short_strangle_probability {
 
     #[test]
     fn test_get_profit_ranges() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.get_profit_ranges();
 
         assert!(result.is_ok(), "Profit ranges calculation should succeed");
@@ -2051,7 +2051,7 @@ mod tests_short_strangle_probability_bis {
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
 
-    fn create_test_short_strangle() -> ShortStrangle {
+    fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
             pos!(100.0),                // underlying_price
@@ -2073,7 +2073,7 @@ mod tests_short_strangle_probability_bis {
 
     #[test]
     fn test_get_expiration() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.get_expiration();
         assert!(result.is_ok());
         match result.unwrap() {
@@ -2084,13 +2084,13 @@ mod tests_short_strangle_probability_bis {
 
     #[test]
     fn test_get_risk_free_rate() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         assert_eq!(strangle.get_risk_free_rate(), Some(0.05));
     }
 
     #[test]
     fn test_get_profit_ranges() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.get_profit_ranges();
 
         assert!(result.is_ok());
@@ -2104,7 +2104,7 @@ mod tests_short_strangle_probability_bis {
 
     #[test]
     fn test_get_loss_ranges() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.get_loss_ranges();
 
         assert!(result.is_ok());
@@ -2118,7 +2118,7 @@ mod tests_short_strangle_probability_bis {
 
     #[test]
     fn test_probability_of_profit() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.probability_of_profit(None, None);
 
         assert!(result.is_ok());
@@ -2129,7 +2129,7 @@ mod tests_short_strangle_probability_bis {
 
     #[test]
     fn test_probability_with_volatility_adjustment() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos!(0.25),
             std_dev_adjustment: pos!(0.1),
@@ -2144,7 +2144,7 @@ mod tests_short_strangle_probability_bis {
 
     #[test]
     fn test_probability_with_trend() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let trend = Some(PriceTrend {
             drift_rate: 0.1,
             confidence: 0.95,
@@ -2159,7 +2159,7 @@ mod tests_short_strangle_probability_bis {
 
     #[test]
     fn test_analyze_probabilities() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.analyze_probabilities(None, None);
 
         assert!(result.is_ok());
@@ -2175,7 +2175,7 @@ mod tests_short_strangle_probability_bis {
 
     #[test]
     fn test_calculate_extreme_probabilities() {
-        let strangle = create_test_short_strangle();
+        let strangle = create_test();
         let result = strangle.calculate_extreme_probabilities(None, None);
 
         assert!(result.is_ok());
@@ -2360,7 +2360,7 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_reducing_adjustments() {
+    fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
@@ -2390,7 +2390,7 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_increasing_adjustments() {
+    fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
 
         assert_relative_eq!(
@@ -2420,7 +2420,7 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_no_adjustments() {
+    fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 
         assert_relative_eq!(
@@ -2465,7 +2465,7 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_reducing_adjustments() {
+    fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
@@ -2495,7 +2495,7 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_increasing_adjustments() {
+    fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
 
         assert_relative_eq!(
@@ -2525,7 +2525,7 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
-    fn create_test_short_strangle_no_adjustments() {
+    fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 
         assert_relative_eq!(
@@ -2571,7 +2571,7 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_reducing_adjustments() {
+    fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
@@ -2601,7 +2601,7 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_increasing_adjustments() {
+    fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
 
         assert_relative_eq!(
@@ -2631,7 +2631,7 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_no_adjustments() {
+    fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7045.0));
 
         assert_relative_eq!(
@@ -2676,7 +2676,7 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_reducing_adjustments() {
+    fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
@@ -2706,7 +2706,7 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_increasing_adjustments() {
+    fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
 
         assert_relative_eq!(
@@ -2736,7 +2736,7 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-    fn create_test_short_strangle_no_adjustments() {
+    fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 
         assert_relative_eq!(
