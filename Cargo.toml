@@ -53,6 +53,7 @@ path = "src/lib.rs"
 members = [
     "examples/examples_simulation",
     "examples/examples_strategies_best",
+    "examples/examples_strategies_delta",
     "examples/examples_strategies",
     "examples/examples_visualization",
     "examples/examples_chain",
