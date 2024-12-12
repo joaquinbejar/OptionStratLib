@@ -117,6 +117,10 @@ impl Display for OptionDataPriceParams {
     }
 }
 
+pub trait OptionChainParams {
+    fn get_params(&self) -> Result<OptionDataPriceParams, String>;
+}
+
 /// Parameters for generating random positions in an option chain
 #[derive(Clone, Debug)]
 pub struct RandomPositionsParams {
