@@ -3,40 +3,47 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-/*
-    The "Poor Man's Covered Call" is an options strategy designed to simulate a traditional covered call,
-    but with a lower capital requirement. In a standard covered call, an investor holds a long position
-    in the underlying asset (e.g., a stock) and sells a call option against it to generate premium income.
-    This strategy works well for neutral to slightly bullish market outlooks.
-    However, instead of purchasing the underlying asset (which can be capital-intensive), the "Poor Man's
-    Covered Call" involves buying a deep-in-the-money LEAP (Long-term Equity Anticipation Security) call
-    option with a long expiration date and selling a short-term out-of-the-money call option against it.
-    By using a LEAP, the investor still benefits from the movement of the underlying asset while avoiding
-    the need to purchase it outright. The premium collected from selling the short-term call generates income
-    and helps offset the cost of the LEAP.
-    The strategy has two main components:
-    1. **Long LEAP Call**: This serves as a substitute for holding the underlying asset. The deep-in-the-money
-       LEAP behaves similarly to the underlying asset's price movement but costs a fraction of its price.
-       The LEAP should have a delta close to 1, meaning it moves nearly dollar-for-dollar with the underlying asset.
-    2. **Short Call**: A short-term out-of-the-money call is sold against the long LEAP. This generates premium
-       income, and if the underlying asset's price rises above the strike price of the short call, the investor may
-       need to sell the asset (or close the position), locking in potential gains.
-    The goal is to capture some upside potential of the underlying asset while reducing risk through a lower capital
-    commitment. The key risks involve the loss of the premium collected if the underlying asset does not move favorably
-    and potential limitations on profits if the underlying asset's price rises sharply, triggering the short call.
-    This strategy is often used by investors who are moderately bullish on an asset but wish to reduce the cost
-    and risk associated with traditional covered call strategies.
-*/
+
+//!
+//! The "Poor Man's Covered Call" is an options strategy designed to simulate a traditional covered call,
+//! but with a lower capital requirement. In a standard covered call, an investor holds a long position
+//! in the underlying asset (e.g., a stock) and sells a call option against it to generate premium income.
+//! This strategy works well for neutral to slightly bullish market outlooks.
+//! However, instead of purchasing the underlying asset (which can be capital-intensive), the "Poor Man's
+//! Covered Call" involves buying a deep-in-the-money LEAP (Long-term Equity Anticipation Security) call
+//! option with a long expiration date and selling a short-term out-of-the-money call option against it.
+//! By using a LEAP, the investor still benefits from the movement of the underlying asset while avoiding
+//! the need to purchase it outright. The premium collected from selling the short-term call generates income
+//! and helps offset the cost of the LEAP.
+//!
+//! The strategy has two main components:
+//! 1. **Long LEAP Call**: This serves as a substitute for holding the underlying asset. The deep-in-the-money
+//!    LEAP behaves similarly to the underlying asset's price movement but costs a fraction of its price.
+//!    The LEAP should have a delta close to 1, meaning it moves nearly dollar-for-dollar with the underlying asset.
+//! 2. **Short Call**: A short-term out-of-the-money call is sold against the long LEAP. This generates premium
+//!    income, and if the underlying asset's price rises above the strike price of the short call, the investor may
+//!    need to sell the asset (or close the position), locking in potential gains.
+//!
+//! The goal is to capture some upside potential of the underlying asset while reducing risk through a lower capital
+//! commitment. The key risks involve the loss of the premium collected if the underlying asset does not move favorably
+//! and potential limitations on profits if the underlying asset's price rises sharply, triggering the short call.
+//! This strategy is often used by investors who are moderately bullish on an asset but wish to reduce the cost
+//! and risk associated with traditional covered call strategies.
+//!
 
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
+use crate::strategies::delta_neutral::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
+};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -520,6 +527,59 @@ impl Graph for PoorMansCoveredCall {
         points.push(self.get_point_at_price(self.long_call.option.underlying_price));
 
         points
+    }
+}
+
+impl Greeks for PoorMansCoveredCall {
+    fn greeks(&self) -> Greek {
+        let long_call_greek = self.long_call.greeks();
+        let short_call_greek = self.short_call.greeks();
+
+        Greek {
+            delta: long_call_greek.delta + short_call_greek.delta,
+            gamma: long_call_greek.gamma + short_call_greek.gamma,
+            theta: long_call_greek.theta + short_call_greek.theta,
+            vega: long_call_greek.vega + short_call_greek.vega,
+            rho: long_call_greek.rho + short_call_greek.rho,
+            rho_d: long_call_greek.rho_d + short_call_greek.rho_d,
+        }
+    }
+}
+
+impl DeltaNeutrality for PoorMansCoveredCall {
+    fn calculate_net_delta(&self) -> DeltaInfo {
+        let long_call_delta = self.long_call.option.delta();
+        let short_call_delta = self.short_call.option.delta();
+        let threshold = DELTA_THRESHOLD;
+        DeltaInfo {
+            net_delta: long_call_delta + short_call_delta,
+            individual_deltas: vec![long_call_delta, short_call_delta],
+            is_neutral: (long_call_delta + short_call_delta).abs() < threshold,
+            underlying_price: self.short_call.option.underlying_price,
+            neutrality_threshold: threshold,
+        }
+    }
+
+    fn get_atm_strike(&self) -> PositiveF64 {
+        self.short_call.option.underlying_price
+    }
+
+    fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
+        let net_delta = self.calculate_net_delta().net_delta;
+        vec![DeltaAdjustment::SellOptions {
+            quantity: pos!((net_delta.abs() / self.short_call.option.delta()).abs()),
+            strike: self.short_call.option.strike_price,
+            option_type: OptionStyle::Call,
+        }]
+    }
+
+    fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
+        let net_delta = self.calculate_net_delta().net_delta;
+        vec![DeltaAdjustment::BuyOptions {
+            quantity: pos!((net_delta.abs() / self.long_call.option.delta()).abs()),
+            strike: self.long_call.option.strike_price,
+            option_type: OptionStyle::Call,
+        }]
     }
 }
 
@@ -1200,5 +1260,111 @@ mod tests_pmcc_best_ratio {
 
         assert!(strategy.profit_ratio() > 0.0);
         assert!(strategy.validate());
+    }
+}
+
+#[cfg(test)]
+mod tests_short_straddle_delta {
+    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::pos;
+    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
+    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
+    use approx::assert_relative_eq;
+
+    fn get_strategy(long_strike: PositiveF64, short_strike: PositiveF64) -> PoorMansCoveredCall {
+        let underlying_price = pos!(7138.5);
+        PoorMansCoveredCall::new(
+            "CL".to_string(),
+            underlying_price, // underlying_price
+            long_strike,      // call_strike 7450
+            short_strike,     // put_strike 7050
+            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(15.0),
+            0.3745,    // implied_volatility
+            0.05,      // risk_free_rate
+            0.0,       // dividend_yield
+            pos!(1.0), // quantity
+            84.2,      // premium_short_call
+            353.2,     // premium_short_put
+            7.01,      // open_fee_short_call
+            7.01,      // close_fee_short_call
+            7.01,      // open_fee_short_put
+            7.01,      // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn create_test_short_straddle_reducing_adjustments() {
+        let strategy = get_strategy(pos!(7250.0), pos!(7300.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.0887293,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(0.21684621688317562),
+                strike: pos!(7300.0),
+                option_type: OptionStyle::Call
+            }
+        );
+
+        let mut option = strategy.short_call.option.clone();
+        option.quantity = pos!(0.21684621688317562);
+        assert_relative_eq!(option.delta(), -0.088729, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_short_straddle_increasing_adjustments() {
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            -0.028694805,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.068980986995787),
+                strike: pos!(7450.0),
+                option_type: OptionStyle::Call
+            }
+        );
+
+        let mut option = strategy.long_call.option.clone();
+        option.quantity = pos!(0.068980986995787);
+        assert_relative_eq!(option.delta(), 0.028694, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_short_straddle_no_adjustments() {
+        let strategy = get_strategy(pos!(7390.0), pos!(7250.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+        assert!(strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
     }
 }
