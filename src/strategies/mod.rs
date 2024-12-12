@@ -196,4 +196,4 @@ pub mod protective_put;
 pub mod straddle;
 pub mod strangle;
 pub mod utils;
-mod delta_neutral;
+pub mod delta_neutral;
