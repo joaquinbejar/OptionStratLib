@@ -155,15 +155,15 @@ impl BullPutSpread {
     /// based on validity, pricing conditions, and strategy constraints.
     ///
     /// This function generates pairs of options from the `OptionChain` and applies
-    /// a series of filters and validations to ensure the results conform to the 
+    /// a series of filters and validations to ensure the results conform to the
     /// specified trading strategy requirements. Each returned pair (`long`, `short`)
-    /// represents options that are suitable for building a strategy, such as a 
+    /// represents options that are suitable for building a strategy, such as a
     /// "bull put spread".
     ///
     /// # Parameters
     ///
     /// - `option_chain`: A reference to the `OptionChain` containing the option data.
-    /// - `side`: The `FindOptimalSide` specifying the filtering condition based on the 
+    /// - `side`: The `FindOptimalSide` specifying the filtering condition based on the
     ///   strike price range relative to the underlying price.
     ///
     /// # Returns
@@ -171,23 +171,23 @@ impl BullPutSpread {
     /// An iterator over pairs of references to `OptionData` that meet the selection criteria.
     /// Each pair satisfies:
     /// - Both options are valid according to the `is_valid_optimal_side` method.
-    /// - Both options have valid bid/ask prices for the put options (`put_ask` for long and 
+    /// - Both options have valid bid/ask prices for the put options (`put_ask` for long and
     ///   `put_bid` for short must be greater than zero).
-    /// - The strategy created using the pair passes validation checks and successfully 
+    /// - The strategy created using the pair passes validation checks and successfully
     ///   calculates `max_profit` and `max_loss`.
     ///
     /// # Process
     ///
     /// 1. Computes the underlying price via `self.get_underlying_price()`.
     /// 2. Initializes a cloned version of the strategy for dynamic closures.
-    /// 3. Uses the `option_chain.get_double_iter()` method to generate all possible pairs 
+    /// 3. Uses the `option_chain.get_double_iter()` method to generate all possible pairs
     ///    of options for evaluation.
-    /// 4. Filters the pairs based on combination validity, pricing constraints, and 
+    /// 4. Filters the pairs based on combination validity, pricing constraints, and
     ///    strategy feasibility:
-    ///    - Ensures the options are on the correct `FindOptimalSide` relative to the 
+    ///    - Ensures the options are on the correct `FindOptimalSide` relative to the
     ///      underlying price.
     ///    - Ensures the `put_ask` and `put_bid` prices meet the conditions.
-    ///    - Ensures the strategy created with the options is valid and has calculable 
+    ///    - Ensures the strategy created with the options is valid and has calculable
     ///      profit and loss parameters.
     ///
     /// # Examples
@@ -199,7 +199,7 @@ impl BullPutSpread {
     /// use optionstratlib::pos;
     /// use optionstratlib::strategies::bull_put_spread::BullPutSpread;
     /// use optionstratlib::strategies::utils::FindOptimalSide;
-    /// 
+    ///
     /// let underlying_price = pos!(5810.0);
     /// let option_chain = OptionChain::new("TEST", underlying_price, "2024-01-01".to_string());
     /// let bull_put_spread_strategy = BullPutSpread::new(
@@ -232,7 +232,7 @@ impl BullPutSpread {
     ///
     /// - This function assumes that the `OptionChain` data structure is well-formed
     ///   and contains valid `OptionData`.
-    /// - It is intended for strategies requiring combinations of two legs, like spreads. 
+    /// - It is intended for strategies requiring combinations of two legs, like spreads.
     ///   For strategies requiring more legs, an alternative method may be needed.
     ///
     /// # See Also

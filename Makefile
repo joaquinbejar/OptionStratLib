@@ -65,7 +65,7 @@ doc:
 	cargo doc --open
 
 .PHONY: publish
-publish:
+publish: readme coverage
 	cargo login ${CARGO_REGISTRY_TOKEN}
 	cargo package
 	cargo publish
