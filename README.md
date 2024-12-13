@@ -2,17 +2,21 @@
 
 
  <div style="text-align: center;">
- <img src="doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 200px;">
+ <img src="https://raw.githubusercontent.com/joaquinbejar/OptionStratLib/refs/heads/main/doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 200px;">
  </div>
 
  [![Dual License](https://img.shields.io/badge/license-MIT%20and%20Apache%202.0-blue)](./LICENSE)
  [![Crates.io](https://img.shields.io/crates/v/optionstratlib.svg)](https://crates.io/crates/optionstratlib)
  [![Downloads](https://img.shields.io/crates/d/optionstratlib.svg)](https://crates.io/crates/optionstratlib)
  [![Stars](https://img.shields.io/github/stars/joaquinbejar/OptionStratLib.svg)](https://github.com/joaquinbejar/OptionStratLib/stargazers)
+ [![Issues](https://img.shields.io/github/issues/joaquinbejar/OptionStratLib.svg)](https://github.com/joaquinbejar/OptionStratLib/issues)
+ [![PRs](https://img.shields.io/github/issues-pr/joaquinbejar/OptionStratLib.svg)](https://github.com/joaquinbejar/OptionStratLib/pulls)
+
 
  [![Build Status](https://img.shields.io/github/workflow/status/joaquinbejar/OptionStratLib/CI)](https://github.com/joaquinbejar/OptionStratLib/actions)
  [![Coverage](https://img.shields.io/codecov/c/github/joaquinbejar/OptionStratLib)](https://codecov.io/gh/joaquinbejar/OptionStratLib)
  [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
+ [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
 
  # OptionStratLib v0.2.5: Financial Options Library
 
