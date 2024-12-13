@@ -14,10 +14,11 @@ Key characteristics:
 - Maximum profit achieved when price stays above higher strike
 - Also known as a vertical put credit spread
 */
-
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
@@ -25,10 +26,13 @@ use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
 use crate::pos;
 use crate::pricing::payoff::Profit;
+use crate::strategies::delta_neutral::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
+};
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
@@ -108,7 +112,9 @@ impl BullPutSpread {
             open_fee_long_put,
             close_fee_long_put,
         );
-        strategy.add_leg(long_put.clone());
+        strategy
+            .add_position(&long_put.clone())
+            .expect("Error adding long put");
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -131,7 +137,9 @@ impl BullPutSpread {
             open_fee_short_put,
             close_fee_short_put,
         );
-        strategy.add_leg(short_put.clone());
+        strategy
+            .add_position(&short_put.clone())
+            .expect("Error adding short put");
 
         strategy.validate();
 
@@ -142,22 +150,145 @@ impl BullPutSpread {
 
         strategy
     }
+
+    /// Filters combinations of `OptionData` from the provided `OptionChain`
+    /// based on validity, pricing conditions, and strategy constraints.
+    ///
+    /// This function generates pairs of options from the `OptionChain` and applies
+    /// a series of filters and validations to ensure the results conform to the
+    /// specified trading strategy requirements. Each returned pair (`long`, `short`)
+    /// represents options that are suitable for building a strategy, such as a
+    /// "bull put spread".
+    ///
+    /// # Parameters
+    ///
+    /// - `option_chain`: A reference to the `OptionChain` containing the option data.
+    /// - `side`: The `FindOptimalSide` specifying the filtering condition based on the
+    ///   strike price range relative to the underlying price.
+    ///
+    /// # Returns
+    ///
+    /// An iterator over pairs of references to `OptionData` that meet the selection criteria.
+    /// Each pair satisfies:
+    /// - Both options are valid according to the `is_valid_optimal_side` method.
+    /// - Both options have valid bid/ask prices for the put options (`put_ask` for long and
+    ///   `put_bid` for short must be greater than zero).
+    /// - The strategy created using the pair passes validation checks and successfully
+    ///   calculates `max_profit` and `max_loss`.
+    ///
+    /// # Process
+    ///
+    /// 1. Computes the underlying price via `self.get_underlying_price()`.
+    /// 2. Initializes a cloned version of the strategy for dynamic closures.
+    /// 3. Uses the `option_chain.get_double_iter()` method to generate all possible pairs
+    ///    of options for evaluation.
+    /// 4. Filters the pairs based on combination validity, pricing constraints, and
+    ///    strategy feasibility:
+    ///    - Ensures the options are on the correct `FindOptimalSide` relative to the
+    ///      underlying price.
+    ///    - Ensures the `put_ask` and `put_bid` prices meet the conditions.
+    ///    - Ensures the strategy created with the options is valid and has calculable
+    ///      profit and loss parameters.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::model::types::ExpirationDate;
+    /// use optionstratlib::model::types::PositiveF64;
+    /// use optionstratlib::pos;
+    /// use optionstratlib::strategies::bull_put_spread::BullPutSpread;
+    /// use optionstratlib::strategies::utils::FindOptimalSide;
+    ///
+    /// let underlying_price = pos!(5810.0);
+    /// let option_chain = OptionChain::new("TEST", underlying_price, "2024-01-01".to_string());
+    /// let bull_put_spread_strategy = BullPutSpread::new(
+    ///         "SP500".to_string(),
+    ///         underlying_price, // underlying_price
+    ///         pos!(5750.0),     // long_strike
+    ///         pos!(5920.0),     // short_strike
+    ///         ExpirationDate::Days(2.0),
+    ///         0.18,      // implied_volatility
+    ///         0.05,      // risk_free_rate
+    ///         0.0,       // dividend_yield
+    ///         pos!(1.0), // long quantity
+    ///         15.04,     // premium_long
+    ///         89.85,     // premium_short
+    ///         0.78,      // open_fee_long
+    ///         0.78,      // open_fee_long
+    ///         0.73,      // close_fee_long
+    ///         0.73,      // close_fee_short
+    ///     );
+    ///
+    /// let side = FindOptimalSide::Lower;
+    /// let filtered_combinations = bull_put_spread_strategy.filter_combinations(&option_chain, side);
+    ///
+    /// for (long, short) in filtered_combinations {
+    ///     println!("Long Option: {:?}, Short Option: {:?}", long, short);
+    /// }
+    /// ```
+    ///
+    /// # Notes
+    ///
+    /// - This function assumes that the `OptionChain` data structure is well-formed
+    ///   and contains valid `OptionData`.
+    /// - It is intended for strategies requiring combinations of two legs, like spreads.
+    ///   For strategies requiring more legs, an alternative method may be needed.
+    ///
+    /// # See Also
+    ///
+    /// - [`OptionChain::get_double_iter`](crate::chains::chain::OptionChain::get_double_iter)
+    /// - [`OptionData::is_valid_optimal_side`](crate::chains::chain::OptionData::is_valid_optimal_side)
+    /// - [`BullPutSpread::validate`](crate::strategies::bull_put_spread::BullPutSpread::validate)
+    pub fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = (&'a OptionData, &'a OptionData)> {
+        let underlying_price = self.get_underlying_price();
+        let strategy = self.clone();
+        option_chain
+            .get_double_iter()
+            .filter(move |&option| {
+                option.0.is_valid_optimal_side(underlying_price, &side)
+                    && option.1.is_valid_optimal_side(underlying_price, &side)
+            })
+            .filter(|(long, short)| {
+                long.put_ask.unwrap_or(PZERO) > PZERO && short.put_bid.unwrap_or(PZERO) > PZERO
+            })
+            .filter(move |(long_option, short_option)| {
+                let legs = StrategyLegs::TwoLegs {
+                    first: long_option,
+                    second: short_option,
+                };
+                let strategy = strategy.create_strategy(option_chain, &legs);
+                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+            })
+    }
+}
+
+impl Positionable for BullPutSpread {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        match position.option.side {
+            Side::Short => {
+                self.short_put = position.clone();
+                Ok(())
+            }
+            Side::Long => {
+                self.long_put = position.clone();
+                Ok(())
+            }
+        }
+    }
+
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![&self.long_put, &self.short_put])
+    }
 }
 
 impl Strategies for BullPutSpread {
     fn get_underlying_price(&self) -> PositiveF64 {
         self.short_put.option.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
-        match position.option.side {
-            Side::Short => self.short_put = position,
-            Side::Long => self.long_put = position,
-        }
-    }
-
-    fn get_legs(&self) -> Vec<Position> {
-        vec![self.long_put.clone(), self.short_put.clone()]
     }
 
     fn max_profit(&self) -> Result<PositiveF64, &str> {
@@ -245,75 +376,34 @@ impl Optimizable for BullPutSpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = f64::NEG_INFINITY;
+        let strategy_clone = self.clone();
+        let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
-        for long_index in 0..options.len() {
-            let long_option = &options[long_index];
+        for (long_option, short_option) in options_iter {
+            let legs = StrategyLegs::TwoLegs {
+                first: long_option,
+                second: short_option,
+            };
+            let strategy = self.create_strategy(option_chain, &legs);
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                OptimizationCriteria::Area => strategy.profit_area(),
+            };
 
-            for short_option in &options[long_index + 1..] {
-                if !self.is_valid_long_option(long_option, &side)
-                    || !self.is_valid_short_option(short_option, &side)
-                {
-                    debug!(
-                        "Invalid options Asset {} - Long({}) Short({})",
-                        option_chain.underlying_price,
-                        long_option.strike_price,
-                        short_option.strike_price,
-                    );
-                    continue;
-                }
-
-                if !self.are_valid_prices(long_option, short_option) {
-                    debug!(
-                        "Invalid prices - Long({}): {:?} Short({}): {:?}",
-                        long_option.strike_price,
-                        long_option.put_ask,
-                        short_option.strike_price,
-                        short_option.put_bid
-                    );
-                    continue;
-                }
-
-                let strategy = self.create_strategy(option_chain, long_option, short_option);
-
-                if !strategy.validate() {
-                    debug!("Invalid strategy");
-                    continue;
-                }
-
-                if strategy.max_profit().is_err() || strategy.max_loss().is_err() {
-                    debug!(
-                        "Invalid profit {} loss {}",
-                        strategy.max_profit().unwrap_or(PZERO),
-                        strategy.max_loss().unwrap_or(PZERO)
-                    );
-                    continue;
-                }
-
-                let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                    OptimizationCriteria::Area => strategy.profit_area(),
-                };
-
-                if current_value > best_value {
-                    best_value = current_value;
-                    *self = strategy.clone();
-                }
+            if current_value > best_value {
+                debug!("Found better value: {}", current_value);
+                best_value = current_value;
+                *self = strategy.clone();
             }
         }
     }
 
-    fn are_valid_prices(&self, long: &OptionData, short: &OptionData) -> bool {
-        long.put_ask.unwrap_or(PZERO) > PZERO && short.put_bid.unwrap_or(PZERO) > PZERO
-    }
-
-    fn create_strategy(
-        &self,
-        chain: &OptionChain,
-        long: &OptionData,
-        short: &OptionData,
-    ) -> BullPutSpread {
+    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+        let (long, short) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
         BullPutSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
@@ -372,7 +462,7 @@ impl Graph for BullPutSpread {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Break Even {:.2}", self.break_even_points[0]),
-            label_offset: (10.0, -10.0),
+            label_offset: LabelOffsetType::Relative(10.0, -10.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -386,7 +476,7 @@ impl Graph for BullPutSpread {
                 self.max_profit().unwrap_or(PZERO).value(),
             ),
             label: format!("Max Profit {:.2}", self.max_profit().unwrap_or(PZERO)),
-            label_offset: (10.0, 10.0),
+            label_offset: LabelOffsetType::Relative(10.0, 10.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -400,7 +490,7 @@ impl Graph for BullPutSpread {
                 -self.max_loss().unwrap_or(PZERO).value(),
             ),
             label: format!("Max Loss -{:.2}", self.max_loss().unwrap_or(PZERO)),
-            label_offset: (-120.0, -10.0),
+            label_offset: LabelOffsetType::Relative(-120.0, -10.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -480,6 +570,61 @@ impl ProbabilityAnalysis for BullPutSpread {
     }
 }
 
+impl Greeks for BullPutSpread {
+    fn greeks(&self) -> Greek {
+        let long_put_greek = self.long_put.greeks();
+        let short_put_greek = self.short_put.greeks();
+
+        Greek {
+            delta: long_put_greek.delta + short_put_greek.delta,
+            gamma: long_put_greek.gamma + short_put_greek.gamma,
+            theta: long_put_greek.theta + short_put_greek.theta,
+            vega: long_put_greek.vega + short_put_greek.vega,
+            rho: long_put_greek.rho + short_put_greek.rho,
+            rho_d: long_put_greek.rho_d + short_put_greek.rho_d,
+        }
+    }
+}
+
+impl DeltaNeutrality for BullPutSpread {
+    fn calculate_net_delta(&self) -> DeltaInfo {
+        let short_put_delta = self.short_put.option.delta();
+        let long_put_delta = self.long_put.option.delta();
+        let threshold = DELTA_THRESHOLD;
+        DeltaInfo {
+            net_delta: short_put_delta + long_put_delta,
+            individual_deltas: vec![short_put_delta, long_put_delta],
+            is_neutral: (short_put_delta + long_put_delta).abs() < threshold,
+            underlying_price: self.long_put.option.underlying_price,
+            neutrality_threshold: threshold,
+        }
+    }
+
+    fn get_atm_strike(&self) -> PositiveF64 {
+        self.long_put.option.underlying_price
+    }
+
+    fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
+        let net_delta = self.calculate_net_delta().net_delta;
+        vec![DeltaAdjustment::BuyOptions {
+            quantity: pos!((net_delta.abs() / self.long_put.option.delta()).abs())
+                * self.long_put.option.quantity,
+            strike: self.long_put.option.strike_price,
+            option_type: OptionStyle::Put,
+        }]
+    }
+
+    fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
+        let net_delta = self.calculate_net_delta().net_delta;
+        vec![DeltaAdjustment::SellOptions {
+            quantity: pos!((net_delta.abs() / self.short_put.option.delta()).abs())
+                * self.short_put.option.quantity,
+            strike: self.short_put.option.strike_price,
+            option_type: OptionStyle::Put,
+        }]
+    }
+}
+
 #[cfg(test)]
 mod tests_bull_put_spread_strategy {
     use super::*;
@@ -542,14 +687,16 @@ mod tests_bull_put_spread_strategy {
             0.0,
         );
 
-        spread.add_leg(new_long_put.clone());
+        spread
+            .add_position(&new_long_put.clone())
+            .expect("Error adding long put");
         assert_eq!(spread.long_put.option.strike_price, pos!(85.0));
     }
 
     #[test]
     fn test_get_legs() {
         let spread = create_test_spread();
-        let legs = spread.get_legs();
+        let legs = spread.get_positions().expect("Error getting positions");
 
         assert_eq!(legs.len(), 2);
         assert_eq!(legs[0].option.side, Side::Long);
@@ -1021,7 +1168,6 @@ mod tests_bull_put_spread_optimization {
 
     #[test]
     fn test_are_valid_prices() {
-        let spread = create_base_spread();
         let long_option = OptionData::new(
             pos!(90.0),
             None,
@@ -1045,7 +1191,10 @@ mod tests_bull_put_spread_optimization {
             Some(50),
         );
 
-        assert!(spread.are_valid_prices(&long_option, &short_option));
+        assert!(
+            long_option.put_ask.unwrap_or(PZERO) > PZERO
+                && short_option.put_bid.unwrap_or(PZERO) > PZERO
+        );
     }
 
     #[test]
@@ -1063,7 +1212,11 @@ mod tests_bull_put_spread_optimization {
             .find(|o| o.strike_price == pos!(95.0))
             .unwrap();
 
-        let new_strategy = spread.create_strategy(&chain, long_option, short_option);
+        let legs = StrategyLegs::TwoLegs {
+            first: long_option,
+            second: short_option,
+        };
+        let new_strategy = spread.create_strategy(&chain, &legs);
 
         assert!(new_strategy.validate());
         assert_eq!(new_strategy.long_put.option.strike_price, pos!(90.0));
@@ -1505,5 +1658,214 @@ mod tests_bull_put_spread_probability {
         assert!(max_profit_prob >= PZERO);
         assert!(max_loss_prob >= PZERO);
         assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_delta {
+    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::pos;
+    use crate::strategies::bull_put_spread::BullPutSpread;
+    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
+    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use approx::assert_relative_eq;
+
+    fn get_strategy(long_strike: PositiveF64, short_strike: PositiveF64) -> BullPutSpread {
+        let underlying_price = pos!(5801.88);
+        BullPutSpread::new(
+            "SP500".to_string(),
+            underlying_price, // underlying_price
+            long_strike,      // long_strike
+            short_strike,     // short_strike
+            ExpirationDate::Days(2.0),
+            0.18,      // implied_volatility
+            0.05,      // risk_free_rate
+            0.0,       // dividend_yield
+            pos!(1.0), // long quantity
+            15.04,     // premium_long
+            89.85,     // premium_short
+            0.78,      // open_fee_long
+            0.78,      // open_fee_long
+            0.73,      // close_fee_long
+            0.73,      // close_fee_short
+        )
+    }
+
+    #[test]
+    fn create_test_reducing_adjustments() {
+        let strategy = get_strategy(pos!(5750.0), pos!(5920.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.6897372802040641,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(2.855544139071382),
+                strike: pos!(5750.0),
+                option_type: OptionStyle::Put
+            }
+        );
+
+        let mut option = strategy.long_put.option.clone();
+        option.quantity = pos!(2.855544139071382);
+        assert_relative_eq!(option.delta(), -0.6897372, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_increasing_adjustments() {
+        let strategy = get_strategy(pos!(5840.0), pos!(5750.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            -0.437230414,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(1.810154072366125),
+                strike: pos!(5750.0),
+                option_type: OptionStyle::Put
+            }
+        );
+
+        let mut option = strategy.short_put.option.clone();
+        option.quantity = pos!(1.810154072366125);
+        assert_relative_eq!(option.delta(), 0.43723041417603214, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_no_adjustments() {
+        let strategy = get_strategy(pos!(5830.0), pos!(5830.0));
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = 0.0001
+        );
+        assert!(strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_delta_size {
+    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::pos;
+    use crate::strategies::bull_put_spread::BullPutSpread;
+    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
+    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use approx::assert_relative_eq;
+
+    fn get_strategy(long_strike: PositiveF64, short_strike: PositiveF64) -> BullPutSpread {
+        let underlying_price = pos!(5781.88);
+        BullPutSpread::new(
+            "SP500".to_string(),
+            underlying_price, // underlying_price
+            long_strike,      // long_strike
+            short_strike,     // short_strike
+            ExpirationDate::Days(2.0),
+            0.18,      // implied_volatility
+            0.05,      // risk_free_rate
+            0.0,       // dividend_yield
+            pos!(2.0), // long quantity
+            15.04,     // premium_long
+            89.85,     // premium_short
+            0.78,      // open_fee_long
+            0.78,      // open_fee_long
+            0.73,      // close_fee_long
+            0.73,      // close_fee_short
+        )
+    }
+
+    #[test]
+    fn create_test_reducing_adjustments() {
+        let strategy = get_strategy(pos!(5750.0), pos!(5820.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.700406,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(2.1277472655611054),
+                strike: pos!(5750.0),
+                option_type: OptionStyle::Put
+            }
+        );
+
+        let mut option = strategy.long_put.option.clone();
+        option.quantity = pos!(2.1277472655611054);
+        assert_relative_eq!(option.delta(), -0.70040, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_increasing_adjustments() {
+        let strategy = get_strategy(pos!(5840.0), pos!(5750.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            -0.8722316,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(2.649732171104462),
+                strike: pos!(5750.0),
+                option_type: OptionStyle::Put
+            }
+        );
+
+        let mut option = strategy.short_put.option.clone();
+        option.quantity = pos!(2.649732171104462);
+        assert_relative_eq!(option.delta(), 0.872231, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_no_adjustments() {
+        let strategy = get_strategy(pos!(5840.0), pos!(5840.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+        assert!(strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
     }
 }

@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
+
 use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::option::Options;
@@ -88,7 +89,7 @@ pub fn delta(option: &Options) -> f64 {
     );
     let sign = if option.is_long() { 1.0 } else { -1.0 };
 
-    match option.option_style {
+    let delta = match option.option_style {
         OptionStyle::Call => {
             trace!("{}", d1);
             sign * big_n(d1) * (-option.dividend_yield * option.time_to_expiration()).exp()
@@ -96,7 +97,8 @@ pub fn delta(option: &Options) -> f64 {
         OptionStyle::Put => {
             sign * (big_n(d1) - 1.0) * (-option.dividend_yield * option.time_to_expiration()).exp()
         }
-    }
+    };
+    delta * option.quantity.value()
 }
 
 /// Computes the gamma of an option.
@@ -142,10 +144,11 @@ pub fn gamma(option: &Options) -> f64 {
         option.implied_volatility,
     );
 
-    (-option.dividend_yield * option.expiration_date.get_years()).exp() * n(d1)
+    let gamma = (-option.dividend_yield * option.expiration_date.get_years()).exp() * n(d1)
         / (option.underlying_price
             * option.implied_volatility
-            * option.expiration_date.get_years().sqrt())
+            * option.expiration_date.get_years().sqrt());
+    gamma * option.quantity.value()
 }
 
 /// Computes the Theta value for a given option.
@@ -211,7 +214,7 @@ pub fn theta(option: &Options) -> f64 {
         * n(d1)
         / (2.0 * option.expiration_date.get_years().sqrt());
 
-    match option.option_style {
+    let theta = match option.option_style {
         OptionStyle::Call => {
             common_term
                 - option.risk_free_rate
@@ -234,7 +237,8 @@ pub fn theta(option: &Options) -> f64 {
                     * (-option.dividend_yield * option.expiration_date.get_years()).exp()
                     * big_n(-d1)
         }
-    }
+    };
+    theta * option.quantity.value()
 }
 
 /// Calculates the "vega" of an option, which measures the sensitivity of the option's price
@@ -270,11 +274,11 @@ pub fn vega(option: &Options) -> f64 {
         option.implied_volatility,
     );
 
-    (option.underlying_price
+    let vega = option.underlying_price
         * (-option.dividend_yield * option.expiration_date.get_years()).exp()
         * big_n(d1)
-        * option.expiration_date.get_years().sqrt())
-    .into()
+        * option.expiration_date.get_years().sqrt();
+    vega.value() * option.quantity.value()
 }
 
 /// Calculates the rho of an options contract.
@@ -327,7 +331,7 @@ pub fn rho(option: &Options) -> f64 {
         return ZERO;
     }
 
-    match option.option_style {
+    let rho = match option.option_style {
         OptionStyle::Call => {
             let big_n_d2 = big_n(d2);
             if big_n_d2 == ZERO {
@@ -345,7 +349,8 @@ pub fn rho(option: &Options) -> f64 {
                 * e_rt
                 * big_n_minus_d2
         }
-    }
+    };
+    rho * option.quantity.value()
 }
 
 /// Computes the dividend rate sensitivity (rho) of an option.
@@ -402,7 +407,7 @@ pub fn rho_d(option: &Options) -> f64 {
         option.implied_volatility,
     );
 
-    match option.option_style {
+    let rhod = match option.option_style {
         OptionStyle::Call => {
             -option.expiration_date.get_years()
                 * option.underlying_price
@@ -415,7 +420,8 @@ pub fn rho_d(option: &Options) -> f64 {
                 * (-option.dividend_yield * option.expiration_date.get_years()).exp()
                 * big_n(-d1)
         }
-    }
+    };
+    rhod * option.quantity.value()
 }
 
 #[cfg(test)]

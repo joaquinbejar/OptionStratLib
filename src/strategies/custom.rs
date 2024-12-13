@@ -5,14 +5,15 @@
 ******************************************************************************/
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::greeks::equations::{Greek, Greeks};
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
-use crate::strategies::base::{Optimizable, Strategies, StrategyType, Validable};
+use crate::strategies::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -149,23 +150,26 @@ impl CustomStrategy {
     }
 }
 
-impl Strategies for CustomStrategy {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
-        self.positions.push(position);
+impl Positionable for CustomStrategy {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        self.positions.push(position.clone());
         self.max_loss_iter();
         if !self.validate() {
-            panic!("Invalid position");
+            return Err("Invalid position".to_string());
         }
         self.max_profit_iter();
         self.calculate_break_even_points();
+        Ok(())
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        self.positions.clone()
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(self.positions.iter().collect())
+    }
+}
+
+impl Strategies for CustomStrategy {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.underlying_price
     }
 
     fn break_even(&self) -> Vec<PositiveF64> {
@@ -391,7 +395,7 @@ impl Graph for CustomStrategy {
             points.push(ChartPoint {
                 coordinates: (point.value(), 0.0),
                 label: format!("Break Even {:.2}", point),
-                label_offset: (-26.0, 2.0),
+                label_offset: LabelOffsetType::Relative(-26.0, 2.0),
                 point_color: DARK_BLUE,
                 label_color: DARK_BLUE,
                 point_size: 5,
@@ -407,7 +411,7 @@ impl Graph for CustomStrategy {
                 self.max_profit_point.unwrap().1,
             ),
             label: format!("Max Profit {:.2}", self.max_profit_point.unwrap().1),
-            label_offset: (2.0, 1.0),
+            label_offset: LabelOffsetType::Relative(2.0, 1.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -420,7 +424,7 @@ impl Graph for CustomStrategy {
                 self.max_loss_point.unwrap().1,
             ),
             label: format!("Max Loss {:.2}", self.max_loss_point.unwrap().1),
-            label_offset: (-30.0, 2.0),
+            label_offset: LabelOffsetType::Relative(-30.0, 2.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -428,6 +432,29 @@ impl Graph for CustomStrategy {
         });
 
         points
+    }
+}
+
+impl Greeks for CustomStrategy {
+    fn greeks(&self) -> Greek {
+        let mut greek = Greek {
+            delta: 0.0,
+            gamma: 0.0,
+            theta: 0.0,
+            vega: 0.0,
+            rho: 0.0,
+            rho_d: 0.0,
+        };
+        for position in self.positions.iter() {
+            let current_greek = position.greeks();
+            greek.delta += current_greek.delta;
+            greek.gamma += current_greek.gamma;
+            greek.theta += current_greek.theta;
+            greek.vega += current_greek.vega;
+            greek.rho += current_greek.rho;
+            greek.rho_d += current_greek.rho_d;
+        }
+        greek
     }
 }
 
@@ -553,7 +580,7 @@ mod tests_custom_strategy {
             close_fee_long,
         );
 
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
         assert_eq!(strategy.break_even_points.len(), 1);
         assert_relative_eq!(
             strategy.break_even_points[0].value(),
@@ -605,7 +632,7 @@ mod tests_custom_strategy {
             close_fee_long,
         );
 
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let position = Position::new(
             Options::new(
@@ -627,7 +654,7 @@ mod tests_custom_strategy {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         assert_eq!(strategy.positions.len(), 3);
         assert_eq!(strategy.break_even_points.len(), 2);
@@ -771,7 +798,7 @@ mod tests_max_profit {
             close_fee_long,
         );
 
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let position = Position::new(
             Options::new(
@@ -793,7 +820,7 @@ mod tests_max_profit {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let max_profit = strategy.max_profit_iter();
         assert!(max_profit > PZERO);
@@ -908,7 +935,7 @@ mod tests_max_loss {
             close_fee_long,
         );
 
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let position = Position::new(
             Options::new(
@@ -930,7 +957,7 @@ mod tests_max_loss {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(position);
+        strategy.add_position(&position).expect("Invalid position");
 
         let max_loss = strategy.max_loss_iter();
         assert!(max_loss > PZERO);
@@ -1385,5 +1412,217 @@ mod tests_best_ratio {
             strategy.profit_ratio() == 78.1948201762769
                 || strategy.profit_ratio() == 96.22317698867245
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_greeks {
+    use super::*;
+    use crate::model::option::Options;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use approx::assert_relative_eq;
+    use chrono::Utc;
+
+    // Helper function to create a test position
+    fn create_test_position(
+        strike: PositiveF64,
+        side: Side,
+        option_style: OptionStyle,
+    ) -> Position {
+        Position::new(
+            Options::new(
+                OptionType::European,
+                side,
+                "TEST".to_string(),
+                strike,
+                ExpirationDate::Days(30.0),
+                0.2,         // volatility
+                pos!(1.0),   // quantity
+                pos!(100.0), // underlying_price
+                0.05,        // risk_free_rate
+                option_style,
+                0.02, // dividend_yield
+                None,
+            ),
+            10.0, // premium
+            Utc::now(),
+            1.0, // open_fee
+            1.0, // close_fee
+        )
+    }
+
+    #[test]
+    fn test_greeks_single_long_call() {
+        let position = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
+        let strategy = CustomStrategy::new(
+            "Long Call".to_string(),
+            "TEST".to_string(),
+            "Test Description".to_string(),
+            pos!(100.0),
+            vec![position.clone()],
+            0.001,
+            100,
+            1.0,
+        );
+
+        let strategy_greeks = strategy.greeks();
+        let position_greeks = position.greeks();
+
+        assert_relative_eq!(
+            strategy_greeks.delta,
+            position_greeks.delta,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.gamma,
+            position_greeks.gamma,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.theta,
+            position_greeks.theta,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(strategy_greeks.vega, position_greeks.vega, epsilon = 1e-10);
+        assert_relative_eq!(strategy_greeks.rho, position_greeks.rho, epsilon = 1e-10);
+        assert_relative_eq!(
+            strategy_greeks.rho_d,
+            position_greeks.rho_d,
+            epsilon = 1e-10
+        );
+    }
+
+    #[test]
+    fn test_greeks_single_short_put() {
+        let position = create_test_position(pos!(100.0), Side::Short, OptionStyle::Put);
+        let strategy = CustomStrategy::new(
+            "Short Put".to_string(),
+            "TEST".to_string(),
+            "Test Description".to_string(),
+            pos!(100.0),
+            vec![position.clone()],
+            0.001,
+            100,
+            1.0,
+        );
+
+        let strategy_greeks = strategy.greeks();
+        let position_greeks = position.greeks();
+
+        assert_relative_eq!(
+            strategy_greeks.delta,
+            position_greeks.delta,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.gamma,
+            position_greeks.gamma,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.theta,
+            position_greeks.theta,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(strategy_greeks.vega, position_greeks.vega, epsilon = 1e-10);
+        assert_relative_eq!(strategy_greeks.rho, position_greeks.rho, epsilon = 1e-10);
+        assert_relative_eq!(
+            strategy_greeks.rho_d,
+            position_greeks.rho_d,
+            epsilon = 1e-10
+        );
+    }
+
+    #[test]
+    fn test_greeks_multiple_positions() {
+        let long_call = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
+        let short_put = create_test_position(pos!(95.0), Side::Short, OptionStyle::Put);
+        let long_put = create_test_position(pos!(105.0), Side::Long, OptionStyle::Put);
+
+        let strategy = CustomStrategy::new(
+            "Multiple".to_string(),
+            "TEST".to_string(),
+            "Test Description".to_string(),
+            pos!(100.0),
+            vec![long_call.clone(), short_put.clone(), long_put.clone()],
+            0.001,
+            100,
+            1.0,
+        );
+
+        let strategy_greeks = strategy.greeks();
+        let long_call_greeks = long_call.greeks();
+        let short_put_greeks = short_put.greeks();
+        let long_put_greeks = long_put.greeks();
+
+        assert_relative_eq!(
+            strategy_greeks.delta,
+            long_call_greeks.delta + short_put_greeks.delta + long_put_greeks.delta,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.gamma,
+            long_call_greeks.gamma + short_put_greeks.gamma + long_put_greeks.gamma,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.theta,
+            long_call_greeks.theta + short_put_greeks.theta + long_put_greeks.theta,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.vega,
+            long_call_greeks.vega + short_put_greeks.vega + long_put_greeks.vega,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.rho,
+            long_call_greeks.rho + short_put_greeks.rho + long_put_greeks.rho,
+            epsilon = 1e-10
+        );
+        assert_relative_eq!(
+            strategy_greeks.rho_d,
+            long_call_greeks.rho_d + short_put_greeks.rho_d + long_put_greeks.rho_d,
+            epsilon = 1e-10
+        );
+    }
+
+    #[test]
+    fn test_greeks_straddle() {
+        let long_call = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
+        let long_put = create_test_position(pos!(100.0), Side::Long, OptionStyle::Put);
+
+        let strategy = CustomStrategy::new(
+            "Straddle".to_string(),
+            "TEST".to_string(),
+            "Test Description".to_string(),
+            pos!(100.0),
+            vec![long_call.clone(), long_put.clone()],
+            0.001,
+            100,
+            1.0,
+        );
+
+        let strategy_greeks = strategy.greeks();
+        let call_greeks = long_call.greeks();
+        let put_greeks = long_put.greeks();
+
+        // Straddle specific assertions
+        assert_relative_eq!(
+            strategy_greeks.delta,
+            call_greeks.delta + put_greeks.delta,
+            epsilon = 1e-10
+        );
+        // Gamma should be positive and roughly double the individual option's gamma
+        assert!(strategy_greeks.gamma > 0.0);
+        assert_relative_eq!(
+            strategy_greeks.gamma,
+            call_greeks.gamma + put_greeks.gamma,
+            epsilon = 1e-10
+        );
+        // Theta should be negative for long straddle
+        assert!(strategy_greeks.theta < 0.0);
+        // Vega should be positive and roughly double the individual option's vega
+        assert!(strategy_greeks.vega > 0.0);
     }
 }

@@ -23,7 +23,7 @@ pub enum TimeFrame {
 
 impl TimeFrame {
     /// Returns the number of periods in a year for this timeframe
-    pub(crate) fn periods_per_year(&self) -> f64 {
+    pub fn periods_per_year(&self) -> f64 {
         match self {
             TimeFrame::Microsecond => {
                 TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MICROSECONDS_PER_SECOND

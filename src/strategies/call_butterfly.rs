@@ -3,17 +3,21 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use super::base::{Optimizable, Strategies, StrategyType, Validable};
+use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::DARK_BLUE;
 use crate::constants::{DARK_GREEN, ZERO};
+use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pos;
 use crate::pricing::payoff::Profit;
+use crate::strategies::delta_neutral::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
+};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, RED};
@@ -90,7 +94,9 @@ impl CallButterfly {
             open_fee_short,
             close_fee_short,
         );
-        strategy.add_leg(short_call.clone());
+        strategy
+            .add_position(&short_call.clone())
+            .expect("Invalid short call");
         strategy.short_call = short_call;
 
         let long_call_itm_option = Options::new(
@@ -114,7 +120,9 @@ impl CallButterfly {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(long_call_itm.clone());
+        strategy
+            .add_position(&long_call_itm.clone())
+            .expect("Invalid long call itm");
         strategy.long_call_itm = long_call_itm;
 
         let long_call_otm_option = Options::new(
@@ -138,7 +146,9 @@ impl CallButterfly {
             open_fee_long,
             close_fee_long,
         );
-        strategy.add_leg(long_call_otm.clone());
+        strategy
+            .add_position(&long_call_otm.clone())
+            .expect("Invalid long call otm");
         strategy.long_call_otm = long_call_otm;
 
         // Calculate break-even points
@@ -241,30 +251,37 @@ impl Default for CallButterfly {
     }
 }
 
-impl Strategies for CallButterfly {
-    fn get_underlying_price(&self) -> PositiveF64 {
-        self.underlying_price
-    }
-
-    fn add_leg(&mut self, position: Position) {
+impl Positionable for CallButterfly {
+    fn add_position(&mut self, position: &Position) -> Result<(), String> {
         match position.option.side {
             Side::Long => {
                 if position.option.strike_price >= self.short_call.option.strike_price {
-                    self.long_call_otm = position
+                    self.long_call_otm = position.clone();
+                    Ok(())
                 } else {
-                    self.long_call_itm = position
+                    self.long_call_itm = position.clone();
+                    Ok(())
                 }
             }
-            Side::Short => self.short_call = position,
+            Side::Short => {
+                self.short_call = position.clone();
+                Ok(())
+            }
         }
     }
 
-    fn get_legs(&self) -> Vec<Position> {
-        vec![
-            self.long_call_itm.clone(),
-            self.long_call_otm.clone(),
-            self.short_call.clone(),
-        ]
+    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        Ok(vec![
+            &self.long_call_itm,
+            &self.long_call_otm,
+            &self.short_call,
+        ])
+    }
+}
+
+impl Strategies for CallButterfly {
+    fn get_underlying_price(&self) -> PositiveF64 {
+        self.underlying_price
     }
 
     fn break_even(&self) -> Vec<PositiveF64> {
@@ -466,7 +483,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: (-26.0, 2.0),
+            label_offset: LabelOffsetType::Relative(-26.0, 2.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -476,7 +493,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].value(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: (1.0, 2.0),
+            label_offset: LabelOffsetType::Relative(1.0, 2.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -489,7 +506,7 @@ impl Graph for CallButterfly {
                 max_profit.value(),
             ),
             label: format!("Max Profit\n\n{:.2}", max_profit),
-            label_offset: (2.0, 1.0),
+            label_offset: LabelOffsetType::Relative(2.0, 1.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -502,7 +519,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.long_call_itm.option.strike_price.value(), lower_loss),
             label: format!("Left Low {:.2}", lower_loss),
-            label_offset: (0.0, -1.0),
+            label_offset: LabelOffsetType::Relative(0.0, -1.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -512,7 +529,7 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (self.long_call_otm.option.strike_price.value(), upper_loss),
             label: format!("Right Low {:.2}", upper_loss),
-            label_offset: (-18.0, -1.0),
+            label_offset: LabelOffsetType::Relative(-18.0, -1.0),
             point_color: RED,
             label_color: RED,
             point_size: 5,
@@ -522,6 +539,73 @@ impl Graph for CallButterfly {
         points.push(self.get_point_at_price(self.underlying_price));
 
         points
+    }
+}
+
+impl Greeks for CallButterfly {
+    fn greeks(&self) -> Greek {
+        let long_call_itm_greek = self.long_call_itm.greeks();
+        let long_call_otm_greek = self.long_call_otm.greeks();
+        let short_call_greek = self.short_call.greeks();
+
+        Greek {
+            delta: long_call_itm_greek.delta + long_call_otm_greek.delta + short_call_greek.delta,
+            gamma: long_call_itm_greek.gamma + long_call_otm_greek.gamma + short_call_greek.gamma,
+            theta: long_call_itm_greek.theta + long_call_otm_greek.theta + short_call_greek.theta,
+            vega: long_call_itm_greek.vega + long_call_otm_greek.vega + short_call_greek.vega,
+            rho: long_call_itm_greek.rho + long_call_otm_greek.rho + short_call_greek.rho,
+            rho_d: long_call_itm_greek.rho_d + long_call_otm_greek.rho_d + short_call_greek.rho_d,
+        }
+    }
+}
+
+impl DeltaNeutrality for CallButterfly {
+    fn calculate_net_delta(&self) -> DeltaInfo {
+        let long_call_itm_delta = self.long_call_itm.option.delta();
+        let long_call_otm_delta = self.long_call_otm.option.delta();
+        let short_call_delta = self.short_call.option.delta();
+        let threshold = DELTA_THRESHOLD;
+        let delta = long_call_itm_delta + long_call_otm_delta + short_call_delta;
+        DeltaInfo {
+            net_delta: delta,
+            individual_deltas: vec![long_call_itm_delta, long_call_otm_delta, short_call_delta],
+            is_neutral: (delta).abs() < threshold,
+            underlying_price: self.long_call_itm.option.underlying_price,
+            neutrality_threshold: threshold,
+        }
+    }
+
+    fn get_atm_strike(&self) -> PositiveF64 {
+        self.long_call_itm.option.underlying_price
+    }
+
+    fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
+        let net_delta = self.calculate_net_delta().net_delta;
+        vec![DeltaAdjustment::SellOptions {
+            quantity: pos!((net_delta.abs() / self.short_call.option.delta()).abs())
+                * self.short_call.option.quantity,
+            strike: self.short_call.option.strike_price,
+            option_type: OptionStyle::Call,
+        }]
+    }
+
+    fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
+        let net_delta = self.calculate_net_delta().net_delta;
+
+        vec![
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!((net_delta.abs() / self.long_call_itm.option.delta()).abs())
+                    * self.long_call_itm.option.quantity,
+                strike: self.long_call_itm.option.strike_price,
+                option_type: OptionStyle::Call,
+            },
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!((net_delta.abs() / self.long_call_otm.option.delta()).abs())
+                    * self.long_call_otm.option.quantity,
+                strike: self.long_call_otm.option.strike_price,
+                option_type: OptionStyle::Call,
+            },
+        ]
     }
 }
 
@@ -906,5 +990,236 @@ mod tests_call_butterfly_graph {
         assert!(!range.is_empty());
         assert!(range[0] < strategy.long_call_itm.option.strike_price);
         assert!(range[range.len() - 1] > strategy.long_call_otm.option.strike_price);
+    }
+}
+
+#[cfg(test)]
+mod tests_iron_condor_delta {
+    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::pos;
+    use crate::strategies::call_butterfly::CallButterfly;
+    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
+    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use approx::assert_relative_eq;
+
+    fn get_strategy(underlying_price: PositiveF64) -> CallButterfly {
+        CallButterfly::new(
+            "SP500".to_string(),
+            underlying_price, // underlying_price
+            pos!(5750.0),     // long_strike_itm
+            pos!(5850.0),     // long_strike_otm
+            pos!(5800.0),     // short_strike
+            ExpirationDate::Days(2.0),
+            0.18,      // implied_volatility
+            0.05,      // risk_free_rate
+            0.0,       // dividend_yield
+            pos!(1.0), // long quantity
+            pos!(2.0), // short_quantity
+            85.04,     // premium_long_itm
+            31.65,     // premium_long_otm
+            53.04,     // premium_short
+            0.78,      // open_fee_long
+            0.78,      // close_fee_long
+            0.73,      // close_fee_short
+            0.73,      // close_fee_short
+        )
+    }
+
+    #[test]
+    fn create_test_reducing_adjustments() {
+        let strategy = get_strategy(pos!(5901.88));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            -0.086598,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.08869424268674732),
+                strike: pos!(5750.0),
+                option_type: OptionStyle::Call
+            }
+        );
+        assert_eq!(
+            suggestion[1],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.11472018606079874),
+                strike: pos!(5850.0),
+                option_type: OptionStyle::Call
+            }
+        );
+
+        let mut option = strategy.long_call_itm.option.clone();
+        option.quantity = pos!(0.08869424268674732);
+        assert_relative_eq!(option.delta(), 0.086598, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_increasing_adjustments() {
+        let strategy = get_strategy(pos!(5781.88));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.032444,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(0.07766273391000812),
+                strike: pos!(5800.0),
+                option_type: OptionStyle::Call
+            }
+        );
+
+        let mut option = strategy.short_call.option.clone();
+        option.quantity = pos!(0.07766273391000812);
+        assert_relative_eq!(option.delta(), -0.032444, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_no_adjustments() {
+        let strategy = get_strategy(pos!(5800.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+        assert!(strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_iron_condor_delta_size {
+    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::pos;
+    use crate::strategies::call_butterfly::CallButterfly;
+    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
+    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use approx::assert_relative_eq;
+
+    fn get_strategy(underlying_price: PositiveF64) -> CallButterfly {
+        CallButterfly::new(
+            "SP500".to_string(),
+            underlying_price, // underlying_price
+            pos!(5750.0),     // long_strike_itm
+            pos!(5850.0),     // long_strike_otm
+            pos!(5800.0),     // short_strike
+            ExpirationDate::Days(2.0),
+            0.18,      // implied_volatility
+            0.05,      // risk_free_rate
+            0.0,       // dividend_yield
+            pos!(1.0), // long quantity
+            pos!(2.0), // short_quantity
+            85.04,     // premium_long_itm
+            31.65,     // premium_long_otm
+            53.04,     // premium_short
+            0.78,      // open_fee_long
+            0.78,      // close_fee_long
+            0.73,      // close_fee_short
+            0.73,      // close_fee_short
+        )
+    }
+
+    #[test]
+    fn create_test_reducing_adjustments() {
+        let strategy = get_strategy(pos!(5881.88));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            -0.0931943,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.09726918791103065),
+                strike: pos!(5750.0),
+                option_type: OptionStyle::Call
+            }
+        );
+        assert_eq!(
+            suggestion[1],
+            DeltaAdjustment::BuyOptions {
+                quantity: pos!(0.13945831929041605),
+                strike: pos!(5850.0),
+                option_type: OptionStyle::Call
+            }
+        );
+
+        let mut option = strategy.long_call_otm.option.clone();
+        option.quantity = pos!(0.13945831929041605);
+        assert_relative_eq!(option.delta(), 0.09319, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_increasing_adjustments() {
+        let strategy = get_strategy(pos!(5781.88));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.03244,
+            epsilon = 0.0001
+        );
+        assert!(!strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+
+        assert_eq!(
+            suggestion[0],
+            DeltaAdjustment::SellOptions {
+                quantity: pos!(0.07766273391000812),
+                strike: pos!(5800.0),
+                option_type: OptionStyle::Call
+            }
+        );
+
+        let mut option = strategy.short_call.option.clone();
+        option.quantity = pos!(0.07766273391000812);
+        assert_relative_eq!(option.delta(), -0.032444, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.delta() + strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+    }
+
+    #[test]
+    fn create_test_no_adjustments() {
+        let strategy = get_strategy(pos!(5800.0));
+
+        assert_relative_eq!(
+            strategy.calculate_net_delta().net_delta,
+            0.0,
+            epsilon = DELTA_THRESHOLD
+        );
+        assert!(strategy.is_delta_neutral());
+        let suggestion = strategy.suggest_delta_adjustments();
+        assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
     }
 }

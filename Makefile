@@ -1,4 +1,6 @@
 # Makefile for common tasks in a Rust project
+# Detect current branch
+CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 
 # Default target
 .PHONY: all
@@ -56,14 +58,14 @@ fix:
 	cargo fix --allow-staged --allow-dirty
 
 .PHONY: pre-push
-pre-push: fix fmt lint-fix test
+pre-push: fix fmt lint-fix test readme
 
 .PHONY: doc
 doc:
 	cargo doc --open
 
 .PHONY: publish
-publish:
+publish: readme coverage
 	cargo login ${CARGO_REGISTRY_TOKEN}
 	cargo package
 	cargo publish
@@ -79,3 +81,25 @@ coverage-html:
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
 	cargo tarpaulin --all-features --workspace --timeout 120 --out Html
+
+
+# Rule to show git log
+git-log:
+	@if [ "$(CURRENT_BRANCH)" = "HEAD" ]; then \
+		echo "You are in a detached HEAD state. Please check out a branch."; \
+		exit 1; \
+	fi; \
+	echo "Showing git log for branch $(CURRENT_BRANCH) against main:"; \
+	git log main..$(CURRENT_BRANCH) --pretty=full
+
+.PHONY: create-doc	
+create-doc:
+	cargo doc --no-deps --document-private-items
+
+.PHONY: readme
+readme: create-doc
+	cargo readme > README.md
+	
+.PHONY: check-spanish
+check-spanish:
+	cd scripts && python3 spanish.py ../src && cd ..

@@ -1,6 +1,6 @@
 use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::types::{OptionStyle, PositiveF64, Side, PZERO};
-use crate::visualization::model::ChartPoint;
+use crate::visualization::model::{ChartPoint, LabelOffsetType};
 use plotters::prelude::RED;
 use tracing::trace;
 
@@ -15,9 +15,9 @@ pub trait Payoff {
 /// - `spot` (f64): The current spot price of the underlying asset.
 /// - `strike` (f64): The strike price of the option.
 /// - `style` (OptionStyle): The style of the option (e.g., European, American).
-/// - `spot_prices` (Option<Vec<f64>>): A vector of spot prices for Asian options, where the payoff depends on the average price of the underlying asset.
-/// - `spot_min` (Option<f64>): The minimum spot price for Lookback options, where the payoff depends on the minimum price of the underlying asset.
-/// - `spot_max` (Option<f64>): The maximum spot price for Lookback options, where the payoff depends on the maximum price of the underlying asset.
+/// - `spot_prices` (`Option<Vec<f64>>`): A vector of spot prices for Asian options, where the payoff depends on the average price of the underlying asset.
+/// - `spot_min` (`Option<f64>`): The minimum spot price for Lookback options, where the payoff depends on the minimum price of the underlying asset.
+/// - `spot_max` (`Option<f64>`): The maximum spot price for Lookback options, where the payoff depends on the maximum price of the underlying asset.
 ///
 #[derive(Debug)]
 pub struct PayoffInfo {
@@ -94,7 +94,7 @@ pub trait Profit {
         ChartPoint {
             coordinates: (price.value(), value_at_current_price),
             label: format!("{:.2}", value_at_current_price),
-            label_offset: (4.0, 1.0),
+            label_offset: LabelOffsetType::Relative(4.0, 1.0),
             point_color: color,
             label_color: color,
             point_size: 5,

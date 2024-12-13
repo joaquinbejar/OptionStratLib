@@ -69,6 +69,26 @@ impl OptionDataPriceParams {
             dividend_yield,
         }
     }
+
+    pub fn get_underlying_price(&self) -> PositiveF64 {
+        self.underlying_price
+    }
+
+    pub fn get_expiration_date(&self) -> ExpirationDate {
+        self.expiration_date.clone()
+    }
+
+    pub fn get_implied_volatility(&self) -> Option<PositiveF64> {
+        self.implied_volatility
+    }
+
+    pub fn get_risk_free_rate(&self) -> f64 {
+        self.risk_free_rate
+    }
+
+    pub fn get_dividend_yield(&self) -> f64 {
+        self.dividend_yield
+    }
 }
 
 impl Default for OptionDataPriceParams {
@@ -95,6 +115,10 @@ impl Display for OptionDataPriceParams {
             self.dividend_yield
         )
     }
+}
+
+pub trait OptionChainParams {
+    fn get_params(&self) -> Result<OptionDataPriceParams, String>;
 }
 
 /// Parameters for generating random positions in an option chain

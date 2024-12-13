@@ -1,7 +1,7 @@
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
-use optionstratlib::strategies::base::Strategies;
+use optionstratlib::strategies::base::{Strategies, Validable};
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
@@ -32,6 +32,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.96,      // open_fee
         0.96,      // close_fee
     );
+    if !strategy.validate() {
+        return Err("Invalid strategy".into());
+    }
 
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
