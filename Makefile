@@ -99,3 +99,7 @@ create-doc:
 .PHONY: readme
 readme: create-doc
 	cargo readme > README.md
+	
+.PHONY: check-spanish
+check-spanish:
+	cd scripts && python3 spanish.py ../src && cd ..
