@@ -14,7 +14,6 @@ Key characteristics:
 - Maximum profit achieved when price stays above higher strike
 - Also known as a vertical put credit spread
 */
-
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
@@ -151,6 +150,121 @@ impl BullPutSpread {
 
         strategy
     }
+
+    /// Filters combinations of `OptionData` from the provided `OptionChain`
+    /// based on validity, pricing conditions, and strategy constraints.
+    ///
+    /// This function generates pairs of options from the `OptionChain` and applies
+    /// a series of filters and validations to ensure the results conform to the 
+    /// specified trading strategy requirements. Each returned pair (`long`, `short`)
+    /// represents options that are suitable for building a strategy, such as a 
+    /// "bull put spread".
+    ///
+    /// # Parameters
+    ///
+    /// - `option_chain`: A reference to the `OptionChain` containing the option data.
+    /// - `side`: The `FindOptimalSide` specifying the filtering condition based on the 
+    ///   strike price range relative to the underlying price.
+    ///
+    /// # Returns
+    ///
+    /// An iterator over pairs of references to `OptionData` that meet the selection criteria.
+    /// Each pair satisfies:
+    /// - Both options are valid according to the `is_valid_optimal_side` method.
+    /// - Both options have valid bid/ask prices for the put options (`put_ask` for long and 
+    ///   `put_bid` for short must be greater than zero).
+    /// - The strategy created using the pair passes validation checks and successfully 
+    ///   calculates `max_profit` and `max_loss`.
+    ///
+    /// # Process
+    ///
+    /// 1. Computes the underlying price via `self.get_underlying_price()`.
+    /// 2. Initializes a cloned version of the strategy for dynamic closures.
+    /// 3. Uses the `option_chain.get_double_iter()` method to generate all possible pairs 
+    ///    of options for evaluation.
+    /// 4. Filters the pairs based on combination validity, pricing constraints, and 
+    ///    strategy feasibility:
+    ///    - Ensures the options are on the correct `FindOptimalSide` relative to the 
+    ///      underlying price.
+    ///    - Ensures the `put_ask` and `put_bid` prices meet the conditions.
+    ///    - Ensures the strategy created with the options is valid and has calculable 
+    ///      profit and loss parameters.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::model::types::ExpirationDate;
+    /// use optionstratlib::model::types::PositiveF64;
+    /// use optionstratlib::pos;
+    /// use optionstratlib::strategies::bull_put_spread::BullPutSpread;
+    /// use optionstratlib::strategies::utils::FindOptimalSide;
+    /// 
+    /// let underlying_price = pos!(5810.0);
+    /// let option_chain = OptionChain::new("TEST", underlying_price, "2024-01-01".to_string());
+    /// let bull_put_spread_strategy = BullPutSpread::new(
+    ///         "SP500".to_string(),
+    ///         underlying_price, // underlying_price
+    ///         pos!(5750.0),     // long_strike
+    ///         pos!(5920.0),     // short_strike
+    ///         ExpirationDate::Days(2.0),
+    ///         0.18,      // implied_volatility
+    ///         0.05,      // risk_free_rate
+    ///         0.0,       // dividend_yield
+    ///         pos!(1.0), // long quantity
+    ///         15.04,     // premium_long
+    ///         89.85,     // premium_short
+    ///         0.78,      // open_fee_long
+    ///         0.78,      // open_fee_long
+    ///         0.73,      // close_fee_long
+    ///         0.73,      // close_fee_short
+    ///     );
+    ///
+    /// let side = FindOptimalSide::Lower;
+    /// let filtered_combinations = bull_put_spread_strategy.filter_combinations(&option_chain, side);
+    ///
+    /// for (long, short) in filtered_combinations {
+    ///     println!("Long Option: {:?}, Short Option: {:?}", long, short);
+    /// }
+    /// ```
+    ///
+    /// # Notes
+    ///
+    /// - This function assumes that the `OptionChain` data structure is well-formed
+    ///   and contains valid `OptionData`.
+    /// - It is intended for strategies requiring combinations of two legs, like spreads. 
+    ///   For strategies requiring more legs, an alternative method may be needed.
+    ///
+    /// # See Also
+    ///
+    /// - [`OptionChain::get_double_iter`](crate::chains::chain::OptionChain::get_double_iter)
+    /// - [`OptionData::is_valid_optimal_side`](crate::chains::chain::OptionData::is_valid_optimal_side)
+    /// - [`BullPutSpread::validate`](crate::strategies::bull_put_spread::BullPutSpread::validate)
+    pub fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = (&'a OptionData, &'a OptionData)> {
+        let underlying_price = self.get_underlying_price();
+        let strategy = self.clone();
+        option_chain
+            .get_double_iter()
+            .filter(move |&option| {
+                option.0.is_valid_optimal_side(underlying_price, &side)
+                    && option.1.is_valid_optimal_side(underlying_price, &side)
+            })
+            .filter(|(long, short)| {
+                long.put_ask.unwrap_or(PZERO) > PZERO && short.put_bid.unwrap_or(PZERO) > PZERO
+            })
+            .filter(move |(long_option, short_option)| {
+                let legs = StrategyLegs::TwoLegs {
+                    first: long_option,
+                    second: short_option,
+                };
+                let strategy = strategy.create_strategy(option_chain, &legs);
+                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+            })
+    }
 }
 
 impl Positionable for BullPutSpread {
@@ -262,76 +376,27 @@ impl Optimizable for BullPutSpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = f64::NEG_INFINITY;
+        let strategy_clone = self.clone();
+        let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
-        for long_index in 0..options.len() {
-            let long_option = &options[long_index];
+        for (long_option, short_option) in options_iter {
+            let legs = StrategyLegs::TwoLegs {
+                first: long_option,
+                second: short_option,
+            };
+            let strategy = self.create_strategy(option_chain, &legs);
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                OptimizationCriteria::Area => strategy.profit_area(),
+            };
 
-            for short_option in &options[long_index + 1..] {
-                if !self.is_valid_long_option(long_option, &side)
-                    || !self.is_valid_short_option(short_option, &side)
-                {
-                    debug!(
-                        "Invalid options Asset {} - Long({}) Short({})",
-                        option_chain.underlying_price,
-                        long_option.strike_price,
-                        short_option.strike_price,
-                    );
-                    continue;
-                }
-
-                let legs = StrategyLegs::TwoLegs {
-                    first: long_option,
-                    second: short_option,
-                };
-
-                if !self.are_valid_prices(&legs) {
-                    debug!(
-                        "Invalid prices - Long({}): {:?} Short({}): {:?}",
-                        long_option.strike_price,
-                        long_option.put_ask,
-                        short_option.strike_price,
-                        short_option.put_bid
-                    );
-                    continue;
-                }
-
-                let strategy = self.create_strategy(option_chain, &legs);
-
-                if !strategy.validate() {
-                    debug!("Invalid strategy");
-                    continue;
-                }
-
-                if strategy.max_profit().is_err() || strategy.max_loss().is_err() {
-                    debug!(
-                        "Invalid profit {} loss {}",
-                        strategy.max_profit().unwrap_or(PZERO),
-                        strategy.max_loss().unwrap_or(PZERO)
-                    );
-                    continue;
-                }
-
-                let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                    OptimizationCriteria::Area => strategy.profit_area(),
-                };
-
-                if current_value > best_value {
-                    best_value = current_value;
-                    *self = strategy.clone();
-                }
+            if current_value > best_value {
+                debug!("Found better value: {}", current_value);
+                best_value = current_value;
+                *self = strategy.clone();
             }
         }
-    }
-
-    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
-        let (long, short) = match legs {
-            StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
-        };
-        long.put_ask.unwrap_or(PZERO) > PZERO && short.put_bid.unwrap_or(PZERO) > PZERO
     }
 
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
@@ -1103,7 +1168,6 @@ mod tests_bull_put_spread_optimization {
 
     #[test]
     fn test_are_valid_prices() {
-        let spread = create_base_spread();
         let long_option = OptionData::new(
             pos!(90.0),
             None,
@@ -1127,11 +1191,10 @@ mod tests_bull_put_spread_optimization {
             Some(50),
         );
 
-        let legs = StrategyLegs::TwoLegs {
-            first: &long_option,
-            second: &short_option,
-        };
-        assert!(spread.are_valid_prices(&legs));
+        assert!(
+            long_option.put_ask.unwrap_or(PZERO) > PZERO
+                && short_option.put_bid.unwrap_or(PZERO) > PZERO
+        );
     }
 
     #[test]
