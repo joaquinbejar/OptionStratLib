@@ -116,7 +116,12 @@ impl OptionData {
         self.put_bid
     }
 
-    fn get_option(&self, price_params: &OptionDataPriceParams) -> Result<Options, String> {
+    fn get_option(
+        &self,
+        price_params: &OptionDataPriceParams,
+        side: Side,
+        option_style: OptionStyle,
+    ) -> Result<Options, String> {
         let implied_volatility = match price_params.implied_volatility {
             Some(iv) => iv.value(),
             None => match self.implied_volatility {
@@ -129,7 +134,7 @@ impl OptionData {
 
         Ok(Options::new(
             OptionType::European,
-            Side::Long,
+            side,
             "OptionData".to_string(),
             self.strike_price,
             price_params.expiration_date.clone(),
@@ -137,7 +142,7 @@ impl OptionData {
             pos!(1.0),
             price_params.underlying_price,
             price_params.risk_free_rate,
-            OptionStyle::Call,
+            option_style,
             price_params.dividend_yield,
             None,
         ))
@@ -146,8 +151,10 @@ impl OptionData {
     fn get_options_in_strike(
         &self,
         price_params: &OptionDataPriceParams,
+        side: Side,
+        option_style: OptionStyle,
     ) -> Result<OptionsInStrike, String> {
-        let mut option: Options = self.get_option(price_params)?;
+        let mut option: Options = self.get_option(price_params, side, option_style)?;
         option.option_style = OptionStyle::Call;
         option.side = Side::Long;
         let long_call = option.clone();
@@ -166,7 +173,7 @@ impl OptionData {
     }
 
     pub fn calculate_prices(&mut self, price_params: &OptionDataPriceParams) -> Result<(), String> {
-        let mut option: Options = self.get_option(price_params)?;
+        let mut option: Options = self.get_option(price_params, Side::Long, OptionStyle::Call)?;
 
         self.call_ask = spos!(black_scholes(&option).abs());
         option.side = Side::Short;
@@ -221,7 +228,7 @@ impl OptionData {
     }
 
     pub fn calculate_delta(&mut self, price_params: &OptionDataPriceParams) {
-        let option: Options = match self.get_option(price_params) {
+        let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
             Ok(option) => option,
             Err(_) => {
                 return;
@@ -234,9 +241,25 @@ impl OptionData {
         &self,
         price_params: &OptionDataPriceParams,
     ) -> Result<DeltasInStrike, String> {
-        let options_in_strike = self.get_options_in_strike(price_params)?;
+        let options_in_strike =
+            self.get_options_in_strike(price_params, Side::Long, OptionStyle::Call)?;
         let deltas = options_in_strike.deltas();
         Ok(deltas)
+    }
+
+    pub fn is_valid_optimal_side(
+        &self,
+        underlying_price: PositiveF64,
+        side: &FindOptimalSide,
+    ) -> bool {
+        match side {
+            FindOptimalSide::Upper => self.strike_price >= underlying_price,
+            FindOptimalSide::Lower => self.strike_price <= underlying_price,
+            FindOptimalSide::All => true,
+            FindOptimalSide::Range(start, end) => {
+                self.strike_price >= *start && self.strike_price <= *end
+            }
+        }
     }
 }
 
@@ -400,7 +423,7 @@ impl OptionChain {
                     option.strike_price >= start && option.strike_price <= end
                 }
             })
-            .map(|option| option.get_options_in_strike(price_params))
+            .map(|option| option.get_options_in_strike(price_params, Side::Long, OptionStyle::Call))
             .collect()
     }
 
@@ -695,6 +718,224 @@ impl OptionChain {
         }
 
         Ok(positions)
+    }
+
+    /// Returns an iterator that generates pairs of distinct option combinations from the `OptionChain`.
+    ///
+    /// This function iterates over all unique combinations of two options from the `options` collection
+    /// without repetition. In mathematical terms, it generates combinations where order does not matter
+    /// and an option cannot combine with itself.
+    ///
+    /// # Returns
+    ///
+    /// An iterator producing tuples of references to two distinct `OptionData` instances.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::model::types::PositiveF64;
+    /// use optionstratlib::pos;
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+    /// for (option1, option2) in option_chain.get_double_iter() {
+    ///     println!("{:?}, {:?}", option1, option2);
+    /// }
+    /// ```
+    pub fn get_double_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
+        self.options.iter().enumerate().flat_map(|(i, item1)| {
+            self.options
+                .iter()
+                .skip(i + 1)
+                .map(move |item2| (item1, item2))
+        })
+    }
+
+    /// Returns an iterator that generates inclusive pairs of option combinations from the `OptionChain`.
+    ///
+    /// This function iterates over all combinations of two options from the `options` collection,
+    /// including pairing an option with itself.
+    ///
+    /// # Returns
+    ///
+    /// An iterator producing tuples with two references to `OptionData`, potentially including
+    /// self-pairs (e.g., `(option, option)`).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::model::types::PositiveF64;
+    /// use optionstratlib::pos;
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+    /// for (option1, option2) in option_chain.get_double_inclusive_iter() {
+    ///     println!("{:?}, {:?}", option1, option2);
+    /// }
+    /// ```
+    pub fn get_double_inclusive_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
+        self.options
+            .iter()
+            .enumerate()
+            .flat_map(|(i, item1)| self.options.iter().skip(i).map(move |item2| (item1, item2)))
+    }
+
+    /// Returns an iterator that generates unique triplets of distinct option combinations from the `OptionChain`.
+    ///
+    /// This function iterates over all unique combinations of three options from the `options` collection
+    /// without repetition.
+    ///
+    /// # Returns
+    ///
+    /// An iterator producing tuples containing references to three distinct `OptionData` instances.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::model::types::PositiveF64;
+    /// use optionstratlib::pos;
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+    /// for (option1, option2, option3) in option_chain.get_triple_iter() {
+    ///     println!("{:?}, {:?}, {:?}", option1, option2, option3);
+    /// }
+    /// ```
+    pub fn get_triple_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData)> {
+        self.options.iter().enumerate().flat_map(move |(i, item1)| {
+            self.options
+                .iter()
+                .skip(i + 1)
+                .enumerate()
+                .flat_map(move |(j, item2)| {
+                    self.options
+                        .iter()
+                        .skip(i + j + 2)
+                        .map(move |item3| (item1, item2, item3))
+                })
+        })
+    }
+
+    /// Returns an iterator that generates inclusive triplets of option combinations from the `OptionChain`.
+    ///
+    /// This function iterates over all combinations of three options from the `options` collection,
+    /// including those where the same option may be included more than once.
+    ///
+    /// # Returns
+    ///
+    /// An iterator producing tuples with three references to `OptionData`, potentially including
+    /// repeated elements (e.g., `(option1, option2, option1)`).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::model::types::PositiveF64;
+    /// use optionstratlib::pos;
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+    /// for (option1, option2, option3) in option_chain.get_triple_inclusive_iter() {
+    ///     println!("{:?}, {:?}, {:?}", option1, option2, option3);
+    /// }
+    /// ```
+    pub fn get_triple_inclusive_iter(
+        &self,
+    ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData)> {
+        self.options.iter().enumerate().flat_map(move |(i, item1)| {
+            self.options
+                .iter()
+                .skip(i)
+                .enumerate()
+                .flat_map(move |(j, item2)| {
+                    self.options
+                        .iter()
+                        .skip(i + j)
+                        .map(move |item3| (item1, item2, item3))
+                })
+        })
+    }
+
+    /// Returns an iterator that generates unique quadruples of distinct option combinations from the `OptionChain`.
+    ///
+    /// This function iterates over all unique combinations of four options from the `options` collection
+    /// without repetition.
+    ///
+    /// # Returns
+    ///
+    /// An iterator producing tuples containing references to four distinct `OptionData` instances.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::model::types::PositiveF64;
+    /// use optionstratlib::pos;
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+    /// for (option1, option2, option3, option4) in option_chain.get_quad_iter() {
+    ///     println!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
+    /// }
+    /// ```
+    pub fn get_quad_iter(
+        &self,
+    ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData, &OptionData)> {
+        self.options.iter().enumerate().flat_map(move |(i, item1)| {
+            self.options
+                .iter()
+                .skip(i + 1)
+                .enumerate()
+                .flat_map(move |(j, item2)| {
+                    self.options
+                        .iter()
+                        .skip(i + j + 2)
+                        .enumerate()
+                        .flat_map(move |(k, item3)| {
+                            self.options
+                                .iter()
+                                .skip(i + j + k + 3)
+                                .map(move |item4| (item1, item2, item3, item4))
+                        })
+                })
+        })
+    }
+
+    /// Returns an iterator that generates inclusive quadruples of option combinations from the `OptionChain`.
+    ///
+    /// This function iterates over all combinations of four options from the `options` collection,
+    /// including those where the same option may be included more than once.
+    ///
+    /// # Returns
+    ///
+    /// An iterator producing tuples with four references to `OptionData`, potentially including
+    /// repeated elements (e.g., `(option1, option2, option1, option4)`).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::model::types::PositiveF64;
+    /// use optionstratlib::pos;
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+    /// for (option1, option2, option3, option4) in option_chain.get_quad_inclusive_iter() {
+    ///     println!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
+    /// }
+    /// ```
+    pub fn get_quad_inclusive_iter(
+        &self,
+    ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData, &OptionData)> {
+        self.options.iter().enumerate().flat_map(move |(i, item1)| {
+            self.options
+                .iter()
+                .skip(i)
+                .enumerate()
+                .flat_map(move |(j, item2)| {
+                    self.options
+                        .iter()
+                        .skip(i + j)
+                        .enumerate()
+                        .flat_map(move |(k, item3)| {
+                            self.options
+                                .iter()
+                                .skip(i + j + k)
+                                .map(move |item4| (item1, item2, item3, item4))
+                        })
+                })
+        })
     }
 }
 
@@ -1789,7 +2030,7 @@ mod tests_option_data_get_option {
             0.02,
         );
 
-        let result = option_data.get_option(&price_params);
+        let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
         let option = result.unwrap();
@@ -1813,7 +2054,7 @@ mod tests_option_data_get_option {
             0.02,
         );
 
-        let result = option_data.get_option(&price_params);
+        let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
         let option = result.unwrap();
@@ -1828,7 +2069,7 @@ mod tests_option_data_get_option {
         let price_params =
             OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
 
-        let result = option_data.get_option(&price_params);
+        let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Implied volatility not found");
     }
@@ -1865,7 +2106,8 @@ mod tests_option_data_get_options_in_strike {
             0.02,
         );
 
-        let result = option_data.get_options_in_strike(&price_params);
+        let result =
+            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
         let options = result.unwrap();
@@ -1897,7 +2139,8 @@ mod tests_option_data_get_options_in_strike {
         let price_params =
             OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
 
-        let result = option_data.get_options_in_strike(&price_params);
+        let result =
+            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
         let options = result.unwrap();
@@ -1915,7 +2158,8 @@ mod tests_option_data_get_options_in_strike {
         let price_params =
             OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
 
-        let result = option_data.get_options_in_strike(&price_params);
+        let result =
+            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Implied volatility not found");
     }
@@ -1931,7 +2175,8 @@ mod tests_option_data_get_options_in_strike {
             0.03,
         );
 
-        let result = option_data.get_options_in_strike(&price_params);
+        let result =
+            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
         let options = result.unwrap();
@@ -1964,7 +2209,8 @@ mod tests_option_data_get_options_in_strike {
             0.03,
         );
 
-        let result = option_data.get_options_in_strike(&price_params);
+        let result =
+            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
         let options = result.unwrap();
@@ -2163,5 +2409,541 @@ mod tests_filter_options_in_strike {
             assert!(deltas.long_put < 0.0);
             assert!(deltas.short_put > 0.0);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_chain_iterators {
+    use super::*;
+    use crate::spos;
+
+    fn create_test_chain() -> OptionChain {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+
+        // Add three options with different strikes
+        chain.add_option(
+            pos!(90.0),   // strike_price
+            spos!(5.0),   // call_bid
+            spos!(5.5),   // call_ask
+            spos!(1.0),   // put_bid
+            spos!(1.5),   // put_ask
+            spos!(0.2),   // implied_volatility
+            Some(0.6),    // delta
+            spos!(100.0), // volume
+            Some(50),     // open_interest
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(0.25),
+            Some(0.5),
+            spos!(150.0),
+            Some(75),
+        );
+
+        chain.add_option(
+            pos!(110.0),
+            spos!(1.0),
+            spos!(1.5),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(0.3),
+            Some(0.4),
+            spos!(80.0),
+            Some(40),
+        );
+
+        chain
+    }
+
+    #[test]
+    fn test_get_double_iter_empty() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        let pairs: Vec<_> = chain.get_double_iter().collect();
+        assert!(pairs.is_empty());
+    }
+
+    #[test]
+    fn test_get_double_iter_single() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(0.25),
+            Some(0.5),
+            spos!(150.0),
+            Some(75),
+        );
+
+        let pairs: Vec<_> = chain.get_double_iter().collect();
+        assert!(pairs.is_empty()); // No pairs with single element
+    }
+
+    #[test]
+    fn test_get_double_iter_multiple() {
+        let chain = create_test_chain();
+        let pairs: Vec<_> = chain.get_double_iter().collect();
+
+        // Should have 3 pairs: (90,100), (90,110), (100,110)
+        assert_eq!(pairs.len(), 3);
+
+        // Check strikes of pairs
+        assert_eq!(pairs[0].0.strike_price, pos!(90.0));
+        assert_eq!(pairs[0].1.strike_price, pos!(100.0));
+
+        assert_eq!(pairs[1].0.strike_price, pos!(90.0));
+        assert_eq!(pairs[1].1.strike_price, pos!(110.0));
+
+        assert_eq!(pairs[2].0.strike_price, pos!(100.0));
+        assert_eq!(pairs[2].1.strike_price, pos!(110.0));
+    }
+
+    #[test]
+    fn test_get_double_inclusive_iter_empty() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
+        assert!(pairs.is_empty());
+    }
+
+    #[test]
+    fn test_get_double_inclusive_iter_single() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(0.25),
+            Some(0.5),
+            spos!(150.0),
+            Some(75),
+        );
+
+        let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
+        assert_eq!(pairs.len(), 1); // Should have one pair (self-pair)
+        assert_eq!(pairs[0].0.strike_price, pairs[0].1.strike_price);
+    }
+
+    #[test]
+    fn test_get_double_inclusive_iter_multiple() {
+        let chain = create_test_chain();
+        let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
+
+        // Should have 6 pairs: (90,90), (90,100), (90,110), (100,100), (100,110), (110,110)
+        assert_eq!(pairs.len(), 6);
+
+        // Check strikes of pairs
+        assert_eq!(pairs[0].0.strike_price, pos!(90.0));
+        assert_eq!(pairs[0].1.strike_price, pos!(90.0));
+
+        assert_eq!(pairs[1].0.strike_price, pos!(90.0));
+        assert_eq!(pairs[1].1.strike_price, pos!(100.0));
+
+        assert_eq!(pairs[2].0.strike_price, pos!(90.0));
+        assert_eq!(pairs[2].1.strike_price, pos!(110.0));
+
+        assert_eq!(pairs[3].0.strike_price, pos!(100.0));
+        assert_eq!(pairs[3].1.strike_price, pos!(100.0));
+
+        assert_eq!(pairs[4].0.strike_price, pos!(100.0));
+        assert_eq!(pairs[4].1.strike_price, pos!(110.0));
+
+        assert_eq!(pairs[5].0.strike_price, pos!(110.0));
+        assert_eq!(pairs[5].1.strike_price, pos!(110.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_chain_iterators_bis {
+    use super::*;
+    use crate::spos;
+
+    fn create_test_chain() -> OptionChain {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+
+        // Add four options with different strikes
+        chain.add_option(
+            pos!(90.0),   // strike_price
+            spos!(5.0),   // call_bid
+            spos!(5.5),   // call_ask
+            spos!(1.0),   // put_bid
+            spos!(1.5),   // put_ask
+            spos!(0.2),   // implied_volatility
+            Some(0.6),    // delta
+            spos!(100.0), // volume
+            Some(50),     // open_interest
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(0.25),
+            Some(0.5),
+            spos!(150.0),
+            Some(75),
+        );
+
+        chain.add_option(
+            pos!(110.0),
+            spos!(1.0),
+            spos!(1.5),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(0.3),
+            Some(0.4),
+            spos!(80.0),
+            Some(40),
+        );
+
+        chain.add_option(
+            pos!(120.0),
+            spos!(0.5),
+            spos!(1.0),
+            spos!(7.0),
+            spos!(7.5),
+            spos!(0.35),
+            Some(0.3),
+            spos!(60.0),
+            Some(30),
+        );
+
+        chain
+    }
+
+    // Tests for Triple Iterator
+    #[test]
+    fn test_get_triple_iter_empty() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        let triples: Vec<_> = chain.get_triple_iter().collect();
+        assert!(triples.is_empty());
+    }
+
+    #[test]
+    fn test_get_triple_iter_two_elements() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        // Add two options
+        chain.add_option(pos!(90.0), None, None, None, None, None, None, None, None);
+        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None);
+
+        let triples: Vec<_> = chain.get_triple_iter().collect();
+        assert!(triples.is_empty()); // Not enough elements for a triple
+    }
+
+    #[test]
+    fn test_get_triple_iter_multiple() {
+        let chain = create_test_chain();
+        let triples: Vec<_> = chain.get_triple_iter().collect();
+
+        // Should have 4 triples: (90,100,110), (90,100,120), (90,110,120), (100,110,120)
+        assert_eq!(triples.len(), 4);
+
+        // Check first triple
+        assert_eq!(triples[0].0.strike_price, pos!(90.0));
+        assert_eq!(triples[0].1.strike_price, pos!(100.0));
+        assert_eq!(triples[0].2.strike_price, pos!(110.0));
+
+        // Check last triple
+        assert_eq!(triples[3].0.strike_price, pos!(100.0));
+        assert_eq!(triples[3].1.strike_price, pos!(110.0));
+        assert_eq!(triples[3].2.strike_price, pos!(120.0));
+    }
+
+    // Tests for Triple Inclusive Iterator
+    #[test]
+    fn test_get_triple_inclusive_iter_empty() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
+        assert!(triples.is_empty());
+    }
+
+    #[test]
+    fn test_get_triple_inclusive_iter_single() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None);
+
+        let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
+        assert_eq!(triples.len(), 1);
+        assert_eq!(triples[0].0.strike_price, triples[0].1.strike_price);
+        assert_eq!(triples[0].1.strike_price, triples[0].2.strike_price);
+    }
+
+    #[test]
+    fn test_get_triple_inclusive_iter_multiple() {
+        let chain = create_test_chain();
+        let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
+
+        // Count should be (n+2)(n+1)n/6 where n is the number of elements
+        assert_eq!(triples.len(), 20); // For 4 elements: 4*5*6/6 = 20
+
+        // Check first few triples (including self-references)
+        assert_eq!(triples[0].0.strike_price, pos!(90.0));
+        assert_eq!(triples[0].1.strike_price, pos!(90.0));
+        assert_eq!(triples[0].2.strike_price, pos!(90.0));
+    }
+
+    // Tests for Quad Iterator
+    #[test]
+    fn test_get_quad_iter_empty() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        let quads: Vec<_> = chain.get_quad_iter().collect();
+        assert!(quads.is_empty());
+    }
+
+    #[test]
+    fn test_get_quad_iter_three_elements() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        // Add three options
+        chain.add_option(pos!(90.0), None, None, None, None, None, None, None, None);
+        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None);
+        chain.add_option(pos!(110.0), None, None, None, None, None, None, None, None);
+
+        let quads: Vec<_> = chain.get_quad_iter().collect();
+        assert!(quads.is_empty()); // Not enough elements for a quad
+    }
+
+    #[test]
+    fn test_get_quad_iter_multiple() {
+        let chain = create_test_chain();
+        let quads: Vec<_> = chain.get_quad_iter().collect();
+
+        // Should have 1 quad: (90,100,110,120)
+        assert_eq!(quads.len(), 1);
+
+        // Check the quad
+        assert_eq!(quads[0].0.strike_price, pos!(90.0));
+        assert_eq!(quads[0].1.strike_price, pos!(100.0));
+        assert_eq!(quads[0].2.strike_price, pos!(110.0));
+        assert_eq!(quads[0].3.strike_price, pos!(120.0));
+    }
+
+    // Tests for Quad Inclusive Iterator
+    #[test]
+    fn test_get_quad_inclusive_iter_empty() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
+        assert!(quads.is_empty());
+    }
+
+    #[test]
+    fn test_get_quad_inclusive_iter_single() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string());
+        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None);
+
+        let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
+        assert_eq!(quads.len(), 1);
+        assert_eq!(quads[0].0.strike_price, quads[0].1.strike_price);
+        assert_eq!(quads[0].1.strike_price, quads[0].2.strike_price);
+        assert_eq!(quads[0].2.strike_price, quads[0].3.strike_price);
+    }
+
+    #[test]
+    fn test_get_quad_inclusive_iter_multiple() {
+        let chain = create_test_chain();
+        let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
+
+        // Count should be (n+3)(n+2)(n+1)n/24 where n is the number of elements
+        assert_eq!(quads.len(), 35); // For 4 elements: 7*6*5*4/24 = 35
+
+        // Check first quad (self-reference)
+        assert_eq!(quads[0].0.strike_price, pos!(90.0));
+        assert_eq!(quads[0].1.strike_price, pos!(90.0));
+        assert_eq!(quads[0].2.strike_price, pos!(90.0));
+        assert_eq!(quads[0].3.strike_price, pos!(90.0));
+
+        // Check last quad
+        assert_eq!(quads[34].0.strike_price, pos!(120.0));
+        assert_eq!(quads[34].1.strike_price, pos!(120.0));
+        assert_eq!(quads[34].2.strike_price, pos!(120.0));
+        assert_eq!(quads[34].3.strike_price, pos!(120.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_is_valid_optimal_side {
+    use super::*;
+
+    #[test]
+    fn test_upper_side_valid() {
+        let option_data = OptionData::new(
+            pos!(110.0), // strike price higher than underlying
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let underlying_price = pos!(100.0);
+
+        assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper));
+    }
+
+    #[test]
+    fn test_upper_side_invalid() {
+        let option_data = OptionData::new(
+            pos!(90.0), // strike price lower than underlying
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let underlying_price = pos!(100.0);
+
+        assert!(!option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper));
+    }
+
+    #[test]
+    fn test_lower_side_valid() {
+        let option_data = OptionData::new(
+            pos!(90.0), // strike price lower than underlying
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let underlying_price = pos!(100.0);
+
+        assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower));
+    }
+
+    #[test]
+    fn test_lower_side_invalid() {
+        let option_data = OptionData::new(
+            pos!(110.0), // strike price higher than underlying
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let underlying_price = pos!(100.0);
+
+        assert!(!option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower));
+    }
+
+    #[test]
+    fn test_all_side() {
+        let option_data =
+            OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None);
+        let underlying_price = pos!(100.0);
+
+        assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::All));
+    }
+
+    #[test]
+    fn test_range_side_valid() {
+        let option_data = OptionData::new(
+            pos!(100.0), // strike price within range
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let range_start = pos!(90.0);
+        let range_end = pos!(110.0);
+
+        assert!(option_data
+            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+    }
+
+    #[test]
+    fn test_range_side_invalid_below() {
+        let option_data = OptionData::new(
+            pos!(80.0), // strike price below range
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let range_start = pos!(90.0);
+        let range_end = pos!(110.0);
+
+        assert!(!option_data
+            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+    }
+
+    #[test]
+    fn test_range_side_invalid_above() {
+        let option_data = OptionData::new(
+            pos!(120.0), // strike price above range
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let range_start = pos!(90.0);
+        let range_end = pos!(110.0);
+
+        assert!(!option_data
+            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+    }
+
+    #[test]
+    fn test_range_side_at_boundaries() {
+        let option_data_lower = OptionData::new(
+            pos!(90.0), // strike price at lower boundary
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let option_data_upper = OptionData::new(
+            pos!(110.0), // strike price at upper boundary
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let range_start = pos!(90.0);
+        let range_end = pos!(110.0);
+
+        assert!(option_data_lower
+            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+        assert!(option_data_upper
+            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
     }
 }
