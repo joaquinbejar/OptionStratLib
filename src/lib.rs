@@ -18,7 +18,7 @@
 //!  [![Coverage](https://img.shields.io/codecov/c/github/joaquinbejar/OptionStratLib)](https://codecov.io/gh/joaquinbejar/OptionStratLib)
 //!  [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
 //!  
-//!  # OptionStratLib v0.2.4: Financial Options Library
+//!  # OptionStratLib v0.2.5: Financial Options Library
 //!  
 //!  ## Table of Contents
 //!  1. [Introduction](#introduction)
