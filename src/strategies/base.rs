@@ -5,6 +5,7 @@
 ******************************************************************************/
 
 use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{
     STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
@@ -14,6 +15,7 @@ use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::{pos, spos};
 use std::f64;
+use tracing::error;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -235,6 +237,42 @@ pub trait Optimizable: Validable + Strategies {
 
     fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+    }
+
+    /// Filters and generates combinations of options data from the given `OptionChain`.
+    ///
+    /// # Parameters
+    /// - `&self`: A reference to the current object/context that holds the filtering logic or required data.
+    /// - `_option_chain`: A reference to an `OptionChain` object that contains relevant financial information
+    ///   such as options data, underlying price, and expiration date.
+    /// - `_side`: A `FindOptimalSide` value that specifies the filtering strategy for finding combinations of
+    ///   options. It can specify:
+    ///     - `Upper`: Consider options higher than a certain threshold.
+    ///     - `Lower`: Consider options lower than a certain threshold.
+    ///     - `All`: Include all options.
+    ///     - `Range(start, end)`: Consider options within a specified range.
+    ///
+    /// # Returns
+    /// - An iterator that yields `OptionDataGroup` items. These items represent combinations of options data filtered
+    ///   based on the given criteria. The `OptionDataGroup` can represent combinations of 2, 3, 4, or any number
+    ///   of options depending on the grouping logic.
+    ///
+    /// **Note**:
+    /// - The current implementation returns an empty iterator (`std::iter::empty()`) as a placeholder.
+    /// - You may modify this method to implement the actual filtering and combination logic based on the
+    ///   provided `OptionChain` and `FindOptimalSide` criteria.
+    ///
+    /// # See Also
+    /// - `FindOptimalSide` for the strategy enumeration.
+    /// - `OptionDataGroup` for the structure of grouped combinations.
+    /// - `OptionChain` for the full structure being processed.
+    fn filter_combinations<'a>(
+        &'a self,
+        _option_chain: &'a OptionChain,
+        _side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        error!("Filter combinations is not applicable for this strategy");
+        std::iter::empty()
     }
 
     fn find_optimal(
