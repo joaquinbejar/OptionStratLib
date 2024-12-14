@@ -915,7 +915,7 @@ mod tests_bull_call_spread_optimization {
     use crate::spos;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string());
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
         chain.add_option(
             pos!(85.0),   // strike

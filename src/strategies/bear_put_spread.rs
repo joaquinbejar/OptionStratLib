@@ -901,7 +901,7 @@ mod tests_bear_put_spread_optimization {
     use crate::spos;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(90.0), "2024-12-31".to_string());
+        let mut chain = OptionChain::new("TEST", pos!(90.0), "2024-12-31".to_string(), None, None);
 
         // Add options with increasing strikes around the current price
         chain.add_option(

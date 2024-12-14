@@ -1485,7 +1485,7 @@ mod tests_iron_condor_optimizable {
     }
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string());
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
         // Add options at various strikes
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {

@@ -2473,7 +2473,7 @@ mod tests_butterfly_optimizable {
     use crate::spos;
 
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string());
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
             chain.add_option(
