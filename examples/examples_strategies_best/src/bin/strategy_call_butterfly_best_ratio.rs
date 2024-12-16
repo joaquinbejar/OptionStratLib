@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.05,      // risk_free_rate
         ZERO,      // dividend_yield
         pos!(2.0), // long quantity
-        pos!(4.0), // short_quantity
+        ZERO, // short_quantity
         ZERO,      // premium_long_itm
         ZERO,      // premium_long_otm
         ZERO,      // premium_short
@@ -40,6 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.78,      // close_fee_long
         0.73,      // close_fee_short
         0.73,      // close_fee_short
+        0.73,
     );
 
     strategy.best_ratio(

@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
         pos!(1.0), // long quantity
-        pos!(2.0), // short_quantity
+        97.8, // short_quantity
         85.04,     // premium_long_itm
         31.65,     // premium_long_otm
         53.04,     // premium_short
@@ -32,6 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.78,      // close_fee_long
         0.73,      // close_fee_short
         0.73,      // close_fee_short
+        0.73,
     );
 
     info!("Title: {}", strategy.title());

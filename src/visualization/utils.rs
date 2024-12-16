@@ -48,6 +48,7 @@ macro_rules! configure_chart_and_draw_mesh {
         // Configure and draw the mesh grid
         $chart
             .configure_mesh()
+            .disable_mesh() // Disable the mesh grid
             .x_labels($x_labels)
             .y_labels($y_labels)
             .draw()?;

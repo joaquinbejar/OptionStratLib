@@ -375,6 +375,16 @@ impl ExpirationDate {
         let date = self.get_date();
         date.format("%Y-%m-%d").to_string()
     }
+
+    pub fn from_string(s: &String) -> Result<Self, String> {
+        if let Ok(days) = s.parse::<f64>() {
+            Ok(ExpirationDate::Days(days))
+        } else if let Ok(datetime) = DateTime::parse_from_rfc3339(s) {
+            Ok(ExpirationDate::DateTime(DateTime::from(datetime)))
+        } else {
+            Err(format!("Failed to parse ExpirationDate from string: {}", s))
+        }
+    }
 }
 
 impl Default for ExpirationDate {

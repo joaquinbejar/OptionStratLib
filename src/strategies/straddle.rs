@@ -11,7 +11,8 @@ Key characteristics:
 */
 
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
-use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::chain::OptionChain;
+use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::greeks::equations::{Greek, Greeks};
@@ -34,7 +35,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use std::f64;
-use tracing::{debug, error, trace};
+use tracing::{info, trace};
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -243,125 +244,68 @@ impl Validable for ShortStraddle {
 impl Optimizable for ShortStraddle {
     type Strategy = ShortStraddle;
 
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        let underlying_price = self.get_underlying_price();
+        let strategy = self.clone();
+        option_chain
+            .get_single_iter()
+            // Filter out invalid combinations based on FindOptimalSide
+            .filter(move |both| both.is_valid_optimal_side(underlying_price, &side))
+            .filter(|both| {
+                both.call_ask.unwrap_or(PZERO) > PZERO && both.call_bid.unwrap_or(PZERO) > PZERO
+            })
+            // Filter out options that don't meet strategy constraints
+            .filter(move |both| {
+                let legs = StrategyLegs::TwoLegs {
+                    first: both,
+                    second: both,
+                };
+                let strategy = strategy.create_strategy(option_chain, &legs);
+                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+            })
+            // Map to OptionDataGroup
+            .map(OptionDataGroup::One)
+    }
+
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = f64::NEG_INFINITY;
+        let strategy_clone = self.clone();
+        let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
-        for call_index in 0..options.len() {
-            let call_option = &options[call_index];
+        for option_data_group in options_iter {
+            // Unpack the OptionDataGroup into individual options
+            let both = match option_data_group {
+                OptionDataGroup::One(first) => first,
+                _ => panic!("Invalid OptionDataGroup"),
+            };
 
-            for put_option in &options[..call_index] {
-                if call_option.strike_price <= put_option.strike_price {
-                    error!(
-                        "Invalid strike prices CALL: {:#?} PUT: {:#?}",
-                        call_option.strike_price, put_option.strike_price
-                    );
-                    continue;
-                }
+            let legs = StrategyLegs::TwoLegs {
+                first: both,
+                second: both,
+            };
+            let strategy = self.create_strategy(option_chain, &legs);
+            // Calculate the current value based on the optimization criteria
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                OptimizationCriteria::Area => strategy.profit_area(),
+            };
 
-                if !self.is_valid_short_option(put_option, &side)
-                    || !self.is_valid_short_option(call_option, &side)
-                {
-                    continue;
-                }
-
-                let legs = StrategyLegs::TwoLegs {
-                    first: call_option,
-                    second: put_option,
-                };
-
-                if !self.are_valid_prices(&legs) {
-                    error!(
-                        "Invalid Bid prices  Put({}): {:?} Call({}): {:?} ",
-                        put_option.strike_price,
-                        put_option.put_bid.unwrap_or(PZERO),
-                        call_option.strike_price,
-                        call_option.call_bid.unwrap_or(PZERO)
-                    );
-                    continue;
-                }
-
-                debug!("Creating Strategy");
-                let strategy: ShortStraddle = self.create_strategy(option_chain, &legs);
-
-                if !strategy.validate() {
-                    continue;
-                }
-
-                let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                    OptimizationCriteria::Area => strategy.profit_area(),
-                };
-
-                if current_value > best_value {
-                    best_value = current_value;
-                    *self = strategy.clone();
-                }
+            if current_value > best_value {
+                // Update the best value and replace the current strategy
+                info!("Found better value: {}", current_value);
+                best_value = current_value;
+                *self = strategy.clone();
             }
         }
-        debug!("Best Value: {}", best_value);
-    }
-
-    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price = match (
-            self.short_put.option.underlying_price,
-            self.short_call.option.underlying_price,
-        ) {
-            (PZERO, PZERO) => PZERO,
-            (PZERO, call) => call,
-            (put, _) => put,
-        };
-        if underlying_price == PZERO {
-            error!("Invalid underlying_price option");
-            return false;
-        }
-
-        match side {
-            FindOptimalSide::Upper => {
-                let valid = option.strike_price >= underlying_price;
-                if !valid {
-                    debug!(
-                        "Option is out of range: {} <= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Lower => {
-                let valid = option.strike_price <= underlying_price;
-                if !valid {
-                    debug!(
-                        "Option is out of range: {} >= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                let valid = option.strike_price >= *start && option.strike_price <= *end;
-                if !valid {
-                    debug!(
-                        "Option is out of range: {} >= {} && {} <= {}",
-                        option.strike_price, *start, option.strike_price, *end
-                    );
-                }
-                valid
-            }
-        }
-    }
-
-    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
-        let (call, put) = match legs {
-            StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
-        };
-        call.call_bid.unwrap() > PZERO && put.put_bid.unwrap() > PZERO
     }
 
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
@@ -833,127 +777,69 @@ impl Validable for LongStraddle {
 
 impl Optimizable for LongStraddle {
     type Strategy = LongStraddle;
+
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        let underlying_price = self.get_underlying_price();
+        let strategy = self.clone();
+        option_chain
+            .get_single_iter()
+            // Filter out invalid combinations based on FindOptimalSide
+            .filter(move |both| both.is_valid_optimal_side(underlying_price, &side))
+            .filter(|both| {
+                both.call_ask.unwrap_or(PZERO) > PZERO && both.call_bid.unwrap_or(PZERO) > PZERO
+            })
+            // Filter out options that don't meet strategy constraints
+            .filter(move |both| {
+                let legs = StrategyLegs::TwoLegs {
+                    first: both,
+                    second: both,
+                };
+                let strategy = strategy.create_strategy(option_chain, &legs);
+                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+            })
+            // Map to OptionDataGroup
+            .map(OptionDataGroup::One)
+    }
+
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = f64::NEG_INFINITY;
+        let strategy_clone = self.clone();
+        let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
-        for call_index in 0..options.len() {
-            let call_option = &options[call_index];
+        for option_data_group in options_iter {
+            // Unpack the OptionDataGroup into individual options
+            let both = match option_data_group {
+                OptionDataGroup::One(first) => first,
+                _ => panic!("Invalid OptionDataGroup"),
+            };
 
-            for put_option in &options[..call_index] {
-                trace!(
-                    "Call: {:#?} Put: {:#?}",
-                    call_option.strike_price,
-                    put_option.strike_price
-                );
-                if call_option.strike_price <= put_option.strike_price {
-                    error!(
-                        "Invalid strike prices Put: {:#?} Call: {:#?} ",
-                        put_option.strike_price, call_option.strike_price
-                    );
-                    continue;
-                }
+            let legs = StrategyLegs::TwoLegs {
+                first: both,
+                second: both,
+            };
+            let strategy = self.create_strategy(option_chain, &legs);
+            // Calculate the current value based on the optimization criteria
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                OptimizationCriteria::Area => strategy.profit_area(),
+            };
 
-                if !self.is_valid_long_option(put_option, &side)
-                    || !self.is_valid_long_option(call_option, &side)
-                {
-                    error!("Invalid option");
-                    continue;
-                }
-
-                let legs = StrategyLegs::TwoLegs {
-                    first: call_option,
-                    second: put_option,
-                };
-
-                if !self.are_valid_prices(&legs) {
-                    error!(
-                        "Invalid Ask prices Put: {:#?} Call: {:#?} ",
-                        put_option.put_ask, call_option.call_ask
-                    );
-                    continue;
-                }
-
-                let strategy: LongStraddle = self.create_strategy(option_chain, &legs);
-
-                if !strategy.validate() {
-                    error!("Invalid strategy");
-                    continue;
-                }
-
-                let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                    OptimizationCriteria::Area => strategy.profit_area(),
-                };
-
-                if current_value > best_value {
-                    best_value = current_value;
-                    *self = strategy.clone();
-                }
+            if current_value > best_value {
+                // Update the best value and replace the current strategy
+                info!("Found better value: {}", current_value);
+                best_value = current_value;
+                *self = strategy.clone();
             }
         }
-    }
-
-    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price = match (
-            self.long_put.option.underlying_price,
-            self.long_call.option.underlying_price,
-        ) {
-            (PZERO, PZERO) => PZERO,
-            (PZERO, call) => call,
-            (put, _) => put,
-        };
-        if underlying_price == PZERO {
-            error!("Invalid underlying_price option");
-            return false;
-        }
-
-        match side {
-            FindOptimalSide::Upper => {
-                let valid = option.strike_price >= underlying_price;
-                if !valid {
-                    debug!(
-                        "Option is out of range: {} <= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Lower => {
-                let valid = option.strike_price <= underlying_price;
-                if !valid {
-                    debug!(
-                        "Option is out of range: {} >= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                let valid = option.strike_price >= *start && option.strike_price <= *end;
-                if !valid {
-                    debug!(
-                        "Option is out of range: {} >= {} && {} <= {}",
-                        option.strike_price, *start, option.strike_price, *end
-                    );
-                }
-                valid
-            }
-        }
-    }
-
-    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
-        let (call, put) = match legs {
-            StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
-        };
-        call.call_ask.unwrap() > PZERO && put.put_ask.unwrap() > PZERO
     }
 
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
@@ -1468,29 +1354,6 @@ mod tests_short_straddle {
         // Test FindOptimalSide::Range
         assert!(strategy
             .is_valid_short_option(option_data, &FindOptimalSide::Range(min_strike, max_strike)));
-    }
-
-    #[test]
-    fn test_are_valid_prices() {
-        let strategy = setup();
-        let option_chain = create_test_option_chain();
-        let call_option = option_chain.options.last().unwrap();
-        let put_option = option_chain.options.first().unwrap();
-
-        let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
-        };
-        assert!(strategy.are_valid_prices(&legs));
-
-        let mut invalid_call = call_option.clone();
-        invalid_call.call_bid = Some(pos!(0.0));
-
-        let legs = StrategyLegs::TwoLegs {
-            first: &invalid_call,
-            second: put_option,
-        };
-        assert!(!strategy.are_valid_prices(&legs));
     }
 
     #[test]

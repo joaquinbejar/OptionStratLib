@@ -1,5 +1,6 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
+use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
@@ -64,6 +65,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             (1400, 933),
         )?;
     }
+
+    info!("Greeks:  {:#?}", strategy.greeks());
 
     Ok(())
 }

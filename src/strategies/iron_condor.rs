@@ -10,7 +10,8 @@ Key characteristics:
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
-use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::chain::OptionChain;
+use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::greeks::equations::{Greek, Greeks};
@@ -28,7 +29,7 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, error};
+use tracing::{error, info};
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -339,6 +340,46 @@ impl Strategies for IronCondor {
 impl Optimizable for IronCondor {
     type Strategy = IronCondor;
 
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        let underlying_price = self.get_underlying_price();
+        let strategy = self.clone();
+        option_chain
+            .get_quad_iter()
+            // Filter out invalid combinations based on FindOptimalSide
+            .filter(move |(long_put, short_put, short_call, long_call)| {
+                long_put.is_valid_optimal_side(underlying_price, &side)
+                    && short_put.is_valid_optimal_side(underlying_price, &side)
+                    && short_call.is_valid_optimal_side(underlying_price, &side)
+                    && long_call.is_valid_optimal_side(underlying_price, &side)
+            })
+            // Filter out options with invalid bid/ask prices
+            .filter(|(long_put, short_put, short_call, long_call)| {
+                long_put.put_ask.unwrap_or(PZERO) > PZERO
+                    && short_put.put_bid.unwrap_or(PZERO) > PZERO
+                    && short_call.call_bid.unwrap_or(PZERO) > PZERO
+                    && long_call.call_ask.unwrap_or(PZERO) > PZERO
+            })
+            // Filter out options that don't meet strategy constraints
+            .filter(move |(long_put, short_put, short_call, long_call)| {
+                let legs = StrategyLegs::FourLegs {
+                    first: long_put,
+                    second: short_put,
+                    third: short_call,
+                    fourth: long_call,
+                };
+                let strategy = strategy.create_strategy(option_chain, &legs);
+                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+            })
+            // Map to OptionDataGroup
+            .map(move |(long_put, short_put, short_call, long_call)| {
+                OptionDataGroup::Four(long_put, short_put, short_call, long_call)
+            })
+    }
+
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,
@@ -346,124 +387,37 @@ impl Optimizable for IronCondor {
         criteria: OptimizationCriteria,
     ) {
         let mut best_value = f64::NEG_INFINITY;
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
+        let strategy_clone = self.clone();
+        let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
-        for (i, long_put) in options.iter().enumerate() {
-            if !self.is_valid_long_option(long_put, &side) {
-                continue;
-            }
-
-            for (j, short_put) in options.iter().enumerate().skip(i + 1) {
-                if !self.is_valid_short_option(short_put, &side) {
-                    continue;
+        for option_data_group in options_iter {
+            // Unpack the OptionDataGroup into individual options
+            let (long_put, short_put, short_call, long_call) = match option_data_group {
+                OptionDataGroup::Four(first, second, third, fourth) => {
+                    (first, second, third, fourth)
                 }
+                _ => panic!("Invalid OptionDataGroup"),
+            };
 
-                for (k, short_call) in options.iter().enumerate().skip(j + 1) {
-                    if !self.is_valid_short_option(short_call, &side) {
-                        continue;
-                    }
-
-                    for long_call in options.iter().skip(k + 1) {
-                        if !self.is_valid_long_option(long_call, &side) {
-                            continue;
-                        }
-
-                        if long_put.strike_price >= short_put.strike_price
-                            || short_put.strike_price >= short_call.strike_price
-                            || short_call.strike_price >= long_call.strike_price
-                        {
-                            error!("Invalid order of strikes");
-                            continue;
-                        }
-
-                        if !self.are_valid_prices(&StrategyLegs::FourLegs {
-                            first: long_put,
-                            second: short_put,
-                            third: short_call,
-                            fourth: long_call,
-                        }) {
-                            error!("Invalid prices");
-                            continue;
-                        }
-
-                        let new_strategy = self.create_strategy(
-                            option_chain,
-                            &StrategyLegs::FourLegs {
-                                first: long_put,
-                                second: short_put,
-                                third: short_call,
-                                fourth: long_call,
-                            },
-                        );
-
-                        if !new_strategy.validate() {
-                            debug!("Invalid strategy");
-                            continue;
-                        }
-
-                        if new_strategy.max_profit().is_err() || new_strategy.max_loss().is_err() {
-                            debug!("Invalid profit or loss");
-                            continue;
-                        }
-
-                        let current_value = match criteria {
-                            OptimizationCriteria::Ratio => new_strategy.profit_ratio(),
-                            OptimizationCriteria::Area => new_strategy.profit_area(),
-                        };
-
-                        if current_value > best_value {
-                            debug!("New best value: {}", current_value);
-                            best_value = current_value;
-                            *self = new_strategy;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let is_valid_strike = match side {
-            FindOptimalSide::Upper => option.strike_price >= self.get_underlying_price(),
-            FindOptimalSide::Lower => option.strike_price <= self.get_underlying_price(),
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                option.strike_price >= *start && option.strike_price <= *end
-            }
-        };
-        is_valid_strike
-            && option.put_bid.unwrap_or(PZERO) > PZERO
-            && option.call_bid.unwrap_or(PZERO) > PZERO
-    }
-
-    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let is_valid_strike = match side {
-            FindOptimalSide::Upper => option.strike_price >= self.get_underlying_price(),
-            FindOptimalSide::Lower => option.strike_price <= self.get_underlying_price(),
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                option.strike_price >= *start && option.strike_price <= *end
-            }
-        };
-        is_valid_strike
-            && option.put_ask.unwrap_or(PZERO) > PZERO
-            && option.call_ask.unwrap_or(PZERO) > PZERO
-    }
-
-    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
-        match legs {
-            StrategyLegs::FourLegs {
+            let legs = StrategyLegs::FourLegs {
                 first: long_put,
                 second: short_put,
                 third: short_call,
                 fourth: long_call,
-            } => {
-                long_put.put_ask.unwrap_or(PZERO) > PZERO
-                    && short_put.put_bid.unwrap_or(PZERO) > PZERO
-                    && short_call.call_bid.unwrap_or(PZERO) > PZERO
-                    && long_call.call_ask.unwrap_or(PZERO) > PZERO
+            };
+            let strategy = self.create_strategy(option_chain, &legs);
+            // Calculate the current value based on the optimization criteria
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                OptimizationCriteria::Area => strategy.profit_area(),
+            };
+
+            if current_value > best_value {
+                // Update the best value and replace the current strategy
+                info!("Found better value: {}", current_value);
+                best_value = current_value;
+                *self = strategy.clone();
             }
-            _ => false,
         }
     }
 
@@ -1458,6 +1412,7 @@ mod tests_iron_condor_strategies {
 #[cfg(test)]
 mod tests_iron_condor_optimizable {
     use super::*;
+    use crate::chains::chain::OptionData;
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::spos;
@@ -1485,7 +1440,7 @@ mod tests_iron_condor_optimizable {
     }
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string());
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
         // Add options at various strikes
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
@@ -1601,22 +1556,6 @@ mod tests_iron_condor_optimizable {
         assert!(condor.is_valid_short_option(&option, &FindOptimalSide::Upper));
         assert!(condor
             .is_valid_short_option(&option, &FindOptimalSide::Range(pos!(100.0), pos!(110.0))));
-    }
-
-    #[test]
-    fn test_are_valid_prices() {
-        let condor = create_test_condor();
-        let chain = create_test_chain();
-        let options: Vec<&OptionData> = chain.options.iter().collect();
-
-        let legs = StrategyLegs::FourLegs {
-            first: options[1],  // 90.0 strike for long put
-            second: options[2], // 95.0 strike for short put
-            third: options[4],  // 105.0 strike for short call
-            fourth: options[5], // 110.0 strike for long call
-        };
-
-        assert!(condor.are_valid_prices(&legs));
     }
 
     #[test]

@@ -21,26 +21,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     let strategy = CallButterfly::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        pos!(5750.0),     // long_strike_itm
-        pos!(5850.0),     // long_strike_otm
-        pos!(5800.0),     // short_strike
+        pos!(5750.0),     // long_call_strike
+        pos!(5800.0),     // short_call_low_strike
+        pos!(5850.0),     // short_call_high_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
         pos!(1.0), // long quantity
-        pos!(2.0), // short_quantity
         85.04,     // premium_long_itm
-        31.65,     // premium_long_otm
-        53.04,     // premium_short
+        53.04,     // premium_long_otm
+        28.85,     // premium_short
+        0.78,      // premium_short
         0.78,      // open_fee_long
         0.78,      // close_fee_long
         0.73,      // close_fee_short
         0.73,      // close_fee_short
+        0.73,      // open_fee_short
     );
-
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let range = strategy.break_even_points[1] - strategy.break_even_points[0];
+    let range = strategy.range_of_profit().unwrap_or(PZERO);
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
