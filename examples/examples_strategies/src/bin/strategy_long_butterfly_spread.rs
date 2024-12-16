@@ -4,6 +4,7 @@
    Date: 25/9/24
 ******************************************************************************/
 
+use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
@@ -17,40 +18,24 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(5781.88);
+    let underlying_price = pos!(5795.88);
 
     let strategy = LongButterflySpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        pos!(5810.0),     // long_strike_itm
-        pos!(5820.0),     // short_strike
-        pos!(6200.0),     // long_strike_otm
+        pos!(5710.0),     // long_strike_itm
+        pos!(5780.0),     // short_strike
+        pos!(5850.0),     // long_strike_otm
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
         pos!(1.0), // long quantity
-        49.65,     // premium_long
-        42.93,     // premium_short
-        1.0,       // open_fee_long
-        4.0,       // open_fee_long
+        113.30,    // premium_long
+        64.20,     // premium_short
+        31.65,     // open_fee_long
+        0.07,      // open_fee_long
     );
-    // let strategy = LongButterfly::new(
-    //     "SP500".to_string(),
-    //     underlying_price, // underlying_price
-    //     pos!(5730.0),     // long_strike_itm
-    //     pos!(5740.0),     // short_strike
-    //     pos!(5850.0),     // long_strike_otm
-    //     ExpirationDate::Days(2.0),
-    //     0.18,      // implied_volatility
-    //     0.05,      // risk_free_rate
-    //     0.0,       // dividend_yield
-    //     pos!(1.0), // long quantity
-    //     98.79,     // premium_long
-    //     90.02,     // premium_short
-    //     31.65,      // open_fee_long
-    //     4.0,      // open_fee_long
-    // );
 
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
 
@@ -73,6 +58,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         20,
         (1400, 933),
     )?;
+
+    info!("Greeks:  {:#?}", strategy.greeks());
 
     Ok(())
 }
