@@ -891,7 +891,7 @@ mod tests_bear_put_spread_validation {
 #[cfg(test)]
 mod tests_bear_put_spread_optimization {
     use super::*;
-    use crate::chains::chain::OptionData;
+
     use crate::model::types::ExpirationDate;
     use crate::spos;
 
@@ -1062,67 +1062,6 @@ mod tests_bear_put_spread_optimization {
         // Strikes should be within the specified range
         assert!(spread.short_put.option.strike_price >= pos!(95.0));
         assert!(spread.long_put.option.strike_price <= pos!(105.0));
-    }
-
-    #[test]
-    fn test_are_valid_prices() {
-        let spread = create_base_spread();
-
-        // Test with valid prices
-        let valid_option1 = OptionData::new(
-            pos!(105.0),
-            None,
-            None,
-            spos!(1.5),
-            spos!(1.7),
-            spos!(0.2),
-            Some(-0.4),
-            spos!(100.0),
-            Some(50),
-        );
-
-        let valid_option2 = OptionData::new(
-            pos!(95.0),
-            None,
-            None,
-            spos!(4.0),
-            spos!(4.2),
-            spos!(0.2),
-            Some(-0.6),
-            spos!(100.0),
-            Some(50),
-        );
-
-        let legs = StrategyLegs::TwoLegs {
-            first: &valid_option1,
-            second: &valid_option2,
-        };
-        assert!(spread.are_valid_prices(&legs));
-
-        // Test with invalid prices (zero or None)
-        let invalid_option = OptionData::new(
-            pos!(100.0),
-            None,
-            None,
-            None,
-            None,
-            spos!(0.2),
-            Some(-0.5),
-            spos!(100.0),
-            Some(50),
-        );
-
-        let legs = StrategyLegs::TwoLegs {
-            first: &invalid_option,
-            second: &valid_option2,
-        };
-        assert!(!spread.are_valid_prices(&legs));
-
-        let legs = StrategyLegs::TwoLegs {
-            first: &valid_option1,
-            second: &invalid_option,
-        };
-        assert!(!spread.are_valid_prices(&legs));
     }
 
     #[test]

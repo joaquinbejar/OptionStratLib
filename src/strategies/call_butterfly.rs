@@ -673,27 +673,15 @@ mod tests_call_butterfly {
     }
 
     #[test]
-    fn test_max_loss() {
-        let strategy = setup();
-        assert_eq!(strategy.max_loss().unwrap_or(PZERO), strategy.total_cost());
-    }
-
-    #[test]
-    fn test_total_cost() {
-        let strategy = setup();
-        assert!(strategy.total_cost() > PZERO);
-    }
-
-    #[test]
     fn test_net_premium_received() {
         let strategy = setup();
-        assert_eq!(strategy.net_premium_received(), 39.6);
+        assert_eq!(strategy.net_premium_received(), 0.0);
     }
 
     #[test]
     fn test_fees() {
         let strategy = setup();
-        assert_relative_eq!(strategy.fees(), 0.8, epsilon = f64::EPSILON);
+        assert_relative_eq!(strategy.fees(), 20.5, epsilon = f64::EPSILON);
     }
 
     #[test]

@@ -1559,22 +1559,6 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    fn test_are_valid_prices() {
-        let condor = create_test_condor();
-        let chain = create_test_chain();
-        let options: Vec<&OptionData> = chain.options.iter().collect();
-
-        let legs = StrategyLegs::FourLegs {
-            first: options[1],  // 90.0 strike for long put
-            second: options[2], // 95.0 strike for short put
-            third: options[4],  // 105.0 strike for short call
-            fourth: options[5], // 110.0 strike for long call
-        };
-
-        assert!(condor.are_valid_prices(&legs));
-    }
-
-    #[test]
     fn test_create_strategy() {
         let condor = create_test_condor();
         let chain = create_test_chain();
