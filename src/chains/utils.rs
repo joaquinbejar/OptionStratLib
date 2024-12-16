@@ -10,7 +10,9 @@ use crate::pos;
 use std::collections::BTreeSet;
 use std::fmt::Display;
 
+#[derive(Debug)]
 pub enum OptionDataGroup<'a> {
+    One(&'a OptionData),
     Two(&'a OptionData, &'a OptionData),
     Three(&'a OptionData, &'a OptionData, &'a OptionData),
     Four(
