@@ -735,6 +735,21 @@ impl OptionChain {
         Ok(positions)
     }
 
+    /// Returns an iterator over the `options` field in the `OptionChain` structure.
+    ///
+    /// This method provides a mechanism to traverse through the set of options
+    /// (`OptionData`) associated with an `OptionChain`.
+    ///
+    /// # Returns
+    ///
+    /// An iterator that yields references to the `OptionData` elements in the `options` field.
+    /// Since the `options` field is stored as a `BTreeSet`, the elements are ordered
+    /// in ascending order based on the sorting rules of `BTreeSet` (typically defined by `Ord` implementation).
+    ///
+    pub fn get_single_iter(&self) -> impl Iterator<Item = &OptionData> {
+        self.options.iter()
+    }
+
     /// Returns an iterator that generates pairs of distinct option combinations from the `OptionChain`.
     ///
     /// This function iterates over all unique combinations of two options from the `options` collection
