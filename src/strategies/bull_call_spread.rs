@@ -16,7 +16,8 @@ Key characteristics:
 */
 
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
-use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::chain::OptionChain;
+use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::greeks::equations::{Greek, Greeks};
@@ -38,7 +39,7 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \
@@ -242,7 +243,10 @@ impl Validable for BullCallSpread {
             return false;
         }
         if self.long_call.option.strike_price >= self.short_call.option.strike_price {
-            error!("Long call strike price must be lower than short call strike price");
+            error!(
+                "Long call strike price {} must be lower than short call strike price {}",
+                self.long_call.option.strike_price, self.short_call.option.strike_price
+            );
             return false;
         }
 
@@ -253,72 +257,70 @@ impl Validable for BullCallSpread {
 impl Optimizable for BullCallSpread {
     type Strategy = BullCallSpread;
 
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        let underlying_price = self.get_underlying_price();
+        let strategy = self.clone();
+        option_chain
+            .get_double_iter()
+            // Filter out invalid combinations based on FindOptimalSide
+            .filter(move |&option| {
+                option.0.is_valid_optimal_side(underlying_price, &side)
+                    && option.1.is_valid_optimal_side(underlying_price, &side)
+            })
+            // Filter out options with invalid bid/ask prices
+            .filter(|(long, short)| {
+                long.call_ask.unwrap_or(PZERO) > PZERO && short.call_bid.unwrap_or(PZERO) > PZERO
+            })
+            // Filter out options that don't meet strategy constraints
+            .filter(move |(long, short)| {
+                let legs = StrategyLegs::TwoLegs {
+                    first: long,
+                    second: short,
+                };
+                let strategy = strategy.create_strategy(option_chain, &legs);
+                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+            })
+            // Map to OptionDataGroup
+            .map(move |(long, short)| OptionDataGroup::Two(long, short))
+    }
+
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = f64::NEG_INFINITY;
+        let strategy_clone = self.clone();
+        let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
-        for long_index in 0..options.len() {
-            let long_option = &options[long_index];
+        for option_data_group in options_iter {
+            // Unpack the OptionDataGroup into individual options
+            let (long, short) = match option_data_group {
+                OptionDataGroup::Two(first, second) => (first, second),
+                _ => panic!("Invalid OptionDataGroup"),
+            };
 
-            for short_option in &options[long_index + 1..] {
-                if !self.is_valid_long_option(long_option, &side)
-                    || !self.is_valid_short_option(short_option, &side)
-                {
-                    debug!(
-                        "Invalid options Asset {} - Long({}) Short({})",
-                        option_chain.underlying_price,
-                        long_option.strike_price,
-                        short_option.strike_price,
-                    );
-                    continue;
-                }
+            let legs = StrategyLegs::TwoLegs {
+                first: long,
+                second: short,
+            };
+            let strategy = self.create_strategy(option_chain, &legs);
+            // Calculate the current value based on the optimization criteria
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                OptimizationCriteria::Area => strategy.profit_area(),
+            };
 
-                let legs = StrategyLegs::TwoLegs {
-                    first: long_option,
-                    second: short_option,
-                };
-
-                if !self.are_valid_prices(&legs) {
-                    debug!(
-                        "Invalid prices - Long({}): {:?} Short({}): {:?}",
-                        long_option.strike_price,
-                        long_option.call_ask,
-                        short_option.strike_price,
-                        short_option.call_bid
-                    );
-                    continue;
-                }
-
-                let strategy = self.create_strategy(option_chain, &legs);
-
-                if !strategy.validate() {
-                    debug!("Invalid strategy");
-                    continue;
-                }
-
-                if strategy.max_profit().is_err() || strategy.max_loss().is_err() {
-                    debug!(
-                        "Invalid profit {} loss {}",
-                        strategy.max_profit().unwrap_or(PZERO),
-                        strategy.max_loss().unwrap_or(PZERO)
-                    );
-                    continue;
-                }
-
-                let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                    OptimizationCriteria::Area => strategy.profit_area(),
-                };
-
-                if current_value > best_value {
-                    best_value = current_value;
-                    *self = strategy.clone();
-                }
+            if current_value > best_value {
+                // Update the best value and replace the current strategy
+                info!("Found better value: {}", current_value);
+                best_value = current_value;
+                *self = strategy.clone();
             }
         }
     }
@@ -911,6 +913,7 @@ mod tests_bull_call_spread_validation {
 #[cfg(test)]
 mod tests_bull_call_spread_optimization {
     use super::*;
+    use crate::chains::chain::OptionData;
     use crate::model::types::ExpirationDate;
     use crate::spos;
 

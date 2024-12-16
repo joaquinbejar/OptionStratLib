@@ -360,13 +360,16 @@ impl Optimizable for BullPutSpread {
         let strategy = self.clone();
         option_chain
             .get_double_iter()
+            // Filter out invalid combinations based on FindOptimalSide
             .filter(move |&option| {
                 option.0.is_valid_optimal_side(underlying_price, &side)
                     && option.1.is_valid_optimal_side(underlying_price, &side)
             })
+            // Filter out options with invalid bid/ask prices
             .filter(|(long, short)| {
                 long.put_ask.unwrap_or(PZERO) > PZERO && short.put_bid.unwrap_or(PZERO) > PZERO
             })
+            // Filter out options that don't meet strategy constraints
             .filter(move |(long_option, short_option)| {
                 let legs = StrategyLegs::TwoLegs {
                     first: long_option,
@@ -375,6 +378,7 @@ impl Optimizable for BullPutSpread {
                 let strategy = strategy.create_strategy(option_chain, &legs);
                 strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
             })
+            // Map to OptionDataGroup
             .map(move |(long, short)| OptionDataGroup::Two(long, short))
     }
 
@@ -389,6 +393,7 @@ impl Optimizable for BullPutSpread {
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
         for option_data_group in options_iter {
+            // Unpack the OptionDataGroup into individual options
             let (long_option, short_option) = match option_data_group {
                 OptionDataGroup::Two(first, second) => (first, second),
                 _ => panic!("Invalid OptionDataGroup"),
@@ -399,12 +404,14 @@ impl Optimizable for BullPutSpread {
                 second: short_option,
             };
             let strategy = self.create_strategy(option_chain, &legs);
+            // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
                 OptimizationCriteria::Ratio => strategy.profit_ratio(),
                 OptimizationCriteria::Area => strategy.profit_area(),
             };
 
             if current_value > best_value {
+                // Update the best value and replace the current strategy
                 debug!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
