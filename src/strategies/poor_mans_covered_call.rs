@@ -440,7 +440,7 @@ impl Graph for PoorMansCoveredCall {
             ),
             format!(
                 "Short Call Expiry: {}",
-                self.short_call.option.expiration_date
+                self.short_call.option.expiration_date.get_date_string()
             ),
         ]
         .iter()

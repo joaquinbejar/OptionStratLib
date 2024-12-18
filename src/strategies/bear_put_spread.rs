@@ -1155,8 +1155,8 @@ mod tests_bear_put_spread_optimization {
 mod tests_bear_put_spread_optimizable {
     use super::*;
     use crate::model::types::{ExpirationDate, PositiveF64};
-    use crate::strategies::utils::{FindOptimalSide};
     use crate::spos;
+    use crate::strategies::utils::FindOptimalSide;
     use crate::utils::setup_logger;
 
     fn create_mock_option_chain() -> OptionChain {
@@ -1197,8 +1197,8 @@ mod tests_bear_put_spread_optimizable {
             pos!(105.0),
             spos!(5.8),
             spos!(6.0),
-            spos!(8.8),   // put_bid - mayor precio por estar ITM
-            spos!(9.0),   // put_ask
+            spos!(8.8), // put_bid - mayor precio por estar ITM
+            spos!(9.0), // put_ask
             spos!(0.2),
             Some(-0.7),
             spos!(150.0),
@@ -1211,16 +1211,16 @@ mod tests_bear_put_spread_optimizable {
     fn create_test_bear_put_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(105.0),                // long strike (higher)
-            pos!(95.0),                 // short strike (lower)
+            pos!(100.0), // underlying_price
+            pos!(105.0), // long strike (higher)
+            pos!(95.0),  // short strike (lower)
             ExpirationDate::Days(30.0),
             0.2,
             0.05,
             0.0,
             pos!(1.0),
-            2.0,                        // premium short put
-            8.8,                        // premium long put
+            2.0, // premium short put
+            8.8, // premium long put
             0.0,
             0.0,
             0.0,
@@ -1237,8 +1237,10 @@ mod tests_bear_put_spread_optimizable {
         // Debug output para ayudar en el diagnóstico
         info!("Chain options:");
         for option in chain.options.iter() {
-            info!("Strike: {}, Put bid: {:?}, Put ask: {:?}",
-                     option.strike_price, option.put_bid, option.put_ask);
+            info!(
+                "Strike: {}, Put bid: {:?}, Put ask: {:?}",
+                option.strike_price, option.put_bid, option.put_ask
+            );
         }
 
         let combinations: Vec<_> = spread
@@ -1247,7 +1249,10 @@ mod tests_bear_put_spread_optimizable {
 
         info!("Found {} combinations", combinations.len());
 
-        assert!(!combinations.is_empty(), "Should find at least one valid combination");
+        assert!(
+            !combinations.is_empty(),
+            "Should find at least one valid combination"
+        );
 
         for combination in combinations {
             match combination {
@@ -1256,18 +1261,26 @@ mod tests_bear_put_spread_optimizable {
                     assert!(short.strike_price < long.strike_price);
 
                     // Both options should have valid put prices
-                    assert!(short.put_bid.is_some(),
-                            "Short put bid is missing for strike {}", short.strike_price);
-                    assert!(long.put_ask.is_some(),
-                            "Long put ask is missing for strike {}", long.strike_price);
+                    assert!(
+                        short.put_bid.is_some(),
+                        "Short put bid is missing for strike {}",
+                        short.strike_price
+                    );
+                    assert!(
+                        long.put_ask.is_some(),
+                        "Long put ask is missing for strike {}",
+                        long.strike_price
+                    );
 
                     // Both options should have valid implied volatility
                     assert!(short.implied_volatility.is_some());
                     assert!(long.implied_volatility.is_some());
 
-                    info!("Valid combination - Short strike: {}, Long strike: {}",
-                             short.strike_price, long.strike_price);
-                },
+                    info!(
+                        "Valid combination - Short strike: {}, Long strike: {}",
+                        short.strike_price, long.strike_price
+                    );
+                }
                 _ => panic!("Expected Two-leg combination"),
             }
         }
@@ -1281,8 +1294,8 @@ mod tests_bear_put_spread_optimizable {
             pos!(97.0),
             spos!(1.0),
             spos!(1.2),
-            None,        // Invalid put_bid
-            None,        // Invalid put_ask
+            None, // Invalid put_bid
+            None, // Invalid put_ask
             spos!(0.2),
             Some(-0.4),
             spos!(50.0),
@@ -1300,7 +1313,7 @@ mod tests_bear_put_spread_optimizable {
                     // Verify that options with invalid prices are filtered out
                     assert!(short.put_bid.unwrap() > PZERO);
                     assert!(long.put_ask.unwrap() > PZERO);
-                },
+                }
                 _ => panic!("Expected Two-leg combination"),
             }
         }
@@ -1334,7 +1347,8 @@ mod tests_bear_put_spread_optimizable {
     #[test]
     fn test_filter_empty_chain() {
         let spread = create_test_bear_put_spread();
-        let empty_chain = OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
+        let empty_chain =
+            OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
 
         let combinations: Vec<_> = spread
             .filter_combinations(&empty_chain, FindOptimalSide::Lower)
@@ -1370,7 +1384,7 @@ mod tests_bear_put_spread_optimizable {
                 OptionDataGroup::Two(short, long) => {
                     // Verify that the strikes have enough width between them
                     assert!((long.strike_price - short.strike_price).value() >= 1.0);
-                },
+                }
                 _ => panic!("Expected Two-leg combination"),
             }
         }

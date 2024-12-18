@@ -473,7 +473,10 @@ impl Graph for IronCondor {
             format!("Short Put: ${}", self.short_put.option.strike_price),
             format!("Short Call: ${}", self.short_call.option.strike_price),
             format!("Long Call: ${}", self.long_call.option.strike_price),
-            format!("Expire: {}", self.short_put.option.expiration_date),
+            format!(
+                "Expire: {}",
+                self.short_put.option.expiration_date.get_date_string()
+            ),
         ]
         .iter()
         .map(|leg| leg.to_string())

@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.05,      // risk_free_rate
         ZERO,      // dividend_yield
         pos!(2.0), // long quantity
-        ZERO, // short_quantity
+        ZERO,      // short_quantity
         ZERO,      // premium_long_itm
         ZERO,      // premium_long_otm
         ZERO,      // premium_short
