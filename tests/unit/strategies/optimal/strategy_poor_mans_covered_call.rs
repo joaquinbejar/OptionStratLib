@@ -1,13 +1,13 @@
-use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::strategies::base::{Optimizable, Strategies};
-use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::pos;
-use std::error::Error;
 use approx::assert_relative_eq;
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::model::types::PositiveF64;
+use optionstratlib::pos;
+use optionstratlib::strategies::base::{Optimizable, Strategies};
+use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::utils::FindOptimalSide;
+use optionstratlib::utils::logger::setup_logger;
+use std::error::Error;
 
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {

@@ -5,6 +5,8 @@
 ******************************************************************************/
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
+use crate::chains::utils::OptionDataGroup;
+use crate::chains::StrategyLegs;
 use crate::constants::DARK_BLUE;
 use crate::constants::{DARK_GREEN, ZERO};
 use crate::greeks::equations::{Greek, Greeks};
@@ -25,8 +27,6 @@ use chrono::Utc;
 use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
 use tracing::{error, info};
-use crate::chains::StrategyLegs;
-use crate::chains::utils::OptionDataGroup;
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -170,8 +170,6 @@ impl CallButterfly {
 
         strategy
     }
-
-
 }
 
 impl Default for CallButterfly {
@@ -355,7 +353,7 @@ impl Optimizable for CallButterfly {
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(long, short_low, short_high)| {
-                long.call_ask.unwrap_or(PZERO) > PZERO 
+                long.call_ask.unwrap_or(PZERO) > PZERO
                     && short_low.call_bid.unwrap_or(PZERO) > PZERO
                     && short_high.call_bid.unwrap_or(PZERO) > PZERO
             })
@@ -370,7 +368,9 @@ impl Optimizable for CallButterfly {
                 strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
             })
             // Map to OptionDataGroup
-            .map(move |(long, short_low, short_high)| OptionDataGroup::Three(long, short_low, short_high))
+            .map(move |(long, short_low, short_high)| {
+                OptionDataGroup::Three(long, short_low, short_high)
+            })
     }
 
     fn find_optimal(
@@ -385,7 +385,7 @@ impl Optimizable for CallButterfly {
 
         for option_data_group in options_iter {
             // Unpack the OptionDataGroup into individual options
-            let (long, short_low, short_high)= match option_data_group {
+            let (long, short_low, short_high) = match option_data_group {
                 OptionDataGroup::Three(first, second, third) => (first, second, third),
                 _ => panic!("Invalid OptionDataGroup"),
             };
@@ -411,11 +411,7 @@ impl Optimizable for CallButterfly {
         }
     }
 
-    fn create_strategy(
-        &self,
-        option_chain: &OptionChain,
-        legs: &StrategyLegs,
-    ) -> CallButterfly {
+    fn create_strategy(&self, option_chain: &OptionChain, legs: &StrategyLegs) -> CallButterfly {
         let (long_call, short_call_low, short_call_high) = match legs {
             StrategyLegs::ThreeLegs {
                 first,
@@ -1199,15 +1195,15 @@ mod tests_call_butterfly_optimizable {
 
         // Add options with different strikes
         chain.add_option(
-            pos!(95.0),  // strike
-            spos!(6.0),  // call_bid
-            spos!(6.2),  // call_ask
-            spos!(1.0),  // put_bid
-            spos!(1.2),  // put_ask
-            spos!(0.2),  // iv
-            Some(0.4),   // delta
-            spos!(100.0),// volume
-            Some(50),    // open interest
+            pos!(95.0),   // strike
+            spos!(6.0),   // call_bid
+            spos!(6.2),   // call_ask
+            spos!(1.0),   // put_bid
+            spos!(1.2),   // put_ask
+            spos!(0.2),   // iv
+            Some(0.4),    // delta
+            spos!(100.0), // volume
+            Some(50),     // open interest
         );
 
         chain.add_option(
@@ -1249,9 +1245,9 @@ mod tests_call_butterfly_optimizable {
             0.01,
             0.02,
             pos!(1.0),
-            6.2,  // long call ask
-            3.0,  // short call bid low
-            1.0,  // short call bid high
+            6.2, // long call ask
+            3.0, // short call bid low
+            1.0, // short call bid high
             0.1,
             0.1,
             0.1,
@@ -1292,8 +1288,13 @@ mod tests_call_butterfly_optimizable {
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
 
         // Verify the optimization resulted in valid strikes
-        assert!(butterfly.long_call.option.strike_price < butterfly.short_call_low.option.strike_price);
-        assert!(butterfly.short_call_low.option.strike_price < butterfly.short_call_high.option.strike_price);
+        assert!(
+            butterfly.long_call.option.strike_price < butterfly.short_call_low.option.strike_price
+        );
+        assert!(
+            butterfly.short_call_low.option.strike_price
+                < butterfly.short_call_high.option.strike_price
+        );
 
         // Verify the strategy is valid
         assert!(butterfly.validate());
@@ -1309,8 +1310,13 @@ mod tests_call_butterfly_optimizable {
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         // Verify the optimization resulted in valid strikes
-        assert!(butterfly.long_call.option.strike_price < butterfly.short_call_low.option.strike_price);
-        assert!(butterfly.short_call_low.option.strike_price < butterfly.short_call_high.option.strike_price);
+        assert!(
+            butterfly.long_call.option.strike_price < butterfly.short_call_low.option.strike_price
+        );
+        assert!(
+            butterfly.short_call_low.option.strike_price
+                < butterfly.short_call_high.option.strike_price
+        );
 
         // Verify the strategy is valid
         assert!(butterfly.validate());
@@ -1357,12 +1363,16 @@ mod tests_call_butterfly_optimizable {
     #[test]
     fn test_filter_combinations_empty_chain() {
         let butterfly = setup_test_butterfly();
-        let empty_chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
+        let empty_chain =
+            OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
 
         let combinations: Vec<_> = butterfly
             .filter_combinations(&empty_chain, FindOptimalSide::All)
             .collect();
 
-        assert!(combinations.is_empty(), "Empty chain should yield no combinations");
+        assert!(
+            combinations.is_empty(),
+            "Empty chain should yield no combinations"
+        );
     }
 }

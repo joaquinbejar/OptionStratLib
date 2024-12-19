@@ -1,16 +1,16 @@
 use approx::assert_relative_eq;
 use chrono::Utc;
+use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
+use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use std::error::Error;
 use tracing::info;
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::strategies::utils::FindOptimalSide;
 
 #[test]
 fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {

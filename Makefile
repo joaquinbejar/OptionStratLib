@@ -74,12 +74,14 @@ publish: readme coverage
 
 .PHONY: coverage
 coverage:
+	export LOGLEVEL=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
 	cargo tarpaulin --all-features --workspace --timeout 120 --out Xml
 
 .PHONY: coverage-html
 coverage-html:
+	export LOGLEVEL=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
 	cargo tarpaulin --all-features --workspace --timeout 120 --out Html

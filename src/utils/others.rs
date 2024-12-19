@@ -71,14 +71,13 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 //     if positions.is_empty() {
 //         return Err("Vector empty".to_string());
 //     }
-// 
+//
 //     Ok(positions
 //         .iter()
 //         .combinations_with_replacement(n)
 //         .flat_map(|combination| process_combination(&combination))
 //         .collect())
 // }
-
 use rayon::prelude::*;
 
 pub fn process_n_times_iter<T, Y, F>(
@@ -96,10 +95,7 @@ where
     }
 
     // Generamos todas las combinaciones primero
-    let combinations: Vec<_> = positions
-        .iter()
-        .combinations_with_replacement(n)
-        .collect();
+    let combinations: Vec<_> = positions.iter().combinations_with_replacement(n).collect();
 
     // Para usar FnMut en paralelo, necesitamos envolverlo en Mutex
     let process_combination = std::sync::Mutex::new(process_combination);

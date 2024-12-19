@@ -1,13 +1,13 @@
 use approx::assert_relative_eq;
+use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::model::types::PositiveF64;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::strangle::LongStrangle;
-use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::pos;
-use std::error::Error;
-use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::strategies::utils::FindOptimalSide;
+use optionstratlib::utils::logger::setup_logger;
+use std::error::Error;
 
 #[test]
 fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
