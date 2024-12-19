@@ -16,7 +16,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
-    // println!("{}", option_chain);
     let underlying_price = option_chain.underlying_price;
     let mut strategy = BullCallSpread::new(
         "SP500".to_string(),

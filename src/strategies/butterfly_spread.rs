@@ -465,7 +465,10 @@ impl Graph for LongButterflySpread {
                 "Long Call High Strike: ${}",
                 self.long_call_high.option.strike_price
             ),
-            format!("Expire: {}", self.long_call_low.option.expiration_date),
+            format!(
+                "Expire: {}",
+                self.long_call_low.option.expiration_date.get_date_string()
+            ),
         ];
 
         format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))

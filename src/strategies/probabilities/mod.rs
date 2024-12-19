@@ -55,6 +55,7 @@
 //! ### Basic Strategy Analysis
 //!
 //! ```rust
+//! use tracing::info;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
 //! use optionstratlib::model::types::PositiveF64;
@@ -80,7 +81,7 @@
 //!     );
 //! let analysis = strategy.analyze_probabilities(None, None);
 //!
-//! println!("Analysis: {:?}", analysis);
+//! info!("Analysis: {:?}", analysis);
 //! ```
 //!
 //! ### Analysis with Volatility Adjustment
@@ -154,6 +155,7 @@
 //! ### Price Range Probability Analysis
 //!
 //! ```rust
+//! use tracing::info;
 //! use optionstratlib::strategies::probabilities::calculate_price_probability;
 //! use optionstratlib::model::types::ExpirationDate;
 //! use optionstratlib::model::types::PositiveF64;
@@ -168,7 +170,7 @@
 //!     ExpirationDate::Days(30.0),
 //!     None                 // risk-free rate
 //! ).unwrap();
-//! println!("Probabilities: {}, {}, {}", prob_below, prob_in_range, prob_above);
+//! info!("Probabilities: {}, {}, {}", prob_below, prob_in_range, prob_above);
 //! ```
 //!
 //! ## Mathematical Models

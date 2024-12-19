@@ -763,12 +763,13 @@ impl OptionChain {
     /// # Example
     ///
     /// ```rust
+    /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::model::types::PositiveF64;
     /// use optionstratlib::pos;
     /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_iter() {
-    ///     println!("{:?}, {:?}", option1, option2);
+    ///     info!("{:?}, {:?}", option1, option2);
     /// }
     /// ```
     pub fn get_double_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
@@ -793,12 +794,13 @@ impl OptionChain {
     /// # Example
     ///
     /// ```rust
+    /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::model::types::PositiveF64;
     /// use optionstratlib::pos;
     /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_inclusive_iter() {
-    ///     println!("{:?}, {:?}", option1, option2);
+    ///     info!("{:?}, {:?}", option1, option2);
     /// }
     /// ```
     pub fn get_double_inclusive_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
@@ -820,12 +822,13 @@ impl OptionChain {
     /// # Example
     ///
     /// ```rust
+    /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::model::types::PositiveF64;
     /// use optionstratlib::pos;
     /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_iter() {
-    ///     println!("{:?}, {:?}, {:?}", option1, option2, option3);
+    ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
     /// }
     /// ```
     pub fn get_triple_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData)> {
@@ -856,12 +859,13 @@ impl OptionChain {
     /// # Example
     ///
     /// ```rust
+    /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::model::types::PositiveF64;
     /// use optionstratlib::pos;
     /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_inclusive_iter() {
-    ///     println!("{:?}, {:?}, {:?}", option1, option2, option3);
+    ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
     /// }
     /// ```
     pub fn get_triple_inclusive_iter(
@@ -893,12 +897,13 @@ impl OptionChain {
     /// # Example
     ///
     /// ```rust
+    /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::model::types::PositiveF64;
     /// use optionstratlib::pos;
     /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_iter() {
-    ///     println!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
+    ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
     /// }
     /// ```
     pub fn get_quad_iter(
@@ -937,12 +942,13 @@ impl OptionChain {
     /// # Example
     ///
     /// ```rust
+    /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::model::types::PositiveF64;
     /// use optionstratlib::pos;
     /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_inclusive_iter() {
-    ///     println!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
+    ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
     /// }
     /// ```
     pub fn get_quad_inclusive_iter(

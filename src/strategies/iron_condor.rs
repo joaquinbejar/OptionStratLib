@@ -473,7 +473,10 @@ impl Graph for IronCondor {
             format!("Short Put: ${}", self.short_put.option.strike_price),
             format!("Short Call: ${}", self.short_call.option.strike_price),
             format!("Long Call: ${}", self.long_call.option.strike_price),
-            format!("Expire: {}", self.short_put.option.expiration_date),
+            format!(
+                "Expire: {}",
+                self.short_put.option.expiration_date.get_date_string()
+            ),
         ]
         .iter()
         .map(|leg| leg.to_string())
@@ -683,12 +686,6 @@ impl DeltaNeutrality for IronCondor {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-
-        println!(
-            "Net Delta: {} long_call: {}",
-            net_delta,
-            self.long_call.option.delta()
-        );
         vec![
             DeltaAdjustment::BuyOptions {
                 quantity: pos!((net_delta.abs() / self.long_call.option.delta()).abs())

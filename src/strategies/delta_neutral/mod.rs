@@ -34,6 +34,7 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use tracing::info;
 //! use optionstratlib::greeks::equations::{Greek, Greeks};
 //! use optionstratlib::model::types::PositiveF64;
 //! use optionstratlib::pos;
@@ -62,13 +63,13 @@
 //!
 //! // Calculate net delta
 //! let delta_info = strategy.calculate_net_delta();
-//! println!("{}", delta_info);
+//! info!("{}", delta_info);
 //!
 //! // Check delta-neutrality within a 0.1 threshold
 //! if !strategy.is_delta_neutral() {
 //!     let adjustments = strategy.suggest_delta_adjustments();
 //!     for adj in adjustments {
-//!         println!("{:?}", adj);
+//!         info!("{:?}", adj);
 //!     }
 //! }
 //! ```

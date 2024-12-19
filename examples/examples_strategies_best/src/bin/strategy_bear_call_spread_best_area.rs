@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
+    info!("Profit Area: {:.2}%", strategy.profit_area());
 
     if strategy.profit_ratio() > ZERO {
         debug!("Strategy:  {:#?}", strategy);

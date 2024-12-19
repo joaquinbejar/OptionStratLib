@@ -577,7 +577,7 @@ mod tests_bear_call_spread_strategies {
             0.05,                       // risk_free_rate
             0.0,                        // dividend_yield
             pos!(1.0),                  // quantity
-            10.0,                        // premium_short_call
+            10.0,                       // premium_short_call
             5.0,                        // premium_long_call
             0.5,                        // open_fee_short_call
             0.5,                        // close_fee_short_call
@@ -597,7 +597,11 @@ mod tests_bear_call_spread_strategies {
         let spread = create_test_spread();
         let result = spread.max_profit();
         assert!(result.is_ok());
-        assert_relative_eq!(result.unwrap().value(), spread.net_premium_received(), epsilon = 0.0001);
+        assert_relative_eq!(
+            result.unwrap().value(),
+            spread.net_premium_received(),
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -618,8 +622,10 @@ mod tests_bear_call_spread_strategies {
         let result = spread.max_loss();
         assert!(result.is_ok());
 
-        let width = (spread.long_call.option.strike_price - spread.short_call.option.strike_price).value();
-        let expected_loss = width * spread.short_call.option.quantity.value() - spread.net_premium_received();
+        let width =
+            (spread.long_call.option.strike_price - spread.short_call.option.strike_price).value();
+        let expected_loss =
+            width * spread.short_call.option.quantity.value() - spread.net_premium_received();
         assert_relative_eq!(result.unwrap().value(), expected_loss, epsilon = 0.0001);
     }
 
@@ -645,15 +651,22 @@ mod tests_bear_call_spread_strategies {
     #[test]
     fn test_net_premium_received() {
         let spread = create_test_spread();
-        let expected_premium = spread.short_call.net_premium_received() - spread.long_call.net_cost();
-        assert_relative_eq!(spread.net_premium_received(), expected_premium, epsilon = 0.0001);
+        let expected_premium =
+            spread.short_call.net_premium_received() - spread.long_call.net_cost();
+        assert_relative_eq!(
+            spread.net_premium_received(),
+            expected_premium,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
     fn test_fees() {
         let spread = create_test_spread();
-        let expected_fees = spread.short_call.open_fee + spread.short_call.close_fee +
-            spread.long_call.open_fee + spread.long_call.close_fee;
+        let expected_fees = spread.short_call.open_fee
+            + spread.short_call.close_fee
+            + spread.long_call.open_fee
+            + spread.long_call.close_fee;
         assert_relative_eq!(spread.fees(), expected_fees, epsilon = 0.0001);
     }
 
@@ -702,9 +715,13 @@ mod tests_bear_call_spread_strategies {
         assert_eq!(break_even_points.len(), 1);
 
         // Break even should be short strike plus net premium received per contract
-        let expected_break_even = spread.short_call.option.strike_price +
-            pos!(spread.net_premium_received() / spread.short_call.option.quantity.value());
-        assert_relative_eq!(break_even_points[0].value(), expected_break_even.value(), epsilon = 0.0001);
+        let expected_break_even = spread.short_call.option.strike_price
+            + pos!(spread.net_premium_received() / spread.short_call.option.quantity.value());
+        assert_relative_eq!(
+            break_even_points[0].value(),
+            expected_break_even.value(),
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -719,7 +736,7 @@ mod tests_bear_call_spread_strategies {
             0.20,
             0.05,
             0.0,
-            pos!(2.0),    // quantity = 2
+            pos!(2.0), // quantity = 2
             2.0,
             1.0,
             0.5,
@@ -730,12 +747,16 @@ mod tests_bear_call_spread_strategies {
 
         // Check that all calculations scale properly with quantity
         let base_spread = create_test_spread();
-        assert_relative_eq!(spread.max_profit().unwrap().value(), 
-                          base_spread.max_profit().unwrap().value() * 2.0, 
-                          epsilon = 0.0001);
-        assert_relative_eq!(spread.max_loss().unwrap().value(), 
-                          base_spread.max_loss().unwrap().value() * 2.0, 
-                          epsilon = 0.0001);
+        assert_relative_eq!(
+            spread.max_profit().unwrap().value(),
+            base_spread.max_profit().unwrap().value() * 2.0,
+            epsilon = 0.0001
+        );
+        assert_relative_eq!(
+            spread.max_loss().unwrap().value(),
+            base_spread.max_loss().unwrap().value() * 2.0,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -743,8 +764,8 @@ mod tests_bear_call_spread_strategies {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            pos!(90.0),   // wider spread
-            pos!(110.0),  // wider spread
+            pos!(90.0),  // wider spread
+            pos!(110.0), // wider spread
             ExpirationDate::Days(30.0),
             0.20,
             0.05,
@@ -767,9 +788,9 @@ mod tests_bear_call_spread_strategies {
 #[cfg(test)]
 mod tests_bear_call_spread_positionable {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::model::option::Options;
     use crate::model::position::Position;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use chrono::Utc;
 
     // Helper function to create a test option
@@ -941,8 +962,6 @@ mod tests_bear_call_spread_positionable {
         // Replace positions
         assert!(spread.add_position(&new_short).is_ok());
         assert!(spread.add_position(&new_long).is_ok());
-
-
     }
 
     #[test]
@@ -1019,8 +1038,8 @@ mod tests_bear_call_spread_validable {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            pos!(105.0),    // short strike higher than long strike
-            pos!(95.0),     // long strike lower than short strike
+            pos!(105.0), // short strike higher than long strike
+            pos!(95.0),  // long strike lower than short strike
             ExpirationDate::Days(30.0),
             0.20,
             0.05,
@@ -1041,8 +1060,8 @@ mod tests_bear_call_spread_validable {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            pos!(100.0),    // both strikes equal
-            pos!(100.0),    // both strikes equal
+            pos!(100.0), // both strikes equal
+            pos!(100.0), // both strikes equal
             ExpirationDate::Days(30.0),
             0.20,
             0.05,
@@ -1082,7 +1101,7 @@ mod tests_bear_call_spread_validable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(0.0),  // Invalid expiration (0 days)
+            ExpirationDate::Days(0.0), // Invalid expiration (0 days)
             0.20,
             0.05,
             0.0,
@@ -1105,7 +1124,7 @@ mod tests_bear_call_spread_validable {
             pos!(95.0),
             pos!(105.0),
             ExpirationDate::Days(30.0),
-            -0.20,          // Invalid negative volatility
+            -0.20, // Invalid negative volatility
             0.05,
             0.0,
             pos!(1.0),
@@ -1123,7 +1142,7 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_underlying_price() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            pos!(0.0),      // Invalid underlying price
+            pos!(0.0), // Invalid underlying price
             pos!(95.0),
             pos!(105.0),
             ExpirationDate::Days(30.0),
@@ -1146,8 +1165,8 @@ mod tests_bear_call_spread_validable {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            pos!(99.999),   // Strikes very close to each other
-            pos!(100.001),  // but technically different
+            pos!(99.999),  // Strikes very close to each other
+            pos!(100.001), // but technically different
             ExpirationDate::Days(30.0),
             0.20,
             0.05,
@@ -1175,7 +1194,7 @@ mod tests_bear_call_spread_validable {
             0.20,
             0.05,
             0.0,
-            pos!(2.0),      // Different quantity
+            pos!(2.0), // Different quantity
             2.0,
             1.0,
             0.0,
@@ -1251,7 +1270,8 @@ mod tests_bear_call_spread_profit {
         // At long strike, both options are in-the-money
         let short_intrinsic = pos!(105.0) - spread.short_call.option.strike_price;
         let long_intrinsic = pos!(105.0) - spread.long_call.option.strike_price;
-        let expected_profit = spread.net_premium_received() - short_intrinsic.value() + long_intrinsic.value();
+        let expected_profit =
+            spread.net_premium_received() - short_intrinsic.value() + long_intrinsic.value();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
@@ -1284,7 +1304,7 @@ mod tests_bear_call_spread_profit {
             0.20,
             0.05,
             0.0,
-            pos!(2.0),    // quantity = 2
+            pos!(2.0), // quantity = 2
             2.0,
             1.0,
             0.0,
@@ -1297,7 +1317,11 @@ mod tests_bear_call_spread_profit {
         // With quantity = 2, profit should be double
         let expected_profit = spread.net_premium_received();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
-        assert_relative_eq!(profit, 2.0 * create_test_spread().calculate_profit_at(pos!(90.0)), epsilon = 0.0001);
+        assert_relative_eq!(
+            profit,
+            2.0 * create_test_spread().calculate_profit_at(pos!(90.0)),
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -1314,10 +1338,10 @@ mod tests_bear_call_spread_profit {
             pos!(1.0),
             2.0,
             1.0,
-            0.5,     // open_fee_short_call
-            0.5,     // close_fee_short_call
-            0.5,     // open_fee_long_call
-            0.5,     // close_fee_long_call
+            0.5, // open_fee_short_call
+            0.5, // close_fee_short_call
+            0.5, // open_fee_long_call
+            0.5, // close_fee_long_call
         );
 
         let profit = spread.calculate_profit_at(pos!(90.0));
@@ -1332,8 +1356,8 @@ mod tests_bear_call_spread_profit {
 mod tests_bear_call_spread_optimizable {
     use super::*;
     use crate::model::types::{ExpirationDate, PositiveF64};
-    use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
     use crate::spos;
+    use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 
     // Helper function to create a mock OptionChain for testing
     fn create_mock_option_chain() -> OptionChain {
@@ -1341,15 +1365,15 @@ mod tests_bear_call_spread_optimizable {
 
         // Add options with different strikes and prices
         chain.add_option(
-            pos!(95.0),  // strike
-            spos!(6.0),  // call_bid
-            spos!(6.2),  // call_ask
-            spos!(1.0),  // put_bid
-            spos!(1.2),  // put_ask
-            spos!(0.2),  // implied_vol
-            Some(0.7),   // delta
+            pos!(95.0),   // strike
+            spos!(6.0),   // call_bid
+            spos!(6.2),   // call_ask
+            spos!(1.0),   // put_bid
+            spos!(1.2),   // put_ask
+            spos!(0.2),   // implied_vol
+            Some(0.7),    // delta
             spos!(100.0), // volume
-            Some(50),    // open_interest
+            Some(50),     // open_interest
         );
 
         chain.add_option(
@@ -1424,7 +1448,7 @@ mod tests_bear_call_spread_optimizable {
                     // Both options should have valid implied volatility
                     assert!(short.implied_volatility.is_some());
                     assert!(long.implied_volatility.is_some());
-                },
+                }
                 _ => panic!("Expected Two-leg combination"),
             }
         }
@@ -1476,8 +1500,14 @@ mod tests_bear_call_spread_optimizable {
 
         // Verify the new strategy
         assert!(new_strategy.validate());
-        assert_eq!(new_strategy.short_call.option.strike_price, short_option.strike_price);
-        assert_eq!(new_strategy.long_call.option.strike_price, long_option.strike_price);
+        assert_eq!(
+            new_strategy.short_call.option.strike_price,
+            short_option.strike_price
+        );
+        assert_eq!(
+            new_strategy.long_call.option.strike_price,
+            long_option.strike_price
+        );
         assert!(new_strategy.max_profit().is_ok());
         assert!(new_strategy.max_loss().is_ok());
     }
@@ -1485,7 +1515,8 @@ mod tests_bear_call_spread_optimizable {
     #[test]
     fn test_filter_combinations_empty_chain() {
         let strategy = create_test_strategy();
-        let empty_chain = OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
+        let empty_chain =
+            OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
         let combinations: Vec<_> = strategy
             .filter_combinations(&empty_chain, FindOptimalSide::All)
             .collect();
@@ -1499,8 +1530,8 @@ mod tests_bear_call_spread_optimizable {
         // Add an option with invalid prices
         chain.add_option(
             pos!(110.0),
-            None,        // Invalid call_bid
-            None,        // Invalid call_ask
+            None, // Invalid call_bid
+            None, // Invalid call_ask
             spos!(1.0),
             spos!(1.2),
             spos!(0.2),
@@ -1520,7 +1551,7 @@ mod tests_bear_call_spread_optimizable {
                 OptionDataGroup::Two(short, long) => {
                     assert!(short.call_bid.is_some());
                     assert!(long.call_ask.is_some());
-                },
+                }
                 _ => panic!("Expected Two-leg combination"),
             }
         }
@@ -1529,22 +1560,17 @@ mod tests_bear_call_spread_optimizable {
     #[test]
     fn test_find_optimal_no_valid_combinations() {
         let mut strategy = create_test_strategy();
-        let mut empty_chain = OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
+        let mut empty_chain =
+            OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
         // Add invalid options
-        empty_chain.add_option(
-            pos!(95.0),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        );
+        empty_chain.add_option(pos!(95.0), None, None, None, None, None, None, None, None);
 
         // Should not panic when no valid combinations exist
-        strategy.find_optimal(&empty_chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        strategy.find_optimal(
+            &empty_chain,
+            FindOptimalSide::All,
+            OptimizationCriteria::Ratio,
+        );
 
         // Strategy should remain unchanged
         assert!(strategy.validate());
@@ -1558,9 +1584,13 @@ mod tests_bear_call_spread_optimizable {
 
         // Test with invalid leg configuration
         let result = std::panic::catch_unwind(|| {
-            strategy.create_strategy(&chain, &StrategyLegs::TwoLegs { 
-                first: chain.options.iter().next().unwrap(), 
-                second: chain.options.iter().next().unwrap() });
+            strategy.create_strategy(
+                &chain,
+                &StrategyLegs::TwoLegs {
+                    first: chain.options.iter().next().unwrap(),
+                    second: chain.options.iter().next().unwrap(),
+                },
+            );
         });
 
         assert!(result.is_err());

@@ -92,6 +92,7 @@
 //! ### Example: Time Frame Usage
 //!
 //! ```rust
+//! use tracing::info;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let timeframes = vec![
@@ -102,7 +103,7 @@
 //! ];
 //!
 //! for tf in timeframes {
-//!     println!("Periods per year: {}", tf.periods_per_year());
+//!     info!("Periods per year: {}", tf.periods_per_year());
 //! }
 //! ```
 //!

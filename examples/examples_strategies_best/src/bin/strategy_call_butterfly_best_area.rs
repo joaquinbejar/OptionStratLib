@@ -13,7 +13,6 @@ use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
-use std::env;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -33,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.05,      // risk_free_rate
         ZERO,      // dividend_yield
         pos!(2.0), // long quantity
-        ZERO, // short_quantity
+        ZERO,      // short_quantity
         ZERO,      // premium_long_itm
         ZERO,      // premium_long_otm
         ZERO,      // premium_short
@@ -41,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.78,      // close_fee_long
         0.73,      // close_fee_short
         0.73,      // close_fee_short
-        0.73,     // close_fee_short
+        0.73,      // close_fee_short
     );
 
     strategy.best_area(

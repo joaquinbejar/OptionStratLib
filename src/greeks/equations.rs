@@ -11,7 +11,7 @@ use crate::model::types::OptionStyle;
 use tracing::trace;
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Greek {
     pub delta: f64,
     pub gamma: f64,
