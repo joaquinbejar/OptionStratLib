@@ -4,7 +4,7 @@
    Date: 25/9/24
 ******************************************************************************/
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
-use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::chain::OptionChain;
 use crate::constants::DARK_BLUE;
 use crate::constants::{DARK_GREEN, ZERO};
 use crate::greeks::equations::{Greek, Greeks};
@@ -24,7 +24,9 @@ use crate::{pos, spos};
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
-use tracing::{debug, error};
+use tracing::{error, info};
+use crate::chains::StrategyLegs;
+use crate::chains::utils::OptionDataGroup;
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -169,63 +171,7 @@ impl CallButterfly {
         strategy
     }
 
-    fn is_valid_short_option(&self, short_option: &OptionData, side: &FindOptimalSide) -> bool {
-        match side {
-            FindOptimalSide::Upper => short_option.strike_price >= self.underlying_price,
-            FindOptimalSide::Lower => short_option.strike_price <= self.underlying_price,
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                short_option.strike_price >= *start && short_option.strike_price <= *end
-            }
-        }
-    }
 
-    fn are_valid_prices(
-        &self,
-        long_itm: &OptionData,
-        long_otm: &OptionData,
-        short_option: &OptionData,
-    ) -> bool {
-        if !long_itm.valid_call() || !long_otm.valid_call() || !short_option.valid_call() {
-            return false;
-        };
-        long_itm.call_ask.unwrap() > PZERO
-            && long_itm.call_ask.unwrap() > PZERO
-            && short_option.call_bid.unwrap() > PZERO
-    }
-
-    fn create_strategy(
-        &self,
-        option_chain: &OptionChain,
-        long_call: &OptionData,
-        short_call_low: &OptionData,
-        short_call_high: &OptionData,
-    ) -> CallButterfly {
-        if !long_call.validate() || !short_call_low.validate() || !short_call_high.validate() {
-            panic!("Invalid options");
-        }
-        CallButterfly::new(
-            option_chain.symbol.clone(),
-            option_chain.underlying_price,
-            long_call.strike_price,
-            short_call_low.strike_price,
-            short_call_high.strike_price,
-            self.long_call.option.expiration_date.clone(),
-            long_call.implied_volatility.unwrap().value(),
-            self.long_call.option.risk_free_rate,
-            self.long_call.option.dividend_yield,
-            self.long_call.option.quantity,
-            long_call.call_ask.unwrap().value(),
-            short_call_low.call_bid.unwrap().value(),
-            short_call_high.call_bid.unwrap().value(),
-            self.long_call.open_fee,
-            self.long_call.close_fee,
-            self.short_call_low.open_fee,
-            self.short_call_low.close_fee,
-            self.short_call_high.open_fee,
-            self.short_call_high.close_fee,
-        )
-    }
 }
 
 impl Default for CallButterfly {
@@ -391,63 +337,118 @@ impl Validable for CallButterfly {
 
 impl Optimizable for CallButterfly {
     type Strategy = CallButterfly;
+
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        let underlying_price = self.get_underlying_price();
+        let strategy = self.clone();
+        option_chain
+            .get_triple_iter()
+            // Filter out invalid combinations based on FindOptimalSide
+            .filter(move |(long, short_low, short_high)| {
+                long.is_valid_optimal_side(underlying_price, &side)
+                    && short_low.is_valid_optimal_side(underlying_price, &side)
+                    && short_high.is_valid_optimal_side(underlying_price, &side)
+            })
+            // Filter out options with invalid bid/ask prices
+            .filter(|(long, short_low, short_high)| {
+                long.call_ask.unwrap_or(PZERO) > PZERO 
+                    && short_low.call_bid.unwrap_or(PZERO) > PZERO
+                    && short_high.call_bid.unwrap_or(PZERO) > PZERO
+            })
+            // Filter out options that don't meet strategy constraints
+            .filter(move |(long, short_low, short_high)| {
+                let legs = StrategyLegs::ThreeLegs {
+                    first: long,
+                    second: short_low,
+                    third: short_high,
+                };
+                let strategy = strategy.create_strategy(option_chain, &legs);
+                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+            })
+            // Map to OptionDataGroup
+            .map(move |(long, short_low, short_high)| OptionDataGroup::Three(long, short_low, short_high))
+    }
+
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = f64::NEG_INFINITY;
+        let strategy_clone = self.clone();
+        let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
-        for short_index in 1..options.len() - 1 {
-            let short_option = &options[short_index];
-            if !self.is_valid_short_option(short_option, &side) {
-                debug!("Skipping short option: {}", short_option.strike_price);
-                continue;
-            }
+        for option_data_group in options_iter {
+            // Unpack the OptionDataGroup into individual options
+            let (long, short_low, short_high)= match option_data_group {
+                OptionDataGroup::Three(first, second, third) => (first, second, third),
+                _ => panic!("Invalid OptionDataGroup"),
+            };
 
-            for long_itm_index in 0..short_index {
-                let long_otm_index = short_index + (short_index - long_itm_index);
+            let legs = StrategyLegs::ThreeLegs {
+                first: long,
+                second: short_low,
+                third: short_high,
+            };
+            let strategy = self.create_strategy(option_chain, &legs);
+            // Calculate the current value based on the optimization criteria
+            let current_value = match criteria {
+                OptimizationCriteria::Ratio => strategy.profit_ratio(),
+                OptimizationCriteria::Area => strategy.profit_area(),
+            };
 
-                if long_otm_index >= options.len() {
-                    continue;
-                }
-
-                let long_itm = &options[long_itm_index];
-                let long_otm = &options[long_otm_index];
-
-                if !self.are_valid_prices(long_itm, long_otm, short_option) {
-                    continue;
-                }
-
-                let strategy = self.create_strategy(option_chain, long_itm, long_otm, short_option);
-
-                if !strategy.validate() {
-                    panic!("Invalid strategy");
-                }
-
-                let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                    OptimizationCriteria::Area => strategy.profit_area(),
-                };
-
-                debug!(
-                    "{}: {:.2}%",
-                    if matches!(criteria, OptimizationCriteria::Ratio) {
-                        "Ratio"
-                    } else {
-                        "Area"
-                    },
-                    current_value
-                );
-
-                if current_value > best_value {
-                    best_value = current_value;
-                    self.clone_from(&strategy);
-                }
+            if current_value > best_value {
+                // Update the best value and replace the current strategy
+                info!("Found better value: {}", current_value);
+                best_value = current_value;
+                *self = strategy.clone();
             }
         }
+    }
+
+    fn create_strategy(
+        &self,
+        option_chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> CallButterfly {
+        let (long_call, short_call_low, short_call_high) = match legs {
+            StrategyLegs::ThreeLegs {
+                first,
+                second,
+                third,
+            } => (first, second, third),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
+
+        if !long_call.validate() || !short_call_low.validate() || !short_call_high.validate() {
+            panic!("Invalid options");
+        }
+        CallButterfly::new(
+            option_chain.symbol.clone(),
+            option_chain.underlying_price,
+            long_call.strike_price,
+            short_call_low.strike_price,
+            short_call_high.strike_price,
+            self.long_call.option.expiration_date.clone(),
+            long_call.implied_volatility.unwrap().value(),
+            self.long_call.option.risk_free_rate,
+            self.long_call.option.dividend_yield,
+            self.long_call.option.quantity,
+            long_call.call_ask.unwrap().value(),
+            short_call_low.call_bid.unwrap().value(),
+            short_call_high.call_bid.unwrap().value(),
+            self.long_call.open_fee,
+            self.long_call.close_fee,
+            self.short_call_low.open_fee,
+            self.short_call_low.close_fee,
+            self.short_call_high.open_fee,
+            self.short_call_high.close_fee,
+        )
     }
 }
 
@@ -1185,5 +1186,183 @@ mod tests_iron_condor_delta_size {
         assert!(strategy.is_delta_neutral());
         let suggestion = strategy.suggest_delta_adjustments();
         assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_call_butterfly_optimizable {
+    use super::*;
+    use approx::assert_relative_eq;
+
+    fn create_test_option_chain() -> OptionChain {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
+
+        // Add options with different strikes
+        chain.add_option(
+            pos!(95.0),  // strike
+            spos!(6.0),  // call_bid
+            spos!(6.2),  // call_ask
+            spos!(1.0),  // put_bid
+            spos!(1.2),  // put_ask
+            spos!(0.2),  // iv
+            Some(0.4),   // delta
+            spos!(100.0),// volume
+            Some(50),    // open interest
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(0.2),
+            Some(0.5),
+            spos!(200.0),
+            Some(100),
+        );
+
+        chain.add_option(
+            pos!(105.0),
+            spos!(1.0),
+            spos!(1.2),
+            spos!(6.0),
+            spos!(6.2),
+            spos!(0.2),
+            Some(0.6),
+            spos!(100.0),
+            Some(50),
+        );
+
+        chain
+    }
+
+    fn setup_test_butterfly() -> CallButterfly {
+        CallButterfly::new(
+            "TEST".to_string(),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(100.0),
+            pos!(105.0),
+            ExpirationDate::Days(30.0),
+            0.2,
+            0.01,
+            0.02,
+            pos!(1.0),
+            6.2,  // long call ask
+            3.0,  // short call bid low
+            1.0,  // short call bid high
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+        )
+    }
+
+    #[test]
+    fn test_filter_combinations() {
+        let butterfly = setup_test_butterfly();
+        let chain = create_test_option_chain();
+
+        let combinations: Vec<_> = butterfly
+            .filter_combinations(&chain, FindOptimalSide::All)
+            .collect();
+
+        assert!(!combinations.is_empty(), "Should find valid combinations");
+
+        // Test first combination
+        if let OptionDataGroup::Three(long, short_low, short_high) = &combinations[0] {
+            assert!(long.strike_price < short_low.strike_price);
+            assert!(short_low.strike_price < short_high.strike_price);
+            assert!(long.call_ask.is_some());
+            assert!(short_low.call_bid.is_some());
+            assert!(short_high.call_bid.is_some());
+        } else {
+            panic!("Expected Three legs in OptionDataGroup");
+        }
+    }
+
+    #[test]
+    fn test_find_optimal_ratio() {
+        let mut butterfly = setup_test_butterfly();
+        let chain = create_test_option_chain();
+
+        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+
+        // Verify the optimization resulted in valid strikes
+        assert!(butterfly.long_call.option.strike_price < butterfly.short_call_low.option.strike_price);
+        assert!(butterfly.short_call_low.option.strike_price < butterfly.short_call_high.option.strike_price);
+
+        // Verify the strategy is valid
+        assert!(butterfly.validate());
+        assert!(butterfly.max_profit().is_ok());
+        assert!(butterfly.max_loss().is_ok());
+    }
+
+    #[test]
+    fn test_find_optimal_area() {
+        let mut butterfly = setup_test_butterfly();
+        let chain = create_test_option_chain();
+
+        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+
+        // Verify the optimization resulted in valid strikes
+        assert!(butterfly.long_call.option.strike_price < butterfly.short_call_low.option.strike_price);
+        assert!(butterfly.short_call_low.option.strike_price < butterfly.short_call_high.option.strike_price);
+
+        // Verify the strategy is valid
+        assert!(butterfly.validate());
+        assert!(butterfly.max_profit().is_ok());
+        assert!(butterfly.max_loss().is_ok());
+    }
+
+    #[test]
+    fn test_create_strategy() {
+        let butterfly = setup_test_butterfly();
+        let chain = create_test_option_chain();
+
+        let legs = StrategyLegs::ThreeLegs {
+            first: chain.options.iter().next().unwrap(),
+            second: chain.options.iter().nth(1).unwrap(),
+            third: chain.options.iter().nth(2).unwrap(),
+        };
+
+        let new_strategy = butterfly.create_strategy(&chain, &legs);
+
+        // Verify the new strategy has correct properties
+        assert_relative_eq!(
+            new_strategy.get_underlying_price().value(),
+            100.0,
+            epsilon = 0.001
+        );
+        assert!(new_strategy.validate());
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid number of legs for this strategy")]
+    fn test_create_strategy_invalid_legs() {
+        let butterfly = setup_test_butterfly();
+        let chain = create_test_option_chain();
+
+        let legs = StrategyLegs::TwoLegs {
+            first: chain.options.iter().next().unwrap(),
+            second: chain.options.iter().nth(1).unwrap(),
+        };
+
+        butterfly.create_strategy(&chain, &legs); // Should panic
+    }
+
+    #[test]
+    fn test_filter_combinations_empty_chain() {
+        let butterfly = setup_test_butterfly();
+        let empty_chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
+
+        let combinations: Vec<_> = butterfly
+            .filter_combinations(&empty_chain, FindOptimalSide::All)
+            .collect();
+
+        assert!(combinations.is_empty(), "Empty chain should yield no combinations");
     }
 }
