@@ -686,12 +686,6 @@ impl DeltaNeutrality for IronCondor {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-
-        println!(
-            "Net Delta: {} long_call: {}",
-            net_delta,
-            self.long_call.option.delta()
-        );
         vec![
             DeltaAdjustment::BuyOptions {
                 quantity: pos!((net_delta.abs() / self.long_call.option.delta()).abs())

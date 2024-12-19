@@ -298,6 +298,7 @@ impl Optimizable for BullPutSpread {
     /// # Examples
     ///
     /// ```rust
+    /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::chains::utils::OptionDataGroup;
     /// use optionstratlib::model::types::ExpirationDate;
@@ -335,7 +336,7 @@ impl Optimizable for BullPutSpread {
     ///        OptionDataGroup::Two(first, second) => (first, second),
     ///       _ => panic!("Invalid OptionDataGroup"),
     ///    };
-    ///    println!("Long Option: {:?}, Short Option: {:?}", long, short);
+    ///    info!("Long Option: {:?}, Short Option: {:?}", long, short);
     /// }
     /// ```
     ///

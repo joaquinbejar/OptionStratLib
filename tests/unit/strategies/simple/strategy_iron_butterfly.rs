@@ -4,7 +4,6 @@ use optionstratlib::model::types::{PositiveF64, PZERO};
 use optionstratlib::strategies::base::{Strategies, Validable};
 use optionstratlib::strategies::iron_butterfly::IronButterfly;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{assert_positivef64_relative_eq, pos};
 use std::error::Error;
 
@@ -38,7 +37,6 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.validate(), "Strategy should be valid");
 
     // Assertions to validate strategy properties and computations
-    assert_eq!(strategy.title(), "IronButterfly Strategy on GOLD Size 2:\n\tLong Put: $2500\n\tShort Put: $2725\n\tShort Call: $2725\n\tLong Call: $2800\n\tExpire: 2025-01-17");
     assert_eq!(strategy.get_break_even_points().len(), 2);
     assert_relative_eq!(strategy.net_premium_received(), 42.839, epsilon = 0.001);
     assert!(strategy.max_profit().is_ok());

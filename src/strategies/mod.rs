@@ -41,6 +41,7 @@
 //! Example usage of the Bull Call Spread strategy:
 //!
 //! ```rust
+//! use tracing::info;
 //! use optionstratlib::model::types::{ExpirationDate, PZERO};
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 //! use optionstratlib::model::types::PositiveF64;
@@ -67,7 +68,7 @@
 //!
 //! let profit = spread.max_profit().unwrap_or(PZERO);
 //! let loss = spread.max_loss().unwrap_or(PZERO);
-//! println!("Max Profit: {}, Max Loss: {}", profit, loss);
+//! info!("Max Profit: {}, Max Loss: {}", profit, loss);
 //! ```
 //!
 //! Refer to the documentation of each sub-module for more details on the specific
@@ -145,6 +146,7 @@
 //! //! Example usage of the Iron Condor strategy:
 //!
 //! ```rust
+//! use tracing::info;
 //! use optionstratlib::model::types::{ExpirationDate, PZERO};
 //! use optionstratlib::strategies::iron_condor::IronCondor;
 //! use optionstratlib::model::types::PositiveF64;
@@ -173,7 +175,7 @@
 //!
 //! let max_profit = condor.max_profit().unwrap_or(PZERO);
 //! let max_loss = condor.max_loss().unwrap_or(PZERO);
-//! println!("Max Profit: {}, Max Loss: {}", max_profit, max_loss);
+//! info!("Max Profit: {}, Max Loss: {}", max_profit, max_loss);
 //! ```
 //!
 //! Refer to the documentation of each sub-module for more details on the specific

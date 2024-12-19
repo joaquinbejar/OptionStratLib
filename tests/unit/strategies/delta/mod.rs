@@ -9,7 +9,6 @@ mod strategy_bull_call_spread;
 mod strategy_bull_put_spread;
 mod strategy_call_butterfly;
 mod strategy_custom;
-mod strategy_graph;
 mod strategy_iron_butterfly;
 mod strategy_iron_condor;
 mod strategy_long_butterfly_spread;

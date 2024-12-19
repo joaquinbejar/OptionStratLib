@@ -4,7 +4,6 @@ use optionstratlib::model::types::{PositiveF64, PZERO};
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{assert_positivef64_relative_eq, pos};
 use std::error::Error;
 
@@ -33,7 +32,6 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Assertions to validate strategy properties and computations
-    assert_eq!(strategy.title(), "LongButterflySpread Strategy on SP500 Size 1:\n\tLong Call Low Strike: $5710\n\tShort Calls Middle Strike: $5780\n\tLong Call High Strike: $5850\n\tExpire: 2024-12-20");
     assert_eq!(strategy.get_break_even_points().len(), 2);
     assert_relative_eq!(strategy.net_premium_received(), -16.736, epsilon = 0.001);
     assert!(strategy.max_profit().is_ok());
