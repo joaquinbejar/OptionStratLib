@@ -3,12 +3,26 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
+use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use crate::pos;
 use std::collections::BTreeSet;
 use std::fmt::Display;
 
+#[derive(Debug)]
+pub enum OptionDataGroup<'a> {
+    One(&'a OptionData),
+    Two(&'a OptionData, &'a OptionData),
+    Three(&'a OptionData, &'a OptionData, &'a OptionData),
+    Four(
+        &'a OptionData,
+        &'a OptionData,
+        &'a OptionData,
+        &'a OptionData,
+    ),
+    Any(Vec<&'a OptionData>),
+}
 pub struct OptionChainBuildParams {
     pub(crate) symbol: String,
     pub(crate) volume: Option<PositiveF64>,
@@ -118,7 +132,7 @@ impl Display for OptionDataPriceParams {
 }
 
 pub trait OptionChainParams {
-    fn get_params(&self) -> Result<OptionDataPriceParams, String>;
+    fn get_params(&self, strike_price: PositiveF64) -> Result<OptionDataPriceParams, String>;
 }
 
 /// Parameters for generating random positions in an option chain

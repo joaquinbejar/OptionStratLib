@@ -35,7 +35,9 @@
 //! let chain = OptionChain::new(
 //!     "SP500",
 //!     PositiveF64::new(100.0).unwrap(),
-//!     "2024-12-31".to_string()
+//!     "2024-12-31".to_string(),
+//!     None,
+//!     None
 //! );
 //!
 //! // Build chain with specific parameters

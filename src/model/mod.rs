@@ -69,6 +69,7 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use tracing::info;
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::pos;
@@ -89,8 +90,8 @@
 //!     None,
 //! );
 //!
-//! println!("Option Details: {}", option);
-//! println!("Debug View: {:?}", option);
+//! info!("Option Details: {}", option);
+//! info!("Debug View: {:?}", option);
 //! ```
 
 mod format;

@@ -1,6 +1,8 @@
 # Makefile for common tasks in a Rust project
 # Detect current branch
 CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+ZIP_NAME = OptionStratLib.zip
+
 
 # Default target
 .PHONY: all
@@ -18,7 +20,7 @@ release:
 # Run tests
 .PHONY: test
 test:
-	cargo test
+	LOGLEVEL=WARN cargo test
 
 # Format the code
 .PHONY: fmt
@@ -103,3 +105,14 @@ readme: create-doc
 .PHONY: check-spanish
 check-spanish:
 	cd scripts && python3 spanish.py ../src && cd ..
+	
+.PHONY: zip
+zip:
+	@echo "Creating $(ZIP_NAME) without any 'target' directories, 'Cargo.lock', and hidden files..."
+	@find . -type f \
+		! -path "*/target/*" \
+		! -path "./.*" \
+		! -name "Cargo.lock" \
+		! -name ".*" \
+		| zip -@ $(ZIP_NAME)
+	@echo "$(ZIP_NAME) created successfully."

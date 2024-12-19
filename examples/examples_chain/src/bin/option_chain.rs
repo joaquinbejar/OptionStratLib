@@ -11,7 +11,13 @@ use tracing::info;
 
 fn main() {
     setup_logger();
-    let mut chain = OptionChain::new("SP500", pos!(5781.88), "18 oct 2024".to_string());
+    let mut chain = OptionChain::new(
+        "SP500",
+        pos!(5781.88),
+        "18 oct 2024".to_string(),
+        None,
+        None,
+    );
 
     chain.add_option(
         pos!(5520.0),

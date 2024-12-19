@@ -84,6 +84,7 @@
 //! ### Using the Iterator Interface
 //!
 //! ```rust
+//! use tracing::info;
 //! use optionstratlib::model::types::PositiveF64;
 //! use optionstratlib::utils::time::TimeFrame;
 //! use optionstratlib::pos;
@@ -109,7 +110,7 @@
 //!
 //! // Iterate through the price path
 //! for params in &mut walk {
-//!     println!(
+//!     info!(
 //!         "Price: {}, Volatility: {:?}",
 //!         params.get_underlying_price(),
 //!         params.get_implied_volatility()

@@ -440,7 +440,7 @@ impl Graph for PoorMansCoveredCall {
             ),
             format!(
                 "Short Call Expiry: {}",
-                self.short_call.option.expiration_date
+                self.short_call.option.expiration_date.get_date_string()
             ),
         ]
         .iter()
@@ -840,7 +840,7 @@ mod tests_pmcc_optimization {
     use crate::spos;
 
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string());
+        let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string(), None, None);
 
         // Add options at various strikes
         for strike in [140.0, 145.0, 150.0, 155.0, 160.0].iter() {

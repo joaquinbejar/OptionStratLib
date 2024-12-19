@@ -1,5 +1,6 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
+use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, PZERO};
 use optionstratlib::pos;
@@ -34,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.82,      // close_fee_short_put
     );
     // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(5700.0), pos!(6100.0)));
-    strategy.best_area(&option_chain, FindOptimalSide::All);
+    strategy.best_area(&option_chain, FindOptimalSide::Upper);
     debug!("Strategy:  {:#?}", strategy);
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(PZERO);
@@ -63,6 +64,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             (1400, 933),
         )?;
     }
+
+    info!("Greeks:  {:#?}", strategy.greeks());
 
     Ok(())
 }

@@ -59,23 +59,58 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 /// # Errors:
 /// This function will return an error if the `positions` slice is empty.
 ///
+// pub fn process_n_times_iter<T, Y, F>(
+//     positions: &[T],
+//     n: usize,
+//     mut process_combination: F,
+// ) -> Result<Vec<Y>, String>
+// where
+//     F: FnMut(&[&T]) -> Vec<Y>,
+//     T: Clone,
+// {
+//     if positions.is_empty() {
+//         return Err("Vector empty".to_string());
+//     }
+// 
+//     Ok(positions
+//         .iter()
+//         .combinations_with_replacement(n)
+//         .flat_map(|combination| process_combination(&combination))
+//         .collect())
+// }
+
+use rayon::prelude::*;
+
 pub fn process_n_times_iter<T, Y, F>(
     positions: &[T],
     n: usize,
-    mut process_combination: F,
+    process_combination: F,
 ) -> Result<Vec<Y>, String>
 where
-    F: FnMut(&[&T]) -> Vec<Y>,
-    T: Clone,
+    F: FnMut(&[&T]) -> Vec<Y> + Send + Sync, // Mantenemos FnMut
+    T: Clone + Send + Sync,
+    Y: Send,
 {
     if positions.is_empty() {
         return Err("Vector empty".to_string());
     }
 
-    Ok(positions
+    // Generamos todas las combinaciones primero
+    let combinations: Vec<_> = positions
         .iter()
         .combinations_with_replacement(n)
-        .flat_map(|combination| process_combination(&combination))
+        .collect();
+
+    // Para usar FnMut en paralelo, necesitamos envolverlo en Mutex
+    let process_combination = std::sync::Mutex::new(process_combination);
+
+    // Procesamos en paralelo usando el Mutex
+    Ok(combinations
+        .par_iter()
+        .flat_map(|combination| {
+            let mut closure = process_combination.lock().unwrap();
+            closure(combination)
+        })
         .collect())
 }
 
@@ -224,6 +259,7 @@ mod tests_get_random_element {
         }
     }
 }
+
 #[cfg(test)]
 mod tests_process_n_times_iter {
     use super::*;

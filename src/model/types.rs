@@ -10,6 +10,7 @@ use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
 
 pub const PZERO: PositiveF64 = PositiveF64(ZERO);
+pub const INFINITY: PositiveF64 = PositiveF64(f64::INFINITY);
 pub const SIZE_ONE: PositiveF64 = PositiveF64(1.0);
 pub const P_INFINITY: PositiveF64 = PositiveF64(f64::INFINITY);
 
@@ -374,6 +375,16 @@ impl ExpirationDate {
     pub(crate) fn get_date_string(&self) -> String {
         let date = self.get_date();
         date.format("%Y-%m-%d").to_string()
+    }
+
+    pub fn from_string(s: &String) -> Result<Self, String> {
+        if let Ok(days) = s.parse::<f64>() {
+            Ok(ExpirationDate::Days(days))
+        } else if let Ok(datetime) = DateTime::parse_from_rfc3339(s) {
+            Ok(ExpirationDate::DateTime(DateTime::from(datetime)))
+        } else {
+            Err(format!("Failed to parse ExpirationDate from string: {}", s))
+        }
     }
 }
 
