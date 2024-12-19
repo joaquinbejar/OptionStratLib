@@ -20,7 +20,7 @@ release:
 # Run tests
 .PHONY: test
 test:
-	cargo test
+	LOGLEVEL=WARN cargo test
 
 # Format the code
 .PHONY: fmt
