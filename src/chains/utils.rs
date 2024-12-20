@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
+use crate::error::chains::ChainError;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use crate::pos;
 use std::collections::BTreeSet;
@@ -132,7 +133,7 @@ impl Display for OptionDataPriceParams {
 }
 
 pub trait OptionChainParams {
-    fn get_params(&self, strike_price: PositiveF64) -> Result<OptionDataPriceParams, String>;
+    fn get_params(&self, strike_price: PositiveF64) -> Result<OptionDataPriceParams, ChainError>;
 }
 
 /// Parameters for generating random positions in an option chain

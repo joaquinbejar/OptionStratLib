@@ -9,6 +9,7 @@ use crate::chains::utils::{
 };
 use crate::chains::{DeltasInStrike, OptionsInStrike};
 use crate::constants::ZERO;
+use crate::error::chains::ChainError;
 use crate::greeks::equations::delta;
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -122,13 +123,16 @@ impl OptionData {
         price_params: &OptionDataPriceParams,
         side: Side,
         option_style: OptionStyle,
-    ) -> Result<Options, String> {
+    ) -> Result<Options, ChainError> {
         let implied_volatility = match price_params.implied_volatility {
             Some(iv) => iv.value(),
             None => match self.implied_volatility {
                 Some(iv) => iv.value(),
                 None => {
-                    return Err("Implied volatility not found".to_string());
+                    return Err(ChainError::invalid_volatility(
+                        None,
+                        "Implied volatility not found",
+                    ));
                 }
             },
         };
@@ -154,7 +158,7 @@ impl OptionData {
         price_params: &OptionDataPriceParams,
         side: Side,
         option_style: OptionStyle,
-    ) -> Result<OptionsInStrike, String> {
+    ) -> Result<OptionsInStrike, ChainError> {
         let mut option: Options = self.get_option(price_params, side, option_style)?;
         option.option_style = OptionStyle::Call;
         option.side = Side::Long;
@@ -173,7 +177,10 @@ impl OptionData {
         })
     }
 
-    pub fn calculate_prices(&mut self, price_params: &OptionDataPriceParams) -> Result<(), String> {
+    pub fn calculate_prices(
+        &mut self,
+        price_params: &OptionDataPriceParams,
+    ) -> Result<(), ChainError> {
         let mut option: Options = self.get_option(price_params, Side::Long, OptionStyle::Call)?;
 
         self.call_ask = spos!(black_scholes(&option).abs());
@@ -241,7 +248,7 @@ impl OptionData {
     pub fn get_deltas(
         &self,
         price_params: &OptionDataPriceParams,
-    ) -> Result<DeltasInStrike, String> {
+    ) -> Result<DeltasInStrike, ChainError> {
         let options_in_strike =
             self.get_options_in_strike(price_params, Side::Long, OptionStyle::Call)?;
         let deltas = options_in_strike.deltas();
@@ -425,7 +432,7 @@ impl OptionChain {
         &self,
         price_params: &OptionDataPriceParams,
         side: FindOptimalSide,
-    ) -> Result<Vec<OptionsInStrike>, String> {
+    ) -> Result<Vec<OptionsInStrike>, ChainError> {
         self.options
             .iter()
             .filter(|option| match side {
@@ -605,13 +612,16 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Position>, String>` - Vector of created positions or error message
+    /// * `Result<Vec<Position>, ChainError>` - Vector of created positions or error message
     pub fn get_random_positions(
         &self,
         params: RandomPositionsParams,
-    ) -> Result<Vec<Position>, String> {
+    ) -> Result<Vec<Position>, ChainError> {
         if params.total_positions() == 0 {
-            return Err("The sum of the quantities must be greater than 0".to_string());
+            return Err(ChainError::invalid_parameters(
+                "total_positions",
+                "The sum of the quantities must be greater than 0",
+            ));
         }
 
         let mut positions = Vec::with_capacity(params.total_positions());
@@ -976,16 +986,14 @@ impl OptionChain {
 }
 
 impl OptionChainParams for OptionChain {
-    fn get_params(&self, strike_price: PositiveF64) -> Result<OptionDataPriceParams, String> {
+    fn get_params(&self, strike_price: PositiveF64) -> Result<OptionDataPriceParams, ChainError> {
         let option = self
             .options
             .iter()
             .find(|option| option.strike_price == strike_price);
         if option.is_none() {
-            return Err(format!(
-                "Option with strike price {} not found",
-                strike_price
-            ));
+            let reason = format!("Option with strike price {} not found", strike_price);
+            return Err(ChainError::invalid_strike(strike_price.value(), &reason));
         }
         Ok(OptionDataPriceParams::new(
             self.underlying_price,
@@ -1587,6 +1595,7 @@ mod tests_option_data {
 #[cfg(test)]
 mod tests_get_random_positions {
     use super::*;
+    use crate::error::chains::ChainBuildErrorKind;
     use crate::model::types::{ExpirationDate, PositiveF64};
     use crate::pos;
     use crate::utils::logger::setup_logger;
@@ -1654,12 +1663,18 @@ mod tests_get_random_positions {
             1.0,
         );
         let result = chain.get_random_positions(params);
-
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "The sum of the quantities must be greater than 0".to_string()
-        );
+        let error = result.unwrap_err();
+        match error {
+            ChainError::ChainBuildError(ChainBuildErrorKind::InvalidParameters {
+                parameter,
+                reason,
+            }) => {
+                assert_eq!(parameter, "total_positions");
+                assert_eq!(reason, "The sum of the quantities must be greater than 0");
+            }
+            _ => panic!("Incorrect error type"),
+        }
     }
 
     #[test]
@@ -2104,6 +2119,7 @@ mod tests_strike_price_range_vec {
 #[cfg(test)]
 mod tests_option_data_get_option {
     use super::*;
+    use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
 
     fn create_test_option_data() -> OptionData {
@@ -2172,13 +2188,25 @@ mod tests_option_data_get_option {
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Implied volatility not found");
+
+        let error = result.unwrap_err();
+        match error {
+            ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility {
+                volatility,
+                reason,
+            }) => {
+                assert_eq!(volatility, None);
+                assert_eq!(reason, "Implied volatility not found");
+            }
+            _ => panic!("Incorrect error type"),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
     use super::*;
+    use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
     use approx::assert_relative_eq;
 
@@ -2262,7 +2290,17 @@ mod tests_option_data_get_options_in_strike {
         let result =
             option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Implied volatility not found");
+        let error = result.unwrap_err();
+        match error {
+            ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility {
+                volatility,
+                reason,
+            }) => {
+                assert_eq!(volatility, None);
+                assert_eq!(reason, "Implied volatility not found");
+            }
+            _ => panic!("Incorrect error type"),
+        }
     }
 
     #[test]

@@ -1236,6 +1236,7 @@ mod tests_best_area {
 
     use super::*;
     use crate::chains::utils::RandomPositionsParams;
+    use crate::error::chains::ChainError;
     use crate::model::types::ExpirationDate;
     use crate::utils::logger::setup_logger;
 
@@ -1244,7 +1245,7 @@ mod tests_best_area {
         qty_puts_short: Option<usize>,
         qty_calls_long: Option<usize>,
         qty_calls_short: Option<usize>,
-    ) -> Result<(CustomStrategy, OptionChain), String> {
+    ) -> Result<(CustomStrategy, OptionChain), ChainError> {
         setup_logger();
         let option_chain =
             OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
@@ -1343,6 +1344,7 @@ mod tests_best_area {
 mod tests_best_ratio {
     use super::*;
     use crate::chains::utils::RandomPositionsParams;
+    use crate::error::chains::ChainError;
     use crate::model::types::ExpirationDate;
     use crate::utils::logger::setup_logger;
 
@@ -1351,7 +1353,7 @@ mod tests_best_ratio {
         qty_puts_short: Option<usize>,
         qty_calls_long: Option<usize>,
         qty_calls_short: Option<usize>,
-    ) -> Result<(CustomStrategy, OptionChain), String> {
+    ) -> Result<(CustomStrategy, OptionChain), ChainError> {
         setup_logger();
         let option_chain =
             OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
