@@ -9,11 +9,12 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::DARK_BLUE;
 use crate::constants::{DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{
-    ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, INFINITY, PZERO,
+    ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO, P_INFINITY,
 };
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
@@ -199,7 +200,7 @@ impl Default for CallButterfly {
 }
 
 impl Positionable for CallButterfly {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
                 if position.option.strike_price >= self.long_call.option.strike_price {
@@ -217,7 +218,7 @@ impl Positionable for CallButterfly {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.long_call,
             &self.short_call_low,
@@ -243,7 +244,7 @@ impl Strategies for CallButterfly {
     }
 
     fn max_loss(&self) -> Result<PositiveF64, &str> {
-        Ok(INFINITY)
+        Ok(P_INFINITY)
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -287,7 +288,7 @@ impl Strategies for CallButterfly {
     fn profit_ratio(&self) -> f64 {
         let max_loss = match self.max_loss().unwrap_or(PZERO) {
             PZERO => spos!(1.0),
-            INFINITY => spos!(1.0),
+            P_INFINITY => spos!(1.0),
             value => Some(value),
         };
 

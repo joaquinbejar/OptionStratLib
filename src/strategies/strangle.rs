@@ -14,6 +14,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -148,7 +149,7 @@ impl ShortStrangle {
 }
 
 impl Positionable for ShortStrangle {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (&position.option.option_style, &position.option.side) {
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
@@ -158,11 +159,14 @@ impl Positionable for ShortStrangle {
                 self.short_put = position.clone();
                 Ok(())
             }
-            _ => Err("Position side is Long, it is not valid for this strategy".to_string()),
+            _ => Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Position side is Long, it is not valid for ShortStrangle".to_string(),
+            )),
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.short_call, &self.short_put])
     }
 }
@@ -723,7 +727,7 @@ impl LongStrangle {
 }
 
 impl Positionable for LongStrangle {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (&position.option.option_style, &position.option.side) {
             (OptionStyle::Call, Side::Long) => {
                 self.long_call = position.clone();
@@ -733,11 +737,14 @@ impl Positionable for LongStrangle {
                 self.long_put = position.clone();
                 Ok(())
             }
-            _ => Err("Position side is Short, it is not valid for this strategy".to_string()),
+            _ => Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Position side is Short, it is not valid for LongStrangle".to_string(),
+            )),
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_call, &self.long_put])
     }
 }

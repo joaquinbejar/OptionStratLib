@@ -15,6 +15,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -164,7 +165,7 @@ impl ShortStraddle {
 }
 
 impl Positionable for ShortStraddle {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.option_style {
             OptionStyle::Call => {
                 self.short_call = position.clone();
@@ -177,7 +178,7 @@ impl Positionable for ShortStraddle {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.short_call, &self.short_put])
     }
 }
@@ -699,7 +700,7 @@ impl LongStraddle {
 }
 
 impl Positionable for LongStraddle {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.option_style {
             OptionStyle::Call => {
                 self.long_call = position.clone();
@@ -712,7 +713,7 @@ impl Positionable for LongStraddle {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_call, &self.long_put])
     }
 }

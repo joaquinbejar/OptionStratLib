@@ -16,6 +16,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -215,7 +216,7 @@ impl Validable for IronButterfly {
 }
 
 impl Positionable for IronButterfly {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (
             position.option.option_style.clone(),
             position.option.side.clone(),
@@ -239,7 +240,7 @@ impl Positionable for IronButterfly {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.short_call,
             &self.short_put,
@@ -413,10 +414,6 @@ impl Optimizable for IronButterfly {
     }
 
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
-        // self.option.strike_price < self.short_put.option.strike_price
-        //     && self.short_put.option.strike_price == self.short_call.option.strike_price
-        //     && self.short_call.option.strike_price < self.long_call.option.strike_price
-
         match legs {
             StrategyLegs::FourLegs {
                 first: long_put,

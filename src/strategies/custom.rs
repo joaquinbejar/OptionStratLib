@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
@@ -151,18 +152,20 @@ impl CustomStrategy {
 }
 
 impl Positionable for CustomStrategy {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         self.positions.push(position.clone());
         self.max_loss_iter();
         if !self.validate() {
-            return Err("Invalid position".to_string());
+            return Err(PositionError::invalid_position(
+                "Strategy is not valid after adding new position",
+            ));
         }
         self.max_profit_iter();
         self.calculate_break_even_points();
         Ok(())
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(self.positions.iter().collect())
     }
 }

@@ -21,6 +21,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -214,7 +215,7 @@ impl Validable for LongButterflySpread {
 }
 
 impl Positionable for LongButterflySpread {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match &position.option.side {
             Side::Long => {
                 // short_calls should be inserted first
@@ -233,7 +234,7 @@ impl Positionable for LongButterflySpread {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.long_call_low,
             &self.short_calls,
@@ -910,7 +911,7 @@ impl Validable for ShortButterflySpread {
 }
 
 impl Positionable for ShortButterflySpread {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match &position.option.side {
             Side::Short => {
                 // long_calls should be inserted first
@@ -929,7 +930,7 @@ impl Positionable for ShortButterflySpread {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.short_call_low,
             &self.long_calls,

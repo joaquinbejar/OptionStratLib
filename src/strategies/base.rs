@@ -10,6 +10,7 @@ use crate::chains::StrategyLegs;
 use crate::constants::{
     STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
 };
+use crate::error::position::PositionError;
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
@@ -314,12 +315,18 @@ pub trait Optimizable: Validable + Strategies {
 }
 
 pub trait Positionable {
-    fn add_position(&mut self, _position: &Position) -> Result<(), String> {
-        Err("Add position is not applicable for this strategy".to_string())
+    fn add_position(&mut self, _position: &Position) -> Result<(), PositionError> {
+        Err(PositionError::unsupported_operation(
+            std::any::type_name::<Self>(),
+            "add_position",
+        ))
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
-        Err("Get positions is not applicable for this strategy".to_string())
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
+        Err(PositionError::unsupported_operation(
+            std::any::type_name::<Self>(),
+            "get_positions",
+        ))
     }
 }
 
@@ -354,12 +361,12 @@ mod tests_strategies {
     impl Validable for MockStrategy {}
 
     impl Positionable for MockStrategy {
-        fn add_position(&mut self, position: &Position) -> Result<(), String> {
+        fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
             self.legs.push(position.clone());
             Ok(())
         }
 
-        fn get_positions(&self) -> Result<Vec<&Position>, String> {
+        fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
             Ok(self.legs.iter().collect())
         }
     }
@@ -568,7 +575,7 @@ mod tests_strategies_extended {
         struct EmptyStrategy;
         impl Validable for EmptyStrategy {}
         impl Positionable for EmptyStrategy {
-            fn get_positions(&self) -> Result<Vec<&Position>, String> {
+            fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
                 Ok(vec![])
             }
         }

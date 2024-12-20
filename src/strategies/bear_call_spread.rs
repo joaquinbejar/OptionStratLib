@@ -33,6 +33,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -168,7 +169,7 @@ impl BearCallSpread {
 }
 
 impl Positionable for BearCallSpread {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
                 self.short_call = position.clone();
@@ -181,7 +182,7 @@ impl Positionable for BearCallSpread {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.short_call, &self.long_call])
     }
 }
