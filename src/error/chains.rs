@@ -10,46 +10,46 @@ use std::io;
 
 #[derive(Debug)]
 pub enum ChainError {
-    /// Errores relacionados con la validación de datos de opciones
+    /// Errors related to option data validation
     OptionDataError(OptionDataErrorKind),
-    /// Errores relacionados con la construcción de la cadena
+    /// Errors related to chain building
     ChainBuildError(ChainBuildErrorKind),
-    /// Errores relacionados con operaciones de archivos
+    /// Errors related to file operations
     FileError(FileErrorKind),
-    /// Errores relacionados con las estrategias
+    /// Errors related to strategies
     StrategyError(StrategyErrorKind),
 }
 
-/// Errores específicos para los datos de opciones
+/// Specific errors for option data
 #[derive(Debug)]
 pub enum OptionDataErrorKind {
-    /// El strike price es inválido
+    /// Invalid strike price
     InvalidStrike { strike: f64, reason: String },
-    /// La volatilidad implícita es inválida
+    /// Invalid implied volatility
     InvalidVolatility {
         volatility: Option<f64>,
         reason: String,
     },
-    /// Los precios bid/ask son inválidos
+    /// Invalid bid/ask prices
     InvalidPrices {
         bid: Option<f64>,
         ask: Option<f64>,
         reason: String,
     },
-    /// El delta es inválido
+    /// Invalid delta
     InvalidDelta { delta: Option<f64>, reason: String },
-    /// Error en el cálculo de precios
+    /// Error in price calculation
     PriceCalculationError(String),
 }
 
-/// Errores específicos para la construcción de cadenas
+/// Specific errors for chain building
 #[derive(Debug)]
 pub enum ChainBuildErrorKind {
-    /// Parámetros inválidos para la construcción
+    /// Invalid parameters for building
     InvalidParameters { parameter: String, reason: String },
-    /// Error en el ajuste de volatilidad
+    /// Error in volatility adjustment
     VolatilityAdjustmentError { skew_factor: f64, reason: String },
-    /// Error en la generación de strikes
+    /// Error in strike generation
     StrikeGenerationError {
         reference_price: f64,
         interval: f64,
@@ -57,14 +57,14 @@ pub enum ChainBuildErrorKind {
     },
 }
 
-/// Errores relacionados con operaciones de archivos
+/// Errors related to file operations
 #[derive(Debug)]
 pub enum FileErrorKind {
-    /// Error al leer/escribir archivo
+    /// Error when reading/writing file
     IOError(io::Error),
-    /// Error en el formato del archivo
+    /// Error in file format
     InvalidFormat { format: String, reason: String },
-    /// Error en el parsing de datos
+    /// Error in data parsing
     ParseError {
         line: usize,
         content: String,
@@ -72,16 +72,16 @@ pub enum FileErrorKind {
     },
 }
 
-/// Errores específicos para estrategias
+// Specific errors for strategies
 #[derive(Debug, PartialEq)]
 pub enum StrategyErrorKind {
-    /// Error en la validación de legs
+    /// Error in legs validation
     InvalidLegs {
         expected: usize,
         found: usize,
         reason: String,
     },
-    /// Error en la combinación de opciones
+    /// Error in options combination
     InvalidCombination {
         strategy_type: String,
         reason: String,
@@ -263,6 +263,7 @@ impl From<String> for ChainError {
         ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(msg))
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
