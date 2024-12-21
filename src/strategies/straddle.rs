@@ -16,6 +16,7 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
+use crate::error::probability::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -438,7 +439,7 @@ impl Graph for ShortStraddle {
 }
 
 impl ProbabilityAnalysis for ShortStraddle {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         let option = &self.short_call.option;
         Ok(option.expiration_date.clone())
     }
@@ -447,7 +448,7 @@ impl ProbabilityAnalysis for ShortStraddle {
         Some(self.short_call.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
         let break_even_points = &self.get_break_even_points();
 
@@ -476,7 +477,7 @@ impl ProbabilityAnalysis for ShortStraddle {
         Ok(vec![profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
         let break_even_points = &self.get_break_even_points();
 
@@ -957,7 +958,7 @@ impl Graph for LongStraddle {
 }
 
 impl ProbabilityAnalysis for LongStraddle {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         let option = &self.long_call.option;
         Ok(option.expiration_date.clone())
     }
@@ -966,7 +967,7 @@ impl ProbabilityAnalysis for LongStraddle {
         Some(self.long_call.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
         let break_even_points = &self.get_break_even_points();
 
@@ -1004,7 +1005,7 @@ impl ProbabilityAnalysis for LongStraddle {
         Ok(vec![lower_profit_range, upper_profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
         let break_even_points = &self.get_break_even_points();
 

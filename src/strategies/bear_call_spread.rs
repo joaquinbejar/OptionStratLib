@@ -34,6 +34,7 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
+use crate::error::probability::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -441,7 +442,7 @@ impl Graph for BearCallSpread {
 }
 
 impl ProbabilityAnalysis for BearCallSpread {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         Ok(self.short_call.option.expiration_date.clone())
     }
 
@@ -449,7 +450,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         Some(self.short_call.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_point = self.get_break_even_points()[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
@@ -477,7 +478,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         Ok(vec![profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_point = self.get_break_even_points()[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
