@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use crate::error::probability::ProbabilityError;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use crate::model::ProfitLossRange;
 use crate::pos;
@@ -15,14 +16,13 @@ use crate::strategies::probabilities::utils::{
 use tracing::warn;
 
 /// Trait for analyzing probabilities and risk metrics of option strategies
-#[allow(dead_code)]
 pub trait ProbabilityAnalysis: Strategies + Profit {
     /// Calculate probability analysis for a strategy
     fn analyze_probabilities(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
-    ) -> Result<StrategyProbabilityAnalysis, String> {
+    ) -> Result<StrategyProbabilityAnalysis, ProbabilityError> {
         let break_even_points = self.get_break_even_points();
         // If both parameters are None, return default probabilities based on profit ranges
         if volatility_adj.is_none() && trend.is_none() {
@@ -85,7 +85,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
-    ) -> Result<PositiveF64, String> {
+    ) -> Result<PositiveF64, ProbabilityError> {
         // Special case: when volatility is zero, return the current value
         if let Some(ref vol_adj) = volatility_adj {
             if vol_adj.base_volatility == PZERO && vol_adj.std_dev_adjustment == PZERO {
@@ -148,7 +148,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
-    ) -> Result<PositiveF64, String> {
+    ) -> Result<PositiveF64, ProbabilityError> {
         let mut sum_of_probabilities = PZERO;
         let ranges = self.get_profit_ranges()?;
         for mut range in ranges {
@@ -168,7 +168,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
-    ) -> Result<PositiveF64, String> {
+    ) -> Result<PositiveF64, ProbabilityError> {
         let mut sum_of_probabilities = PZERO;
         let ranges = self.get_loss_ranges()?;
         for mut range in ranges {
@@ -189,7 +189,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
-    ) -> Result<(PositiveF64, PositiveF64), String> {
+    ) -> Result<(PositiveF64, PositiveF64), ProbabilityError> {
         let profit_ranges = self.get_profit_ranges()?;
         let loss_ranges = self.get_loss_ranges()?;
 
@@ -228,10 +228,10 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         Ok((max_profit_prob, max_loss_prob))
     }
 
-    fn get_expiration(&self) -> Result<ExpirationDate, String>;
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError>;
     fn get_risk_free_rate(&self) -> Option<f64>;
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String>;
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String>;
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
 }
 
 #[cfg(test)]
@@ -294,7 +294,7 @@ mod tests_probability_analysis {
     }
 
     impl ProbabilityAnalysis for MockStrategy {
-        fn get_expiration(&self) -> Result<ExpirationDate, String> {
+        fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
             Ok(self.expiration.clone())
         }
 
@@ -302,7 +302,7 @@ mod tests_probability_analysis {
             Some(self.risk_free_rate)
         }
 
-        fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+        fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![ProfitLossRange::new(
                 Some(pos!(95.0)),
                 Some(pos!(105.0)),
@@ -310,7 +310,7 @@ mod tests_probability_analysis {
             )?])
         }
 
-        fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+        fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![
                 ProfitLossRange::new(None, Some(pos!(95.0)), pos!(0.0))?,
                 ProfitLossRange::new(Some(pos!(105.0)), None, pos!(0.0))?,
@@ -501,7 +501,7 @@ mod tests_expected_value {
     }
 
     impl ProbabilityAnalysis for TestStrategy {
-        fn get_expiration(&self) -> Result<ExpirationDate, String> {
+        fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
             Ok(self.expiration.clone())
         }
 
@@ -509,7 +509,7 @@ mod tests_expected_value {
             Some(self.risk_free_rate)
         }
 
-        fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+        fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![ProfitLossRange::new(
                 Some(pos!(95.0)),
                 Some(pos!(105.0)),
@@ -517,7 +517,7 @@ mod tests_expected_value {
             )?])
         }
 
-        fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+        fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![ProfitLossRange::new(None, Some(pos!(95.0)), PZERO)?])
         }
     }
@@ -636,7 +636,7 @@ mod tests_expected_value {
         }
 
         impl ProbabilityAnalysis for ExtremeStrategy {
-            fn get_expiration(&self) -> Result<ExpirationDate, String> {
+            fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
                 self.base.get_expiration()
             }
 
@@ -644,11 +644,11 @@ mod tests_expected_value {
                 self.base.get_risk_free_rate()
             }
 
-            fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+            fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
                 self.base.get_profit_ranges()
             }
 
-            fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+            fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
                 self.base.get_loss_ranges()
             }
         }
