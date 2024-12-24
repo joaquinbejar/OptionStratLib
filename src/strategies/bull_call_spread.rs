@@ -42,6 +42,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, error, info};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \
@@ -180,21 +181,25 @@ impl Strategies for BullCallSpread {
         self.long_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
         if profit >= ZERO {
             Ok(pos!(profit))
         } else {
-            Err("Max profit must be greater than zero")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Net premium received is negative".to_string(),
+            }))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if loss <= ZERO {
             Ok(pos!(loss.abs()))
         } else {
-            Err("Max loss must be less than zero")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         }
     }
 

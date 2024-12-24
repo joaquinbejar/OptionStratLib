@@ -42,7 +42,8 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =
     "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -249,22 +250,25 @@ impl Strategies for LongButterflySpread {
         self.long_call_low.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let profit = self.calculate_profit_at(self.short_calls.option.strike_price);
         if profit > ZERO {
             Ok(pos!(profit))
         } else {
-            Err("Profit is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "max_profit is negative".to_string(),
+            }))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let left_loss = self.calculate_profit_at(self.long_call_low.option.strike_price);
         let right_loss = self.calculate_profit_at(self.long_call_high.option.strike_price);
         let max_loss = left_loss.min(right_loss);
         if max_loss > ZERO {
-            error!("Loss is positive {}", max_loss);
-            Err("Loss is positive")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         } else {
             Ok(pos!(max_loss.abs()))
         }
@@ -945,22 +949,25 @@ impl Strategies for ShortButterflySpread {
         self.short_call_low.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
         let max_profit = left_profit.max(right_profit);
         if max_profit > ZERO {
             Ok(pos!(max_profit))
         } else {
-            Err("Profit is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let loss = self.calculate_profit_at(self.long_calls.option.strike_price);
         if loss > ZERO {
-            error!("Loss is positive {}", loss);
-            Err("Loss is positive")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         } else {
             Ok(pos!(loss.abs()))
         }

@@ -52,6 +52,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, error};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -201,19 +202,23 @@ impl Strategies for PoorMansCoveredCall {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
         if profit <= ZERO {
-            Ok(PZERO)
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }))
         } else {
             Ok(profit.into())
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if loss >= ZERO {
-            Ok(PZERO)
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss must be negative".to_string(),
+            }))
         } else {
             Ok(loss.abs().into())
         }

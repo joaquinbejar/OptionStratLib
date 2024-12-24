@@ -37,6 +37,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use std::f64;
 use tracing::{debug, info, trace};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -177,16 +178,18 @@ impl Strategies for ShortStrangle {
         self.short_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let max_profit = self.net_premium_received();
-        if max_profit < 0.0 {
-            Err("Invalid max profit")
+        if max_profit < ZERO {
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }))
         } else {
             Ok(max_profit.into())
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         Ok(f64::INFINITY.into())
     }
 
@@ -755,11 +758,11 @@ impl Strategies for LongStrangle {
         self.long_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         Ok(f64::INFINITY.into()) // Theoretically unlimited
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         Ok(self.total_cost())
     }
 

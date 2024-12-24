@@ -38,6 +38,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use std::f64;
 use tracing::{info, trace};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -189,16 +190,18 @@ impl Strategies for ShortStraddle {
         self.short_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let max_profit = self.net_premium_received();
         if max_profit < ZERO {
-            Err("Max Profit is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }))
         } else {
             Ok(max_profit.into())
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         Ok(f64::INFINITY.into())
     }
 
@@ -724,11 +727,11 @@ impl Strategies for LongStraddle {
         self.long_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         Ok(f64::INFINITY.into()) // Theoretically unlimited
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         Ok(self.total_cost())
     }
 

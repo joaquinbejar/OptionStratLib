@@ -40,7 +40,8 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, trace};
+use tracing::debug;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =
     "A bull put spread is created by buying a put option with a lower strike price \
@@ -179,23 +180,25 @@ impl Strategies for BullPutSpread {
         self.short_put.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let net_premium_received = self.net_premium_received();
         if net_premium_received < ZERO {
-            trace!("Net premium received is negative {}", net_premium_received);
-            Err("Net premium received is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Net premium received is negative".to_string(),
+            }))
         } else {
             Ok(pos!(net_premium_received))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let width = self.short_put.option.strike_price - self.long_put.option.strike_price;
         let max_loss =
             (width * self.short_put.option.quantity).value() - self.net_premium_received();
         if max_loss < ZERO {
-            trace!("Max loss is negative {}", max_loss);
-            Err("Max loss is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         } else {
             Ok(pos!(max_loss))
         }

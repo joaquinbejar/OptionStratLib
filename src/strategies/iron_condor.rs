@@ -15,6 +15,7 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -263,11 +264,15 @@ impl Strategies for IronCondor {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let left_profit = self.calculate_profit_at(self.short_call.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_put.option.strike_price);
         if left_profit < ZERO || right_profit < ZERO {
-            return Err("Invalid Max Profit");
+            return Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Max profit is negative".to_string(),
+                },
+            ));
         }
 
         Ok(pos!(
@@ -275,11 +280,15 @@ impl Strategies for IronCondor {
         ))
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let left_loss = self.calculate_profit_at(self.long_put.option.strike_price);
         let right_loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if left_loss > ZERO || right_loss > ZERO {
-            return Err("Invalid Max Loss");
+            return Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxLossError {
+                    reason: "Max loss is negative".to_string(),
+                },
+            ));
         }
         Ok(pos!(left_loss.abs().max(right_loss.abs())))
     }

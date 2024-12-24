@@ -54,7 +54,8 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, trace};
+use tracing::debug;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const BEAR_CALL_SPREAD_DESCRIPTION: &str =
     "A bear call spread is created by selling a call option with a lower strike price \
@@ -193,23 +194,25 @@ impl Strategies for BearCallSpread {
         self.short_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let net_premium_received = self.net_premium_received();
         if net_premium_received < ZERO {
-            trace!("Net premium received is negative {}", net_premium_received);
-            Err("Net premium received is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Net premium received is negative".to_string(),
+            }))
         } else {
             Ok(pos!(net_premium_received))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let width = self.long_call.option.strike_price - self.short_call.option.strike_price;
         let mas_loss =
             (width * self.short_call.option.quantity).value() - self.net_premium_received();
         if mas_loss < ZERO {
-            trace!("Max loss is negative {}", mas_loss);
-            Err("Max loss is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         } else {
             Ok(pos!(mas_loss))
         }
@@ -615,7 +618,8 @@ mod tests_bear_call_spread_strategies {
 
         let result = spread.max_profit();
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Net premium received is negative");
+        let error = result.unwrap_err();
+        assert_eq!(error.to_string(), "Profit/Loss error: Maximum profit calculation error: Net premium received is negative");
     }
 
     #[test]
@@ -640,7 +644,7 @@ mod tests_bear_call_spread_strategies {
 
         let result = spread.max_loss();
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Max loss is negative");
+        assert_eq!(result.unwrap_err().to_string(), "Profit/Loss error: Maximum loss calculation error: Max loss is negative");
     }
 
     #[test]

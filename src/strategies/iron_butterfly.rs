@@ -33,6 +33,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{error, info};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
@@ -260,11 +261,13 @@ impl Strategies for IronButterfly {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let left_profit = self.calculate_profit_at(self.short_call.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_put.option.strike_price);
         if left_profit < ZERO || right_profit < ZERO {
-            return Err("Invalid Max Profit");
+            return Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }));
         }
 
         Ok(pos!(
@@ -272,11 +275,13 @@ impl Strategies for IronButterfly {
         ))
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let left_loss = self.calculate_profit_at(self.long_put.option.strike_price);
         let right_loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if left_loss > ZERO || right_loss > ZERO {
-            return Err("Invalid Max Loss");
+            return Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }));
         }
         Ok(pos!(left_loss.abs().max(right_loss.abs())))
     }
