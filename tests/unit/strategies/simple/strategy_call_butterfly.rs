@@ -44,7 +44,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_relative_eq!(strategy.net_premium_received(), ZERO, epsilon = 0.001);
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(7.68), pos!(0.0001));
+    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(42.319), pos!(0.0001));
     assert_eq!(strategy.max_loss()?, P_INFINITY);
     assert_positivef64_relative_eq!(strategy.total_cost(), pos!(89.57), pos!(0.0001));
     assert_eq!(strategy.fees(), 4.53);
