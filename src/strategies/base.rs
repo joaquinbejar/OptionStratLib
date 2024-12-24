@@ -17,6 +17,7 @@ use crate::strategies::utils::{calculate_price_range, FindOptimalSide, Optimizat
 use crate::{pos, spos};
 use std::f64;
 use tracing::error;
+use crate::error::strategies::StrategyError;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
@@ -89,16 +90,22 @@ pub trait Strategies: Validable + Positionable {
         self.get_break_even_points()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
-        Err("Max profit is not applicable for this strategy")
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "max_profit",
+            std::any::type_name::<Self>(),
+        ))
     }
 
     fn max_profit_iter(&mut self) -> PositiveF64 {
         self.max_profit().unwrap_or(PZERO)
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
-        Err("Max loss is not applicable for this strategy")
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "max_loss",
+            std::any::type_name::<Self>(),
+        ))
     }
 
     fn max_loss_iter(&mut self) -> PositiveF64 {
@@ -376,11 +383,11 @@ mod tests_strategies {
             vec![PositiveF64::new(100.0).unwrap()]
         }
 
-        fn max_profit(&self) -> Result<PositiveF64, &str> {
+        fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
             Ok(pos!(1000.0))
         }
 
-        fn max_loss(&self) -> Result<PositiveF64, &str> {
+        fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
             Ok(pos!(500.0))
         }
 
@@ -546,7 +553,7 @@ mod tests_strategies_extended {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_profit(&self) -> Result<PositiveF64, &str> {
+            fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
                 Ok(pos!(100.0))
             }
         }
@@ -561,7 +568,7 @@ mod tests_strategies_extended {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_loss(&self) -> Result<PositiveF64, &str> {
+            fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
                 Ok(pos!(50.0))
             }
         }
@@ -679,10 +686,10 @@ mod tests_max_min_strikes {
         fn break_even(&self) -> Vec<PositiveF64> {
             vec![]
         }
-        fn max_profit(&self) -> Result<PositiveF64, &str> {
+        fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
             Ok(PZERO)
         }
-        fn max_loss(&self) -> Result<PositiveF64, &str> {
+        fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
             Ok(PZERO)
         }
         fn total_cost(&self) -> PositiveF64 {
