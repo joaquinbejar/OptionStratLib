@@ -14,6 +14,8 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
+use crate::error::probability::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -35,6 +37,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use std::f64;
 use tracing::{debug, info, trace};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -148,7 +151,7 @@ impl ShortStrangle {
 }
 
 impl Positionable for ShortStrangle {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (&position.option.option_style, &position.option.side) {
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
@@ -158,11 +161,14 @@ impl Positionable for ShortStrangle {
                 self.short_put = position.clone();
                 Ok(())
             }
-            _ => Err("Position side is Long, it is not valid for this strategy".to_string()),
+            _ => Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Position side is Long, it is not valid for ShortStrangle".to_string(),
+            )),
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.short_call, &self.short_put])
     }
 }
@@ -172,16 +178,18 @@ impl Strategies for ShortStrangle {
         self.short_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let max_profit = self.net_premium_received();
-        if max_profit < 0.0 {
-            Err("Invalid max profit")
+        if max_profit < ZERO {
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }))
         } else {
             Ok(max_profit.into())
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         Ok(f64::INFINITY.into())
     }
 
@@ -476,7 +484,7 @@ impl Graph for ShortStrangle {
 }
 
 impl ProbabilityAnalysis for ShortStrangle {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         let option = &self.short_call.option;
         Ok(option.expiration_date.clone())
     }
@@ -485,7 +493,7 @@ impl ProbabilityAnalysis for ShortStrangle {
         Some(self.short_call.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
         let break_even_points = &self.get_break_even_points();
 
@@ -514,7 +522,7 @@ impl ProbabilityAnalysis for ShortStrangle {
         Ok(vec![profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
         let break_even_points = &self.get_break_even_points();
 
@@ -723,7 +731,7 @@ impl LongStrangle {
 }
 
 impl Positionable for LongStrangle {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (&position.option.option_style, &position.option.side) {
             (OptionStyle::Call, Side::Long) => {
                 self.long_call = position.clone();
@@ -733,11 +741,14 @@ impl Positionable for LongStrangle {
                 self.long_put = position.clone();
                 Ok(())
             }
-            _ => Err("Position side is Short, it is not valid for this strategy".to_string()),
+            _ => Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Position side is Short, it is not valid for LongStrangle".to_string(),
+            )),
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_call, &self.long_put])
     }
 }
@@ -747,11 +758,11 @@ impl Strategies for LongStrangle {
         self.long_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         Ok(f64::INFINITY.into()) // Theoretically unlimited
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         Ok(self.total_cost())
     }
 
@@ -1026,7 +1037,7 @@ impl Graph for LongStrangle {
 }
 
 impl ProbabilityAnalysis for LongStrangle {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         let option = &self.long_call.option;
         Ok(option.expiration_date.clone())
     }
@@ -1035,7 +1046,7 @@ impl ProbabilityAnalysis for LongStrangle {
         Some(self.long_call.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
         let break_even_points = &self.get_break_even_points();
 
@@ -1073,7 +1084,7 @@ impl ProbabilityAnalysis for LongStrangle {
         Ok(vec![lower_profit_range, upper_profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
         let break_even_points = &self.get_break_even_points();
 

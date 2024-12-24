@@ -3,6 +3,9 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use crate::error::probability::{
+    ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
+};
 use crate::greeks::utils::big_n;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use crate::pos;
@@ -62,10 +65,14 @@ pub fn calculate_single_point_probability(
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
     risk_free_rate: Option<f64>,
-) -> Result<(PositiveF64, PositiveF64), String> {
+) -> Result<(PositiveF64, PositiveF64), ProbabilityError> {
     let time_to_expiry = expiration_date.get_years();
     if time_to_expiry <= 0.0 {
-        return Err("Time to expiry must be positive".to_string());
+        return Err(ProbabilityError::ExpirationError(
+            ExpirationErrorKind::InvalidExpiration {
+                reason: "Time to expiry must be positive".to_string(),
+            },
+        ));
     }
 
     // Get base parameters
@@ -75,7 +82,11 @@ pub fn calculate_single_point_probability(
     let volatility = match volatility_adj {
         Some(adj) => {
             if adj.base_volatility <= PZERO {
-                return Err("Base volatility must be positive".to_string());
+                return Err(ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::VolatilityAdjustmentError {
+                        reason: "Base volatility must be positive".to_string(),
+                    },
+                ));
             }
             adj.base_volatility * (1.0 + adj.std_dev_adjustment)
         }
@@ -86,7 +97,11 @@ pub fn calculate_single_point_probability(
     let drift_rate = match trend {
         Some(t) => {
             if !(0.0..=1.0).contains(&t.confidence) {
-                return Err("Confidence must be between 0 and 1".to_string());
+                return Err(ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::TrendError {
+                        reason: "Confidence must be between 0 and 1".to_string(),
+                    },
+                ));
             }
             risk_free + (t.drift_rate * t.confidence)
         }
@@ -142,9 +157,14 @@ pub fn calculate_price_probability(
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
     risk_free_rate: Option<f64>,
-) -> Result<(PositiveF64, PositiveF64, PositiveF64), String> {
+) -> Result<(PositiveF64, PositiveF64, PositiveF64), ProbabilityError> {
     if lower_bound > upper_bound {
-        return Err("Lower bound must be less than upper bound".to_string());
+        return Err(ProbabilityError::PriceError(
+            PriceErrorKind::InvalidPriceRange {
+                range: format!("lower_bound: {} upper_bound: {}", lower_bound, upper_bound),
+                reason: "Lower bound must be less than upper bound".to_string(),
+            },
+        ));
     }
 
     // Calculate probabilities for the lower bound
@@ -211,16 +231,26 @@ pub fn calculate_bounds_probability(
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
     risk_free_rate: Option<f64>,
-) -> Result<Vec<PositiveF64>, String> {
+) -> Result<Vec<PositiveF64>, ProbabilityError> {
     // Check if bounds vector is empty
     if bounds.is_empty() {
-        return Err("Bounds vector cannot be empty".to_string());
+        return Err(ProbabilityError::PriceError(
+            PriceErrorKind::InvalidPriceRange {
+                range: "bounds: Vec<PositiveF64> is empty".to_string(),
+                reason: "Bounds vector cannot be empty".to_string(),
+            },
+        ));
     }
 
     // Check if bounds are in ascending order
     for i in 1..bounds.len() {
         if bounds[i] <= bounds[i - 1] {
-            return Err("Bounds must be in ascending order".to_string());
+            return Err(ProbabilityError::PriceError(
+                PriceErrorKind::InvalidPriceRange {
+                    range: format!("bounds: {:?}", bounds),
+                    reason: "Bounds must be in ascending order".to_string(),
+                },
+            ));
         }
     }
 
@@ -299,7 +329,15 @@ mod tests_calculate_bounds_probability {
         );
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Bounds vector cannot be empty");
+        // assert_eq!(result.unwrap_err(), "Bounds vector cannot be empty");
+        let error = result.unwrap_err();
+        assert!(match error {
+            ProbabilityError::PriceError(PriceErrorKind::InvalidPriceRange { range, reason }) => {
+                range == "bounds: Vec<PositiveF64> is empty"
+                    && reason == "Bounds vector cannot be empty"
+            }
+            _ => false,
+        });
     }
 
     #[test]
@@ -315,7 +353,14 @@ mod tests_calculate_bounds_probability {
         );
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Bounds must be in ascending order");
+        let error = result.unwrap_err();
+        match error {
+            ProbabilityError::PriceError(PriceErrorKind::InvalidPriceRange { range, reason }) => {
+                assert_eq!(range, "bounds: [100.0, 95.0, 105.0]");
+                assert_eq!(reason, "Bounds must be in ascending order");
+            },
+            _ => panic!("Unexpected error type"),
+        };
     }
 
     #[test]
@@ -552,10 +597,13 @@ mod tests_single_point_probability {
         );
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "Time to expiry must be positive".to_string()
-        );
+        let error = result.unwrap_err();
+        match error {
+            ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidExpiration { reason }) => {
+                assert_eq!(reason, "Time to expiry must be positive");
+            },
+            _ => panic!("Unexpected error type"),
+        };
     }
 
     #[test]
@@ -592,10 +640,13 @@ mod tests_single_point_probability {
         );
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "Base volatility must be positive".to_string()
-        );
+        let error = result.unwrap_err();
+        match error {
+            ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::VolatilityAdjustmentError { reason }) => {
+                assert_eq!(reason, "Base volatility must be positive");
+            },
+            _ => panic!("Unexpected error type"),
+        };
     }
 
     #[test]
@@ -615,10 +666,13 @@ mod tests_single_point_probability {
         );
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "Confidence must be between 0 and 1".to_string()
-        );
+        let error = result.unwrap_err();
+        match error {
+            ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {  reason }) => {
+                assert_eq!(reason, "Confidence must be between 0 and 1");
+            },
+            _ => panic!("Unexpected error type"),
+        };
     }
 
     #[test]
@@ -634,7 +688,7 @@ mod tests_single_point_probability {
         );
 
         assert!(result_high.is_ok());
-        let (_, prob_above) = result_high.clone().unwrap();
+        let (_, prob_above) = result_high.unwrap();
         assert!(prob_above < pos!(0.01)); // Probability should be very low
 
         // Test with very low target price
@@ -741,10 +795,14 @@ mod tests_calculate_price_probability {
         );
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "Lower bound must be less than upper bound".to_string()
-        );
+        let error = result.unwrap_err();
+        match error {
+            ProbabilityError::PriceError(PriceErrorKind::InvalidPriceRange { range, reason }) => {
+                assert_eq!(range ,"lower_bound: 105 upper_bound: 95");
+                assert_eq!(reason , "Lower bound must be less than upper bound");
+            }
+            _ => panic!("Unexpected error type"),
+        };
     }
 
     #[test]

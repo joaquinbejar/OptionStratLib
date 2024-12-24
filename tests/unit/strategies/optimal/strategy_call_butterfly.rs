@@ -41,9 +41,9 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     strategy.best_area(&option_chain, FindOptimalSide::All);
-    assert_relative_eq!(strategy.profit_area(), 67071.5408, epsilon = 0.001);
+    assert_relative_eq!(strategy.profit_area(), 68391.6908, epsilon = 0.001);
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-    assert_relative_eq!(strategy.profit_ratio(), 5340.0, epsilon = 0.001);
+    assert_relative_eq!(strategy.profit_ratio(), 10660.0, epsilon = 0.001);
 
     Ok(())
 }

@@ -19,6 +19,8 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
+use crate::error::probability::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -38,7 +40,8 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, trace};
+use tracing::debug;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =
     "A bull put spread is created by buying a put option with a lower strike price \
@@ -154,7 +157,7 @@ impl BullPutSpread {
 }
 
 impl Positionable for BullPutSpread {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
                 self.short_put = position.clone();
@@ -167,7 +170,7 @@ impl Positionable for BullPutSpread {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_put, &self.short_put])
     }
 }
@@ -177,23 +180,25 @@ impl Strategies for BullPutSpread {
         self.short_put.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let net_premium_received = self.net_premium_received();
         if net_premium_received < ZERO {
-            trace!("Net premium received is negative {}", net_premium_received);
-            Err("Net premium received is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Net premium received is negative".to_string(),
+            }))
         } else {
             Ok(pos!(net_premium_received))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let width = self.short_put.option.strike_price - self.long_put.option.strike_price;
         let max_loss =
             (width * self.short_put.option.quantity).value() - self.net_premium_received();
         if max_loss < ZERO {
-            trace!("Max loss is negative {}", max_loss);
-            Err("Max loss is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         } else {
             Ok(pos!(max_loss))
         }
@@ -526,7 +531,7 @@ impl Graph for BullPutSpread {
 }
 
 impl ProbabilityAnalysis for BullPutSpread {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         Ok(self.short_put.option.expiration_date.clone())
     }
 
@@ -534,7 +539,7 @@ impl ProbabilityAnalysis for BullPutSpread {
         Some(self.short_put.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_point = self.get_break_even_points()[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
@@ -562,7 +567,7 @@ impl ProbabilityAnalysis for BullPutSpread {
         Ok(vec![profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_point = self.get_break_even_points()[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![

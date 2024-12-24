@@ -10,7 +10,7 @@ use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
 
 pub const PZERO: PositiveF64 = PositiveF64(ZERO);
-pub const INFINITY: PositiveF64 = PositiveF64(f64::INFINITY);
+
 pub const SIZE_ONE: PositiveF64 = PositiveF64(1.0);
 pub const P_INFINITY: PositiveF64 = PositiveF64(f64::INFINITY);
 

@@ -20,6 +20,8 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
+use crate::error::probability::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -40,6 +42,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, error, info};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \
@@ -155,7 +158,7 @@ impl BullCallSpread {
 }
 
 impl Positionable for BullCallSpread {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
                 self.short_call = position.clone();
@@ -168,7 +171,7 @@ impl Positionable for BullCallSpread {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_call, &self.short_call])
     }
 }
@@ -178,21 +181,25 @@ impl Strategies for BullCallSpread {
         self.long_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
         if profit >= ZERO {
             Ok(pos!(profit))
         } else {
-            Err("Max profit must be greater than zero")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Net premium received is negative".to_string(),
+            }))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if loss <= ZERO {
             Ok(pos!(loss.abs()))
         } else {
-            Err("Max loss must be less than zero")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         }
     }
 
@@ -431,7 +438,7 @@ impl Graph for BullCallSpread {
 }
 
 impl ProbabilityAnalysis for BullCallSpread {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         Ok(self.long_call.option.expiration_date.clone())
     }
 
@@ -439,7 +446,7 @@ impl ProbabilityAnalysis for BullCallSpread {
         Some(self.long_call.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_point = self.get_break_even_points()[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
@@ -467,7 +474,7 @@ impl ProbabilityAnalysis for BullCallSpread {
         Ok(vec![profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_point = self.get_break_even_points()[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![

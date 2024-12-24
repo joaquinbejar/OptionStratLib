@@ -115,6 +115,7 @@
 //! Example:
 //!
 //! ```rust
+//! use optionstratlib::error::position::PositionError;
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::model::types::PositiveF64;
 //! use optionstratlib::strategies::base::{Positionable, Strategies, Validable};
@@ -132,11 +133,11 @@
 //!
 //!
 //! impl Positionable for MyStrategy {
-//!     fn add_position(&mut self, position: &Position) -> Result<(), String> {
+//!     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
 //!         Ok(self.legs.push(position.clone()))
 //!     }
 //!
-//!  fn get_positions(&self) -> Result<Vec<&Position>, String> {
+//!  fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
 //!         Ok(self.legs.iter().collect())
 //!     }
 //! }

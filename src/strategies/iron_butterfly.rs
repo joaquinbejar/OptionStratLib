@@ -16,6 +16,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -32,6 +33,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{error, info};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
@@ -215,7 +217,7 @@ impl Validable for IronButterfly {
 }
 
 impl Positionable for IronButterfly {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (
             position.option.option_style.clone(),
             position.option.side.clone(),
@@ -239,7 +241,7 @@ impl Positionable for IronButterfly {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.short_call,
             &self.short_put,
@@ -259,11 +261,13 @@ impl Strategies for IronButterfly {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let left_profit = self.calculate_profit_at(self.short_call.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_put.option.strike_price);
         if left_profit < ZERO || right_profit < ZERO {
-            return Err("Invalid Max Profit");
+            return Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }));
         }
 
         Ok(pos!(
@@ -271,11 +275,13 @@ impl Strategies for IronButterfly {
         ))
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let left_loss = self.calculate_profit_at(self.long_put.option.strike_price);
         let right_loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if left_loss > ZERO || right_loss > ZERO {
-            return Err("Invalid Max Loss");
+            return Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }));
         }
         Ok(pos!(left_loss.abs().max(right_loss.abs())))
     }
@@ -413,10 +419,6 @@ impl Optimizable for IronButterfly {
     }
 
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
-        // self.option.strike_price < self.short_put.option.strike_price
-        //     && self.short_put.option.strike_price == self.short_call.option.strike_price
-        //     && self.short_call.option.strike_price < self.long_call.option.strike_price
-
         match legs {
             StrategyLegs::FourLegs {
                 first: long_put,

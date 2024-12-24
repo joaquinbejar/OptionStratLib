@@ -21,6 +21,8 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
+use crate::error::probability::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -40,7 +42,8 @@ use crate::visualization::utils::Graph;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =
     "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -214,7 +217,7 @@ impl Validable for LongButterflySpread {
 }
 
 impl Positionable for LongButterflySpread {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match &position.option.side {
             Side::Long => {
                 // short_calls should be inserted first
@@ -233,7 +236,7 @@ impl Positionable for LongButterflySpread {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.long_call_low,
             &self.short_calls,
@@ -247,22 +250,25 @@ impl Strategies for LongButterflySpread {
         self.long_call_low.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let profit = self.calculate_profit_at(self.short_calls.option.strike_price);
         if profit > ZERO {
             Ok(pos!(profit))
         } else {
-            Err("Profit is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "max_profit is negative".to_string(),
+            }))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let left_loss = self.calculate_profit_at(self.long_call_low.option.strike_price);
         let right_loss = self.calculate_profit_at(self.long_call_high.option.strike_price);
         let max_loss = left_loss.min(right_loss);
         if max_loss > ZERO {
-            error!("Loss is positive {}", max_loss);
-            Err("Loss is positive")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         } else {
             Ok(pos!(max_loss.abs()))
         }
@@ -565,7 +571,7 @@ impl Graph for LongButterflySpread {
 }
 
 impl ProbabilityAnalysis for LongButterflySpread {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         Ok(self.long_call_low.option.expiration_date.clone())
     }
 
@@ -573,7 +579,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         Some(self.long_call_low.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points();
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
@@ -602,7 +608,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         Ok(vec![profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let mut ranges = Vec::new();
         let break_even_points = self.get_break_even_points();
 
@@ -910,7 +916,7 @@ impl Validable for ShortButterflySpread {
 }
 
 impl Positionable for ShortButterflySpread {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match &position.option.side {
             Side::Short => {
                 // long_calls should be inserted first
@@ -929,7 +935,7 @@ impl Positionable for ShortButterflySpread {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.short_call_low,
             &self.long_calls,
@@ -943,22 +949,25 @@ impl Strategies for ShortButterflySpread {
         self.short_call_low.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
         let max_profit = left_profit.max(right_profit);
         if max_profit > ZERO {
             Ok(pos!(max_profit))
         } else {
-            Err("Profit is negative")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }))
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let loss = self.calculate_profit_at(self.long_calls.option.strike_price);
         if loss > ZERO {
-            error!("Loss is positive {}", loss);
-            Err("Loss is positive")
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            }))
         } else {
             Ok(pos!(loss.abs()))
         }
@@ -1253,7 +1262,7 @@ impl Graph for ShortButterflySpread {
 }
 
 impl ProbabilityAnalysis for ShortButterflySpread {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         Ok(self.short_call_low.option.expiration_date.clone())
     }
 
@@ -1261,7 +1270,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         Some(self.short_call_low.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let mut ranges = Vec::new();
         let break_even_points = self.get_break_even_points();
 
@@ -1311,7 +1320,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         Ok(ranges)
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points();
 
         let (mean_volatility, std_dev) = mean_and_std(vec![

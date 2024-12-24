@@ -35,6 +35,7 @@ use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -51,6 +52,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, error};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -166,7 +168,7 @@ impl Validable for PoorMansCoveredCall {
 }
 
 impl Positionable for PoorMansCoveredCall {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (
             position.option.option_style.clone(),
             position.option.side.clone(),
@@ -179,11 +181,14 @@ impl Positionable for PoorMansCoveredCall {
                 self.short_call = position.clone();
                 Ok(())
             }
-            _ => Err("Invalid option type for Poor Man's Covered Call strategy".to_string()),
+            _ => Err(PositionError::invalid_position_style(
+                position.option.option_style.clone(),
+                "Position is a Put, it is not valid for PoorMansCoveredCall".to_string(),
+            )),
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.short_call, &self.long_call])
     }
 }
@@ -197,19 +202,23 @@ impl Strategies for PoorMansCoveredCall {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
         if profit <= ZERO {
-            Ok(PZERO)
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+                reason: "Max profit is negative".to_string(),
+            }))
         } else {
             Ok(profit.into())
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
         let loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if loss >= ZERO {
-            Ok(PZERO)
+            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss must be negative".to_string(),
+            }))
         } else {
             Ok(loss.abs().into())
         }
@@ -733,6 +742,7 @@ mod tests {
 #[cfg(test)]
 mod tests_pmcc_validation {
     use super::*;
+    use crate::error::position::PositionValidationErrorKind;
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -810,7 +820,6 @@ mod tests_pmcc_validation {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid option type for Poor Man's Covered Call strategy")]
     fn test_add_leg_invalid_option() {
         let mut strategy = create_basic_strategy();
         let option = Options::new(
@@ -828,9 +837,16 @@ mod tests_pmcc_validation {
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
-        strategy
-            .add_position(&position)
-            .expect("Invalid option type");
+        let err = strategy.add_position(&position).unwrap_err();
+        assert!(matches!(
+            err,
+            PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleStyle {
+                    style: OptionStyle::Put,
+                    reason
+                }
+            ) if reason == "Position is a Put, it is not valid for PoorMansCoveredCall"
+        ));
     }
 }
 

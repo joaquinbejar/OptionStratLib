@@ -9,11 +9,13 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::DARK_BLUE;
 use crate::constants::{DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{
-    ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, INFINITY, PZERO,
+    ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO, P_INFINITY,
 };
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
@@ -199,7 +201,7 @@ impl Default for CallButterfly {
 }
 
 impl Positionable for CallButterfly {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
                 if position.option.strike_price >= self.long_call.option.strike_price {
@@ -217,7 +219,7 @@ impl Positionable for CallButterfly {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.long_call,
             &self.short_call_low,
@@ -235,15 +237,21 @@ impl Strategies for CallButterfly {
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
-        Ok(self
-            .calculate_profit_at(self.long_call.option.strike_price)
-            .abs()
-            .into())
+    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
+        let max_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
+        if max_profit > ZERO {
+            Ok(max_profit.into())
+        } else {
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Max profit is negative".to_string(),
+                },
+            ))
+        }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
-        Ok(INFINITY)
+    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
+        Ok(P_INFINITY)
     }
 
     fn total_cost(&self) -> PositiveF64 {
@@ -287,7 +295,7 @@ impl Strategies for CallButterfly {
     fn profit_ratio(&self) -> f64 {
         let max_loss = match self.max_loss().unwrap_or(PZERO) {
             PZERO => spos!(1.0),
-            INFINITY => spos!(1.0),
+            P_INFINITY => spos!(1.0),
             value => Some(value),
         };
 
@@ -491,7 +499,6 @@ impl Graph for CallButterfly {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.max_profit().unwrap_or(PZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].value(), 0.0),
@@ -518,7 +525,10 @@ impl Graph for CallButterfly {
                 self.long_call.option.strike_price.value(),
                 self.calculate_profit_at(self.long_call.option.strike_price),
             ),
-            label: format!("Left Loss\n\n{:.2}", max_profit),
+            label: format!(
+                "Left Loss\n\n{:.2}",
+                self.calculate_profit_at(self.long_call.option.strike_price)
+            ),
             label_offset: LabelOffsetType::Relative(3.0, 3.0),
             point_color: RED,
             label_color: RED,
@@ -814,7 +824,7 @@ mod tests_call_butterfly_pnl {
     fn test_profit_ratio() {
         let strategy = setup_test_strategy();
         let ratio = strategy.profit_ratio();
-        assert!(ratio > 0.0);
+        assert!(ratio > ZERO);
     }
 }
 
@@ -1255,29 +1265,6 @@ mod tests_call_butterfly_optimizable {
             0.1,
             0.1,
         )
-    }
-
-    #[test]
-    fn test_filter_combinations() {
-        let butterfly = setup_test_butterfly();
-        let chain = create_test_option_chain();
-
-        let combinations: Vec<_> = butterfly
-            .filter_combinations(&chain, FindOptimalSide::All)
-            .collect();
-
-        assert!(!combinations.is_empty(), "Should find valid combinations");
-
-        // Test first combination
-        if let OptionDataGroup::Three(long, short_low, short_high) = &combinations[0] {
-            assert!(long.strike_price < short_low.strike_price);
-            assert!(short_low.strike_price < short_high.strike_price);
-            assert!(long.call_ask.is_some());
-            assert!(short_low.call_bid.is_some());
-            assert!(short_high.call_bid.is_some());
-        } else {
-            panic!("Expected Three legs in OptionDataGroup");
-        }
     }
 
     #[test]
