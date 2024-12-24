@@ -1,3 +1,74 @@
+/******************************************************************************
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 20/12/24
+******************************************************************************/
+
+//! # Probability Error Module
+//!
+//! This module provides error handling for probability analysis and calculations in option trading.
+//! It defines a comprehensive error system to handle various scenarios in probability calculations,
+//! profit/loss analysis, and option pricing.
+//!
+//! ## Main Error Types
+//!
+//! ### Probability Error (`ProbabilityError`)
+//! Main error enum with four variants:
+//! * `CalculationError` - For probability calculation failures
+//! * `RangeError` - For profit/loss range analysis errors
+//! * `ExpirationError` - For expiration date related errors
+//! * `PriceError` - For price calculation and validation errors
+//!
+//! ### Calculation Errors (`ProbabilityCalculationErrorKind`)
+//! Handles specific calculation failures:
+//! * Invalid probability values
+//! * Expected value calculation errors
+//! * Volatility adjustment errors
+//! * Price trend errors
+//!
+//! ### Range Errors (`ProfitLossRangeErrorKind`)
+//! Manages profit/loss analysis errors:
+//! * Invalid profit ranges
+//! * Invalid loss ranges
+//! * Break-even point errors
+//!
+//! ### Price Errors (`PriceErrorKind`)
+//! Handles pricing-related errors:
+//! * Invalid underlying prices
+//! * Invalid price ranges
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use optionstratlib::error::probability::{ProbabilityError, ProbabilityResult};
+//!
+//! fn calculate_probability(value: f64) -> ProbabilityResult<f64> {
+//!     if value < 0.0 || value > 1.0 {
+//!         return Err(ProbabilityError::invalid_probability(
+//!             value,
+//!             "Probability must be between 0 and 1"
+//!         ));
+//!     }
+//!     Ok(value)
+//! }
+//! ```
+//!
+//! ## Error Creation Helpers
+//!
+//! The module provides helper methods for creating common errors:
+//! * `invalid_probability` - Creates an error for invalid probability values
+//! * `invalid_profit_range` - Creates an error for invalid profit ranges
+//! * `invalid_expiration` - Creates an error for invalid expiration dates
+//!
+//! ## Type Conversions
+//!
+//! Implements conversions from:
+//! * `String` to `ProbabilityError`
+//! * `&str` to `ProbabilityError`
+//!
+//! A type alias `ProbabilityResult<T>` is provided for convenience when working
+//! with Results that may contain probability errors.
+
 use std::error::Error;
 use std::fmt;
 

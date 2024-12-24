@@ -2,14 +2,78 @@
     Author: Joaquín Béjar García
     Email: jb@taunais.com 
     Date: 24/12/24
- ******************************************************************************/
+******************************************************************************/
+
+//! # Strategy Error Module
+//!
+//! This module provides error handling for option trading strategies and their operations.
+//! It defines error types for strategy calculations, validations, and operations,
+//! with integration with the probability analysis system.
+//!
+//! ## Error Types
+//!
+//! ### Strategy Error (`StrategyError`)
+//! The main error enum with four categories:
+//! * `PriceError` - For price calculation failures
+//! * `BreakEvenError` - For break-even point calculation errors
+//! * `ProfitLossError` - For profit/loss calculation failures
+//! * `OperationError` - For strategy operation errors
+//!
+//! ### Price Errors (`PriceErrorKind`)
+//! Specific errors for price-related operations:
+//! * Invalid underlying prices
+//! * Invalid price ranges with start and end points
+//!
+//! ### Break-Even Errors (`BreakEvenErrorKind`)
+//! Handles break-even point calculations:
+//! * Calculation failures
+//! * Missing break-even points
+//!
+//! ### Profit/Loss Errors (`ProfitLossErrorKind`)
+//! Manages profit and loss calculations:
+//! * Maximum profit calculation errors
+//! * Maximum loss calculation errors
+//! * Profit range calculation errors
+//!
+//! ## Integration with Probability Analysis
+//!
+//! Implements conversion from `StrategyError` to `ProbabilityError` for seamless
+//! error handling between strategy and probability calculations.
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//!
+//! use optionstratlib::error::strategies::{StrategyError, StrategyResult};
+//!
+//! fn validate_strategy_operation(operation: &str, strategy: &str) -> StrategyResult<()> {
+//!     if !is_supported_operation(operation) {
+//!         return Err(StrategyError::operation_not_supported(operation, strategy));
+//!     }
+//!     Ok(())
+//! }
+//!
+//! fn is_supported_operation(p0: &str) -> bool  {
+//!     false
+//! }
+//! ```
+//!
+//! ## Helper Methods
+//!
+//! The module provides convenient methods for creating common errors:
+//! * `operation_not_supported` - Creates an error for unsupported operations
+//! * `invalid_parameters` - Creates an error for invalid operation parameters
+//!
+//! ## Type Alias
+//!
+//! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
+
 use std::fmt;
 use crate::error::probability::ProbabilityError;
-
 use std::error::Error;
 
-impl Error for StrategyError {}
 
+impl Error for StrategyError {}
 impl Error for PriceErrorKind {}
 impl Error for BreakEvenErrorKind {}
 impl Error for ProfitLossErrorKind {}

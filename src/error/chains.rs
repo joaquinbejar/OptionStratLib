@@ -4,6 +4,56 @@
    Date: 20/12/24
 ******************************************************************************/
 
+//! # Chain Error Module
+//!
+//! This module provides error handling for operations related to option chains and their data.
+//! It defines a comprehensive error hierarchy to handle various failure scenarios in option chain
+//! operations, data validation, and file handling.
+//!
+//! ## Error Types
+//!
+//! * `ChainError` - The main error enum that encompasses all possible chain-related errors
+//! * `OptionDataErrorKind` - Specific errors related to option data validation
+//! * `ChainBuildErrorKind` - Errors that can occur during chain construction
+//! * `FileErrorKind` - File operation related errors
+//! * `StrategyErrorKind` - Strategy-specific validation errors
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use optionstratlib::error::chains::ChainError;
+//!
+//! fn validate_strike_price(strike: f64) -> Result<(), ChainError> {
+//!     if strike <= 0.0 {
+//!         return Err(ChainError::invalid_strike(
+//!             strike,
+//!             "Strike price must be positive"
+//!         ));
+//!     }
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Error Creation Helpers
+//!
+//! The module provides several helper methods for creating common errors:
+//!
+//! * `invalid_strike` - Creates an error for invalid strike prices
+//! * `invalid_volatility` - Creates an error for invalid volatility values
+//! * `invalid_prices` - Creates an error for invalid bid/ask prices
+//! * `invalid_legs` - Creates an error for invalid strategy legs
+//! * `invalid_parameters` - Creates an error for invalid chain building parameters
+//!
+//! ## Conversions
+//!
+//! The module implements various conversion traits:
+//!
+//! * `From<io::Error>` - Converts IO errors to chain errors
+//! * `From<String>` - Converts string messages to price calculation errors
+//!
+//! All error types implement `std::error::Error` and `std::fmt::Display` for proper error
+//! handling and formatting.
+
 use std::error::Error;
 use std::fmt;
 use std::io;

@@ -4,6 +4,68 @@
    Date: 20/12/24
 ******************************************************************************/
 
+//! # Position Error Module
+//!
+//! This module provides error handling for position-related operations in option trading strategies.
+//! It defines error types to handle various scenarios related to position validation, strategy
+//! operations, and position limits.
+//!
+//! ## Error Types
+//!
+//! ### Position Error (`PositionError`)
+//! The main error type with three variants:
+//! * `StrategyError` - For strategy operation failures
+//! * `ValidationError` - For position validation failures
+//! * `LimitError` - For position limit violations
+//!
+//! ### Strategy Errors (`StrategyErrorKind`)
+//! Handles specific strategy-related errors:
+//! * Unsupported operations
+//! * Strategy capacity limits
+//! * Invalid configurations
+//!
+//! ### Validation Errors (`PositionValidationErrorKind`)
+//! Handles position validation failures:
+//! * Invalid position sizes
+//! * Invalid prices
+//! * Incompatible sides (Long/Short)
+//! * Incompatible styles (Call/Put)
+//! * General position invalidity
+//!
+//! ### Limit Errors (`PositionLimitErrorKind`)
+//! Handles position limit violations:
+//! * Maximum positions reached
+//! * Maximum exposure reached
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use optionstratlib::error::position::PositionError;
+//!
+//! fn validate_position_size(size: f64) -> Result<(), PositionError> {
+//!     if size <= 0.0 {
+//!         return Err(PositionError::invalid_position_size(
+//!             size,
+//!             "Position size must be positive"
+//!         ));
+//!     }
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Helper Methods
+//!
+//! The module provides several helper methods for creating common errors:
+//! * `unsupported_operation` - Creates an error for unsupported strategy operations
+//! * `strategy_full` - Creates an error when strategy capacity is reached
+//! * `invalid_position_size` - Creates an error for invalid position sizes
+//! * `invalid_position_type` - Creates an error for incompatible position sides
+//! * `invalid_position_style` - Creates an error for incompatible option styles
+//! * `invalid_position` - Creates a general position validation error
+//!
+//! All error types implement `std::error::Error` and `std::fmt::Display` for proper
+//! error handling and formatting capabilities.
+
 use crate::model::types::{OptionStyle, Side};
 use std::error::Error;
 use std::fmt;
