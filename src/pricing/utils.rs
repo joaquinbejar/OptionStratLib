@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 5/8/24
 ******************************************************************************/
+use num_traits::ToPrimitive;
 use crate::greeks::utils::{big_n, d2};
 use crate::model::option::Options;
 use crate::model::types::{PositiveF64, Side};
@@ -280,7 +281,7 @@ pub(crate) fn wiener_increment(dt: f64) -> f64 {
     normal.sample(&mut rng) * dt.sqrt()
 }
 
-#[allow(dead_code)]
+
 /// Calculates the probability that the option will remain under the strike price.
 ///
 /// # Parameters
@@ -302,7 +303,7 @@ pub fn probability_keep_under_strike(option: Options, strike: Option<PositiveF64
         option.risk_free_rate,
         option.expiration_date.get_years(),
         option.implied_volatility,
-    ))
+    ).unwrap()).unwrap().to_f64().unwrap()
 }
 
 #[cfg(test)]

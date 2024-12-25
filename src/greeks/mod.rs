@@ -86,3 +86,5 @@
 
 pub mod equations;
 pub mod utils;
+
+pub use utils::{d1, d2};

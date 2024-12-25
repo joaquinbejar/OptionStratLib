@@ -14,6 +14,7 @@ use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{debug, error, trace};
+use crate::model::decimal::decimal_to_f64;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
@@ -176,27 +177,27 @@ impl Options {
     }
 
     pub fn delta(&self) -> f64 {
-        delta(self)
+        decimal_to_f64(delta(self).unwrap()).unwrap()
     }
 
     pub fn gamma(&self) -> f64 {
-        gamma(self)
+        decimal_to_f64(gamma(self).unwrap()).unwrap()
     }
 
     pub fn theta(&self) -> f64 {
-        theta(self)
+        decimal_to_f64(theta(self).unwrap()).unwrap()
     }
 
     pub fn vega(&self) -> f64 {
-        vega(self)
+        decimal_to_f64(vega(self).unwrap()).unwrap()
     }
 
     pub fn rho(&self) -> f64 {
-        rho(self)
+        decimal_to_f64(rho(self).unwrap()).unwrap()
     }
 
     pub fn rho_d(&self) -> f64 {
-        rho_d(self)
+        decimal_to_f64(rho_d(self).unwrap()).unwrap()
     }
 
     pub fn is_in_the_money(&self) -> bool {
@@ -1067,7 +1068,7 @@ mod tests_greeks {
     #[test]
     fn test_delta() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = delta(&option);
+        let expected = decimal_to_f64(delta(&option).unwrap()).unwrap();
         assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
     }
 
@@ -1075,7 +1076,7 @@ mod tests_greeks {
     fn test_delta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = delta(&option);
+        let expected = decimal_to_f64(delta(&option).unwrap()).unwrap();
         assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
         assert_relative_eq!(option.delta(), 0.5395199 * 2.0, epsilon = 1e-6);
     }
@@ -1083,7 +1084,7 @@ mod tests_greeks {
     #[test]
     fn test_gamma() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = gamma(&option);
+        let expected = decimal_to_f64(gamma(&option).unwrap()).unwrap();
         assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
     }
 
@@ -1091,7 +1092,7 @@ mod tests_greeks {
     fn test_gamma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = gamma(&option);
+        let expected = decimal_to_f64(gamma(&option).unwrap()).unwrap();
         assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
         assert_relative_eq!(option.gamma(), 0.1383415, epsilon = 1e-6);
     }
@@ -1099,7 +1100,7 @@ mod tests_greeks {
     #[test]
     fn test_theta() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = theta(&option);
+        let expected = decimal_to_f64(theta(&option).unwrap()).unwrap();
         assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
     }
 
@@ -1107,7 +1108,7 @@ mod tests_greeks {
     fn test_theta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = theta(&option);
+        let expected = decimal_to_f64(theta(&option).unwrap()).unwrap();
         assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
         assert_relative_eq!(option.theta(), -31.739563, epsilon = 1e-6);
     }
@@ -1115,7 +1116,7 @@ mod tests_greeks {
     #[test]
     fn test_vega() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = vega(&option);
+        let expected = decimal_to_f64(vega(&option).unwrap()).unwrap();
         assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
     }
 
@@ -1123,7 +1124,7 @@ mod tests_greeks {
     fn test_vega_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = vega(&option);
+        let expected = decimal_to_f64(vega(&option).unwrap()).unwrap();
         assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
         assert_relative_eq!(option.vega(), 30.9351108, epsilon = 1e-6);
     }
@@ -1131,7 +1132,7 @@ mod tests_greeks {
     #[test]
     fn test_rho() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = rho(&option);
+        let expected = decimal_to_f64(rho(&option).unwrap()).unwrap();
         assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
     }
 
@@ -1139,7 +1140,7 @@ mod tests_greeks {
     fn test_rho_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = rho(&option);
+        let expected = decimal_to_f64(rho(&option).unwrap()).unwrap();
         assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
         assert_relative_eq!(option.rho(), 8.46624291, epsilon = 1e-6);
     }
@@ -1147,7 +1148,7 @@ mod tests_greeks {
     #[test]
     fn test_rho_d() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = rho_d(&option);
+        let expected = decimal_to_f64(rho_d(&option).unwrap()).unwrap();
         assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
     }
 
@@ -1155,7 +1156,7 @@ mod tests_greeks {
     fn test_rho_d_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = rho_d(&option);
+        let expected = decimal_to_f64(rho_d(&option).unwrap()).unwrap();
         assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
         assert_relative_eq!(option.rho_d(), -8.86882064, epsilon = 1e-6);
     }

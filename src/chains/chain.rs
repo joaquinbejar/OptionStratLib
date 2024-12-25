@@ -27,6 +27,7 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
+use num_traits::ToPrimitive;
 use tracing::debug;
 
 /// Struct representing a row in an option chain.
@@ -242,7 +243,11 @@ impl OptionData {
                 return;
             }
         };
-        self.delta = Some(delta(&option));
+        
+        match delta(&option) { 
+            Ok(d) => self.delta = d.to_f64(),
+            Err(_) => self.delta = None,
+        }
     }
 
     pub fn get_deltas(

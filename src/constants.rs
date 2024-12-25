@@ -4,6 +4,11 @@
    Date: 11/8/24
 ******************************************************************************/
 use plotters::style::RGBColor;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
+
+pub const ZERO_DEC: Decimal = dec!(0);
+pub const PI: Decimal = dec!(3.1415926535897932384626433832);
 
 #[allow(dead_code)]
 pub(crate) const SECONDS_IN_A_DAY: i64 = 86400;

@@ -3,10 +3,12 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use num_traits::ToPrimitive;
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
 use crate::greeks::utils::big_n;
+use crate::model::decimal::f64_to_decimal;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use crate::pos;
 
@@ -113,10 +115,10 @@ pub fn calculate_single_point_probability(
     let std_dev = volatility.value() * time_to_expiry.sqrt();
 
     // Calculate z-score considering drift
-    let z_score = (log_ratio - drift_rate * time_to_expiry) / std_dev;
+    let z_score = f64_to_decimal((log_ratio - drift_rate * time_to_expiry) / std_dev).unwrap();
 
     // Calculate probabilities using the standard normal distribution
-    let prob_below = pos!(big_n(z_score));
+    let prob_below = pos!(big_n(z_score).unwrap().to_f64().unwrap());
     let prob_above = pos!(1.0 - prob_below);
 
     Ok((prob_below, prob_above))
