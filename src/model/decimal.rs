@@ -6,7 +6,7 @@
 use crate::error::decimal::DecimalError;
 use crate::model::types::PositiveF64;
 use num_traits::{FromPrimitive, ToPrimitive};
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 
 /// Asserts that two Decimal values are approximately equal within a given epsilon
 #[macro_export]
@@ -22,6 +22,31 @@ macro_rules! assert_decimal_eq {
             $epsilon
         );
     };
+}
+
+pub trait DecimalStats {
+    fn mean(&self) -> Decimal;
+
+    fn std_dev(&self) -> Decimal;
+}
+
+impl DecimalStats for Vec<Decimal> {
+    fn mean(&self) -> Decimal {
+        if self.is_empty() {
+            return Decimal::ZERO;
+        }
+        let sum: Decimal = self.iter().sum();
+        sum / Decimal::from(self.len())
+    }
+
+    fn std_dev(&self) -> Decimal {
+        if self.is_empty() {
+            return Decimal::ZERO;
+        }
+        let mean = self.mean();
+        let variance: Decimal = self.iter().map(|x| (x - mean).powd(Decimal::TWO)).sum();
+        (variance / Decimal::from(self.len() - 1)).sqrt().unwrap()
+    }
 }
 
 pub(crate) fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {

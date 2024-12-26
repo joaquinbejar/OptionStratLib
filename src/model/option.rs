@@ -1,5 +1,6 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
+use crate::error::decimal::DecimalError;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::decimal::decimal_to_f64;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
@@ -9,11 +10,12 @@ use crate::pricing::binomial_model::{
 };
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo, Profit};
-use crate::pricing::telegraph::telegraph;
+use crate::pricing::telegraph;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
+use rust_decimal::Decimal;
 use tracing::{debug, error, trace};
 
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -133,7 +135,7 @@ impl Options {
         black_scholes(self)
     }
 
-    pub fn calculate_price_telegraph(&self, no_steps: usize) -> f64 {
+    pub fn calculate_price_telegraph(&self, no_steps: usize) -> Result<Decimal, DecimalError> {
         telegraph(self, no_steps, None, None)
     }
 

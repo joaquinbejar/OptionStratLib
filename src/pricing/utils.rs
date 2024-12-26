@@ -3,17 +3,20 @@
    Email: jb@taunais.com
    Date: 5/8/24
 ******************************************************************************/
+use crate::error::decimal::DecimalError;
 use crate::greeks::utils::{big_n, d2};
 use crate::model::option::Options;
 use crate::model::types::{PositiveF64, Side};
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
-use num_traits::ToPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use rand::distributions::Distribution;
+use rand::Rng;
+use rust_decimal::{Decimal, MathematicalOps};
 use statrs::distribution::Normal;
 
-/// Simulates stock returns based on a normal distribution.
+/// Simulates stock returns based on a normal distribution using pure decimal arithmetic.
 ///
 /// # Arguments
 ///
@@ -24,17 +27,74 @@ use statrs::distribution::Normal;
 ///
 /// # Returns
 ///
-/// A vector of simulated returns
-pub fn simulate_returns(mean: f64, std_dev: f64, length: usize, time_step: f64) -> Vec<f64> {
-    let mut rng = rand::thread_rng();
+/// A Result containing either:
+/// - Ok(`Vec<Decimal>`): A vector of simulated returns as Decimal numbers
+/// - Err(DecimalError): If there's an error in decimal calculations
+pub fn simulate_returns(
+    mean: Decimal,
+    std_dev: Decimal,
+    length: usize,
+    time_step: Decimal,
+) -> Result<Vec<Decimal>, DecimalError> {
+    /// Generates a pair of normally distributed random numbers using Box-Muller transform
+    fn generate_normal_pair<R: Rng>(rng: &mut R) -> Result<(Decimal, Decimal), DecimalError> {
+        // Generate two uniform random numbers between 0 and 1
+        let u1 = Decimal::from_f64(rng.gen::<f64>()).ok_or(DecimalError::ConversionError {
+            from_type: "f64".to_string(),
+            to_type: "Decimal".to_string(),
+            reason: "Failed to convert f64 to Decimal".to_string(),
+        })?;
+
+        let u2 = Decimal::from_f64(rng.gen::<f64>()).ok_or(DecimalError::ConversionError {
+            from_type: "f64".to_string(),
+            to_type: "Decimal".to_string(),
+            reason: "Failed to convert f64 to Decimal".to_string(),
+        })?;
+
+        // Convert to normal distribution using Box-Muller transform
+        let r = (-Decimal::TWO * u1.ln()).sqrt().unwrap();
+        let theta = Decimal::TWO * Decimal::PI * u2;
+
+        let x1 = r * theta.cos();
+        let x2 = r * theta.sin();
+
+        Ok((x1, x2))
+    }
+
+    if std_dev < Decimal::ZERO {
+        return Err(DecimalError::InvalidValue {
+            value: std_dev.to_f64().unwrap(),
+            reason: "Standard deviation cannot be negative".to_string(),
+        });
+    }
 
     // Adjust mean and standard deviation for the time step
     let adjusted_mean = mean * time_step;
-    let adjusted_std_dev = std_dev * time_step.sqrt();
+    let adjusted_std = std_dev * time_step.sqrt().unwrap();
 
-    let normal = Normal::new(adjusted_mean, adjusted_std_dev).unwrap();
+    // Special case: if std_dev is 0, return a vector of constant values
+    if adjusted_std == Decimal::ZERO {
+        return Ok(vec![adjusted_mean; length]);
+    }
 
-    (0..length).map(|_| normal.sample(&mut rng)).collect()
+    let mut returns = Vec::with_capacity(length);
+    let mut rng = rand::thread_rng();
+
+    // Generate pairs of normally distributed random numbers using Box-Muller transform
+    for _ in 0..(length + 1) / 2 {
+        let (n1, n2) = generate_normal_pair(&mut rng)?;
+
+        // Scale the random numbers by mean and std_dev
+        let r1 = n1 * adjusted_std + adjusted_mean;
+        returns.push(r1);
+
+        if returns.len() < length {
+            let r2 = n2 * adjusted_std + adjusted_mean;
+            returns.push(r2);
+        }
+    }
+
+    Ok(returns)
 }
 
 /// Calculates the up factor for an asset's price movement model.
@@ -223,36 +283,6 @@ pub(crate) fn calculate_discounted_payoff(params: BinomialPricingParams) -> f64 
     }
 }
 
-#[cfg(test)]
-mod tests_simulate_returns {
-    use super::*;
-    use approx::assert_relative_eq;
-    use statrs::statistics::Statistics;
-
-    #[test]
-    fn test_simulate_returns() {
-        let mean = 0.05; // 5% annual return
-        let std_dev = 0.2; // 20% annual volatility
-        let length = 252; // One year of daily returns
-        let time_step = 1.0 / 252.0; // Daily time step
-
-        let returns = simulate_returns(mean, std_dev, length, time_step);
-
-        assert_eq!(returns.len(), length);
-
-        // Check that the mean and standard deviation are reasonably close to expected values
-        let simulated_mean = returns.clone().mean();
-        let simulated_std_dev = returns.std_dev();
-
-        assert_relative_eq!(simulated_mean, mean * time_step, epsilon = 0.01);
-        assert_relative_eq!(
-            simulated_std_dev,
-            std_dev * time_step.sqrt(),
-            epsilon = 0.01
-        );
-    }
-}
-
 /// Calculates a Wiener process (Brownian motion) increment over a small-time step `dt`.
 ///
 /// This function uses the standard normal distribution to sample a value and scales it
@@ -273,7 +303,6 @@ mod tests_simulate_returns {
 /// This function will panic if the creation of the normal distribution fails, which is
 /// highly unlikely with valid inputs.
 ///
-#[allow(dead_code)]
 pub(crate) fn wiener_increment(dt: f64) -> f64 {
     let normal = Normal::new(0.0, 1.0).unwrap();
     let mut rng = rand::thread_rng();
@@ -309,6 +338,151 @@ pub fn probability_keep_under_strike(option: Options, strike: Option<PositiveF64
     .unwrap()
     .to_f64()
     .unwrap()
+}
+
+#[cfg(test)]
+mod tests_simulate_returns {
+    use super::*;
+    use crate::assert_decimal_eq;
+    use crate::model::decimal::DecimalStats;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_simulate_returns() {
+        let mean = dec!(0.05); // 5% annual return
+        let std_dev = dec!(0.2); // 20% annual volatility
+        let length = 252; // One year of daily returns
+        let time_step = Decimal::from_f64(1.0 / 252.0).unwrap(); // Daily time step
+
+        let returns = simulate_returns(mean, std_dev, length, time_step).unwrap();
+
+        assert_eq!(returns.len(), length);
+
+        // Check that the mean and standard deviation are reasonably close to expected values
+        let simulated_mean = returns.clone().mean();
+        let simulated_std_dev = returns.std_dev();
+
+        assert_decimal_eq!(simulated_mean, mean * time_step, dec!(0.01));
+        assert_decimal_eq!(
+            simulated_std_dev,
+            std_dev * time_step.sqrt().unwrap(),
+            dec!(0.01)
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_simulate_returns_bis {
+    use super::*;
+    use crate::assert_decimal_eq;
+    use crate::model::decimal::DecimalStats;
+    use rust_decimal_macros::dec;
+
+    fn mean(values: &[Decimal]) -> Decimal {
+        if values.is_empty() {
+            return Decimal::ZERO;
+        }
+        values.to_vec().mean()
+    }
+
+    fn std_dev(values: &[Decimal]) -> Decimal {
+        if values.is_empty() {
+            return Decimal::ZERO;
+        }
+        let mean = mean(values);
+        let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<Decimal>()
+            / Decimal::from_f64(values.len() as f64).unwrap();
+        variance.sqrt().unwrap()
+    }
+
+    #[test]
+    fn test_simulate_returns_length() {
+        let length = 1000;
+        let returns = simulate_returns(
+            dec!(0.05),
+            dec!(0.2),
+            length,
+            Decimal::from_f64(1.0 / 252.0).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(returns.len(), length);
+    }
+
+    #[test]
+    fn test_simulate_returns_statistical_properties() {
+        let m = dec!(0.10);
+        let sd = dec!(0.20);
+        let time_step = Decimal::from_f64(1.0 / 252.0).unwrap();
+        let length = 10000;
+
+        let returns = simulate_returns(m, sd, length, time_step).unwrap();
+
+        let sample_mean = mean(&returns);
+        let sample_std = std_dev(&returns);
+
+        let expected_mean = m * time_step;
+        let expected_std = sd * time_step.sqrt().unwrap();
+
+        assert_decimal_eq!(sample_mean, expected_mean, expected_mean.abs());
+        assert_decimal_eq!(sample_std, expected_std, expected_std);
+    }
+
+    #[test]
+    fn test_simulate_returns_zero_mean() {
+        let returns = simulate_returns(
+            dec!(0.0),
+            dec!(0.2),
+            1000,
+            Decimal::from_f64(1.0 / 252.0).unwrap(),
+        )
+        .unwrap();
+        let mean = returns.mean();
+        assert!(mean.abs() < dec!(0.01));
+    }
+
+    #[test]
+    fn test_simulate_returns_zero_volatility() {
+        let mean = dec!(0.05);
+        let time_step = Decimal::from_f64(1.0 / 252.0).unwrap();
+        let returns = simulate_returns(mean, Decimal::ZERO, 100, time_step).unwrap();
+
+        let expected = mean * time_step;
+        for r in returns {
+            assert_decimal_eq!(r, expected, dec!(1e-10));
+        }
+    }
+
+    #[test]
+    fn test_simulate_returns_single_value() {
+        let returns = simulate_returns(
+            dec!(0.05),
+            dec!(0.2),
+            1,
+            Decimal::from_f64(1.0 / 252.0).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(returns.len(), 1);
+    }
+
+    #[test]
+    fn test_simulate_returns_yearly_step() {
+        let returns = simulate_returns(dec!(0.05), dec!(0.2), 100, dec!(1.0)).unwrap();
+        assert_eq!(returns.len(), 100);
+        for r in returns {
+            assert!(r > dec!(-1.0)); // Los retornos no deberían ser menores que -100%
+        }
+    }
+
+    #[test]
+    fn test_simulate_returns_invalid_std_dev() {
+        assert!(simulate_returns(
+            dec!(0.05),
+            dec!(-0.2),
+            100,
+            Decimal::from_f64(1.0 / 252.0).unwrap(),
+        )
+        .is_err());
+    }
 }
 
 #[cfg(test)]

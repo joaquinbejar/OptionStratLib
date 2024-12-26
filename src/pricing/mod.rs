@@ -61,6 +61,7 @@
 //! ### Using the Telegraph Process
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
@@ -68,7 +69,7 @@
 //! use optionstratlib::pos;
 //!
 //! // Create a Telegraph Process with transition rates
-//! let process = TelegraphProcess::new(0.5, 0.3);
+//! let process = TelegraphProcess::new(dec!(0.5), dec!(0.3));
 //!
 //! // Price an option using the Telegraph Process
 //! let option = Options {
@@ -85,12 +86,13 @@
 //!             dividend_yield: 0.01,
 //!             exotic_params: None,
 //!         };
-//! let price = telegraph(&option, 1000, Some(0.5), Some(0.3));
+//! let price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
 //! ```
 //!
 //! ### Combined Model Analysis
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
 //! use optionstratlib::model::types::PositiveF64;
@@ -117,7 +119,7 @@
 //! // Compare prices across different models
 //! let bs_price = black_scholes(&option);
 //! let mc_price = monte_carlo_option_pricing(&option, 1000, 10000);
-//! let tp_price = telegraph(&option, 1000, Some(0.5), Some(0.3));
+//! let tp_price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
 //! ```
 //!
 //! ## Implementation Notes
