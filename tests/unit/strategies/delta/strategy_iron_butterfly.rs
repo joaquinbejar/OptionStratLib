@@ -65,7 +65,7 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: pos!(11.30151498857601),
+            quantity: pos!(11.301514988575999),
             strike: pos!(2500.0),
             option_type: OptionStyle::Put
         }

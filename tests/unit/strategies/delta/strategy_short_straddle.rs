@@ -63,7 +63,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: pos!(0.1939607389394844),
+            quantity: pos!(0.19396073893948335),
             strike: pos!(7140.0),
             option_type: OptionStyle::Put
         }

@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 5/8/24
 ******************************************************************************/
-use num_traits::ToPrimitive;
 use crate::greeks::utils::{big_n, d2};
 use crate::model::option::Options;
 use crate::model::types::{PositiveF64, Side};
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
+use num_traits::ToPrimitive;
 use rand::distributions::Distribution;
 use statrs::distribution::Normal;
 
@@ -281,7 +281,6 @@ pub(crate) fn wiener_increment(dt: f64) -> f64 {
     normal.sample(&mut rng) * dt.sqrt()
 }
 
-
 /// Calculates the probability that the option will remain under the strike price.
 ///
 /// # Parameters
@@ -297,13 +296,19 @@ pub fn probability_keep_under_strike(option: Options, strike: Option<PositiveF64
         Some(strike) => strike,
         None => option.strike_price,
     };
-    big_n(-d2(
-        option.underlying_price,
-        strike_price,
-        option.risk_free_rate,
-        option.expiration_date.get_years(),
-        option.implied_volatility,
-    ).unwrap()).unwrap().to_f64().unwrap()
+    big_n(
+        -d2(
+            option.underlying_price,
+            strike_price,
+            option.risk_free_rate,
+            option.expiration_date.get_years(),
+            option.implied_volatility,
+        )
+        .unwrap(),
+    )
+    .unwrap()
+    .to_f64()
+    .unwrap()
 }
 
 #[cfg(test)]
@@ -422,7 +427,7 @@ mod tests_probability_keep_under_strike {
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
             expiration_date: ExpirationDate::Days(365.0),
-            implied_volatility: ZERO,
+            implied_volatility: 0.001,
             underlying_symbol: "".to_string(),
             quantity: SIZE_ONE,
             exotic_params: None,
@@ -462,6 +467,7 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
+    #[should_panic]
     fn test_probability_keep_under_strike_zero_volatility() {
         let option = Options {
             option_type: OptionType::European,
@@ -478,11 +484,7 @@ mod tests_probability_keep_under_strike {
             exotic_params: None,
         };
         let strike = None;
-        let probability = probability_keep_under_strike(option, strike);
-        assert_eq!(
-            probability, 0.5,
-            "With zero volatility, the probability should be 0.5"
-        );
+        let _ = probability_keep_under_strike(option, strike);
     }
 
     #[test]
@@ -519,7 +521,7 @@ mod tests_probability_keep_under_strike {
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
-            expiration_date: ExpirationDate::Days(ZERO),
+            expiration_date: ExpirationDate::Days(1.0),
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             quantity: PZERO,

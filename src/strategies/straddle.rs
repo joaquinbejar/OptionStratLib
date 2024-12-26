@@ -17,6 +17,7 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -38,7 +39,6 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use std::f64;
 use tracing::{info, trace};
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -193,9 +193,11 @@ impl Strategies for ShortStraddle {
     fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
         let max_profit = self.net_premium_received();
         if max_profit < ZERO {
-            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
-                reason: "Max profit is negative".to_string(),
-            }))
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Max profit is negative".to_string(),
+                },
+            ))
         } else {
             Ok(max_profit.into())
         }
@@ -2187,14 +2189,14 @@ mod tests_short_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.4271447567333657),
+                quantity: pos!(0.42714475673336616),
                 strike: pos!(7460.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(0.4271447567333657);
+        option.quantity = pos!(0.42714475673336616);
         assert_relative_eq!(option.delta(), -0.175986, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -2217,14 +2219,14 @@ mod tests_short_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.39342797972712407),
+                quantity: pos!(0.3934279797271222),
                 strike: pos!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.short_put.option.clone();
-        option.quantity = pos!(0.39342797972712407);
+        option.quantity = pos!(0.3934279797271222);
         assert_relative_eq!(option.delta(), 0.164378, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -2321,14 +2323,14 @@ mod tests_long_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.17382253382440507),
+                quantity: pos!(0.17382253382440663),
                 strike: pos!(7150.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.17382253382440507);
+        option.quantity = pos!(0.17382253382440663);
         assert_relative_eq!(option.delta(), -0.07996, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -2396,14 +2398,14 @@ mod tests_short_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.8542895134667314),
+                quantity: pos!(0.8542895134667323),
                 strike: pos!(7460.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(0.8542895134667314);
+        option.quantity = pos!(0.8542895134667323);
         assert_relative_eq!(option.delta(), -0.35197, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -2426,14 +2428,14 @@ mod tests_short_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.7868559594542481),
+                quantity: pos!(0.7868559594542444),
                 strike: pos!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.short_put.option.clone();
-        option.quantity = pos!(0.7868559594542481);
+        option.quantity = pos!(0.7868559594542444);
         assert_relative_eq!(option.delta(), 0.32875, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -2530,14 +2532,14 @@ mod tests_long_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.34764506764881015),
+                quantity: pos!(0.34764506764881326),
                 strike: pos!(7150.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.34764506764881015);
+        option.quantity = pos!(0.34764506764881326);
         assert_relative_eq!(option.delta(), -0.15992, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,

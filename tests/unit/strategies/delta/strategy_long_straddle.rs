@@ -63,7 +63,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: pos!(0.046931443553379394),
+            quantity: pos!(0.04693144355338067),
             strike: pos!(7140.0),
             option_type: OptionStyle::Call,
         }

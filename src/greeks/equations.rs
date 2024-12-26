@@ -6,11 +6,10 @@
 use crate::constants::ZERO;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
-use crate::model::decimal::{decimal_exp, decimal_sqrt, f64_to_decimal, positive_f64_to_decimal};
+use crate::model::decimal::{f64_to_decimal, positive_f64_to_decimal};
 use crate::model::option::Options;
 use crate::model::types::OptionStyle;
-use rust_decimal::Decimal;
-
+use rust_decimal::{Decimal, MathematicalOps};
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
@@ -67,7 +66,7 @@ pub trait Greeks {
 ///     \[ \Delta_{\text{call}} = \text{sign} \cdot N(d1) \cdot e^{-qT} \]
 ///   - Put Option:
 ///     \[ \Delta_{\text{put}} = \text{sign} \cdot (N(d1) - 1) \cdot e^{-qT} \]
-///   Where:
+///     Where:
 ///     - \(N(d1)\): The cumulative distribution function (CDF) of the standard normal distribution evaluated at \(d1\).
 ///     - \(q\): The dividend yield.
 ///     - \(T\): Time to expiration.
@@ -86,6 +85,7 @@ pub trait Greeks {
 /// use optionstratlib::greeks::equations::delta;
 /// use optionstratlib::model::option::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+/// use optionstratlib::pos;
 /// let option = Options {
 ///     option_type: OptionType::European,side:
 ///     Side::Long,underlying_price:
@@ -95,7 +95,7 @@ pub trait Greeks {
 ///     expiration_date: ExpirationDate::Days(30.0),
 ///     implied_volatility: 0.2,
 ///     dividend_yield: ZERO,
-///     quantity: PositiveF64(1.0),
+///     quantity: pos!(1.0),
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "AAPL".to_string(),
 ///     exotic_params: None,
@@ -142,7 +142,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
     )?;
 
     let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
-    let div_date = decimal_exp(-dividend_yield * expiration_date)?;
+    let div_date = (-dividend_yield * expiration_date).exp();
 
     let delta = match option.option_style {
         OptionStyle::Call => sign * big_n(d1)? * div_date,
@@ -251,9 +251,9 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
     let underlying_price: Decimal = positive_f64_to_decimal(option.underlying_price)?;
     let implied_volatility: Decimal = f64_to_decimal(option.implied_volatility)?;
-    
-    let gamma = decimal_exp(-dividend_yield * expiration_date)? * n(d1)?
-        / (underlying_price * implied_volatility * decimal_sqrt(expiration_date)?);
+
+    let gamma = (-dividend_yield * expiration_date).exp() * n(d1)?
+        / (underlying_price * implied_volatility * expiration_date.sqrt().unwrap());
 
     let quantity: Decimal = option.quantity.into();
     Ok(gamma * quantity)
@@ -374,41 +374,40 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
         option.expiration_date.get_years(),
         option.implied_volatility,
     )?;
-    
+
     let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
     let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
     let underlying_price: Decimal = positive_f64_to_decimal(option.underlying_price)?;
     let implied_volatility: Decimal = f64_to_decimal(option.implied_volatility)?;
 
     let common_term: Decimal =
-        -underlying_price * implied_volatility * decimal_exp(-dividend_yield * expiration_date)? * n(d1)?
-            / (Decimal::TWO * decimal_sqrt(expiration_date)?);
+        -underlying_price * implied_volatility * (-dividend_yield * expiration_date).exp() * n(d1)?
+            / (Decimal::TWO * expiration_date.sqrt().unwrap());
 
     let strike_price: Decimal = positive_f64_to_decimal(option.strike_price)?;
     let risk_free_rate: Decimal = f64_to_decimal(option.risk_free_rate)?;
 
-    
     let theta: Decimal = match option.option_style {
         OptionStyle::Call => {
             common_term
                 - risk_free_rate
                     * strike_price
-                    * decimal_exp(-risk_free_rate * expiration_date)?
+                    * (-risk_free_rate * expiration_date).exp()
                     * big_n(d2)?
                 + dividend_yield
                     * underlying_price
-                    * decimal_exp(-dividend_yield * expiration_date)?
+                    * (-dividend_yield * expiration_date).exp()
                     * big_n(d1)?
         }
         OptionStyle::Put => {
             common_term
                 + risk_free_rate
                     * strike_price
-                    * decimal_exp(-risk_free_rate * expiration_date)?
+                    * (-risk_free_rate * expiration_date).exp()
                     * big_n(-d2)?
                 - dividend_yield
                     * underlying_price
-                    * decimal_exp(-dividend_yield * expiration_date)?
+                    * (-dividend_yield * expiration_date).exp()
                     * big_n(-d1)?
         }
     };
@@ -508,15 +507,15 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
         option.expiration_date.get_years(),
         option.implied_volatility,
     )?;
-    
+
     let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
     let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
     let underlying_price: Decimal = positive_f64_to_decimal(option.underlying_price)?;
 
     let vega: Decimal = underlying_price
-        * decimal_exp(-dividend_yield * expiration_date)?
+        * (-dividend_yield * expiration_date).exp()
         * big_n(d1)?
-        * decimal_sqrt(expiration_date)?;
+        * expiration_date.sqrt().unwrap();
 
     let quantity: Decimal = option.quantity.into();
     Ok(vega * quantity)
@@ -629,8 +628,7 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
     let risk_free_rate: Decimal = f64_to_decimal(option.risk_free_rate)?;
     let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
 
-
-    let e_rt = decimal_exp(-risk_free_rate * expiration_date)?;
+    let e_rt = (-risk_free_rate * expiration_date).exp();
     if e_rt == Decimal::ZERO {
         return Ok(Decimal::ZERO);
     }
@@ -758,7 +756,7 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
         option.expiration_date.get_years(),
         option.implied_volatility,
     )?;
-    
+
     let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
     let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
     let underlying_price: Decimal = positive_f64_to_decimal(option.underlying_price)?;
@@ -767,13 +765,13 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
         OptionStyle::Call => {
             -expiration_date
                 * underlying_price
-                * decimal_exp(-dividend_yield * expiration_date)?
+                * (-dividend_yield * expiration_date).exp()
                 * big_n(d1)?
         }
         OptionStyle::Put => {
             expiration_date
                 * underlying_price
-                * decimal_exp(-dividend_yield * expiration_date)?
+                * (-dividend_yield * expiration_date).exp()
                 * big_n(-d1)?
         }
     };
@@ -1002,499 +1000,503 @@ mod tests_delta_equations {
     }
 }
 
-// #[cfg(test)]
-// mod tests_gamma_equations {
-//     use super::*;
-//     use crate::model::types::PositiveF64;
-//     use crate::model::types::{ExpirationDate, OptionStyle, Side};
-//     use crate::model::utils::create_sample_option;
-//     use crate::pos;
-//     use crate::utils::logger::setup_logger;
-//     use approx::assert_relative_eq;
-//     use tracing::info;
-//
-//     #[test]
-//     fn test_gamma_deep_in_the_money_call() {
-//         setup_logger();
-//         let option = create_sample_option(
-//             OptionStyle::Call,
-//             Side::Long,
-//             pos!(150.0),
-//             pos!(1.0),
-//             pos!(120.0),
-//             0.2,
-//         );
-//         let gamma_value = gamma(&option);
-//         info!("Deep ITM Call Gamma: {}", gamma_value);
-//         assert_relative_eq!(gamma_value, 0.000016049457791525, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_gamma_deep_out_of_the_money_call() {
-//         let option = create_sample_option(
-//             OptionStyle::Call,
-//             Side::Long,
-//             pos!(50.0),
-//             pos!(1.0),
-//             pos!(100.0),
-//             0.20,
-//         );
-//         let gamma_value = gamma(&option);
-//         info!("Deep OTM Call Gamma: {}", gamma_value);
-//         assert_relative_eq!(gamma_value, 8.596799333253201e-33, epsilon = 1e-34);
-//     }
-//
-//     #[test]
-//     fn test_gamma_at_the_money_put() {
-//         let option = create_sample_option(
-//             OptionStyle::Put,
-//             Side::Long,
-//             pos!(100.0),
-//             pos!(1.0),
-//             pos!(100.0),
-//             0.20,
-//         );
-//         let gamma_value = gamma(&option);
-//         info!("ATM Put Gamma: {}", gamma_value);
-//         assert_relative_eq!(gamma_value, 0.06917076441486919, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_gamma_short_term_high_volatility() {
-//         let mut option = create_sample_option(
-//             OptionStyle::Call,
-//             Side::Long,
-//             pos!(100.0),
-//             pos!(1.0),
-//             pos!(100.0),
-//             0.50,
-//         );
-//         option.expiration_date = ExpirationDate::Days(7.0);
-//         let gamma_value = gamma(&option);
-//         info!("Short-term High Vol Call Gamma: {}", gamma_value);
-//         assert_relative_eq!(gamma_value, 0.05753657912620555, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_gamma_long_term_low_volatility() {
-//         let mut option = create_sample_option(
-//             OptionStyle::Put,
-//             Side::Long,
-//             pos!(100.0),
-//             pos!(1.0),
-//             pos!(100.0),
-//             0.10,
-//         );
-//         option.expiration_date = ExpirationDate::Days(365.0);
-//         let gamma_value = gamma(&option);
-//         info!("Long-term Low Vol Put Gamma: {}", gamma_value);
-//         assert_relative_eq!(gamma_value, 0.033953150664723986, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_gamma_zero_volatility() {
-//         let option = create_sample_option(
-//             OptionStyle::Call,
-//             Side::Long,
-//             pos!(100.0),
-//             pos!(1.0),
-//             pos!(100.0),
-//             0.0,
-//         );
-//         let gamma_value = gamma(&option);
-//         info!("Zero Volatility Call Gamma: {}", gamma_value);
-//         assert_relative_eq!(gamma_value, 0.0, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_gamma_extreme_high_volatility() {
-//         let option = create_sample_option(
-//             OptionStyle::Put,
-//             Side::Short,
-//             pos!(100.0),
-//             pos!(1.0),
-//             pos!(100.0),
-//             5.0,
-//         );
-//         let gamma_value = gamma(&option);
-//         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
-//         assert_relative_eq!(gamma_value, 0.002146478293943308, epsilon = 1e-8);
-//     }
-// }
-//
-// #[cfg(test)]
-// mod tests_vega_equation {
-//     use super::*;
-//     use crate::model::types::PositiveF64;
-//     use crate::model::types::{ExpirationDate, OptionType, Side};
-//     use crate::pos;
-//
-//     fn create_test_option(
-//         underlying_price: PositiveF64,
-//         strike_price: PositiveF64,
-//         implied_volatility: f64,
-//         dividend_yield: f64,
-//         expiration_in_days: f64,
-//     ) -> Options {
-//         Options::new(
-//             OptionType::European,
-//             Side::Long,
-//             "TEST".to_string(),
-//             strike_price,
-//             ExpirationDate::Days(expiration_in_days),
-//             implied_volatility,
-//             pos!(1.0), // Quantity
-//             underlying_price,
-//             0.05, // Risk-free rate
-//             OptionStyle::Call,
-//             dividend_yield,
-//             None, // No exotic params for this test
-//         )
-//     }
-//
-//     #[test]
-//     fn test_vega_atm() {
-//         let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.0, 365.0);
-//         let vega = vega(&option);
-//         let expected_vega = 63.68306511756191;
-//         assert!(
-//             (vega - expected_vega).abs() < 1e-5,
-//             "Vega ATM test failed: expected {}, got {}",
-//             expected_vega,
-//             vega
-//         );
-//     }
-//
-//     #[test]
-//     fn test_vega_otm() {
-//         let option = create_test_option(pos!(90.0), pos!(100.0), 0.2, 0.0, 365.0);
-//         let vega = vega(&option);
-//         let expected_vega = 38.68485587005888;
-//         assert!(
-//             (vega - expected_vega).abs() < 1e-5,
-//             "Vega OTM test failed: expected {}, got {}",
-//             expected_vega,
-//             vega
-//         );
-//     }
-//
-//     #[test]
-//     fn test_vega_short_expiration() {
-//         let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.0, 1.0);
-//         let vega = vega(&option);
-//         let expected_vega = 2.6553722124554757;
-//         assert!(
-//             (vega - expected_vega).abs() < 1e-5,
-//             "Vega short expiration test failed: expected {}, got {}",
-//             expected_vega,
-//             vega
-//         );
-//     }
-//
-//     #[test]
-//     fn test_vega_with_dividends() {
-//         let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.03, 1.0);
-//         let vega = vega(&option);
-//         let expected_vega = 2.6551539716535117;
-//         assert!(
-//             (vega - expected_vega).abs() < 1e-5,
-//             "Vega with dividends test failed: expected {}, got {}",
-//             expected_vega,
-//             vega
-//         );
-//     }
-//
-//     #[test]
-//     fn test_vega_itm() {
-//         let option = create_test_option(pos!(110.0), pos!(100.0), 0.2, 0.0, 1.0);
-//         let vega = vega(&option);
-//         let expected_vega = 5.757663148492351;
-//         assert!(
-//             (vega - expected_vega).abs() < 1e-5,
-//             "Vega ITM test failed: expected {}, got {}",
-//             expected_vega,
-//             vega
-//         );
-//     }
-// }
-//
-// #[cfg(test)]
-// mod tests_rho_equations {
-//     use super::*;
-//     use crate::constants::ZERO;
-//     use crate::model::types::PositiveF64;
-//     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-//     use crate::pos;
-//     use approx::assert_relative_eq;
-//
-//     fn create_test_option(style: OptionStyle) -> Options {
-//         Options {
-//             option_type: OptionType::European,
-//             side: Side::Long,
-//             underlying_symbol: "TEST".to_string(),
-//             strike_price: pos!(100.0),
-//             expiration_date: ExpirationDate::Days(365.0),
-//             implied_volatility: 0.2,
-//             quantity: pos!(1.0),
-//             underlying_price: pos!(100.0),
-//             risk_free_rate: 0.05,
-//             option_style: style,
-//             dividend_yield: 0.0,
-//             exotic_params: None,
-//         }
-//     }
-//
-//     #[test]
-//     fn test_rho_call_option() {
-//         let option = create_test_option(OptionStyle::Call);
-//         let result = rho(&option);
-//         assert_relative_eq!(result, 53.232481545376345, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_rho_put_option() {
-//         let option = create_test_option(OptionStyle::Put);
-//         let result = rho(&option);
-//         assert_relative_eq!(result, -41.89046090469506, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_rho_zero_time_to_expiry() {
-//         let mut option = create_test_option(OptionStyle::Call);
-//         option.expiration_date = ExpirationDate::Days(0.0);
-//         let result = rho(&option);
-//         assert_eq!(result, ZERO);
-//     }
-//
-//     #[test]
-//     fn test_rho_zero_risk_free_rate() {
-//         let mut option = create_test_option(OptionStyle::Call);
-//         option.risk_free_rate = 0.0;
-//         let result = rho(&option);
-//         assert_relative_eq!(result, 46.0172162722971, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_rho_deep_out_of_money_call() {
-//         let mut option = create_test_option(OptionStyle::Call);
-//         option.strike_price = pos!(1000.0);
-//         let result = rho(&option);
-//         assert_relative_eq!(result, 0.0, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_rho_deep_out_of_money_put() {
-//         let mut option = create_test_option(OptionStyle::Put);
-//         option.strike_price = pos!(1.0);
-//         let result = rho(&option);
-//         assert_relative_eq!(result, 0.0, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_rho_high_volatility() {
-//         let mut option = create_test_option(OptionStyle::Call);
-//         option.implied_volatility = 1.0;
-//         let result = rho(&option);
-//         assert_relative_eq!(result, 31.043868837728198, epsilon = 0.0001);
-//     }
-// }
-//
-// #[cfg(test)]
-// mod tests_theta_long_equations {
-//     use super::*;
-//     use crate::model::types::PositiveF64;
-//     use crate::model::types::{ExpirationDate, Side};
-//     use crate::model::utils::create_sample_option;
-//     use crate::pos;
-//     use approx::assert_relative_eq;
-//
-//     #[test]
-//     fn test_theta_call_option() {
-//         // Create a sample call option
-//         let option = create_sample_option(
-//             OptionStyle::Call,
-//             Side::Long,
-//             pos!(150.0), // underlying price
-//             pos!(1.0),   // quantity
-//             pos!(155.0), // strike price
-//             0.20,        // implied volatility
-//         );
-//
-//         // Expected theta value for a call option (precomputed or from known source)
-//         let expected_theta = -20.487619647724042;
-//
-//         // Compute the theta value using the function
-//         let calculated_theta = theta(&option);
-//
-//         // Assert the calculated theta is close to the expected value
-//         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_theta_put_option() {
-//         // Create a sample put option
-//         let option = create_sample_option(
-//             OptionStyle::Put,
-//             Side::Long,
-//             pos!(150.0), // underlying price
-//             pos!(1.0),   // quantity
-//             pos!(145.0), // strike price
-//             0.25,        // implied volatility
-//         );
-//
-//         // Expected theta value for a put option (precomputed or from known source)
-//         let expected_theta = -20.395533126950692;
-//
-//         // Compute the theta value using the function
-//         let calculated_theta = theta(&option);
-//
-//         // Assert the calculated theta is close to the expected value
-//         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_theta_call_option_near_expiry() {
-//         // Create a sample call option near expiry
-//         let mut option = create_sample_option(
-//             OptionStyle::Call,
-//             Side::Long,
-//             pos!(150.0), // underlying price
-//             pos!(1.0),   // quantity
-//             pos!(150.0), // strike price
-//             0.15,        // implied volatility
-//         );
-//         option.expiration_date = ExpirationDate::Days(1.0); // Option close to expiry
-//
-//         // Expected theta value for a near-expiry call option (precomputed)
-//         let expected_theta = -88.75028112939226;
-//
-//         // Compute the theta value using the function
-//         let calculated_theta = theta(&option);
-//
-//         // Assert the calculated theta is close to the expected value
-//         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_theta_put_option_far_from_expiry() {
-//         // Create a sample put option far from expiry
-//         let mut option = create_sample_option(
-//             OptionStyle::Put,
-//             Side::Long,
-//             pos!(140.0), // underlying price
-//             pos!(1.0),   // quantity
-//             pos!(130.0), // strike price
-//             0.30,        // implied volatility
-//         );
-//         option.expiration_date = ExpirationDate::Days(365.0); // Option far from expiry
-//
-//         // Expected theta value for a far-expiry put option (precomputed)
-//         let expected_theta = -5.024569007193639;
-//
-//         // Compute the theta value using the function
-//         let calculated_theta = theta(&option);
-//
-//         // Assert the calculated theta is close to the expected value
-//         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
-//     }
-// }
-//
-// #[cfg(test)]
-// mod tests_theta_short_equations {
-//     use super::*;
-//     use crate::model::types::PositiveF64;
-//     use crate::model::types::{ExpirationDate, Side};
-//     use crate::model::utils::create_sample_option;
-//     use crate::pos;
-//     use approx::assert_relative_eq;
-//
-//     #[test]
-//     fn test_theta_short_call_option() {
-//         // Create a sample short call option
-//         let option = create_sample_option(
-//             OptionStyle::Call,
-//             Side::Short,
-//             pos!(150.0), // underlying price
-//             pos!(1.0),   // quantity
-//             pos!(155.0), // strike price
-//             0.20,        // implied volatility
-//         );
-//
-//         // Expected theta value for a short call option (precomputed or from known source)
-//         let expected_theta = -20.487619647724042;
-//
-//         // Compute the theta value using the function
-//         let calculated_theta = theta(&option);
-//
-//         // Assert the calculated theta is close to the expected value
-//         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_theta_short_put_option() {
-//         // Create a sample short put option
-//         let option = create_sample_option(
-//             OptionStyle::Put,
-//             Side::Short,
-//             pos!(150.0), // underlying price
-//             pos!(1.0),   // quantity
-//             pos!(145.0), // strike price
-//             0.25,        // implied volatility
-//         );
-//
-//         // Expected theta value for a short put option (precomputed or from known source)
-//         let expected_theta = -20.395533126950692;
-//
-//         // Compute the theta value using the function
-//         let calculated_theta = theta(&option);
-//
-//         // Assert the calculated theta is close to the expected value
-//         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_theta_short_call_option_near_expiry() {
-//         // Create a sample short call option near expiry
-//         let mut option = create_sample_option(
-//             OptionStyle::Call,
-//             Side::Short,
-//             pos!(150.0), // underlying price
-//             pos!(1.0),   // quantity
-//             pos!(150.0), // strike price
-//             0.15,        // implied volatility
-//         );
-//         option.expiration_date = ExpirationDate::Days(1.0); // Option close to expiry
-//
-//         // Expected theta value for a short near-expiry call option (precomputed)
-//         let expected_theta = -88.75028112939226;
-//
-//         // Compute the theta value using the function
-//         let calculated_theta = theta(&option);
-//
-//         // Assert the calculated theta is close to the expected value
-//         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
-//     }
-//
-//     #[test]
-//     fn test_theta_short_put_option_far_from_expiry() {
-//         // Create a sample short put option far from expiry
-//         let mut option = create_sample_option(
-//             OptionStyle::Put,
-//             Side::Short,
-//             pos!(140.0), // underlying price
-//             pos!(1.0),   // quantity
-//             pos!(130.0), // strike price
-//             0.30,        // implied volatility
-//         );
-//         option.expiration_date = ExpirationDate::Days(365.0); // Option far from expiry
-//
-//         // Expected theta value for a far-expiry short put option (precomputed)
-//         let expected_theta = -5.024569007193639;
-//
-//         // Compute the theta value using the function
-//         let calculated_theta = theta(&option);
-//
-//         // Assert the calculated theta is close to the expected value
-//         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
-//     }
-// }
+#[cfg(test)]
+mod tests_gamma_equations {
+    use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::utils::create_sample_option;
+    use crate::pos;
+    use crate::utils::logger::setup_logger;
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+    use tracing::info;
+
+    #[test]
+    fn test_gamma_deep_in_the_money_call() {
+        setup_logger();
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0),
+            pos!(1.0),
+            pos!(120.0),
+            0.2,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Deep ITM Call Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.000016049457791525, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_gamma_deep_out_of_the_money_call() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(50.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.20,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Deep OTM Call Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.0, epsilon = 1e-34);
+    }
+
+    #[test]
+    fn test_gamma_at_the_money_put() {
+        let option = create_sample_option(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.20,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("ATM Put Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.06917076441486919, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_gamma_short_term_high_volatility() {
+        let mut option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.50,
+        );
+        option.expiration_date = ExpirationDate::Days(7.0);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Short-term High Vol Call Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.05753657912620555, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_gamma_long_term_low_volatility() {
+        let mut option = create_sample_option(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.10,
+        );
+        option.expiration_date = ExpirationDate::Days(365.0);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Long-term Low Vol Put Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.033953150664723986, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_gamma_zero_volatility() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            0.0,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Zero Volatility Call Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.0, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_gamma_extreme_high_volatility() {
+        let option = create_sample_option(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            5.0,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Extreme High Volatility Put Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.002146478293943308, epsilon = 1e-8);
+    }
+}
+
+#[cfg(test)]
+mod tests_vega_equation {
+    use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::model::types::{ExpirationDate, OptionType, Side};
+    use crate::pos;
+    use num_traits::ToPrimitive;
+
+    fn create_test_option(
+        underlying_price: PositiveF64,
+        strike_price: PositiveF64,
+        implied_volatility: f64,
+        dividend_yield: f64,
+        expiration_in_days: f64,
+    ) -> Options {
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            strike_price,
+            ExpirationDate::Days(expiration_in_days),
+            implied_volatility,
+            pos!(1.0), // Quantity
+            underlying_price,
+            0.05, // Risk-free rate
+            OptionStyle::Call,
+            dividend_yield,
+            None, // No exotic params for this test
+        )
+    }
+
+    #[test]
+    fn test_vega_atm() {
+        let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.0, 365.0);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
+        let expected_vega = 63.68306511756191;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega ATM test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+
+    #[test]
+    fn test_vega_otm() {
+        let option = create_test_option(pos!(90.0), pos!(100.0), 0.2, 0.0, 365.0);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
+        let expected_vega = 38.68485587005888;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega OTM test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+
+    #[test]
+    fn test_vega_short_expiration() {
+        let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.0, 1.0);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
+        let expected_vega = 2.6553722124554757;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega short expiration test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+
+    #[test]
+    fn test_vega_with_dividends() {
+        let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.03, 1.0);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
+        let expected_vega = 2.6551539716535117;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega with dividends test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+
+    #[test]
+    fn test_vega_itm() {
+        let option = create_test_option(pos!(110.0), pos!(100.0), 0.2, 0.0, 1.0);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
+        let expected_vega = 5.757663148492351;
+        assert!(
+            (vega - expected_vega).abs() < 1e-5,
+            "Vega ITM test failed: expected {}, got {}",
+            expected_vega,
+            vega
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_rho_equations {
+    use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+
+    fn create_test_option(style: OptionStyle) -> Options {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "TEST".to_string(),
+            strike_price: pos!(100.0),
+            expiration_date: ExpirationDate::Days(365.0),
+            implied_volatility: 0.2,
+            quantity: pos!(1.0),
+            underlying_price: pos!(100.0),
+            risk_free_rate: 0.05,
+            option_style: style,
+            dividend_yield: 0.0,
+            exotic_params: None,
+        }
+    }
+
+    #[test]
+    fn test_rho_call_option() {
+        let option = create_test_option(OptionStyle::Call);
+        let result = rho(&option).unwrap().to_f64().unwrap();
+        assert_relative_eq!(result, 53.232481545376345, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_rho_put_option() {
+        let option = create_test_option(OptionStyle::Put);
+        let result = rho(&option).unwrap().to_f64().unwrap();
+        assert_relative_eq!(result, -41.89046090469506, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_rho_zero_time_to_expiry() {
+        let mut option = create_test_option(OptionStyle::Call);
+        option.expiration_date = ExpirationDate::Days(0.0);
+        let result = rho(&option).is_err();
+        assert!(result);
+    }
+
+    #[test]
+    fn test_rho_zero_risk_free_rate() {
+        let mut option = create_test_option(OptionStyle::Call);
+        option.risk_free_rate = 0.0;
+        let result = rho(&option).unwrap().to_f64().unwrap();
+        assert_relative_eq!(result, 46.0172162722971, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_rho_deep_out_of_money_call() {
+        let mut option = create_test_option(OptionStyle::Call);
+        option.strike_price = pos!(1000.0);
+        let result = rho(&option).unwrap().to_f64().unwrap();
+        assert_relative_eq!(result, 0.0, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_rho_deep_out_of_money_put() {
+        let mut option = create_test_option(OptionStyle::Put);
+        option.strike_price = pos!(1.0);
+        let result = rho(&option).unwrap().to_f64().unwrap();
+        assert_relative_eq!(result, 0.0, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_rho_high_volatility() {
+        let mut option = create_test_option(OptionStyle::Call);
+        option.implied_volatility = 1.0;
+        let result = rho(&option).unwrap().to_f64().unwrap();
+        assert_relative_eq!(result, 31.043868837728198, epsilon = 0.0001);
+    }
+}
+
+#[cfg(test)]
+mod tests_theta_long_equations {
+    use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::model::types::{ExpirationDate, Side};
+    use crate::model::utils::create_sample_option;
+    use crate::pos;
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+
+    #[test]
+    fn test_theta_call_option() {
+        // Create a sample call option
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(155.0), // strike price
+            0.20,        // implied volatility
+        );
+
+        // Expected theta value for a call option (precomputed or from known source)
+        let expected_theta = -20.487619692230428;
+
+        // Compute the theta value using the function
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
+
+        // Assert the calculated theta is close to the expected value
+        assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_theta_put_option() {
+        // Create a sample put option
+        let option = create_sample_option(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(150.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(145.0), // strike price
+            0.25,        // implied volatility
+        );
+
+        // Expected theta value for a put option (precomputed or from known source)
+        let expected_theta = -20.395533137333533;
+
+        // Compute the theta value using the function
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
+
+        // Assert the calculated theta is close to the expected value
+        assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_theta_call_option_near_expiry() {
+        // Create a sample call option near expiry
+        let mut option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(150.0), // strike price
+            0.15,        // implied volatility
+        );
+        option.expiration_date = ExpirationDate::Days(1.0); // Option close to expiry
+
+        // Expected theta value for a near-expiry call option (precomputed)
+        let expected_theta = -88.75028112939226;
+
+        // Compute the theta value using the function
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
+
+        // Assert the calculated theta is close to the expected value
+        assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_theta_put_option_far_from_expiry() {
+        // Create a sample put option far from expiry
+        let mut option = create_sample_option(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(140.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(130.0), // strike price
+            0.30,        // implied volatility
+        );
+        option.expiration_date = ExpirationDate::Days(365.0); // Option far from expiry
+
+        // Expected theta value for a far-expiry put option (precomputed)
+        let expected_theta = -5.024569007193639;
+
+        // Compute the theta value using the function
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
+
+        // Assert the calculated theta is close to the expected value
+        assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+}
+
+#[cfg(test)]
+mod tests_theta_short_equations {
+    use super::*;
+    use crate::model::types::PositiveF64;
+    use crate::model::types::{ExpirationDate, Side};
+    use crate::model::utils::create_sample_option;
+    use crate::pos;
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+
+    #[test]
+    fn test_theta_short_call_option() {
+        // Create a sample short call option
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(150.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(155.0), // strike price
+            0.20,        // implied volatility
+        );
+
+        // Expected theta value for a short call option (precomputed or from known source)
+        let expected_theta = -20.487619692230428;
+
+        // Compute the theta value using the function
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
+
+        // Assert the calculated theta is close to the expected value
+        assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_theta_short_put_option() {
+        // Create a sample short put option
+        let option = create_sample_option(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(150.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(145.0), // strike price
+            0.25,        // implied volatility
+        );
+
+        // Expected theta value for a short put option (precomputed or from known source)
+        let expected_theta = -20.395533137333533;
+
+        // Compute the theta value using the function
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
+
+        // Assert the calculated theta is close to the expected value
+        assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_theta_short_call_option_near_expiry() {
+        // Create a sample short call option near expiry
+        let mut option = create_sample_option(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(150.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(150.0), // strike price
+            0.15,        // implied volatility
+        );
+        option.expiration_date = ExpirationDate::Days(1.0); // Option close to expiry
+
+        // Expected theta value for a short near-expiry call option (precomputed)
+        let expected_theta = -88.75028112939226;
+
+        // Compute the theta value using the function
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
+
+        // Assert the calculated theta is close to the expected value
+        assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_theta_short_put_option_far_from_expiry() {
+        // Create a sample short put option far from expiry
+        let mut option = create_sample_option(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(140.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(130.0), // strike price
+            0.30,        // implied volatility
+        );
+        option.expiration_date = ExpirationDate::Days(365.0); // Option far from expiry
+
+        // Expected theta value for a far-expiry short put option (precomputed)
+        let expected_theta = -5.024569007193639;
+
+        // Compute the theta value using the function
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
+
+        // Assert the calculated theta is close to the expected value
+        assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+}

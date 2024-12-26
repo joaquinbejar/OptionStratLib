@@ -94,12 +94,12 @@
 //! info!("Debug View: {:?}", option);
 //! ```
 
+pub mod decimal;
 mod format;
 pub mod option;
 pub mod position;
 mod profit_range;
 pub mod types;
 pub mod utils;
-pub mod decimal;
 
 pub use profit_range::ProfitLossRange;

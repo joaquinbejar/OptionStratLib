@@ -1987,7 +1987,7 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.4175977387296569),
+                quantity: pos!(0.4175977387296557),
                 strike: pos!(2800.0),
                 option_type: OptionStyle::Call
             }
@@ -1995,14 +1995,14 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(10.312565341673606),
+                quantity: pos!(10.312565341673709),
                 strike: pos!(2560.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.4175977387296569);
+        option.quantity = pos!(0.4175977387296557);
         assert_relative_eq!(option.delta(), 0.21249, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -2025,7 +2025,7 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.3722450887122396),
+                quantity: pos!(0.37224508871224055),
                 strike: pos!(2500.0),
                 option_type: OptionStyle::Put
             }
@@ -2033,14 +2033,14 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(6.659872649379878),
+                quantity: pos!(6.659872649379908),
                 strike: pos!(2725.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.3722450887122396);
+        option.quantity = pos!(0.37224508871224055);
         assert_relative_eq!(option.delta(), -0.1828275205, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -2109,7 +2109,7 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.8351954774593138),
+                quantity: pos!(0.8351954774593114),
                 strike: pos!(2800.0),
                 option_type: OptionStyle::Call
             }
@@ -2117,14 +2117,14 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(20.625130683347212),
+                quantity: pos!(20.625130683347418),
                 strike: pos!(2560.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.8351954774593138);
+        option.quantity = pos!(0.8351954774593114);
         assert_relative_eq!(option.delta(), 0.42499, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -2147,7 +2147,7 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.7444901774244792),
+                quantity: pos!(0.7444901774244811),
                 strike: pos!(2500.0),
                 option_type: OptionStyle::Put
             }
@@ -2155,14 +2155,14 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(13.319745298759756),
+                quantity: pos!(13.319745298759816),
                 strike: pos!(2725.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.7444901774244792);
+        option.quantity = pos!(0.7444901774244811);
         assert_relative_eq!(option.delta(), -0.36565, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,

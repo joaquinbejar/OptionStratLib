@@ -22,6 +22,7 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -42,7 +43,6 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, error, info};
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \
@@ -186,9 +186,11 @@ impl Strategies for BullCallSpread {
         if profit >= ZERO {
             Ok(pos!(profit))
         } else {
-            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
-                reason: "Net premium received is negative".to_string(),
-            }))
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Net premium received is negative".to_string(),
+                },
+            ))
         }
     }
 
@@ -197,9 +199,11 @@ impl Strategies for BullCallSpread {
         if loss <= ZERO {
             Ok(pos!(loss.abs()))
         } else {
-            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
-                reason: "Max loss is negative".to_string(),
-            }))
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxLossError {
+                    reason: "Max loss is negative".to_string(),
+                },
+            ))
         }
     }
 
@@ -1796,14 +1800,14 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(1.0922693934308936),
+                quantity: pos!(1.0922693934308985),
                 strike: pos!(5820.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(1.0922693934308936);
+        option.quantity = pos!(1.0922693934308985);
         assert_relative_eq!(option.delta(), -0.35020, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1826,14 +1830,14 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.6262517169375644),
+                quantity: pos!(0.626251716937553),
                 strike: pos!(5850.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.6262517169375644);
+        option.quantity = pos!(0.626251716937553);
         assert_relative_eq!(option.delta(), 0.123467, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1901,14 +1905,14 @@ mod tests_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(2.184538786861787),
+                quantity: pos!(2.184538786861797),
                 strike: pos!(5820.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(2.184538786861787);
+        option.quantity = pos!(2.184538786861797);
         assert_relative_eq!(option.delta(), -0.70040, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1931,14 +1935,14 @@ mod tests_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(1.2525034338751289),
+                quantity: pos!(1.252503433875106),
                 strike: pos!(5850.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(1.2525034338751289);
+        option.quantity = pos!(1.252503433875106);
         assert_relative_eq!(option.delta(), 0.24693, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,

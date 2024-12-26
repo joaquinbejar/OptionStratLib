@@ -1,8 +1,8 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 25/12/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 25/12/24
+******************************************************************************/
 use std::error::Error;
 use std::fmt;
 
@@ -10,15 +10,9 @@ use std::fmt;
 #[derive(Debug)]
 pub enum DecimalError {
     /// Error when attempting to create a decimal from an invalid value
-    InvalidValue {
-        value: f64,
-        reason: String,
-    },
+    InvalidValue { value: f64, reason: String },
     /// Error when performing decimal arithmetic operations
-    ArithmeticError {
-        operation: String,
-        reason: String,
-    },
+    ArithmeticError { operation: String, reason: String },
     /// Error when converting between decimal types
     ConversionError {
         from_type: String,
@@ -26,16 +20,9 @@ pub enum DecimalError {
         reason: String,
     },
     /// Error when a decimal value exceeds its bounds
-    OutOfBounds {
-        value: f64,
-        min: f64,
-        max: f64,
-    },
+    OutOfBounds { value: f64, min: f64, max: f64 },
     /// Error when decimal precision is invalid
-    InvalidPrecision {
-        precision: i32,
-        reason: String,
-    },
+    InvalidPrecision { precision: i32, reason: String },
 }
 
 impl fmt::Display for DecimalError {
@@ -45,7 +32,11 @@ impl fmt::Display for DecimalError {
                 write!(f, "Invalid decimal value {}: {}", value, reason)
             }
             DecimalError::ArithmeticError { operation, reason } => {
-                write!(f, "Decimal arithmetic error during {}: {}", operation, reason)
+                write!(
+                    f,
+                    "Decimal arithmetic error during {}: {}",
+                    operation, reason
+                )
             }
             DecimalError::ConversionError {
                 from_type,

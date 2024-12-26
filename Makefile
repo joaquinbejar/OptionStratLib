@@ -101,8 +101,12 @@ create-doc:
 	cargo doc --no-deps --document-private-items
 
 .PHONY: readme
-readme: create-doc
+readme: check-cargo-readme create-doc
 	cargo readme > README.md
+
+.PHONY: check-cargo-readme
+check-cargo-readme:
+	@command -v cargo-readme > /dev/null || (echo "Installing cargo-readme..."; cargo install cargo-readme)
 	
 .PHONY: check-spanish
 check-spanish:

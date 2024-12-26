@@ -63,7 +63,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: pos!(0.11409430831965134),
+            quantity: pos!(0.1140943083196651),
             strike: pos!(5780.0),
             option_type: OptionStyle::Call
         }

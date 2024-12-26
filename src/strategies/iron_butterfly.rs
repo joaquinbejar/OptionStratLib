@@ -17,6 +17,7 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
@@ -33,7 +34,6 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{error, info};
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
@@ -265,9 +265,11 @@ impl Strategies for IronButterfly {
         let left_profit = self.calculate_profit_at(self.short_call.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_put.option.strike_price);
         if left_profit < ZERO || right_profit < ZERO {
-            return Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
-                reason: "Max profit is negative".to_string(),
-            }));
+            return Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Max profit is negative".to_string(),
+                },
+            ));
         }
 
         Ok(pos!(
@@ -279,9 +281,11 @@ impl Strategies for IronButterfly {
         let left_loss = self.calculate_profit_at(self.long_put.option.strike_price);
         let right_loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if left_loss > ZERO || right_loss > ZERO {
-            return Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
-                reason: "Max loss is negative".to_string(),
-            }));
+            return Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxLossError {
+                    reason: "Max loss is negative".to_string(),
+                },
+            ));
         }
         Ok(pos!(left_loss.abs().max(right_loss.abs())))
     }
@@ -1794,7 +1798,7 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.06566830350547574),
+                quantity: pos!(0.06566830350547599),
                 strike: pos!(2800.0),
                 option_type: OptionStyle::Call
             }
@@ -1802,14 +1806,14 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.83094634131382),
+                quantity: pos!(0.8309463413138212),
                 strike: pos!(2725.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.06566830350547574);
+        option.quantity = pos!(0.06566830350547599);
         assert_relative_eq!(option.delta(), 0.053677, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1832,7 +1836,7 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(1.068371502787393),
+                quantity: pos!(1.068371502787395),
                 strike: pos!(2500.0),
                 option_type: OptionStyle::Put
             }
@@ -1840,14 +1844,14 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(14.339865587583866),
+                quantity: pos!(14.339865587583922),
                 strike: pos!(2725.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(1.068371502787393);
+        option.quantity = pos!(1.068371502787395);
         assert_relative_eq!(option.delta(), -0.485367, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1915,7 +1919,7 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.13133660701095148),
+                quantity: pos!(0.13133660701095198),
                 strike: pos!(2800.0),
                 option_type: OptionStyle::Call
             }
@@ -1923,14 +1927,14 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(1.66189268262764),
+                quantity: pos!(1.6618926826276423),
                 strike: pos!(2725.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.13133660701095148);
+        option.quantity = pos!(0.13133660701095198);
         assert_relative_eq!(option.delta(), 0.10735, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1953,7 +1957,7 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(17.514681033591067),
+                quantity: pos!(17.514681033591106),
                 strike: pos!(2500.0),
                 option_type: OptionStyle::Put
             }
@@ -1961,14 +1965,14 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(1.2193578542229058),
+                quantity: pos!(1.2193578542229133),
                 strike: pos!(2725.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(1.2193578542229058);
+        option.quantity = pos!(1.2193578542229133);
         assert_relative_eq!(option.delta(), -0.5645, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,

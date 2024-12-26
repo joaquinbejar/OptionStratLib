@@ -64,7 +64,7 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: pos!(3.82949671165404),
+            quantity: pos!(3.829496711654006),
             strike: pos!(5750.0),
             option_type: OptionStyle::Put
         }

@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use num_traits::ToPrimitive;
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
@@ -11,6 +10,7 @@ use crate::greeks::utils::big_n;
 use crate::model::decimal::f64_to_decimal;
 use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
 use crate::pos;
+use num_traits::ToPrimitive;
 
 /// Struct to hold volatility adjustment parameters
 #[derive(Debug, Clone)]
@@ -360,7 +360,7 @@ mod tests_calculate_bounds_probability {
             ProbabilityError::PriceError(PriceErrorKind::InvalidPriceRange { range, reason }) => {
                 assert_eq!(range, "bounds: [100.0, 95.0, 105.0]");
                 assert_eq!(reason, "Bounds must be in ascending order");
-            },
+            }
             _ => panic!("Unexpected error type"),
         };
     }
@@ -601,9 +601,11 @@ mod tests_single_point_probability {
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidExpiration { reason }) => {
+            ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidExpiration {
+                reason,
+            }) => {
                 assert_eq!(reason, "Time to expiry must be positive");
-            },
+            }
             _ => panic!("Unexpected error type"),
         };
     }
@@ -644,9 +646,11 @@ mod tests_single_point_probability {
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::VolatilityAdjustmentError { reason }) => {
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::VolatilityAdjustmentError { reason },
+            ) => {
                 assert_eq!(reason, "Base volatility must be positive");
-            },
+            }
             _ => panic!("Unexpected error type"),
         };
     }
@@ -670,9 +674,11 @@ mod tests_single_point_probability {
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {  reason }) => {
+            ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {
+                reason,
+            }) => {
                 assert_eq!(reason, "Confidence must be between 0 and 1");
-            },
+            }
             _ => panic!("Unexpected error type"),
         };
     }
@@ -800,8 +806,8 @@ mod tests_calculate_price_probability {
         let error = result.unwrap_err();
         match error {
             ProbabilityError::PriceError(PriceErrorKind::InvalidPriceRange { range, reason }) => {
-                assert_eq!(range ,"lower_bound: 105 upper_bound: 95");
-                assert_eq!(reason , "Lower bound must be less than upper bound");
+                assert_eq!(range, "lower_bound: 105 upper_bound: 95");
+                assert_eq!(reason, "Lower bound must be less than upper bound");
             }
             _ => panic!("Unexpected error type"),
         };

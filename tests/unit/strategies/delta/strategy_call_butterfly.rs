@@ -68,7 +68,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: pos!(0.1338190182607821),
+            quantity: pos!(0.13381901826077533),
             strike: pos!(5800.0),
             option_type: OptionStyle::Call
         }

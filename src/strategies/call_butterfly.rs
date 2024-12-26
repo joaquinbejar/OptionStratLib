@@ -1009,14 +1009,14 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.7040502965074416),
+                quantity: pos!(0.7040502965074396),
                 strike: pos!(5750.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.7040502965074416);
+        option.quantity = pos!(0.7040502965074396);
         assert_relative_eq!(option.delta(), 0.687410, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1039,7 +1039,7 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.2835618144021529),
+                quantity: pos!(0.28356181440213835),
                 strike: pos!(5850.0),
                 option_type: OptionStyle::Call
             }
@@ -1047,14 +1047,14 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.1338190182607821),
+                quantity: pos!(0.13381901826077533),
                 strike: pos!(5800.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call_low.option.clone();
-        option.quantity = pos!(0.2835618144021529);
+        option.quantity = pos!(0.28356181440213835);
         assert_relative_eq!(option.delta(), -0.055904, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1125,14 +1125,14 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.5948524360242091),
+                quantity: pos!(0.5948524360242063),
                 strike: pos!(5750.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.5948524360242091);
+        option.quantity = pos!(0.5948524360242063);
         assert_relative_eq!(option.delta(), 0.56993, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,
@@ -1156,7 +1156,7 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.2835618144021529),
+                quantity: pos!(0.28356181440213835),
                 strike: pos!(5850.0),
                 option_type: OptionStyle::Call
             }
@@ -1164,14 +1164,14 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.1338190182607821),
+                quantity: pos!(0.13381901826077533),
                 strike: pos!(5800.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call_low.option.clone();
-        option.quantity = pos!(0.2835618144021529);
+        option.quantity = pos!(0.28356181440213835);
         assert_relative_eq!(option.delta(), -0.05590, epsilon = 0.0001);
         assert_relative_eq!(
             option.delta() + strategy.calculate_net_delta().net_delta,

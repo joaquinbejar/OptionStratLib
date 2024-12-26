@@ -1,6 +1,7 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
+use crate::model::decimal::decimal_to_f64;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::binomial_model::{
@@ -14,7 +15,6 @@ use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{debug, error, trace};
-use crate::model::decimal::decimal_to_f64;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
@@ -599,6 +599,7 @@ mod tests_time_value {
     use crate::model::utils::create_sample_option_simplest_strike;
     use crate::pos;
     use crate::utils::logger::setup_logger;
+    use approx::assert_relative_eq;
     use tracing::debug;
 
     #[test]
@@ -661,8 +662,16 @@ mod tests_time_value {
         let call_time_value = call.time_value();
         let put_time_value = put.time_value();
 
-        assert!(call_time_value > ZERO);
-        assert!(put_time_value > ZERO);
+        assert_relative_eq!(
+            call_time_value,
+            call.calculate_price_black_scholes(),
+            epsilon = 0.01
+        );
+        assert_relative_eq!(
+            put_time_value,
+            put.calculate_price_black_scholes(),
+            epsilon = 0.01
+        );
         debug!("Call time value: {}", call_time_value);
         debug!("Call BS price: {}", call.calculate_price_black_scholes());
         debug!("Put time value: {}", put_time_value);

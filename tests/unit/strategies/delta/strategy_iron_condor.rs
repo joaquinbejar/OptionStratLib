@@ -66,7 +66,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: pos!(0.9213451734695193),
+            quantity: pos!(0.921345173469527),
             strike: pos!(2800.0),
             option_type: OptionStyle::Call
         }

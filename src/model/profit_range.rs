@@ -65,10 +65,16 @@ impl ProfitLossRange {
         risk_free_rate: Option<f64>,
     ) -> Result<(), ProbabilityError> {
         if self.lower_bound.unwrap_or(PZERO) > self.upper_bound.unwrap_or(P_INFINITY) {
-            return Err(ProbabilityError::PriceError(PriceErrorKind::InvalidPriceRange {
-                range: format!("lower_bound: {} upper_bound: {}", self.lower_bound.unwrap().value(), self.upper_bound.unwrap().value()),
-                reason: "Lower bound must be less than upper bound".to_string(),
-            }));
+            return Err(ProbabilityError::PriceError(
+                PriceErrorKind::InvalidPriceRange {
+                    range: format!(
+                        "lower_bound: {} upper_bound: {}",
+                        self.lower_bound.unwrap().value(),
+                        self.upper_bound.unwrap().value()
+                    ),
+                    reason: "Lower bound must be less than upper bound".to_string(),
+                },
+            ));
         }
         // Calculate probabilities for the lower bound
         let (prob_below_lower, _) = calculate_single_point_probability(

@@ -69,8 +69,8 @@
 //! for seamless error handling and propagation throughout the library.
 
 pub mod chains;
+pub mod decimal;
+pub mod greeks;
 pub mod position;
 pub mod probability;
 pub mod strategies;
-pub mod greeks;
-pub mod decimal;

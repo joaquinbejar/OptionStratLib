@@ -64,7 +64,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: pos!(3.4154122075924565),
+            quantity: pos!(3.415412207592465),
             strike: pos!(2800.0),
             option_type: OptionStyle::Call
         }

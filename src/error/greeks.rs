@@ -1,8 +1,8 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 25/12/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 25/12/24
+******************************************************************************/
 
 //! # Greeks Error Module
 //!
@@ -33,9 +33,9 @@
 //! * Invalid price values
 //! * Invalid rate values
 
+use crate::error::decimal::DecimalError;
 use std::error::Error;
 use std::fmt;
-use crate::error::decimal::DecimalError;
 
 #[derive(Debug)]
 pub enum GreeksError {
@@ -90,16 +90,28 @@ pub enum InputErrorKind {
 #[derive(Debug)]
 pub enum CalculationErrorKind {
     /// Error in delta calculation
-    DeltaError { reason: String },
+    DeltaError {
+        reason: String,
+    },
     /// Error in gamma calculation
-    GammaError { reason: String },
+    GammaError {
+        reason: String,
+    },
     /// Error in theta calculation
-    ThetaError { reason: String },
+    ThetaError {
+        reason: String,
+    },
     /// Error in vega calculation
-    VegaError { reason: String },
+    VegaError {
+        reason: String,
+    },
     /// Error in rho calculation
-    RhoError { reason: String },
-    DecimalError { error: DecimalError },
+    RhoError {
+        reason: String,
+    },
+    DecimalError {
+        error: DecimalError,
+    },
 }
 
 impl fmt::Display for GreeksError {
@@ -120,7 +132,10 @@ impl fmt::Display for MathErrorKind {
             MathErrorKind::InvalidDomain { value, reason } => {
                 write!(f, "Invalid domain value {}: {}", value, reason)
             }
-            MathErrorKind::ConvergenceFailure { iterations, tolerance } => {
+            MathErrorKind::ConvergenceFailure {
+                iterations,
+                tolerance,
+            } => {
                 write!(
                     f,
                     "Failed to converge after {} iterations (tolerance: {})",
@@ -156,11 +171,21 @@ impl fmt::Display for InputErrorKind {
 impl fmt::Display for CalculationErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CalculationErrorKind::DeltaError { reason } => write!(f, "Delta calculation error: {}", reason),
-            CalculationErrorKind::GammaError { reason } => write!(f, "Gamma calculation error: {}", reason),
-            CalculationErrorKind::ThetaError { reason } => write!(f, "Theta calculation error: {}", reason),
-            CalculationErrorKind::VegaError { reason } => write!(f, "Vega calculation error: {}", reason),
-            CalculationErrorKind::RhoError { reason } => write!(f, "Rho calculation error: {}", reason),
+            CalculationErrorKind::DeltaError { reason } => {
+                write!(f, "Delta calculation error: {}", reason)
+            }
+            CalculationErrorKind::GammaError { reason } => {
+                write!(f, "Gamma calculation error: {}", reason)
+            }
+            CalculationErrorKind::ThetaError { reason } => {
+                write!(f, "Theta calculation error: {}", reason)
+            }
+            CalculationErrorKind::VegaError { reason } => {
+                write!(f, "Vega calculation error: {}", reason)
+            }
+            CalculationErrorKind::RhoError { reason } => {
+                write!(f, "Rho calculation error: {}", reason)
+            }
             CalculationErrorKind::DecimalError { error } => write!(f, "Decimal error: {}", error),
         }
     }

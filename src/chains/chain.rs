@@ -20,6 +20,7 @@ use crate::utils::others::get_random_element;
 use crate::{pos, spos};
 use chrono::Utc;
 use csv::WriterBuilder;
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
@@ -27,7 +28,6 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
-use num_traits::ToPrimitive;
 use tracing::debug;
 
 /// Struct representing a row in an option chain.
@@ -243,8 +243,8 @@ impl OptionData {
                 return;
             }
         };
-        
-        match delta(&option) { 
+
+        match delta(&option) {
             Ok(d) => self.delta = d.to_f64(),
             Err(_) => self.delta = None,
         }
@@ -1554,10 +1554,10 @@ mod tests_option_data {
 
         assert!(result.is_ok());
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.412135042233558));
-        assert_eq!(option_data.call_bid, spos!(10.412135042233558));
-        assert_eq!(option_data.put_ask, spos!(0.002019418653974231));
-        assert_eq!(option_data.put_bid, spos!(0.002019418653974231));
+        assert_eq!(option_data.call_ask, spos!(10.412135042233587));
+        assert_eq!(option_data.call_bid, spos!(10.412135042233587));
+        assert_eq!(option_data.put_ask, spos!(0.002019418653973759));
+        assert_eq!(option_data.put_bid, spos!(0.002019418653973759));
         option_data.apply_spread(pos!(0.02), 2);
         info!("{}", option_data);
         assert_eq!(option_data.call_ask, spos!(10.42));

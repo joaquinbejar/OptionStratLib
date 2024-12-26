@@ -2,14 +2,14 @@ use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use approx::{AbsDiffEq, RelativeEq};
 use chrono::{DateTime, Duration, Utc};
+use num_traits::{FromPrimitive, ToPrimitive};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
-use num_traits::{FromPrimitive, ToPrimitive};
-use rust_decimal::Decimal;
 
 pub const PZERO: PositiveF64 = PositiveF64(ZERO);
 
@@ -75,7 +75,9 @@ impl From<PositiveF64> for f64 {
 
 impl From<PositiveF64> for Decimal {
     fn from(pos_f64: PositiveF64) -> Self {
-        Decimal::from_f64(pos_f64.0).ok_or("Failed to convert PositiveF64 to Decimal").unwrap()
+        Decimal::from_f64(pos_f64.0)
+            .ok_or("Failed to convert PositiveF64 to Decimal")
+            .unwrap()
     }
 }
 
@@ -269,7 +271,7 @@ impl From<f64> for PositiveF64 {
 impl From<Decimal> for PositiveF64 {
     fn from(value: Decimal) -> Self {
         let value = value.to_f64();
-        match value { 
+        match value {
             Some(value) => PositiveF64::new(value).expect("Value must be positive"),
             None => panic!("Failed to convert Decimal to f64"),
         }
