@@ -118,7 +118,7 @@
 //!         };
 //! // Compare prices across different models
 //! let bs_price = black_scholes(&option);
-//! let mc_price = monte_carlo_option_pricing(&option, 1000, 10000);
+//! let mc_price = monte_carlo_option_pricing(&option, 2, 2);
 //! let tp_price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
 //! ```
 //!
