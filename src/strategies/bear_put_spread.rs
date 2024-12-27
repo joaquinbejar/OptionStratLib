@@ -28,7 +28,7 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
-use crate::pos;
+use crate::{d2fu, pos};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -42,6 +42,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, info};
+use crate::model::decimal::decimal_to_f64;
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
     "A bear put spread is created by buying a put option with a higher strike price \
@@ -528,10 +529,13 @@ impl DeltaNeutrality for BearPutSpread {
         let long_put_delta = self.long_put.option.delta();
         let short_put_delta = self.short_put.option.delta();
         let threshold = DELTA_THRESHOLD;
+        let l_p_delta = d2fu!(long_put_delta.unwrap()).unwrap();
+        let s_p_delta = d2fu!(short_put_delta.unwrap()).unwrap();
+        
         DeltaInfo {
-            net_delta: long_put_delta + short_put_delta,
-            individual_deltas: vec![long_put_delta, short_put_delta],
-            is_neutral: (long_put_delta + short_put_delta).abs() < threshold,
+            net_delta: l_p_delta + s_p_delta,
+            individual_deltas: vec![l_p_delta, s_p_delta],
+            is_neutral: (l_p_delta + s_p_delta).abs() < threshold,
             underlying_price: self.short_put.option.underlying_price,
             neutrality_threshold: threshold,
         }
@@ -543,8 +547,10 @@ impl DeltaNeutrality for BearPutSpread {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let l_p_delta = d2fu!(self.long_put.option.delta().unwrap()).unwrap();
+        
         vec![DeltaAdjustment::BuyOptions {
-            quantity: pos!((net_delta.abs() / self.long_put.option.delta()).abs())
+            quantity: pos!((net_delta.abs() / l_p_delta).abs())
                 * self.long_put.option.quantity,
             strike: self.long_put.option.strike_price,
             option_type: OptionStyle::Put,
@@ -553,8 +559,10 @@ impl DeltaNeutrality for BearPutSpread {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let l_p_delta = d2fu!(self.long_put.option.delta().unwrap()).unwrap();
+        
         vec![DeltaAdjustment::SellOptions {
-            quantity: pos!((net_delta.abs() / self.short_put.option.delta()).abs())
+            quantity: pos!((net_delta.abs() / l_p_delta).abs())
                 * self.short_put.option.quantity,
             strike: self.short_put.option.strike_price,
             option_type: OptionStyle::Put,
@@ -1876,6 +1884,7 @@ mod tests_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     fn get_strategy(long_strike: PositiveF64, short_strike: PositiveF64) -> BearPutSpread {
         let underlying_price = pos!(5810.5);
@@ -1919,9 +1928,10 @@ mod tests_delta {
 
         let mut option = strategy.long_put.option.clone();
         option.quantity = pos!(0.23599920741322516);
-        assert_relative_eq!(option.delta(), -0.10272, epsilon = 0.0001);
+        let delta = option.delta().unwrap().to_f64().unwrap();
+        assert_relative_eq!(delta, -0.10272, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1949,9 +1959,10 @@ mod tests_delta {
 
         let mut option = strategy.short_put.option.clone();
         option.quantity = pos!(0.18569835434604637);
-        assert_relative_eq!(option.delta(), 0.099904, epsilon = 0.0001);
-        assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+        let delta = option.delta().unwrap().to_f64().unwrap();
+
+        assert_relative_eq!(delta, 0.099904, epsilon = 0.0001);
+        assert_relative_eq!(delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1978,9 +1989,9 @@ mod tests_delta_size {
     use crate::pos;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-
     use crate::strategies::bear_put_spread::BearPutSpread;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     fn get_strategy(long_strike: PositiveF64, short_strike: PositiveF64) -> BearPutSpread {
         let underlying_price = pos!(5781.88);
@@ -2025,9 +2036,10 @@ mod tests_delta_size {
 
         let mut option = strategy.long_put.option.clone();
         option.quantity = pos!(0.3336989562679228);
-        assert_relative_eq!(option.delta(), -0.19429, epsilon = 0.0001);
-        assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+        let delta = option.delta().unwrap().to_f64().unwrap();
+
+        assert_relative_eq!(delta, -0.19429, epsilon = 0.0001);
+        assert_relative_eq!(delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2055,9 +2067,10 @@ mod tests_delta_size {
 
         let mut option = strategy.short_put.option.clone();
         option.quantity = pos!(0.25291514812372523);
-        assert_relative_eq!(option.delta(), 0.171825, epsilon = 0.0001);
-        assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+        let delta = option.delta().unwrap().to_f64().unwrap();
+
+        assert_relative_eq!(delta, 0.171825, epsilon = 0.0001);
+        assert_relative_eq!(delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );

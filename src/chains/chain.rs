@@ -256,8 +256,7 @@ impl OptionData {
     ) -> Result<DeltasInStrike, ChainError> {
         let options_in_strike =
             self.get_options_in_strike(price_params, Side::Long, OptionStyle::Call)?;
-        let deltas = options_in_strike.deltas();
-        Ok(deltas)
+        Ok(options_in_strike.deltas()?)
     }
 
     pub fn is_valid_optimal_side(
@@ -2211,9 +2210,11 @@ mod tests_option_data_get_option {
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
@@ -2359,15 +2360,18 @@ mod tests_option_data_get_options_in_strike {
 
         let options = result.unwrap();
 
-        assert_relative_eq!(options.long_call.delta(), 0.844825189, epsilon = 1e-8);
-        assert_relative_eq!(options.short_call.delta(), -0.844825189, epsilon = 1e-8);
-        assert_relative_eq!(options.long_put.delta(), -0.151483012, epsilon = 1e-8);
-        assert_relative_eq!(options.short_put.delta(), 0.151483012, epsilon = 1e-8);
+        let epsilon = dec!(1e-8);
+
+        assert_decimal_eq!(options.long_call.delta().unwrap(), dec!(0.844825189), epsilon);
+        assert_decimal_eq!(options.short_call.delta().unwrap(), dec!(-0.844825189), epsilon);
+        assert_decimal_eq!(options.long_put.delta().unwrap(), dec!(-0.151483012), epsilon);
+        assert_decimal_eq!(options.short_put.delta().unwrap(), dec!(0.151483012), epsilon);
     }
 }
 
 #[cfg(test)]
 mod tests_filter_options_in_strike {
+    use rust_decimal::Decimal;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
@@ -2547,11 +2551,11 @@ mod tests_filter_options_in_strike {
             assert_eq!(opt.long_put.side, Side::Long);
             assert_eq!(opt.short_put.side, Side::Short);
 
-            let deltas = opt.deltas();
-            assert!(deltas.long_call > 0.0);
-            assert!(deltas.short_call < 0.0);
-            assert!(deltas.long_put < 0.0);
-            assert!(deltas.short_put > 0.0);
+            let deltas = opt.deltas().unwrap();
+            assert!(deltas.long_call > Decimal::ZERO);
+            assert!(deltas.short_call < Decimal::ZERO);
+            assert!(deltas.long_put < Decimal::ZERO);
+            assert!(deltas.short_put > Decimal::ZERO);
         }
     }
 }

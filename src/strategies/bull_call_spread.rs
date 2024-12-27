@@ -528,6 +528,8 @@ impl DeltaNeutrality for BullCallSpread {
         let long_call_delta = self.long_call.option.delta();
         let short_call_delta = self.short_call.option.delta();
         let threshold = DELTA_THRESHOLD;
+        
+        
         DeltaInfo {
             net_delta: long_call_delta + short_call_delta,
             individual_deltas: vec![long_call_delta, short_call_delta],

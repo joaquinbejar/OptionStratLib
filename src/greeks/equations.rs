@@ -14,12 +14,12 @@ use rust_decimal::{Decimal, MathematicalOps};
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct Greek {
-    pub delta: f64,
-    pub gamma: f64,
-    pub theta: f64,
-    pub vega: f64,
-    pub rho: f64,
-    pub rho_d: f64,
+    pub delta: Decimal,
+    pub gamma: Decimal,
+    pub theta: Decimal,
+    pub vega: Decimal,
+    pub rho: Decimal,
+    pub rho_d: Decimal,
 }
 
 pub trait Greeks {

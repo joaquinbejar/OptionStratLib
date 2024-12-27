@@ -19,6 +19,7 @@ use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
 use tracing::{debug, error, trace};
+use crate::error::greeks::GreeksError;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
@@ -181,28 +182,28 @@ impl Options {
         self.option_type.payoff(&payoff_info) * self.quantity
     }
 
-    pub fn delta(&self) -> f64 {
-        decimal_to_f64(delta(self).unwrap()).unwrap()
+    pub fn delta(&self) -> Result<Decimal, GreeksError> {
+        delta(self)
     }
 
-    pub fn gamma(&self) -> f64 {
-        decimal_to_f64(gamma(self).unwrap()).unwrap()
+    pub fn gamma(&self) -> Result<Decimal, GreeksError> {
+        gamma(self)
     }
 
-    pub fn theta(&self) -> f64 {
-        decimal_to_f64(theta(self).unwrap()).unwrap()
+    pub fn theta(&self) -> Result<Decimal, GreeksError> {
+        theta(self)
     }
 
-    pub fn vega(&self) -> f64 {
-        decimal_to_f64(vega(self).unwrap()).unwrap()
+    pub fn vega(&self) -> Result<Decimal, GreeksError> {
+        vega(self)
     }
 
-    pub fn rho(&self) -> f64 {
-        decimal_to_f64(rho(self).unwrap()).unwrap()
+    pub fn rho(&self) -> Result<Decimal, GreeksError> {
+        rho(self)
     }
 
-    pub fn rho_d(&self) -> f64 {
-        decimal_to_f64(rho_d(self).unwrap()).unwrap()
+    pub fn rho_d(&self) -> Result<Decimal, GreeksError> {
+        rho_d(self)
     }
 
     pub fn is_in_the_money(&self) -> bool {
@@ -274,12 +275,12 @@ impl Default for Options {
 impl Greeks for Options {
     fn greeks(&self) -> Greek {
         Greek {
-            delta: self.delta(),
-            gamma: self.gamma(),
-            theta: self.theta(),
-            vega: self.vega(),
-            rho: self.rho(),
-            rho_d: self.rho_d(),
+            delta: self.delta().unwrap(),
+            gamma: self.gamma().unwrap(),
+            theta: self.theta().unwrap(),
+            vega: self.vega().unwrap(),
+            rho: self.rho().unwrap(),
+            rho_d: self.rho_d().unwrap(),
         }
     }
 }
@@ -1076,104 +1077,89 @@ mod tests_in_the_money {
 mod tests_greeks {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
-    use approx::assert_relative_eq;
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
     fn test_delta() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = decimal_to_f64(delta(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
+        let delta = create_sample_option_simplest(OptionStyle::Call, Side::Long).delta().unwrap();
+        assert_decimal_eq!(delta, dec!(0.1), EPSILON);
     }
 
     #[test]
     fn test_delta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = decimal_to_f64(delta(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.delta(), 0.5395199 * 2.0, epsilon = 1e-6);
+        assert_decimal_eq!(option.delta().unwrap(), dec!(0.5395199), EPSILON);
     }
 
     #[test]
     fn test_gamma() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = decimal_to_f64(gamma(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.gamma().unwrap(), dec!(0.0),  EPSILON);
     }
 
     #[test]
     fn test_gamma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = decimal_to_f64(gamma(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.gamma(), 0.1383415, epsilon = 1e-6);
+        assert_decimal_eq!(option.gamma().unwrap(), dec!(0.1383415), EPSILON);
     }
 
     #[test]
     fn test_theta() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = decimal_to_f64(theta(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.theta().unwrap(), dec!(0.0), EPSILON);
     }
 
     #[test]
     fn test_theta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = decimal_to_f64(theta(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.theta(), -31.739563, epsilon = 1e-6);
+        assert_decimal_eq!(option.theta().unwrap(), dec!(-31.739563), EPSILON);
     }
 
     #[test]
     fn test_vega() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = decimal_to_f64(vega(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.vega().unwrap(), dec!(0.0),  EPSILON);
     }
 
     #[test]
     fn test_vega_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = decimal_to_f64(vega(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.vega(), 30.9351108, epsilon = 1e-6);
+        assert_decimal_eq!(option.vega().unwrap(), dec!(30.9351108), EPSILON);
     }
 
     #[test]
     fn test_rho() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = decimal_to_f64(rho(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
-    }
+        assert_decimal_eq!(option.rho().unwrap(), dec!(0.0),  EPSILON);
 
-    #[test]
-    fn test_rho_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
-        let expected = decimal_to_f64(rho(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.rho(), 8.46624291, epsilon = 1e-6);
-    }
+        #[test]
+        fn test_rho_size() {
+            let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+            option.quantity = pos!(2.0);
+            assert_decimal_eq!(option.rho().unwrap(), dec!(8.46624291), EPSILON);
+        }
 
-    #[test]
-    fn test_rho_d() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = decimal_to_f64(rho_d(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
-    }
+        #[test]
+        fn test_rho_d() {
+            let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+            assert_decimal_eq!(option.rho_d().unwrap(), dec!(0.0), EPSILON);
+        }
 
-    #[test]
-    fn test_rho_d_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
-        let expected = decimal_to_f64(rho_d(&option).unwrap()).unwrap();
-        assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.rho_d(), -8.86882064, epsilon = 1e-6);
+        #[test]
+        fn test_rho_d_size() {
+            let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+            option.quantity = pos!(2.0);
+            assert_decimal_eq!(option.rho_d().unwrap(), dec!(-8.86882064), EPSILON);
+        }
     }
+    
 }
 
 #[cfg(test)]
@@ -1181,18 +1167,22 @@ mod tests_greek_trait {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
+    use crate::assert_decimal_eq;
+
+    const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
     fn test_greeks_implementation() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let greeks = option.greeks();
 
-        assert_relative_eq!(greeks.delta, option.delta(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.gamma, option.gamma(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.theta, option.theta(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.vega, option.vega(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.rho, option.rho(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.rho_d, option.rho_d(), epsilon = 1e-6);
+        assert_decimal_eq!(greeks.delta, option.delta().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.gamma, option.gamma().unwrap(),EPSILON);
+        assert_decimal_eq!(greeks.theta, option.theta().unwrap(),EPSILON);
+        assert_decimal_eq!(greeks.vega, option.vega().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.rho, option.rho().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.rho_d, option.rho_d().unwrap(),EPSILON);
     }
 
     #[test]
@@ -1201,11 +1191,11 @@ mod tests_greek_trait {
         let greeks = option.greeks();
 
         assert!(
-            greeks.delta >= -1.0 && greeks.delta <= 1.0,
+            greeks.delta >= Decimal::NEGATIVE_ONE && greeks.delta <= Decimal::ONE,
             "Delta should be between -1 and 1"
         );
-        assert!(greeks.gamma >= 0.0, "Gamma should be non-negative");
-        assert!(greeks.vega >= 0.0, "Vega should be non-negative");
+        assert!(greeks.gamma >= Decimal::ZERO, "Gamma should be non-negative");
+        assert!(greeks.vega >= Decimal::ZERO, "Vega should be non-negative");
     }
 
     #[test]
@@ -1217,10 +1207,10 @@ mod tests_greek_trait {
         let call_greeks = call_option.greeks();
         let put_greeks = put_option.greeks();
 
-        // assert_relative_eq!(call_greeks.delta + put_greeks.delta, 0.0, epsilon = 1e-6); // TODO: Fix this
-        assert_relative_eq!(call_greeks.gamma, put_greeks.gamma, epsilon = 1e-6);
-        assert_relative_eq!(call_greeks.vega, put_greeks.vega, epsilon = 1e-6);
-        // assert_relative_eq!(call_greeks.rho, put_greeks.rho, epsilon = 1e-6); // TODO: Fix this
+        assert_decimal_eq!(call_greeks.delta + put_greeks.delta, Decimal::ZERO, EPSILON); // TODO: Fix this
+        assert_decimal_eq!(call_greeks.gamma, put_greeks.gamma, EPSILON);
+        assert_decimal_eq!(call_greeks.vega, put_greeks.vega, EPSILON);
+        assert_decimal_eq!(call_greeks.rho, put_greeks.rho, EPSILON); // TODO: Fix this
     }
 }
 
