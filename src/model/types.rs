@@ -244,6 +244,14 @@ impl Mul<f64> for PositiveF64 {
     }
 }
 
+impl Mul<Decimal> for PositiveF64 {
+    type Output = PositiveF64;
+
+    fn mul(self, rhs: Decimal) -> PositiveF64 {
+        PositiveF64(self.0 * rhs.to_f64().unwrap())
+    }
+}
+
 impl Default for PositiveF64 {
     fn default() -> Self {
         PositiveF64(ZERO)
