@@ -5,8 +5,14 @@
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
 use crate::model::types::PositiveF64;
+use crate::pos;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
+use std::error::Error;
+use std::ops::Mul;
+
+pub const ONE_DAY: Decimal = dec!(0.00396825397);
 
 /// Asserts that two Decimal values are approximately equal within a given epsilon
 #[macro_export]
@@ -49,6 +55,14 @@ impl DecimalStats for Vec<Decimal> {
     }
 }
 
+impl Mul<PositiveF64> for Decimal {
+    type Output = Decimal;
+
+    fn mul(self, rhs: PositiveF64) -> Self::Output {
+        self * Decimal::from_f64(rhs.value()).unwrap()
+    }
+}
+
 pub(crate) fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     if value == f64::NEG_INFINITY {
         return Ok(Decimal::MIN);
@@ -72,19 +86,80 @@ pub(crate) fn positive_f64_to_decimal(value: PositiveF64) -> Result<Decimal, Dec
     match result {
         Some(decimal) => Ok(decimal),
         None => Err(DecimalError::ConversionError {
-            from_type: "PositiveF64".to_string(),
+            from_type: format!("PositiveF64: {}", value.value()),
             to_type: "Decimal".to_string(),
             reason: "Failed to convert f64 to Decimal".to_string(),
         }),
     }
 }
 
+pub(crate) fn decimal_to_positive_f64(value: Decimal) -> Result<PositiveF64, Box<dyn Error>> {
+    let result = value.to_f64();
+    match result {
+        Some(decimal) => Ok(pos!(decimal)),
+        None => Err(Box::new(DecimalError::ConversionError {
+            from_type: format!("Decimal: {}", value),
+            to_type: "PositiveF64".to_string(),
+            reason: "Failed to convert Decimal to f64".to_string(),
+        })),
+    }
+}
+
 pub(crate) fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
-        from_type: "Decimal".to_string(),
+        from_type: format!("Decimal: {}", value),
         to_type: "f64".to_string(),
         reason: "Failed to convert Decimal to f64".to_string(),
     })
+}
+
+#[macro_export]
+macro_rules! d2fu {
+    ($val:expr) => {
+        decimal_to_f64($val)
+    };
+}
+
+#[macro_export]
+macro_rules! d2p {
+    ($val:expr) => {
+        decimal_to_positive_f64($val)
+    };
+}
+
+#[macro_export]
+macro_rules! p2du {
+    ($val:expr) => {
+        positive_f64_to_decimal($val)
+    };
+}
+
+#[macro_export]
+macro_rules! p2d {
+    ($val:expr) => {
+        positive_f64_to_decimal($val)?
+    };
+}
+
+#[macro_export]
+macro_rules! d2f {
+    ($val:expr) => {
+        decimal_to_f64($val)?
+    };
+}
+
+#[macro_export]
+macro_rules! f2du {
+    ($val:expr) => {
+        f64_to_decimal($val)
+    };
+}
+
+#[macro_export]
+macro_rules! f2d {
+    ($val:expr) => {
+        f64_to_decimal($val)?
+    };
 }
 
 #[cfg(test)]
