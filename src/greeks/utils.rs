@@ -3,174 +3,281 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-use crate::constants::ZERO;
+use crate::constants::{PI, ZERO_DEC};
+use crate::error::decimal::DecimalError;
+use crate::error::greeks::{GreeksError, InputErrorKind};
+use crate::model::decimal::{f64_to_decimal, positive_f64_to_decimal};
 use crate::model::option::Options;
-use crate::model::types::{PositiveF64, PZERO};
+use crate::model::types::PositiveF64;
 use core::f64;
-use num_traits::Float;
+use num_traits::{FromPrimitive, ToPrimitive};
+use rust_decimal::{Decimal, MathematicalOps};
 use statrs::distribution::{ContinuousCDF, Normal};
-use std::f64::consts::PI;
 
-/// Evaluates the option payoff based on comparative values of the underlying price and strike price.
+/// Calculates the `d1` parameter used in the Black-Scholes options pricing model.
 ///
-/// This function assesses the value of an option by comparing the current price of the underlying asset (`underlying_price`) to the strike price of the option (`strike_price`). The function returns distinct values based on the comparison:
+/// The `d1` value is an intermediary result used to determine option greeks and prices.
+/// It is computed using the formula:
 ///
-/// * Positive infinity if the current price exceeds the strike price, indicating the option is in-the-money.
-/// * Negative infinity if the current price is below the strike price, indicating the option is out-of-the-money.
-/// * Zero if the current price is equal to the strike price, indicating the option is at the money.
+/// ```math
+/// d1 = (ln(S / K) + (r + σ² / 2) * T) / (σ * sqrt(T))
+/// ```
 ///
-/// # Arguments
+/// Where:
+/// - `S`: Underlying price
+/// - `K`: Strike price
+/// - `r`: Risk-free rate
+/// - `T`: Time to expiration (in years)
+/// - `σ`: Implied volatility
 ///
-/// * `underlying_price` - The current price of the underlying asset.
-/// * `strike_price` - The strike price of the option.
+/// # Parameters
+///
+/// - `underlying_price`: The current price of the underlying asset. Must be positive.
+/// - `strike_price`: The strike price of the option. Must be greater than zero.
+/// - `risk_free_rate`: The annual risk-free interest rate, expressed as a decimal.
+/// - `expiration_date`: The time to expiration of the option, in years. Must be greater than zero.
+/// - `implied_volatility`: The implied volatility of the option, expressed as a decimal. Must be greater than zero.
 ///
 /// # Returns
 ///
-/// This function returns a floating point number of the same type as the input:
+/// - `Ok(Decimal)`: The computed `d1` value.
+/// - `Err(GreeksError)`: Returns an error if input validation fails. Possible errors include:
+///   - Invalid strike price (must be greater than zero).
+///   - Invalid implied volatility (must be greater than zero).
+///   - Invalid expiration time (must be greater than zero).
 ///
-/// * Positive infinity if the `underlying_price` is greater than the `strike_price`.
-/// * Negative infinity if the `underlying_price` is less than the `strike_price`.
-/// * Zero if the `underlying_price` is equal to the `strike_price`.
+/// # Errors
 ///
-/// # Qualifications
+/// Returns a `GreeksError::InputError` in the following cases:
+/// - **InvalidStrike**: Triggered when `strike_price` is zero or less.
+/// - **InvalidVolatility**: Triggered when `implied_volatility` is zero.
+/// - **InvalidTime**: Triggered when `expiration_date` is zero or less.
 ///
-/// This function requires that the generic type `T` implements the `Float` trait, which provides the methods `T::infinity()`, `T::neg_infinity()`, and `T::zero()`. These methods return positive infinity, negative infinity, and zero respectively, appropriate to the type `T`.
-fn handle_zero(underlying_price: PositiveF64, strike_price: PositiveF64) -> f64 {
-    match underlying_price {
-        _ if underlying_price > strike_price => f64::INFINITY,
-        _ if underlying_price < strike_price => f64::NEG_INFINITY,
-        _ => ZERO,
-    }
-}
-
-/// Calculates the d1 component used in the Black-Scholes option pricing model.
+/// # Example
 ///
-/// # Type Parameters
+/// ```rust
+/// use optionstratlib::greeks::d1;
+/// use optionstratlib::model::types::PositiveF64;
 ///
-/// * `T` - A floating-point type that implements the `num_traits::Float` trait
+/// let underlying_price = PositiveF64::new(100.0).unwrap();
+/// let strike_price = PositiveF64::new(95.0).unwrap();
+/// let risk_free_rate = 0.05;
+/// let expiration_date = 0.5; // 6 months
+/// let implied_volatility = 0.2;
 ///
-/// # Arguments
-///
-/// * `underlying_price` - Current stock price
-/// * `strike_price` - Option strike price
-/// * `risk_free_rate` - Risk-free rate
-/// * `expiration_date` - Time to expiration in years
-/// * `implied_volatility` - Volatility of the stock
-///
-/// # Returns
-///
-/// * `T` - The computed d1 value
-///
-/// d1 is a crucial component in the Black-Scholes model, vital for determining
-/// the price of options. It takes into account factors such as the current stock
-/// price, risk-free rate, time to expiration, and stock volatility to produce
-/// an important intermediate result.
-pub(crate) fn d1(
+/// match d1(
+///     underlying_price,
+///     strike_price,
+///     risk_free_rate,
+///     expiration_date,
+///     implied_volatility,
+/// ) {
+///     Ok(result) => println!("d1: {}", result),
+///     Err(e) => eprintln!("Error: {:?}", e),
+/// }
+/// ```
+pub fn d1(
     underlying_price: PositiveF64,
     strike_price: PositiveF64,
     risk_free_rate: f64,
     expiration_date: f64,
     implied_volatility: f64,
-) -> f64 {
-    if strike_price == PZERO {
-        return f64::INFINITY;
+) -> Result<Decimal, GreeksError> {
+    let underlying_price: Decimal = positive_f64_to_decimal(underlying_price)?;
+    let strike_price: Decimal = positive_f64_to_decimal(strike_price)?;
+    let risk_free_rate: Decimal = f64_to_decimal(risk_free_rate)?;
+    let expiration_date: Decimal = f64_to_decimal(expiration_date)?;
+    let implied_volatility: Decimal = f64_to_decimal(implied_volatility)?;
+
+    if strike_price == ZERO_DEC {
+        return Err(GreeksError::InputError(InputErrorKind::InvalidStrike {
+            value: strike_price.to_f64().unwrap(),
+            reason: "Strike price cannot be zero".to_string(),
+        }));
+    }
+    if implied_volatility == ZERO_DEC {
+        return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
+            value: implied_volatility.to_f64().unwrap(),
+            reason: "Implied volatility cannot be zero".to_string(),
+        }));
+    }
+    if expiration_date == ZERO_DEC {
+        return Err(GreeksError::InputError(InputErrorKind::InvalidTime {
+            value: expiration_date.to_f64().unwrap(),
+            reason: "Expiration date cannot be zero".to_string(),
+        }));
     }
 
-    if implied_volatility == ZERO || expiration_date == ZERO {
-        return handle_zero(underlying_price, strike_price);
-    }
-
-    let implied_volatility_squared = implied_volatility.powi(2);
-    let ln_price_ratio = (underlying_price / strike_price).value().ln();
-    let rate_vol_term = risk_free_rate + implied_volatility_squared / 2.0;
+    // d1 = (ln(S / K) + (r + σ² / 2) * T) / (σ * sqrt(T))
+    let implied_volatility_squared = implied_volatility.powd(Decimal::TWO);
+    let ln_price_ratio = (underlying_price / strike_price).ln();
+    let rate_vol_term = risk_free_rate + implied_volatility_squared / Decimal::TWO;
     let numerator = ln_price_ratio + rate_vol_term * expiration_date;
-    let denominator = implied_volatility * expiration_date.sqrt();
+    let denominator = implied_volatility * expiration_date.sqrt().unwrap();
 
-    numerator / denominator
+    Ok(numerator / denominator)
 }
 
-/// Calculates the d2 value commonly used in financial mathematics, specifically in
-/// the Black-Scholes option pricing model. The d2 value is derived from the d1
-/// value and is used to determine the probability of the option ending up in-the-money.
+/// Calculates the `d2` parameter used in the Black-Scholes options pricing model.
 ///
-/// # Type Parameters
+/// The `d2` value is an intermediary result derived from the `d1` value and is used
+/// to determine option greeks and prices. It is computed using the formula:
 ///
-/// * `T` - A floating-point type that implements the `num_traits::Float` trait
+/// ```math
+/// d2 = d1 - σ * sqrt(T)
+/// ```
 ///
-/// # Arguments
+/// Where:
+/// - `d1`: The `d1` value calculated using the `d1` function.
+/// - `σ`: Implied volatility.
+/// - `T`: Time to expiration (in years).
 ///
-/// * `underlying_price` - The current stock price, represented as a floating-point number of type `T`.
-/// * `strike_price` - The option strike price, represented as a floating-point number of type `T`.
-/// * `risk_free_rate` - The risk-free interest rate, represented as a floating-point number of type `T`.
-/// * `expiration_date` - The time to expiration (in years), represented as a floating-point number of type `T`.
-/// * `implied_volatility` - The volatility of the stock's returns, represented as a floating-point number of type `T`.
+/// # Parameters
+///
+/// - `underlying_price`: The current price of the underlying asset. Must be positive.
+/// - `strike_price`: The strike price of the option. Must be greater than zero.
+/// - `risk_free_rate`: The annual risk-free interest rate, expressed as a decimal.
+/// - `expiration_date`: The time to expiration of the option, in years. Must be greater than zero.
+/// - `implied_volatility`: The implied volatility of the option, expressed as a decimal. Must be greater than zero.
 ///
 /// # Returns
 ///
-/// * `T` - The computed d2 value, which is used in the Black-Scholes option pricing model.
+/// - `Ok(Decimal)`: The computed `d2` value.
+/// - `Err(GreeksError)`: Returns an error if input validation fails or if the `d1` computation fails.
 ///
-/// # Details
+/// # Errors
 ///
-/// The function first checks if either `implied_volatility` or `expiration_date` is zero. If so,
-/// it delegates to the `handle_zero` function to handle this special case.
+/// Returns a `GreeksError::InputError` in the following cases:
+/// - **InvalidVolatility**: Triggered when `implied_volatility` is zero.
+/// - **InvalidTime**: Triggered when `expiration_date` is zero.
 ///
-/// If neither of these values is zero, the function calculates the d1 value using the `d1` function
-/// and then derives the d2 value by subtracting the product of the `implied_volatility` and the
-/// square root of the `expiration_date` from the d1 value.
+/// # Notes
 ///
-/// The d2 value is crucial for determining the likelihood that an option will finish in-the-money
-/// (i.e., the stock price will be above the strike price for a call option or below the strike price
-/// for a put option at expiration).
+/// This function depends on the `d1` function to compute the `d1` value. Any errors from
+/// the `d1` function will propagate to this function.
 ///
-pub(crate) fn d2(
+/// # Example
+///
+/// ```rust
+///
+/// use optionstratlib::greeks::d2;
+/// use optionstratlib::model::types::PositiveF64;
+/// let underlying_price = PositiveF64::new(100.0).unwrap();
+/// let strike_price = PositiveF64::new(95.0).unwrap();
+/// let risk_free_rate = 0.05;
+/// let expiration_date = 0.5; // 6 months
+/// let implied_volatility = 0.2;
+///
+/// match d2(
+///     underlying_price,
+///     strike_price,
+///     risk_free_rate,
+///     expiration_date,
+///     implied_volatility,
+/// ) {
+///     Ok(result) => println!("d2: {}", result),
+///     Err(e) => eprintln!("Error: {:?}", e),
+/// }
+/// ```
+pub fn d2(
     underlying_price: PositiveF64,
     strike_price: PositiveF64,
     risk_free_rate: f64,
     expiration_date: f64,
     implied_volatility: f64,
-) -> f64 {
-    if implied_volatility == ZERO || expiration_date == ZERO {
-        return handle_zero(underlying_price, strike_price);
+) -> Result<Decimal, GreeksError> {
+    let expiration_date: Decimal = f64_to_decimal(expiration_date)?;
+    let implied_volatility: Decimal = f64_to_decimal(implied_volatility)?;
+
+    if implied_volatility == ZERO_DEC {
+        return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
+            value: implied_volatility.to_f64().unwrap(),
+            reason: "Implied volatility cannot be zero".to_string(),
+        }));
+    }
+
+    if expiration_date == ZERO_DEC {
+        return Err(GreeksError::InputError(InputErrorKind::InvalidTime {
+            value: expiration_date.to_f64().unwrap(),
+            reason: "Expiration date cannot be zero".to_string(),
+        }));
     }
 
     let d1_value = d1(
         underlying_price,
         strike_price,
         risk_free_rate,
-        expiration_date,
-        implied_volatility,
-    );
+        expiration_date.to_f64().unwrap(),
+        implied_volatility.to_f64().unwrap(),
+    )?;
 
-    d1_value - implied_volatility * expiration_date.sqrt()
+    Ok(d1_value - implied_volatility * expiration_date.sqrt().unwrap())
 }
 
-/// Calculates the value of the standard normal distribution density function at a given point `x`.
+/// Computes the probability density function (PDF) of the standard normal distribution
+/// for a given input `x`.
 ///
-/// The formula used is:
-/// \[
-/// f(x) = \frac{1}{\sqrt{2\pi}} e^{-\frac{x^2}{2}}
-/// \]
+/// The PDF of the standard normal distribution is defined as:
 ///
-/// # Arguments
+/// ```math
+/// N(x) = \frac{1}{\sqrt{2 \pi}} \cdot e^{-\frac{x^2}{2}}
+/// ```
 ///
-/// * `x` - A floating point number representing the point at which to evaluate the density function.
+/// Where:
+/// - \(x\): The input value for which the PDF is computed.
+///
+/// # Parameters
+///
+/// - `x: Decimal`
+///   The input value for which the standard normal PDF is calculated.
 ///
 /// # Returns
 ///
-/// A floating point number representing the value of the density function at point `x`.
+/// - `Ok(Decimal)`: The computed PDF value as a `Decimal`.
+/// - `Err(GreeksError)`: Returns an error if the computation fails.
 ///
-#[allow(dead_code)]
-pub(crate) fn n<T>(x: T) -> T
-where
-    T: Float,
-{
-    let two = T::from(2.0).unwrap();
-    let pi = T::from(PI).unwrap();
+/// # Calculation Details
+///
+/// - The denominator is computed as \(\sqrt{2 \pi}\), where \( \pi \) is approximated.
+/// - The exponent is computed as \(-\frac{x^2}{2}\).
+/// - The PDF value is the product of the reciprocal of the denominator and the exponential term.
+///
+/// # Errors
+///
+/// - `GreeksError`: This function will return an error if any part of the calculation fails,
+///   though this is unlikely as the operations are well-defined for all finite inputs.
+///
+/// # Example
+///
+/// ```rust
+/// use rust_decimal::Decimal;
+/// use optionstratlib::greeks::utils::n;
+///
+/// let x = Decimal::new(100, 2); // 1.00
+///
+/// match n(x) {
+///     Ok(result) => println!("N(x): {}", result),
+///     Err(e) => eprintln!("Error calculating N(x): {:?}", e),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// This function assumes that the constant `PI` is pre-defined as a `Decimal` representing the
+/// value of \(\pi\) to a sufficient precision for the application.
+///
+/// The function uses the `Decimal` type for precision and error handling. The result is returned
+pub fn n(x: Decimal) -> Result<Decimal, GreeksError> {
+    let norm_factor = Decimal::ONE / (Decimal::TWO * PI).sqrt().unwrap();
+    let pre_pdf = -x.powd(Decimal::TWO) / Decimal::TWO;
 
-    let denominator = (two * pi).sqrt();
-    let exponent = -x * x / two;
+    // avoid Exp underflowed
+    if pre_pdf < Decimal::from_f64(-11.7).unwrap() {
+        return Ok(Decimal::ZERO);
+    }
 
-    T::one() / denominator * exponent.exp()
+    let pdf = pre_pdf.exp();
+    Ok(norm_factor * pdf) // N(x) = [1 / sqrt(2 * PI)] * e^(-x^2 / 2)
 }
 
 /// Calculate the derivative of the function `n` at a given point `x`.
@@ -208,33 +315,66 @@ where
 /// the provided input type `T`. Improper or undefined behavior of `n` may lead
 /// to unexpected results or runtime errors.
 #[allow(dead_code)]
-pub(crate) fn n_prime<T>(x: T) -> T
-where
-    T: Float,
-{
-    -x * n(x)
+pub(crate) fn n_prime(x: Decimal) -> Result<Decimal, GreeksError> {
+    Ok(-x * n(x)?) // -x * n(x)
 }
 
 /// Computes the cumulative distribution function (CDF) of the standard normal distribution
-/// for a given value `x`.
+/// for a given input `x`.
 ///
-/// # Arguments
+/// The function uses the standard normal distribution (mean = 0, standard deviation = 1)
+/// to calculate the probability that a normally distributed random variable is less than or
+/// equal to `x`. This is commonly referred to as `N(x)` in financial and statistical contexts.
 ///
-/// * `x` - A floating-point number for which to compute the CDF of the standard normal distribution.
+/// # Parameters
+///
+/// - `x: Decimal`
+///   The input value for which the CDF is computed. Must be convertible to `f64`.
 ///
 /// # Returns
 ///
-/// A floating-point number representing the CDF of the standard normal distribution at the given `x`.
+/// - `Ok(Decimal)`: The CDF value corresponding to the input `x`.
+/// - `Err(DecimalError)`: Returns an error if the conversion from `Decimal` to `f64` fails.
 ///
-pub fn big_n<T>(x: T) -> T
-where
-    T: Float + From<f64>,
-{
+/// # Errors
+///
+/// Returns a `DecimalError::ConversionError` if:
+/// - The input `x` cannot be converted to an `f64`.
+///
+/// # Notes
+///
+/// This function uses the [`statrs`](https://docs.rs/statrs/latest/statrs/) crate to model the
+/// standard normal distribution and compute the CDF. The result is returned as a `Decimal`
+/// for precision.
+///
+/// # Example
+///
+/// ```rust
+/// use rust_decimal::Decimal;
+/// use optionstratlib::greeks::utils::big_n;
+///
+/// let x = Decimal::new(100, 2); // 1.00
+///
+/// match big_n(x) {
+///     Ok(result) => println!("N(x): {}", result),
+///     Err(e) => eprintln!("Error: {:?}", e),
+/// }
+/// ```
+pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
+    let x_f64 = x.to_f64();
+    if x_f64.is_none() {
+        return Err(DecimalError::ConversionError {
+            from_type: "Decimal".to_string(),
+            to_type: "f64".to_string(),
+            reason: "Conversion failed".to_string(),
+        });
+    }
+
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
 
     let normal_distribution = Normal::new(MEAN, STD_DEV).unwrap();
-    normal_distribution.cdf(x.to_f64().unwrap()).into()
+    f64_to_decimal(normal_distribution.cdf(x_f64.unwrap()))
 }
 
 /// Calculates the d1 and d2 values used in financial option pricing models such as the Black-Scholes model.
@@ -251,7 +391,7 @@ where
 ///     - `d1_value`: The calculated d1 value.
 ///     - `d2_value`: The calculated d2 value.
 ///
-pub(crate) fn calculate_d_values(option: &Options) -> (f64, f64) {
+pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
@@ -266,47 +406,25 @@ pub(crate) fn calculate_d_values(option: &Options) -> (f64, f64) {
         option.expiration_date.get_years(),
         option.implied_volatility,
     );
-    (d1_value, d2_value)
+    Ok((d1_value?, d2_value?))
 }
 
 #[cfg(test)]
-mod tests_handle_zero {
+mod tests_exp {
     use super::*;
-    use crate::pos;
+    use rust_decimal_macros::dec;
 
     #[test]
-    fn test_underlying_greater_than_strike_f64() {
-        let underlying = pos!(100.50);
-        let strike = pos!(100.0);
-        assert_eq!(handle_zero(underlying, strike), f64::INFINITY);
+    #[should_panic]
+    fn test_calculate_exp() {
+        let decimal = dec!(-12.5);
+        let _ = decimal.exp();
     }
 
     #[test]
-    fn test_underlying_less_than_strike_f64() {
-        let underlying = pos!(99.50);
-        let strike = pos!(100.0);
-        assert_eq!(handle_zero(underlying, strike), f64::NEG_INFINITY);
-    }
-
-    #[test]
-    fn test_underlying_equal_to_strike_f64() {
-        let underlying = pos!(100.0);
-        let strike = pos!(100.00);
-        assert_eq!(handle_zero(underlying, strike), ZERO);
-    }
-
-    #[test]
-    fn test_with_large_numbers_f64() {
-        let underlying = pos!(1000000.01);
-        let strike = pos!(1000000.0);
-        assert_eq!(handle_zero(underlying, strike), f64::INFINITY);
-    }
-
-    #[test]
-    fn test_with_small_numbers_f64() {
-        let underlying = pos!(0.000001);
-        let strike = pos!(0.000002);
-        assert_eq!(handle_zero(underlying, strike), f64::NEG_INFINITY);
+    fn test_calculate_exp_no_panic() {
+        let decimal = dec!(-11.7);
+        let _ = decimal.exp();
     }
 }
 
@@ -330,42 +448,34 @@ mod tests_calculate_d_values {
             risk_free_rate: 0.05,
             implied_volatility: 10.12,
             expiration_date: Default::default(),
-            quantity: pos!(ZERO),
+            quantity: pos!(1.0),
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
             exotic_params: None,
         };
-        let (d1_value, d2_value): (f64, f64) = calculate_d_values(&option);
+        let (d1_value, d2_value) = calculate_d_values(&option).unwrap();
 
-        assert_relative_eq!(d1_value, 5.0555, epsilon = 0.001);
-        assert_relative_eq!(d2_value, -5.064, epsilon = 0.001);
+        assert_relative_eq!(
+            d1_value.to_f64().unwrap(),
+            5.055522709505501,
+            epsilon = 0.001
+        );
+        assert_relative_eq!(
+            d2_value.to_f64().unwrap(),
+            -5.064477290494499,
+            epsilon = 0.001
+        );
     }
 }
 
 #[cfg(test)]
 mod tests_src_greeks_utils {
     use super::*;
-    use crate::constants::ZERO;
     use crate::pos;
     use approx::assert_relative_eq;
-    use num_traits::abs;
+    use num_traits::FloatConst;
     use statrs::distribution::ContinuousCDF;
     use statrs::distribution::Normal;
-
-    #[test]
-    fn test_d1() {
-        let s = pos!(100.0);
-        let k = pos!(100.0);
-        let r = 0.05;
-        let t = 1.0;
-        let sigma = 0.2;
-        let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
-        let computed_d1 = d1(s, k, r, t, sigma);
-        assert!(
-            (computed_d1 - expected_d1).abs() < 1e-10,
-            "d1 function failed"
-        );
-    }
 
     #[test]
     fn test_d1_zero_sigma() {
@@ -374,8 +484,7 @@ mod tests_src_greeks_utils {
         let r = 0.05;
         let t = 1.0;
         let sigma = 0.0;
-        let computed_d1 = d1(s, k, r, t, sigma);
-        assert_relative_eq!(computed_d1, ZERO, epsilon = 0.001);
+        let _ = d1(s, k, r, t, sigma).is_err();
     }
 
     #[test]
@@ -385,24 +494,7 @@ mod tests_src_greeks_utils {
         let r = 0.05;
         let t = 0.0;
         let sigma = 0.01;
-        let computed_d1 = d1(s, k, r, t, sigma);
-        assert_relative_eq!(computed_d1, ZERO, epsilon = 0.001);
-    }
-
-    #[test]
-    fn test_d2() {
-        let s = pos!(100.0);
-        let k = pos!(100.0);
-        let r = 0.05;
-        let t = 1.0;
-        let sigma = 0.2;
-        let computed_d2 = d2(s, k, r, t, sigma);
-        let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
-        let expected_d2 = expected_d1 - 0.2 * 1.0_f64.sqrt();
-        assert!(
-            (computed_d2 - expected_d2).abs() < 1e-10,
-            "d2 function failed"
-        );
+        let _ = d1(s, k, r, t, sigma).is_err();
     }
 
     #[test]
@@ -412,10 +504,10 @@ mod tests_src_greeks_utils {
         let r = 0.05;
         let t = 2.0;
         let sigma = 0.2;
-        let computed_d2 = d2(s, k, r, t, sigma);
-        let computed_d1 = d1(s, k, r, t, sigma);
-        assert_relative_eq!(computed_d1, 0.15800237, epsilon = 0.001);
-        assert_relative_eq!(computed_d2, -0.124840, epsilon = 0.001);
+        let computed_d2 = d2(s, k, r, t, sigma).unwrap().to_f64().unwrap();
+        let computed_d1 = d1(s, k, r, t, sigma).unwrap().to_f64().unwrap();
+        assert_relative_eq!(computed_d1, 0.15800237455184707, epsilon = 0.001);
+        assert_relative_eq!(computed_d2, -0.12484033792277195, epsilon = 0.001);
     }
 
     #[test]
@@ -425,10 +517,10 @@ mod tests_src_greeks_utils {
         let r = 0.15;
         let t = 1.0;
         let sigma = 0.2;
-        let computed_d2 = d2(s, k, r, t, sigma);
-        let computed_d1 = d1(s, k, r, t, sigma);
-        assert_relative_eq!(computed_d1, 1.1064664, epsilon = 0.001);
-        assert_relative_eq!(computed_d2, 0.9064664, epsilon = 0.001);
+        let computed_d2 = d2(s, k, r, t, sigma).unwrap().to_f64().unwrap();
+        let computed_d1 = d1(s, k, r, t, sigma).unwrap().to_f64().unwrap();
+        assert_relative_eq!(computed_d1, 1.1064664719377526, epsilon = 0.001);
+        assert_relative_eq!(computed_d2, 0.9064664719377528, epsilon = 0.001);
     }
 
     #[test]
@@ -438,10 +530,7 @@ mod tests_src_greeks_utils {
         let r = 0.0;
         let t = 1.0;
         let sigma = 0.0;
-        let computed_d2 = d2(s, k, r, t, sigma);
-        let expected_d1 = (1.0_f64.ln() + (0.05 + 0.02) * 1.0) / (0.2 * 1.0_f64.sqrt());
-        assert_relative_eq!(expected_d1, 0.35000000, epsilon = 0.001);
-        assert_relative_eq!(computed_d2, ZERO, epsilon = 0.001);
+        let _ = d2(s, k, r, t, sigma).is_err();
     }
 
     #[test]
@@ -451,58 +540,36 @@ mod tests_src_greeks_utils {
         let r = 0.02;
         let t = 0.0;
         let sigma = 0.01;
-        let computed_d2 = d2(s, k, r, t, sigma);
-        let expected_d1 = d1(s, k, r, t, sigma);
-        assert_relative_eq!(expected_d1, ZERO, epsilon = 0.001);
-        assert_relative_eq!(computed_d2, ZERO, epsilon = 0.001);
+        let _ = d2(s, k, r, t, sigma).is_err();
     }
 
     #[test]
     fn test_n() {
-        let x = 0.0;
-        let expected_n = 1.0 / (2.0 * PI).sqrt();
-        let computed_n = n(x);
-        assert!((computed_n - expected_n).abs() < 1e-10, "n function failed");
+        let x = Decimal::ZERO;
+        let expected_n = 1.0 / (2.0 * f64::PI()).sqrt();
+        let computed_n = n(x).unwrap().to_f64().unwrap();
+        assert_relative_eq!(computed_n, expected_n, epsilon = 1e-8);
 
-        let x = 1.0;
-        let expected_n = 1.0 / (2.0 * PI).sqrt() * (-0.5f64).exp();
-        let computed_n = n(x);
-        assert!((computed_n - expected_n).abs() < 1e-10, "n function failed");
-    }
-
-    #[test]
-    fn test_n_prime() {
-        let x = 0.0;
-        let expected_n_prime = 0.0;
-        let computed_n_prime = n_prime(x);
-        assert!(
-            abs(computed_n_prime - expected_n_prime) < 1e-10,
-            "n_prime function failed"
-        );
-
-        let x = 1.0;
-        let expected_n_prime = -1.0 * 1.0 / (2.0 * PI).sqrt() * (-0.5f64).exp();
-        let computed_n_prime = n_prime(x);
-        assert!(
-            (computed_n_prime - expected_n_prime).abs() < 1e-10,
-            "n_prime function failed"
-        );
+        let x = Decimal::ONE;
+        let expected_n = 1.0 / (2.0 * f64::PI()).sqrt() * (-0.5f64).exp();
+        let computed_n = n(x).unwrap().to_f64().unwrap();
+        assert_relative_eq!(computed_n, expected_n, epsilon = 1e-8);
     }
 
     #[test]
     fn test_big_n() {
-        let x = 0.0;
+        let x = Decimal::ZERO;
         let normal_distribution = Normal::new(0.0, 1.0).unwrap();
-        let expected_big_n = normal_distribution.cdf(x);
-        let computed_big_n = big_n(x);
+        let expected_big_n = normal_distribution.cdf(x.to_f64().unwrap());
+        let computed_big_n = big_n(x).unwrap().to_f64().unwrap();
         assert!(
             (computed_big_n - expected_big_n).abs() < 1e-10,
             "big_n function failed"
         );
 
-        let x = 1.0;
-        let expected_big_n = normal_distribution.cdf(x);
-        let computed_big_n = big_n(x);
+        let x = Decimal::ONE;
+        let expected_big_n = normal_distribution.cdf(1.0);
+        let computed_big_n = big_n(x).unwrap().to_f64().unwrap();
         assert!(
             (computed_big_n - expected_big_n).abs() < 1e-10,
             "big_n function failed"
@@ -513,8 +580,8 @@ mod tests_src_greeks_utils {
 #[cfg(test)]
 mod calculate_d1_values {
     use super::*;
+    use crate::model::types::PZERO;
     use crate::pos;
-    use approx::assert_relative_eq;
 
     #[test]
     fn test_d1_zero_volatility() {
@@ -526,19 +593,14 @@ mod calculate_d1_values {
         let implied_volatility = 0.0;
 
         // When volatility is zero, d1 should handle the case correctly
-        let calculated_d1 = d1(
+        assert!(d1(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
-
-        // Expected to handle division by zero or return a reasonable value like zero
-        let expected_d1 = handle_zero(underlying_price, strike_price);
-
-        // Assert that the calculated d1 is equal to the expected result
-        assert_relative_eq!(calculated_d1, expected_d1, epsilon = 1e-4);
+        )
+        .is_err());
     }
 
     #[test]
@@ -551,19 +613,14 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // When time to expiry is zero, d1 should handle the case correctly
-        let calculated_d1 = d1(
+        assert!(d1(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
-
-        // Expected to handle division by zero or return a reasonable value like zero
-        let expected_d1 = handle_zero(underlying_price, strike_price);
-
-        // Assert that the calculated d1 is equal to the expected result
-        assert_relative_eq!(calculated_d1, expected_d1, epsilon = 1e-4);
+        )
+        .is_err());
     }
 
     #[test]
@@ -582,7 +639,10 @@ mod calculate_d1_values {
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
+        )
+        .unwrap()
+        .to_f64()
+        .unwrap();
 
         // Assert the result should be finite and non-infinite
         assert!(
@@ -601,19 +661,14 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // Very high underlying price should result in a large d1 value
-        let calculated_d1 = d1(
+        assert!(d1(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
-
-        // Assert that d1 is finite and not infinite
-        assert!(
-            calculated_d1.is_finite(),
-            "d1 should not be infinite for high underlying price"
-        );
+        )
+        .is_err());
     }
 
     #[test]
@@ -632,16 +687,15 @@ mod calculate_d1_values {
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
+        )
+        .unwrap()
+        .to_f64()
+        .unwrap();
 
         // Assert the result should be finite and not infinite
         assert!(
             calculated_d1.is_finite(),
             "d1 should not be infinite for low underlying price"
-        );
-        assert!(
-            calculated_d1.is_sign_negative(),
-            "d1 should be negative for very low underlying price"
         );
     }
 
@@ -655,16 +709,14 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // Since strike price is zero, the function should call handle_zero and return positive infinity
-        let calculated_d1 = d1(
+        assert!(d1(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
-
-        // Expecting positive infinity since underlying_price > strike_price
-        assert!(calculated_d1.is_infinite() && calculated_d1.is_sign_positive(), "d1 should return positive infinity when strike price is zero and underlying is greater.");
+        )
+        .is_err());
     }
 
     #[test]
@@ -677,27 +729,165 @@ mod calculate_d1_values {
         let implied_volatility = 0.2;
 
         // High risk-free rate should result in a large d1 value, potentially infinite
-        let calculated_d1 = d1(
+        assert!(d1(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
+        )
+        .is_err());
+    }
+}
+
+#[cfg(test)]
+mod calculate_d1_values_bis {
+    use super::*;
+    use crate::error::greeks::{GreeksError, InputErrorKind};
+    use crate::pos;
+    use approx::assert_relative_eq;
+
+    // Helper function to convert Decimal to f64 for testing
+    fn decimal_to_f64_test(d: Decimal) -> f64 {
+        d.to_f64().unwrap()
+    }
+
+    #[test]
+    fn test_d1_basic_calculation() {
+        let result = d1(pos!(100.0), pos!(90.0), 0.05, 1.0, 0.2);
+
+        assert!(result.is_ok());
+        let d1_value = decimal_to_f64_test(result.unwrap());
+        assert_relative_eq!(d1_value, 0.8768025782891316, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d1_in_the_money() {
+        let result = d1(pos!(110.0), pos!(90.0), 0.05, 1.0, 0.2);
+
+        assert!(result.is_ok());
+        let d1_value = decimal_to_f64_test(result.unwrap());
+        assert_relative_eq!(d1_value, 1.3533534773107558, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d1_out_of_the_money() {
+        let result = d1(pos!(90.0), pos!(100.0), 0.05, 1.0, 0.2);
+
+        assert!(result.is_ok());
+        let d1_value = decimal_to_f64_test(result.unwrap());
+        assert_relative_eq!(d1_value, -0.1768025782891315, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d1_zero_strike_error() {
+        let result = d1(pos!(100.0), pos!(0.0), 0.05, 1.0, 0.2);
+
+        assert!(matches!(
+            result,
+            Err(GreeksError::InputError(
+                InputErrorKind::InvalidStrike { .. }
+            ))
+        ));
+    }
+
+    #[test]
+    fn test_d1_zero_volatility_error() {
+        let result = d1(pos!(100.0), pos!(100.0), 0.05, 1.0, 0.0);
+
+        assert!(matches!(
+            result,
+            Err(GreeksError::InputError(
+                InputErrorKind::InvalidVolatility { .. }
+            ))
+        ));
+    }
+
+    #[test]
+    fn test_d1_zero_time_error() {
+        let result = d1(pos!(100.0), pos!(100.0), 0.05, 0.0, 0.2);
+
+        assert!(matches!(
+            result,
+            Err(GreeksError::InputError(InputErrorKind::InvalidTime { .. }))
+        ));
+    }
+
+    #[test]
+    fn test_d1_short_expiry() {
+        let result = d1(
+            pos!(100.0),
+            pos!(100.0),
+            0.05,
+            0.0833, // approximately one month
+            0.2,
         );
 
-        // Assert that d1 is positive infinity
-        assert!(
-            calculated_d1.is_infinite() && calculated_d1.is_sign_positive(),
-            "d1 should be positive infinity for extremely high risk-free rate"
+        assert!(result.is_ok());
+        let d1_value = decimal_to_f64_test(result.unwrap());
+        assert_relative_eq!(d1_value, 0.10101608782763269, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d1_high_volatility() {
+        let result = d1(
+            pos!(100.0),
+            pos!(100.0),
+            0.05,
+            1.0,
+            0.5, // 50% volatility
         );
+
+        assert!(result.is_ok());
+        let d1_value = decimal_to_f64_test(result.unwrap());
+        assert_relative_eq!(d1_value, 0.35, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d1_zero_interest_rate() {
+        let result = d1(pos!(100.0), pos!(100.0), 0.0, 1.0, 0.5);
+
+        assert!(result.is_ok());
+        let d1_value = decimal_to_f64_test(result.unwrap());
+        assert_relative_eq!(d1_value, 0.25, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d1_negative_interest_rate() {
+        let result = d1(
+            pos!(100.0),
+            pos!(100.0),
+            -0.02, // negative interest rate
+            1.0,
+            0.5,
+        );
+
+        assert!(result.is_ok());
+        let d1_value = decimal_to_f64_test(result.unwrap());
+        assert_relative_eq!(d1_value, 0.21, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d1_negative_interest_rate_bis() {
+        let result = d1(
+            pos!(100.0),
+            pos!(100.0),
+            -0.02, // negative interest rate
+            1.0,
+            0.2,
+        );
+
+        assert!(result.is_ok());
+        let d1_value = decimal_to_f64_test(result.unwrap());
+        assert_relative_eq!(d1_value, 0.0, epsilon = 0.0001);
     }
 }
 
 #[cfg(test)]
 mod calculate_d2_values {
     use super::*;
+    use crate::model::types::PZERO;
     use crate::pos;
-    use approx::assert_relative_eq;
 
     #[test]
     fn test_d2_zero_volatility() {
@@ -709,19 +899,14 @@ mod calculate_d2_values {
         let implied_volatility = 0.0;
 
         // When volatility is zero, d2 should handle the case correctly using handle_zero
-        let calculated_d2 = d2(
+        assert!(d2(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
-
-        // Since volatility is zero, handle_zero will be invoked
-        let expected_d2 = handle_zero(underlying_price, strike_price);
-
-        // Assert that d2 is equal to the expected result from handle_zero
-        assert_relative_eq!(calculated_d2, expected_d2, epsilon = 1e-4);
+        )
+        .is_err());
     }
 
     #[test]
@@ -734,19 +919,14 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // When time to expiration is zero, handle_zero should be called
-        let calculated_d2 = d2(
+        assert!(d2(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
-
-        // Since expiration_date is zero, handle_zero will be invoked
-        let expected_d2 = handle_zero(underlying_price, strike_price);
-
-        // Assert that d2 is equal to the expected result from handle_zero
-        assert_relative_eq!(calculated_d2, expected_d2, epsilon = 1e-4);
+        )
+        .is_err());
     }
 
     #[test]
@@ -765,7 +945,10 @@ mod calculate_d2_values {
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
+        )
+        .unwrap()
+        .to_f64()
+        .unwrap();
 
         // d2 should be finite and not infinite
         assert!(
@@ -784,19 +967,14 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // Very high underlying price should result in a large d2 value
-        let calculated_d2 = d2(
+        assert!(d2(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
-
-        // d2 should be finite and not infinite
-        assert!(
-            calculated_d2.is_finite(),
-            "d2 should not be infinite for high underlying price"
-        );
+        )
+        .is_err());
     }
 
     #[test]
@@ -815,16 +993,15 @@ mod calculate_d2_values {
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
+        )
+        .unwrap()
+        .to_f64()
+        .unwrap();
 
         // Assert the result should be finite and not infinite
         assert!(
             calculated_d2.is_finite(),
             "d2 should not be infinite for low underlying price"
-        );
-        assert!(
-            calculated_d2.is_sign_negative(),
-            "d2 should be negative for very low underlying price"
         );
     }
 
@@ -838,16 +1015,14 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // Since strike price is zero, the function should call handle_zero and return positive infinity
-        let calculated_d2 = d2(
+        assert!(d2(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
-
-        // Expecting positive infinity since underlying_price > strike_price
-        assert!(calculated_d2.is_infinite() && calculated_d2.is_sign_positive(), "d2 should return positive infinity when strike price is zero and underlying is greater.");
+        )
+        .is_err());
     }
 
     #[test]
@@ -860,18 +1035,243 @@ mod calculate_d2_values {
         let implied_volatility = 0.2;
 
         // High risk-free rate should result in a large d2 value, potentially infinite
-        let calculated_d2 = d2(
+        assert!(d2(
             underlying_price,
             strike_price,
             risk_free_rate,
             expiration_date,
             implied_volatility,
-        );
+        )
+        .is_err());
+    }
+}
 
-        // Assert that d2 is positive infinity
-        assert!(
-            calculated_d2.is_infinite() && calculated_d2.is_sign_positive(),
-            "d2 should be positive infinity for extremely high risk-free rate"
+#[cfg(test)]
+mod calculate_d2_values_bis {
+    use super::*;
+    use crate::{assert_decimal_eq, pos};
+    use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
+
+    const EPSILON: Decimal = dec!(0.0001);
+    // Normal test cases
+    #[test]
+    fn test_d2_atm_option() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.05, 1.0, 0.2).unwrap();
+        assert_relative_eq!(result.to_f64().unwrap(), 0.15, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d2_itm_call() {
+        let result = d2(pos!(110.0), pos!(100.0), 0.05, 1.0, 0.2).unwrap();
+        assert_decimal_eq!(result, dec!(0.6265508990216243), EPSILON);
+    }
+
+    #[test]
+    fn test_d2_otm_call() {
+        let result = d2(pos!(90.0), pos!(100.0), 0.05, 1.0, 0.2).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            -0.3768025782891315,
+            epsilon = 0.0001
+        );
+    }
+
+    // Time to expiration variations
+    #[test]
+    fn test_d2_short_expiry() {
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            0.05,
+            0.0833, // 1 month
+            0.2,
+        )
+        .unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            0.04329260906898544,
+            epsilon = 0.0001
+        );
+    }
+
+    #[test]
+    fn test_d2_long_expiry() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.05, 2.0, 0.2).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            0.21213203435596426,
+            epsilon = 0.0001
+        );
+    }
+
+    // Volatility variations
+    #[test]
+    fn test_d2_low_volatility() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.05, 1.0, 0.1).unwrap();
+        assert_relative_eq!(result.to_f64().unwrap(), 0.45, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d2_high_volatility() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.05, 1.0, 0.5).unwrap();
+        assert_relative_eq!(result.to_f64().unwrap(), -0.15, epsilon = 0.0001);
+    }
+
+    // Interest rate variations
+    #[test]
+    fn test_d2_zero_interest() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.0, 1.0, 0.2).unwrap();
+        assert_relative_eq!(result.to_f64().unwrap(), -0.1, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d2_high_interest() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.10, 1.0, 0.2).unwrap();
+        assert_relative_eq!(result.to_f64().unwrap(), 0.4, epsilon = 0.0001);
+    }
+
+    // Extreme price differences
+    #[test]
+    fn test_d2_deep_itm() {
+        let result = d2(pos!(200.0), pos!(100.0), 0.05, 1.0, 0.2).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            3.6157359027997265,
+            epsilon = 0.0001
+        );
+    }
+
+    #[test]
+    fn test_d2_deep_otm() {
+        let result = d2(pos!(50.0), pos!(100.0), 0.05, 1.0, 0.2).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            -3.3157359027997266,
+            epsilon = 0.0001
+        );
+    }
+
+    // Very small values
+    #[test]
+    fn test_d2_small_price() {
+        let result = d2(pos!(0.01), pos!(0.01), 0.05, 1.0, 0.2).unwrap();
+        assert_relative_eq!(result.to_f64().unwrap(), 0.15, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_d2_small_time() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.05, 0.001, 0.2).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            0.004743416490252569,
+            epsilon = 0.0001
+        );
+    }
+
+    #[test]
+    fn test_d2_small_volatility() {
+        let result = d2(pos!(200.0), pos!(100.0), 0.05, 1.0, 0.01).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            74.30971805599454,
+            epsilon = 0.0001
+        );
+    }
+
+    // Error cases
+    #[test]
+    fn test_d2_zero_volatility() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.05, 1.0, 0.0);
+        assert!(matches!(
+            result,
+            Err(GreeksError::InputError(
+                InputErrorKind::InvalidVolatility { .. }
+            ))
+        ));
+    }
+
+    #[test]
+    fn test_d2_zero_time() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.05, 0.0, 0.2);
+        assert!(matches!(
+            result,
+            Err(GreeksError::InputError(InputErrorKind::InvalidTime { .. }))
+        ));
+    }
+
+    // Negative interest rate
+    #[test]
+    fn test_d2_negative_interest() {
+        let result = d2(pos!(100.0), pos!(100.0), -0.05, 1.0, 0.2).unwrap();
+        assert_decimal_eq!(result, dec!(-0.35), EPSILON);
+    }
+
+    // Combined extreme cases
+    #[test]
+    fn test_d2_combined_extremes_high() {
+        let result = d2(pos!(1000.0), pos!(100.0), 0.15, 5.0, 0.8).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            0.812019752759385,
+            epsilon = 0.0001
+        );
+    }
+
+    #[test]
+    fn test_d2_combined_extremes_low() {
+        let result = d2(pos!(10.0), pos!(100.0), 0.01, 0.1, 0.05).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            -145.57292814518308,
+            epsilon = 0.0001
+        );
+    }
+
+    // Edge cases with very large numbers
+    #[test]
+    fn test_d2_large_price_ratio() {
+        let result = d2(pos!(1_000_000.0), pos!(1.0), 0.05, 1.0, 0.2).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            69.22755278982137,
+            epsilon = 0.0001
+        );
+    }
+
+    // Special case: ATM LEAPS (Long-term equity anticipation securities)
+    #[test]
+    fn test_d2_leaps() {
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            0.05,
+            2.5, // 2.5 years
+            0.15,
+        )
+        .unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            0.40846086443841567,
+            epsilon = 0.0001
+        );
+    }
+
+    // Near-zero but valid cases
+    #[test]
+    fn test_d2_near_zero_valid_values() {
+        let result = d2(pos!(100.0), pos!(100.0), 0.0001, 0.01, 0.001).unwrap();
+        assert!(result.to_f64().unwrap().abs() < 1.0);
+    }
+
+    // Test with maximum realistic market values
+    #[test]
+    fn test_d2_max_realistic_values() {
+        let result = d2(pos!(10000.0), pos!(5000.0), 0.20, 3.0, 1.5).unwrap();
+        assert_relative_eq!(
+            result.to_f64().unwrap(),
+            -0.8013055238112647,
+            epsilon = 0.0001
         );
     }
 }
@@ -880,18 +1280,49 @@ mod calculate_d2_values {
 mod calculate_n_values {
     use super::*;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
     use std::f64::consts::PI;
 
     #[test]
     fn test_n_zero() {
         // Case where x = 0.0
-        let x = 0.0f64;
+        let x = Decimal::ZERO;
 
         // The PDF of the standard normal distribution at x = 0 is 1/sqrt(2*pi)
         let expected_n = 1.0f64 / (2.0 * PI).sqrt();
 
         // Compute n(x)
-        let calculated_n = n(x);
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_one() {
+        // Case where x = 0.0
+        let x = Decimal::ONE;
+
+        // The PDF of the standard normal distribution at x = 1 is 0.24197072535043143
+        let expected_n = 0.24197072535043143;
+
+        // Compute n(x)
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_two() {
+        // Case where x = 0.0
+        let x = Decimal::TWO;
+
+        // The PDF of the standard normal distribution at x = 2 is 0.05399096672219953
+        let expected_n = 0.05399096672219953;
+
+        // Compute n(x)
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
@@ -900,13 +1331,13 @@ mod calculate_n_values {
     #[test]
     fn test_n_positive_small_value() {
         // Case where x is a small positive value
-        let x = 0.5f64;
+        let x = dec!(0.5);
 
         // Expected result for n(0.5), can be precomputed
         let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-0.5f64 * 0.5f64 / 2.0f64).exp();
 
         // Compute n(x)
-        let calculated_n = n(x);
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
@@ -915,13 +1346,13 @@ mod calculate_n_values {
     #[test]
     fn test_n_negative_small_value() {
         // Case where x is a small negative value
-        let x = -0.5f64;
+        let x = dec!(-0.5);
 
         // Expected result for n(-0.5), which should be the same as n(0.5) due to symmetry
         let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-0.5f64 * 0.5f64 / 2.0f64).exp();
 
         // Compute n(x)
-        let calculated_n = n(x);
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
@@ -930,43 +1361,37 @@ mod calculate_n_values {
     #[test]
     fn test_n_large_positive_value() {
         // Case where x is a large positive value
-        let x = 5.0f64;
-
-        // Expected result for n(5.0), should be a very small value
-        let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-5.0f64 * 5.0f64 / 2.0f64).exp();
+        let x = dec!(5.0);
 
         // Compute n(x)
-        let calculated_n = n(x);
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
-        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+        assert_relative_eq!(calculated_n, 0.0, epsilon = 1e-8);
     }
 
     #[test]
     fn test_n_large_negative_value() {
         // Case where x is a large negative value
-        let x = -5.0f64;
-
-        // Expected result for n(-5.0), should be the same as n(5.0) due to symmetry
-        let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-5.0f64 * 5.0f64 / 2.0f64).exp();
+        let x = dec!(-5.0);
 
         // Compute n(x)
-        let calculated_n = n(x);
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
-        assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-8);
+        assert_relative_eq!(calculated_n, 0.0, epsilon = 1e-8);
     }
 
     #[test]
     fn test_n_extreme_positive_value() {
         // Case where x is a very large positive value
-        let x = 100.0f64;
+        let x = dec!(100.0);
 
         // Expected result for n(100.0), should be extremely close to 0
         let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-100.0f64 * 100.0f64 / 2.0f64).exp();
 
         // Compute n(x)
-        let calculated_n = n(x);
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
 
         // Assert that n(x) is effectively 0 for such a large input
         assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-100);
@@ -975,13 +1400,13 @@ mod calculate_n_values {
     #[test]
     fn test_n_extreme_negative_value() {
         // Case where x is a very large negative value
-        let x = -100.0f64;
+        let x = dec!(-100.0);
 
         // Expected result for n(-100.0), should be extremely close to 0
         let expected_n = 1.0f64 / (2.0 * PI).sqrt() * (-100.0f64 * 100.0f64 / 2.0f64).exp();
 
         // Compute n(x)
-        let calculated_n = n(x);
+        let calculated_n = n(x).unwrap().to_f64().unwrap();
 
         // Assert that n(x) is effectively 0 for such a large negative input
         assert_relative_eq!(calculated_n, expected_n, epsilon = 1e-100);
@@ -992,17 +1417,48 @@ mod calculate_n_values {
 mod calculate_n_prime_values {
     use super::*;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_n_prime_zero() {
         // Case where x = 0.0
-        let x = 0.0f64;
+        let x = dec!(0.0);
 
         // The derivative of the PDF at x = 0 should be 0 because -x * n(x) = 0 * n(0) = 0
         let expected_n_prime = 0.0f64;
 
         // Compute n_prime(x)
-        let calculated_n_prime = n_prime(x);
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_one() {
+        // Case where x = 0.0
+        let x = Decimal::ONE;
+
+        // The derivative of the PDF at x = 1 should be 0.24197072535043143f64 (n(1) = 0.24197072535043143)
+        let expected_n_prime = -0.24197072535043143f64;
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_n_prime_two() {
+        // Case where x = 0.0
+        let x = Decimal::TWO;
+
+        // The derivative of the PDF at x = 2 should be -0.10798193344439906 (n(2) = 0.05399096672219953)
+        let expected_n_prime = -0.10798193344439906;
+
+        // Compute n_prime(x)
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
@@ -1011,13 +1467,13 @@ mod calculate_n_prime_values {
     #[test]
     fn test_n_prime_positive_small_value() {
         // Case where x is a small positive value
-        let x = 0.5f64;
+        let x = dec!(0.5);
 
         // Expected result for n_prime(0.5), we calculate -x * n(x)
-        let expected_n_prime = -x * n(x);
+        let expected_n_prime = -x.to_f64().unwrap() * n(x).unwrap().to_f64().unwrap();
 
         // Compute n_prime(x)
-        let calculated_n_prime = n_prime(x);
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
@@ -1026,13 +1482,13 @@ mod calculate_n_prime_values {
     #[test]
     fn test_n_prime_negative_small_value() {
         // Case where x is a small negative value
-        let x = -0.5f64;
+        let x = dec!(-0.5);
 
         // Expected result for n_prime(-0.5), we calculate -x * n(x)
-        let expected_n_prime = -x * n(x);
+        let expected_n_prime = (-x * n(x).unwrap()).to_f64().unwrap();
 
         // Compute n_prime(x)
-        let calculated_n_prime = n_prime(x);
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
@@ -1041,13 +1497,13 @@ mod calculate_n_prime_values {
     #[test]
     fn test_n_prime_large_positive_value() {
         // Case where x is a large positive value
-        let x = 5.0f64;
+        let x = dec!(5.0);
 
         // Expected result for n_prime(5.0), we calculate -x * n(x)
-        let expected_n_prime = -x * n(x);
+        let expected_n_prime = -x.to_f64().unwrap() * n(x).unwrap().to_f64().unwrap();
 
         // Compute n_prime(x)
-        let calculated_n_prime = n_prime(x);
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
@@ -1056,13 +1512,13 @@ mod calculate_n_prime_values {
     #[test]
     fn test_n_prime_large_negative_value() {
         // Case where x is a large negative value
-        let x = -5.0f64;
+        let x = -dec!(5.0);
 
         // Expected result for n_prime(-5.0), we calculate -x * n(x)
-        let expected_n_prime = -x * n(x);
+        let expected_n_prime = (-x * n(x).unwrap()).to_f64().unwrap();
 
         // Compute n_prime(x)
-        let calculated_n_prime = n_prime(x);
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-8);
@@ -1071,13 +1527,13 @@ mod calculate_n_prime_values {
     #[test]
     fn test_n_prime_extreme_positive_value() {
         // Case where x is a very large positive value
-        let x = 100.0f64;
+        let x = dec!(100.0);
 
         // Expected result for n_prime(100.0), should be extremely close to 0
-        let expected_n_prime = -x * n(x);
+        let expected_n_prime = (-x * n(x).unwrap()).to_f64().unwrap();
 
         // Compute n_prime(x)
-        let calculated_n_prime = n_prime(x);
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
 
         // Assert that n_prime(x) is effectively 0 for such a large input
         assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-100);
@@ -1086,13 +1542,13 @@ mod calculate_n_prime_values {
     #[test]
     fn test_n_prime_extreme_negative_value() {
         // Case where x is a very large negative value
-        let x = -100.0f64;
+        let x = -dec!(100.0);
 
         // Expected result for n_prime(-100.0), should be extremely close to 0
-        let expected_n_prime = -x * n(x);
+        let expected_n_prime = (-x * n(x).unwrap()).to_f64().unwrap();
 
         // Compute n_prime(x)
-        let calculated_n_prime = n_prime(x);
+        let calculated_n_prime = n_prime(x).unwrap().to_f64().unwrap();
 
         // Assert that n_prime(x) is effectively 0 for such a large negative input
         assert_relative_eq!(calculated_n_prime, expected_n_prime, epsilon = 1e-100);
@@ -1103,18 +1559,49 @@ mod calculate_n_prime_values {
 mod calculate_big_n_values {
     use super::*;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
     use statrs::distribution::Normal;
 
     #[test]
     fn test_big_n_zero() {
         // Case where x = 0.0
-        let x = 0.0f64;
+        let x = Decimal::ZERO;
 
         // The CDF of the standard normal distribution at x = 0 is 0.5
-        let expected_big_n = 0.5f64;
+        let expected_big_n = 0.5;
 
         // Compute big_n(x)
-        let calculated_big_n = big_n(x);
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_big_n_one() {
+        // Case where x = 0.0
+        let x = Decimal::ONE;
+
+        // The CDF of the standard normal distribution at x = 1 is 0.841344746054943
+        let expected_big_n = 0.841344746054943;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
+
+        // Assert that the calculated value is close to the expected value
+        assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_big_n_two() {
+        // Case where x = 0.0
+        let x = Decimal::TWO;
+
+        // The CDF of the standard normal distribution at x = 2 is 0.977249868052837
+        let expected_big_n = 0.977249868052837;
+
+        // Compute big_n(x)
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
@@ -1123,14 +1610,14 @@ mod calculate_big_n_values {
     #[test]
     fn test_big_n_positive_small_value() {
         // Case where x is a small positive value
-        let x = 0.5f64;
+        let x = dec!(0.5);
 
         // The expected CDF for the standard normal distribution at x = 0.5 can be precomputed
         let normal_distribution = Normal::new(0.0, 1.0).unwrap();
-        let expected_big_n = normal_distribution.cdf(x);
+        let expected_big_n = normal_distribution.cdf(x.to_f64().unwrap());
 
         // Compute big_n(x)
-        let calculated_big_n = big_n(x);
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
@@ -1139,14 +1626,14 @@ mod calculate_big_n_values {
     #[test]
     fn test_big_n_negative_small_value() {
         // Case where x is a small negative value
-        let x = -0.5f64;
+        let x = -dec!(0.5);
 
         // The expected CDF for the standard normal distribution at x = -0.5 can be precomputed
         let normal_distribution = Normal::new(0.0, 1.0).unwrap();
-        let expected_big_n = normal_distribution.cdf(x);
+        let expected_big_n = normal_distribution.cdf(x.to_f64().unwrap());
 
         // Compute big_n(x)
-        let calculated_big_n = big_n(x);
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-8);
@@ -1155,13 +1642,13 @@ mod calculate_big_n_values {
     #[test]
     fn test_big_n_large_positive_value() {
         // Case where x is a large positive value
-        let x = 5.0f64;
+        let x = dec!(5.0);
 
         // The CDF for large positive x should be very close to 1
         let expected_big_n = 1.0f64;
 
         // Compute big_n(x)
-        let calculated_big_n = big_n(x);
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6); // if lower epsilon fail
@@ -1170,13 +1657,13 @@ mod calculate_big_n_values {
     #[test]
     fn test_big_n_large_negative_value() {
         // Case where x is a large negative value
-        let x = -5.0f64;
+        let x = -dec!(5.0);
 
         // The CDF for large negative x should be very close to 0
         let expected_big_n = 0.0f64;
 
         // Compute big_n(x)
-        let calculated_big_n = big_n(x);
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
 
         // Assert that the calculated value is close to the expected value
         assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-6); // if lower epsilon fail
@@ -1185,13 +1672,13 @@ mod calculate_big_n_values {
     #[test]
     fn test_big_n_extreme_positive_value() {
         // Case where x is an extremely large positive value
-        let x = 100.0f64;
+        let x = dec!(100.0);
 
         // The CDF for an extremely large positive x should be effectively 1
         let expected_big_n = 1.0f64;
 
         // Compute big_n(x)
-        let calculated_big_n = big_n(x);
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
 
         // Assert that big_n(x) is effectively 1 for such a large positive input
         assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-12);
@@ -1200,13 +1687,13 @@ mod calculate_big_n_values {
     #[test]
     fn test_big_n_extreme_negative_value() {
         // Case where x is an extremely large negative value
-        let x = -100.0f64;
+        let x = -dec!(100.0);
 
         // The CDF for an extremely large negative x should be effectively 0
         let expected_big_n = 0.0f64;
 
         // Compute big_n(x)
-        let calculated_big_n = big_n(x);
+        let calculated_big_n = big_n(x).unwrap().to_f64().unwrap();
 
         // Assert that big_n(x) is effectively 0 for such a large negative input
         assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-12);

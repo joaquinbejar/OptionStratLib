@@ -34,10 +34,11 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::greeks::equations::{Greek, Greeks};
 //! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
+//! use optionstratlib::{d2fu, pos};
 //! use optionstratlib::strategies::delta_neutral::{DeltaNeutrality, DeltaAdjustment, DeltaInfo};
 //!
 //! struct MyStrategy { /* Implementation specifics */ }
@@ -45,13 +46,20 @@
 //! let strategy = MyStrategy { /* Implementation specifics */ };
 //!
 //! impl Greeks for MyStrategy {fn greeks(&self) -> Greek {
-//!     Greek { delta: 0.5,gamma: 0.2,theta: 0.1,vega: 0.3,rho: 0.4,rho_d: 0.0 } }
+//!     Greek { delta: dec!(0.5),
+//!             gamma: dec!(0.2),
+//!             theta: dec!(0.1),
+//!             vega: dec!(0.3),
+//!             rho: dec!(0.4),
+//!             rho_d: dec!(0.0)
+//!           }
+//!     }
 //! }
 //!
 //! impl DeltaNeutrality for MyStrategy {
 //!     fn calculate_net_delta(&self) -> DeltaInfo {
 //!         DeltaInfo {
-//!            net_delta: self.greeks().delta,
+//!            net_delta: d2fu!(self.greeks().delta).unwrap(),
 //!            individual_deltas: vec![],
 //!            is_neutral: false,
 //!            neutrality_threshold: 0.0,

@@ -5,6 +5,7 @@
 ******************************************************************************/
 
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
+use crate::d2fu;
 use crate::model::option::Options;
 use crate::utils::time::TimeFrame;
 use std::f64;
@@ -96,7 +97,7 @@ pub fn implied_volatility(market_price: f64, options: &mut Options, max_iteratio
         options.implied_volatility = iv; // Update the implied volatility in the Options struct
 
         let price = options.calculate_price_black_scholes().abs();
-        let vega = options.vega();
+        let vega = d2fu!(options.vega().unwrap()).unwrap();
         let price_diff = price - market_price;
 
         if price_diff.abs() < TOLERANCE {

@@ -2,11 +2,12 @@ use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
-use optionstratlib::pos;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::{assert_decimal_eq, pos};
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
@@ -35,13 +36,14 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     );
 
     let greeks = strategy.greeks();
+    let epsilon = dec!(0.001);
 
-    assert_relative_eq!(greeks.delta, 0.9225, epsilon = 0.001);
-    assert_relative_eq!(greeks.gamma, 0.0075, epsilon = 0.001);
-    assert_relative_eq!(greeks.theta, -1043.9572, epsilon = 0.001);
-    assert_relative_eq!(greeks.vega, 2686.1099, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho, 1290.9435, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho_d, -1420.1310, epsilon = 0.001);
+    assert_decimal_eq!(greeks.delta, dec!(0.9225), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(0.0075), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-1043.9572), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(2686.1099), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(1290.9435), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-1420.1310), epsilon);
 
     assert_relative_eq!(
         strategy.calculate_net_delta().net_delta,
@@ -64,7 +66,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: pos!(3.4154122075924565),
+            quantity: pos!(3.415412207592465),
             strike: pos!(2800.0),
             option_type: OptionStyle::Call
         }

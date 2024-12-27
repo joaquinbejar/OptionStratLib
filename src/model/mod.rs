@@ -94,6 +94,7 @@
 //! info!("Debug View: {:?}", option);
 //! ```
 
+pub mod decimal;
 mod format;
 pub mod option;
 pub mod position;

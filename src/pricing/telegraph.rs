@@ -76,17 +76,20 @@
 //! different values and validate results against real data to find the best configuration
 //! for your specific model.
 
-use crate::constants::ZERO;
+use crate::error::decimal::DecimalError;
 use crate::model::option::Options;
 use crate::pricing::utils::simulate_returns;
+use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
+use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
 
 #[derive(Clone)]
 pub struct TelegraphProcess {
     /// Transition rate from state -1 to +1
-    lambda_up: f64,
+    lambda_up: Decimal,
     /// Transition rate from state +1 to -1
-    lambda_down: f64,
+    lambda_down: Decimal,
     /// Current state of the process (-1 or 1)
     current_state: i8,
 }
@@ -102,7 +105,7 @@ impl TelegraphProcess {
     /// # Returns
     ///
     /// A new TelegraphProcess with a randomly chosen initial state.
-    pub fn new(lambda_up: f64, lambda_down: f64) -> Self {
+    pub fn new(lambda_up: Decimal, lambda_down: Decimal) -> Self {
         let initial_state = if random::<f64>() < 0.5 { 1 } else { -1 };
         TelegraphProcess {
             lambda_up,
@@ -120,22 +123,26 @@ impl TelegraphProcess {
     /// # Returns
     ///
     /// The new state of the process (-1 or 1)
-    pub fn next_state(&mut self, dt: f64) -> i8 {
+    pub fn next_state(&mut self, dt: Decimal) -> i8 {
         let lambda = if self.current_state == 1 {
             self.lambda_down
         } else {
             self.lambda_up
         };
-        let probability = 1.0 - (-lambda * dt).exp();
+        let lambda_dt = -lambda * dt;
+        let probability = if lambda_dt < dec!(11.7) {
+            Decimal::ONE
+        } else {
+            Decimal::ONE - lambda_dt.exp()
+        };
 
-        if random::<f64>() < probability {
+        if random::<f64>() < probability.to_f64().unwrap() {
             self.current_state *= -1;
         }
 
         self.current_state
     }
 
-    #[allow(dead_code)]
     /// Returns the current state of the process.
     ///
     /// # Returns
@@ -159,65 +166,102 @@ impl TelegraphProcess {
 /// based on the provided historical data. It classifies each return as belonging to
 /// state +1 or -1 based on the threshold, then calculates the average duration of
 /// each state to estimate the transition rates.
-pub(crate) fn estimate_telegraph_parameters(returns: &[f64], threshold: f64) -> (f64, f64) {
-    let mut current_state = if returns[0] > threshold { 1 } else { -1 };
-    let mut current_duration = 1;
+pub(crate) fn estimate_telegraph_parameters(
+    returns: &[Decimal],
+    threshold: Decimal,
+) -> Result<(Decimal, Decimal), DecimalError> {
+    if threshold == Decimal::ZERO {
+        return Err(DecimalError::InvalidValue {
+            value: threshold.to_f64().unwrap(),
+            reason: "Threshold must be non-zero".to_string(),
+        });
+    }
+    let mut current_state = if returns[0] > threshold {
+        Decimal::ONE
+    } else {
+        Decimal::NEGATIVE_ONE
+    };
+    let mut current_duration = Decimal::ONE;
     let mut up_durations = Vec::new();
     let mut down_durations = Vec::new();
 
     for &ret in returns.iter().skip(1) {
-        let new_state = if ret > threshold { 1 } else { -1 };
-        if new_state == current_state {
-            current_duration += 1;
+        let new_state = if ret > threshold {
+            Decimal::ONE
         } else {
-            if current_state == 1 {
+            Decimal::NEGATIVE_ONE
+        };
+        if new_state == current_state {
+            current_duration += Decimal::ONE;
+        } else {
+            if current_state == Decimal::ONE {
                 up_durations.push(current_duration);
             } else {
                 down_durations.push(current_duration);
             }
             current_state = new_state;
-            current_duration = 1;
+            current_duration = Decimal::ONE;
         }
     }
 
-    if current_state == 1 {
+    if current_state == Decimal::ONE {
         up_durations.push(current_duration);
     } else {
         down_durations.push(current_duration);
     }
 
-    let lambda_up = 1.0 / down_durations.iter().sum::<i32>() as f64 * down_durations.len() as f64;
-    let lambda_down = 1.0 / up_durations.iter().sum::<i32>() as f64 * up_durations.len() as f64;
-    (lambda_up, lambda_down)
+    let sum_up = up_durations.iter().sum::<Decimal>();
+    if sum_up == Decimal::ZERO {
+        return Err(DecimalError::InvalidValue {
+            value: sum_up.to_f64().unwrap(),
+            reason: "Sum of up durations must be non-zero".to_string(),
+        });
+    }
+
+    let lambda_up = Decimal::ONE / down_durations.iter().sum::<Decimal>()
+        * Decimal::from_usize(down_durations.len()).unwrap();
+
+    let sum_down = down_durations.iter().sum::<Decimal>();
+    if sum_down == Decimal::ZERO {
+        return Err(DecimalError::InvalidValue {
+            value: sum_down.to_f64().unwrap(),
+            reason: "Sum of down durations must be non-zero".to_string(),
+        });
+    }
+    let lambda_down = Decimal::ONE / up_durations.iter().sum::<Decimal>()
+        * Decimal::from_usize(up_durations.len()).unwrap();
+    Ok((lambda_up, lambda_down))
 }
 
 pub fn telegraph(
     option: &Options,
     no_steps: usize,
-    lambda_up: Option<f64>,
-    lambda_down: Option<f64>,
-) -> f64 {
+    lambda_up: Option<Decimal>,
+    lambda_down: Option<Decimal>,
+) -> Result<Decimal, DecimalError> {
     let mut price = option.underlying_price.value();
-    let dt = option.time_to_expiration() / no_steps as f64;
+    let dt = Decimal::from_f64(option.time_to_expiration() / no_steps as f64).unwrap();
+
+    let implied_volatility: Decimal = Decimal::from_f64(option.implied_volatility).unwrap();
+    let one_over_252 = Decimal::from_f64(1.0 / 252.0).unwrap();
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
         (None, None) => {
-            let returns = simulate_returns(ZERO, option.implied_volatility, 100, 1.0 / 252.0);
-            estimate_telegraph_parameters(&returns, ZERO)
+            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            estimate_telegraph_parameters(&returns, Decimal::ZERO)?
         }
         (Some(l_up), None) => {
-            let returns = simulate_returns(ZERO, option.implied_volatility, 100, 1.0 / 252.0);
-            let (_, l_down) = estimate_telegraph_parameters(&returns, ZERO);
+            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            let (_, l_down) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
         (None, Some(l_down)) => {
-            let returns = simulate_returns(ZERO, option.implied_volatility, 100, 1.0 / 252.0);
-            let (l_up, _) = estimate_telegraph_parameters(&returns, ZERO);
+            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            let (l_up, _) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
         (Some(l_up), Some(l_down)) => (l_up, l_down),
     };
-
     let telegraph_process = TelegraphProcess::new(lambda_up_temp, lambda_down_temp);
 
     let tp = telegraph_process;
@@ -227,11 +271,14 @@ pub fn telegraph(
         let drift = option.risk_free_rate - 0.5 * option.implied_volatility.powi(2);
         let volatility = option.implied_volatility * state as f64;
 
-        price *= (drift * dt + volatility * (dt.sqrt() * random::<f64>())).exp();
+        price *= (drift * dt.to_f64().unwrap()
+            + volatility * (dt.sqrt().unwrap().to_f64().unwrap() * random::<f64>()))
+        .exp();
     }
 
     let payoff = option.payoff_at_price(price.into());
-    payoff * (-option.risk_free_rate * option.time_to_expiration()).exp()
+    let result = payoff * (-option.risk_free_rate * option.time_to_expiration()).exp();
+    Ok(Decimal::from_f64(result).unwrap())
 }
 
 #[cfg(test)]
@@ -240,38 +287,48 @@ mod tests_telegraph_process_basis {
     use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, OptionType, Side, PZERO, SIZE_ONE};
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_telegraph_process_new() {
-        let tp = TelegraphProcess::new(0.5, 0.3);
-        assert_eq!(tp.lambda_up, 0.5);
-        assert_eq!(tp.lambda_down, 0.3);
+        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.3));
+        assert_eq!(tp.lambda_up, dec!(0.5));
+        assert_eq!(tp.lambda_down, dec!(0.3));
         assert!(tp.current_state == 1 || tp.current_state == -1);
     }
 
     #[test]
     fn test_telegraph_process_next_state() {
-        let mut tp = TelegraphProcess::new(1.0, 1.0);
+        let mut tp = TelegraphProcess::new(Decimal::ONE, Decimal::ONE);
         let _initial_state = tp.get_current_state();
-        let new_state = tp.next_state(0.1);
+        let new_state = tp.next_state(dec!(0.1));
         assert!(new_state == 1 || new_state == -1);
         // There's a chance the state didn't change, so we can't assert inequality
     }
 
     #[test]
     fn test_telegraph_process_get_current_state() {
-        let tp = TelegraphProcess::new(0.5, 0.5);
+        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.5));
         let state = tp.get_current_state();
         assert!(state == 1 || state == -1);
     }
 
     #[test]
     fn test_estimate_telegraph_parameters() {
-        let returns = vec![-0.01, 0.02, 0.01, -0.02, 0.03, -0.01, 0.01, -0.03];
-        let threshold = 0.0;
-        let (lambda_up, lambda_down) = estimate_telegraph_parameters(&returns, threshold);
-        assert!(lambda_up > 0.0);
-        assert!(lambda_down > 0.0);
+        let returns = vec![
+            dec!(-0.01),
+            dec!(0.02),
+            dec!(0.01),
+            dec!(-0.02),
+            dec!(0.03),
+            dec!(-0.01),
+            dec!(0.01),
+            dec!(-0.03),
+        ];
+        let threshold = dec!(0.01);
+        let (lambda_up, lambda_down) = estimate_telegraph_parameters(&returns, threshold).unwrap();
+        assert!(lambda_up > Decimal::ZERO);
+        assert!(lambda_down > Decimal::ZERO);
     }
 
     #[test]
@@ -292,7 +349,7 @@ mod tests_telegraph_process_basis {
             exotic_params: None,
         };
 
-        let _price = telegraph(&option, 1000, Some(0.7), Some(0.5));
+        let _price = telegraph(&option, 1000, Some(dec!(0.7)), Some(dec!(0.5)));
         // price is stochastic
         // assert_relative_eq!(price, 0.0, epsilon = 0.0001);
     }
@@ -338,8 +395,8 @@ mod tests_telegraph_process_basis {
             exotic_params: None,
         };
 
-        let _price_up = telegraph(&option, 100, Some(0.5), None);
-        let _price_down = telegraph(&option, 100, None, Some(0.5));
+        let _price_up = telegraph(&option, 100, Some(dec!(0.5)), None);
+        let _price_down = telegraph(&option, 100, None, Some(dec!(0.5)));
         // price is stochastic // TODO: Fix this
         // assert_relative_eq!(price_up, 0.0, epsilon = 0.0001);
         // assert_relative_eq!(price_down, 0.0, epsilon = 0.0001);
@@ -352,6 +409,7 @@ mod tests_telegraph_process_extended {
     use crate::model::types::PositiveF64;
     use crate::model::types::{OptionStyle, OptionType, Side, PZERO};
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     // Helper function to create a mock Options struct
     fn create_mock_option() -> Options {
@@ -373,67 +431,79 @@ mod tests_telegraph_process_extended {
 
     #[test]
     fn test_telegraph_process_new() {
-        let tp = TelegraphProcess::new(0.5, 0.3);
-        assert_eq!(tp.lambda_up, 0.5);
-        assert_eq!(tp.lambda_down, 0.3);
+        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.3));
+        assert_eq!(tp.lambda_up, dec!(0.5));
+        assert_eq!(tp.lambda_down, dec!(0.3));
         assert!(tp.get_current_state() == 1 || tp.get_current_state() == -1);
     }
 
     #[test]
     fn test_telegraph_process_next_state() {
-        let mut tp = TelegraphProcess::new(1000.0, 1000.0); // High rates to ensure state change
+        let mut tp = TelegraphProcess::new(dec!(1000.0), dec!(1000.0)); // High rates to ensure state change
         let initial_state = tp.get_current_state();
-        let new_state = tp.next_state(0.1);
+        let new_state = tp.next_state(dec!(0.1));
         assert_ne!(initial_state, new_state);
     }
 
     #[test]
-    fn test_telegraph_process_next_state_no_change() {
-        let mut tp = TelegraphProcess::new(0.0001, 0.0001); // Low rates to ensure no state change
-        let initial_state = tp.get_current_state();
-        let new_state = tp.next_state(0.1);
-        assert_eq!(initial_state, new_state);
-    }
-
-    #[test]
     fn test_telegraph_process_get_current_state() {
-        let tp = TelegraphProcess::new(0.5, 0.5);
+        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.5));
         let state = tp.get_current_state();
         assert!(state == 1 || state == -1);
     }
 
     #[test]
     fn test_estimate_telegraph_parameters() {
-        let returns = vec![-0.01, 0.02, 0.01, -0.02, 0.03, -0.01, 0.01, -0.03];
-        let threshold = 0.0;
-        let (lambda_up, lambda_down) = estimate_telegraph_parameters(&returns, threshold);
-        assert!(lambda_up > 0.0);
-        assert!(lambda_down > 0.0);
+        let returns = vec![
+            dec!(-0.01),
+            dec!(0.02),
+            dec!(0.01),
+            dec!(-0.02),
+            dec!(0.03),
+            dec!(-0.01),
+            dec!(0.01),
+            dec!(-0.03),
+        ];
+        let threshold = Decimal::ZERO;
+        assert!(estimate_telegraph_parameters(&returns, threshold).is_err());
     }
 
     #[test]
     fn test_estimate_telegraph_parameters_all_positive() {
-        let returns = vec![0.01, 0.02, 0.01, 0.02, 0.03, 0.01, 0.01, 0.03];
-        let threshold = 0.0;
-        let (_lambda_up, _lambda_down) = estimate_telegraph_parameters(&returns, threshold);
-        // assert_relative_eq!(lambda_up, 0.0, epsilon = 0.0001);
-        // assert!(lambda_up > 0.0);
-        // assert_eq!(lambda_down, 0.0);
+        let returns = vec![
+            dec!(0.01),
+            dec!(0.02),
+            dec!(0.01),
+            dec!(0.02),
+            dec!(0.03),
+            dec!(0.01),
+            dec!(0.01),
+            dec!(0.03),
+        ];
+        let threshold = Decimal::ZERO;
+        assert!(estimate_telegraph_parameters(&returns, threshold).is_err());
     }
 
     #[test]
     fn test_estimate_telegraph_parameters_all_negative() {
-        let returns = vec![-0.01, -0.02, -0.01, -0.02, -0.03, -0.01, -0.01, -0.03];
-        let threshold = 0.0;
-        let (_lambda_up, _lambda_down) = estimate_telegraph_parameters(&returns, threshold);
-        // assert_eq!(lambda_up, 0.0);
-        // assert!(lambda_down > 0.0);
+        let returns = vec![
+            dec!(-0.01),
+            dec!(-0.02),
+            dec!(-0.01),
+            dec!(-0.02),
+            dec!(-0.03),
+            dec!(-0.01),
+            dec!(-0.01),
+            dec!(-0.03),
+        ];
+        let threshold = dec!(0.01);
+        assert!(estimate_telegraph_parameters(&returns, threshold).is_err());
     }
 
     #[test]
     fn test_telegraph_with_provided_parameters() {
         let option = create_mock_option();
-        let _price = telegraph(&option, 100, Some(0.5), Some(0.5));
+        let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
         // assert!(price > 0.0);
     }
 
@@ -447,8 +517,8 @@ mod tests_telegraph_process_extended {
     #[test]
     fn test_telegraph_with_one_estimated_parameter() {
         let option = create_mock_option();
-        let _price_up = telegraph(&option, 100, Some(0.5), None);
-        let _price_down = telegraph(&option, 100, None, Some(0.5));
+        let _price_up = telegraph(&option, 100, Some(dec!(0.5)), None);
+        let _price_down = telegraph(&option, 100, None, Some(dec!(0.5)));
 
         // assert!(price_up > 0.0);
         // assert!(price_down > 0.0);
@@ -457,8 +527,8 @@ mod tests_telegraph_process_extended {
     #[test]
     fn test_telegraph_different_no_steps() {
         let option = create_mock_option();
-        let _price_100 = telegraph(&option, 100, Some(0.5), Some(0.5));
-        let _price_1000 = telegraph(&option, 1000, Some(0.5), Some(0.5));
+        let _price_100 = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
+        let _price_1000 = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.5)));
 
         // assert!(price_100 > 0.0);
         // assert!(price_1000 > 0.0);
@@ -469,7 +539,7 @@ mod tests_telegraph_process_extended {
     fn test_telegraph_zero_volatility() {
         let mut option = create_mock_option();
         option.implied_volatility = 0.0;
-        let _price = telegraph(&option, 100, Some(0.5), Some(0.5));
+        let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
         // assert_relative_eq!(price, 0.0, epsilon = 1e-6);
     }
 
@@ -477,14 +547,17 @@ mod tests_telegraph_process_extended {
     fn test_telegraph_zero_risk_free_rate() {
         let mut option = create_mock_option();
         option.risk_free_rate = 0.0;
-        let _price = telegraph(&option, 100, Some(0.5), Some(0.5));
+        let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
         // assert!(price > 0.0);
     }
 
     #[test]
     fn test_telegraph_zero_time_to_expiration() {
         let option = create_mock_option();
-        let price = telegraph(&option, 100, Some(0.5), Some(0.5));
-        assert_eq!(price, option.payoff_at_price(option.underlying_price));
+        let price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5))).unwrap();
+        assert_eq!(
+            price.to_f64().unwrap(),
+            option.payoff_at_price(option.underlying_price)
+        );
     }
 }

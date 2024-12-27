@@ -68,6 +68,10 @@ pub enum ChainError {
     FileError(FileErrorKind),
     /// Errors related to strategies
     StrategyError(StrategyErrorKind),
+
+    DynError {
+        message: String,
+    },
 }
 
 /// Specific errors for option data
@@ -145,6 +149,7 @@ impl fmt::Display for ChainError {
             ChainError::ChainBuildError(err) => write!(f, "Chain build error: {}", err),
             ChainError::FileError(err) => write!(f, "File error: {}", err),
             ChainError::StrategyError(err) => write!(f, "Strategy error: {}", err),
+            ChainError::DynError { message } => write!(f, "Error: {}", message),
         }
     }
 }
@@ -311,6 +316,14 @@ impl ChainError {
 impl From<String> for ChainError {
     fn from(msg: String) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(msg))
+    }
+}
+
+impl From<Box<dyn Error>> for ChainError {
+    fn from(error: Box<dyn Error>) -> Self {
+        ChainError::DynError {
+            message: error.to_string(),
+        }
     }
 }
 

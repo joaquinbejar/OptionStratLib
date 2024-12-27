@@ -20,6 +20,7 @@ use crate::utils::others::get_random_element;
 use crate::{pos, spos};
 use chrono::Utc;
 use csv::WriterBuilder;
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
@@ -242,7 +243,11 @@ impl OptionData {
                 return;
             }
         };
-        self.delta = Some(delta(&option));
+
+        match delta(&option) {
+            Ok(d) => self.delta = d.to_f64(),
+            Err(_) => self.delta = None,
+        }
     }
 
     pub fn get_deltas(
@@ -251,8 +256,7 @@ impl OptionData {
     ) -> Result<DeltasInStrike, ChainError> {
         let options_in_strike =
             self.get_options_in_strike(price_params, Side::Long, OptionStyle::Call)?;
-        let deltas = options_in_strike.deltas();
-        Ok(deltas)
+        Ok(options_in_strike.deltas()?)
     }
 
     pub fn is_valid_optimal_side(
@@ -1549,10 +1553,10 @@ mod tests_option_data {
 
         assert!(result.is_ok());
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.412135042233558));
-        assert_eq!(option_data.call_bid, spos!(10.412135042233558));
-        assert_eq!(option_data.put_ask, spos!(0.002019418653974231));
-        assert_eq!(option_data.put_bid, spos!(0.002019418653974231));
+        assert_eq!(option_data.call_ask, spos!(10.412135042233587));
+        assert_eq!(option_data.call_bid, spos!(10.412135042233587));
+        assert_eq!(option_data.put_ask, spos!(0.002019418653973759));
+        assert_eq!(option_data.put_bid, spos!(0.002019418653973759));
         option_data.apply_spread(pos!(0.02), 2);
         info!("{}", option_data);
         assert_eq!(option_data.call_ask, spos!(10.42));
@@ -2206,9 +2210,10 @@ mod tests_option_data_get_option {
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
-    use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
@@ -2354,10 +2359,28 @@ mod tests_option_data_get_options_in_strike {
 
         let options = result.unwrap();
 
-        assert_relative_eq!(options.long_call.delta(), 0.844825189, epsilon = 1e-8);
-        assert_relative_eq!(options.short_call.delta(), -0.844825189, epsilon = 1e-8);
-        assert_relative_eq!(options.long_put.delta(), -0.151483012, epsilon = 1e-8);
-        assert_relative_eq!(options.short_put.delta(), 0.151483012, epsilon = 1e-8);
+        let epsilon = dec!(1e-8);
+
+        assert_decimal_eq!(
+            options.long_call.delta().unwrap(),
+            dec!(0.844825189),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.short_call.delta().unwrap(),
+            dec!(-0.844825189),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.long_put.delta().unwrap(),
+            dec!(-0.151483012),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.short_put.delta().unwrap(),
+            dec!(0.151483012),
+            epsilon
+        );
     }
 }
 
@@ -2366,6 +2389,7 @@ mod tests_filter_options_in_strike {
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
+    use rust_decimal::Decimal;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
@@ -2542,11 +2566,11 @@ mod tests_filter_options_in_strike {
             assert_eq!(opt.long_put.side, Side::Long);
             assert_eq!(opt.short_put.side, Side::Short);
 
-            let deltas = opt.deltas();
-            assert!(deltas.long_call > 0.0);
-            assert!(deltas.short_call < 0.0);
-            assert!(deltas.long_put < 0.0);
-            assert!(deltas.short_put > 0.0);
+            let deltas = opt.deltas().unwrap();
+            assert!(deltas.long_call > Decimal::ZERO);
+            assert!(deltas.short_call < Decimal::ZERO);
+            assert!(deltas.long_put < Decimal::ZERO);
+            assert!(deltas.short_put > Decimal::ZERO);
         }
     }
 }

@@ -11,13 +11,13 @@ use crate::constants::{
     STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
 };
 use crate::error::position::PositionError;
+use crate::error::strategies::StrategyError;
 use crate::model::position::Position;
 use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::{pos, spos};
 use std::f64;
 use tracing::error;
-use crate::error::strategies::StrategyError;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.

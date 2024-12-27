@@ -18,6 +18,7 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType
 use crate::visualization::utils::Graph;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use rust_decimal::Decimal;
 use tracing::{debug, error};
 
 #[derive(Clone, Debug)]
@@ -441,12 +442,12 @@ impl Graph for CustomStrategy {
 impl Greeks for CustomStrategy {
     fn greeks(&self) -> Greek {
         let mut greek = Greek {
-            delta: 0.0,
-            gamma: 0.0,
-            theta: 0.0,
-            vega: 0.0,
-            rho: 0.0,
-            rho_d: 0.0,
+            delta: Decimal::ZERO,
+            gamma: Decimal::ZERO,
+            theta: Decimal::ZERO,
+            vega: Decimal::ZERO,
+            rho: Decimal::ZERO,
+            rho_d: Decimal::ZERO,
         };
         for position in self.positions.iter() {
             let current_greek = position.greeks();
@@ -1423,10 +1424,13 @@ mod tests_best_ratio {
 #[cfg(test)]
 mod tests_greeks {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::option::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use approx::assert_relative_eq;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
+
+    const EPSILON: Decimal = dec!(1e-10);
 
     // Helper function to create a test position
     fn create_test_position(
@@ -1473,28 +1477,12 @@ mod tests_greeks {
         let strategy_greeks = strategy.greeks();
         let position_greeks = position.greeks();
 
-        assert_relative_eq!(
-            strategy_greeks.delta,
-            position_greeks.delta,
-            epsilon = 1e-10
-        );
-        assert_relative_eq!(
-            strategy_greeks.gamma,
-            position_greeks.gamma,
-            epsilon = 1e-10
-        );
-        assert_relative_eq!(
-            strategy_greeks.theta,
-            position_greeks.theta,
-            epsilon = 1e-10
-        );
-        assert_relative_eq!(strategy_greeks.vega, position_greeks.vega, epsilon = 1e-10);
-        assert_relative_eq!(strategy_greeks.rho, position_greeks.rho, epsilon = 1e-10);
-        assert_relative_eq!(
-            strategy_greeks.rho_d,
-            position_greeks.rho_d,
-            epsilon = 1e-10
-        );
+        assert_decimal_eq!(strategy_greeks.delta, position_greeks.delta, EPSILON);
+        assert_decimal_eq!(strategy_greeks.gamma, position_greeks.gamma, EPSILON);
+        assert_decimal_eq!(strategy_greeks.theta, position_greeks.theta, EPSILON);
+        assert_decimal_eq!(strategy_greeks.vega, position_greeks.vega, EPSILON);
+        assert_decimal_eq!(strategy_greeks.rho, position_greeks.rho, EPSILON);
+        assert_decimal_eq!(strategy_greeks.rho_d, position_greeks.rho_d, EPSILON);
     }
 
     #[test]
@@ -1514,28 +1502,12 @@ mod tests_greeks {
         let strategy_greeks = strategy.greeks();
         let position_greeks = position.greeks();
 
-        assert_relative_eq!(
-            strategy_greeks.delta,
-            position_greeks.delta,
-            epsilon = 1e-10
-        );
-        assert_relative_eq!(
-            strategy_greeks.gamma,
-            position_greeks.gamma,
-            epsilon = 1e-10
-        );
-        assert_relative_eq!(
-            strategy_greeks.theta,
-            position_greeks.theta,
-            epsilon = 1e-10
-        );
-        assert_relative_eq!(strategy_greeks.vega, position_greeks.vega, epsilon = 1e-10);
-        assert_relative_eq!(strategy_greeks.rho, position_greeks.rho, epsilon = 1e-10);
-        assert_relative_eq!(
-            strategy_greeks.rho_d,
-            position_greeks.rho_d,
-            epsilon = 1e-10
-        );
+        assert_decimal_eq!(strategy_greeks.delta, position_greeks.delta, EPSILON);
+        assert_decimal_eq!(strategy_greeks.gamma, position_greeks.gamma, EPSILON);
+        assert_decimal_eq!(strategy_greeks.theta, position_greeks.theta, EPSILON);
+        assert_decimal_eq!(strategy_greeks.vega, position_greeks.vega, EPSILON);
+        assert_decimal_eq!(strategy_greeks.rho, position_greeks.rho, EPSILON);
+        assert_decimal_eq!(strategy_greeks.rho_d, position_greeks.rho_d, EPSILON);
     }
 
     #[test]
@@ -1560,35 +1532,35 @@ mod tests_greeks {
         let short_put_greeks = short_put.greeks();
         let long_put_greeks = long_put.greeks();
 
-        assert_relative_eq!(
+        assert_decimal_eq!(
             strategy_greeks.delta,
             long_call_greeks.delta + short_put_greeks.delta + long_put_greeks.delta,
-            epsilon = 1e-10
+            EPSILON
         );
-        assert_relative_eq!(
+        assert_decimal_eq!(
             strategy_greeks.gamma,
             long_call_greeks.gamma + short_put_greeks.gamma + long_put_greeks.gamma,
-            epsilon = 1e-10
+            EPSILON
         );
-        assert_relative_eq!(
+        assert_decimal_eq!(
             strategy_greeks.theta,
             long_call_greeks.theta + short_put_greeks.theta + long_put_greeks.theta,
-            epsilon = 1e-10
+            EPSILON
         );
-        assert_relative_eq!(
+        assert_decimal_eq!(
             strategy_greeks.vega,
             long_call_greeks.vega + short_put_greeks.vega + long_put_greeks.vega,
-            epsilon = 1e-10
+            EPSILON
         );
-        assert_relative_eq!(
+        assert_decimal_eq!(
             strategy_greeks.rho,
             long_call_greeks.rho + short_put_greeks.rho + long_put_greeks.rho,
-            epsilon = 1e-10
+            EPSILON
         );
-        assert_relative_eq!(
+        assert_decimal_eq!(
             strategy_greeks.rho_d,
             long_call_greeks.rho_d + short_put_greeks.rho_d + long_put_greeks.rho_d,
-            epsilon = 1e-10
+            EPSILON
         );
     }
 
@@ -1613,21 +1585,21 @@ mod tests_greeks {
         let put_greeks = long_put.greeks();
 
         // Straddle specific assertions
-        assert_relative_eq!(
+        assert_decimal_eq!(
             strategy_greeks.delta,
             call_greeks.delta + put_greeks.delta,
-            epsilon = 1e-10
+            EPSILON
         );
         // Gamma should be positive and roughly double the individual option's gamma
-        assert!(strategy_greeks.gamma > 0.0);
-        assert_relative_eq!(
+        assert!(strategy_greeks.gamma > Decimal::ZERO);
+        assert_decimal_eq!(
             strategy_greeks.gamma,
             call_greeks.gamma + put_greeks.gamma,
-            epsilon = 1e-10
+            EPSILON
         );
         // Theta should be negative for long straddle
-        assert!(strategy_greeks.theta < 0.0);
+        assert!(strategy_greeks.theta < Decimal::ZERO);
         // Vega should be positive and roughly double the individual option's vega
-        assert!(strategy_greeks.vega > 0.0);
+        assert!(strategy_greeks.vega > Decimal::ZERO);
     }
 }

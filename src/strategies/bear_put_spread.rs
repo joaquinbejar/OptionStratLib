@@ -21,13 +21,13 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
-use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -37,11 +37,11 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::{d2fu, pos};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use tracing::{debug, info};
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
     "A bear put spread is created by buying a put option with a higher strike price \
@@ -185,9 +185,11 @@ impl Strategies for BearPutSpread {
         if profit >= ZERO {
             Ok(pos!(profit))
         } else {
-            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
-                reason: "Net premium received is negative".to_string(),
-            }))
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Net premium received is negative".to_string(),
+                },
+            ))
         }
     }
 
@@ -196,9 +198,11 @@ impl Strategies for BearPutSpread {
         if loss <= ZERO {
             Ok(pos!(loss.abs()))
         } else {
-            Err(StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
-                reason: "Max loss is negative".to_string(),
-            }))
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxLossError {
+                    reason: "Max loss is negative".to_string(),
+                },
+            ))
         }
     }
 
@@ -521,9 +525,10 @@ impl Greeks for BearPutSpread {
 
 impl DeltaNeutrality for BearPutSpread {
     fn calculate_net_delta(&self) -> DeltaInfo {
-        let long_put_delta = self.long_put.option.delta();
-        let short_put_delta = self.short_put.option.delta();
+        let long_put_delta = d2fu!(self.long_put.option.delta().unwrap()).unwrap();
+        let short_put_delta = d2fu!(self.short_put.option.delta().unwrap()).unwrap();
         let threshold = DELTA_THRESHOLD;
+
         DeltaInfo {
             net_delta: long_put_delta + short_put_delta,
             individual_deltas: vec![long_put_delta, short_put_delta],
@@ -539,9 +544,10 @@ impl DeltaNeutrality for BearPutSpread {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let l_p_delta = d2fu!(self.long_put.option.delta().unwrap()).unwrap();
+
         vec![DeltaAdjustment::BuyOptions {
-            quantity: pos!((net_delta.abs() / self.long_put.option.delta()).abs())
-                * self.long_put.option.quantity,
+            quantity: pos!((net_delta.abs() / l_p_delta).abs()) * self.long_put.option.quantity,
             strike: self.long_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
@@ -549,9 +555,10 @@ impl DeltaNeutrality for BearPutSpread {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let l_p_delta = d2fu!(self.short_put.option.delta().unwrap()).unwrap();
+
         vec![DeltaAdjustment::SellOptions {
-            quantity: pos!((net_delta.abs() / self.short_put.option.delta()).abs())
-                * self.short_put.option.quantity,
+            quantity: pos!((net_delta.abs() / l_p_delta).abs()) * self.short_put.option.quantity,
             strike: self.short_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
@@ -1872,6 +1879,7 @@ mod tests_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     fn get_strategy(long_strike: PositiveF64, short_strike: PositiveF64) -> BearPutSpread {
         let underlying_price = pos!(5810.5);
@@ -1907,17 +1915,18 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.23599920741321748),
+                quantity: pos!(0.23599920741322516),
                 strike: pos!(5800.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.23599920741321748);
-        assert_relative_eq!(option.delta(), -0.10272, epsilon = 0.0001);
+        option.quantity = pos!(0.23599920741322516);
+        let delta = option.delta().unwrap().to_f64().unwrap();
+        assert_relative_eq!(delta, -0.10272, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1937,17 +1946,19 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.18569835434604723),
+                quantity: pos!(0.18569835434604637),
                 strike: pos!(5820.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.short_put.option.clone();
-        option.quantity = pos!(0.18569835434604723);
-        assert_relative_eq!(option.delta(), 0.099904, epsilon = 0.0001);
+        option.quantity = pos!(0.18569835434604637);
+        let delta = option.delta().unwrap().to_f64().unwrap();
+
+        assert_relative_eq!(delta, 0.099904, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1972,11 +1983,11 @@ mod tests_delta {
 mod tests_delta_size {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
     use crate::pos;
+    use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-
-    use crate::strategies::bear_put_spread::BearPutSpread;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     fn get_strategy(long_strike: PositiveF64, short_strike: PositiveF64) -> BearPutSpread {
         let underlying_price = pos!(5781.88);
@@ -2013,17 +2024,19 @@ mod tests_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.33369895626791535),
+                quantity: pos!(0.3336989562679228),
                 strike: pos!(5800.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.33369895626791535);
-        assert_relative_eq!(option.delta(), -0.19429, epsilon = 0.0001);
+        option.quantity = pos!(0.3336989562679228);
+        let delta = option.delta().unwrap().to_f64().unwrap();
+
+        assert_relative_eq!(delta, -0.19429, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2043,17 +2056,19 @@ mod tests_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.2529151481237311),
+                quantity: pos!(0.25291514812372523),
                 strike: pos!(5820.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.short_put.option.clone();
-        option.quantity = pos!(0.2529151481237311);
-        assert_relative_eq!(option.delta(), 0.171825, epsilon = 0.0001);
+        option.quantity = pos!(0.25291514812372523);
+        let delta = option.delta().unwrap().to_f64().unwrap();
+
+        assert_relative_eq!(delta, 0.171825, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );

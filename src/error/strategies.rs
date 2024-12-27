@@ -1,6 +1,6 @@
 /******************************************************************************
     Author: Joaquín Béjar García
-    Email: jb@taunais.com 
+    Email: jb@taunais.com
     Date: 24/12/24
 ******************************************************************************/
 
@@ -68,10 +68,9 @@
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
 
-use std::fmt;
 use crate::error::probability::ProbabilityError;
 use std::error::Error;
-
+use std::fmt;
 
 impl Error for StrategyError {}
 impl Error for PriceErrorKind {}
@@ -93,9 +92,7 @@ pub enum StrategyError {
 #[derive(Debug)]
 pub enum PriceErrorKind {
     /// Error when underlying price is not available or invalid
-    InvalidUnderlyingPrice {
-        reason: String,
-    },
+    InvalidUnderlyingPrice { reason: String },
     /// Error in price range calculation
     InvalidPriceRange {
         start: f64,
@@ -107,9 +104,7 @@ pub enum PriceErrorKind {
 #[derive(Debug)]
 pub enum BreakEvenErrorKind {
     /// Error calculating break-even points
-    CalculationError {
-        reason: String,
-    },
+    CalculationError { reason: String },
     /// No break-even points found
     NoBreakEvenPoints,
 }
@@ -117,17 +112,11 @@ pub enum BreakEvenErrorKind {
 #[derive(Debug)]
 pub enum ProfitLossErrorKind {
     /// Error calculating maximum profit
-    MaxProfitError {
-        reason: String,
-    },
+    MaxProfitError { reason: String },
     /// Error calculating maximum loss
-    MaxLossError {
-        reason: String,
-    },
+    MaxLossError { reason: String },
     /// Error in profit range calculation
-    ProfitRangeError {
-        reason: String,
-    },
+    ProfitRangeError { reason: String },
 }
 
 #[derive(Debug)]
@@ -138,10 +127,7 @@ pub enum OperationErrorKind {
         strategy_type: String,
     },
     /// Invalid parameters for operation
-    InvalidParameters {
-        operation: String,
-        reason: String,
-    },
+    InvalidParameters { operation: String, reason: String },
 }
 
 impl fmt::Display for StrategyError {
@@ -200,7 +186,10 @@ impl fmt::Display for ProfitLossErrorKind {
 impl fmt::Display for OperationErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OperationErrorKind::NotSupported { operation, strategy_type } => {
+            OperationErrorKind::NotSupported {
+                operation,
+                strategy_type,
+            } => {
                 write!(
                     f,
                     "Operation '{}' is not supported for strategy '{}'",
@@ -208,7 +197,11 @@ impl fmt::Display for OperationErrorKind {
                 )
             }
             OperationErrorKind::InvalidParameters { operation, reason } => {
-                write!(f, "Invalid parameters for operation '{}': {}", operation, reason)
+                write!(
+                    f,
+                    "Invalid parameters for operation '{}': {}",
+                    operation, reason
+                )
             }
         }
     }
@@ -238,38 +231,41 @@ impl From<StrategyError> for ProbabilityError {
     fn from(error: StrategyError) -> Self {
         match error {
             StrategyError::ProfitLossError(kind) => match kind {
-                ProfitLossErrorKind::MaxProfitError { reason } |
-                ProfitLossErrorKind::MaxLossError { reason } |
-                ProfitLossErrorKind::ProfitRangeError { reason } => {
+                ProfitLossErrorKind::MaxProfitError { reason }
+                | ProfitLossErrorKind::MaxLossError { reason }
+                | ProfitLossErrorKind::ProfitRangeError { reason } => {
                     ProbabilityError::from(reason)
                 }
             },
             StrategyError::PriceError(kind) => match kind {
-                PriceErrorKind::InvalidUnderlyingPrice { reason } |
-                PriceErrorKind::InvalidPriceRange { start: _, end: _, reason } => {
-                    ProbabilityError::from(reason)
-                }
+                PriceErrorKind::InvalidUnderlyingPrice { reason }
+                | PriceErrorKind::InvalidPriceRange {
+                    start: _,
+                    end: _,
+                    reason,
+                } => ProbabilityError::from(reason),
             },
             StrategyError::BreakEvenError(kind) => match kind {
-                BreakEvenErrorKind::CalculationError { reason } => {
-                    ProbabilityError::from(reason)
-                },
+                BreakEvenErrorKind::CalculationError { reason } => ProbabilityError::from(reason),
                 BreakEvenErrorKind::NoBreakEvenPoints => {
                     ProbabilityError::from("No break-even points found".to_string())
                 }
             },
             StrategyError::OperationError(kind) => match kind {
-                OperationErrorKind::NotSupported { operation, strategy_type } => {
-                    ProbabilityError::from(
-                        format!("Operation '{}' not supported for strategy '{}'", operation, strategy_type)
-                    )
-                },
+                OperationErrorKind::NotSupported {
+                    operation,
+                    strategy_type,
+                } => ProbabilityError::from(format!(
+                    "Operation '{}' not supported for strategy '{}'",
+                    operation, strategy_type
+                )),
                 OperationErrorKind::InvalidParameters { operation, reason } => {
-                    ProbabilityError::from(
-                        format!("Invalid parameters for operation '{}': {}", operation, reason)
-                    )
+                    ProbabilityError::from(format!(
+                        "Invalid parameters for operation '{}': {}",
+                        operation, reason
+                    ))
                 }
-            }
+            },
         }
     }
 }
@@ -291,7 +287,7 @@ mod tests_from_str {
     #[test]
     fn test_profit_loss_error_conversion() {
         let strategy_error = StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
-            reason: "Test error".to_string()
+            reason: "Test error".to_string(),
         });
         let probability_error = ProbabilityError::from(strategy_error);
 
@@ -346,7 +342,9 @@ mod tests_display {
         let error = StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
             reason: "Cannot calculate maximum profit".to_string(),
         });
-        assert!(error.to_string().contains("Cannot calculate maximum profit"));
+        assert!(error
+            .to_string()
+            .contains("Cannot calculate maximum profit"));
     }
 
     #[test]

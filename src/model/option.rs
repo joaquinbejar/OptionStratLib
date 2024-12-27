@@ -1,5 +1,8 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
+use crate::error::decimal::DecimalError;
+use crate::error::greeks::GreeksError;
+use crate::f2du;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -8,11 +11,12 @@ use crate::pricing::binomial_model::{
 };
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo, Profit};
-use crate::pricing::telegraph::telegraph;
+use crate::pricing::telegraph;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
+use rust_decimal::Decimal;
 use tracing::{debug, error, trace};
 
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -89,38 +93,39 @@ impl Options {
         matches!(self.side, Side::Short)
     }
 
-    pub fn calculate_price_binomial(&self, no_steps: usize) -> f64 {
+    pub fn calculate_price_binomial(&self, no_steps: usize) -> Decimal {
         let expiry = self.time_to_expiration();
         price_binomial(BinomialPricingParams {
             asset: self.underlying_price,
-            volatility: self.implied_volatility,
-            int_rate: self.risk_free_rate,
+            volatility: f2du!(self.implied_volatility).unwrap(),
+            int_rate: f2du!(self.risk_free_rate).unwrap(),
             strike: self.strike_price,
-            expiry,
+            expiry: f2du!(expiry).unwrap(),
             no_steps,
             option_type: &self.option_type,
             option_style: &self.option_style,
             side: &self.side,
         })
+        .unwrap()
     }
 
     pub fn calculate_price_binomial_tree(
         &self,
         no_steps: usize,
-    ) -> (f64, Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    ) -> (Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>) {
         let expiry = self.time_to_expiration();
         let params = BinomialPricingParams {
             asset: self.underlying_price,
-            volatility: self.implied_volatility,
-            int_rate: self.risk_free_rate,
+            volatility: f2du!(self.implied_volatility).unwrap(),
+            int_rate: f2du!(self.risk_free_rate).unwrap(),
             strike: self.strike_price,
-            expiry,
+            expiry: f2du!(expiry).unwrap(),
             no_steps,
             option_type: &self.option_type,
             option_style: &self.option_style,
             side: &self.side,
         };
-        let (asset_tree, option_tree) = generate_binomial_tree(&params);
+        let (asset_tree, option_tree) = generate_binomial_tree(&params).unwrap();
         let price = match self.side {
             Side::Long => option_tree[0][0],
             Side::Short => -option_tree[0][0],
@@ -132,7 +137,7 @@ impl Options {
         black_scholes(self)
     }
 
-    pub fn calculate_price_telegraph(&self, no_steps: usize) -> f64 {
+    pub fn calculate_price_telegraph(&self, no_steps: usize) -> Result<Decimal, DecimalError> {
         telegraph(self, no_steps, None, None)
     }
 
@@ -175,27 +180,27 @@ impl Options {
         self.option_type.payoff(&payoff_info) * self.quantity
     }
 
-    pub fn delta(&self) -> f64 {
+    pub fn delta(&self) -> Result<Decimal, GreeksError> {
         delta(self)
     }
 
-    pub fn gamma(&self) -> f64 {
+    pub fn gamma(&self) -> Result<Decimal, GreeksError> {
         gamma(self)
     }
 
-    pub fn theta(&self) -> f64 {
+    pub fn theta(&self) -> Result<Decimal, GreeksError> {
         theta(self)
     }
 
-    pub fn vega(&self) -> f64 {
+    pub fn vega(&self) -> Result<Decimal, GreeksError> {
         vega(self)
     }
 
-    pub fn rho(&self) -> f64 {
+    pub fn rho(&self) -> Result<Decimal, GreeksError> {
         rho(self)
     }
 
-    pub fn rho_d(&self) -> f64 {
+    pub fn rho_d(&self) -> Result<Decimal, GreeksError> {
         rho_d(self)
     }
 
@@ -268,12 +273,12 @@ impl Default for Options {
 impl Greeks for Options {
     fn greeks(&self) -> Greek {
         Greek {
-            delta: self.delta(),
-            gamma: self.gamma(),
-            theta: self.theta(),
-            vega: self.vega(),
-            rho: self.rho(),
-            rho_d: self.rho_d(),
+            delta: self.delta().unwrap(),
+            gamma: self.gamma().unwrap(),
+            theta: self.theta().unwrap(),
+            vega: self.vega().unwrap(),
+            rho: self.rho().unwrap(),
+            rho_d: self.rho_d().unwrap(),
         }
     }
 }
@@ -396,14 +401,14 @@ mod tests_options {
     fn test_calculate_price_binomial() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let price = option.calculate_price_binomial(100);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
     }
 
     #[test]
     fn test_calculate_price_binomial_tree() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
     }
@@ -412,7 +417,7 @@ mod tests_options {
     fn test_calculate_price_binomial_tree_short() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
     }
@@ -598,6 +603,7 @@ mod tests_time_value {
     use crate::model::utils::create_sample_option_simplest_strike;
     use crate::pos;
     use crate::utils::logger::setup_logger;
+    use approx::assert_relative_eq;
     use tracing::debug;
 
     #[test]
@@ -660,8 +666,16 @@ mod tests_time_value {
         let call_time_value = call.time_value();
         let put_time_value = put.time_value();
 
-        assert!(call_time_value > ZERO);
-        assert!(put_time_value > ZERO);
+        assert_relative_eq!(
+            call_time_value,
+            call.calculate_price_black_scholes(),
+            epsilon = 0.01
+        );
+        assert_relative_eq!(
+            put_time_value,
+            put.calculate_price_black_scholes(),
+            epsilon = 0.01
+        );
         debug!("Call time value: {}", call_time_value);
         debug!("Call BS price: {}", call.calculate_price_black_scholes());
         debug!("Put time value: {}", put_time_value);
@@ -1061,123 +1075,112 @@ mod tests_in_the_money {
 mod tests_greeks {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
-    use approx::assert_relative_eq;
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
     fn test_delta() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = delta(&option);
-        assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
+        let delta = create_sample_option_simplest(OptionStyle::Call, Side::Long)
+            .delta()
+            .unwrap();
+        assert_decimal_eq!(delta, dec!(0.539519922), EPSILON);
     }
 
     #[test]
     fn test_delta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = delta(&option);
-        assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.delta(), 0.5395199 * 2.0, epsilon = 1e-6);
+        assert_decimal_eq!(option.delta().unwrap(), dec!(1.0790398), EPSILON);
     }
 
     #[test]
     fn test_gamma() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = gamma(&option);
-        assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.gamma().unwrap(), dec!(0.0691707), EPSILON);
     }
 
     #[test]
     fn test_gamma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = gamma(&option);
-        assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.gamma(), 0.1383415, epsilon = 1e-6);
+        assert_decimal_eq!(option.gamma().unwrap(), dec!(0.1383415), EPSILON);
     }
 
     #[test]
     fn test_theta() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = theta(&option);
-        assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.theta().unwrap(), dec!(-15.8697818), EPSILON);
     }
 
     #[test]
     fn test_theta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = theta(&option);
-        assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.theta(), -31.739563, epsilon = 1e-6);
+        assert_decimal_eq!(option.theta().unwrap(), dec!(-31.739563), EPSILON);
     }
 
     #[test]
     fn test_vega() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = vega(&option);
-        assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.vega().unwrap(), dec!(15.4675554), EPSILON);
     }
 
     #[test]
     fn test_vega_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = vega(&option);
-        assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.vega(), 30.9351108, epsilon = 1e-6);
+        assert_decimal_eq!(option.vega().unwrap(), dec!(30.9351108), EPSILON);
     }
 
     #[test]
     fn test_rho() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = rho(&option);
-        assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.rho().unwrap(), dec!(4.23312145), EPSILON);
     }
 
     #[test]
     fn test_rho_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = rho(&option);
-        assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.rho(), 8.46624291, epsilon = 1e-6);
+        assert_decimal_eq!(option.rho().unwrap(), dec!(8.46624291), EPSILON);
     }
 
     #[test]
     fn test_rho_d() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = rho_d(&option);
-        assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-4.43441032), EPSILON);
     }
 
     #[test]
     fn test_rho_d_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        let expected = rho_d(&option);
-        assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.rho_d(), -8.86882064, epsilon = 1e-6);
+        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-8.86882064), EPSILON);
     }
 }
 
 #[cfg(test)]
 mod tests_greek_trait {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_option_simplest;
-    use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
+
+    const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
     fn test_greeks_implementation() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let greeks = option.greeks();
 
-        assert_relative_eq!(greeks.delta, option.delta(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.gamma, option.gamma(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.theta, option.theta(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.vega, option.vega(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.rho, option.rho(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.rho_d, option.rho_d(), epsilon = 1e-6);
+        assert_decimal_eq!(greeks.delta, option.delta().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.gamma, option.gamma().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.theta, option.theta().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.vega, option.vega().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.rho, option.rho().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.rho_d, option.rho_d().unwrap(), EPSILON);
     }
 
     #[test]
@@ -1186,11 +1189,14 @@ mod tests_greek_trait {
         let greeks = option.greeks();
 
         assert!(
-            greeks.delta >= -1.0 && greeks.delta <= 1.0,
+            greeks.delta >= Decimal::NEGATIVE_ONE && greeks.delta <= Decimal::ONE,
             "Delta should be between -1 and 1"
         );
-        assert!(greeks.gamma >= 0.0, "Gamma should be non-negative");
-        assert!(greeks.vega >= 0.0, "Vega should be non-negative");
+        assert!(
+            greeks.gamma >= Decimal::ZERO,
+            "Gamma should be non-negative"
+        );
+        assert!(greeks.vega >= Decimal::ZERO, "Vega should be non-negative");
     }
 
     #[test]
@@ -1202,10 +1208,10 @@ mod tests_greek_trait {
         let call_greeks = call_option.greeks();
         let put_greeks = put_option.greeks();
 
-        // assert_relative_eq!(call_greeks.delta + put_greeks.delta, 0.0, epsilon = 1e-6); // TODO: Fix this
-        assert_relative_eq!(call_greeks.gamma, put_greeks.gamma, epsilon = 1e-6);
-        assert_relative_eq!(call_greeks.vega, put_greeks.vega, epsilon = 1e-6);
-        // assert_relative_eq!(call_greeks.rho, put_greeks.rho, epsilon = 1e-6); // TODO: Fix this
+        // assert_decimal_eq!(call_greeks.delta + put_greeks.delta, Decimal::ZERO, EPSILON); // TODO: Fix this
+        assert_decimal_eq!(call_greeks.gamma, put_greeks.gamma, EPSILON);
+        assert_decimal_eq!(call_greeks.vega, put_greeks.vega, EPSILON);
+        // assert_decimal_eq!(call_greeks.rho, put_greeks.rho, EPSILON); // TODO: Fix this
     }
 }
 

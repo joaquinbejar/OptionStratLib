@@ -3,78 +3,131 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-
 use crate::constants::ZERO;
+use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
+use crate::model::decimal::{f64_to_decimal, positive_f64_to_decimal};
 use crate::model::option::Options;
 use crate::model::types::OptionStyle;
-use tracing::trace;
+use rust_decimal::{Decimal, MathematicalOps};
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct Greek {
-    pub delta: f64,
-    pub gamma: f64,
-    pub theta: f64,
-    pub vega: f64,
-    pub rho: f64,
-    pub rho_d: f64,
+    pub delta: Decimal,
+    pub gamma: Decimal,
+    pub theta: Decimal,
+    pub vega: Decimal,
+    pub rho: Decimal,
+    pub rho_d: Decimal,
 }
 
 pub trait Greeks {
     fn greeks(&self) -> Greek;
 }
 
-/// Calculates the delta of a financial option.
+/// Calculates the delta of an option.
 ///
-/// The delta measures the sensitivity of the option's price to changes in the price
-/// of the underlying asset. It is a key metric in options trading and risk management.
+/// The delta measures the sensitivity of an option's price to changes in the price of the
+/// underlying asset. It is calculated differently for call and put options. For options
+/// with zero implied volatility, the delta is determined based on whether the option is
+/// in-the-money or out-of-the-money.
 ///
 /// # Parameters
 ///
-/// - `option`: A reference to an `Options` struct which holds relevant data for the option such as:
+/// - `option: &Options`
+///   A reference to an `Options` struct containing all the relevant parameters for the calculation:
 ///   - `underlying_price`: The current price of the underlying asset.
 ///   - `strike_price`: The strike price of the option.
-///   - `risk_free_rate`: The risk-free interest rate over the life of the option.
-///   - `expiration_date`: The expiration date of the option, from which we get the time to expiration in years.
-///   - `implied_volatility`: The implied volatility of the underlying asset.
+///   - `risk_free_rate`: The annualized risk-free interest rate.
+///   - `expiration_date`: The time to expiration of the option, in years.
+///   - `implied_volatility`: The implied volatility of the option.
 ///   - `dividend_yield`: The dividend yield of the underlying asset.
-///   - `option_style`: The style of the option, which can be either a `Call` or a `Put`.
+///   - `quantity`: The quantity of the options.
+///   - `option_style`: The style of the option (Call or Put).
 ///
 /// # Returns
 ///
-/// - `f64`: The delta of the option.
+/// - `Ok(Decimal)`: The calculated delta value.
+/// - `Err(GreeksError)`: Returns an error if any intermediate calculations fail.
 ///
-/// The function internally calls the `d1` function to calculate a component needed for the delta.
-/// Depending on the option style (`Call` or `Put`), it then computes the delta using the cumulative
-/// distribution function (`big_n`) of the standard normal distribution.
+/// # Calculation Details
 ///
-/// # Note
+/// - If `implied_volatility == 0`, the delta is determined based on whether the option is
+///   in-the-money or out-of-the-money:
+///   - Call Option:
+///     - In-the-money: Delta = `sign`
+///     - Out-of-the-money: Delta = 0
+///   - Put Option:
+///     - In-the-money: Delta = `-sign`
+///     - Out-of-the-money: Delta = 0
+/// - For options with non-zero implied volatility, the delta is calculated as:
+///   - Call Option:
+///     \[ \Delta_{\text{call}} = \text{sign} \cdot N(d1) \cdot e^{-qT} \]
+///   - Put Option:
+///     \[ \Delta_{\text{put}} = \text{sign} \cdot (N(d1) - 1) \cdot e^{-qT} \]
+///     Where:
+///     - \(N(d1)\): The cumulative distribution function (CDF) of the standard normal distribution evaluated at \(d1\).
+///     - \(q\): The dividend yield.
+///     - \(T\): Time to expiration.
 ///
-/// This function assumes that all input values are properly validated and that `option.expiration_date.get_years()`
-/// correctly returns the time to expiration in years.
+/// - The delta is adjusted by multiplying it by the option quantity.
 ///
-/// # Panics
+/// # Errors
 ///
-/// This function will not panic if the input `Options` struct adheres to the expected format and all methods
-/// (like `get_years`) function correctly.
-#[allow(dead_code)]
-pub fn delta(option: &Options) -> f64 {
+/// - `GreeksError`: If the calculation of \(d1\) or the standard normal CDF (`big_n`) fails.
+///
+/// # Example
+///
+/// ```rust
+/// use rust_decimal::Decimal;
+/// use optionstratlib::constants::ZERO;
+/// use optionstratlib::greeks::equations::delta;
+/// use optionstratlib::model::option::Options;
+/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+/// use optionstratlib::pos;
+/// let option = Options {
+///     option_type: OptionType::European,side:
+///     Side::Long,underlying_price:
+///     PositiveF64::new(100.0).unwrap(),
+///     strike_price: PositiveF64::new(95.0).unwrap(),
+///     risk_free_rate: 0.05,
+///     expiration_date: ExpirationDate::Days(30.0),
+///     implied_volatility: 0.2,
+///     dividend_yield: ZERO,
+///     quantity: pos!(1.0),
+///     option_style: OptionStyle::Call,
+///     underlying_symbol: "AAPL".to_string(),
+///     exotic_params: None,
+/// };
+///
+/// match delta(&option) {
+///     Ok(result) => println!("Delta: {}", result),
+///     Err(e) => eprintln!("Error calculating delta: {:?}", e),
+/// }
+/// ```
+pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
+    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+
+    let sign = if option.is_long() {
+        Decimal::ONE
+    } else {
+        Decimal::NEGATIVE_ONE
+    };
     if option.implied_volatility == ZERO {
-        let sign = if option.is_long() { 1.0 } else { -1.0 };
         return match option.option_style {
             OptionStyle::Call => {
                 if option.underlying_price >= option.strike_price {
-                    sign // Delta is 1 for Call in-the-money
+                    Ok(sign) // Delta is 1 for Call in-the-money
                 } else {
-                    0.0 // Delta is 0 for Call out-of-the-money
+                    Ok(Decimal::ZERO) // Delta is 0 for Call out-of-the-money
                 }
             }
             OptionStyle::Put => {
                 if option.underlying_price <= option.strike_price {
-                    sign * -1.0 // Delta is -1 for Put in-the-money
+                    Ok(sign * Decimal::NEGATIVE_ONE) // Delta is -1 for Put in-the-money
                 } else {
-                    0.0 // Delta is 0 for Put out-of-the-money
+                    Ok(Decimal::ZERO) // Delta is 0 for Put out-of-the-money
                 }
             }
         };
@@ -86,342 +139,645 @@ pub fn delta(option: &Options) -> f64 {
         option.risk_free_rate,
         option.expiration_date.get_years(),
         option.implied_volatility,
-    );
-    let sign = if option.is_long() { 1.0 } else { -1.0 };
+    )?;
+
+    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
+    let div_date = (-dividend_yield * expiration_date).exp();
 
     let delta = match option.option_style {
-        OptionStyle::Call => {
-            trace!("{}", d1);
-            sign * big_n(d1) * (-option.dividend_yield * option.time_to_expiration()).exp()
-        }
-        OptionStyle::Put => {
-            sign * (big_n(d1) - 1.0) * (-option.dividend_yield * option.time_to_expiration()).exp()
-        }
+        OptionStyle::Call => sign * big_n(d1)? * div_date,
+        OptionStyle::Put => sign * (big_n(d1)? - Decimal::ONE) * div_date,
     };
-    delta * option.quantity.value()
+    let quantity: Decimal = option.quantity.into();
+    Ok(delta * quantity)
 }
 
 /// Computes the gamma of an option.
 ///
-/// Gamma measures the rate of change of delta with respect to changes in the underlying price of the asset.
-/// It is a second-order derivative of the option price.
+/// Gamma measures the rate of change of the option's delta with respect to changes in the underlying
+/// asset's price. It is a second-order derivative of the option price and provides insight into the
+/// sensitivity of delta to movements in the underlying price.
 ///
-/// # Arguments
+/// # Parameters
 ///
-/// * `option` - A reference to an `Options` struct containing the necessary parameters to compute the gamma.
+/// - `option: &Options`
+///   A reference to an `Options` struct containing the following relevant parameters:
+///   - `underlying_price`: The current price of the underlying asset.
+///   - `strike_price`: The strike price of the option.
+///   - `risk_free_rate`: The risk-free interest rate.
+///   - `expiration_date`: The time to expiration in years.
+///   - `implied_volatility`: The implied volatility of the option.
+///   - `dividend_yield`: The dividend yield of the underlying asset.
+///   - `quantity`: The quantity of the options.
 ///
 /// # Returns
 ///
-/// A `f64` value representing the gamma of the option.
+/// - `Ok(Decimal)`: The calculated gamma value.
+/// - `Err(GreeksError)`: Returns an error if the computation of `d1` or the probability density function `n(d1)` fails.
 ///
 /// # Calculation
 ///
-/// Gamma is computed using the following formula:
+/// Gamma is calculated using the formula:
 ///
-/// ```text
-/// Gamma = (e^(-dividend_yield * T) * N'(d1)) / (S * σ * sqrt(T))
+/// ```math
+/// \Gamma = \frac{e^{-qT} \cdot N'(d1)}{S \cdot \sigma \cdot \sqrt{T}}
 /// ```
 ///
 /// Where:
-/// * `N'(d1)` is the standard normal probability density function evaluated at `d1`.
-/// * `S` is the underlying price of the asset.
-/// * `σ` (sigma) is the implied volatility.
-/// * `T` is the time to expiration in years.
+/// - \(N'(d1)\): The standard normal probability density function (PDF) evaluated at \(d1\).
+/// - \(S\): The price of the underlying asset.
+/// - \(\sigma\): The implied volatility of the option.
+/// - \(T\): The time to expiration in years.
+/// - \(q\): The dividend yield of the underlying asset.
 ///
-/// The function first calculates `d1` using the `d1` function and then applies the gamma formula.
-/// The exponential expression accounts for continuous dividend yield over the life of the option.
+/// ### Steps:
+/// 1. Compute \(d1\) using the `d1` function.
+/// 2. Evaluate \(N'(d1)\) using the `n` function.
+/// 3. Apply the gamma formula, accounting for the effect of the dividend yield \(e^{-qT}\).
+/// 4. Multiply the result by the option's quantity.
 ///
-#[allow(dead_code)]
-pub fn gamma(option: &Options) -> f64 {
+/// # Edge Cases
+///
+/// - If the implied volatility (\(\sigma\)) is zero, gamma is returned as `0`.
+///
+/// # Example
+///
+/// ```rust
+/// use optionstratlib::greeks::equations::gamma;
+/// use optionstratlib::model::option::Options;
+/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+/// use optionstratlib::pos;
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_price: PositiveF64::new(100.0).unwrap(),
+///     strike_price: PositiveF64::new(95.0).unwrap(),
+///     risk_free_rate: 0.05,
+///     expiration_date: ExpirationDate::Days(30.0),
+///     implied_volatility: 0.2,
+///     dividend_yield: 0.01,
+///     quantity: pos!(1.0),
+///     option_style: OptionStyle::Call,
+///     underlying_symbol: "".to_string(),
+///     exotic_params: None,
+/// };
+///
+/// match gamma(&option) {
+///     Ok(result) => println!("Gamma: {}", result),
+///     Err(e) => eprintln!("Error calculating gamma: {:?}", e),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - This function assumes that the dividend yield \(q\) and the time to expiration \(T\) are
+///   provided in consistent units.
+/// - If the implied volatility or time to expiration is very small, the result may be close to 0,
+///   as gamma becomes negligible in those cases.
+pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     if option.implied_volatility == ZERO {
-        return 0.0;
+        return Ok(Decimal::ZERO);
     }
+
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
         option.expiration_date.get_years(),
         option.implied_volatility,
-    );
+    )?;
 
-    let gamma = (-option.dividend_yield * option.expiration_date.get_years()).exp() * n(d1)
-        / (option.underlying_price
-            * option.implied_volatility
-            * option.expiration_date.get_years().sqrt());
-    gamma * option.quantity.value()
+    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
+    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+    let underlying_price: Decimal = positive_f64_to_decimal(option.underlying_price)?;
+    let implied_volatility: Decimal = f64_to_decimal(option.implied_volatility)?;
+
+    let gamma = (-dividend_yield * expiration_date).exp() * n(d1)?
+        / (underlying_price * implied_volatility * expiration_date.sqrt().unwrap());
+
+    let quantity: Decimal = option.quantity.into();
+    Ok(gamma * quantity)
 }
 
-/// Computes the Theta value for a given option.
+/// Computes the Theta of an option.
 ///
-/// Theta measures the sensitivity of the option's price with respect to time decay.
-/// It represents the rate at which the value of the option decreases as the expiration
-/// date approaches, holding all other inputs constant.
+/// Theta measures the sensitivity of the option's price to time decay, indicating the rate
+/// at which the value of the option decreases as the expiration date approaches. This is
+/// particularly important in options trading, as Theta reflects the "time decay" of the
+/// option's extrinsic value.
 ///
 /// # Parameters
-/// - `option`: A reference to an `Options` struct that encapsulates various parameters
-///   necessary for the calculation.
-///   - `underlying_price`: Current price of the underlying asset.
-///   - `strike_price`: Strike price of the option.
-///   - `risk_free_rate`: Risk-free interest rate.
-///   - `expiration_date`: Expiration date of the option (needs to provide `get_years` method).
-///   - `implied_volatility`: Implied volatility of the underlying asset.
-///   - `dividend_yield`: Expected dividend yield of the underlying asset.
-///   - `option_style`: Style of the option, either `Call` or `Put`.
+///
+/// - `option: &Options`
+///   A reference to an `Options` struct containing the following relevant parameters:
+///   - `underlying_price`: The current price of the underlying asset.
+///   - `strike_price`: The strike price of the option.
+///   - `risk_free_rate`: The risk-free interest rate.
+///   - `expiration_date`: The time to expiration in years (provides `get_years` method).
+///   - `implied_volatility`: The implied volatility of the option.
+///   - `dividend_yield`: The dividend yield of the underlying asset.
+///   - `option_style`: The style of the option (Call or Put).
+///   - `quantity`: The quantity of the options.
 ///
 /// # Returns
-/// - `f64`: The calculated Theta value for the given option.
+///
+/// - `Ok(Decimal)`: The calculated Theta value for the option.
+/// - `Err(GreeksError)`: Returns an error if any intermediate calculation fails (e.g., in `d1`, `d2`, or `n`).
 ///
 /// # Formula
-/// The function utilizes the Black-Scholes model to compute Theta. It applies
-/// different formulas for call and put options:
 ///
-/// For Call Options:
-/// `common_term - risk_free_rate * strike_price * exp(-risk_free_rate * expiration_years) * big_n(d2) + dividend_yield * underlying_price * exp(-dividend_yield * expiration_years) * big_n(d1)`
+/// The Theta is calculated using the Black-Scholes model. The formula differs for call and put options:
 ///
-/// For Put Options:
-/// `common_term + risk_free_rate * strike_price * exp(-risk_free_rate * expiration_years) * big_n(-d2) - dividend_yield * underlying_price * exp(-dividend_yield * expiration_years) * big_n(-d1)`
+/// **Call Options:**
+///
+/// ```math
+/// \Theta_{\text{call}} =
+/// -\frac{S \cdot \sigma \cdot e^{-qT} \cdot n(d1)}{2 \sqrt{T}}
+/// - r \cdot K \cdot e^{-rT} \cdot N(d2)
+/// + q \cdot S \cdot e^{-qT} \cdot N(d1)
+/// ```
+///
+/// **Put Options:**
+///
+/// ```math
+/// \Theta_{\text{put}} =
+/// -\frac{S \cdot \sigma \cdot e^{-qT} \cdot n(d1)}{2 \sqrt{T}}
+/// + r \cdot K \cdot e^{-rT} \cdot N(-d2)
+/// - q \cdot S \cdot e^{-qT} \cdot N(-d1)
+/// ```
 ///
 /// Where:
-/// - `common_term = -underlying_price * implied_volatility * exp(-dividend_yield * expiration_years) * n(d1) / (2.0 * sqrt(expiration_years))`
+/// - \( S \): Underlying price
+/// - \( \sigma \): Implied volatility
+/// - \( T \): Time to expiration (in years)
+/// - \( r \): Risk-free rate
+/// - \( q \): Dividend yield
+/// - \( K \): Strike price
+/// - \( N(d1) \): Cumulative distribution function (CDF) of the standard normal distribution at \( d1 \).
+/// - \( n(d1) \): Probability density function (PDF) of the standard normal distribution at \( d1 \).
 ///
-/// The `d1` and `d2` terms are intermediate calculations used in the Black-Scholes model.
+/// # Calculation Steps
+/// 1. Compute \( d1 \) and \( d2 \) using the `d1` and `d2` functions.
+/// 2. Calculate the common term:
+///    ```math
+///    \text{common\_term} = -\frac{S \cdot \sigma \cdot e^{-qT} \cdot n(d1)}{2 \sqrt{T}}
+///    ```
+/// 3. Apply the corresponding formula for Call or Put options, accounting for the effect of
+///    dividends (\( e^{-qT} \)) and risk-free rate (\( e^{-rT} \)).
+/// 4. Multiply the resulting Theta by the quantity of options.
 ///
-/// - `d1` is calculated using the `d1` function.
-/// - `d2` is calculated using the `d2` function.
+/// # Example
 ///
-/// - `n(.)` and `big_n(.)` refer to the probability density function (pdf) and the cumulative
-///   distribution function (cdf) of the standard normal distribution respectively.
-#[allow(dead_code)]
-pub fn theta(option: &Options) -> f64 {
+/// ```rust
+/// use optionstratlib::greeks::equations::theta;
+/// use optionstratlib::model::option::Options;
+/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+/// use optionstratlib::pos;
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_price: PositiveF64::new(100.0).unwrap(),
+///     strike_price: PositiveF64::new(95.0).unwrap(),
+///     risk_free_rate: 0.05,
+///     expiration_date: ExpirationDate::Days(30.0),
+///     implied_volatility: 0.2,
+///     dividend_yield: 0.01,
+///     quantity: pos!(1.0),
+///     option_style: OptionStyle::Call,
+///     underlying_symbol: "".to_string(),
+///     exotic_params: None,
+/// };
+///
+/// match theta(&option) {
+///     Ok(result) => println!("Theta: {}", result),
+///     Err(e) => eprintln!("Error calculating Theta: {:?}", e),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - A positive Theta means the option gains value as time passes (rare and usually for short positions).
+/// - A negative Theta is typical for long positions, as the option loses extrinsic value over time.
+/// - If the implied volatility is zero, Theta may be close to zero for far-out-of-the-money options.
+pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
         option.expiration_date.get_years(),
         option.implied_volatility,
-    );
+    )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
         option.expiration_date.get_years(),
         option.implied_volatility,
-    );
+    )?;
 
-    let common_term = -option.underlying_price.value()
-        * option.implied_volatility
-        * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-        * n(d1)
-        / (2.0 * option.expiration_date.get_years().sqrt());
+    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
+    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+    let underlying_price: Decimal = positive_f64_to_decimal(option.underlying_price)?;
+    let implied_volatility: Decimal = f64_to_decimal(option.implied_volatility)?;
 
-    let theta = match option.option_style {
+    let common_term: Decimal =
+        -underlying_price * implied_volatility * (-dividend_yield * expiration_date).exp() * n(d1)?
+            / (Decimal::TWO * expiration_date.sqrt().unwrap());
+
+    let strike_price: Decimal = positive_f64_to_decimal(option.strike_price)?;
+    let risk_free_rate: Decimal = f64_to_decimal(option.risk_free_rate)?;
+
+    let theta: Decimal = match option.option_style {
         OptionStyle::Call => {
             common_term
-                - option.risk_free_rate
-                    * option.strike_price.value()
-                    * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
-                    * big_n(d2)
-                + option.dividend_yield
-                    * option.underlying_price.value()
-                    * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                    * big_n(d1)
+                - risk_free_rate
+                    * strike_price
+                    * (-risk_free_rate * expiration_date).exp()
+                    * big_n(d2)?
+                + dividend_yield
+                    * underlying_price
+                    * (-dividend_yield * expiration_date).exp()
+                    * big_n(d1)?
         }
         OptionStyle::Put => {
             common_term
-                + option.risk_free_rate
-                    * option.strike_price.value()
-                    * (-option.risk_free_rate * option.expiration_date.get_years()).exp()
-                    * big_n(-d2)
-                - option.dividend_yield
-                    * option.underlying_price.value()
-                    * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                    * big_n(-d1)
+                + risk_free_rate
+                    * strike_price
+                    * (-risk_free_rate * expiration_date).exp()
+                    * big_n(-d2)?
+                - dividend_yield
+                    * underlying_price
+                    * (-dividend_yield * expiration_date).exp()
+                    * big_n(-d1)?
         }
     };
-    theta * option.quantity.value()
+
+    let quantity: Decimal = option.quantity.into();
+    Ok(theta * quantity)
 }
 
-/// Calculates the "vega" of an option, which measures the sensitivity of the option's price
-/// to changes in the volatility of the underlying asset. Vega indicates how much the price
-/// of an option is expected to change for a 1% change in the implied volatility.
+/// Computes the vega of an option.
 ///
-/// # Arguments
+/// Vega measures the sensitivity of the option's price to changes in the implied volatility
+/// of the underlying asset. It quantifies the expected change in the option's price for a
+/// 1% change in the implied volatility. Vega is particularly important for understanding
+/// how an option's value is affected by market conditions that alter volatility.
 ///
-/// * `option` - A reference to an `Options` struct containing all the necessary parameters
-///   for the calculation including underlying price, strike price, risk-free rate,
-///   expiration date, implied volatility, and dividend yield.
+/// # Parameters
+///
+/// - `option: &Options`
+///   A reference to an `Options` struct containing the necessary parameters:
+///   - `underlying_price`: The current price of the underlying asset.
+///   - `strike_price`: The strike price of the option.
+///   - `risk_free_rate`: The annualized risk-free interest rate.
+///   - `expiration_date`: The time to expiration in years (provides `get_years` method).
+///   - `implied_volatility`: The implied volatility of the option.
+///   - `dividend_yield`: The dividend yield of the underlying asset.
+///   - `quantity`: The quantity of the options.
+///   - `option_style`: The style of the option (e.g., European).
 ///
 /// # Returns
 ///
-/// * `f64` - The calculated vega value of the option.
+/// - `Ok(Decimal)`: The computed vega value of the option.
+/// - `Err(GreeksError)`: Returns an error if any intermediate calculation fails (e.g., in `d1` or `big_n`).
 ///
-/// # Implementation Details
+/// # Formula
 ///
-/// The formula used for calculating vega is based on the Black-Scholes option pricing model.
-/// - `d1` is calculated using several parameters of the `Options` struct.
-/// - The underlying price is then multiplied by the exponential term of the negative
-///   dividend yield times the time to expiration.
-/// - This product is further multiplied by the value of the normal distribution `n(d1)`
-///   and the square root of the time to expiration.
+/// Vega is computed using the Black-Scholes model formula:
 ///
-#[allow(dead_code)]
-pub fn vega(option: &Options) -> f64 {
+/// ```math
+/// \text{Vega} = S \cdot e^{-qT} \cdot n(d1) \cdot \sqrt{T}
+/// ```
+///
+/// Where:
+/// - \( S \): The price of the underlying asset.
+/// - \( q \): The dividend yield of the underlying asset.
+/// - \( T \): Time to expiration in years.
+/// - \( n(d1) \): The probability density function (PDF) of the standard normal distribution at \( d1 \).
+/// - \( d1 \): A parameter calculated using the Black-Scholes model.
+///
+/// # Calculation Steps
+///
+/// 1. Compute \( d1 \) using the `d1` function.
+/// 2. Calculate the exponential factor \( e^{-qT} \), which accounts for the effect of dividends.
+/// 3. Evaluate \( n(d1) \), the PDF of the standard normal distribution at \( d1 \).
+/// 4. Multiply the underlying price, the exponential factor, \( n(d1) \), and the square root of time to expiration.
+/// 5. Multiply the result by the quantity of options to adjust for position size.
+///
+/// # Example
+///
+/// ```rust
+/// use optionstratlib::greeks::equations::vega;
+/// use optionstratlib::model::option::Options;
+/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+/// use optionstratlib::pos;
+///
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_price: PositiveF64::new(100.0).unwrap(),
+///     strike_price: PositiveF64::new(95.0).unwrap(),
+///     risk_free_rate: 0.05,
+///     expiration_date: ExpirationDate::Days(30.0),
+///     implied_volatility: 0.2,
+///     dividend_yield: 0.01,
+///     quantity: pos!(1.0),
+///     option_style: OptionStyle::Call,
+///     underlying_symbol: "".to_string(),
+///     exotic_params: None,
+/// };
+///
+/// match vega(&option) {
+///     Ok(result) => println!("Vega: {}", result),
+///     Err(e) => eprintln!("Error calculating Vega: {:?}", e),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - Vega is usually highest for at-the-money options and decreases as the option moves deeper
+///   in-the-money or out-of-the-money.
+/// - For shorter time to expiration, Vega is smaller as the sensitivity to volatility diminishes.
+/// - A positive Vega indicates that an increase in implied volatility will increase the option's value.
+pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
         option.expiration_date.get_years(),
         option.implied_volatility,
-    );
+    )?;
 
-    let vega = option.underlying_price
-        * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-        * big_n(d1)
-        * option.expiration_date.get_years().sqrt();
-    vega.value() * option.quantity.value()
+    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
+    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+    let underlying_price: Decimal = positive_f64_to_decimal(option.underlying_price)?;
+
+    let vega: Decimal = underlying_price
+        * (-dividend_yield * expiration_date).exp()
+        * big_n(d1)?
+        * expiration_date.sqrt().unwrap();
+
+    let quantity: Decimal = option.quantity.into();
+    Ok(vega * quantity)
 }
 
-/// Calculates the rho of an options contract.
+/// Computes the rho of an options contract.
 ///
-/// Rho measures the sensitivity of the options price to changes in the risk-free interest rate.
-/// This function computes the rho based on the given options parameters.
+/// Rho measures the sensitivity of the option's price to changes in the risk-free interest rate.
+/// It quantifies the expected change in the option's price for a 1% change in the risk-free rate.
+/// This metric is useful for understanding how interest rate fluctuations affect the value of
+/// options contracts.
 ///
 /// # Parameters
 ///
-/// - `option`: A reference to an `Options` struct which contains all necessary information about the options contract.
-///
-/// The `Options` struct should include the following fields:
-/// - `underlying_price`: The current price of the underlying asset.
-/// - `strike_price`: The strike price of the option.
-/// - `risk_free_rate`: The risk-free interest rate.
-/// - `expiration_date`: An object providing the expiration date of the option, with a method `get_years()` that returns the term in years.
-/// - `implied_volatility`: The implied volatility of the option.
-/// - `option_style`: The style of the option, either `Call` or `Put`.
+/// - `option: &Options`
+///   A reference to an `Options` struct containing the following fields:
+///   - `underlying_price`: The current price of the underlying asset.
+///   - `strike_price`: The strike price of the option.
+///   - `risk_free_rate`: The annualized risk-free interest rate.
+///   - `expiration_date`: The time to expiration in years (provides `get_years` method).
+///   - `implied_volatility`: The implied volatility of the option.
+///   - `option_style`: The style of the option (`Call` or `Put`).
+///   - `quantity`: The quantity of the options.
 ///
 /// # Returns
 ///
-/// A `f64` value representing the rho of the options contract.
+/// - `Ok(Decimal)`: The computed rho value for the options contract.
+/// - `Err(GreeksError)`: Returns an error if any intermediate calculation fails (e.g., in `d2` or `big_n`).
 ///
 /// # Formula
 ///
-/// For a Call option:
-/// \[ \rho = K \cdot T \cdot e^{-rT} \cdot N(d2) \]
+/// The rho is calculated differently for Call and Put options, as follows:
 ///
-/// For a Put option:
-/// \[ \rho = -K \cdot T \cdot e^{-rT} \cdot N(-d2) \]
+/// **Call Options:**
+///
+/// ```math
+/// \rho_{\text{call}} = K \cdot T \cdot e^{-rT} \cdot N(d2)
+/// ```
+///
+/// **Put Options:**
+///
+/// ```math
+/// \rho_{\text{put}} = -K \cdot T \cdot e^{-rT} \cdot N(-d2)
+/// ```
 ///
 /// Where:
-/// - \( K \) is `strike_price`
-/// - \( T \) is `expiration_date.get_years()`
-/// - \( r \) is `risk_free_rate`
-/// - \( N(d2) \) is the cumulative distribution function of the standard normal distribution evaluated at `d2`
+/// - \( K \): The strike price of the option.
+/// - \( T \): The time to expiration (in years).
+/// - \( r \): The risk-free interest rate.
+/// - \( N(d2) \): The cumulative distribution function (CDF) of the standard normal distribution evaluated at \( d2 \).
+/// - \( e^{-rT} \): The discount factor for the risk-free rate.
 ///
-#[allow(dead_code)]
-pub fn rho(option: &Options) -> f64 {
+/// # Calculation Steps
+///
+/// 1. Compute \( d2 \) using the `d2` function.
+/// 2. Calculate the discount factor \( e^{-rT} \).
+/// 3. Evaluate \( N(d2) \) or \( N(-d2) \), depending on the option style.
+/// 4. Multiply the strike price, time to expiration, discount factor, and \( N(d2) \) or \( N(-d2) \).
+/// 5. Multiply the result by the option's quantity.
+///
+/// # Edge Cases
+///
+/// - If the discount factor (\( e^{-rT} \)) is zero, the rho is returned as zero.
+/// - If \( N(d2) \) or \( N(-d2) \) is zero, the rho is returned as zero.
+///
+/// # Example
+///
+/// ```rust
+/// use optionstratlib::greeks::equations::rho;
+/// use optionstratlib::model::option::Options;
+/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+/// use optionstratlib::pos;
+///
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_price: PositiveF64::new(100.0).unwrap(),
+///     strike_price: PositiveF64::new(95.0).unwrap(),
+///     risk_free_rate: 0.05,
+///     expiration_date: ExpirationDate::Days(30.0),
+///     implied_volatility: 0.2,
+///     dividend_yield: 0.01,
+///     quantity: pos!(1.0),
+///     option_style: OptionStyle::Call,
+///     underlying_symbol: "".to_string(),
+///     exotic_params: None,
+/// };
+///
+/// match rho(&option) {
+///     Ok(result) => println!("Rho: {}", result),
+///     Err(e) => eprintln!("Error calculating rho: {:?}", e),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - Rho is typically higher for options with longer time to expiration, as they are more
+///   sensitive to changes in the risk-free rate.
+/// - Call options have positive rho values, as an increase in interest rates increases their value.
+/// - Put options have negative rho values, as an increase in interest rates decreases their value.
+pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
         option.expiration_date.get_years(),
         option.implied_volatility,
-    );
+    )?;
 
-    let e_rt = (-option.risk_free_rate * option.expiration_date.get_years()).exp();
-    if e_rt == ZERO {
-        return ZERO;
+    let risk_free_rate: Decimal = f64_to_decimal(option.risk_free_rate)?;
+    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
+
+    let e_rt = (-risk_free_rate * expiration_date).exp();
+    if e_rt == Decimal::ZERO {
+        return Ok(Decimal::ZERO);
     }
+
+    let strike_price: Decimal = positive_f64_to_decimal(option.strike_price)?;
 
     let rho = match option.option_style {
         OptionStyle::Call => {
-            let big_n_d2 = big_n(d2);
-            if big_n_d2 == ZERO {
-                return ZERO;
+            let big_n_d2 = big_n(d2)?;
+            if big_n_d2 == Decimal::ZERO {
+                return Ok(Decimal::ZERO);
             }
-            option.strike_price.value() * option.expiration_date.get_years() * e_rt * big_n_d2
+            strike_price * expiration_date * e_rt * big_n_d2
         }
         OptionStyle::Put => {
-            let big_n_minus_d2 = big_n(-d2);
-            if big_n_minus_d2 == ZERO {
-                return ZERO;
+            let big_n_minus_d2 = big_n(-d2)?;
+            if big_n_minus_d2 == Decimal::ZERO {
+                return Ok(Decimal::ZERO);
             }
-            -1.0 * option.strike_price.value()
-                * option.expiration_date.get_years()
-                * e_rt
-                * big_n_minus_d2
+            Decimal::NEGATIVE_ONE * strike_price * expiration_date * e_rt * big_n_minus_d2
         }
     };
-    rho * option.quantity.value()
+
+    let quantity: Decimal = option.quantity.into();
+    Ok(rho * quantity)
 }
 
-/// Computes the dividend rate sensitivity (rho) of an option.
+/// Computes the sensitivity of the option price to changes in the dividend yield (Rho_d).
 ///
-/// The `rho_d` function calculates the sensitivity of the option price
-/// with respect to the dividend yield of the underlying asset. It takes
-/// into account whether the option is a call or a put and uses various
-/// financial parameters to compute the result.
+/// This function calculates how the price of an option changes with respect to variations
+/// in the dividend yield of the underlying asset. This metric, often referred to as "dividend rho",
+/// is essential for understanding the impact of dividends on the option's value.
 ///
 /// # Parameters
 ///
-/// - `option`: A reference to an `Options` struct that holds important
-///   information about the option including underlying price, strike
-///   price, risk-free rate, expiration date, implied volatility, and
-///   dividend yield.
+/// - `option: &Options`
+///   A reference to an `Options` struct containing the following relevant fields:
+///   - `underlying_price`: The current price of the underlying asset.
+///   - `strike_price`: The strike price of the option.
+///   - `risk_free_rate`: The risk-free interest rate.
+///   - `expiration_date`: The time to expiration in years (provides `get_years` method).
+///   - `implied_volatility`: The implied volatility of the option.
+///   - `dividend_yield`: The dividend yield of the underlying asset.
+///   - `quantity`: The quantity of the options.
+///   - `option_style`: The style of the option (`Call` or `Put`).
 ///
 /// # Returns
 ///
-/// Returns a `f64` value representing the rate of change of the option
-/// price concerning the dividend yield.
+/// - `Ok(Decimal)`: The calculated dividend sensitivity (`Rho_d`) value for the options contract.
+/// - `Err(GreeksError)`: Returns an error if any intermediate calculation fails (e.g., in `d1` or `big_n`).
 ///
-/// # Calculations
+/// # Formula
 ///
-/// - First, the function calculates the `d1` value using the provided
-///   option parameters.
-/// - Then, it matches on the option style (`Call` or `Put`) to compute
-///   the corresponding rho value.
-/// - For a `Call` option, the rho value is calculated using the formula:
+/// The dividend sensitivity is calculated differently for Call and Put options:
 ///
-/// ```text
-/// -T * S * e^(-q * T) * N(d1)
+/// **Call Options:**
+///
+/// ```math
+/// \rho_d^{\text{call}} = -T \cdot S \cdot e^{-qT} \cdot N(d1)
 /// ```
 ///
-/// - For a `Put` option, the rho value is calculated using the formula:
+/// **Put Options:**
 ///
-/// ```text
-/// T * S * e^(-q * T) * N(-d1)
+/// ```math
+/// \rho_d^{\text{put}} = T \cdot S \cdot e^{-qT} \cdot N(-d1)
 /// ```
 ///
-/// where:
-/// - `T` is the expiration time in years,
-/// - `S` is the underlying price,
-/// - `q` is the dividend yield,
-/// - `N` is the cumulative distribution function of the standard normal distribution,
-/// - `d1` is a calculated parameter for option pricing.
+/// Where:
+/// - \( T \): Time to expiration (in years).
+/// - \( S \): Price of the underlying asset.
+/// - \( q \): Dividend yield.
+/// - \( N(d1) \): The cumulative distribution function (CDF) of the standard normal distribution evaluated at \( d1 \).
+/// - \( d1 \): A parameter calculated using the Black-Scholes model.
 ///
-#[allow(dead_code)]
-pub fn rho_d(option: &Options) -> f64 {
+/// # Calculation Steps
+///
+/// 1. Compute \( d1 \) using the `d1` function.
+/// 2. Evaluate the exponential factor \( e^{-qT} \), which accounts for the dividend yield.
+/// 3. Calculate \( N(d1) \) or \( N(-d1) \), depending on the option style.
+/// 4. Use the appropriate formula for Call or Put options.
+/// 5. Multiply the result by the option's quantity to adjust for position size.
+///
+/// # Example
+///
+/// ```rust
+/// use optionstratlib::greeks::equations::rho_d;
+/// use optionstratlib::model::option::Options;
+/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+/// use optionstratlib::pos;
+///
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_price: PositiveF64::new(100.0).unwrap(),
+///     strike_price: PositiveF64::new(95.0).unwrap(),
+///     risk_free_rate: 0.05,
+///     expiration_date: ExpirationDate::Days(30.0),
+///     implied_volatility: 0.2,
+///     dividend_yield: 0.01,
+///     quantity: pos!(1.0),
+///     option_style: OptionStyle::Call,
+///     underlying_symbol: "".to_string(),
+///     exotic_params: None,
+/// };
+///
+/// match rho_d(&option) {
+///     Ok(result) => println!("Dividend Rho (Rho_d): {}", result),
+///     Err(e) => eprintln!("Error calculating Rho_d: {:?}", e),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - **Call Options**: A higher dividend yield decreases the price of the call option,
+///   leading to a negative dividend sensitivity.
+/// - **Put Options**: A higher dividend yield increases the price of the put option,
+///   leading to a positive dividend sensitivity.
+/// - This calculation assumes that dividends are continuously compounded at the dividend yield rate.
+/// - \( Rho_d \) is generally more significant for options with longer times to expiration.
+pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
         option.expiration_date.get_years(),
         option.implied_volatility,
-    );
+    )?;
+
+    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
+    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+    let underlying_price: Decimal = positive_f64_to_decimal(option.underlying_price)?;
 
     let rhod = match option.option_style {
         OptionStyle::Call => {
-            -option.expiration_date.get_years()
-                * option.underlying_price
-                * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                * big_n(d1)
+            -expiration_date
+                * underlying_price
+                * (-dividend_yield * expiration_date).exp()
+                * big_n(d1)?
         }
         OptionStyle::Put => {
-            option.expiration_date.get_years()
-                * option.underlying_price
-                * (-option.dividend_yield * option.expiration_date.get_years()).exp()
-                * big_n(-d1)
+            expiration_date
+                * underlying_price
+                * (-dividend_yield * expiration_date).exp()
+                * big_n(-d1)?
         }
     };
-    rhod * option.quantity.value()
+
+    let quantity: Decimal = option.quantity.into();
+    Ok(rhod * quantity)
 }
 
 #[cfg(test)]
@@ -434,6 +790,7 @@ mod tests_delta_equations {
     use crate::pos;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
     use tracing::info;
 
     #[test]
@@ -447,9 +804,9 @@ mod tests_delta_equations {
             pos!(150.0),
             ZERO,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap();
         info!("Zero Volatility: {}", delta_value);
-        assert_relative_eq!(delta_value, 1.0, epsilon = 1e-8);
+        assert_relative_eq!(delta_value.to_f64().unwrap(), 1.0, epsilon = 1e-8);
     }
 
     #[test]
@@ -463,7 +820,7 @@ mod tests_delta_equations {
             pos!(150.0),
             ZERO,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
         assert_relative_eq!(delta_value, ZERO, epsilon = 1e-8);
     }
@@ -479,7 +836,7 @@ mod tests_delta_equations {
             pos!(150.0),
             ZERO,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
         assert_relative_eq!(delta_value, -1.0, epsilon = 1e-8);
     }
@@ -495,7 +852,7 @@ mod tests_delta_equations {
             pos!(150.0),
             ZERO,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
         assert_relative_eq!(delta_value, ZERO, epsilon = 1e-8);
     }
@@ -511,7 +868,7 @@ mod tests_delta_equations {
             pos!(150.0),
             ZERO,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
         assert_relative_eq!(delta_value, -1.0, epsilon = 1e-8);
     }
@@ -527,7 +884,7 @@ mod tests_delta_equations {
             pos!(150.0),
             ZERO,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
         assert_relative_eq!(delta_value, ZERO, epsilon = 1e-8);
     }
@@ -543,7 +900,7 @@ mod tests_delta_equations {
             pos!(150.0),
             ZERO,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
         assert_relative_eq!(delta_value, 1.0, epsilon = 1e-8);
     }
@@ -559,7 +916,7 @@ mod tests_delta_equations {
             pos!(150.0),
             ZERO,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
         assert_relative_eq!(delta_value, ZERO, epsilon = 1e-8);
     }
@@ -575,7 +932,7 @@ mod tests_delta_equations {
             pos!(100.0),
             0.20,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Deep ITM Call Delta: {}", delta_value);
         assert_relative_eq!(delta_value, 0.9991784198733309, epsilon = 1e-8);
     }
@@ -590,7 +947,7 @@ mod tests_delta_equations {
             pos!(100.0),
             0.20,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Deep OTM Call Delta: {}", delta_value);
         assert_relative_eq!(delta_value, 2.0418256951423236e-33, epsilon = 1e-4);
     }
@@ -605,7 +962,7 @@ mod tests_delta_equations {
             pos!(100.0),
             0.20,
         );
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("ATM Put Delta: {}", delta_value);
         assert_relative_eq!(delta_value, -0.4596584975686261, epsilon = 1e-8);
     }
@@ -621,7 +978,7 @@ mod tests_delta_equations {
             0.50,
         );
         option.expiration_date = ExpirationDate::Days(7.0);
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Short-term High Vol Call Delta: {}", delta_value);
         assert_relative_eq!(delta_value, 0.519229469584234, epsilon = 1e-4);
     }
@@ -637,7 +994,7 @@ mod tests_delta_equations {
             0.10,
         );
         option.expiration_date = ExpirationDate::Days(365.0);
-        let delta_value = delta(&option);
+        let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
         assert_relative_eq!(delta_value, -0.2882625994992622, epsilon = 1e-8);
     }
@@ -652,6 +1009,7 @@ mod tests_gamma_equations {
     use crate::pos;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
     use tracing::info;
 
     #[test]
@@ -665,7 +1023,7 @@ mod tests_gamma_equations {
             pos!(120.0),
             0.2,
         );
-        let gamma_value = gamma(&option);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Deep ITM Call Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.000016049457791525, epsilon = 1e-8);
     }
@@ -680,9 +1038,9 @@ mod tests_gamma_equations {
             pos!(100.0),
             0.20,
         );
-        let gamma_value = gamma(&option);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Deep OTM Call Gamma: {}", gamma_value);
-        assert_relative_eq!(gamma_value, 8.596799333253201e-33, epsilon = 1e-34);
+        assert_relative_eq!(gamma_value, 0.0, epsilon = 1e-34);
     }
 
     #[test]
@@ -695,7 +1053,7 @@ mod tests_gamma_equations {
             pos!(100.0),
             0.20,
         );
-        let gamma_value = gamma(&option);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("ATM Put Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.06917076441486919, epsilon = 1e-8);
     }
@@ -711,7 +1069,7 @@ mod tests_gamma_equations {
             0.50,
         );
         option.expiration_date = ExpirationDate::Days(7.0);
-        let gamma_value = gamma(&option);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Short-term High Vol Call Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.05753657912620555, epsilon = 1e-8);
     }
@@ -727,7 +1085,7 @@ mod tests_gamma_equations {
             0.10,
         );
         option.expiration_date = ExpirationDate::Days(365.0);
-        let gamma_value = gamma(&option);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Long-term Low Vol Put Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.033953150664723986, epsilon = 1e-8);
     }
@@ -742,7 +1100,7 @@ mod tests_gamma_equations {
             pos!(100.0),
             0.0,
         );
-        let gamma_value = gamma(&option);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility Call Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.0, epsilon = 1e-8);
     }
@@ -757,7 +1115,7 @@ mod tests_gamma_equations {
             pos!(100.0),
             5.0,
         );
-        let gamma_value = gamma(&option);
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.002146478293943308, epsilon = 1e-8);
     }
@@ -769,6 +1127,7 @@ mod tests_vega_equation {
     use crate::model::types::PositiveF64;
     use crate::model::types::{ExpirationDate, OptionType, Side};
     use crate::pos;
+    use num_traits::ToPrimitive;
 
     fn create_test_option(
         underlying_price: PositiveF64,
@@ -796,7 +1155,7 @@ mod tests_vega_equation {
     #[test]
     fn test_vega_atm() {
         let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.0, 365.0);
-        let vega = vega(&option);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 63.68306511756191;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
@@ -809,7 +1168,7 @@ mod tests_vega_equation {
     #[test]
     fn test_vega_otm() {
         let option = create_test_option(pos!(90.0), pos!(100.0), 0.2, 0.0, 365.0);
-        let vega = vega(&option);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 38.68485587005888;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
@@ -822,7 +1181,7 @@ mod tests_vega_equation {
     #[test]
     fn test_vega_short_expiration() {
         let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.0, 1.0);
-        let vega = vega(&option);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 2.6553722124554757;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
@@ -835,7 +1194,7 @@ mod tests_vega_equation {
     #[test]
     fn test_vega_with_dividends() {
         let option = create_test_option(pos!(100.0), pos!(100.0), 0.2, 0.03, 1.0);
-        let vega = vega(&option);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 2.6551539716535117;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
@@ -848,7 +1207,7 @@ mod tests_vega_equation {
     #[test]
     fn test_vega_itm() {
         let option = create_test_option(pos!(110.0), pos!(100.0), 0.2, 0.0, 1.0);
-        let vega = vega(&option);
+        let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 5.757663148492351;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
@@ -862,11 +1221,11 @@ mod tests_vega_equation {
 #[cfg(test)]
 mod tests_rho_equations {
     use super::*;
-    use crate::constants::ZERO;
     use crate::model::types::PositiveF64;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::pos;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     fn create_test_option(style: OptionStyle) -> Options {
         Options {
@@ -888,14 +1247,14 @@ mod tests_rho_equations {
     #[test]
     fn test_rho_call_option() {
         let option = create_test_option(OptionStyle::Call);
-        let result = rho(&option);
+        let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 53.232481545376345, epsilon = 1e-8);
     }
 
     #[test]
     fn test_rho_put_option() {
         let option = create_test_option(OptionStyle::Put);
-        let result = rho(&option);
+        let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, -41.89046090469506, epsilon = 1e-8);
     }
 
@@ -903,15 +1262,15 @@ mod tests_rho_equations {
     fn test_rho_zero_time_to_expiry() {
         let mut option = create_test_option(OptionStyle::Call);
         option.expiration_date = ExpirationDate::Days(0.0);
-        let result = rho(&option);
-        assert_eq!(result, ZERO);
+        let result = rho(&option).is_err();
+        assert!(result);
     }
 
     #[test]
     fn test_rho_zero_risk_free_rate() {
         let mut option = create_test_option(OptionStyle::Call);
         option.risk_free_rate = 0.0;
-        let result = rho(&option);
+        let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 46.0172162722971, epsilon = 1e-8);
     }
 
@@ -919,7 +1278,7 @@ mod tests_rho_equations {
     fn test_rho_deep_out_of_money_call() {
         let mut option = create_test_option(OptionStyle::Call);
         option.strike_price = pos!(1000.0);
-        let result = rho(&option);
+        let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 0.0, epsilon = 1e-8);
     }
 
@@ -927,7 +1286,7 @@ mod tests_rho_equations {
     fn test_rho_deep_out_of_money_put() {
         let mut option = create_test_option(OptionStyle::Put);
         option.strike_price = pos!(1.0);
-        let result = rho(&option);
+        let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 0.0, epsilon = 1e-8);
     }
 
@@ -935,7 +1294,7 @@ mod tests_rho_equations {
     fn test_rho_high_volatility() {
         let mut option = create_test_option(OptionStyle::Call);
         option.implied_volatility = 1.0;
-        let result = rho(&option);
+        let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 31.043868837728198, epsilon = 0.0001);
     }
 }
@@ -948,6 +1307,7 @@ mod tests_theta_long_equations {
     use crate::model::utils::create_sample_option;
     use crate::pos;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     #[test]
     fn test_theta_call_option() {
@@ -962,10 +1322,10 @@ mod tests_theta_long_equations {
         );
 
         // Expected theta value for a call option (precomputed or from known source)
-        let expected_theta = -20.487619647724042;
+        let expected_theta = -20.487619692230428;
 
         // Compute the theta value using the function
-        let calculated_theta = theta(&option);
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
@@ -984,10 +1344,10 @@ mod tests_theta_long_equations {
         );
 
         // Expected theta value for a put option (precomputed or from known source)
-        let expected_theta = -20.395533126950692;
+        let expected_theta = -20.395533137333533;
 
         // Compute the theta value using the function
-        let calculated_theta = theta(&option);
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
@@ -1010,7 +1370,7 @@ mod tests_theta_long_equations {
         let expected_theta = -88.75028112939226;
 
         // Compute the theta value using the function
-        let calculated_theta = theta(&option);
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
@@ -1033,7 +1393,7 @@ mod tests_theta_long_equations {
         let expected_theta = -5.024569007193639;
 
         // Compute the theta value using the function
-        let calculated_theta = theta(&option);
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
@@ -1048,6 +1408,7 @@ mod tests_theta_short_equations {
     use crate::model::utils::create_sample_option;
     use crate::pos;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     #[test]
     fn test_theta_short_call_option() {
@@ -1062,10 +1423,10 @@ mod tests_theta_short_equations {
         );
 
         // Expected theta value for a short call option (precomputed or from known source)
-        let expected_theta = -20.487619647724042;
+        let expected_theta = -20.487619692230428;
 
         // Compute the theta value using the function
-        let calculated_theta = theta(&option);
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
@@ -1084,10 +1445,10 @@ mod tests_theta_short_equations {
         );
 
         // Expected theta value for a short put option (precomputed or from known source)
-        let expected_theta = -20.395533126950692;
+        let expected_theta = -20.395533137333533;
 
         // Compute the theta value using the function
-        let calculated_theta = theta(&option);
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
@@ -1110,7 +1471,7 @@ mod tests_theta_short_equations {
         let expected_theta = -88.75028112939226;
 
         // Compute the theta value using the function
-        let calculated_theta = theta(&option);
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
@@ -1133,7 +1494,7 @@ mod tests_theta_short_equations {
         let expected_theta = -5.024569007193639;
 
         // Compute the theta value using the function
-        let calculated_theta = theta(&option);
+        let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);

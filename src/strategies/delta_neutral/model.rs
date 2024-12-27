@@ -209,10 +209,13 @@ pub trait DeltaNeutrality: Greeks {
 mod tests {
     use super::*;
     use crate::greeks::equations::Greek;
+    use num_traits::ToPrimitive;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
 
     // Mock struct to implement required traits for testing
     struct MockStrategy {
-        delta: f64,
+        delta: Decimal,
         underlying_price: PositiveF64,
         individual_deltas: Vec<f64>,
     }
@@ -222,11 +225,11 @@ mod tests {
         fn greeks(&self) -> Greek {
             Greek {
                 delta: self.delta,
-                gamma: 0.0,
-                theta: 0.0,
-                vega: 0.0,
-                rho: 0.0,
-                rho_d: 0.0,
+                gamma: Decimal::ZERO,
+                theta: Decimal::ZERO,
+                vega: Decimal::ZERO,
+                rho: Decimal::ZERO,
+                rho_d: Decimal::ZERO,
             }
         }
     }
@@ -235,9 +238,9 @@ mod tests {
     impl DeltaNeutrality for MockStrategy {
         fn calculate_net_delta(&self) -> DeltaInfo {
             DeltaInfo {
-                net_delta: self.delta,
+                net_delta: self.delta.to_f64().unwrap(),
                 individual_deltas: self.individual_deltas.clone(),
-                is_neutral: self.delta.abs() <= 0.01,
+                is_neutral: self.delta.abs() <= dec!(0.01),
                 neutrality_threshold: 0.01,
                 underlying_price: self.underlying_price,
             }
@@ -249,17 +252,17 @@ mod tests {
     }
 
     // Helper function to create a mock strategy
-    fn create_mock_strategy(delta: f64, price: f64) -> MockStrategy {
+    fn create_mock_strategy(delta: Decimal, price: f64) -> MockStrategy {
         MockStrategy {
             delta,
             underlying_price: pos!(price),
-            individual_deltas: vec![delta],
+            individual_deltas: vec![delta.to_f64().unwrap()],
         }
     }
 
     #[test]
     fn test_calculate_net_delta() {
-        let strategy = create_mock_strategy(0.5, 100.0);
+        let strategy = create_mock_strategy(dec!(0.5), 100.0);
         let info = strategy.calculate_net_delta();
 
         assert_eq!(info.net_delta, 0.5);
@@ -270,8 +273,8 @@ mod tests {
 
     #[test]
     fn test_is_delta_neutral() {
-        let neutral_strategy = create_mock_strategy(0.005, 100.0);
-        let non_neutral_strategy = create_mock_strategy(0.5, 100.0);
+        let neutral_strategy = create_mock_strategy(dec!(0.005), 100.0);
+        let non_neutral_strategy = create_mock_strategy(dec!(0.5), 100.0);
 
         assert!(neutral_strategy.is_delta_neutral());
         assert!(!non_neutral_strategy.is_delta_neutral());
@@ -279,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_suggest_delta_adjustments_neutral() {
-        let strategy = create_mock_strategy(0.005, 100.0);
+        let strategy = create_mock_strategy(dec!(0.005), 100.0);
         let adjustments = strategy.suggest_delta_adjustments();
 
         assert_eq!(adjustments, vec![DeltaAdjustment::NoAdjustmentNeeded]);
@@ -287,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_suggest_delta_adjustments_positive() {
-        let strategy = create_mock_strategy(0.5, 100.0);
+        let strategy = create_mock_strategy(dec!(0.5), 100.0);
         let adjustments = strategy.suggest_delta_adjustments();
 
         assert_eq!(
@@ -310,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_suggest_delta_adjustments_negative() {
-        let strategy = create_mock_strategy(-0.5, 100.0);
+        let strategy = create_mock_strategy(dec!(-0.5), 100.0);
         let adjustments = strategy.suggest_delta_adjustments();
 
         assert_eq!(
@@ -333,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_delta_info_display() {
-        let strategy = create_mock_strategy(0.5, 100.0);
+        let strategy = create_mock_strategy(dec!(0.5), 100.0);
         let info = strategy.calculate_net_delta();
         let display_string = format!("{}", info);
 
@@ -345,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_generate_delta_reducing_adjustments() {
-        let strategy = create_mock_strategy(0.5, 100.0);
+        let strategy = create_mock_strategy(dec!(0.5), 100.0);
         let adjustments = strategy.generate_delta_reducing_adjustments();
 
         assert_eq!(
@@ -368,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_generate_delta_increasing_adjustments() {
-        let strategy = create_mock_strategy(-0.5, 100.0);
+        let strategy = create_mock_strategy(dec!(-0.5), 100.0);
         let adjustments = strategy.generate_delta_increasing_adjustments();
 
         assert_eq!(
