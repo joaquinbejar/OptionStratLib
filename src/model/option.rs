@@ -1,8 +1,10 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::error::decimal::DecimalError;
+use crate::f2du;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::decimal::decimal_to_f64;
+use crate::model::decimal::f64_to_decimal;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::binomial_model::{
@@ -92,38 +94,39 @@ impl Options {
         matches!(self.side, Side::Short)
     }
 
-    pub fn calculate_price_binomial(&self, no_steps: usize) -> f64 {
+    pub fn calculate_price_binomial(&self, no_steps: usize) -> Decimal {
         let expiry = self.time_to_expiration();
         price_binomial(BinomialPricingParams {
             asset: self.underlying_price,
-            volatility: self.implied_volatility,
-            int_rate: self.risk_free_rate,
+            volatility: f2du!(self.implied_volatility).unwrap(),
+            int_rate: f2du!(self.risk_free_rate).unwrap(),
             strike: self.strike_price,
-            expiry,
+            expiry: f2du!(expiry).unwrap(),
             no_steps,
             option_type: &self.option_type,
             option_style: &self.option_style,
             side: &self.side,
         })
+        .unwrap()
     }
 
     pub fn calculate_price_binomial_tree(
         &self,
         no_steps: usize,
-    ) -> (f64, Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    ) -> (Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>) {
         let expiry = self.time_to_expiration();
         let params = BinomialPricingParams {
             asset: self.underlying_price,
-            volatility: self.implied_volatility,
-            int_rate: self.risk_free_rate,
+            volatility: f2du!(self.implied_volatility).unwrap(),
+            int_rate: f2du!(self.risk_free_rate).unwrap(),
             strike: self.strike_price,
-            expiry,
+            expiry: f2du!(expiry).unwrap(),
             no_steps,
             option_type: &self.option_type,
             option_style: &self.option_style,
             side: &self.side,
         };
-        let (asset_tree, option_tree) = generate_binomial_tree(&params);
+        let (asset_tree, option_tree) = generate_binomial_tree(&params).unwrap();
         let price = match self.side {
             Side::Long => option_tree[0][0],
             Side::Short => -option_tree[0][0],
@@ -399,14 +402,14 @@ mod tests_options {
     fn test_calculate_price_binomial() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let price = option.calculate_price_binomial(100);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
     }
 
     #[test]
     fn test_calculate_price_binomial_tree() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
     }
@@ -415,7 +418,7 @@ mod tests_options {
     fn test_calculate_price_binomial_tree_short() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
     }
