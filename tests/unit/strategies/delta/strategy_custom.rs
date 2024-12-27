@@ -1,12 +1,12 @@
-use approx::assert_relative_eq;
 use chrono::Utc;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
-use optionstratlib::pos;
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::{assert_decimal_eq, pos};
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
@@ -117,13 +117,14 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     );
 
     let greeks = strategy.greeks();
+    let epsilon = dec!(0.001);
 
-    assert_relative_eq!(greeks.delta, -1.975, epsilon = 0.001);
-    assert_relative_eq!(greeks.gamma, 0.0093, epsilon = 0.001);
-    assert_relative_eq!(greeks.theta, -13818.8978, epsilon = 0.001);
-    assert_relative_eq!(greeks.vega, 1642.8158, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho, 59.0889, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho_d, -75.9988, epsilon = 0.001);
+    assert_decimal_eq!(greeks.delta, dec!(-1.9757), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(0.0093), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-13818.8979), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(1642.8158), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(59.0889), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-75.9988), epsilon);
 
     Ok(())
 }

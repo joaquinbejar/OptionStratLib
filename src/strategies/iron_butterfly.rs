@@ -22,7 +22,6 @@ use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
-use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -30,6 +29,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::{d2fu, pos};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -627,15 +627,15 @@ impl DeltaNeutrality for IronButterfly {
         let short_call_delta = self.short_call.option.delta();
         let short_put_delta = self.short_put.option.delta();
         let threshold = DELTA_THRESHOLD;
-        let delta = long_call_delta + long_put_delta + short_call_delta + short_put_delta;
+        let l_c_delta = d2fu!(long_call_delta.unwrap()).unwrap();
+        let l_p_delta = d2fu!(long_put_delta.unwrap()).unwrap();
+        let s_c_delta = d2fu!(short_call_delta.unwrap()).unwrap();
+        let s_p_delta = d2fu!(short_put_delta.unwrap()).unwrap();
+
+        let delta = l_c_delta + l_p_delta + s_c_delta + s_p_delta;
         DeltaInfo {
             net_delta: delta,
-            individual_deltas: vec![
-                long_call_delta,
-                long_put_delta,
-                short_call_delta,
-                short_put_delta,
-            ],
+            individual_deltas: vec![l_c_delta, l_p_delta, s_c_delta, s_p_delta],
             is_neutral: (delta).abs() < threshold,
             underlying_price: self.long_call.option.underlying_price,
             neutrality_threshold: threshold,
@@ -648,15 +648,16 @@ impl DeltaNeutrality for IronButterfly {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let l_p_delta = d2fu!(self.long_put.option.delta().unwrap()).unwrap();
+        let s_c_delta = d2fu!(self.short_call.option.delta().unwrap()).unwrap();
         vec![
             DeltaAdjustment::BuyOptions {
-                quantity: pos!((net_delta.abs() / self.long_put.option.delta()).abs())
-                    * self.long_put.option.quantity,
+                quantity: pos!((net_delta.abs() / l_p_delta).abs()) * self.long_put.option.quantity,
                 strike: self.long_put.option.strike_price,
                 option_type: OptionStyle::Put,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / self.short_call.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / s_c_delta).abs())
                     * self.short_call.option.quantity,
                 strike: self.short_call.option.strike_price,
                 option_type: OptionStyle::Call,
@@ -666,16 +667,18 @@ impl DeltaNeutrality for IronButterfly {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let s_p_delta = d2fu!(self.short_put.option.delta().unwrap()).unwrap();
+        let l_c_delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
 
         vec![
             DeltaAdjustment::BuyOptions {
-                quantity: pos!((net_delta.abs() / self.long_call.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / l_c_delta).abs())
                     * self.long_call.option.quantity,
                 strike: self.long_call.option.strike_price,
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / self.short_put.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / s_p_delta).abs())
                     * self.short_put.option.quantity,
                 strike: self.short_put.option.strike_price,
                 option_type: OptionStyle::Put,
@@ -1757,10 +1760,10 @@ mod tests_iron_butterfly_graph {
 #[cfg(test)]
 mod tests_iron_condor_delta {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: PositiveF64) -> IronButterfly {
@@ -1814,9 +1817,10 @@ mod tests_iron_condor_delta {
 
         let mut option = strategy.long_call.option.clone();
         option.quantity = pos!(0.06566830350547599);
-        assert_relative_eq!(option.delta(), 0.053677, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.053677, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1852,9 +1856,10 @@ mod tests_iron_condor_delta {
 
         let mut option = strategy.long_put.option.clone();
         option.quantity = pos!(1.068371502787395);
-        assert_relative_eq!(option.delta(), -0.485367, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.485367, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1878,10 +1883,10 @@ mod tests_iron_condor_delta {
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: PositiveF64) -> IronButterfly {
@@ -1935,9 +1940,10 @@ mod tests_iron_condor_delta_size {
 
         let mut option = strategy.long_call.option.clone();
         option.quantity = pos!(0.13133660701095198);
-        assert_relative_eq!(option.delta(), 0.10735, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.10735, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1973,9 +1979,10 @@ mod tests_iron_condor_delta_size {
 
         let mut option = strategy.short_call.option.clone();
         option.quantity = pos!(1.2193578542229133);
-        assert_relative_eq!(option.delta(), -0.5645, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.5645, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );

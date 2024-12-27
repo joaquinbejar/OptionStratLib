@@ -30,7 +30,6 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
-use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -40,6 +39,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::approx_equal;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::{d2fu, pos};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -686,10 +686,14 @@ impl DeltaNeutrality for LongButterflySpread {
         let long_call_high_delta = self.long_call_high.option.delta();
         let short_calls_delta = self.short_calls.option.delta();
         let threshold = DELTA_THRESHOLD;
-        let delta = long_call_low_delta + long_call_high_delta + short_calls_delta;
+        let l_cl_delta = d2fu!(long_call_low_delta.unwrap()).unwrap();
+        let l_ch_delta = d2fu!(long_call_high_delta.unwrap()).unwrap();
+        let s_c_delta = d2fu!(short_calls_delta.unwrap()).unwrap();
+
+        let delta = l_cl_delta + l_ch_delta + s_c_delta;
         DeltaInfo {
             net_delta: delta,
-            individual_deltas: vec![long_call_low_delta, long_call_high_delta, short_calls_delta],
+            individual_deltas: vec![l_cl_delta, l_ch_delta, s_c_delta],
             is_neutral: (delta).abs() < threshold,
             underlying_price: self.long_call_low.option.underlying_price,
             neutrality_threshold: threshold,
@@ -702,9 +706,10 @@ impl DeltaNeutrality for LongButterflySpread {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.short_calls.option.delta().unwrap()).unwrap();
+
         vec![DeltaAdjustment::SellOptions {
-            quantity: pos!((net_delta.abs() / self.short_calls.option.delta()).abs())
-                * self.short_calls.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.short_calls.option.quantity,
             strike: self.short_calls.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -712,16 +717,18 @@ impl DeltaNeutrality for LongButterflySpread {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta_low = d2fu!(self.long_call_low.option.delta().unwrap()).unwrap();
+        let delta_high = d2fu!(self.long_call_high.option.delta().unwrap()).unwrap();
 
         vec![
             DeltaAdjustment::BuyOptions {
-                quantity: pos!((net_delta.abs() / self.long_call_low.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / delta_low).abs())
                     * self.long_call_low.option.quantity,
                 strike: self.long_call_low.option.strike_price,
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::BuyOptions {
-                quantity: pos!((net_delta.abs() / self.long_call_high.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / delta_high).abs())
                     * self.long_call_high.option.quantity,
                 strike: self.long_call_high.option.strike_price,
                 option_type: OptionStyle::Call,
@@ -1389,14 +1396,15 @@ impl DeltaNeutrality for ShortButterflySpread {
         let short_call_high_delta = self.short_call_high.option.delta();
         let long_calls_delta = self.long_calls.option.delta();
         let threshold = DELTA_THRESHOLD;
-        let delta = short_call_low_delta + short_call_high_delta + long_calls_delta;
+        let s_cl_delta = d2fu!(short_call_low_delta.unwrap()).unwrap();
+        let s_ch_delta = d2fu!(short_call_high_delta.unwrap()).unwrap();
+        let l_c_delta = d2fu!(long_calls_delta.unwrap()).unwrap();
+
+        let delta = s_cl_delta + s_ch_delta + l_c_delta;
+
         DeltaInfo {
             net_delta: delta,
-            individual_deltas: vec![
-                short_call_low_delta,
-                short_call_high_delta,
-                long_calls_delta,
-            ],
+            individual_deltas: vec![s_cl_delta, s_ch_delta, l_c_delta],
             is_neutral: (delta).abs() < threshold,
             underlying_price: self.short_call_low.option.underlying_price,
             neutrality_threshold: threshold,
@@ -1409,15 +1417,18 @@ impl DeltaNeutrality for ShortButterflySpread {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta_low = d2fu!(self.short_call_low.option.delta().unwrap()).unwrap();
+        let delta_high = d2fu!(self.short_call_high.option.delta().unwrap()).unwrap();
+
         vec![
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / self.short_call_low.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / delta_low).abs())
                     * self.short_call_low.option.quantity,
                 strike: self.short_call_low.option.strike_price,
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / self.short_call_high.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / delta_high).abs())
                     * self.short_call_high.option.quantity,
                 strike: self.short_call_high.option.strike_price,
                 option_type: OptionStyle::Call,
@@ -1427,9 +1438,10 @@ impl DeltaNeutrality for ShortButterflySpread {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.long_calls.option.delta().unwrap()).unwrap();
+
         vec![DeltaAdjustment::BuyOptions {
-            quantity: pos!((net_delta.abs() / self.long_calls.option.delta()).abs())
-                * self.long_calls.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.long_calls.option.quantity,
             strike: self.long_calls.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -3200,10 +3212,10 @@ mod tests_butterfly_probability {
 #[cfg(test)]
 mod tests_long_butterfly_delta {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
     use crate::strategies::butterfly_spread::LongButterflySpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: PositiveF64) -> LongButterflySpread {
@@ -3255,9 +3267,10 @@ mod tests_long_butterfly_delta {
 
         let mut option = strategy.long_call_low.option.clone();
         option.quantity = pos!(0.6043915147191112);
-        assert_relative_eq!(option.delta(), 0.597061, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.597061, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -3285,9 +3298,10 @@ mod tests_long_butterfly_delta {
 
         let mut option = strategy.short_calls.option.clone();
         option.quantity = pos!(4.304155794779247);
-        assert_relative_eq!(option.delta(), -0.351937, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.351937, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -3311,10 +3325,10 @@ mod tests_long_butterfly_delta {
 #[cfg(test)]
 mod tests_long_butterfly_delta_size {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
     use crate::strategies::butterfly_spread::LongButterflySpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: PositiveF64) -> LongButterflySpread {
@@ -3366,9 +3380,10 @@ mod tests_long_butterfly_delta_size {
 
         let mut option = strategy.long_call_low.option.clone();
         option.quantity = pos!(1.8131745441573326);
-        assert_relative_eq!(option.delta(), 1.7911846707277679, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 1.7911846707277679, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -3396,9 +3411,10 @@ mod tests_long_butterfly_delta_size {
 
         let mut option = strategy.short_calls.option.clone();
         option.quantity = pos!(12.912467384337745);
-        assert_relative_eq!(option.delta(), -1.05581, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -1.05581, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -3422,10 +3438,10 @@ mod tests_long_butterfly_delta_size {
 #[cfg(test)]
 mod tests_short_butterfly_delta {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
     use crate::strategies::butterfly_spread::ShortButterflySpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: PositiveF64) -> ShortButterflySpread {
@@ -3469,9 +3485,10 @@ mod tests_short_butterfly_delta {
 
         let mut option = strategy.long_calls.option.clone();
         option.quantity = pos!(0.05072646985065365);
-        assert_relative_eq!(option.delta(), 0.025991, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.025991, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -3507,9 +3524,10 @@ mod tests_short_butterfly_delta {
 
         let mut option = strategy.short_call_low.option.clone();
         option.quantity = pos!(0.1622425119653983);
-        assert_relative_eq!(option.delta(), -0.16077, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.16077, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -3533,10 +3551,10 @@ mod tests_short_butterfly_delta {
 #[cfg(test)]
 mod tests_short_butterfly_delta_size {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
     use crate::strategies::butterfly_spread::ShortButterflySpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: PositiveF64) -> ShortButterflySpread {
@@ -3580,9 +3598,10 @@ mod tests_short_butterfly_delta_size {
 
         let mut option = strategy.long_calls.option.clone();
         option.quantity = pos!(0.1140943083196651);
-        assert_relative_eq!(option.delta(), 0.059396, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.059396, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -3618,9 +3637,10 @@ mod tests_short_butterfly_delta_size {
 
         let mut option = strategy.short_call_low.option.clone();
         option.quantity = pos!(0.4828726371186377);
-        assert_relative_eq!(option.delta(), -0.478744, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.478744, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );

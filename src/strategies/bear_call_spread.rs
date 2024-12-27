@@ -37,8 +37,6 @@ use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::model::decimal::decimal_to_f64;
-use crate::model::decimal::f64_to_decimal;
 use crate::model::option::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
@@ -53,7 +51,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2d, f2du, pos};
+use crate::{d2fu, f2du, pos};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -555,11 +553,9 @@ impl DeltaNeutrality for BearCallSpread {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.short_call.option.delta().unwrap()).unwrap();
         vec![DeltaAdjustment::SellOptions {
-            quantity: pos!((net_delta.abs()
-                / d2fu!(self.short_call.option.delta().unwrap()).unwrap())
-            .abs())
-                * self.short_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -567,11 +563,9 @@ impl DeltaNeutrality for BearCallSpread {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
         vec![DeltaAdjustment::BuyOptions {
-            quantity: pos!((net_delta.abs()
-                / d2fu!(self.long_call.option.delta().unwrap()).unwrap())
-            .abs())
-                * self.long_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -1852,7 +1846,6 @@ mod tests_bear_call_spread_probability {
 #[cfg(test)]
 mod tests_delta {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::strategies::bear_call_spread::decimal_to_f64;
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -1894,14 +1887,14 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.36604292169601743),
+                quantity: pos!(0.3660429216960173),
                 strike: pos!(5840.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(0.3660429216960246);
+        option.quantity = pos!(0.3660429216960173);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.0859127, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1925,14 +1918,14 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.3029931694406449),
+                quantity: pos!(0.302993169440645),
                 strike: pos!(5820.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.3029931694406449);
+        option.quantity = pos!(0.302993169440645);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.09714, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1960,12 +1953,11 @@ mod tests_delta {
 #[cfg(test)]
 mod tests_delta_size {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::{d2fu, pos};
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
-    use crate::strategies::bear_call_spread::decimal_to_f64;
 
     fn get_strategy(long_strike: PositiveF64, short_strike: PositiveF64) -> BearCallSpread {
         let underlying_price = pos!(5781.88);
@@ -2012,7 +2004,8 @@ mod tests_delta_size {
         option.quantity = pos!(1.0981287650880518);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.257738, epsilon = 0.0001);
-        assert_relative_eq!(delta + strategy.calculate_net_delta().net_delta,
+        assert_relative_eq!(
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2032,17 +2025,18 @@ mod tests_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.9089795083219352),
+                quantity: pos!(0.9089795083219351),
                 strike: pos!(5820.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.9089795083219352);
+        option.quantity = pos!(0.9089795083219351);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.29143, epsilon = 0.0001);
-        assert_relative_eq!(delta + strategy.calculate_net_delta().net_delta,
+        assert_relative_eq!(
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );

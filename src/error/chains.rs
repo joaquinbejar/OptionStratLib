@@ -68,8 +68,10 @@ pub enum ChainError {
     FileError(FileErrorKind),
     /// Errors related to strategies
     StrategyError(StrategyErrorKind),
-    
-    DynError { message: String },
+
+    DynError {
+        message: String,
+    },
 }
 
 /// Specific errors for option data
@@ -319,7 +321,9 @@ impl From<String> for ChainError {
 
 impl From<Box<dyn Error>> for ChainError {
     fn from(error: Box<dyn Error>) -> Self {
-        ChainError::DynError{ message: error.to_string() }
+        ChainError::DynError {
+            message: error.to_string(),
+        }
     }
 }
 

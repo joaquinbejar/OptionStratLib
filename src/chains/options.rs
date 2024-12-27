@@ -3,9 +3,9 @@
    Email: jb@taunais.com
    Date: 12/12/24
 ******************************************************************************/
-use std::error::Error;
-use rust_decimal::Decimal;
 use crate::model::option::Options;
+use rust_decimal::Decimal;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct OptionsInStrike {
@@ -30,7 +30,7 @@ impl OptionsInStrike {
         }
     }
 
-    pub fn deltas(&self) -> Result<DeltasInStrike, Box<dyn  Error>> {
+    pub fn deltas(&self) -> Result<DeltasInStrike, Box<dyn Error>> {
         Ok(DeltasInStrike {
             long_call: self.long_call.delta()?,
             short_call: self.short_call.delta()?,

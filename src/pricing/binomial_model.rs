@@ -1,4 +1,3 @@
-use crate::model::decimal::{decimal_to_f64, decimal_to_positive_f64, f64_to_decimal};
 use crate::model::types::{OptionStyle, OptionType, PositiveF64, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::{
@@ -9,6 +8,8 @@ use crate::pricing::utils::{
 use crate::{d2f, d2p, f2d};
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
+
+type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), Box<dyn Error>>;
 
 #[derive(Clone)]
 pub struct BinomialPricingParams<'a> {
@@ -159,9 +160,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn 
 ///         };
 /// let (asset_tree, option_tree) = generate_binomial_tree(&params).unwrap();
 /// ```
-pub fn generate_binomial_tree(
-    params: &BinomialPricingParams,
-) -> Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), Box<dyn Error>> {
+pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeResult {
     let mut info = PayoffInfo {
         spot: params.asset,
         strike: params.strike,
@@ -229,7 +228,6 @@ pub fn generate_binomial_tree(
 #[cfg(test)]
 mod tests_price_binomial {
     use super::*;
-    use crate::model::decimal::positive_f64_to_decimal;
     use crate::model::types::{OptionType, PZERO};
     use crate::{assert_decimal_eq, p2du, pos};
     use rust_decimal_macros::dec;
@@ -398,7 +396,6 @@ mod tests_price_binomial {
 #[cfg(test)]
 mod tests_generate_binomial_tree {
     use super::*;
-    use crate::model::decimal::positive_f64_to_decimal;
     use crate::model::types::OptionType;
     use crate::{assert_decimal_eq, p2du, pos};
     use rust_decimal_macros::dec;

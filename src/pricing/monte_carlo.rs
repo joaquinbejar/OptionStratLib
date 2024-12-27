@@ -1,5 +1,4 @@
 use crate::constants::ZERO;
-use crate::model::decimal::{decimal_to_f64, f64_to_decimal};
 use crate::model::option::Options;
 use crate::pricing::utils::wiener_increment;
 use crate::{d2f, f2d};

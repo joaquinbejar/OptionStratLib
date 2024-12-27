@@ -2,11 +2,12 @@ use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
-use optionstratlib::pos;
 use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::{assert_decimal_eq, pos};
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
@@ -34,13 +35,14 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     );
 
     let greeks = strategy.greeks();
+    let epsilon = dec!(0.001);
 
-    assert_relative_eq!(greeks.delta, -0.0593, epsilon = 0.001);
-    assert_relative_eq!(greeks.gamma, 0.0503, epsilon = 0.001);
-    assert_relative_eq!(greeks.theta, -29062.9106, epsilon = 0.001);
-    assert_relative_eq!(greeks.vega, 2699.1274, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho, 197.1329, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho_d, -199.7983, epsilon = 0.001);
+    assert_decimal_eq!(greeks.delta, dec!(-0.0593), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(0.0503), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-29062.9106), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(2699.1274), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(197.1329), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-199.7983), epsilon);
 
     assert_relative_eq!(
         strategy.calculate_net_delta().net_delta,

@@ -2213,7 +2213,6 @@ mod tests_option_data_get_options_in_strike {
     use crate::assert_decimal_eq;
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
-    use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -2362,19 +2361,35 @@ mod tests_option_data_get_options_in_strike {
 
         let epsilon = dec!(1e-8);
 
-        assert_decimal_eq!(options.long_call.delta().unwrap(), dec!(0.844825189), epsilon);
-        assert_decimal_eq!(options.short_call.delta().unwrap(), dec!(-0.844825189), epsilon);
-        assert_decimal_eq!(options.long_put.delta().unwrap(), dec!(-0.151483012), epsilon);
-        assert_decimal_eq!(options.short_put.delta().unwrap(), dec!(0.151483012), epsilon);
+        assert_decimal_eq!(
+            options.long_call.delta().unwrap(),
+            dec!(0.844825189),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.short_call.delta().unwrap(),
+            dec!(-0.844825189),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.long_put.delta().unwrap(),
+            dec!(-0.151483012),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.short_put.delta().unwrap(),
+            dec!(0.151483012),
+            epsilon
+        );
     }
 }
 
 #[cfg(test)]
 mod tests_filter_options_in_strike {
-    use rust_decimal::Decimal;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
+    use rust_decimal::Decimal;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);

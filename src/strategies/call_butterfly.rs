@@ -24,7 +24,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, spos};
+use crate::{d2fu, pos, spos};
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
@@ -588,10 +588,14 @@ impl DeltaNeutrality for CallButterfly {
         let long_call_otm_delta = self.short_call_high.option.delta();
         let short_call_delta = self.long_call.option.delta();
         let threshold = DELTA_THRESHOLD;
-        let delta = long_call_itm_delta + long_call_otm_delta + short_call_delta;
+        let l_ci_delta = d2fu!(long_call_itm_delta.unwrap()).unwrap();
+        let l_co_delta = d2fu!(long_call_otm_delta.unwrap()).unwrap();
+        let s_c_delta = d2fu!(short_call_delta.unwrap()).unwrap();
+
+        let delta = l_ci_delta + l_co_delta + s_c_delta;
         DeltaInfo {
             net_delta: delta,
-            individual_deltas: vec![long_call_itm_delta, long_call_otm_delta, short_call_delta],
+            individual_deltas: vec![l_ci_delta, l_co_delta, s_c_delta],
             is_neutral: (delta).abs() < threshold,
             underlying_price: self.short_call_low.option.underlying_price,
             neutrality_threshold: threshold,
@@ -604,15 +608,18 @@ impl DeltaNeutrality for CallButterfly {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta_low = d2fu!(self.short_call_low.option.delta().unwrap()).unwrap();
+        let delta_high = d2fu!(self.short_call_high.option.delta().unwrap()).unwrap();
+
         vec![
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / self.short_call_low.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / delta_low).abs())
                     * self.short_call_low.option.quantity,
                 strike: self.short_call_low.option.strike_price,
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / self.short_call_high.option.delta()).abs())
+                quantity: pos!((net_delta.abs() / delta_high).abs())
                     * self.short_call_high.option.quantity,
                 strike: self.short_call_high.option.strike_price,
                 option_type: OptionStyle::Call,
@@ -622,10 +629,10 @@ impl DeltaNeutrality for CallButterfly {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
 
         vec![DeltaAdjustment::BuyOptions {
-            quantity: pos!((net_delta.abs() / self.long_call.option.delta()).abs())
-                * self.long_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -965,10 +972,10 @@ mod tests_call_butterfly_graph {
 #[cfg(test)]
 mod tests_iron_condor_delta {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: PositiveF64) -> CallButterfly {
@@ -1017,9 +1024,10 @@ mod tests_iron_condor_delta {
 
         let mut option = strategy.long_call.option.clone();
         option.quantity = pos!(0.7040502965074396);
-        assert_relative_eq!(option.delta(), 0.687410, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.687410, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1055,9 +1063,10 @@ mod tests_iron_condor_delta {
 
         let mut option = strategy.short_call_low.option.clone();
         option.quantity = pos!(0.28356181440213835);
-        assert_relative_eq!(option.delta(), -0.055904, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.055904, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1081,10 +1090,10 @@ mod tests_iron_condor_delta {
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
     use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: PositiveF64) -> CallButterfly {
@@ -1133,9 +1142,10 @@ mod tests_iron_condor_delta_size {
 
         let mut option = strategy.long_call.option.clone();
         option.quantity = pos!(0.5948524360242063);
-        assert_relative_eq!(option.delta(), 0.56993, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.56993, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1172,9 +1182,10 @@ mod tests_iron_condor_delta_size {
 
         let mut option = strategy.short_call_low.option.clone();
         option.quantity = pos!(0.28356181440213835);
-        assert_relative_eq!(option.delta(), -0.05590, epsilon = 0.0001);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.05590, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );

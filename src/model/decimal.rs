@@ -63,7 +63,7 @@ impl Mul<PositiveF64> for Decimal {
     }
 }
 
-pub(crate) fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
+pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     if value == f64::NEG_INFINITY {
         return Ok(Decimal::MIN);
     }
@@ -81,7 +81,7 @@ pub(crate) fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     }
 }
 
-pub(crate) fn positive_f64_to_decimal(value: PositiveF64) -> Result<Decimal, DecimalError> {
+pub fn positive_f64_to_decimal(value: PositiveF64) -> Result<Decimal, DecimalError> {
     let result = Decimal::from_f64(value.value());
     match result {
         Some(decimal) => Ok(decimal),
@@ -93,7 +93,7 @@ pub(crate) fn positive_f64_to_decimal(value: PositiveF64) -> Result<Decimal, Dec
     }
 }
 
-pub(crate) fn decimal_to_positive_f64(value: Decimal) -> Result<PositiveF64, Box<dyn Error>> {
+pub fn decimal_to_positive_f64(value: Decimal) -> Result<PositiveF64, Box<dyn Error>> {
     let result = value.to_f64();
     match result {
         Some(decimal) => Ok(pos!(decimal)),
@@ -105,7 +105,7 @@ pub(crate) fn decimal_to_positive_f64(value: Decimal) -> Result<PositiveF64, Box
     }
 }
 
-pub(crate) fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
+pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
         from_type: format!("Decimal: {}", value),
         to_type: "f64".to_string(),
@@ -116,49 +116,49 @@ pub(crate) fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 #[macro_export]
 macro_rules! d2fu {
     ($val:expr) => {
-        decimal_to_f64($val)
+        $crate::model::decimal::decimal_to_f64($val)
     };
 }
 
 #[macro_export]
 macro_rules! d2p {
     ($val:expr) => {
-        decimal_to_positive_f64($val)
+        $crate::model::decimal::decimal_to_positive_f64($val)
     };
 }
 
 #[macro_export]
 macro_rules! p2du {
     ($val:expr) => {
-        positive_f64_to_decimal($val)
+        $crate::model::decimal::positive_f64_to_decimal($val)
     };
 }
 
 #[macro_export]
 macro_rules! p2d {
     ($val:expr) => {
-        positive_f64_to_decimal($val)?
+        $crate::model::decimal::positive_f64_to_decimal($val)?
     };
 }
 
 #[macro_export]
 macro_rules! d2f {
     ($val:expr) => {
-        decimal_to_f64($val)?
+        $crate::model::decimal::decimal_to_f64($val)?
     };
 }
 
 #[macro_export]
 macro_rules! f2du {
     ($val:expr) => {
-        f64_to_decimal($val)
+        $crate::model::decimal::f64_to_decimal($val)
     };
 }
 
 #[macro_export]
 macro_rules! f2d {
     ($val:expr) => {
-        f64_to_decimal($val)?
+        $crate::model::decimal::f64_to_decimal($val)?
     };
 }
 
