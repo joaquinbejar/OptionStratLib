@@ -554,6 +554,7 @@
 //! use optionstratlib::pos;
 //! use optionstratlib::utils::setup_logger;
 //! use optionstratlib::visualization::utils::Graph;
+//! use optionstratlib::visualization::utils::GraphBackend;
 //! use std::error::Error;
 //! use tracing::info;
 //!
@@ -588,9 +589,11 @@
 //!     // Generate the intrinsic value graph
 //!     option.graph(
 //!         &price_range,
-//!         "Draws/Options/intrinsic_value_chart.png",
+//!         GraphBackend::Bitmap {
+//!             file_path: "Draws/Options/intrinsic_value_chart.png",
+//!             size: (1400, 933),
+//!         },
 //!         25,
-//!         (1400, 933),
 //!     )?;
 //!
 //!     Ok(())
@@ -605,6 +608,7 @@
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 //! use optionstratlib::utils::setup_logger;
 //! use optionstratlib::visualization::utils::Graph;
+//! use optionstratlib::visualization::utils::GraphBackend;
 //! use std::error::Error;
 //! use tracing::info;
 //!
@@ -649,9 +653,11 @@
 //!     // Generate the profit/loss graph
 //!     strategy.graph(
 //!         &price_range,
-//!         "Draws/Strategy/bull_call_spread_profit_loss_chart.png",
+//!         GraphBackend::Bitmap {
+//!             file_path: "Draws/Strategy/bull_call_spread_profit_loss_chart.png",
+//!             size: (1400, 933),
+//!         },
 //!         20,
-//!         (1400, 933),
 //!     )?;
 //!
 //!     Ok(())
