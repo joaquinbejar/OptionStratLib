@@ -818,7 +818,14 @@ mod tests_custom_strategy {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_new_custom_strategy() {
         let strategy = create_test_strategy();
         assert_eq!(strategy.name, "Custom Strategy");
@@ -831,6 +838,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_break_even_points_single_call() {
         setup_logger();
         let strategy = create_test_strategy();
@@ -843,6 +851,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_break_even_points_single_put() {
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
@@ -890,6 +899,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_break_even_points_straddle() {
         setup_logger();
 
@@ -971,6 +981,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_break_even_points_no_get_break_even_points() {
         let mut strategy = create_test_strategy();
         let option = create_sample_option(
@@ -1100,7 +1111,14 @@ mod tests_max_profit {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_max_profit_single_long_call() {
         let mut strategy = create_test_strategy();
         let max_profit = strategy.max_profit_iter().unwrap();
@@ -1108,6 +1126,7 @@ mod tests_max_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_max_profit_multi_leg_strategy() {
         setup_logger();
 
@@ -1190,7 +1209,14 @@ mod tests_max_loss {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_max_loss_single_long_call() {
         let mut strategy = create_test_strategy();
         let max_loss = strategy.max_loss_iter().unwrap();
@@ -1198,6 +1224,7 @@ mod tests_max_loss {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_max_loss_multi_leg_strategy() {
         setup_logger();
 
@@ -1279,6 +1306,12 @@ mod tests_total_cost {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+    
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+    
     fn create_test_position(side: Side, premium: Positive, fees: Positive) -> Position {
         Position::new(
             Options::new(
@@ -1303,6 +1336,7 @@ mod tests_total_cost {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_total_cost_only_long_positions() {
         let positions = vec![
             create_test_position(Side::Long, pos!(5.0), pos!(0.5)), // net cost = 6.0 (premium + fees)
@@ -1324,6 +1358,7 @@ mod tests_total_cost {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_total_cost_only_short_positions() {
         setup_logger();
         let position_1 = create_test_position(Side::Short, pos!(5.0), pos!(0.5));
@@ -1349,6 +1384,7 @@ mod tests_total_cost {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_total_cost_mixed_positions() {
         let positions = vec![
             create_test_position(Side::Long, pos!(5.0), pos!(0.5)), // net cost = 6.0
@@ -1372,6 +1408,7 @@ mod tests_total_cost {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_total_cost_with_different_premiums_and_fees() {
         let positions = vec![
             create_test_position(Side::Long, pos!(10.0), pos!(1.0)),
@@ -1402,6 +1439,12 @@ mod tests_best_range_to_show {
     use crate::{pos, Options};
     use chrono::Utc;
     use rust_decimal_macros::dec;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_position(strike: Positive, side: Side) -> Position {
         Position::new(
@@ -1445,6 +1488,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_range_single_strike() {
         let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0)]);
         let step = pos!(10.0);
@@ -1460,6 +1504,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_range_multiple_strikes() {
         let strategy =
             create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5800.0), pos!(5900.0)]);
@@ -1476,6 +1521,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_range_with_small_step() {
         let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0), pos!(5850.0)]);
         let step = pos!(5.0);
@@ -1488,6 +1534,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_range_with_underlying() {
         let strategy = create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5900.0)]);
         let range = strategy.best_range_to_show(pos!(10.0)).unwrap();
@@ -1498,6 +1545,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_range_with_large_step() {
         let strategy = create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(6000.0)]);
         let step = pos!(100.0);
@@ -1513,6 +1561,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_range_strike_bounds() {
         let min_strike = pos!(5600.0);
         let max_strike = pos!(6000.0);
@@ -1526,6 +1575,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_range_unordered_strikes() {
         let strategy =
             create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(5700.0), pos!(5100.0)]);
@@ -1548,6 +1598,13 @@ mod tests_greeks {
 
     const EPSILON: Decimal = dec!(1e-10);
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    // Helper function to create a test position
     fn create_test_position(strike: Positive, side: Side, option_style: OptionStyle) -> Position {
         Position::new(
             Options::new(
@@ -1572,6 +1629,7 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_greeks_single_long_call() {
         let position = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
         let strategy = CustomStrategy::new(
@@ -1597,6 +1655,7 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_greeks_single_short_put() {
         setup_logger();
         let position = create_test_position(pos!(100.0), Side::Short, OptionStyle::Put);
@@ -1623,6 +1682,7 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_greeks_multiple_positions() {
         let long_call = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
         let short_put = create_test_position(pos!(95.0), Side::Short, OptionStyle::Put);
@@ -1677,6 +1737,7 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_greeks_straddle() {
         let long_call = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
         let long_put = create_test_position(pos!(100.0), Side::Long, OptionStyle::Put);

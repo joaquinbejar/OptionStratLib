@@ -402,21 +402,30 @@ mod tests_annualize_volatility {
     use super::*;
     use approx::assert_relative_eq;
 
-    #[test]
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_annualize_daily_volatility() {
         let daily_vol = 0.01; // 1% daily volatility
         let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day);
         assert_relative_eq!(annual_vol, 0.01 * 252.0_f64.sqrt(), epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_deannualize_annual_volatility() {
         let annual_vol = 0.20; // 20% annual volatility
         let daily_vol = de_annualized_volatility(annual_vol, TimeFrame::Day);
         assert_relative_eq!(daily_vol, 0.20 / 252.0_f64.sqrt(), epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_custom_timeframe() {
         let custom_periods = 100.0;
         let vol = 0.05;
@@ -424,7 +433,8 @@ mod tests_annualize_volatility {
         assert_relative_eq!(annual_vol, 0.05 * 100.0_f64.sqrt(), epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_conversion_roundtrip() {
         let original_vol = 0.15;
         let annualized = annualized_volatility(original_vol, TimeFrame::Day);
@@ -432,7 +442,8 @@ mod tests_annualize_volatility {
         assert_relative_eq!(original_vol, roundtrip, epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_different_timeframes() {
         let daily_vol = 0.01;
         let weekly_vol = annualized_volatility(daily_vol, TimeFrame::Day);
@@ -446,35 +457,46 @@ mod tests_constant_volatility {
     use super::*;
     use approx::assert_relative_eq;
 
-    #[test]
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_constant_volatility_single_value() {
         let returns = [0.05];
         let result = constant_volatility(&returns);
         assert_eq!(result, ZERO);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_constant_volatility_identical_values() {
         let returns = [0.02, 0.02, 0.02, 0.02];
         let result = constant_volatility(&returns);
         assert_eq!(result, ZERO);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_constant_volatility_varying_values() {
         let returns = [0.01, 0.03, 0.02, 0.04];
         let result = constant_volatility(&returns);
         assert_relative_eq!(result, 0.012909944487358056, epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_constant_volatility_negative_values() {
         let returns = [-0.01, -0.03, -0.02, -0.04];
         let result = constant_volatility(&returns);
         assert_relative_eq!(result, 0.012909944487358056, epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_constant_volatility_mixed_values() {
         let returns = [0.01, -0.02, 0.03, -0.04];
         let result = constant_volatility(&returns);
@@ -487,28 +509,38 @@ mod tests_historical_volatility {
     use super::*;
     use approx::assert_relative_eq;
 
-    #[test]
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_historical_volatility_empty_returns() {
         let returns: [f64; 0] = [];
         let result = historical_volatility(&returns, 3);
         assert!(result.is_empty());
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_historical_volatility_single_value() {
         let returns = [0.02];
         let result = historical_volatility(&returns, 3);
         assert!(result.is_empty());
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_historical_volatility_insufficient_data() {
         let returns = [0.01, 0.02];
         let result = historical_volatility(&returns, 3);
         assert!(result.is_empty());
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_historical_volatility_exact_window() {
         let returns = [0.01, 0.02, 0.03];
         let result = historical_volatility(&returns, 3);
@@ -516,7 +548,8 @@ mod tests_historical_volatility {
         assert_relative_eq!(result[0], 0.01, epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_historical_volatility_larger_window() {
         let returns = [0.01, 0.02, 0.03, 0.04];
         let result = historical_volatility(&returns, 3);
@@ -525,7 +558,8 @@ mod tests_historical_volatility {
         assert_relative_eq!(result[1], 0.01, epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_historical_volatility_varying_returns() {
         let returns = [0.01, -0.02, 0.03, -0.04, 0.05];
         let result = historical_volatility(&returns, 3);
@@ -541,7 +575,14 @@ mod tests_ewma_volatility {
     use super::*;
     use approx::assert_relative_eq;
 
-    #[test]
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_ewma_volatility_single_return() {
         let returns = [0.02];
         let lambda = 0.94;
@@ -550,7 +591,8 @@ mod tests_ewma_volatility {
         assert_eq!(result[0], 0.02); // The volatility is simply the return itself
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_ewma_volatility_constant_returns() {
         let returns = [0.02, 0.02, 0.02, 0.02];
         let lambda = 0.94;
@@ -582,7 +624,8 @@ mod tests_ewma_volatility {
         }
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_ewma_volatility_varying_returns() {
         let returns = [0.01, -0.02, 0.03, -0.04];
         let lambda = 0.94;
@@ -614,7 +657,8 @@ mod tests_ewma_volatility {
         }
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_ewma_volatility_high_lambda() {
         let returns = [0.01, 0.02, 0.03, 0.04];
         let lambda = 0.99; // High lambda means slow decay
@@ -646,7 +690,8 @@ mod tests_ewma_volatility {
         }
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_ewma_volatility_low_lambda() {
         let returns = [0.01, 0.02, 0.03, 0.04];
         let lambda = 0.5; // Low lambda means faster decay
@@ -686,10 +731,22 @@ mod tests_implied_volatility {
     use crate::pos;
     use crate::utils::logger::setup_logger;
     use crate::Positive;
+
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    
+    #[cfg(not(feature = "wasm"))]
+    use crate::utils::logger::setup_logger;
+
+    #[cfg(not(feature = "wasm"))]
     use tracing::info;
 
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+    
     fn create_test_option() -> Options {
         Options::new(
             OptionType::European,
@@ -706,16 +763,26 @@ mod tests_implied_volatility {
             None,
         )
     }
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_implied_volatility_long_short() {
-        setup_logger();
+        #[cfg(not(feature = "wasm"))]
+        {
+            setup_logger();
+            info!("Starting test_implied_volatility_long_short");
+        }
+        
         let mut option_long = create_test_option();
         let mut option_short = create_test_option();
         option_short.side = Side::Short;
         let market_price = 10.0; // Assume this is the observed market price
         let iv_long = implied_volatility(market_price, &mut option_long, 100);
         let iv_short = implied_volatility(market_price, &mut option_short, 100);
+        
+        #[cfg(not(target_arch = "wasm32"))]
         info!("IV Long {} short {}", iv_long, iv_short);
+        
         // Check if the calculated price with the new IV is close to the market price
         option_long.implied_volatility = iv_long;
         option_short.implied_volatility = iv_short;
@@ -731,6 +798,8 @@ mod tests_implied_volatility {
             .to_f64()
             .unwrap()
             .abs();
+        
+        #[cfg(not(target_arch = "wasm32"))]
         info!(
             "Price Long {} short {}",
             calculated_price_long, calculated_price_short
@@ -741,6 +810,7 @@ mod tests_implied_volatility {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_implied_volatility_convergence() {
         let mut option = create_test_option();
         let market_price = 6.261026; // Assume this is the observed market price
@@ -753,11 +823,14 @@ mod tests_implied_volatility {
             .unwrap()
             .to_f64()
             .unwrap();
+
+        #[cfg(not(target_arch = "wasm32"))]
         info!("{}", (calculated_price - market_price).abs());
         assert_relative_eq!(calculated_price, market_price, epsilon = 0.002);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_implied_volatility_bounds() {
         let mut option = create_test_option();
         let market_price = 5.0;
@@ -768,6 +841,7 @@ mod tests_implied_volatility {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_implied_volatility_max_iterations() {
         let mut option = create_test_option();
         let market_price = 5.0;
@@ -778,6 +852,7 @@ mod tests_implied_volatility {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_implied_volatility_extreme_prices() {
         let mut option = create_test_option();
 
@@ -789,8 +864,8 @@ mod tests_implied_volatility {
         // Test with a very high market price
         let high_price = 10.0;
         let high_iv = implied_volatility(high_price, &mut option, 100);
+        #[cfg(not(target_arch = "wasm32"))]
         info!("{}", high_iv);
-        // assert!(high_iv < 1.0);
     }
 }
 
@@ -798,8 +873,14 @@ mod tests_implied_volatility {
 mod tests_garch_volatility {
     use super::*;
     use approx::assert_relative_eq;
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_garch_volatility_single_return() {
         let returns = [0.02];
         let omega = 0.1;
@@ -811,6 +892,7 @@ mod tests_garch_volatility {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_garch_volatility_constant_returns() {
         let returns = [0.02, 0.02, 0.02, 0.02];
         let omega = 0.1;
@@ -850,6 +932,7 @@ mod tests_garch_volatility {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_garch_volatility_varying_returns() {
         let returns = [0.01, -0.02, 0.03, -0.04];
         let omega = 0.1;
@@ -889,6 +972,7 @@ mod tests_garch_volatility {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_garch_volatility_high_omega() {
         let returns = [0.01, 0.02, 0.03, 0.04];
         let omega = 1.0; // High omega, high base variance
@@ -928,6 +1012,7 @@ mod tests_garch_volatility {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_garch_volatility_high_alpha() {
         let returns = [0.01, 0.02, 0.03, 0.04];
         let omega = 0.1;
@@ -971,8 +1056,14 @@ mod tests_garch_volatility {
 mod tests_simulate_heston_volatility {
     use super::*;
     use approx::assert_relative_eq;
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
 
-    #[test]
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_heston_volatility_basic() {
         let kappa = 2.0;
         let theta = 0.1;
@@ -995,7 +1086,8 @@ mod tests_simulate_heston_volatility {
         }
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_heston_volatility_zero_initial_variance() {
         let kappa = 2.0;
         let theta = 0.1;
@@ -1015,7 +1107,8 @@ mod tests_simulate_heston_volatility {
         }
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_heston_volatility_high_volatility_of_volatility() {
         let kappa = 2.0;
         let theta = 0.1;
@@ -1035,7 +1128,8 @@ mod tests_simulate_heston_volatility {
         }
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_heston_volatility_long_term_mean() {
         let kappa = 2.0;
         let theta = 0.5; // Long-term variance should tend towards 0.5
@@ -1059,7 +1153,8 @@ mod tests_simulate_heston_volatility {
         }
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_heston_volatility_zero_volatility_of_volatility() {
         let kappa = 2.0;
         let theta = 0.1;
@@ -1090,8 +1185,14 @@ mod tests_simulate_heston_volatility {
 mod tests_interpolate_volatility_surface {
     use super::*;
     use approx::assert_relative_eq;
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
 
-    #[test]
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_interpolate_volatility_surface_success() {
         let volatility_surface = vec![
             (100.0, 0.5, 0.2),
@@ -1109,7 +1210,8 @@ mod tests_interpolate_volatility_surface {
         assert_relative_eq!(interpolated_vol, 0.2375, epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_interpolate_volatility_surface_exact_match() {
         let volatility_surface = vec![
             (100.0, 0.5, 0.2),
@@ -1127,7 +1229,8 @@ mod tests_interpolate_volatility_surface {
         assert_relative_eq!(interpolated_vol, 0.2, epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_interpolate_volatility_surface_upper_bound() {
         let volatility_surface = vec![
             (100.0, 0.5, 0.2),
@@ -1145,7 +1248,8 @@ mod tests_interpolate_volatility_surface {
         assert_relative_eq!(interpolated_vol, 0.28, epsilon = 1e-10);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_interpolate_volatility_surface_insufficient_points() {
         let volatility_surface = vec![(100.0, 0.5, 0.2), (100.0, 1.0, 0.25)];
 
@@ -1160,7 +1264,8 @@ mod tests_interpolate_volatility_surface {
         );
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_interpolate_volatility_surface_out_of_bounds() {
         let volatility_surface = vec![
             (100.0, 0.5, 0.2),
@@ -1189,6 +1294,11 @@ mod tests_uncertain_volatility_bounds {
     use crate::Positive;
     use rust_decimal_macros::dec;
 
+    use approx::assert_relative_eq;
+
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+
     fn create_test_option() -> Options {
         Options::new(
             OptionType::European,
@@ -1206,7 +1316,11 @@ mod tests_uncertain_volatility_bounds {
         )
     }
 
-    #[test]
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_basic() {
         let option = create_test_option();
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
@@ -1215,18 +1329,17 @@ mod tests_uncertain_volatility_bounds {
         assert!(lower > ZERO, "Lower bound should be positive");
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_same_volatility() {
         let option = create_test_option();
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.2), pos!(0.2));
 
-        assert!(
-            (lower - upper).abs() < 1e-6,
-            "Bounds should be equal when min and max volatilities are the same"
-        );
+        assert_relative_eq!(lower, upper, epsilon = 1e-6);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_different_strikes() {
         let mut itm_option = create_test_option();
         itm_option.strike_price = pos!(90.0); // In-the-money
@@ -1247,7 +1360,8 @@ mod tests_uncertain_volatility_bounds {
         );
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_put_option() {
         let mut put_option = create_test_option();
         put_option.option_style = OptionStyle::Put;
@@ -1264,7 +1378,8 @@ mod tests_uncertain_volatility_bounds {
         );
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_extreme_volatilities() {
         let option = create_test_option();
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.01), pos!(1.0));
@@ -1293,6 +1408,9 @@ mod tests_uncertain_volatility_bounds_side {
     use rust_decimal_macros::dec;
     use tracing::info;
 
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+
     fn create_test_option(option_style: OptionStyle, side: Side) -> Options {
         Options::new(
             OptionType::European,
@@ -1310,7 +1428,11 @@ mod tests_uncertain_volatility_bounds_side {
         )
     }
 
-    #[test]
+    #[cfg(feature = "wasm")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_call_long() {
         let option = create_test_option(OptionStyle::Call, Side::Long);
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
@@ -1322,7 +1444,8 @@ mod tests_uncertain_volatility_bounds_side {
         assert!(lower > ZERO, "Call Long: Lower bound should be positive");
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_call_short() {
         let option = create_test_option(OptionStyle::Call, Side::Short);
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
@@ -1334,7 +1457,8 @@ mod tests_uncertain_volatility_bounds_side {
         assert!(lower < ZERO, "Call Short: Lower bound should be negative");
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_put_long() {
         let option = create_test_option(OptionStyle::Put, Side::Long);
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
@@ -1346,7 +1470,8 @@ mod tests_uncertain_volatility_bounds_side {
         assert!(lower > ZERO, "Put Long: Lower bound should be positive");
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_put_short() {
         let option = create_test_option(OptionStyle::Put, Side::Short);
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
@@ -1358,7 +1483,8 @@ mod tests_uncertain_volatility_bounds_side {
         assert!(lower < ZERO, "Put Short: Lower bound should be negative");
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_same_volatility() {
         let option = create_test_option(OptionStyle::Call, Side::Long);
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.2), pos!(0.2));
@@ -1366,7 +1492,8 @@ mod tests_uncertain_volatility_bounds_side {
         assert_relative_eq!(lower, upper, epsilon = 1e-6);
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_different_strikes() {
         let mut itm_option = create_test_option(OptionStyle::Call, Side::Long);
         itm_option.strike_price = pos!(90.0); // In-the-money
@@ -1387,7 +1514,8 @@ mod tests_uncertain_volatility_bounds_side {
         );
     }
 
-    #[test]
+    #[cfg_attr(not(feature = "wasm"), test)]
+    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
     fn test_uncertain_volatility_bounds_extreme_volatilities() {
         let option = create_test_option(OptionStyle::Call, Side::Long);
         let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.01), pos!(1.0));

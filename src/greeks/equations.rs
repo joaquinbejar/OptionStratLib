@@ -805,7 +805,14 @@ mod tests_delta_equations {
     use num_traits::ToPrimitive;
     use tracing::info;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_no_volatility_itm() {
         setup_logger();
         let option = create_sample_option(
@@ -822,6 +829,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_no_volatility_otm() {
         setup_logger();
         let option = create_sample_option(
@@ -838,6 +846,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_no_volatility_itm_put() {
         setup_logger();
         let option = create_sample_option(
@@ -854,6 +863,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_no_volatility_otm_put() {
         setup_logger();
         let option = create_sample_option(
@@ -870,6 +880,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_no_volatility_itm_short() {
         setup_logger();
         let option = create_sample_option(
@@ -886,6 +897,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_no_volatility_otm_short() {
         setup_logger();
         let option = create_sample_option(
@@ -902,6 +914,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_no_volatility_itm_put_short() {
         setup_logger();
         let option = create_sample_option(
@@ -918,6 +931,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_no_volatility_otm_put_short() {
         setup_logger();
         let option = create_sample_option(
@@ -934,6 +948,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_deep_in_the_money_call() {
         setup_logger();
         let option = create_sample_option(
@@ -950,6 +965,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_deep_out_of_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -965,6 +981,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_at_the_money_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -980,6 +997,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_short_term_high_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -996,6 +1014,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_long_term_low_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1024,7 +1043,14 @@ mod tests_gamma_equations {
     use num_traits::ToPrimitive;
     use tracing::info;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma_deep_in_the_money_call() {
         setup_logger();
         let option = create_sample_option(
@@ -1041,6 +1067,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma_deep_out_of_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1056,6 +1083,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma_at_the_money_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1071,6 +1099,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma_short_term_high_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -1087,6 +1116,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma_long_term_low_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1103,6 +1133,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma_zero_volatility() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1118,6 +1149,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma_extreme_high_volatility() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1142,7 +1174,13 @@ mod tests_vega_equation {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    fn create_test_option(
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+   fn create_test_option(
         underlying_price: Positive,
         strike_price: Positive,
         implied_volatility: Positive,
@@ -1166,6 +1204,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_vega_atm() {
         let option = create_test_option(
             pos!(100.0),
@@ -1185,6 +1224,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_vega_otm() {
         let option = create_test_option(
             pos!(90.0),
@@ -1204,6 +1244,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_vega_short_expiration() {
         let option = create_test_option(
             pos!(100.0),
@@ -1223,6 +1264,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_vega_with_dividends() {
         let option = create_test_option(
             pos!(100.0),
@@ -1242,6 +1284,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_vega_itm() {
         let option = create_test_option(
             pos!(110.0),
@@ -1271,7 +1314,13 @@ mod tests_rho_equations {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    fn create_test_option(style: OptionStyle) -> Options {
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+   fn create_test_option(style: OptionStyle) -> Options {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
@@ -1289,6 +1338,7 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_call_option() {
         let option = create_test_option(OptionStyle::Call);
         let result = rho(&option).unwrap().to_f64().unwrap();
@@ -1296,6 +1346,7 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_put_option() {
         let option = create_test_option(OptionStyle::Put);
         let result = rho(&option).unwrap().to_f64().unwrap();
@@ -1303,6 +1354,7 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_zero_time_to_expiry() {
         let mut option = create_test_option(OptionStyle::Call);
         option.expiration_date = ExpirationDate::Days(Positive::ZERO);
@@ -1311,6 +1363,7 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_zero_risk_free_rate() {
         let mut option = create_test_option(OptionStyle::Call);
         option.risk_free_rate = dec!(0.0);
@@ -1319,6 +1372,7 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_deep_out_of_money_call() {
         let mut option = create_test_option(OptionStyle::Call);
         option.strike_price = pos!(1000.0);
@@ -1327,6 +1381,7 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_deep_out_of_money_put() {
         let mut option = create_test_option(OptionStyle::Put);
         option.strike_price = pos!(1.0);
@@ -1335,6 +1390,7 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_high_volatility() {
         let mut option = create_test_option(OptionStyle::Call);
         option.implied_volatility = Positive::ONE;
@@ -1353,7 +1409,14 @@ mod tests_theta_long_equations {
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
-    #[test]
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+   #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_call_option() {
         // Create a sample call option
         let option = create_sample_option(
@@ -1376,6 +1439,7 @@ mod tests_theta_long_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_put_option() {
         // Create a sample put option
         let option = create_sample_option(
@@ -1398,6 +1462,7 @@ mod tests_theta_long_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_call_option_near_expiry() {
         // Create a sample call option near expiry
         let mut option = create_sample_option(
@@ -1421,6 +1486,7 @@ mod tests_theta_long_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_put_option_far_from_expiry() {
         // Create a sample put option far from expiry
         let mut option = create_sample_option(
@@ -1454,7 +1520,14 @@ mod tests_theta_short_equations {
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
-    #[test]
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+   #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_short_call_option() {
         // Create a sample short call option
         let option = create_sample_option(
@@ -1477,6 +1550,7 @@ mod tests_theta_short_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_short_put_option() {
         // Create a sample short put option
         let option = create_sample_option(
@@ -1499,6 +1573,7 @@ mod tests_theta_short_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_short_call_option_near_expiry() {
         // Create a sample short call option near expiry
         let mut option = create_sample_option(
@@ -1522,6 +1597,7 @@ mod tests_theta_short_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_short_put_option_far_from_expiry() {
         // Create a sample short put option far from expiry
         let mut option = create_sample_option(

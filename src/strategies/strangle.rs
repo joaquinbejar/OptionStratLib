@@ -1177,6 +1177,12 @@ mod tests_short_strangle {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     fn setup() -> ShortStrangle {
         ShortStrangle::new(
             "AAPL".to_string(),
@@ -1218,6 +1224,7 @@ mod tests_short_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "Short Strangle");
@@ -1231,6 +1238,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_validate() {
         let strategy = setup();
         let wrong_strategy = wrong_setup();
@@ -1239,12 +1247,14 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let strategy = setup();
         assert_eq!(strategy.get_break_even_points().unwrap()[0], 141.9);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 150.0;
@@ -1259,6 +1269,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_max_profit() {
         let strategy = setup();
         assert_eq!(
@@ -1268,6 +1279,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_max_loss() {
         let strategy = setup();
         assert_eq!(
@@ -1277,12 +1289,14 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_total_cost() {
         let strategy = setup();
         assert_eq!(strategy.total_cost().unwrap(), 40.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_net_premium_received() {
         let strategy = setup();
         assert_eq!(
@@ -1293,6 +1307,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_fees() {
         let strategy = setup();
         let expected_fees = 40.0;
@@ -1300,6 +1315,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_area() {
         let strategy = setup();
         assert_eq!(
@@ -1309,6 +1325,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_graph_methods() {
         let strategy = setup();
 
@@ -1342,6 +1359,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_add_leg() {
         let mut strategy = setup();
         let original_call = strategy.short_call.clone();
@@ -1361,6 +1379,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
@@ -1374,6 +1393,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_ratio() {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
@@ -1383,6 +1403,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_area() {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
@@ -1392,6 +1413,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     #[should_panic]
     fn test_best_range_to_show() {
         let strategy = setup();
@@ -1400,6 +1422,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_is_valid_short_option() {
         let strategy = setup();
         let option_chain = create_test_option_chain();
@@ -1422,6 +1445,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_create_strategy() {
         let strategy = setup();
         let chain = create_test_option_chain();
@@ -1449,6 +1473,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_points() {
         let strategy = setup();
         let points = strategy.get_points();
@@ -1490,7 +1515,14 @@ mod tests_long_strangle {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_long_strangle_new() {
         let underlying_symbol = "AAPL".to_string();
         let underlying_price = pos!(150.0);
@@ -1535,12 +1567,14 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let long_strangle = setup_long_strangle();
         assert_eq!(long_strangle.get_break_even_points().unwrap()[0], 128.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_total_cost() {
         let long_strangle = setup_long_strangle();
         assert_eq!(
@@ -1551,6 +1585,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_profit_at() {
         let long_strangle = setup_long_strangle();
         let price = pos!(150.0);
@@ -1610,6 +1645,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_new() {
         let strategy = setup_long_strangle();
         assert_eq!(strategy.name, "Long Strangle");
@@ -1618,6 +1654,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_validate() {
         let strategy = setup_long_strangle();
         let wrong_strategy = wrong_setup_long_strangle();
@@ -1626,6 +1663,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_max_profit() {
         let strategy = setup_long_strangle();
         assert_eq!(
@@ -1635,6 +1673,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_max_loss() {
         let strategy = setup_long_strangle();
         assert_eq!(
@@ -1644,6 +1683,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_fees() {
         let strategy = setup_long_strangle();
         let expected_fees = 20.0; // 0.5 * 4 fees * 10 qty
@@ -1651,12 +1691,14 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_net_premium_received() {
         let strategy = setup_long_strangle();
         assert_eq!(strategy.net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_profit_area() {
         let strategy = setup_long_strangle();
         let area = strategy.profit_area().unwrap();
@@ -1664,6 +1706,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_profit_ratio() {
         let strategy = setup_long_strangle();
         let expected_ratio = 0.003666666666666666;
@@ -1674,6 +1717,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_add_leg() {
         let mut strategy = setup_long_strangle();
         let original_call = strategy.long_call.clone();
@@ -1691,6 +1735,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_graph_methods() {
         let strategy = setup_long_strangle();
 
@@ -1727,6 +1772,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_ratio() {
         let mut strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
@@ -1736,6 +1782,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_area() {
         let mut strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
@@ -1745,6 +1792,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_best_range_to_show() {
         let strategy = setup_long_strangle();
         let step = pos!(1.0);
@@ -1756,6 +1804,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_is_valid_long_option() {
         let strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
@@ -1771,6 +1820,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_are_valid_prices() {
         let strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
@@ -1794,6 +1844,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_create_strategy() {
         let strategy = setup_long_strangle();
         let chain = create_test_option_chain();
@@ -1817,6 +1868,7 @@ mod tests_long_strangle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_points() {
         let strategy = setup_long_strangle();
         let points = strategy.get_points();
@@ -1859,6 +1911,12 @@ mod tests_short_strangle_probability {
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     /// Helper function that creates a basic short strangle for testing purposes
     /// Returns a ShortStrangle instance with predefined test values
     fn create_test() -> ShortStrangle {
@@ -1882,6 +1940,7 @@ mod tests_short_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_of_profit_basic() {
         let strangle = create_test();
         let result = strangle.probability_of_profit(None, None);
@@ -1893,6 +1952,7 @@ mod tests_short_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_of_profit_with_volatility_adjustment() {
         let strangle = create_test();
         let vol_adj = VolatilityAdjustment {
@@ -1912,6 +1972,7 @@ mod tests_short_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_of_profit_with_trend() {
         let strangle = create_test();
         let trend = PriceTrend {
@@ -1931,6 +1992,7 @@ mod tests_short_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_of_profit_with_downward_trend() {
         let strangle = create_test();
         let trend = PriceTrend {
@@ -1950,6 +2012,7 @@ mod tests_short_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_reference_price() {
         let strangle = create_test();
         let result = strangle.get_underlying_price();
@@ -1962,6 +2025,7 @@ mod tests_short_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_expiration() {
         let strangle = create_test();
         let result = strangle.get_expiration();
@@ -1974,6 +2038,7 @@ mod tests_short_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let strangle = create_test();
         let result = strangle.get_profit_ranges();
@@ -2000,6 +2065,12 @@ mod tests_short_strangle_probability_bis {
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
@@ -2021,6 +2092,7 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_expiration() {
         let strangle = create_test();
         let result = strangle.get_expiration();
@@ -2032,12 +2104,14 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let strangle = create_test();
         assert_eq!(strangle.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let strangle = create_test();
         let result = strangle.get_profit_ranges();
@@ -2052,6 +2126,7 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let strangle = create_test();
         let result = strangle.get_loss_ranges();
@@ -2066,6 +2141,7 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_of_profit() {
         let strangle = create_test();
         let result = strangle.probability_of_profit(None, None);
@@ -2077,6 +2153,7 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_with_volatility_adjustment() {
         let strangle = create_test();
         let vol_adj = Some(VolatilityAdjustment {
@@ -2092,6 +2169,7 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_with_trend() {
         let strangle = create_test();
         let trend = Some(PriceTrend {
@@ -2107,6 +2185,7 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_analyze_probabilities() {
         let strangle = create_test();
         let result = strangle.analyze_probabilities(None, None);
@@ -2123,6 +2202,7 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_extreme_probabilities() {
         let strangle = create_test();
         let result = strangle.calculate_extreme_probabilities(None, None);
@@ -2142,6 +2222,12 @@ mod tests_long_strangle_probability {
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
@@ -2164,6 +2250,7 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_expiration() {
         let strangle = create_test_long_strangle();
         let result = strangle.get_expiration();
@@ -2175,12 +2262,14 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let strangle = create_test_long_strangle();
         assert_eq!(strangle.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let strangle = create_test_long_strangle();
         let result = strangle.get_profit_ranges();
@@ -2195,6 +2284,7 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let strangle = create_test_long_strangle();
         let result = strangle.get_loss_ranges();
@@ -2207,6 +2297,7 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_of_profit() {
         let strangle = create_test_long_strangle();
         let result = strangle.probability_of_profit(None, None);
@@ -2218,6 +2309,7 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_with_volatility_adjustment() {
         let strangle = create_test_long_strangle();
         let vol_adj = Some(VolatilityAdjustment {
@@ -2233,6 +2325,7 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_with_trend() {
         let strangle = create_test_long_strangle();
         let trend = Some(PriceTrend {
@@ -2248,6 +2341,7 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_expected_value_calculation() {
         let strangle = create_test_long_strangle();
         let result = strangle.expected_value(None, None);
@@ -2269,6 +2363,7 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_extreme_probabilities() {
         let strangle = create_test_long_strangle();
         let result = strangle.calculate_extreme_probabilities(None, None);
@@ -2292,6 +2387,12 @@ mod tests_short_strangle_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
         let underlying_price = pos!(7138.5);
         ShortStrangle::new(
@@ -2314,6 +2415,7 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
@@ -2345,6 +2447,7 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strike = pos!(7050.0);
         let strategy = get_strategy(pos!(7150.0), strike);
@@ -2378,6 +2481,7 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 
@@ -2401,6 +2505,12 @@ mod tests_long_strangle_delta {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos!(7138.5);
@@ -2424,6 +2534,7 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strike = pos!(7450.0);
         let strategy = get_strategy(strike, pos!(7250.0));
@@ -2458,6 +2569,7 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strike = pos!(7050.0);
         let strategy = get_strategy(pos!(7150.0), strike);
@@ -2491,6 +2603,7 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 
@@ -2515,6 +2628,12 @@ mod tests_short_strangle_delta_size {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
         let underlying_price = pos!(7138.5);
@@ -2538,6 +2657,7 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strike = pos!(7450.0);
         let strategy = get_strategy(strike, pos!(7250.0));
@@ -2571,6 +2691,7 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     #[ignore = "This test is failing because of the precision limit"]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
@@ -2608,6 +2729,7 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7045.0));
 
@@ -2631,6 +2753,12 @@ mod tests_long_strangle_delta_size {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos!(7138.5);
@@ -2654,6 +2782,7 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strike = pos!(7450.0);
         let strategy = get_strategy(strike, pos!(7250.0));
@@ -2687,6 +2816,7 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     #[ignore = "This test is failing because of the precision limit"]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
@@ -2719,6 +2849,7 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 

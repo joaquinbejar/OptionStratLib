@@ -391,7 +391,14 @@ mod tests_options {
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_new_option() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert_eq!(option.underlying_symbol, "AAPL");
@@ -400,6 +407,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_time_to_expiration() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert_relative_eq!(
@@ -428,6 +436,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_is_long_and_short() {
         let long_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert!(long_option.is_long());
@@ -452,6 +461,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_price_binomial() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let price = option.calculate_price_binomial(100).unwrap();
@@ -459,6 +469,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_price_binomial_tree() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5).unwrap();
@@ -468,6 +479,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_price_binomial_tree_short() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5).unwrap();
@@ -477,6 +489,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_price_black_scholes() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let price = option.calculate_price_black_scholes().unwrap();
@@ -484,6 +497,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_call_long() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let call_payoff = call_option.payoff().unwrap();
@@ -508,6 +522,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_time_value() {
         let option = Options::new(
             OptionType::European,
@@ -536,6 +551,12 @@ mod tests_valid_option {
     use crate::pos;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser); 
+
     fn create_valid_option() -> Options {
         Options {
             option_type: OptionType::European,
@@ -554,12 +575,14 @@ mod tests_valid_option {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_valid_option() {
         let option = create_valid_option();
         assert!(option.validate());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_empty_underlying_symbol() {
         let mut option = create_valid_option();
         option.underlying_symbol = "".to_string();
@@ -567,6 +590,7 @@ mod tests_valid_option {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_zero_strike_price() {
         let mut option = create_valid_option();
         option.strike_price = Positive::ZERO;
@@ -574,6 +598,7 @@ mod tests_valid_option {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_zero_quantity() {
         let mut option = create_valid_option();
         option.quantity = Positive::ZERO;
@@ -581,6 +606,7 @@ mod tests_valid_option {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_zero_underlying_price() {
         let mut option = create_valid_option();
         option.underlying_price = Positive::ZERO;
@@ -597,7 +623,14 @@ mod tests_time_value {
     use rust_decimal_macros::dec;
     use tracing::debug;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_time_value_long_call() {
         setup_logger();
         let option =
@@ -608,6 +641,7 @@ mod tests_time_value {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_time_value_short_call() {
         let option =
             create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
@@ -617,6 +651,7 @@ mod tests_time_value {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_time_value_long_put() {
         setup_logger();
         let option = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
@@ -626,6 +661,7 @@ mod tests_time_value {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_time_value_short_put() {
         let option =
             create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
@@ -635,6 +671,7 @@ mod tests_time_value {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_time_value_at_the_money() {
         let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(100.0));
         let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(100.0));
@@ -652,6 +689,7 @@ mod tests_time_value {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_time_value_deep_in_the_money() {
         setup_logger();
         let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(150.0));
@@ -682,7 +720,14 @@ mod tests_options_payoffs {
     use crate::utils::logger::setup_logger;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_call_long() {
         setup_logger();
         let call_option =
@@ -697,6 +742,7 @@ mod tests_options_payoffs {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_call_short() {
         setup_logger();
         let call_option =
@@ -711,6 +757,7 @@ mod tests_options_payoffs {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_put_long() {
         let put_option =
             create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(105.0));
@@ -724,6 +771,7 @@ mod tests_options_payoffs {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_put_short() {
         let put_option =
             create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(105.0));
@@ -744,7 +792,14 @@ mod tests_options_payoff_at_price {
     use crate::pos;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_call_long() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let call_payoff = call_option.payoff_at_price(pos!(105.0)).unwrap();
@@ -756,6 +811,7 @@ mod tests_options_payoff_at_price {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_call_short() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let call_payoff = call_option.payoff_at_price(pos!(105.0)).unwrap();
@@ -767,6 +823,7 @@ mod tests_options_payoff_at_price {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_put_long() {
         let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
         let put_payoff = put_option.payoff_at_price(pos!(95.0)).unwrap();
@@ -778,6 +835,7 @@ mod tests_options_payoff_at_price {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_european_put_short() {
         let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Short);
         let put_payoff = put_option.payoff_at_price(pos!(95.0)).unwrap();
@@ -796,7 +854,14 @@ mod tests_options_payoffs_with_quantity {
     use crate::pos;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_call_long() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -820,6 +885,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_call_short() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -843,6 +909,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_put_long() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -866,6 +933,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_put_short() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -889,6 +957,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_payoff_with_quantity() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -902,6 +971,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_intrinsic_value_call_long() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -916,6 +986,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_intrinsic_value_call_short() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -930,6 +1001,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_intrinsic_value_put_long() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -944,6 +1016,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_intrinsic_value_put_short() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -958,6 +1031,7 @@ mod tests_options_payoffs_with_quantity {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_intrinsic_value_with_quantity() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -977,7 +1051,14 @@ mod tests_in_the_money {
     use crate::model::utils::create_sample_option;
     use crate::pos;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_call_in_the_money() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -992,6 +1073,7 @@ mod tests_in_the_money {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_call_at_the_money() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -1006,6 +1088,7 @@ mod tests_in_the_money {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_call_out_of_the_money() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -1020,6 +1103,7 @@ mod tests_in_the_money {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_put_in_the_money() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1034,6 +1118,7 @@ mod tests_in_the_money {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_put_at_the_money() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1048,6 +1133,7 @@ mod tests_in_the_money {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_put_out_of_the_money() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1071,7 +1157,14 @@ mod tests_greeks {
 
     const EPSILON: Decimal = dec!(1e-6);
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta() {
         let delta = create_sample_option_simplest(OptionStyle::Call, Side::Long)
             .delta()
@@ -1080,6 +1173,7 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_delta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
@@ -1087,12 +1181,14 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert_decimal_eq!(option.gamma().unwrap(), dec!(0.0691707), EPSILON);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_gamma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
@@ -1100,12 +1196,14 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert_decimal_eq!(option.theta().unwrap(), dec!(-15.8697818), EPSILON);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_theta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
@@ -1113,12 +1211,14 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_vega() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert_decimal_eq!(option.vega().unwrap(), dec!(15.4675554), EPSILON);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_vega_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
@@ -1126,12 +1226,14 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert_decimal_eq!(option.rho().unwrap(), dec!(4.23312145), EPSILON);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
@@ -1139,12 +1241,14 @@ mod tests_greeks {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_d() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert_decimal_eq!(option.rho_d().unwrap(), dec!(-4.43441032), EPSILON);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_rho_d_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
@@ -1161,7 +1265,14 @@ mod tests_greek_trait {
 
     const EPSILON: Decimal = dec!(1e-6);
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_greeks_implementation() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let greeks = option.greeks();
@@ -1175,6 +1286,7 @@ mod tests_greek_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_greeks_consistency() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let greeks = option.greeks();
@@ -1191,6 +1303,7 @@ mod tests_greek_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_greeks_for_different_options() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let mut put_option = call_option.clone();
@@ -1214,7 +1327,14 @@ mod tests_graph {
     use crate::visualization::utils::Graph;
     use approx::assert_relative_eq;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_title() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let expected_title = "Underlying: AAPL @ $100 Long Call European Option".to_string();
@@ -1222,6 +1342,7 @@ mod tests_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_values() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
@@ -1234,6 +1355,7 @@ mod tests_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_vertical_lines() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let vertical_lines = option.get_vertical_lines();
@@ -1244,6 +1366,7 @@ mod tests_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_title_put_option() {
         let option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
         let expected_title = "Underlying: AAPL @ $100 Long Put European Option".to_string();
@@ -1251,6 +1374,7 @@ mod tests_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_values_put_option() {
         let option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
         let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
@@ -1263,6 +1387,7 @@ mod tests_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_values_short_option() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];

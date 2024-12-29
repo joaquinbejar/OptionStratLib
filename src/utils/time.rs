@@ -49,62 +49,79 @@ mod tests_timeframe {
     use super::*;
     use approx::assert_relative_eq;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_microsecond_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MICROSECONDS_PER_SECOND;
         assert_eq!(TimeFrame::Microsecond.periods_per_year(), expected);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_millisecond_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND;
         assert_eq!(TimeFrame::Millisecond.periods_per_year(), expected);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_second_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR;
         assert_eq!(TimeFrame::Second.periods_per_year(), expected);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_minute_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS * MINUTES_PER_HOUR;
         assert_eq!(TimeFrame::Minute.periods_per_year(), expected);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_hour_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS;
         assert_eq!(TimeFrame::Hour.periods_per_year(), expected);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_day_periods() {
         assert_eq!(TimeFrame::Day.periods_per_year(), TRADING_DAYS);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_week_periods() {
         assert_eq!(TimeFrame::Week.periods_per_year(), 52.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_month_periods() {
         assert_eq!(TimeFrame::Month.periods_per_year(), 12.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_quarter_periods() {
         assert_eq!(TimeFrame::Quarter.periods_per_year(), 4.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_year_periods() {
         assert_eq!(TimeFrame::Year.periods_per_year(), 1.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_custom_periods() {
         let custom_periods = 123.45;
         assert_eq!(
@@ -114,6 +131,7 @@ mod tests_timeframe {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_relative_period_relationships() {
         // Test that higher timeframes have fewer periods
         assert!(
@@ -130,6 +148,7 @@ mod tests_timeframe {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_specific_conversion_ratios() {
         // Test specific conversion ratios between timeframes
         assert_relative_eq!(
@@ -152,6 +171,7 @@ mod tests_timeframe {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_trading_days_relationship() {
         // Verify relationships with trading days
         assert_relative_eq!(
@@ -168,6 +188,7 @@ mod tests_timeframe {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_custom_edge_cases() {
         // Test edge cases for custom periods
         assert_eq!(TimeFrame::Custom(0.0).periods_per_year(), 0.0);
@@ -179,12 +200,14 @@ mod tests_timeframe {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_timeframe_debug() {
         assert_eq!(format!("{:?}", TimeFrame::Day), "Day");
         assert_eq!(format!("{:?}", TimeFrame::Custom(1.5)), "Custom(1.5)");
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_timeframe_clone() {
         let tf = TimeFrame::Day;
         let cloned = tf;
@@ -192,6 +215,7 @@ mod tests_timeframe {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_timeframe_copy() {
         let tf = TimeFrame::Day;
         let copied = tf;

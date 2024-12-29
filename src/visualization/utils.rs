@@ -310,7 +310,14 @@ mod tests_calculate_axis_range {
     use super::*;
     use crate::pos;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_axis_range() {
         let x_data = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
@@ -324,6 +331,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_axis_range_single_value() {
         let x_data = vec![pos!(1.0)];
         let y_data = vec![0.0];
@@ -337,6 +345,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_axis_range_zero_values() {
         let x_data = vec![Positive::ZERO, Positive::ZERO, Positive::ZERO];
         let y_data = vec![0.0, 0.0, 0.0];
@@ -350,6 +359,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_axis_range_large_values() {
         let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
         let y_data = vec![1e9, 2e9, 3e9];
@@ -374,6 +384,12 @@ mod tests {
     use plotters::style::RGBColor;
     use rust_decimal::Decimal;
     use std::error::Error;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     struct MockGraph;
 
@@ -415,6 +431,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     #[cfg(not(feature = "wasm"))]
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;

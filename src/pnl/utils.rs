@@ -62,7 +62,14 @@ mod tests_pnl_calculator {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_pnl_new() {
         let now = Utc::now();
         let pnl = PnL::new(
@@ -81,6 +88,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_pnl_with_none_values() {
         let now = Utc::now();
         let pnl = PnL::new(None, None, pos!(10.0), pos!(20.0), now);
@@ -126,6 +134,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_pnl_calculator() {
         let dummy = DummyOption;
         let now = ExpirationDate::Days(pos!(3.0));

@@ -186,6 +186,7 @@ mod tests_draw_binomial_tree {
 
     // Native-only test
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     #[cfg(not(feature = "wasm"))]
     fn test_draw_binomial_tree_bitmap() -> Result<(), Box<dyn std::error::Error>> {
         let (asset_tree, option_tree) = setup_test_data();

@@ -304,7 +304,14 @@ mod tests_options {
     use crate::pos;
     use chrono::{NaiveDate, TimeZone, Utc};
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_options() {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
@@ -346,6 +353,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_options() {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
@@ -382,6 +390,7 @@ mod tests_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_options_with_exotic_params() {
         let exotic_params = ExoticParams {
             spot_prices: None,
@@ -434,7 +443,14 @@ mod tests_expiration_date {
     use chrono::{Duration, NaiveDate, TimeZone};
     use tracing::info;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_days() {
         let expiration = ExpirationDate::Days(pos!(30.5));
         let display_string = format!("{}", expiration);
@@ -442,6 +458,7 @@ mod tests_expiration_date {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_datetime() {
         let future_date = Utc::now() + Duration::days(15) + Duration::minutes(1);
         let expiration = ExpirationDate::DateTime(future_date);
@@ -451,6 +468,7 @@ mod tests_expiration_date {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_days() {
         let expiration = ExpirationDate::Days(pos!(45.75));
         let debug_string = format!("{:?}", expiration);
@@ -458,6 +476,7 @@ mod tests_expiration_date {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_datetime() {
         let date = Utc.from_utc_datetime(
             &NaiveDate::from_ymd_opt(2023, 12, 31)
@@ -475,6 +494,7 @@ mod tests_expiration_date {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_past_date() {
         let past_date = Utc::now() - Duration::days(5);
         let expiration = ExpirationDate::DateTime(past_date);
@@ -484,6 +504,7 @@ mod tests_expiration_date {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_today() {
         let today = Utc::now();
         let expiration = ExpirationDate::DateTime(today);
@@ -497,25 +518,35 @@ mod tests_expiration_date {
 mod tests_side_option_style_display_debug {
     use super::*;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_side_display() {
         assert_eq!(format!("{}", Side::Long), "Long");
         assert_eq!(format!("{}", Side::Short), "Short");
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_side_debug() {
         assert_eq!(format!("{:?}", Side::Long), "Side::Long");
         assert_eq!(format!("{:?}", Side::Short), "Side::Short");
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_option_style_display() {
         assert_eq!(format!("{}", OptionStyle::Call), "Call");
         assert_eq!(format!("{}", OptionStyle::Put), "Put");
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_option_style_debug() {
         assert_eq!(format!("{:?}", OptionStyle::Call), "OptionStyle::Call");
         assert_eq!(format!("{:?}", OptionStyle::Put), "OptionStyle::Put");
@@ -526,7 +557,14 @@ mod tests_side_option_style_display_debug {
 mod tests_option_type_display_debug {
     use super::*;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_european_option() {
         let option = OptionType::European;
         let debug_output = format!("{:?}", option);
@@ -534,6 +572,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_european_option() {
         let option = OptionType::European;
         let display_output = format!("{}", option);
@@ -541,6 +580,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_american_option() {
         let option = OptionType::American;
         let debug_output = format!("{:?}", option);
@@ -548,6 +588,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_american_option() {
         let option = OptionType::American;
         let display_output = format!("{}", option);
@@ -555,6 +596,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_bermuda_option() {
         let option = OptionType::Bermuda {
             exercise_dates: vec![1.0, 2.0, 3.0],
@@ -564,6 +606,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_bermuda_option() {
         let option = OptionType::Bermuda {
             exercise_dates: vec![1.0, 2.0, 3.0],
@@ -576,6 +619,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_asian_option() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
@@ -585,6 +629,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_asian_option() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
@@ -597,6 +642,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_barrier_option() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndIn,
@@ -610,6 +656,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_barrier_option() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndIn,
@@ -623,6 +670,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_binary_option() {
         let option = OptionType::Binary {
             binary_type: BinaryType::CashOrNothing,
@@ -632,6 +680,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_binary_option() {
         let option = OptionType::Binary {
             binary_type: BinaryType::CashOrNothing,
@@ -644,6 +693,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_lookback_option() {
         let option = OptionType::Lookback {
             lookback_type: LookbackType::FixedStrike,
@@ -653,6 +703,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_lookback_option() {
         let option = OptionType::Lookback {
             lookback_type: LookbackType::FixedStrike,
@@ -665,6 +716,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_compound_option() {
         let option = OptionType::Compound {
             underlying_option: Box::new(OptionType::European),
@@ -674,6 +726,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_compound_option() {
         let option = OptionType::Compound {
             underlying_option: Box::new(OptionType::European),
@@ -686,6 +739,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_chooser_option() {
         let option = OptionType::Chooser { choice_date: 2.0 };
         let debug_output = format!("{:?}", option);
@@ -693,6 +747,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_chooser_option() {
         let option = OptionType::Chooser { choice_date: 2.0 };
         let display_output = format!("{}", option);
@@ -700,6 +755,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_cliquet_option() {
         let option = OptionType::Cliquet {
             reset_dates: vec![1.0, 2.0],
@@ -709,6 +765,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_cliquet_option() {
         let option = OptionType::Cliquet {
             reset_dates: vec![1.0, 2.0],
@@ -718,6 +775,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_rainbow_option() {
         let option = OptionType::Rainbow { num_assets: 3 };
         let debug_output = format!("{:?}", option);
@@ -725,6 +783,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_rainbow_option() {
         let option = OptionType::Rainbow { num_assets: 3 };
         let display_output = format!("{}", option);
@@ -732,6 +791,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_spread_option() {
         let option = OptionType::Spread { second_asset: 50.0 };
         let debug_output = format!("{:?}", option);
@@ -739,6 +799,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_spread_option() {
         let option = OptionType::Spread { second_asset: 50.0 };
         let display_output = format!("{}", option);
@@ -746,6 +807,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_quanto_option() {
         let option = OptionType::Quanto { exchange_rate: 1.2 };
         let debug_output = format!("{:?}", option);
@@ -753,6 +815,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_quanto_option() {
         let option = OptionType::Quanto { exchange_rate: 1.2 };
         let display_output = format!("{}", option);
@@ -760,6 +823,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_exchange_option() {
         let option = OptionType::Exchange { second_asset: 75.0 };
         let debug_output = format!("{:?}", option);
@@ -767,6 +831,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_exchange_option() {
         let option = OptionType::Exchange { second_asset: 75.0 };
         let display_output = format!("{}", option);
@@ -774,6 +839,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_debug_power_option() {
         let option = OptionType::Power { exponent: 2.5 };
         let debug_output = format!("{:?}", option);
@@ -781,6 +847,7 @@ mod tests_option_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_power_option() {
         let option = OptionType::Power { exponent: 2.5 };
         let display_output = format!("{}", option);
@@ -793,6 +860,12 @@ mod tests_position_type_display_debug {
     use super::*;
     use crate::pos;
     use chrono::{DateTime, NaiveDate, TimeZone};
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_option() -> (Options, DateTime<Utc>) {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
@@ -820,6 +893,7 @@ mod tests_position_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_position_display() {
         let (option, naive_date) = get_option();
         let position = Position {
@@ -848,6 +922,7 @@ mod tests_position_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_position_debug() {
         let (option, naive_date) = get_option();
 
@@ -892,7 +967,14 @@ mod tests_strategy_type_display_debug {
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_strategy_display() {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
@@ -945,6 +1027,7 @@ mod tests_strategy_type_display_debug {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_strategy_debug() {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")

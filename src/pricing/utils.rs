@@ -513,9 +513,16 @@ mod tests_utils {
     use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+    
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+    
     const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_up_factor() {
         let volatility = pos!(0.09531018);
         let dt = dec!(1.0);
@@ -530,6 +537,7 @@ mod tests_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_up_factor_2() {
         let volatility = pos!(0.17);
         let dt = dec!(1.0);
@@ -539,6 +547,7 @@ mod tests_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_down_factor() {
         let volatility = pos!(0.09531018);
         let dt = dec!(1.0);
@@ -553,6 +562,7 @@ mod tests_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_down_factor_2() {
         let volatility = pos!(0.17);
         let dt = dec!(1.0);
@@ -562,6 +572,7 @@ mod tests_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_probability() {
         let int_rate = dec!(0.05);
         let dt = Decimal::ONE;
@@ -580,6 +591,7 @@ mod tests_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_probability_ii() {
         let int_rate = dec!(0.05);
         let dt = Decimal::ONE;
@@ -590,6 +602,7 @@ mod tests_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_discount_factor() {
         let int_rate = dec!(0.05);
         let dt = Decimal::ONE;
@@ -613,7 +626,14 @@ mod tests_probability_keep_under_strike {
     use rust_decimal_macros::dec;
     use tracing::info;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_keep_under_strike_with_given_strike() {
         let option = Options {
             option_type: OptionType::European,
@@ -636,6 +656,7 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_keep_under_strike_with_default_strike() {
         let option = Options {
             option_type: OptionType::European,
@@ -660,6 +681,7 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     #[should_panic]
     fn test_probability_keep_under_strike_zero_volatility() {
         let option = Options {
@@ -681,6 +703,7 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_keep_under_strike_high_volatility() {
         let option = Options {
             option_type: OptionType::European,
@@ -705,6 +728,7 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_probability_keep_under_strike_expired_option() {
         let option = Options {
             option_type: OptionType::European,

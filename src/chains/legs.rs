@@ -91,6 +91,12 @@ mod tests {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     // Helper function to create a test OptionData with a specific strike price
     fn create_test_option(strike: Decimal) -> OptionData {
         OptionData::new(
@@ -107,6 +113,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_two_legs_creation() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -126,6 +133,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_four_legs_creation() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -156,6 +164,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_six_legs_creation() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -194,6 +203,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_two_legs() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -210,6 +220,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_four_legs() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -232,6 +243,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_display_six_legs() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -260,6 +272,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_clone() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
