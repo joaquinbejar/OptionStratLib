@@ -321,24 +321,24 @@ impl Strategies for IronCondor {
 
     fn profit_area(&self) -> f64 {
         let inner_width =
-            (self.short_call.option.strike_price - self.short_put.option.strike_price).value();
+            (self.short_call.option.strike_price - self.short_put.option.strike_price).to_f64();
         let outer_width =
-            (self.long_call.option.strike_price - self.long_put.option.strike_price).value();
+            (self.long_call.option.strike_price - self.long_put.option.strike_price).to_f64();
         let height = self.max_profit().unwrap_or(Positive::ZERO);
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
-        (inner_area + outer_triangles) / self.short_call.option.underlying_price.value()
+        (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64()
     }
 
     fn profit_ratio(&self) -> f64 {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (Positive::ZERO, _) => ZERO,
-            (_, Positive::ZERO) => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).value(),
+            (value, _) if value == Positive::ZERO => ZERO,
+            (_, value) if value == Positive::ZERO => f64::INFINITY,
+            _ => (max_profit / max_loss * 100.0).to_f64(),
         }
     }
 
@@ -446,14 +446,14 @@ impl Optimizable for IronCondor {
                 long_call.strike_price,
                 long_put.strike_price,
                 self.short_call.option.expiration_date.clone(),
-                short_put.implied_volatility.unwrap().value() / 100.0,
+                short_put.implied_volatility.unwrap().to_f64() / 100.0,
                 self.short_call.option.risk_free_rate,
                 self.short_call.option.dividend_yield,
                 self.short_call.option.quantity,
-                short_call.call_bid.unwrap().value(),
-                short_put.put_bid.unwrap().value(),
-                long_call.call_ask.unwrap().value(),
-                long_put.put_ask.unwrap().value(),
+                short_call.call_bid.unwrap().to_f64(),
+                short_put.put_bid.unwrap().to_f64(),
+                long_call.call_ask.unwrap().to_f64(),
+                long_put.put_ask.unwrap().to_f64(),
                 self.fees() / 8.0,
                 self.fees() / 8.0,
             ),
@@ -501,7 +501,7 @@ impl Graph for IronCondor {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.value(),
+            x_coordinate: self.short_call.option.underlying_price.to_f64(),
             y_range: (-50000.0, 50000.0),
             label: format!("Current Price: {}", self.short_call.option.underlying_price),
             label_offset: (5.0, 5.0),
@@ -524,7 +524,7 @@ impl Graph for IronCondor {
         let current_price = &self.short_call.option.underlying_price;
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Left Break Even\n\n{}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(5.0, 5.0),
             point_color: DARK_BLUE,
@@ -534,7 +534,7 @@ impl Graph for IronCondor {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].value(), 0.0),
+            coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("Right Break Even\n\n{}", self.break_even_points[1]),
             label_offset: LabelOffsetType::Relative(5.0, 5.0),
             point_color: DARK_BLUE,
@@ -544,11 +544,11 @@ impl Graph for IronCondor {
         });
 
         let coordiantes: (f64, f64) = (
-            short_call_strike_price.value() / 2000.0,
-            max_profit.value() / 5.0,
+            short_call_strike_price.to_f64() / 2000.0,
+            max_profit.to_f64() / 5.0,
         );
         points.push(ChartPoint {
-            coordinates: (short_call_strike_price.value(), max_profit.value()),
+            coordinates: (short_call_strike_price.to_f64(), max_profit.to_f64()),
             label: format!(
                 "High Max Profit {:.2} at {:.0}",
                 max_profit, short_call_strike_price
@@ -561,13 +561,13 @@ impl Graph for IronCondor {
         });
 
         let coordinates: (f64, f64) = (
-            -short_put_strike_price.value() / 35.0,
-            max_profit.value() / 5.0,
+            -short_put_strike_price.to_f64() / 35.0,
+            max_profit.to_f64() / 5.0,
         );
         points.push(ChartPoint {
             coordinates: (
-                self.short_put.option.strike_price.value(),
-                max_profit.value(),
+                self.short_put.option.strike_price.to_f64(),
+                max_profit.to_f64(),
             ),
             label: format!(
                 "Low Max Profit {:.2} at {:.0}",
@@ -581,9 +581,9 @@ impl Graph for IronCondor {
         });
 
         let loss = self.calculate_profit_at(*long_call_strike_price);
-        let coordinates: (f64, f64) = (-short_put_strike_price.value() / 35.0, loss / 50.0);
+        let coordinates: (f64, f64) = (-short_put_strike_price.to_f64() / 35.0, loss / 50.0);
         points.push(ChartPoint {
-            coordinates: (self.long_call.option.strike_price.value(), loss),
+            coordinates: (self.long_call.option.strike_price.to_f64(), loss),
             label: format!(
                 "Right Max Loss {:.2} at {:.0}",
                 loss, self.long_call.option.strike_price
@@ -597,9 +597,9 @@ impl Graph for IronCondor {
 
         let loss = self.calculate_profit_at(*long_put_strike_price);
 
-        let coordinates: (f64, f64) = (long_put_strike_price.value() / 2000.0, loss / 50.0);
+        let coordinates: (f64, f64) = (long_put_strike_price.to_f64() / 2000.0, loss / 50.0);
         points.push(ChartPoint {
-            coordinates: (long_put_strike_price.value(), loss),
+            coordinates: (long_put_strike_price.to_f64(), loss),
             label: format!("Left Max Loss {:.2} at {:.0}", loss, long_put_strike_price),
             label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: RED,
@@ -1936,7 +1936,7 @@ mod tests_iron_condor_graph {
 
         assert_eq!(
             current_price_point.coordinates.0,
-            condor.long_call.option.underlying_price.value()
+            condor.long_call.option.underlying_price.to_f64()
         );
 
         let expected_profit = condor.calculate_profit_at(condor.long_call.option.underlying_price);

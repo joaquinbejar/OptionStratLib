@@ -211,7 +211,7 @@ impl Strategies for BearCallSpread {
     fn max_loss(&self) -> Result<Positive, StrategyError> {
         let width = self.long_call.option.strike_price - self.short_call.option.strike_price;
         let mas_loss =
-            (width * self.short_call.option.quantity).value() - self.net_premium_received();
+            (width * self.short_call.option.quantity).to_f64() - self.net_premium_received();
         if mas_loss < ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -241,16 +241,16 @@ impl Strategies for BearCallSpread {
     fn profit_area(&self) -> f64 {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
         let base = self.break_even_points[0] - self.short_call.option.strike_price;
-        (high * base / 200.0).value()
+        (high * base / 200.0).to_f64()
     }
 
     fn profit_ratio(&self) -> f64 {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (Positive::ZERO, _) => ZERO,
-            (_, Positive::ZERO) => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).value(),
+            (value, _) if value == Positive::ZERO => ZERO,
+            (_, value)  if value == Positive::ZERO => f64::INFINITY,
+            _ => (max_profit / max_loss * 100.0).to_f64(),
         }
     }
 
@@ -359,7 +359,7 @@ impl Optimizable for BearCallSpread {
             short.strike_price,
             long.strike_price,
             self.short_call.option.expiration_date.clone(),
-            short.implied_volatility.unwrap().value() / 100.0,
+            short.implied_volatility.unwrap().to_f64() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
@@ -391,7 +391,7 @@ impl Graph for BearCallSpread {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let underlying_price = self.short_call.option.underlying_price.value();
+        let underlying_price = self.short_call.option.underlying_price.to_f64();
         vec![ChartVerticalLine {
             x_coordinate: underlying_price,
             y_range: (f64::NEG_INFINITY, f64::INFINITY),
@@ -408,7 +408,7 @@ impl Graph for BearCallSpread {
         let mut points = Vec::new();
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Break Even {:.2}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(10.0, -10.0),
             point_color: DARK_BLUE,
@@ -432,8 +432,8 @@ impl Graph for BearCallSpread {
 
         points.push(ChartPoint {
             coordinates: (
-                self.long_call.option.strike_price.into(),
-                -self.max_loss().unwrap_or(Positive::ZERO).into(),
+                self.long_call.option.strike_price.to_f64(),
+                -self.max_loss().unwrap_or(Positive::ZERO).to_f64(),
             ),
             label: format!("Max Loss -{:.2}", self.max_loss().unwrap_or(Positive::ZERO)),
             label_offset: LabelOffsetType::Relative(10.0, -10.0),
@@ -469,7 +469,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         let mut profit_range = ProfitLossRange::new(
             None,
             Some(break_even_point),
-            f2p!(self.max_profit()?.value()),
+            f2p!(self.max_profit()?.to_f64()),
         )?;
 
         profit_range.calculate_probability(
@@ -497,7 +497,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_point),
             Some(self.long_call.option.strike_price),
-            f2p!(self.max_loss()?.value()),
+            f2p!(self.max_loss()?.to_f64()),
         )?;
 
         loss_range.calculate_probability(
@@ -611,7 +611,7 @@ mod tests_bear_call_spread_strategies {
         let result = spread.max_profit();
         assert!(result.is_ok());
         assert_relative_eq!(
-            result.unwrap().value(),
+            result.unwrap().to_f64(),
             spread.net_premium_received(),
             epsilon = 0.0001
         );
@@ -640,10 +640,10 @@ mod tests_bear_call_spread_strategies {
         assert!(result.is_ok());
 
         let width =
-            (spread.long_call.option.strike_price - spread.short_call.option.strike_price).value();
+            (spread.long_call.option.strike_price - spread.short_call.option.strike_price).to_f64();
         let expected_loss =
-            width * spread.short_call.option.quantity.value() - spread.net_premium_received();
-        assert_relative_eq!(result.unwrap().value(), expected_loss, epsilon = 0.0001);
+            width * spread.short_call.option.quantity.to_f64() - spread.net_premium_received();
+        assert_relative_eq!(result.unwrap().to_f64(), expected_loss, epsilon = 0.0001);
     }
 
     #[test]
@@ -665,7 +665,7 @@ mod tests_bear_call_spread_strategies {
     fn test_total_cost() {
         let spread = create_test_spread();
         let expected_cost = spread.short_call.net_cost() + spread.long_call.net_cost();
-        assert_relative_eq!(spread.total_cost().value(), expected_cost, epsilon = 0.0001);
+        assert_relative_eq!(spread.total_cost().to_f64(), expected_cost, epsilon = 0.0001);
     }
 
     #[test]
@@ -695,7 +695,7 @@ mod tests_bear_call_spread_strategies {
         let spread = create_test_spread();
         let high = spread.max_profit().unwrap_or(Positive::ZERO);
         let base = spread.break_even_points[0] - spread.short_call.option.strike_price;
-        let expected_area = (high * base / 200.0).value();
+        let expected_area = (high * base / 200.0).to_f64();
         assert_relative_eq!(spread.profit_area(), expected_area, epsilon = 0.0001);
     }
 
@@ -704,7 +704,7 @@ mod tests_bear_call_spread_strategies {
         let spread = create_test_spread();
         let max_profit = spread.max_profit().unwrap();
         let max_loss = spread.max_loss().unwrap();
-        let expected_ratio = (max_profit / max_loss * 100.0).value();
+        let expected_ratio = (max_profit / max_loss * 100.0).to_f64();
         assert_relative_eq!(spread.profit_ratio(), expected_ratio, epsilon = 0.0001);
     }
 
@@ -736,10 +736,10 @@ mod tests_bear_call_spread_strategies {
 
         // Break even should be short strike plus net premium received per contract
         let expected_break_even = spread.short_call.option.strike_price
-            + f2p!(spread.net_premium_received() / spread.short_call.option.quantity.value());
+            + f2p!(spread.net_premium_received() / spread.short_call.option.quantity.to_f64());
         assert_relative_eq!(
-            break_even_points[0].value(),
-            expected_break_even.value(),
+            break_even_points[0].to_f64(),
+            expected_break_even.to_f64(),
             epsilon = 0.0001
         );
     }
@@ -768,13 +768,13 @@ mod tests_bear_call_spread_strategies {
         // Check that all calculations scale properly with quantity
         let base_spread = create_test_spread();
         assert_relative_eq!(
-            spread.max_profit().unwrap().value(),
-            base_spread.max_profit().unwrap().value() * 2.0,
+            spread.max_profit().unwrap().to_f64(),
+            base_spread.max_profit().unwrap().to_f64() * 2.0,
             epsilon = 0.0001
         );
         assert_relative_eq!(
-            spread.max_loss().unwrap().value(),
-            base_spread.max_loss().unwrap().value() * 2.0,
+            spread.max_loss().unwrap().to_f64(),
+            base_spread.max_loss().unwrap().to_f64() * 2.0,
             epsilon = 0.0001
         );
     }
@@ -1279,7 +1279,7 @@ mod tests_bear_call_spread_profit {
         let profit = spread.calculate_profit_at(test_price);
         // Between strikes, only short call is in-the-money
         let intrinsic_value = test_price - spread.short_call.option.strike_price;
-        let expected_profit = spread.net_premium_received() - intrinsic_value.value();
+        let expected_profit = spread.net_premium_received() - intrinsic_value.to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
@@ -1291,7 +1291,7 @@ mod tests_bear_call_spread_profit {
         let short_intrinsic = f2p!(105.0) - spread.short_call.option.strike_price;
         let long_intrinsic = f2p!(105.0) - spread.long_call.option.strike_price;
         let expected_profit =
-            spread.net_premium_received() - short_intrinsic.value() + long_intrinsic.value();
+            spread.net_premium_received() - short_intrinsic.to_f64() + long_intrinsic.to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
@@ -1300,7 +1300,7 @@ mod tests_bear_call_spread_profit {
         let spread = create_test_spread();
         let profit = spread.calculate_profit_at(f2p!(110.0));
         // Maximum loss occurs when price is above long strike
-        let expected_profit = -spread.max_loss().unwrap().value();
+        let expected_profit = -spread.max_loss().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
@@ -1696,8 +1696,8 @@ mod tests_bear_call_spread_graph {
         assert_eq!(values[2], spread.calculate_profit_at(f2p!(105.0)));
         assert_eq!(values[3], spread.calculate_profit_at(f2p!(110.0)));
         assert_eq!(values[4], spread.calculate_profit_at(f2p!(115.0)));
-        assert_eq!(values[0], spread.max_profit().unwrap_or(Positive::ZERO).value());
-        assert_eq!(values[4], -spread.max_loss().unwrap_or(Positive::ZERO).value());
+        assert_eq!(values[0], spread.max_profit().unwrap_or(Positive::ZERO).to_f64());
+        assert_eq!(values[4], -spread.max_loss().unwrap_or(Positive::ZERO).to_f64());
     }
 }
 

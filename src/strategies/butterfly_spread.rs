@@ -161,14 +161,14 @@ impl LongButterflySpread {
 
         strategy.validate();
 
-        let left_profit = strategy.calculate_profit_at(low_strike) / quantity.value();
+        let left_profit = strategy.calculate_profit_at(low_strike) / quantity.to_f64();
         let first_break_even = low_strike - left_profit;
         let value_at_first = strategy.calculate_profit_at(first_break_even);
         if approx_equal(value_at_first, ZERO) {
             strategy.break_even_points.push(first_break_even);
         }
 
-        let right_profit = strategy.calculate_profit_at(high_strike) / quantity.value();
+        let right_profit = strategy.calculate_profit_at(high_strike) / quantity.to_f64();
         let second_break_even = high_strike + right_profit;
         let value_at_second = strategy.calculate_profit_at(second_break_even);
         if approx_equal(value_at_second, ZERO) {
@@ -299,7 +299,7 @@ impl Strategies for LongButterflySpread {
             + self.short_calls.close_fee
             + self.long_call_high.open_fee
             + self.long_call_high.close_fee)
-            * self.long_call_low.option.quantity.value()
+            * self.long_call_low.option.quantity.to_f64()
     }
 
     fn profit_area(&self) -> f64 {
@@ -317,16 +317,16 @@ impl Strategies for LongButterflySpread {
                 f2p!(self.calculate_profit_at(self.long_call_low.option.strike_price))
             }
         };
-        (high * base / 200.0).value()
+        (high * base / 200.0).to_f64()
     }
 
     fn profit_ratio(&self) -> f64 {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (Positive::ZERO, _) => ZERO,
-            (_, Positive::ZERO) => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).value(),
+            (value, _) if value == Positive::ZERO => ZERO,
+            (_, value) if value == Positive::ZERO => f64::INFINITY,
+            _ => (max_profit / max_loss * 100.0).to_f64(),
         }
     }
 
@@ -430,13 +430,13 @@ impl Optimizable for LongButterflySpread {
                 middle_strike.strike_price,
                 high_strike.strike_price,
                 self.long_call_low.option.expiration_date.clone(),
-                middle_strike.implied_volatility.unwrap().value() / 100.0,
+                middle_strike.implied_volatility.unwrap().to_f64() / 100.0,
                 self.long_call_low.option.risk_free_rate,
                 self.long_call_low.option.dividend_yield,
                 self.long_call_low.option.quantity,
-                low_strike.call_ask.unwrap().value(),
-                middle_strike.call_bid.unwrap().value(),
-                high_strike.call_ask.unwrap().value(),
+                low_strike.call_ask.unwrap().to_f64(),
+                middle_strike.call_bid.unwrap().to_f64(),
+                high_strike.call_ask.unwrap().to_f64(),
                 self.fees() / 8.0,
             ),
             _ => panic!("Invalid number of legs for Long Butterfly strategy"),
@@ -486,7 +486,7 @@ impl Graph for LongButterflySpread {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         vec![ChartVerticalLine {
-            x_coordinate: self.long_call_low.option.underlying_price.value(),
+            x_coordinate: self.long_call_low.option.underlying_price.to_f64(),
             y_range: (-50000.0, 50000.0),
             label: format!(
                 "Current Price: {}",
@@ -514,7 +514,7 @@ impl Graph for LongButterflySpread {
                 .iter()
                 .enumerate()
                 .map(|(i, &price)| ChartPoint {
-                    coordinates: (price.value(), 0.0),
+                    coordinates: (price.to_f64(), 0.0),
                     label: format!(
                         "Break Even {}: {:.2}",
                         if i == 0 { "Lower" } else { "Upper" },
@@ -531,8 +531,8 @@ impl Graph for LongButterflySpread {
         // Maximum profit point (at middle strike)
         points.push(ChartPoint {
             coordinates: (
-                self.short_calls.option.strike_price.value(),
-                max_profit.value(),
+                self.short_calls.option.strike_price.to_f64(),
+                max_profit.to_f64(),
             ),
             label: format!("Max Profit {:.2}", max_profit),
             label_offset: LabelOffsetType::Relative(3.0, 3.0),
@@ -546,7 +546,7 @@ impl Graph for LongButterflySpread {
 
         // Maximum loss points (at wing strikes)
         points.push(ChartPoint {
-            coordinates: (self.long_call_low.option.strike_price.value(), left_loss),
+            coordinates: (self.long_call_low.option.strike_price.to_f64(), left_loss),
             label: format!("Left Loss {:.2}", left_loss),
             label_offset: LabelOffsetType::Relative(-30.0, -3.0),
             point_color: left_color,
@@ -558,7 +558,7 @@ impl Graph for LongButterflySpread {
         let right_color = if right_loss > ZERO { DARK_GREEN } else { RED };
 
         points.push(ChartPoint {
-            coordinates: (self.long_call_high.option.strike_price.value(), right_loss),
+            coordinates: (self.long_call_high.option.strike_price.to_f64(), right_loss),
             label: format!("Right Loss {:.2}", right_loss),
             label_offset: LabelOffsetType::Relative(3.0, -3.0),
             point_color: right_color,
@@ -595,7 +595,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            f2p!(self.max_profit()?.value()),
+            f2p!(self.max_profit()?.to_f64()),
         )?;
 
         profit_range.calculate_probability(
@@ -630,7 +630,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut lower_loss_range = ProfitLossRange::new(
             Some(self.long_call_low.option.strike_price),
             Some(break_even_points[0]),
-            f2p!(self.max_loss()?.value()),
+            f2p!(self.max_loss()?.to_f64()),
         )?;
 
         lower_loss_range.calculate_probability(
@@ -646,7 +646,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut upper_loss_range = ProfitLossRange::new(
             Some(break_even_points[1]),
             Some(self.long_call_high.option.strike_price),
-            f2p!(self.max_loss()?.value()),
+            f2p!(self.max_loss()?.to_f64()),
         )?;
 
         upper_loss_range.calculate_probability(
@@ -871,14 +871,14 @@ impl ShortButterflySpread {
 
         strategy.validate();
 
-        let left_profit = strategy.calculate_profit_at(low_strike) / quantity.value();
+        let left_profit = strategy.calculate_profit_at(low_strike) / quantity.to_f64();
         let first_break_even = low_strike + left_profit;
         let value_at_first = strategy.calculate_profit_at(first_break_even);
         if approx_equal(value_at_first, ZERO) {
             strategy.break_even_points.push(first_break_even);
         }
 
-        let right_profit = strategy.calculate_profit_at(high_strike) / quantity.value();
+        let right_profit = strategy.calculate_profit_at(high_strike) / quantity.to_f64();
         let second_break_even = high_strike - right_profit;
         let value_at_second = strategy.calculate_profit_at(second_break_even);
         if approx_equal(value_at_second, ZERO) {
@@ -1008,7 +1008,7 @@ impl Strategies for ShortButterflySpread {
             + self.long_calls.close_fee
             + self.short_call_high.open_fee
             + self.short_call_high.close_fee)
-            * self.short_call_low.option.quantity.value()
+            * self.short_call_low.option.quantity.to_f64()
     }
 
     fn profit_area(&self) -> f64 {
@@ -1027,9 +1027,9 @@ impl Strategies for ShortButterflySpread {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (Positive::ZERO, _) => ZERO,
-            (_, Positive::ZERO) => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).value(),
+            (value, _) if value == Positive::ZERO=> ZERO,
+            (_, value) if value == Positive::ZERO=> f64::INFINITY,
+            _ => (max_profit / max_loss * 100.0).to_f64(),
         }
     }
 
@@ -1133,13 +1133,13 @@ impl Optimizable for ShortButterflySpread {
                 middle_strike.strike_price,
                 high_strike.strike_price,
                 self.short_call_low.option.expiration_date.clone(),
-                middle_strike.implied_volatility.unwrap().value() / 100.0,
+                middle_strike.implied_volatility.unwrap().to_f64() / 100.0,
                 self.short_call_low.option.risk_free_rate,
                 self.short_call_low.option.dividend_yield,
                 self.short_call_low.option.quantity,
-                low_strike.call_bid.unwrap().value(),
-                middle_strike.call_ask.unwrap().value(),
-                high_strike.call_bid.unwrap().value(),
+                low_strike.call_bid.unwrap().to_f64(),
+                middle_strike.call_ask.unwrap().to_f64(),
+                high_strike.call_bid.unwrap().to_f64(),
                 self.fees() / 8.0,
             ),
             _ => panic!("Invalid number of legs for Short Butterfly strategy"),
@@ -1186,7 +1186,7 @@ impl Graph for ShortButterflySpread {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         vec![ChartVerticalLine {
-            x_coordinate: self.short_call_low.option.underlying_price.value(),
+            x_coordinate: self.short_call_low.option.underlying_price.to_f64(),
             y_range: (-50000.0, 50000.0),
             label: format!(
                 "Current Price: {}",
@@ -1213,7 +1213,7 @@ impl Graph for ShortButterflySpread {
                 .iter()
                 .enumerate()
                 .map(|(i, &price)| ChartPoint {
-                    coordinates: (price.value(), 0.0),
+                    coordinates: (price.to_f64(), 0.0),
                     label: format!(
                         "Break Even {}: {:.2}",
                         if i == 0 { "Lower" } else { "Upper" },
@@ -1230,10 +1230,10 @@ impl Graph for ShortButterflySpread {
         // Maximum loss point (at middle strike)
         points.push(ChartPoint {
             coordinates: (
-                self.long_calls.option.strike_price.value(),
-                -max_loss.value(),
+                self.long_calls.option.strike_price.to_f64(),
+                -max_loss.to_f64(),
             ),
-            label: format!("Max Loss {:.2}", -max_loss.value()),
+            label: format!("Max Loss {:.2}", -max_loss.to_f64()),
             label_offset: LabelOffsetType::Relative(3.0, -3.0),
             point_color: RED,
             label_color: RED,
@@ -1245,7 +1245,7 @@ impl Graph for ShortButterflySpread {
 
         // Maximum profit points (at wing strikes)
         points.push(ChartPoint {
-            coordinates: (self.short_call_low.option.strike_price.value(), left_profit),
+            coordinates: (self.short_call_low.option.strike_price.to_f64(), left_profit),
             label: format!("Left Profit {:.2}", left_profit),
             label_offset: LabelOffsetType::Relative(-30.0, 3.0),
             point_color: left_color,
@@ -1258,7 +1258,7 @@ impl Graph for ShortButterflySpread {
 
         points.push(ChartPoint {
             coordinates: (
-                self.short_call_high.option.strike_price.value(),
+                self.short_call_high.option.strike_price.to_f64(),
                 right_profit,
             ),
             label: format!("Right Profit {:.2}", right_profit),
@@ -1303,7 +1303,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         let mut lower_profit_range = ProfitLossRange::new(
             Some(self.short_call_low.option.strike_price),
             Some(break_even_points[0]),
-            f2p!(self.max_profit()?.value()),
+            f2p!(self.max_profit()?.to_f64()),
         )?;
 
         lower_profit_range.calculate_probability(
@@ -1319,7 +1319,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         let mut upper_profit_range = ProfitLossRange::new(
             Some(break_even_points[1]),
             Some(self.short_call_high.option.strike_price),
-            f2p!(self.max_profit()?.value()),
+            f2p!(self.max_profit()?.to_f64()),
         )?;
 
         upper_profit_range.calculate_probability(
@@ -1347,7 +1347,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            f2p!(self.max_loss()?.value()),
+            f2p!(self.max_loss()?.to_f64()),
         )?;
 
         loss_range.calculate_probability(
@@ -2300,7 +2300,7 @@ mod tests_butterfly_strategies {
         let max_profit = butterfly.max_profit().unwrap();
         // Max profit at middle strike
         let expected_profit = butterfly.calculate_profit_at(f2p!(100.0));
-        assert_eq!(max_profit.value(), expected_profit);
+        assert_eq!(max_profit.to_f64(), expected_profit);
     }
 
     #[test]
@@ -2310,7 +2310,7 @@ mod tests_butterfly_strategies {
         // Max loss at wings
         let left_loss = butterfly.calculate_profit_at(f2p!(90.0));
         let right_loss = butterfly.calculate_profit_at(f2p!(110.0));
-        assert_eq!(max_loss.value(), left_loss.min(right_loss).abs());
+        assert_eq!(max_loss.to_f64(), left_loss.min(right_loss).abs());
     }
 
     #[test]
@@ -2319,7 +2319,7 @@ mod tests_butterfly_strategies {
         let max_loss = butterfly.max_loss().unwrap();
         // Max loss at middle strike
         let expected_loss = butterfly.calculate_profit_at(f2p!(100.0));
-        assert_eq!(max_loss.value(), expected_loss.abs());
+        assert_eq!(max_loss.to_f64(), expected_loss.abs());
     }
 
     #[test]
@@ -2427,8 +2427,8 @@ mod tests_butterfly_strategies {
 
         let base_butterfly = create_test_long();
         assert_eq!(
-            long_butterfly.max_profit().unwrap().value(),
-            base_butterfly.max_profit().unwrap().value() * 2.0
+            long_butterfly.max_profit().unwrap().to_f64(),
+            base_butterfly.max_profit().unwrap().to_f64() * 2.0
         );
     }
 }
@@ -2620,7 +2620,7 @@ mod tests_long_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(100.0));
         assert!(profit > 0.0);
-        assert_eq!(profit, butterfly.max_profit().unwrap().value());
+        assert_eq!(profit, butterfly.max_profit().unwrap().to_f64());
     }
 
     #[test]
@@ -2628,7 +2628,7 @@ mod tests_long_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(85.0));
         assert!(profit < 0.0);
-        assert_eq!(profit, -butterfly.max_loss().unwrap().value());
+        assert_eq!(profit, -butterfly.max_loss().unwrap().to_f64());
     }
 
     #[test]
@@ -2638,7 +2638,7 @@ mod tests_long_butterfly_profit {
         assert!(profit < 0.0);
         assert_relative_eq!(
             profit,
-            -butterfly.max_loss().unwrap().value(),
+            -butterfly.max_loss().unwrap().to_f64(),
             epsilon = 0.0001
         );
     }
@@ -2709,7 +2709,7 @@ mod tests_short_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(100.0));
         assert!(profit < 0.0);
-        assert_eq!(profit, -butterfly.max_loss().unwrap().value());
+        assert_eq!(profit, -butterfly.max_loss().unwrap().to_f64());
     }
 
     #[test]
@@ -3187,11 +3187,11 @@ mod tests_butterfly_probability {
         let long_loss_ranges = long_butterfly.get_loss_ranges().unwrap();
         let long_total_prob = long_profit_ranges
             .iter()
-            .map(|r| r.probability.value())
+            .map(|r| r.probability.to_f64())
             .sum::<f64>()
             + long_loss_ranges
                 .iter()
-                .map(|r| r.probability.value())
+                .map(|r| r.probability.to_f64())
                 .sum::<f64>();
         assert!((long_total_prob - 1.0).abs() < 0.1);
 
@@ -3199,11 +3199,11 @@ mod tests_butterfly_probability {
         let short_loss_ranges = short_butterfly.get_loss_ranges().unwrap();
         let short_total_prob = short_profit_ranges
             .iter()
-            .map(|r| r.probability.value())
+            .map(|r| r.probability.to_f64())
             .sum::<f64>()
             + short_loss_ranges
                 .iter()
-                .map(|r| r.probability.value())
+                .map(|r| r.probability.to_f64())
                 .sum::<f64>();
         assert!((short_total_prob - 1.0).abs() < 0.1);
     }

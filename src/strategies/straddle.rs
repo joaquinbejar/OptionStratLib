@@ -224,13 +224,13 @@ impl Strategies for ShortStraddle {
 
     fn profit_area(&self) -> f64 {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
-        let cat = (strike_diff / 2.0_f64.sqrt()).value();
+        let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
         (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()))
     }
 
     fn profit_ratio(&self) -> f64 {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        self.max_profit().unwrap_or(Positive::ZERO).value() / break_even_diff * 100.0
+        self.max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0
     }
 
     fn get_break_even_points(&self) -> Vec<Positive> {
@@ -328,12 +328,12 @@ impl Optimizable for ShortStraddle {
             chain.underlying_price,
             call.strike_price,
             self.short_call.option.expiration_date.clone(),
-            call.implied_volatility.unwrap().value() / 100.0,
+            call.implied_volatility.unwrap().to_f64() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            call.call_bid.unwrap().value(),
-            put.put_bid.unwrap().value(),
+            call.call_bid.unwrap().to_f64(),
+            put.put_bid.unwrap().to_f64(),
             self.short_call.open_fee,
             self.short_call.close_fee,
             self.short_put.open_fee,
@@ -378,7 +378,7 @@ impl Graph for ShortStraddle {
         let min_value = f64::NEG_INFINITY;
 
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.value(),
+            x_coordinate: self.short_call.option.underlying_price.to_f64(),
             y_range: (min_value, max_value),
             label: format!(
                 "Current Price: {:.2}",
@@ -399,7 +399,7 @@ impl Graph for ShortStraddle {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(0.0, -10.0),
             point_color: DARK_BLUE,
@@ -409,7 +409,7 @@ impl Graph for ShortStraddle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].value(), 0.0),
+            coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
             label_offset: LabelOffsetType::Relative(-230.0, -10.0),
             point_color: DARK_BLUE,
@@ -419,13 +419,13 @@ impl Graph for ShortStraddle {
         });
 
         let coordinates: (f64, f64) = (
-            -self.short_put.option.strike_price.value() / 30.0,
-            max_profit.value() / 15.0,
+            -self.short_put.option.strike_price.to_f64() / 30.0,
+            max_profit.to_f64() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
-                self.short_put.option.strike_price.value(),
-                max_profit.value(),
+                self.short_put.option.strike_price.to_f64(),
+                max_profit.to_f64(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
@@ -759,7 +759,7 @@ impl Strategies for LongStraddle {
 
     fn profit_area(&self) -> f64 {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
-        let cat = (strike_diff / 2.0_f64.sqrt()).value();
+        let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
         let loss_area = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
         (1.0 / loss_area) * 10000.0 // Invert the value to get the profit area: the lower, the better
     }
@@ -767,7 +767,7 @@ impl Strategies for LongStraddle {
     fn profit_ratio(&self) -> f64 {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
         match self.max_loss() {
-            Ok(max_loss) => ((break_even_diff / max_loss) * 100.0).value(),
+            Ok(max_loss) => ((break_even_diff / max_loss) * 100.0).to_f64(),
             Err(_) => ZERO,
         }
     }
@@ -864,12 +864,12 @@ impl Optimizable for LongStraddle {
             chain.underlying_price,
             call.strike_price,
             self.long_call.option.expiration_date.clone(),
-            call.implied_volatility.unwrap().value() / 100.0,
+            call.implied_volatility.unwrap().to_f64() / 100.0,
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            call.call_ask.unwrap().value(),
-            put.put_ask.unwrap().value(),
+            call.call_ask.unwrap().to_f64(),
+            put.put_ask.unwrap().to_f64(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.long_put.open_fee,
@@ -905,7 +905,7 @@ impl Graph for LongStraddle {
         let min_value = f64::NEG_INFINITY;
 
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.long_call.option.underlying_price.value(),
+            x_coordinate: self.long_call.option.underlying_price.to_f64(),
             y_range: (min_value, max_value),
             label: format!(
                 "Current Price: {:.2}",
@@ -926,7 +926,7 @@ impl Graph for LongStraddle {
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Low Break Even {}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(10.0, -10.0),
             point_color: DARK_BLUE,
@@ -936,7 +936,7 @@ impl Graph for LongStraddle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].value(), 0.0),
+            coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("High Break Even {}", self.break_even_points[1]),
             label_offset: LabelOffsetType::Relative(-60.0, -10.0),
             point_color: DARK_BLUE,
@@ -947,8 +947,8 @@ impl Graph for LongStraddle {
 
         points.push(ChartPoint {
             coordinates: (
-                self.long_call.option.strike_price.value(),
-                -max_loss.value(),
+                self.long_call.option.strike_price.to_f64(),
+                -max_loss.to_f64(),
             ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
@@ -1319,7 +1319,7 @@ mod tests_short_straddle {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
         let expected_ratio = strategy.max_profit().unwrap_or(Positive::ZERO) / break_even_diff * 100.0;
-        assert_eq!(strategy.profit_ratio(), expected_ratio.value());
+        assert_eq!(strategy.profit_ratio(), expected_ratio.to_f64());
     }
 
     #[test]
@@ -1406,8 +1406,8 @@ mod tests_short_straddle {
         assert_eq!(points.len(), 4);
 
         let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
-        assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
-        assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
+        assert!(break_even_points.contains(&strategy.break_even_points[0].to_f64()));
+        assert!(break_even_points.contains(&strategy.break_even_points[1].to_f64()));
     }
 
     fn create_test_option_chain() -> OptionChain {
@@ -1548,7 +1548,7 @@ mod tests_long_straddle {
         let strategy = setup_long_straddle();
         assert_eq!(
             strategy.max_loss().unwrap_or(Positive::ZERO),
-            strategy.total_cost().value()
+            strategy.total_cost().to_f64()
         );
     }
 
@@ -1713,8 +1713,8 @@ mod tests_long_straddle {
         assert_eq!(points.len(), 4);
 
         let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
-        assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
-        assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
+        assert!(break_even_points.contains(&strategy.break_even_points[0].to_f64()));
+        assert!(break_even_points.contains(&strategy.break_even_points[1].to_f64()));
     }
 
     fn create_test_option_chain() -> OptionChain {

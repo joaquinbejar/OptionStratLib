@@ -318,24 +318,24 @@ impl Strategies for IronButterfly {
 
     fn profit_area(&self) -> f64 {
         let inner_width =
-            (self.short_call.option.strike_price - self.short_put.option.strike_price).value();
+            (self.short_call.option.strike_price - self.short_put.option.strike_price).to_f64();
         let outer_width =
-            (self.long_call.option.strike_price - self.long_put.option.strike_price).value();
+            (self.long_call.option.strike_price - self.long_put.option.strike_price).to_f64();
         let height = self.max_profit().unwrap_or(Positive::ZERO);
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
-        (inner_area + outer_triangles) / self.short_call.option.underlying_price.value()
+        (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64()
     }
 
     fn profit_ratio(&self) -> f64 {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (Positive::ZERO, _) => ZERO,
-            (_, Positive::ZERO) => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).value(),
+            (value, _) if value == Positive::ZERO => ZERO,
+            (_, value) if value == Positive::ZERO => f64::INFINITY,
+            _ => (max_profit / max_loss * 100.0).to_f64(),
         }
     }
 
@@ -436,14 +436,14 @@ impl Optimizable for IronButterfly {
                 long_call.strike_price,
                 long_put.strike_price,
                 self.short_call.option.expiration_date.clone(),
-                short_strike.implied_volatility.unwrap().value() / 100.0,
+                short_strike.implied_volatility.unwrap().to_f64() / 100.0,
                 self.short_call.option.risk_free_rate,
                 self.short_call.option.dividend_yield,
                 self.short_call.option.quantity,
-                short_strike.call_bid.unwrap().value(),
-                short_strike.put_bid.unwrap().value(),
-                long_call.call_ask.unwrap().value(),
-                long_put.put_ask.unwrap().value(),
+                short_strike.call_bid.unwrap().to_f64(),
+                short_strike.put_bid.unwrap().to_f64(),
+                long_call.call_ask.unwrap().to_f64(),
+                long_put.put_ask.unwrap().to_f64(),
                 self.fees() / 8.0,
                 self.fees() / 8.0,
             ),
@@ -491,7 +491,7 @@ impl Graph for IronButterfly {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.value(),
+            x_coordinate: self.short_call.option.underlying_price.to_f64(),
             y_range: (-50000.0, 50000.0),
             label: format!("Current Price: {}", self.short_call.option.underlying_price),
             label_offset: (5.0, 5.0),
@@ -514,7 +514,7 @@ impl Graph for IronButterfly {
         let current_price = &self.short_call.option.underlying_price;
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Left Break Even\n\n{}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(5.0, 5.0),
             point_color: DARK_BLUE,
@@ -524,7 +524,7 @@ impl Graph for IronButterfly {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].value(), 0.0),
+            coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("Right Break Even\n\n{}", self.break_even_points[1]),
             label_offset: LabelOffsetType::Relative(5.0, 5.0),
             point_color: DARK_BLUE,
@@ -534,11 +534,11 @@ impl Graph for IronButterfly {
         });
 
         let coordiantes: (f64, f64) = (
-            short_call_strike_price.value() / 2000.0,
-            max_profit.value() / 5.0,
+            short_call_strike_price.to_f64() / 2000.0,
+            max_profit.to_f64() / 5.0,
         );
         points.push(ChartPoint {
-            coordinates: (short_call_strike_price.value(), max_profit.value()),
+            coordinates: (short_call_strike_price.to_f64(), max_profit.to_f64()),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
                 max_profit, short_call_strike_price
@@ -551,9 +551,9 @@ impl Graph for IronButterfly {
         });
 
         let loss = self.calculate_profit_at(*long_call_strike_price);
-        let coordinates: (f64, f64) = (-short_put_strike_price.value() / 35.0, loss / 50.0);
+        let coordinates: (f64, f64) = (-short_put_strike_price.to_f64() / 35.0, loss / 50.0);
         points.push(ChartPoint {
-            coordinates: (self.long_call.option.strike_price.value(), loss),
+            coordinates: (self.long_call.option.strike_price.to_f64(), loss),
             label: format!(
                 "Right Max Loss {:.2} at {:.0}",
                 loss, self.long_call.option.strike_price
@@ -567,9 +567,9 @@ impl Graph for IronButterfly {
 
         let loss = self.calculate_profit_at(*long_put_strike_price);
 
-        let coordinates: (f64, f64) = (long_put_strike_price.value() / 2000.0, loss / 50.0);
+        let coordinates: (f64, f64) = (long_put_strike_price.to_f64() / 2000.0, loss / 50.0);
         points.push(ChartPoint {
-            coordinates: (long_put_strike_price.value(), loss),
+            coordinates: (long_put_strike_price.to_f64(), loss),
             label: format!("Left Max Loss {:.2} at {:.0}", loss, long_put_strike_price),
             label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: RED,
@@ -1286,8 +1286,8 @@ mod tests_iron_butterfly_optimizable {
 
         assert!(butterfly.validate());
         // Short strikes should be at or very near the money
-        let diff = (butterfly.short_call.option.strike_price.value()
-            - chain.underlying_price.value())
+        let diff = (butterfly.short_call.option.strike_price.to_f64()
+            - chain.underlying_price.to_f64())
         .abs();
         assert!(diff <= 5.0); // Allow some flexibility in strike selection
         assert_eq!(
@@ -1309,7 +1309,7 @@ mod tests_iron_butterfly_optimizable {
             butterfly.long_call.option.strike_price - butterfly.short_call.option.strike_price;
         let lower_wing =
             butterfly.short_put.option.strike_price - butterfly.long_put.option.strike_price;
-        assert!((upper_wing - lower_wing).value().abs() <= 5.0);
+        assert!((upper_wing - lower_wing).to_f64().abs() <= 5.0);
     }
 
     #[test]
@@ -1564,8 +1564,8 @@ mod tests_iron_butterfly_profit {
 
         // Break-evens should be equidistant from short strike
         let short_strike = butterfly.short_call.option.strike_price;
-        let lower_break_even = f2p!((short_strike - 2.0).value());
-        let upper_break_even = f2p!((short_strike + 2.0).value());
+        let lower_break_even = f2p!((short_strike - 2.0).to_f64());
+        let upper_break_even = f2p!((short_strike + 2.0).to_f64());
 
         let lower_profit = butterfly.calculate_profit_at(lower_break_even);
         let upper_profit = butterfly.calculate_profit_at(upper_break_even);
@@ -1575,8 +1575,8 @@ mod tests_iron_butterfly_profit {
 
         // Break-evens should be equidistant from short strike
         assert!(
-            (lower_break_even.value() - short_strike.value()).abs()
-                == (upper_break_even.value() - short_strike.value()).abs()
+            (lower_break_even.to_f64() - short_strike.to_f64()).abs()
+                == (upper_break_even.to_f64() - short_strike.to_f64()).abs()
         );
     }
 
@@ -1587,8 +1587,8 @@ mod tests_iron_butterfly_profit {
 
         // Test points equidistant from short strike should have equal profits
         for offset in [2.0, 4.0, 6.0, 8.0] {
-            let up_profit = butterfly.calculate_profit_at(f2p!((short_strike + offset).value()));
-            let down_profit = butterfly.calculate_profit_at(f2p!((short_strike - offset).value()));
+            let up_profit = butterfly.calculate_profit_at(f2p!((short_strike + offset).to_f64()));
+            let down_profit = butterfly.calculate_profit_at(f2p!((short_strike - offset).to_f64()));
             assert!((up_profit - down_profit).abs() < 0.001);
         }
     }
@@ -1664,7 +1664,7 @@ mod tests_iron_butterfly_graph {
         assert_eq!(upper_break_even.coordinates.1, 0.0);
 
         // Break evens should be equidistant from short strike
-        let short_strike = butterfly.short_call.option.strike_price.value();
+        let short_strike = butterfly.short_call.option.strike_price.to_f64();
         let lower_distance = short_strike - lower_break_even.coordinates.0;
         let upper_distance = upper_break_even.coordinates.0 - short_strike;
         assert!((lower_distance - upper_distance).abs() < 0.001);
@@ -1745,7 +1745,7 @@ mod tests_iron_butterfly_graph {
     #[test]
     fn test_profit_curve_symmetry() {
         let butterfly = create_test_butterfly();
-        let short_strike = butterfly.short_call.option.strike_price.value();
+        let short_strike = butterfly.short_call.option.strike_price.to_f64();
 
         // Test points equidistant from short strike should have equal profits
         for offset in [2.0, 4.0, 6.0, 8.0] {

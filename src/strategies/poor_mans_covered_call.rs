@@ -245,14 +245,14 @@ impl Strategies for PoorMansCoveredCall {
     fn profit_area(&self) -> f64 {
         let base = (self.short_call.option.strike_price
             - (self.short_call.option.strike_price - self.max_profit().unwrap_or(Positive::ZERO)))
-        .value();
-        let high = self.max_profit().unwrap_or(Positive::ZERO).value();
+        .to_f64();
+        let high = self.max_profit().unwrap_or(Positive::ZERO).to_f64();
         base * high / 200.0
     }
 
     fn profit_ratio(&self) -> f64 {
         match (self.max_profit(), self.max_loss()) {
-            (Ok(profit), Ok(loss)) => (profit / loss).value() * 100.0,
+            (Ok(profit), Ok(loss)) => (profit / loss).to_f64() * 100.0,
             _ => ZERO,
         }
     }
@@ -417,7 +417,7 @@ impl Optimizable for PoorMansCoveredCall {
             short.strike_price,
             self.long_call.option.expiration_date.clone(),
             self.short_call.option.expiration_date.clone(),
-            short.implied_volatility.unwrap().value() / 100.0,
+            short.implied_volatility.unwrap().to_f64() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
@@ -469,7 +469,7 @@ impl Graph for PoorMansCoveredCall {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.value(),
+            x_coordinate: self.short_call.option.underlying_price.to_f64(),
             y_range: (-50000.0, 50000.0),
             label: format!("Current Price: {}", self.short_call.option.underlying_price),
             label_offset: (5.0, 5.0),
@@ -488,7 +488,7 @@ impl Graph for PoorMansCoveredCall {
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Break Even\n\n{}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(-30.0, 15.0),
             point_color: DARK_BLUE,
@@ -498,13 +498,13 @@ impl Graph for PoorMansCoveredCall {
         });
 
         let coordiantes: (f64, f64) = (
-            self.short_call.option.strike_price.value() / 2000.0,
-            max_profit.value() / 10.0,
+            self.short_call.option.strike_price.to_f64() / 2000.0,
+            max_profit.to_f64() / 10.0,
         );
         points.push(ChartPoint {
             coordinates: (
-                self.short_call.option.strike_price.value(),
-                max_profit.value(),
+                self.short_call.option.strike_price.to_f64(),
+                max_profit.to_f64(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
@@ -518,13 +518,13 @@ impl Graph for PoorMansCoveredCall {
         });
 
         let coordiantes: (f64, f64) = (
-            self.long_call.option.strike_price.value() / 2000.0,
-            -max_loss.value() / 50.0,
+            self.long_call.option.strike_price.to_f64() / 2000.0,
+            -max_loss.to_f64() / 50.0,
         );
         points.push(ChartPoint {
             coordinates: (
-                self.long_call.option.strike_price.value(),
-                -max_loss.value(),
+                self.long_call.option.strike_price.to_f64(),
+                -max_loss.to_f64(),
             ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
@@ -671,7 +671,7 @@ mod tests {
         let pmcc = create_pmcc_strategy();
         let break_even = pmcc.break_even();
         assert_eq!(break_even.len(), 1);
-        assert!(break_even[0].value() > 0.0);
+        assert!(break_even[0].to_f64() > 0.0);
     }
 
     #[test]
@@ -717,8 +717,8 @@ mod tests {
         let pmcc = create_pmcc_strategy();
         let profit = pmcc.calculate_profit_at(f2p!(150.0));
         assert!(
-            profit >= -pmcc.max_loss().unwrap_or(Positive::ZERO).value()
-                && profit <= pmcc.max_profit().unwrap_or(Positive::ZERO).value()
+            profit >= -pmcc.max_loss().unwrap_or(Positive::ZERO).to_f64()
+                && profit <= pmcc.max_profit().unwrap_or(Positive::ZERO).to_f64()
         );
     }
 
@@ -1028,7 +1028,7 @@ mod tests_pmcc_pnl {
 
         // At short strike
         let profit_short = strategy.calculate_profit_at(strategy.short_call.option.strike_price);
-        assert_eq!(profit_short, strategy.max_profit().unwrap_or(Positive::ZERO).value());
+        assert_eq!(profit_short, strategy.max_profit().unwrap_or(Positive::ZERO).to_f64());
 
         // Above short strike
         let profit_above = strategy.calculate_profit_at(f2p!(170.0));

@@ -96,7 +96,7 @@ impl CustomStrategy {
                 let mut high = current_price;
                 let mut iterations = 0;
 
-                'inner: while (high - low).value().abs() > self.epsilon
+                'inner: while (high - low).to_f64().abs() > self.epsilon
                     && iterations < self.max_iterations
                 {
                     let mid = (low + high) / 2.0;
@@ -255,7 +255,7 @@ impl Strategies for CustomStrategy {
             }
             current_price += f2p!(self.step_by);
         }
-        total_profit / self.underlying_price.value()
+        total_profit / self.underlying_price.to_f64()
     }
 
     fn profit_ratio(&self) -> f64 {
@@ -378,7 +378,7 @@ impl Graph for CustomStrategy {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.underlying_price.value(),
+            x_coordinate: self.underlying_price.to_f64(),
             y_range: (-1e8, 1e8),
             label: format!("Current Price: {:.2}", self.underlying_price),
             label_offset: (4.0, -1.0),
@@ -396,7 +396,7 @@ impl Graph for CustomStrategy {
 
         for point in self.break_even_points.iter() {
             points.push(ChartPoint {
-                coordinates: (point.value(), 0.0),
+                coordinates: (point.to_f64(), 0.0),
                 label: format!("Break Even {:.2}", point),
                 label_offset: LabelOffsetType::Relative(-26.0, 2.0),
                 point_color: DARK_BLUE,
@@ -410,7 +410,7 @@ impl Graph for CustomStrategy {
 
         points.push(ChartPoint {
             coordinates: (
-                self.max_profit_point.unwrap().0.value(),
+                self.max_profit_point.unwrap().0.to_f64(),
                 self.max_profit_point.unwrap().1,
             ),
             label: format!("Max Profit {:.2}", self.max_profit_point.unwrap().1),
@@ -423,7 +423,7 @@ impl Graph for CustomStrategy {
 
         points.push(ChartPoint {
             coordinates: (
-                self.max_loss_point.unwrap().0.value(),
+                self.max_loss_point.unwrap().0.to_f64(),
                 self.max_loss_point.unwrap().1,
             ),
             label: format!("Max Loss {:.2}", self.max_loss_point.unwrap().1),
@@ -539,7 +539,7 @@ mod tests_custom_strategy {
         let strategy = create_test_strategy();
         assert_eq!(strategy.break_even_points.len(), 1);
         assert_relative_eq!(
-            strategy.break_even_points[0].value(),
+            strategy.break_even_points[0].to_f64(),
             5851.48,
             epsilon = strategy.epsilon
         );
@@ -586,7 +586,7 @@ mod tests_custom_strategy {
         strategy.add_position(&position).expect("Invalid position");
         assert_eq!(strategy.break_even_points.len(), 1);
         assert_relative_eq!(
-            strategy.break_even_points[0].value(),
+            strategy.break_even_points[0].to_f64(),
             5866.36,
             epsilon = strategy.epsilon
         );
@@ -662,12 +662,12 @@ mod tests_custom_strategy {
         assert_eq!(strategy.positions.len(), 3);
         assert_eq!(strategy.break_even_points.len(), 2);
         assert_relative_eq!(
-            strategy.break_even_points[0].value(),
+            strategy.break_even_points[0].to_f64(),
             5766.85,
             epsilon = strategy.epsilon
         );
         assert_relative_eq!(
-            strategy.break_even_points[1].value(),
+            strategy.break_even_points[1].to_f64(),
             5833.15,
             epsilon = strategy.epsilon
         );
@@ -1145,12 +1145,12 @@ mod tests_best_range_to_show {
         let step = f2p!(10.0);
         let range = strategy.best_range_to_show(step).unwrap();
 
-        assert_eq!(range.first().unwrap().value(), 5644.8);
-        assert_eq!(range.last().unwrap().value(), 5974.8);
+        assert_eq!(range.first().unwrap().to_f64(), 5644.8);
+        assert_eq!(range.last().unwrap().to_f64(), 5974.8);
 
         // Check step size
         for i in 0..range.len() - 1 {
-            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+            assert_eq!((range[i + 1] - range[i]).to_f64(), step.to_f64());
         }
     }
 
@@ -1161,12 +1161,12 @@ mod tests_best_range_to_show {
         let step = f2p!(50.0);
         let range = strategy.best_range_to_show(step).unwrap();
 
-        assert_eq!(range.first().unwrap().value(), 5546.8);
-        assert_eq!(range.last().unwrap().value(), 6046.8);
+        assert_eq!(range.first().unwrap().to_f64(), 5546.8);
+        assert_eq!(range.last().unwrap().to_f64(), 6046.8);
 
         // Verify step size
         for i in 0..range.len() - 1 {
-            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+            assert_eq!((range[i + 1] - range[i]).to_f64(), step.to_f64());
         }
     }
 
@@ -1178,7 +1178,7 @@ mod tests_best_range_to_show {
 
         // Verify granular steps
         for i in 0..range.len() - 1 {
-            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+            assert_eq!((range[i + 1] - range[i]).to_f64(), step.to_f64());
         }
     }
 
@@ -1203,7 +1203,7 @@ mod tests_best_range_to_show {
 
         // Verify step size
         for i in 0..range.len() - 1 {
-            assert_eq!((range[i + 1] - range[i]).value(), step.value());
+            assert_eq!((range[i + 1] - range[i]).to_f64(), step.to_f64());
         }
     }
 
@@ -1214,10 +1214,10 @@ mod tests_best_range_to_show {
         let strategy = create_test_strategy_with_strikes(vec![min_strike, max_strike]);
         let range = strategy.best_range_to_show(f2p!(50.0)).unwrap();
 
-        let expected_min = (min_strike * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).value();
+        let expected_min = (min_strike * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).to_f64();
 
-        assert!(range.first().unwrap().value() <= expected_min);
-        assert!(range.last().unwrap().value() >= max_strike.value());
+        assert!(range.first().unwrap().to_f64() <= expected_min);
+        assert!(range.last().unwrap().to_f64() >= max_strike.to_f64());
     }
 
     #[test]
@@ -1226,8 +1226,8 @@ mod tests_best_range_to_show {
             create_test_strategy_with_strikes(vec![f2p!(5600.0), f2p!(5700.0), f2p!(5100.0)]);
         let range = strategy.best_range_to_show(f2p!(50.0)).unwrap();
 
-        assert_eq!(range.first().unwrap().value(), 4998.0);
-        assert_eq!(range.last().unwrap().value(), 6598.0);
+        assert_eq!(range.first().unwrap().to_f64(), 4998.0);
+        assert_eq!(range.last().unwrap().to_f64(), 6598.0);
     }
 }
 
@@ -1289,7 +1289,7 @@ mod tests_best_area {
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5520 Long Call European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
-            strategy.get_break_even_points()[0].value(),
+            strategy.get_break_even_points()[0].to_f64(),
             5796.675000003557
         );
         assert_eq!(strategy.max_profit_iter(), 203.32);
@@ -1309,7 +1309,7 @@ mod tests_best_area {
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6000 Short Put European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
-            strategy.get_break_even_points()[0].value(),
+            strategy.get_break_even_points()[0].to_f64(),
             5780.175000003497
         );
         assert_eq!(strategy.max_profit_iter(), 219.81480000199196);
@@ -1329,7 +1329,7 @@ mod tests_best_area {
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6200 Short Put European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
-            strategy.get_break_even_points()[0].value(),
+            strategy.get_break_even_points()[0].to_f64(),
             5785.975000003518
         );
         assert_eq!(strategy.max_profit_iter(), 414.03);
@@ -1396,7 +1396,7 @@ mod tests_best_ratio {
         assert_eq!(strategy.profit_ratio(), 441.4185165132647);
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5900 Long Call European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
-        assert_eq!(strategy.get_break_even_points()[0].value(), 5918.475000004);
+        assert_eq!(strategy.get_break_even_points()[0].to_f64(), 5918.475000004);
         assert_eq!(strategy.max_profit_iter(), 81.53);
         assert_eq!(strategy.max_loss_iter(), 18.470000000000002);
         assert_eq!(strategy.total_cost(), 21.85);

@@ -225,15 +225,15 @@ impl Strategies for BullCallSpread {
     fn profit_area(&self) -> f64 {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
         let base = self.short_call.option.strike_price - self.break_even_points[0];
-        (high * base / 200.0).value()
+        (high * base / 200.0).to_f64()
     }
 
     fn profit_ratio(&self) -> f64 {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (Positive::ZERO, _) => ZERO,
-            (_, Positive::ZERO) => f64::INFINITY,
+            (value, _) if value == Positive::ZERO => ZERO,
+            (_, value) if value == Positive::ZERO => f64::INFINITY,
             _ => (max_profit / max_loss * 100.0).into(),
         }
     }
@@ -347,7 +347,7 @@ impl Optimizable for BullCallSpread {
             long.strike_price,
             short.strike_price,
             self.long_call.option.expiration_date.clone(),
-            long.implied_volatility.unwrap().value() / 100.0,
+            long.implied_volatility.unwrap().to_f64() / 100.0,
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
@@ -379,7 +379,7 @@ impl Graph for BullCallSpread {
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let underlying_price = self.long_call.option.underlying_price.value();
+        let underlying_price = self.long_call.option.underlying_price.to_f64();
         vec![ChartVerticalLine {
             x_coordinate: underlying_price,
             y_range: (f64::NEG_INFINITY, f64::INFINITY),
@@ -397,7 +397,7 @@ impl Graph for BullCallSpread {
 
         // Break Even Point
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Break Even {:.2}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(10.0, -10.0),
             point_color: DARK_BLUE,
@@ -409,8 +409,8 @@ impl Graph for BullCallSpread {
         // Maximum Profit Point (at higher strike price)
         points.push(ChartPoint {
             coordinates: (
-                self.short_call.option.strike_price.value(),
-                self.max_profit().unwrap_or(Positive::ZERO).value(),
+                self.short_call.option.strike_price.to_f64(),
+                self.max_profit().unwrap_or(Positive::ZERO).to_f64(),
             ),
             label: format!("Max Profit {:.2}", self.max_profit().unwrap_or(Positive::ZERO)),
             label_offset: LabelOffsetType::Relative(10.0, 10.0),
@@ -423,8 +423,8 @@ impl Graph for BullCallSpread {
         // Maximum Loss Point (at lower strike price)
         points.push(ChartPoint {
             coordinates: (
-                self.long_call.option.strike_price.value(),
-                -self.max_loss().unwrap_or(Positive::ZERO).value(),
+                self.long_call.option.strike_price.to_f64(),
+                -self.max_loss().unwrap_or(Positive::ZERO).to_f64(),
             ),
             label: format!("Max Loss -{:.2}", self.max_loss().unwrap_or(Positive::ZERO)),
             label_offset: LabelOffsetType::Relative(-120.0, -10.0),
@@ -461,7 +461,7 @@ impl ProbabilityAnalysis for BullCallSpread {
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_point),
             Some(self.short_call.option.strike_price),
-            f2p!(self.max_profit()?.value()),
+            f2p!(self.max_profit()?.to_f64()),
         )?;
 
         profit_range.calculate_probability(
@@ -489,7 +489,7 @@ impl ProbabilityAnalysis for BullCallSpread {
         let mut loss_range = ProfitLossRange::new(
             Some(self.long_call.option.strike_price),
             Some(break_even_point),
-            f2p!(self.max_loss()?.value()),
+            f2p!(self.max_loss()?.to_f64()),
         )?;
 
         loss_range.calculate_probability(

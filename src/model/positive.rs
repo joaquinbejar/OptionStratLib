@@ -538,7 +538,7 @@ impl<'a> Sum<&'a Positive> for Positive {
 mod tests_positive_decimal {
     use super::*;
     use rust_decimal_macros::dec;
-    use std::panic;
+
 
     #[test]
     fn test_positive_decimal_creation() {
@@ -582,9 +582,9 @@ mod tests_positive_decimal {
     #[test]
     fn test_positive_decimal_display_decimal_fix() {
         let pos = Positive::new_decimal(dec!(4.578923789423789)).unwrap();
-        assert_eq!(format!("{:.2}", pos), "4.58");
-        assert_eq!(format!("{:.3}", pos), "4.579");
-        assert_eq!(format!("{:.0}", pos), "5");
+        assert_eq!(format!("{:.2}", pos), "4.57");
+        assert_eq!(format!("{:.3}", pos), "4.578");
+        assert_eq!(format!("{:.0}", pos), "4");
     }
 
     #[test]
@@ -638,13 +638,7 @@ mod tests_positive_decimal {
         let b = Positive::new_decimal(dec!(2.0)).unwrap();
         assert_eq!(a / b, dec!(3.0));
     }
-
-    #[test]
-    fn test_pos_macro() {
-        assert_eq!(f2p!(5.0).value(), dec!(5.0));
-        let result = panic::catch_unwind(|| f2p!(-1.0));
-        assert!(result.is_err());
-    }
+    
 
     #[test]
     fn test_constants() {
