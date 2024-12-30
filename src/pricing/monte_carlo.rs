@@ -146,7 +146,7 @@ mod tests {
     fn test_monte_carlo_option_pricing_long_expiration() {
         let mut option = create_test_option();
         option.expiration_date = ExpirationDate::Days(730.0); // 2 years
-        let price = monte_carlo_option_pricing(&option, 10, 100).unwrap();
+        let price = monte_carlo_option_pricing(&option, 25, 1000).unwrap();
         // The price should be higher for a longer expiration
         assert!(price > dec!(15.0));
     }

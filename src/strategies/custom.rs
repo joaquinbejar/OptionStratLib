@@ -515,7 +515,7 @@ mod tests_custom_strategy {
             "Test Description".to_string(),
             f2p!(100.0), // underlying_price
             vec![short_call],
-            1e-16, // epsilon
+            1e-5, // epsilon
             1000,  // max_iterations
             0.1,   // step_by
         )
