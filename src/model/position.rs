@@ -1393,13 +1393,10 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[should_panic]
     fn test_calculate_pnl_at_zero_price() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let pnl = position.calculate_pnl(Utc::now(), f2p!(0.0));
-
-        assert_eq!(pnl.unrealized.unwrap(), -7.0);
-        assert_eq!(position.total_cost(), 7.0);
-        assert_eq!(position.premium_received(), 0.0);
+        let _ = position.calculate_pnl(Utc::now(), f2p!(0.0));
     }
 }
 

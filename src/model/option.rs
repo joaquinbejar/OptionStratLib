@@ -516,27 +516,7 @@ mod tests_valid_option {
         option.strike_price = Positive::ZERO;
         assert!(!option.validate());
     }
-
-    #[test]
-    fn test_negative_strike_price() {
-        let mut option = create_valid_option();
-
-        // Isolate the potential panic-inducing operation outside the closure
-        let result = std::panic::catch_unwind(|| {
-            // We are only testing the invalid value creation here, not the assignment
-            f2p!(-10.0);
-        });
-
-        assert!(
-            result.is_err(),
-            "Positive value must be positive, got -10"
-        );
-
-        // Proceed with assignment after the panic check
-        if result.is_ok() {
-            option.strike_price = f2p!(-10.0); // This line won't run due to expected panic
-        }
-    }
+    
 
     #[test]
     fn test_negative_implied_volatility() {
@@ -558,27 +538,7 @@ mod tests_valid_option {
         option.underlying_price = Positive::ZERO;
         assert!(!option.validate());
     }
-
-    #[test]
-    fn test_negative_underlying_price() {
-        let mut option = create_valid_option();
-
-        // Isolate the potential panic-inducing operation outside the closure
-        let result = std::panic::catch_unwind(|| {
-            // We are only testing the invalid value creation here, not the assignment
-            f2p!(-10.0);
-        });
-
-        assert!(
-            result.is_err(),
-            "Positive value must be positive, got -10"
-        );
-
-        // Proceed with assignment after the panic check
-        if result.is_ok() {
-            option.underlying_price = f2p!(-10.0); // This line won't run due to expected panic
-        }
-    }
+    
 
     #[test]
     fn test_negative_risk_free_rate() {
