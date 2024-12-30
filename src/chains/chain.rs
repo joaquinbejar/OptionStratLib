@@ -25,6 +25,7 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
+use rust_decimal::Decimal;
 use tracing::debug;
 
 /// Struct representing a row in an option chain.
@@ -195,40 +196,40 @@ impl OptionData {
         fn round_to_decimal(
             number: Positive,
             decimal_places: i32,
-            shift: f64,
+            shift: Decimal,
         ) -> Option<Positive> {
-            let multiplier = 10_f64.powi(decimal_places);
-            sf2p!(((number.value() + shift) * multiplier).round() / multiplier)
+            let multiplier = Positive::TEN.powi(decimal_places as i64);
+            Some(((number + shift) * multiplier).round() / multiplier)
         }
 
-        let half_spread = spread / 2.0;
+        let half_spread: Decimal = (spread / Positive::TWO).into();
 
         if let Some(call_ask) = self.call_ask {
             if call_ask < half_spread {
                 self.call_ask = None;
             } else {
-                self.call_ask = round_to_decimal(call_ask, decimal_places, half_spread.value());
+                self.call_ask = round_to_decimal(call_ask, decimal_places, half_spread);
             }
         }
         if let Some(call_bid) = self.call_bid {
             if call_bid < half_spread {
                 self.call_bid = None;
             } else {
-                self.call_bid = round_to_decimal(call_bid, decimal_places, -half_spread.value());
+                self.call_bid = round_to_decimal(call_bid, decimal_places, -half_spread);
             }
         }
         if let Some(put_ask) = self.put_ask {
             if put_ask < half_spread {
                 self.put_ask = None;
             } else {
-                self.put_ask = round_to_decimal(put_ask, decimal_places, half_spread.value());
+                self.put_ask = round_to_decimal(put_ask, decimal_places, half_spread);
             }
         }
         if let Some(put_bid) = self.put_bid {
             if put_bid < half_spread {
                 self.put_bid = None;
             } else {
-                self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread.value());
+                self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread);
             }
         }
     }
@@ -288,10 +289,9 @@ impl Default for OptionData {
     }
 }
 
-#[allow(clippy::non_canonical_partial_ord_impl)]
 impl PartialOrd for OptionData {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.strike_price.partial_cmp(&other.strike_price)
+        Some(self.strike_price.cmp(&other.strike_price))
     }
 }
 
@@ -299,17 +299,7 @@ impl Eq for OptionData {}
 
 impl Ord for OptionData {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or_else(|| {
-            if self.strike_price.value().is_nan() {
-                if other.strike_price.value().is_nan() {
-                    Ordering::Equal
-                } else {
-                    Ordering::Greater
-                }
-            } else {
-                Ordering::Less
-            }
-        })
+        self.strike_price.cmp(&other.strike_price)
     }
 }
 
@@ -378,11 +368,11 @@ impl OptionChain {
         );
 
         for strike in strikes {
-            let atm_distance = strike.value() - params.price_params.underlying_price.value();
+            let atm_distance = strike - params.price_params.underlying_price;
             let adjusted_volatility = adjust_volatility(
                 params.price_params.implied_volatility,
                 params.skew_factor,
-                atm_distance,
+                atm_distance.into(),
             );
             let mut option_data = OptionData::new(
                 strike,

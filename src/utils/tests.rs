@@ -6,7 +6,7 @@ macro_rules! assert_positivef64_relative_eq {
         let right: Positive = $right;
         let epsilon: Positive = $epsilon;
 
-        let abs_diff: Positive = (left.to_64() - right.to_64()).abs();
+        let abs_diff: Positive = (left.to_f64() - right.to_f64()).abs().into();
         let max_abs = left.max(right);
 
         if left == Positive::ZERO || right == Positive::ZERO {

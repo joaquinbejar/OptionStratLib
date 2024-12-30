@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 22/10/24
 ******************************************************************************/
-use num_traits::ToPrimitive;
 use crate::chains::utils::OptionDataPriceParams;
 use crate::constants::ZERO;
 use crate::model::types::ExpirationDate;
@@ -31,10 +30,10 @@ pub trait Walkable {
             panic!("Number of steps must be greater than zero");
         }
         let mut rng = thread_rng();
-        let mut current_std_dev = std_dev.value();
+        let mut current_std_dev = std_dev;
         let mut result = Vec::with_capacity(n_steps);
         result.push(initial_price);
-        let mut current_value = initial_price.value();
+        let mut current_value = initial_price;
 
         let values = self.get_y_values();
         values.clear();
@@ -46,12 +45,13 @@ pub trait Walkable {
                 current_std_dev = Normal::new(std_dev.into(), std_dev_change.into())
                     .unwrap()
                     .sample(&mut rng)
-                    .max(0.0).into();
+                    .max(ZERO)
+                    .into();
             }
-            let normal = Normal::new(mean, current_std_dev.to_f64().unwrap()).unwrap();
+            let normal = Normal::new(mean, current_std_dev.to_f64()).unwrap();
             let step = normal.sample(&mut rng);
-            current_value = (current_value + step).max(ZERO);
-            values.push(f2p!(current_value));
+            current_value = (current_value + step).max(Positive::ZERO);
+            values.push(current_value);
             trace!("Current value: {}", current_value);
         }
     }
@@ -353,6 +353,7 @@ mod tests {
     use super::*;
     use crate::utils::logger::setup_logger_with_level;
     use tracing::debug;
+    use crate::spos;
 
     #[test]
     fn test_random_walk_iterator() {
@@ -366,7 +367,7 @@ mod tests {
             Some(0.02),     // dividend_yield
             TimeFrame::Day, // time_frame (2 years)
             4,              // volatility_window
-            0.2f64.into(),     // initial_volatility
+            spos!(0.2),     // initial_volatility
         );
 
         walk.generate_random_walk(

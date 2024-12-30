@@ -50,6 +50,7 @@ mod tests_pnl_calculator {
     use super::*;
     use crate::f2p;
     use chrono::Utc;
+    use num_traits::ToPrimitive;
 
     #[test]
     fn test_pnl_new() {
@@ -79,12 +80,12 @@ mod tests_pnl_calculator {
 
     impl PnLCalculator for DummyOption {
         fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: Positive) -> PnL {
-            PnL::new(Some(market_price.value()), None, 10.0, 20.0, date_time)
+            PnL::new(Some(market_price.into()), None, 10.0, 20.0, date_time)
         }
 
         fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> PnL {
             let underlying_price = Some(underlying_price.unwrap().value());
-            PnL::new(underlying_price, None, 10.0, 20.0, Utc::now())
+            PnL::new(underlying_price.unwrap().to_f64(), None, 10.0, 20.0, Utc::now())
         }
     }
 

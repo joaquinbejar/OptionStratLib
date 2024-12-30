@@ -277,7 +277,7 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
         base
     };
 
-    f2p!(rounded)
+    rounded.into()
 }
 
 #[cfg(test)]
@@ -307,13 +307,13 @@ mod tests_rounder {
 #[cfg(test)]
 mod tests_generate_list_of_strikes {
     use super::*;
-    use crate::Positive;
+    use crate::{ Positive};
 
     #[test]
     fn test_generate_list_of_strikes_basic() {
-        let reference_price = Positive::new(1000.0).unwrap();
+        let reference_price = Positive::THOUSAND;
         let chain_size = 3;
-        let strike_interval = Positive::new(10.0).unwrap();
+        let strike_interval = Positive::TEN;
 
         let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
 

@@ -8,7 +8,7 @@ use crate::Positive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
-use std::ops::{Add, AddAssign, Div, Mul, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
 
 pub const ONE_DAY: Decimal = dec!(0.00396825397);
 
@@ -126,6 +126,17 @@ impl AddAssign<&Positive> for Decimal {
     }
 }
 
+impl MulAssign<Positive> for Decimal {
+    fn mul_assign(&mut self, rhs: Positive) {
+        *self *= rhs.0;
+    }
+}
+
+impl MulAssign<&Positive> for Decimal {
+    fn mul_assign(&mut self, rhs: &Positive) {
+        *self *= rhs.0;
+    }
+}
 
 impl PartialEq<Positive> for Decimal {
     fn eq(&self, other: &Positive) -> bool {
@@ -133,37 +144,20 @@ impl PartialEq<Positive> for Decimal {
     }
 }
 
-impl PartialOrd<Decimal> for Positive {
-    fn partial_cmp(&self, other: &Decimal) -> Option<std::cmp::Ordering> {
-        self.0.partial_cmp(other)
-    }
-}
-
-
-
-pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
-    if value == f64::NEG_INFINITY {
-        return Ok(Decimal::MIN);
-    }
-    if value == f64::INFINITY {
-        return Ok(Decimal::MAX);
-    }
-    let result = Decimal::from_f64(value);
-    match result {
-        Some(decimal) => Ok(decimal),
-        None => Err(DecimalError::ConversionError {
-            from_type: format!("f64: {}", value),
-            to_type: "Decimal".to_string(),
-            reason: "Failed to convert f64 to Decimal".to_string(),
-        }),
-    }
-}
 
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
         from_type: format!("Decimal: {}", value),
         to_type: "f64".to_string(),
         reason: "Failed to convert Decimal to f64".to_string(),
+    })
+}
+
+pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
+    Decimal::from_f64(value).ok_or(DecimalError::ConversionError {
+        from_type: format!("f64: {}", value),
+        to_type: "Decimal".to_string(),
+        reason: "Failed to convert f64 to Decimal".to_string(),
     })
 }
 

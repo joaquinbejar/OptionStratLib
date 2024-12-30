@@ -89,12 +89,11 @@ mod tests {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use super::*;
-    use crate::Positive;
-    use crate::{f2p, pos};
+    use crate::f2p;
 
     // Helper function to create a test OptionData with a specific strike price
     fn create_test_option(strike: Decimal) -> OptionData {
-        OptionData::new(pos!(strike), None, None, None, None, None, None, None, None)
+        OptionData::new(strike.into(), None, None, None, None, None, None, None, None)
     }
 
     #[test]

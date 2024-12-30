@@ -9,7 +9,7 @@ use crate::{f2p, Positive};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 
 pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
-    vec.into_iter().map(|pos_f64| pos_f64.value()).collect()
+    vec.into_iter().map(|pos_f64| pos_f64.to_f64()).collect()
 }
 
 #[allow(dead_code)]
@@ -125,8 +125,8 @@ pub(crate) fn create_sample_option_simplest_strike(
 /// let data = vec![Positive::new(2.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(5.0).unwrap(), Positive::new(5.0).unwrap(), Positive::new(7.0).unwrap(), Positive::new(9.0).unwrap()];
 /// let (mean, std) = mean_and_std(data);
 ///
-/// assert_eq!(mean.value(), 5.0);
-/// assert_eq!(std.value(), (4.0_f64.sqrt()));
+/// assert_eq!(mean.to_f64(), 5.0);
+/// assert_eq!(std.to_f64(), 4.0_f64.sqrt());
 /// ```
 ///
 /// # Details
@@ -141,10 +141,10 @@ pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
     let mean = vec.iter().sum::<Positive>() / vec.len() as f64;
     let variance = vec
         .iter()
-        .map(|x| f2p!((x.value() - mean.value()).powi(2)))
+        .map(|x| f2p!((x.to_f64() - mean.to_f64()).powi(2)))
         .sum::<Positive>()
         / vec.len() as f64;
-    let std = variance.value().sqrt();
+    let std = variance.to_f64().sqrt();
     (mean, f2p!(std))
 }
 
@@ -201,8 +201,8 @@ mod tests_mean_and_std {
         ];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 5.0, epsilon = 0.0001);
-        assert_relative_eq!(std.value(), 2.0, epsilon = 0.0001);
+        assert_relative_eq!(mean.to_f64(), 5.0, epsilon = 0.0001);
+        assert_relative_eq!(std.to_f64(), 2.0, epsilon = 0.0001);
     }
 
     #[test]
@@ -210,8 +210,8 @@ mod tests_mean_and_std {
         let values = vec![f2p!(5.0), f2p!(5.0), f2p!(5.0), f2p!(5.0)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 5.0, epsilon = 0.0001);
-        assert_relative_eq!(std.value(), 0.0, epsilon = 0.0001);
+        assert_relative_eq!(mean.to_f64(), 5.0, epsilon = 0.0001);
+        assert_relative_eq!(std.to_f64(), 0.0, epsilon = 0.0001);
     }
 
     #[test]
@@ -219,8 +219,8 @@ mod tests_mean_and_std {
         let values = vec![f2p!(3.0)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 3.0, epsilon = 0.0001);
-        assert_relative_eq!(std.value(), 0.0, epsilon = 0.0001);
+        assert_relative_eq!(mean.to_f64(), 3.0, epsilon = 0.0001);
+        assert_relative_eq!(std.to_f64(), 0.0, epsilon = 0.0001);
     }
 
     #[test]
@@ -228,8 +228,8 @@ mod tests_mean_and_std {
         let values = vec![f2p!(0.1), f2p!(0.2), f2p!(0.3)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 0.2, epsilon = 0.0001);
-        assert_relative_eq!(std.value(), 0.08164966, epsilon = 0.0001);
+        assert_relative_eq!(mean.to_f64(), 0.2, epsilon = 0.0001);
+        assert_relative_eq!(std.to_f64(), 0.08164966, epsilon = 0.0001);
     }
 
     #[test]
@@ -237,8 +237,8 @@ mod tests_mean_and_std {
         let values = vec![f2p!(1000.0), f2p!(2000.0), f2p!(3000.0)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 2000.0, epsilon = 0.0001);
-        assert_relative_eq!(std.value(), 816.4966, epsilon = 0.1);
+        assert_relative_eq!(mean.to_f64(), 2000.0, epsilon = 0.0001);
+        assert_relative_eq!(std.to_f64(), 816.4966, epsilon = 0.1);
     }
 
     #[test]
@@ -246,8 +246,8 @@ mod tests_mean_and_std {
         let values = vec![f2p!(0.5), f2p!(5.0), f2p!(50.0), f2p!(500.0)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 138.875, epsilon = 0.001);
-        assert_relative_eq!(std.value(), 209.392, epsilon = 0.001);
+        assert_relative_eq!(mean.to_f64(), 138.875, epsilon = 0.001);
+        assert_relative_eq!(std.to_f64(), 209.392, epsilon = 0.001);
     }
 
     #[test]
@@ -262,8 +262,8 @@ mod tests_mean_and_std {
         let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0), f2p!(4.0), f2p!(5.0)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 3.0, epsilon = 0.0001);
-        assert_relative_eq!(std.value(), std::f64::consts::SQRT_2, epsilon = 0.0001);
+        assert_relative_eq!(mean.to_f64(), 3.0, epsilon = 0.0001);
+        assert_relative_eq!(std.to_f64(), std::f64::consts::SQRT_2, epsilon = 0.0001);
     }
 
     #[test]
@@ -280,8 +280,8 @@ mod tests_mean_and_std {
         let values = vec![f2p!(1.23456789), f2p!(2.34567890), f2p!(3.45678901)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 2.34567860, epsilon = 0.00000001);
-        assert_relative_eq!(std.value(), 0.90721797, epsilon = 0.00000001);
+        assert_relative_eq!(mean.to_f64(), 2.34567860, epsilon = 0.00000001);
+        assert_relative_eq!(std.to_f64(), 0.90721797, epsilon = 0.00000001);
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod tests_mean_and_std {
         let values = vec![f2p!(0.123456789), f2p!(0.134567890), f2p!(0.145678901)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.value(), 0.13456785, epsilon = 0.00000001);
-        assert_relative_eq!(std.value(), 0.00907213, epsilon = 0.00000001);
+        assert_relative_eq!(mean.to_f64(), 0.13456785, epsilon = 0.00000001);
+        assert_relative_eq!(std.to_f64(), 0.00907213, epsilon = 0.00000001);
     }
 }

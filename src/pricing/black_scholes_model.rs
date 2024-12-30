@@ -5,10 +5,10 @@
 ******************************************************************************/
 use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, calculate_d_values};
-use crate::model::decimal::f64_to_decimal;
 use crate::model::option::Options;
 use crate::model::types::{OptionStyle, OptionType, Side};
-use num_traits::ToPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
+use rust_decimal::Decimal;
 
 /// Computes the price of an option using the Black-Scholes model.
 ///
@@ -74,7 +74,7 @@ pub fn black_scholes(option: &Options) -> f64 {
 /// The calculated price of the European option as a floating-point number.
 ///
 /// Note: This example uses placeholder values and the `Options` and `Side` structs should be defined accordingly in your codebase.
-fn calculate_european_option_price(option: &Options, d1: f64, d2: f64, expiry_time: f64) -> f64 {
+fn calculate_european_option_price(option: &Options, d1: Decimal, d2: Decimal, expiry_time: Decimal) -> f64 {
     match option.side {
         Side::Long => calculate_long_position(option, d1, d2, expiry_time),
         Side::Short => -calculate_long_position(option, d1, d2, expiry_time),
@@ -95,7 +95,7 @@ fn calculate_european_option_price(option: &Options, d1: f64, d2: f64, expiry_ti
 /// A floating-point value representing the calculated price of the long position.
 ///
 /// The function matches on the style of the option (Call or Put) and calls the respective price calculation function.
-fn calculate_long_position(option: &Options, d1: f64, d2: f64, expiry_time: f64) -> f64 {
+fn calculate_long_position(option: &Options, d1: Decimal, d2: Decimal, expiry_time: Decimal) -> f64 {
     match option.option_style {
         OptionStyle::Call => calculate_call_option_price(option, d1, d2, expiry_time),
         OptionStyle::Put => calculate_put_option_price(option, d1, d2, expiry_time),
@@ -115,12 +115,12 @@ fn calculate_long_position(option: &Options, d1: f64, d2: f64, expiry_time: f64)
 /// - `d2`: The second value computed based on the option's details and time to expiry.
 /// - `time_to_expiry`: The calculated or given time to expiry in years.
 ///
-fn calculate_d1_d2_and_time(option: &Options) -> (f64, f64, f64) {
-    let calculated_time_to_expiry = option.time_to_expiration();
+fn calculate_d1_d2_and_time(option: &Options) -> (Decimal, Decimal, Decimal) {
+    let calculated_time_to_expiry: Decimal = Decimal::from_f64(option.time_to_expiration()).unwrap();
     let (d1, d2) = calculate_d_values(option).unwrap();
     (
-        d1.to_f64().unwrap(),
-        d2.to_f64().unwrap(),
+        d1,
+        d2,
         calculated_time_to_expiry,
     )
 }
@@ -136,14 +136,16 @@ fn calculate_d1_d2_and_time(option: &Options) -> (f64, f64, f64) {
 /// # Returns
 /// The price of the call option.
 ///
-fn calculate_call_option_price(option: &Options, d1: f64, d2: f64, t: f64) -> f64 {
-    let d1 = f64_to_decimal(d1).unwrap();
-    let d2 = f64_to_decimal(d2).unwrap();
-    let big_n_d1 = big_n(d1).unwrap().to_f64().unwrap();
-    let big_n_d2 = big_n(d2).unwrap().to_f64().unwrap();
+fn calculate_call_option_price(option: &Options, d1: Decimal, d2: Decimal, t: Decimal) -> f64 {
 
-    option.underlying_price.to_f64() * big_n_d1
-        - option.strike_price.to_f64() * (-option.risk_free_rate * t).exp() * big_n_d2
+    let big_n_d1 = big_n(d1).unwrap();
+    let big_n_d2 = big_n(d2).unwrap();
+
+    (option.underlying_price
+        * big_n_d1
+        - option.strike_price
+        * (-option.risk_free_rate * t.to_f64().unwrap()).exp() 
+        * big_n_d2).to_f64()
 }
 
 /// Calculates the price of a European put option using the Black-Scholes model.
@@ -175,14 +177,16 @@ fn calculate_call_option_price(option: &Options, d1: f64, d2: f64, t: f64) -> f6
 ///
 /// # Example
 ///
-fn calculate_put_option_price(option: &Options, d1: f64, d2: f64, t: f64) -> f64 {
-    let d1 = f64_to_decimal(d1).unwrap();
-    let d2 = f64_to_decimal(d2).unwrap();
+fn calculate_put_option_price(option: &Options, d1: Decimal, d2: Decimal, t: Decimal) -> f64 {
+
     let big_n_d1 = big_n(-d1).unwrap().to_f64().unwrap();
     let big_n_d2 = big_n(-d2).unwrap().to_f64().unwrap();
 
-    option.strike_price.into() * (-option.risk_free_rate * t).exp() * big_n_d2
-        - option.underlying_price.into() * big_n_d1
+    option.strike_price .to_f64()
+        * (-option.risk_free_rate * t.to_f64().unwrap()).exp() 
+        * big_n_d2
+        - option.underlying_price
+        * big_n_d1
 }
 
 pub trait BlackScholes {
@@ -281,19 +285,19 @@ mod tests_black_scholes {
         let big_n_d1 = big_n(d1).unwrap();
         assert_relative_eq!(big_n_d1.to_f64().unwrap(), 0.501994, epsilon = 0.00001);
         let big_n_d2 = big_n(d2).unwrap();
-        assert_relative_eq!(big_n_d2, 0.498005, epsilon = 0.00001);
+        assert_relative_eq!(big_n_d2.to_f64().unwrap(), 0.498005, epsilon = 0.00001);
 
         let option_value = option.strike_price * big_n_d1.to_f64().unwrap()
             - option.underlying_price * big_n_d2.to_f64().unwrap();
-        assert_relative_eq!(option_value, 0.3989406, epsilon = 0.00001);
+        assert_relative_eq!(option_value.to_f64(), 0.3989406, epsilon = 0.00001);
         let volatility = 0.2;
-        let value_at_20 = volatility * option.strike_price.into() * option_value.into();
+        let value_at_20 = volatility * option.strike_price * option_value;
         assert_relative_eq!(value_at_20, 7.97881, epsilon = 0.00001);
 
         let price = black_scholes(&option);
 
         assert_relative_eq!(price, 0.39894, epsilon = 0.001);
-        assert_relative_eq!(price, option_value.value(), epsilon = 0.001);
+        assert_relative_eq!(price, option_value.to_f64(), epsilon = 0.001);
 
         option.implied_volatility = 0.2;
         let price = black_scholes(&option);
@@ -352,7 +356,7 @@ mod tests_black_scholes {
         assert_relative_eq!(big_n_d2, 1.0, epsilon = 0.00001);
 
         let option_value = option.underlying_price * big_n_d1 - option.strike_price * big_n_d2;
-        assert_relative_eq!(option_value.value(), 50.0, epsilon = 0.00001);
+        assert_relative_eq!(option_value.to_f64(), 50.0, epsilon = 0.00001);
 
         let volatility = 0.2;
         let value_at_20 = volatility * option.strike_price * option_value;
@@ -361,7 +365,7 @@ mod tests_black_scholes {
         let price = black_scholes(&option.clone());
 
         assert_relative_eq!(price, 50.0, epsilon = 0.001);
-        assert_relative_eq!(price, option_value.value(), epsilon = 0.001);
+        assert_relative_eq!(price, option_value.to_f64(), epsilon = 0.001);
     }
 
     #[test]
@@ -409,15 +413,15 @@ mod tests_black_scholes {
             - option.strike_price
                 * big_n_d2
                 * (-option.risk_free_rate * option.expiration_date.get_years()).exp();
-        assert_relative_eq!(option_value.value(), 2.133368, epsilon = 0.00001);
+        assert_relative_eq!(option_value.to_f64(), 2.133368, epsilon = 0.00001);
 
         let price = black_scholes(&option.clone());
 
         assert_relative_eq!(price, 2.133368, epsilon = 0.001);
-        assert_relative_eq!(price, option_value.value(), epsilon = 0.001);
+        assert_relative_eq!(price, option_value.to_f64(), epsilon = 0.001);
         assert_relative_eq!(
             option.calculate_price_black_scholes(),
-            option_value.value(),
+            option_value.to_f64(),
             epsilon = 0.0001
         );
     }

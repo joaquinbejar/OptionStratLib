@@ -6,13 +6,13 @@
 use crate::constants::PI;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{GreeksError, InputErrorKind};
-use crate::model::decimal::{f64_to_decimal};
 use crate::model::option::Options;
 use crate::Positive;
 use core::f64;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use statrs::distribution::{ContinuousCDF, Normal};
+use crate::model::decimal::f64_to_decimal;
 
 /// Calculates the `d1` parameter used in the Black-Scholes options pricing model.
 ///

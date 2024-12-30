@@ -6,8 +6,8 @@
 
 use crate::constants::EPSILON;
 use approx::{AbsDiffEq, RelativeEq};
-use num_traits::ToPrimitive;
-use rust_decimal::Decimal;
+use num_traits::{FromPrimitive, ToPrimitive};
+use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
@@ -36,10 +36,7 @@ macro_rules! spos {
 #[macro_export]
 macro_rules! f2p {
     ($val:expr) => {
-        crate::Positive::new(
-            rust_decimal::Decimal::try_from($val).unwrap_or(rust_decimal::Decimal::ZERO),
-        )
-        .unwrap_or(crate::Positive::ZERO)
+        crate::Positive::new($val).unwrap_or(crate::Positive::ZERO)
     };
 }
 
@@ -67,11 +64,21 @@ impl Positive {
     
     pub const PI: Positive = Positive(Decimal::PI);
 
-    pub fn new(value: Decimal) -> Result<Self, String> {
+    pub fn new(value: f64) -> Result<Self, String> {
+        let dec = Decimal::try_from(value);
+        
+        match dec {  
+            Ok(value) if value >= Decimal::ZERO => Ok(Positive(value)),
+            Ok(value) => Err(format!("Value must be positive, got {}", value)),
+            Err(e) => Err(format!("Failed to parse as Decimal: {}", e)),
+        }
+    }
+    
+    pub fn new_decimal(value: Decimal) -> Result<Self, String> {
         if value >= Decimal::ZERO {
             Ok(Positive(value))
         } else {
-            Err(format!("Positive value must be positive, got {}", value))
+            Err(format!("Value must be positive, got {}", value))
         }
     }
 
@@ -105,6 +112,22 @@ impl Positive {
 
     pub fn floor(&self) -> Positive {
         Positive(self.0.floor())
+    }
+    
+    pub  fn powi(&self, n: i64) -> Positive {
+        Positive(self.0.powi(n))
+    }
+    
+    pub fn round(&self) -> Positive {
+        Positive(self.0.round())
+    }
+    
+    pub fn sqrt(&self) -> Positive {
+        Positive(self.0.ln())
+    }
+    
+    pub fn ln(&self) -> Positive {
+        Positive(self.0.ln())
     }
 }
 
@@ -196,19 +219,19 @@ impl FromStr for Positive {
 
 impl From<f64> for Positive {
     fn from(value: f64) -> Self {
-        Positive::new(Decimal::try_from(value).unwrap()).expect("Value must be positive")
+        Positive::new(value).expect("Value must be positive")
     }
 }
 
 impl From<Decimal> for Positive {
     fn from(value: Decimal) -> Self {
-        Positive::new(value).expect("Value must be positive")
+        Positive::new_decimal(value).expect("Value must be positive")
     }
 }
 
 impl From<&Decimal> for Positive {
     fn from(value: &Decimal) -> Self {
-        Positive::new(*value).expect("Value must be positive")
+        Positive::new_decimal(*value).expect("Value must be positive")
     }
 }
 
@@ -262,12 +285,6 @@ impl PartialOrd<f64> for &Positive {
     }
 }
 
-impl PartialEq<Decimal> for Positive {
-    fn eq(&self, other: &Decimal) -> bool {
-        self.0 == *other
-    }
-}
-
 impl PartialEq<f64> for Positive {
     fn eq(&self, other: &f64) -> bool {
         self.to_f64() == *other
@@ -303,13 +320,21 @@ impl Serialize for Positive {
     }
 }
 
+impl PartialEq<Decimal> for Positive {
+    fn eq(&self, other: &Decimal) -> bool {
+        self.0 == *other
+    }
+}
+
 impl<'de> Deserialize<'de> for Positive {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let value = Decimal::deserialize(deserializer);
-        Positive::new(value).map_err(serde::de::Error::custom)
+        let value = f64::deserialize(deserializer)?;
+        let decimal = Decimal::from_f64(value)
+            .ok_or_else(|| serde::de::Error::custom("Failed to convert f64 to Decimal"))?;
+        Positive::new_decimal(decimal).map_err(serde::de::Error::custom)
     }
 }
 
@@ -403,6 +428,12 @@ impl Div<&Decimal> for Positive {
     }
 }
 
+impl PartialOrd<Decimal> for Positive {
+    fn partial_cmp(&self, other: &Decimal) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(other)
+    }
+}
+
 impl PartialOrd for Positive {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -488,17 +519,18 @@ impl RelativeEq for Positive {
     }
 }
 
+
 impl Sum for Positive {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         let sum = iter.fold(Decimal::ZERO, |acc, x| acc + x.value());
-        Positive::new(sum).unwrap_or(Positive::ZERO)
+        Positive::new_decimal(sum).unwrap_or(Positive::ZERO)
     }
 }
 
 impl<'a> Sum<&'a Positive> for Positive {
     fn sum<I: Iterator<Item = &'a Positive>>(iter: I) -> Self {
         let sum = iter.fold(Decimal::ZERO, |acc, x| acc + x.value());
-        Positive::new(sum).unwrap_or(Positive::ZERO)
+        Positive::new_decimal(sum).unwrap_or(Positive::ZERO)
     }
 }
 
@@ -510,46 +542,46 @@ mod tests_positive_decimal {
 
     #[test]
     fn test_positive_decimal_creation() {
-        assert!(Positive::new(Decimal::ZERO).is_ok());
-        assert!(Positive::new(Decimal::ONE).is_ok());
-        assert!(Positive::new(Decimal::NEGATIVE_ONE).is_err());
+        assert!(Positive::new_decimal(Decimal::ZERO).is_ok());
+        assert!(Positive::new_decimal(Decimal::ONE).is_ok());
+        assert!(Positive::new_decimal(Decimal::NEGATIVE_ONE).is_err());
     }
 
     #[test]
     fn test_positive_decimal_value() {
-        let pos = Positive::new(dec!(5.0)).unwrap();
-        assert_eq!(pos.to_f64(), 5.0);
+        let pos = Positive::new(5.0).unwrap();
+        assert_eq!(pos, 5.0);
     }
 
     #[test]
     fn test_positive_decimal_from() {
-        let pos = Positive::new(dec!(3.0)).unwrap();
+        let pos = Positive::new(3.0).unwrap();
         let f: Decimal = pos.into();
         assert_eq!(f, dec!(3.0));
     }
 
     #[test]
     fn test_positive_decimal_eq() {
-        let pos = Positive::new(Decimal::TWO).unwrap();
+        let pos = Positive::new_decimal(Decimal::TWO).unwrap();
         assert_eq!(pos, dec!(2.0));
         assert_ne!(pos, dec!(3.0));
     }
 
     #[test]
     fn test_positive_decimal_display() {
-        let pos = Positive::new(dec!(4.5)).unwrap();
+        let pos = Positive::new_decimal(dec!(4.5)).unwrap();
         assert_eq!(format!("{}", pos), "4.5");
     }
 
     #[test]
     fn test_positive_decimal_debug() {
-        let pos = Positive::new(dec!(4.5)).unwrap();
+        let pos = Positive::new_decimal(dec!(4.5)).unwrap();
         assert_eq!(format!("{:?}", pos), "4.5");
     }
 
     #[test]
     fn test_positive_decimal_display_decimal_fix() {
-        let pos = Positive::new(dec!(4.578923789423789)).unwrap();
+        let pos = Positive::new_decimal(dec!(4.578923789423789)).unwrap();
         assert_eq!(format!("{:.2}", pos), "4.58");
         assert_eq!(format!("{:.3}", pos), "4.579");
         assert_eq!(format!("{:.0}", pos), "5");
@@ -557,41 +589,41 @@ mod tests_positive_decimal {
 
     #[test]
     fn test_positive_decimal_add() {
-        let a = Positive::new(dec!(2.0)).unwrap();
-        let b = Positive::new(dec!(3.0)).unwrap();
+        let a = Positive::new_decimal(dec!(2.0)).unwrap();
+        let b = Positive::new_decimal(dec!(3.0)).unwrap();
         assert_eq!((a + b).value(), dec!(5.0));
     }
 
     #[test]
     fn test_positive_decimal_div() {
-        let a = Positive::new(dec!(6.0)).unwrap();
-        let b = Positive::new(dec!(2.0)).unwrap();
+        let a = Positive::new_decimal(dec!(6.0)).unwrap();
+        let b = Positive::new_decimal(dec!(2.0)).unwrap();
         assert_eq!((a / b).value(), dec!(3.0));
     }
 
     #[test]
     fn test_positive_decimal_div_decimal() {
-        let a = Positive::new(dec!(6.0)).unwrap();
+        let a = Positive::new_decimal(dec!(6.0)).unwrap();
         assert_eq!((a / 2.0), 3.0);
     }
 
     #[test]
     fn test_decimal_mul_positive_decimal() {
         let a = dec!(2.0);
-        let b = Positive::new(dec!(3.0)).unwrap();
+        let b = Positive::new_decimal(dec!(3.0)).unwrap();
         assert_eq!(a * b, dec!(6.0));
     }
 
     #[test]
     fn test_positive_decimal_mul() {
-        let a = Positive::new(dec!(2.0)).unwrap();
-        let b = Positive::new(dec!(3.0)).unwrap();
+        let a = Positive::new_decimal(dec!(2.0)).unwrap();
+        let b = Positive::new_decimal(dec!(3.0)).unwrap();
         assert_eq!((a * b).value(), dec!(6.0));
     }
 
     #[test]
     fn test_positive_decimal_mul_decimal() {
-        let a = Positive::new(dec!(2.0)).unwrap();
+        let a = Positive::new_decimal(dec!(2.0)).unwrap();
         assert_eq!((a * 3.0), 6.0);
     }
 
@@ -603,7 +635,7 @@ mod tests_positive_decimal {
     #[test]
     fn test_decimal_div_positive_decimal() {
         let a = dec!(6.0);
-        let b = Positive::new(dec!(2.0)).unwrap();
+        let b = Positive::new_decimal(dec!(2.0)).unwrap();
         assert_eq!(a / b, dec!(3.0));
     }
 
@@ -647,9 +679,9 @@ mod tests_positive_decimal_extended {
 
     #[test]
     fn test_positive_decimal_mul_assign() {
-        let mut a = pos!(Decimal::TWO);
+        let mut a = Decimal::TWO;
         a *= dec!(3.0);
-        assert_eq!(a.value(), dec!(6.0));
+        assert_eq!(a, dec!(6.0));
     }
 
     #[test]

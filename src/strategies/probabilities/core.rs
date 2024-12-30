@@ -97,7 +97,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             }
         }
 
-        let step = f2p!(self.get_underlying_price().value() / 100.0);
+        let step = self.get_underlying_price() / 100.0;
         let range = self.best_range_to_show(step).unwrap();
         let expiration = self.get_expiration()?;
 
@@ -114,19 +114,19 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 None,
             )?;
 
-            let marginal_prob = prob.0.value() - last_prob;
+            let marginal_prob = prob.0 - last_prob;
             probabilities.push(marginal_prob);
-            last_prob = prob.0.value();
+            last_prob = prob.0.into();
         }
 
         let expected_value = range
             .iter()
             .zip(probabilities.iter())
             .fold(0.0, |acc, (price, prob)| {
-                acc + self.calculate_profit_at(*price) * prob
+                acc + self.calculate_profit_at(*price) * *prob
             });
 
-        let total_prob: f64 = probabilities.iter().sum();
+        let total_prob: f64 = probabilities.iter().map(|p| p.to_f64()).sum();
         if (total_prob - 1.0).abs() > 0.05 {
             warn!(
                 "Sum of probabilities ({}) deviates significantly from 1.0",
@@ -278,7 +278,7 @@ mod tests_probability_analysis {
 
     impl Profit for MockStrategy {
         fn calculate_profit_at(&self, price: Positive) -> f64 {
-            price.value() - self.underlying_price.value()
+            price.to_f64() - self.underlying_price
         }
     }
 
@@ -436,7 +436,7 @@ mod tests_probability_analysis {
         let loss_prob = strategy.probability_of_loss(None, None).unwrap();
 
         let total_prob = profit_prob + loss_prob;
-        assert!((total_prob.value() - 1.0).abs() < 0.0001);
+        assert!((total_prob.to_f64() - 1.0).abs() < 0.0001);
     }
 
     #[test]
@@ -495,7 +495,7 @@ mod tests_expected_value {
 
     impl Profit for TestStrategy {
         fn calculate_profit_at(&self, price: Positive) -> f64 {
-            price.value() - self.underlying_price.value()
+            price.to_f64() - self.underlying_price
         }
     }
 

@@ -69,7 +69,7 @@ macro_rules! draw_line_segments {
                 };
 
                 let points: Vec<(f64, f64)> =
-                    vec![(last_price.value(), last_profit), (price.value(), value)];
+                    vec![(last_price.to_f64(), last_profit), (price.to_f64(), value)];
 
                 $chart.draw_series(LineSeries::new(points, color))?;
             }
@@ -109,12 +109,12 @@ pub trait Graph: Profit {
             &root,
             self.title(),
             title_size,
-            min_x_value.value(),
-            max_x_value.value(),
+            min_x_value.to_f64(),
+            max_x_value.to_f64(),
             min_y_value,
             max_y_value
         );
-        configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value.value(), max_x_value.value());
+        configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value.to_f64(), max_x_value.to_f64());
         draw_line_segments!(chart, x_axis_point, y_axis_data, DARK_GREEN, DARK_RED);
 
         draw_points_on_chart(&mut chart, &self.get_points())?;
@@ -341,7 +341,7 @@ mod tests {
 
     impl Profit for MockGraph {
         fn calculate_profit_at(&self, price: Positive) -> f64 {
-            price.value() * 2.0 - 100.0
+            (price * 2.0 - 100.0).into()
         }
     }
 

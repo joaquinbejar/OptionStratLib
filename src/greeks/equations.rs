@@ -6,10 +6,10 @@
 use crate::constants::ZERO;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
-use crate::model::decimal::{f64_to_decimal};
 use crate::model::option::Options;
 use crate::model::types::OptionStyle;
 use rust_decimal::{Decimal, MathematicalOps};
+use crate::f2du;
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
@@ -107,7 +107,7 @@ pub trait Greeks {
 /// }
 /// ```
 pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
-    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
 
     let sign = if option.is_long() {
         Decimal::ONE
@@ -141,7 +141,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
+    let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
     let div_date = (-dividend_yield * expiration_date).exp();
 
     let delta = match option.option_style {
@@ -247,10 +247,10 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
-    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
-    let underlying_price: Decimal = option.underlying_price.to_dec();
-    let implied_volatility: Decimal = f64_to_decimal(option.implied_volatility)?;
+    let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
+    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
+    let underlying_price: Decimal = option.underlying_price.into();
+    let implied_volatility: Decimal = f2du!(option.implied_volatility)?;
 
     let gamma = (-dividend_yield * expiration_date).exp() * n(d1)?
         / (underlying_price * implied_volatility * expiration_date.sqrt().unwrap());
@@ -375,17 +375,17 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
-    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+    let expiration_date: Decimal =  f2du!(option.expiration_date.get_years())?;
+    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
     let underlying_price: Decimal = option.underlying_price.to_dec();
-    let implied_volatility: Decimal = f64_to_decimal(option.implied_volatility)?;
+    let implied_volatility: Decimal = f2du!(option.implied_volatility.into())?;
 
     let common_term: Decimal =
         -underlying_price * implied_volatility * (-dividend_yield * expiration_date).exp() * n(d1)?
             / (Decimal::TWO * expiration_date.sqrt().unwrap());
 
     let strike_price: Decimal = option.strike_price.to_dec();
-    let risk_free_rate: Decimal = f64_to_decimal(option.risk_free_rate)?;
+    let risk_free_rate: Decimal = f2du!(option.risk_free_rate)?;
 
     let theta: Decimal = match option.option_style {
         OptionStyle::Call => {
@@ -508,8 +508,8 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
-    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+    let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
+    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
     let underlying_price: Decimal = option.underlying_price.to_dec();
 
     let vega: Decimal = underlying_price
@@ -625,8 +625,8 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let risk_free_rate: Decimal = f64_to_decimal(option.risk_free_rate)?;
-    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
+    let risk_free_rate: Decimal = f2du!(option.risk_free_rate)?;
+    let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
 
     let e_rt = (-risk_free_rate * expiration_date).exp();
     if e_rt == Decimal::ZERO {
@@ -757,8 +757,8 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date: Decimal = f64_to_decimal(option.expiration_date.get_years())?;
-    let dividend_yield: Decimal = f64_to_decimal(option.dividend_yield)?;
+    let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
+    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
     let underlying_price: Decimal = option.underlying_price.to_dec();
 
     let rhod = match option.option_style {

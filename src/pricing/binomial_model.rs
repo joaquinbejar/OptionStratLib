@@ -1,7 +1,7 @@
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
-use crate::{d2f, f2d, pos, Positive};
+use crate::{d2f, f2d, Positive};
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 
@@ -205,7 +205,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                     if (step == 0) & (node_idx == 0) {
                         *node_val = node_value;
                     } else {
-                        info.spot = pos!(asset_tree[step][node_idx]);
+                        info.spot = asset_tree[step][node_idx].into();
                         let intrinsic_value = params.option_type.payoff(&info);
                         let dec_node_val = d2f!(node_value);
                         *node_val = f2d!(intrinsic_value.max(dec_node_val));

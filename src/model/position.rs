@@ -12,7 +12,7 @@ use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::{f2p, spos, Positive};
+use crate::{f2p, Positive};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{debug, trace};
@@ -221,13 +221,13 @@ impl Position {
         let total_cost_per_contract = self.total_cost() / self.option.quantity;
         match (&self.option.side, &self.option.option_style) {
             (Side::Long, OptionStyle::Call) => {
-                spos!(self.option.strike_price.value() + total_cost_per_contract)
+                Some(self.option.strike_price + total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Call) => {
                 Some(self.option.strike_price + self.premium - total_cost_per_contract)
             }
             (Side::Long, OptionStyle::Put) => {
-                spos!(self.option.strike_price.value() - total_cost_per_contract)
+                Some(self.option.strike_price - total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Put) => {
                 Some(self.option.strike_price- self.premium + total_cost_per_contract)

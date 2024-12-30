@@ -7,9 +7,7 @@ use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
 use crate::greeks::utils::big_n;
-use crate::model::decimal::f64_to_decimal;
 use crate::{f2p, Positive};
-use num_traits::ToPrimitive;
 use crate::model::ExpirationDate;
 
 /// Struct to hold volatility adjustment parameters
@@ -111,15 +109,15 @@ pub fn calculate_single_point_probability(
     };
 
     // Calculate parameters for the log-normal distribution
-    let log_ratio = (target_price / current_price).value().ln();
-    let std_dev = volatility.value() * time_to_expiry.sqrt();
+    let log_ratio = (target_price / current_price).ln();
+    let std_dev = volatility * time_to_expiry.sqrt();
 
     // Calculate z-score considering drift
-    let z_score = f64_to_decimal((log_ratio - drift_rate * time_to_expiry) / std_dev).unwrap();
+    let z_score = (log_ratio - drift_rate * time_to_expiry) / std_dev;
 
     // Calculate probabilities using the standard normal distribution
-    let prob_below = f2p!(big_n(z_score).unwrap().to_f64().unwrap());
-    let prob_above = f2p!(1.0 - prob_below);
+    let prob_below :Positive = big_n(z_score.into()).unwrap().into();
+    let prob_above: Positive = (1.0 - prob_below).into();
 
     Ok((prob_below, prob_above))
 }
@@ -310,7 +308,7 @@ mod tests_calculate_bounds_probability {
 
         // Verify probabilities sum to 1
         let sum: Positive = probs.iter().sum();
-        assert_relative_eq!(sum.value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!(sum.to_f64(), 1.0, epsilon = 1e-10);
 
         // Verify all probabilities are between 0 and 1
         for prob in probs {
@@ -380,7 +378,7 @@ mod tests_calculate_bounds_probability {
         assert!(result.is_ok());
         let probs = result.unwrap();
         assert_eq!(probs.len(), 2); // Two probabilities for single bound
-        assert_relative_eq!((probs[0] + probs[1]).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((probs[0] + probs[1]).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -404,7 +402,7 @@ mod tests_calculate_bounds_probability {
         let probs = result.unwrap();
         assert_eq!(probs.len(), 4);
         assert_relative_eq!(
-            probs.iter().sum::<Positive>().value(),
+            probs.iter().sum::<Positive>().to_f64(),
             1.0,
             epsilon = 1e-10
         );
@@ -449,7 +447,7 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -470,7 +468,7 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -491,7 +489,7 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -512,7 +510,7 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -532,7 +530,7 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -554,7 +552,7 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -582,9 +580,9 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert_relative_eq!((prob_above + prob_below).value(), 1.0, epsilon = 1e-10);
-        assert_relative_eq!(prob_below.value(), 0.5, epsilon = 1e-10);
-        assert_relative_eq!(prob_above.value(), 0.5, epsilon = 1e-10);
+        assert_relative_eq!((prob_above + prob_below).to_f64(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!(prob_below.to_f64(), 0.5, epsilon = 1e-10);
+        assert_relative_eq!(prob_above.to_f64(), 0.5, epsilon = 1e-10);
     }
 
     #[test]
@@ -713,7 +711,7 @@ mod tests_single_point_probability {
         let (prob_below, prob_above) = result_low.unwrap();
         assert!(prob_above > f2p!(0.99)); // Probability should be very high
         assert!(prob_below < f2p!(0.01)); // Probability should be very low
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -735,7 +733,7 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -757,7 +755,7 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert_relative_eq!((prob_below + prob_above).value(), 1.0, epsilon = 1e-10);
+        assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 }
 
@@ -784,7 +782,7 @@ mod tests_calculate_price_probability {
         assert!(prob_in_range >= Positive::ZERO && prob_in_range <= f2p!(1.0));
         assert!(prob_above >= Positive::ZERO && prob_above <= f2p!(1.0));
         assert_relative_eq!(
-            (prob_below + prob_in_range + prob_above).value(),
+            (prob_below + prob_in_range + prob_above).to_f64(),
             1.0,
             epsilon = 1e-10
         );
@@ -833,7 +831,7 @@ mod tests_calculate_price_probability {
         assert!(result.is_ok());
         let (prob_below, prob_in_range, prob_above) = result.unwrap();
         assert_relative_eq!(
-            (prob_below + prob_in_range + prob_above).value(),
+            (prob_below + prob_in_range + prob_above).to_f64(),
             1.0,
             epsilon = 1e-10
         );

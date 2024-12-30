@@ -40,7 +40,7 @@ csv = "1.3.1"
 serde = { version = "1.0.217", features = ["derive"] }
 rayon = "1.10.0"
 itertools = "0.13.0"
-rust_decimal = { version = "1.36.0", features = ["maths"] }
+rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
 rust_decimal_macros = "1.36.0"
 
 

@@ -142,9 +142,9 @@ pub trait Strategies: Validable + Positionable {
         let underlying_price = self.get_underlying_price();
 
         // Calculate the largest difference from the underlying price
-        let max_diff = f2p!((last_strike.value() - underlying_price.value())
+        let max_diff = (last_strike.value() - underlying_price.value())
             .abs()
-            .max((first_strike.value() - underlying_price.value()).abs()));
+            .max((first_strike.value() - underlying_price.value()).abs());
 
         // Calculate limits in a single step
         all_points

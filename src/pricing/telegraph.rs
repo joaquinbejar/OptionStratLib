@@ -239,7 +239,7 @@ pub fn telegraph(
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
 ) -> Result<Decimal, DecimalError> {
-    let mut price = option.underlying_price.value();
+    let mut price = option.underlying_price;
     let dt = Decimal::from_f64(option.time_to_expiration() / no_steps as f64).unwrap();
 
     let implied_volatility: Decimal = Decimal::from_f64(option.implied_volatility).unwrap();
@@ -268,10 +268,14 @@ pub fn telegraph(
     let mut telegraph_process = tp.clone();
     for _ in 0..no_steps {
         let state = telegraph_process.next_state(dt);
-        let drift = option.risk_free_rate - 0.5 * option.implied_volatility.powi(2);
-        let volatility = option.implied_volatility * state as f64;
-
-        price *= (drift * dt + volatility * (dt.sqrt().unwrap() * random::<f64>())).exp();
+        let drift = Decimal::from_f64(option.risk_free_rate - 0.5 * option.implied_volatility.powi(2)).unwrap();
+        let volatility: Decimal = Decimal::from_f64(option.implied_volatility * state as f64).unwrap();
+        
+        let rh = Decimal::from_f64(dt.sqrt().unwrap().to_f64().unwrap() * random::<f64>()).unwrap();
+        let lhs = drift * dt + volatility;
+        
+        let update = (lhs * rh).exp();
+        price *= update;
     }
 
     let payoff = option.payoff_at_price(price.into());
