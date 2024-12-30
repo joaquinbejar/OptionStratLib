@@ -326,11 +326,11 @@ mod tests_options {
             option_type: European, \
             side: Side::Long, \
             underlying_symbol: \"AAPL\", \
-            strike_price: 150.0, \
+            strike_price: 150, \
             expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), \
             implied_volatility: 0.25, \
-            quantity: 10.0, \
-            underlying_price: 155.0, \
+            quantity: 10, \
+            underlying_price: 155, \
             risk_free_rate: 0.01, \
             option_style: OptionStyle::Call, \
             dividend_yield: 0.02, \
@@ -858,11 +858,11 @@ mod tests_position_type_display_debug {
             option_type: European, \
             side: Side::Long, \
             underlying_symbol: \"AAPL\", \
-            strike_price: 150.0, \
+            strike_price: 150, \
             expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), \
             implied_volatility: 0.25, \
-            quantity: 10.0, \
-            underlying_price: 155.0, \
+            quantity: 10, \
+            underlying_price: 155, \
             risk_free_rate: 0.01, \
             option_style: OptionStyle::Call, \
             dividend_yield: 0.02, \
@@ -986,7 +986,7 @@ mod tests_strategy_type_display_debug {
             break_even_points: vec![f2p!(82.0), f2p!(88.0)],
         };
 
-        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110.0, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1.0, underlying_price: 100.0, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110.0, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1.0, underlying_price: 100.0, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82.0, 88.0] }";
+        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";
 
         assert_eq!(format!("{:?}", strategy), expected_output);
     }
