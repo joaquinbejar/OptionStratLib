@@ -9,7 +9,7 @@ use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::Graph;
-use crate::Positive;
+use crate::{f2p, Positive};
 use rand::distributions::Distribution;
 use rand::thread_rng;
 use statrs::distribution::Normal;
@@ -50,7 +50,7 @@ pub trait Walkable {
             }
             let normal = Normal::new(mean, current_std_dev.to_f64()).unwrap();
             let step = normal.sample(&mut rng);
-            current_value = (current_value + step).max(Positive::ZERO);
+            current_value = f2p!((current_value.to_f64() + step).max(ZERO));
             values.push(current_value);
             trace!("Current value: {}", current_value);
         }
