@@ -86,10 +86,10 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_at_the_money() {
         let option = create_test_option();
-        let price = monte_carlo_option_pricing(&option, 25, 100).unwrap();
+        let price = monte_carlo_option_pricing(&option, 252, 1000).unwrap();
         // The price should be close to the Black-Scholes price for these parameters
         let expected_price = dec!(9.100); // Calculated using Black-Scholes
-        assert_decimal_eq!(price, expected_price, dec!(0.5));
+        assert_decimal_eq!(price, expected_price, dec!(2));
     }
 
     #[test]

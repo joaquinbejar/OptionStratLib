@@ -289,7 +289,7 @@ mod tests_mean_and_std {
         let values = vec![f2p!(0.123456789), f2p!(0.134567890), f2p!(0.145678901)];
         let (mean, std) = mean_and_std(values);
 
-        assert_relative_eq!(mean.to_f64(), 0.13456785, epsilon = 0.00000001);
+        assert_relative_eq!(mean.to_f64(), 0.13456786, epsilon = 0.00000001);
         assert_relative_eq!(std.to_f64(), 0.00907213, epsilon = 0.00000001);
     }
 }
