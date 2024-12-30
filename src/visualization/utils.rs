@@ -270,7 +270,7 @@ where
     Ok(())
 }
 
-// TODO: fix this
+
 #[cfg(test)]
 mod tests_calculate_axis_range {
     use super::*;
