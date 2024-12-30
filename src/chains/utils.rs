@@ -6,8 +6,8 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::error::chains::ChainError;
-use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
-use crate::pos;
+use crate::model::types::{ExpirationDate};
+use crate::{f2p, Positive};
 use std::collections::BTreeSet;
 use std::fmt::Display;
 
@@ -26,11 +26,11 @@ pub enum OptionDataGroup<'a> {
 }
 pub struct OptionChainBuildParams {
     pub(crate) symbol: String,
-    pub(crate) volume: Option<PositiveF64>,
+    pub(crate) volume: Option<Positive>,
     pub(crate) chain_size: usize,
-    pub(crate) strike_interval: PositiveF64,
+    pub(crate) strike_interval: Positive,
     pub(crate) skew_factor: f64,
-    pub(crate) spread: PositiveF64,
+    pub(crate) spread: Positive,
     pub(crate) decimal_places: i32,
     pub(crate) price_params: OptionDataPriceParams,
 }
@@ -39,11 +39,11 @@ pub struct OptionChainBuildParams {
 impl OptionChainBuildParams {
     pub fn new(
         symbol: String,
-        volume: Option<PositiveF64>,
+        volume: Option<Positive>,
         chain_size: usize,
-        strike_interval: PositiveF64,
+        strike_interval: Positive,
         skew_factor: f64,
-        spread: PositiveF64,
+        spread: Positive,
         decimal_places: i32,
         price_params: OptionDataPriceParams,
     ) -> Self {
@@ -61,18 +61,18 @@ impl OptionChainBuildParams {
 }
 
 pub struct OptionDataPriceParams {
-    pub(crate) underlying_price: PositiveF64,
+    pub(crate) underlying_price: Positive,
     pub(crate) expiration_date: ExpirationDate,
-    pub(crate) implied_volatility: Option<PositiveF64>,
+    pub(crate) implied_volatility: Option<Positive>,
     pub(crate) risk_free_rate: f64,
     pub(crate) dividend_yield: f64,
 }
 
 impl OptionDataPriceParams {
     pub fn new(
-        underlying_price: PositiveF64,
+        underlying_price: Positive,
         expiration_date: ExpirationDate,
-        implied_volatility: Option<PositiveF64>,
+        implied_volatility: Option<Positive>,
         risk_free_rate: f64,
         dividend_yield: f64,
     ) -> Self {
@@ -85,7 +85,7 @@ impl OptionDataPriceParams {
         }
     }
 
-    pub fn get_underlying_price(&self) -> PositiveF64 {
+    pub fn get_underlying_price(&self) -> Positive {
         self.underlying_price
     }
 
@@ -93,7 +93,7 @@ impl OptionDataPriceParams {
         self.expiration_date.clone()
     }
 
-    pub fn get_implied_volatility(&self) -> Option<PositiveF64> {
+    pub fn get_implied_volatility(&self) -> Option<Positive> {
         self.implied_volatility
     }
 
@@ -109,7 +109,7 @@ impl OptionDataPriceParams {
 impl Default for OptionDataPriceParams {
     fn default() -> Self {
         Self {
-            underlying_price: PZERO,
+            underlying_price: Positive::ZERO,
             expiration_date: ExpirationDate::Days(0.0),
             implied_volatility: None,
             risk_free_rate: ZERO,
@@ -125,7 +125,7 @@ impl Display for OptionDataPriceParams {
             "Underlying Price: {:.3}, Expiration: {:.4} Years, Implied Volatility: {:.3}, Risk-Free Rate: {:.2}, Dividend Yield: {:.2}",
             self.underlying_price,
             self.expiration_date.get_years(),
-            self.implied_volatility.unwrap_or(PZERO).value(),
+            self.implied_volatility.unwrap_or(Positive::ZERO).value(),
             self.risk_free_rate,
             self.dividend_yield
         )
@@ -133,7 +133,7 @@ impl Display for OptionDataPriceParams {
 }
 
 pub trait OptionChainParams {
-    fn get_params(&self, strike_price: PositiveF64) -> Result<OptionDataPriceParams, ChainError>;
+    fn get_params(&self, strike_price: Positive) -> Result<OptionDataPriceParams, ChainError>;
 }
 
 /// Parameters for generating random positions in an option chain
@@ -150,7 +150,7 @@ pub struct RandomPositionsParams {
     /// Expiration date for the options
     pub expiration_date: ExpirationDate,
     /// Quantity for each option position
-    pub option_qty: PositiveF64,
+    pub option_qty: Positive,
     /// Risk free interest rate
     pub risk_free_rate: f64,
     /// Dividend yield of the underlying
@@ -173,7 +173,7 @@ impl RandomPositionsParams {
         qty_calls_long: Option<usize>,
         qty_calls_short: Option<usize>,
         expiration_date: ExpirationDate,
-        option_qty: PositiveF64,
+        option_qty: Positive,
         risk_free_rate: f64,
         dividend_yield: f64,
         open_put_fee: f64,
@@ -208,10 +208,10 @@ impl RandomPositionsParams {
 
 #[allow(dead_code)]
 pub(crate) fn generate_list_of_strikes(
-    reference_price: PositiveF64,
+    reference_price: Positive,
     chain_size: usize,
-    strike_interval: PositiveF64,
-) -> BTreeSet<PositiveF64> {
+    strike_interval: Positive,
+) -> BTreeSet<Positive> {
     let mut strikes = BTreeSet::new();
     let reference_price_rounded = rounder(reference_price, strike_interval);
 
@@ -230,10 +230,10 @@ pub(crate) fn generate_list_of_strikes(
 }
 
 pub(crate) fn adjust_volatility(
-    volatility: Option<PositiveF64>,
+    volatility: Option<Positive>,
     skew_factor: f64,
     atm_distance: f64,
-) -> Option<PositiveF64> {
+) -> Option<Positive> {
     volatility?;
     let skew = skew_factor * atm_distance.abs();
     let smile = skew_factor * atm_distance.powi(2);
@@ -260,8 +260,8 @@ pub(crate) fn default_empty_string<T: ToString>(input: Option<T>) -> String {
     input.map_or_else(|| "".to_string(), |v| v.to_string())
 }
 
-pub(crate) fn rounder(reference_price: PositiveF64, strike_interval: PositiveF64) -> PositiveF64 {
-    if strike_interval == PZERO {
+pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> Positive {
+    if strike_interval == Positive::ZERO {
         return reference_price;
     }
     let price = reference_price.value();
@@ -276,60 +276,60 @@ pub(crate) fn rounder(reference_price: PositiveF64, strike_interval: PositiveF64
         base
     };
 
-    pos!(rounded)
+    f2p!(rounded)
 }
 
 #[cfg(test)]
 mod tests_rounder {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     #[test]
     fn test_rounder() {
-        assert_eq!(rounder(pos!(151.0), pos!(5.0)), pos!(150.0));
-        assert_eq!(rounder(pos!(154.0), pos!(5.0)), pos!(155.0));
-        assert_eq!(rounder(pos!(152.5), pos!(5.0)), pos!(155.0));
-        assert_eq!(rounder(pos!(152.4), pos!(5.0)), pos!(150.0));
+        assert_eq!(rounder(f2p!(151.0), f2p!(5.0)), f2p!(150.0));
+        assert_eq!(rounder(f2p!(154.0), f2p!(5.0)), f2p!(155.0));
+        assert_eq!(rounder(f2p!(152.5), f2p!(5.0)), f2p!(155.0));
+        assert_eq!(rounder(f2p!(152.4), f2p!(5.0)), f2p!(150.0));
 
-        assert_eq!(rounder(pos!(151.0), pos!(10.0)), pos!(150.0));
-        assert_eq!(rounder(pos!(156.0), pos!(10.0)), pos!(160.0));
-        assert_eq!(rounder(pos!(155.0), pos!(10.0)), pos!(160.0));
-        assert_eq!(rounder(pos!(154.9), pos!(10.0)), pos!(150.0));
+        assert_eq!(rounder(f2p!(151.0), f2p!(10.0)), f2p!(150.0));
+        assert_eq!(rounder(f2p!(156.0), f2p!(10.0)), f2p!(160.0));
+        assert_eq!(rounder(f2p!(155.0), f2p!(10.0)), f2p!(160.0));
+        assert_eq!(rounder(f2p!(154.9), f2p!(10.0)), f2p!(150.0));
 
-        assert_eq!(rounder(pos!(17.0), pos!(15.0)), pos!(15.0));
-        assert_eq!(rounder(pos!(43.0), pos!(15.0)), pos!(45.0));
-        assert_eq!(rounder(pos!(37.5), pos!(15.0)), pos!(45.0));
-        assert_eq!(rounder(pos!(37.4), pos!(15.0)), pos!(30.0));
+        assert_eq!(rounder(f2p!(17.0), f2p!(15.0)), f2p!(15.0));
+        assert_eq!(rounder(f2p!(43.0), f2p!(15.0)), f2p!(45.0));
+        assert_eq!(rounder(f2p!(37.5), f2p!(15.0)), f2p!(45.0));
+        assert_eq!(rounder(f2p!(37.4), f2p!(15.0)), f2p!(30.0));
     }
 }
 
 #[cfg(test)]
 mod tests_generate_list_of_strikes {
     use super::*;
-    use crate::model::types::PositiveF64;
+    use crate::model::types::Positive;
 
     #[test]
     fn test_generate_list_of_strikes_basic() {
-        let reference_price = PositiveF64::new(1000.0).unwrap();
+        let reference_price = Positive::new(1000.0).unwrap();
         let chain_size = 3;
-        let strike_interval = PositiveF64::new(10.0).unwrap();
+        let strike_interval = Positive::new(10.0).unwrap();
 
         let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
 
         assert_eq!(strikes.len(), 7);
 
-        assert!(strikes.contains(&PositiveF64::new(970.0).unwrap()));
-        assert!(strikes.contains(&PositiveF64::new(980.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(970.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(980.0).unwrap()));
         assert!(strikes.contains(&reference_price));
-        assert!(strikes.contains(&PositiveF64::new(1010.0).unwrap()));
-        assert!(strikes.contains(&PositiveF64::new(1030.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(1010.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(1030.0).unwrap()));
     }
 
     #[test]
     fn test_generate_list_of_strikes_zero_chain_size() {
-        let reference_price = PositiveF64::new(1000.0).unwrap();
+        let reference_price = Positive::new(1000.0).unwrap();
         let chain_size = 0;
-        let strike_interval = PositiveF64::new(10.0).unwrap();
+        let strike_interval = Positive::new(10.0).unwrap();
 
         let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
 
@@ -339,26 +339,26 @@ mod tests_generate_list_of_strikes {
 
     #[test]
     fn test_generate_list_of_strikes_large_interval() {
-        let reference_price = PositiveF64::new(1000.0).unwrap();
+        let reference_price = Positive::new(1000.0).unwrap();
         let chain_size = 3;
-        let strike_interval = PositiveF64::new(100.0).unwrap();
+        let strike_interval = Positive::new(100.0).unwrap();
 
         let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
 
-        assert!(strikes.contains(&PositiveF64::new(700.0).unwrap()));
-        assert!(strikes.contains(&PositiveF64::new(800.0).unwrap()));
-        assert!(strikes.contains(&PositiveF64::new(900.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(700.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(800.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(900.0).unwrap()));
         assert!(strikes.contains(&reference_price));
-        assert!(strikes.contains(&PositiveF64::new(1100.0).unwrap()));
-        assert!(strikes.contains(&PositiveF64::new(1200.0).unwrap()));
-        assert!(strikes.contains(&PositiveF64::new(1300.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(1100.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(1200.0).unwrap()));
+        assert!(strikes.contains(&Positive::new(1300.0).unwrap()));
     }
 
     #[test]
     fn test_generate_list_of_strikes_duplicate_strikes() {
-        let reference_price = PositiveF64::new(1000.0).unwrap();
+        let reference_price = Positive::new(1000.0).unwrap();
         let chain_size = 1;
-        let strike_interval = PositiveF64::new(0.0).unwrap();
+        let strike_interval = Positive::new(0.0).unwrap();
 
         let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
 
@@ -397,7 +397,7 @@ mod tests_parse {
     #[test]
     fn test_positive_f64() {
         let input = "42.01";
-        let result: Option<PositiveF64> = parse(input);
+        let result: Option<Positive> = parse(input);
         assert_eq!(result, spos!(42.01));
     }
 }
@@ -438,7 +438,7 @@ mod tests_default_empty_string {
 #[cfg(test)]
 mod tests_random_positions_params {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     fn create_test_params() -> RandomPositionsParams {
         RandomPositionsParams::new(
@@ -447,7 +447,7 @@ mod tests_random_positions_params {
             Some(1),
             Some(1),
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -484,7 +484,7 @@ mod tests_random_positions_params {
             Some(3),
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -500,7 +500,7 @@ mod tests_random_positions_params {
             None,
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -569,14 +569,14 @@ mod tests_option_data_price_params {
     #[test]
     fn test_new_price_params() {
         let params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
             0.05,
             0.02,
         );
 
-        assert_eq!(params.underlying_price, pos!(100.0));
+        assert_eq!(params.underlying_price, f2p!(100.0));
         assert_eq!(params.risk_free_rate, 0.05);
         assert_eq!(params.dividend_yield, 0.02);
         assert_eq!(params.implied_volatility, spos!(0.2));
@@ -585,7 +585,7 @@ mod tests_option_data_price_params {
     #[test]
     fn test_default_price_params() {
         let params = OptionDataPriceParams::default();
-        assert_eq!(params.underlying_price, PZERO);
+        assert_eq!(params.underlying_price, Positive::ZERO);
         assert_eq!(params.risk_free_rate, ZERO);
         assert_eq!(params.dividend_yield, ZERO);
         assert_eq!(params.implied_volatility, None);
@@ -594,7 +594,7 @@ mod tests_option_data_price_params {
     #[test]
     fn test_display_price_params() {
         let params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
             0.05,
@@ -610,7 +610,7 @@ mod tests_option_data_price_params {
     #[test]
     fn test_display_price_params_no_volatility() {
         let params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
         let display_string = format!("{}", params);
         assert!(display_string.contains("Implied Volatility: 0.000"));
     }
@@ -624,7 +624,7 @@ mod tests_option_chain_build_params {
     #[test]
     fn test_new_chain_build_params() {
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
             0.05,
@@ -635,9 +635,9 @@ mod tests_option_chain_build_params {
             "TEST".to_string(),
             spos!(1000.0),
             10,
-            pos!(5.0),
+            f2p!(5.0),
             0.1,
-            pos!(0.02),
+            f2p!(0.02),
             2,
             price_params,
         );
@@ -645,9 +645,9 @@ mod tests_option_chain_build_params {
         assert_eq!(params.symbol, "TEST");
         assert_eq!(params.volume, spos!(1000.0));
         assert_eq!(params.chain_size, 10);
-        assert_eq!(params.strike_interval, pos!(5.0));
+        assert_eq!(params.strike_interval, f2p!(5.0));
         assert_eq!(params.skew_factor, 0.1);
-        assert_eq!(params.spread, pos!(0.02));
+        assert_eq!(params.spread, f2p!(0.02));
         assert_eq!(params.decimal_places, 2);
     }
 
@@ -659,9 +659,9 @@ mod tests_option_chain_build_params {
             "TEST".to_string(),
             None,
             10,
-            pos!(5.0),
+            f2p!(5.0),
             0.1,
-            pos!(0.02),
+            f2p!(0.02),
             2,
             price_params,
         );
@@ -682,7 +682,7 @@ mod tests_random_positions_params_extended {
             Some(1),
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -706,7 +706,7 @@ mod tests_random_positions_params_extended {
             None,
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -726,7 +726,7 @@ mod tests_random_positions_params_extended {
             None,
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,

@@ -2,10 +2,10 @@ use chrono::Utc;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
+use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::{assert_decimal_eq, pos};
+use optionstratlib::{assert_decimal_eq, f2p};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -14,7 +14,7 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define common parameters
-    let underlying_price = pos!(2340.0);
+    let underlying_price = f2p!(2340.0);
     let underlying_symbol = "GAS".to_string();
     let expiration = ExpirationDate::Days(6.0);
     let implied_volatility = 0.73;
@@ -28,10 +28,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                pos!(2100.0),
+                f2p!(2100.0),
                 expiration.clone(),
                 implied_volatility,
-                pos!(2.0),
+                f2p!(2.0),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Call,
@@ -48,10 +48,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                pos!(2250.0),
+                f2p!(2250.0),
                 expiration.clone(),
                 implied_volatility,
-                pos!(2.0),
+                f2p!(2.0),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Call,
@@ -68,10 +68,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                pos!(2500.0),
+                f2p!(2500.0),
                 expiration.clone(),
                 implied_volatility,
-                pos!(1.0),
+                f2p!(1.0),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Put,
@@ -88,10 +88,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                pos!(2150.0),
+                f2p!(2150.0),
                 expiration.clone(),
                 implied_volatility,
-                pos!(2.5),
+                f2p!(2.5),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Put,

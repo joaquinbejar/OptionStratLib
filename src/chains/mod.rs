@@ -29,12 +29,12 @@
 //! ```rust
 //! use optionstratlib::chains::chain::{OptionChain, OptionData};
 //! use optionstratlib::chains::utils::OptionChainBuildParams;
-//! use optionstratlib::model::types::{ExpirationDate, PositiveF64};
+//! use optionstratlib::model::types::{ExpirationDate, Positive};
 //!
 //! // Create a new option chain
 //! let chain = OptionChain::new(
 //!     "SP500",
-//!     PositiveF64::new(100.0).unwrap(),
+//!     Positive::new(100.0).unwrap(),
 //!     "2024-12-31".to_string(),
 //!     None,
 //!     None
@@ -44,9 +44,9 @@
 //! let params = OptionChainBuildParams::new("SP500".to_string(),
 //! None,
 //! 10,
-//! PositiveF64::new(1.0).unwrap(),
+//! Positive::new(1.0).unwrap(),
 //! 0.0,
-//! PositiveF64::new(0.02).unwrap(), 2, Default::default());
+//! Positive::new(0.02).unwrap(), 2, Default::default());
 //!
 //! let built_chain = OptionChain::build_chain(&params);
 //! ```

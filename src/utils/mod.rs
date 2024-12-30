@@ -39,13 +39,13 @@
 //! Provides testing utilities and macros for relative equality assertions:
 //!
 //! ```rust
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::{assert_positivef64_relative_eq, pos};
-//! use optionstratlib::model::types::PZERO;
+//! use optionstratlib::Positive;
+//! use optionstratlib::{assert_positivef64_relative_eq, f2p};
+//! use optionstratlib::model::types::Positive::ZERO;
 //!
-//! let a = pos!(1.0);
-//! let b = pos!(1.0001);
-//! let epsilon = pos!(0.001);
+//! let a = f2p!(1.0);
+//! let b = f2p!(1.0001);
+//! let epsilon = f2p!(0.001);
 //! assert_positivef64_relative_eq!(a, b, epsilon);
 //! ```
 //!
@@ -138,23 +138,23 @@
 //! ## Testing Utilities
 //!
 //! The module provides testing utilities for:
-//! - Relative equality comparisons for PositiveF64
+//! - Relative equality comparisons for Positive
 //! - Approximate floating-point comparisons
 //! - Random element selection testing
 //!
-//! ### Example: Testing PositiveF64 Values
+//! ### Example: Testing Positive Values
 //!
 //! ```rust
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
-//! use optionstratlib::model::types::PZERO;
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
+//! use optionstratlib::model::types::Positive::ZERO;
 //! use optionstratlib::assert_positivef64_relative_eq;
 //!
 //!
 //! fn test_values() {
-//!     let a = pos!(1.0);
-//!     let b = pos!(1.0001);
-//!     let epsilon = pos!(0.001);
+//!     let a = f2p!(1.0);
+//!     let b = f2p!(1.0001);
+//!     let epsilon = f2p!(0.001);
 //!     assert_positivef64_relative_eq!(a, b, epsilon);
 //! }
 //! ```

@@ -65,8 +65,8 @@
 //! use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
 //!
 //! // Create a Telegraph Process with transition rates
 //! let process = TelegraphProcess::new(dec!(0.5), dec!(0.3));
@@ -76,11 +76,11 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
+//!             strike_price: f2p!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
 //!             implied_volatility: 0.2,
 //!             quantity: SIZE_ONE,
-//!             underlying_price: pos!(105.0),
+//!             underlying_price: f2p!(105.0),
 //!             risk_free_rate: 0.05,
 //!             option_style: OptionStyle::Call,
 //!             dividend_yield: 0.01,
@@ -95,8 +95,8 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
 //! use optionstratlib::pricing::{
 //!     black_scholes_model::black_scholes,
 //!     monte_carlo::monte_carlo_option_pricing,
@@ -106,11 +106,11 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
+//!             strike_price: f2p!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
 //!             implied_volatility: 0.2,
 //!             quantity: SIZE_ONE,
-//!             underlying_price: pos!(105.0),
+//!             underlying_price: f2p!(105.0),
 //!             risk_free_rate: 0.05,
 //!             option_style: OptionStyle::Call,
 //!             dividend_yield: 0.01,

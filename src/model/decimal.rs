@@ -4,8 +4,8 @@
    Date: 25/12/24
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
-use crate::model::types::PositiveF64;
-use crate::pos;
+use crate::model::types::Positive;
+use crate::{f2p, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
@@ -55,10 +55,10 @@ impl DecimalStats for Vec<Decimal> {
     }
 }
 
-impl Mul<PositiveF64> for Decimal {
+impl Mul<Positive> for Decimal {
     type Output = Decimal;
 
-    fn mul(self, rhs: PositiveF64) -> Self::Output {
+    fn mul(self, rhs: Positive) -> Self::Output {
         self * Decimal::from_f64(rhs.value()).unwrap()
     }
 }
@@ -81,29 +81,7 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     }
 }
 
-pub fn positive_f64_to_decimal(value: PositiveF64) -> Result<Decimal, DecimalError> {
-    let result = Decimal::from_f64(value.value());
-    match result {
-        Some(decimal) => Ok(decimal),
-        None => Err(DecimalError::ConversionError {
-            from_type: format!("PositiveF64: {}", value.value()),
-            to_type: "Decimal".to_string(),
-            reason: "Failed to convert f64 to Decimal".to_string(),
-        }),
-    }
-}
 
-pub fn decimal_to_positive_f64(value: Decimal) -> Result<PositiveF64, Box<dyn Error>> {
-    let result = value.to_f64();
-    match result {
-        Some(decimal) => Ok(pos!(decimal)),
-        None => Err(Box::new(DecimalError::ConversionError {
-            from_type: format!("Decimal: {}", value),
-            to_type: "PositiveF64".to_string(),
-            reason: "Failed to convert Decimal to f64".to_string(),
-        })),
-    }
-}
 
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
@@ -117,27 +95,6 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 macro_rules! d2fu {
     ($val:expr) => {
         $crate::model::decimal::decimal_to_f64($val)
-    };
-}
-
-#[macro_export]
-macro_rules! d2p {
-    ($val:expr) => {
-        $crate::model::decimal::decimal_to_positive_f64($val)
-    };
-}
-
-#[macro_export]
-macro_rules! p2du {
-    ($val:expr) => {
-        $crate::model::decimal::positive_f64_to_decimal($val)
-    };
-}
-
-#[macro_export]
-macro_rules! p2d {
-    ($val:expr) => {
-        $crate::model::decimal::positive_f64_to_decimal($val)?
     };
 }
 
@@ -165,7 +122,7 @@ macro_rules! f2d {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
     use std::str::FromStr;
 
     #[test]
@@ -199,12 +156,5 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0.0);
     }
-
-    #[test]
-    fn test_positive_f64_to_decimal() {
-        let value = pos!(42.42);
-        let result = positive_f64_to_decimal(value);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Decimal::from_str("42.42").unwrap());
-    }
+    
 }

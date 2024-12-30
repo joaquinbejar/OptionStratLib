@@ -21,7 +21,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -29,7 +29,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, pos};
+use crate::{d2fu, f2p};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -46,7 +46,7 @@ pub struct IronButterfly {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<PositiveF64>,
+    pub break_even_points: Vec<Positive>,
     short_call: Position,
     short_put: Position,
     long_call: Position,
@@ -57,15 +57,15 @@ impl IronButterfly {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: PositiveF64,
-        short_strike: PositiveF64,
-        long_call_strike: PositiveF64,
-        long_put_strike: PositiveF64,
+        underlying_price: Positive,
+        short_strike: Positive,
+        long_call_strike: Positive,
+        long_put_strike: Positive,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: PositiveF64,
+        quantity: Positive,
         premium_short_call: f64,
         premium_short_put: f64,
         premium_long_call: f64,
@@ -252,16 +252,16 @@ impl Positionable for IronButterfly {
 }
 
 impl Strategies for IronButterfly {
-    fn get_underlying_price(&self) -> PositiveF64 {
+    fn get_underlying_price(&self) -> Positive {
         self.long_put.option.underlying_price
     }
 
-    fn break_even(&self) -> Vec<PositiveF64> {
+    fn break_even(&self) -> Vec<Positive> {
         // Iron Condor has two break-even points, we'll return the lower one
         self.break_even_points.clone()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
+    fn max_profit(&self) -> Result<Positive, StrategyError> {
         let left_profit = self.calculate_profit_at(self.short_call.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_put.option.strike_price);
         if left_profit < ZERO || right_profit < ZERO {
@@ -272,12 +272,12 @@ impl Strategies for IronButterfly {
             ));
         }
 
-        Ok(pos!(
+        Ok(f2p!(
             self.calculate_profit_at(self.short_call.option.strike_price)
         ))
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
+    fn max_loss(&self) -> Result<Positive, StrategyError> {
         let left_loss = self.calculate_profit_at(self.long_put.option.strike_price);
         let right_loss = self.calculate_profit_at(self.long_call.option.strike_price);
         if left_loss > ZERO || right_loss > ZERO {
@@ -287,11 +287,11 @@ impl Strategies for IronButterfly {
                 },
             ));
         }
-        Ok(pos!(left_loss.abs().max(right_loss.abs())))
+        Ok(f2p!(left_loss.abs().max(right_loss.abs())))
     }
 
-    fn total_cost(&self) -> PositiveF64 {
-        pos!(
+    fn total_cost(&self) -> Positive {
+        f2p!(
             self.short_call.net_cost()
                 + self.short_put.net_cost()
                 + self.long_call.net_cost()
@@ -321,7 +321,7 @@ impl Strategies for IronButterfly {
             (self.short_call.option.strike_price - self.short_put.option.strike_price).value();
         let outer_width =
             (self.long_call.option.strike_price - self.long_put.option.strike_price).value();
-        let height = self.max_profit().unwrap_or(PZERO);
+        let height = self.max_profit().unwrap_or(Positive::ZERO);
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
@@ -330,16 +330,16 @@ impl Strategies for IronButterfly {
     }
 
     fn profit_ratio(&self) -> f64 {
-        let max_profit = self.max_profit().unwrap_or(PZERO);
-        let max_loss = self.max_loss().unwrap_or(PZERO);
+        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
+        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (PZERO, _) => ZERO,
-            (_, PZERO) => f64::INFINITY,
+            (Positive::ZERO, _) => ZERO,
+            (_, Positive::ZERO) => f64::INFINITY,
             _ => (max_profit / max_loss * 100.0).value(),
         }
     }
 
-    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+    fn get_break_even_points(&self) -> Vec<Positive> {
         self.break_even_points.clone()
     }
 }
@@ -364,9 +364,9 @@ impl Optimizable for IronButterfly {
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(low, mid, high)| {
-                low.put_ask.unwrap_or(PZERO) > PZERO
-                    && mid.put_bid.unwrap_or(PZERO) > PZERO
-                    && high.call_ask.unwrap_or(PZERO) > PZERO
+                low.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && mid.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && high.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |(low, mid, high)| {
@@ -453,7 +453,7 @@ impl Optimizable for IronButterfly {
 }
 
 impl Profit for IronButterfly {
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> f64 {
         let price = Some(price);
         self.short_call.pnl_at_expiration(&price)
             + self.short_put.pnl_at_expiration(&price)
@@ -506,7 +506,7 @@ impl Graph for IronButterfly {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.max_profit().unwrap_or(PZERO);
+        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let short_call_strike_price = &self.short_call.option.strike_price;
         let short_put_strike_price = &self.short_put.option.strike_price;
         let long_call_strike_price = &self.long_call.option.strike_price;
@@ -642,7 +642,7 @@ impl DeltaNeutrality for IronButterfly {
         }
     }
 
-    fn get_atm_strike(&self) -> PositiveF64 {
+    fn get_atm_strike(&self) -> Positive {
         self.long_call.option.underlying_price
     }
 
@@ -652,12 +652,12 @@ impl DeltaNeutrality for IronButterfly {
         let s_c_delta = d2fu!(self.short_call.option.delta().unwrap()).unwrap();
         vec![
             DeltaAdjustment::BuyOptions {
-                quantity: pos!((net_delta.abs() / l_p_delta).abs()) * self.long_put.option.quantity,
+                quantity: f2p!((net_delta.abs() / l_p_delta).abs()) * self.long_put.option.quantity,
                 strike: self.long_put.option.strike_price,
                 option_type: OptionStyle::Put,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / s_c_delta).abs())
+                quantity: f2p!((net_delta.abs() / s_c_delta).abs())
                     * self.short_call.option.quantity,
                 strike: self.short_call.option.strike_price,
                 option_type: OptionStyle::Call,
@@ -672,13 +672,13 @@ impl DeltaNeutrality for IronButterfly {
 
         vec![
             DeltaAdjustment::BuyOptions {
-                quantity: pos!((net_delta.abs() / l_c_delta).abs())
+                quantity: f2p!((net_delta.abs() / l_c_delta).abs())
                     * self.long_call.option.quantity,
                 strike: self.long_call.option.strike_price,
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / s_p_delta).abs())
+                quantity: f2p!((net_delta.abs() / s_p_delta).abs())
                     * self.short_put.option.quantity,
                 strike: self.short_put.option.strike_price,
                 option_type: OptionStyle::Put,
@@ -691,7 +691,7 @@ impl DeltaNeutrality for IronButterfly {
 mod tests_iron_butterfly {
     use super::*;
     use crate::model::types::SIZE_ONE;
-    use crate::pos;
+    use crate::f2p;
     use chrono::{TimeZone, Utc};
 
     #[test]
@@ -699,10 +699,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0), // underlying price
-            pos!(150.0), // short strike (at the money)
-            pos!(160.0), // long call strike
-            pos!(140.0), // long put strike
+            f2p!(150.0), // underlying price
+            f2p!(150.0), // short strike (at the money)
+            f2p!(160.0), // long call strike
+            f2p!(140.0), // long put strike
             ExpirationDate::DateTime(date),
             0.2,      // implied volatility
             0.01,     // risk free rate
@@ -734,10 +734,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(100.0), // underlying price
-            pos!(100.0), // short strike (at the money)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            f2p!(100.0), // underlying price
+            f2p!(100.0), // short strike (at the money)
+            f2p!(110.0), // long call strike
+            f2p!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -753,7 +753,7 @@ mod tests_iron_butterfly {
 
         // Max loss should be width of the wing minus net credit received
         let expected_loss = 10.0 - butterfly.net_premium_received();
-        assert_eq!(butterfly.max_loss().unwrap(), pos!(expected_loss));
+        assert_eq!(butterfly.max_loss().unwrap(), f2p!(expected_loss));
     }
 
     #[test]
@@ -761,10 +761,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(100.0), // underlying price
-            pos!(100.0), // short strike (at the money)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            f2p!(100.0), // underlying price
+            f2p!(100.0), // short strike (at the money)
+            f2p!(110.0), // long call strike
+            f2p!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -779,7 +779,7 @@ mod tests_iron_butterfly {
         );
 
         let expected_profit = butterfly.net_premium_received();
-        assert_eq!(butterfly.max_profit().unwrap(), pos!(expected_profit));
+        assert_eq!(butterfly.max_profit().unwrap(), f2p!(expected_profit));
     }
 
     #[test]
@@ -787,10 +787,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(100.0), // underlying price
-            pos!(100.0), // short strike (at the money)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            f2p!(100.0), // underlying price
+            f2p!(100.0), // short strike (at the money)
+            f2p!(110.0), // long call strike
+            f2p!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -811,7 +811,7 @@ mod tests_iron_butterfly {
         let distance_up = butterfly.break_even_points[1] - butterfly.short_call.option.strike_price;
         let distance_down =
             butterfly.short_put.option.strike_price - butterfly.break_even_points[0];
-        assert!((distance_up - distance_down) < pos!(0.01));
+        assert!((distance_up - distance_down) < f2p!(0.01));
     }
 
     #[test]
@@ -819,10 +819,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(100.0),
-            pos!(110.0),
-            pos!(90.0),
+            f2p!(100.0),
+            f2p!(100.0),
+            f2p!(110.0),
+            f2p!(90.0),
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -852,10 +852,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(100.0),
-            pos!(110.0),
-            pos!(90.0),
+            f2p!(100.0),
+            f2p!(100.0),
+            f2p!(110.0),
+            f2p!(90.0),
             ExpirationDate::DateTime(date),
             0.2,
             0.01,
@@ -883,13 +883,13 @@ mod tests_iron_butterfly {
 mod tests_iron_butterfly_validable {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
+    use crate::f2p;
 
     fn create_valid_position(
         side: Side,
         option_style: OptionStyle,
-        strike_price: PositiveF64,
-        quantity: PositiveF64,
+        strike_price: Positive,
+        quantity: Positive,
     ) -> Position {
         Position::new(
             Options::new(
@@ -900,7 +900,7 @@ mod tests_iron_butterfly_validable {
                 ExpirationDate::Days(30.0),
                 0.20,
                 quantity,
-                pos!(100.0),
+                f2p!(100.0),
                 0.05,
                 option_style,
                 0.0,
@@ -916,15 +916,15 @@ mod tests_iron_butterfly_validable {
     fn create_valid_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            f2p!(100.0), // underlying_price
+            f2p!(100.0), // short strike (both call and put)
+            f2p!(110.0), // long call strike
+            f2p!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
             0.20,      // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // quantity
+            f2p!(1.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
             1.0,       // premium_long_call
@@ -945,7 +945,7 @@ mod tests_iron_butterfly_validable {
         let mut butterfly = create_valid_butterfly();
         // Make short call invalid by setting quantity to zero
         butterfly.short_call =
-            create_valid_position(Side::Short, OptionStyle::Call, pos!(100.0), PZERO);
+            create_valid_position(Side::Short, OptionStyle::Call, f2p!(100.0), Positive::ZERO);
         assert!(!butterfly.validate());
     }
 
@@ -954,7 +954,7 @@ mod tests_iron_butterfly_validable {
         let mut butterfly = create_valid_butterfly();
         // Make short put invalid by setting quantity to zero
         butterfly.short_put =
-            create_valid_position(Side::Short, OptionStyle::Put, pos!(100.0), PZERO);
+            create_valid_position(Side::Short, OptionStyle::Put, f2p!(100.0), Positive::ZERO);
         assert!(!butterfly.validate());
     }
 
@@ -963,7 +963,7 @@ mod tests_iron_butterfly_validable {
         let mut butterfly = create_valid_butterfly();
         // Make long call invalid by setting quantity to zero
         butterfly.long_call =
-            create_valid_position(Side::Long, OptionStyle::Call, pos!(110.0), PZERO);
+            create_valid_position(Side::Long, OptionStyle::Call, f2p!(110.0), Positive::ZERO);
         assert!(!butterfly.validate());
     }
 
@@ -971,7 +971,7 @@ mod tests_iron_butterfly_validable {
     fn test_validate_invalid_long_put() {
         let mut butterfly = create_valid_butterfly();
         // Make long put invalid by setting quantity to zero
-        butterfly.long_put = create_valid_position(Side::Long, OptionStyle::Put, pos!(90.0), PZERO);
+        butterfly.long_put = create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
         assert!(!butterfly.validate());
     }
 
@@ -980,12 +980,12 @@ mod tests_iron_butterfly_validable {
         let mut butterfly = create_valid_butterfly();
         // Make all positions invalid
         butterfly.short_call =
-            create_valid_position(Side::Short, OptionStyle::Call, pos!(100.0), PZERO);
+            create_valid_position(Side::Short, OptionStyle::Call, f2p!(100.0), Positive::ZERO);
         butterfly.short_put =
-            create_valid_position(Side::Short, OptionStyle::Put, pos!(100.0), PZERO);
+            create_valid_position(Side::Short, OptionStyle::Put, f2p!(100.0), Positive::ZERO);
         butterfly.long_call =
-            create_valid_position(Side::Long, OptionStyle::Call, pos!(110.0), PZERO);
-        butterfly.long_put = create_valid_position(Side::Long, OptionStyle::Put, pos!(90.0), PZERO);
+            create_valid_position(Side::Long, OptionStyle::Call, f2p!(110.0), Positive::ZERO);
+        butterfly.long_put = create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
         assert!(!butterfly.validate());
     }
 
@@ -994,9 +994,9 @@ mod tests_iron_butterfly_validable {
         let mut butterfly = create_valid_butterfly();
         // Make short strikes different
         butterfly.short_call =
-            create_valid_position(Side::Short, OptionStyle::Call, pos!(105.0), pos!(1.0));
+            create_valid_position(Side::Short, OptionStyle::Call, f2p!(105.0), f2p!(1.0));
         butterfly.short_put =
-            create_valid_position(Side::Short, OptionStyle::Put, pos!(95.0), pos!(1.0));
+            create_valid_position(Side::Short, OptionStyle::Put, f2p!(95.0), f2p!(1.0));
         assert!(!butterfly.validate());
     }
 
@@ -1005,9 +1005,9 @@ mod tests_iron_butterfly_validable {
         let mut butterfly = create_valid_butterfly();
         // Invert the strikes
         butterfly.long_put =
-            create_valid_position(Side::Long, OptionStyle::Put, pos!(105.0), pos!(1.0));
+            create_valid_position(Side::Long, OptionStyle::Put, f2p!(105.0), f2p!(1.0));
         butterfly.short_put =
-            create_valid_position(Side::Short, OptionStyle::Put, pos!(110.0), pos!(1.0));
+            create_valid_position(Side::Short, OptionStyle::Put, f2p!(110.0), f2p!(1.0));
         assert!(!butterfly.validate());
     }
 }
@@ -1016,20 +1016,20 @@ mod tests_iron_butterfly_validable {
 mod tests_iron_butterfly_strategies {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
+    use crate::f2p;
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            f2p!(100.0), // underlying_price
+            f2p!(100.0), // short strike (both call and put)
+            f2p!(110.0), // long call strike
+            f2p!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
             0.20,      // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // quantity
+            f2p!(1.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
             1.0,       // premium_long_call
@@ -1049,11 +1049,11 @@ mod tests_iron_butterfly_strategies {
                 OptionType::European,
                 Side::Short,
                 "TEST".to_string(),
-                pos!(100.0),
+                f2p!(100.0),
                 ExpirationDate::Days(30.0),
                 0.20,
-                pos!(1.0),
-                pos!(100.0),
+                f2p!(1.0),
+                f2p!(100.0),
                 0.05,
                 OptionStyle::Call,
                 0.0,
@@ -1078,11 +1078,11 @@ mod tests_iron_butterfly_strategies {
                 OptionType::European,
                 Side::Long,
                 "TEST".to_string(),
-                pos!(90.0),
+                f2p!(90.0),
                 ExpirationDate::Days(30.0),
                 0.20,
-                pos!(1.0),
-                pos!(100.0),
+                f2p!(1.0),
+                f2p!(100.0),
                 0.05,
                 OptionStyle::Put,
                 0.0,
@@ -1096,7 +1096,7 @@ mod tests_iron_butterfly_strategies {
         butterfly
             .add_position(&new_long_put.clone())
             .expect("Failed to add long put");
-        assert_eq!(butterfly.long_put.option.strike_price, pos!(90.0));
+        assert_eq!(butterfly.long_put.option.strike_price, f2p!(90.0));
     }
 
     #[test]
@@ -1129,7 +1129,7 @@ mod tests_iron_butterfly_strategies {
         let short_strike = butterfly.short_call.option.strike_price;
         let upper_distance = break_even_points[1] - short_strike;
         let lower_distance = short_strike - break_even_points[0];
-        assert!((upper_distance - lower_distance) < pos!(0.01));
+        assert!((upper_distance - lower_distance) < f2p!(0.01));
     }
 
     #[test]
@@ -1149,14 +1149,14 @@ mod tests_iron_butterfly_strategies {
         let loss_at_long_call =
             butterfly.calculate_profit_at(butterfly.long_call.option.strike_price);
         assert!((loss_at_long_put - loss_at_long_call).abs() < 0.01);
-        assert_eq!(max_loss, pos!(loss_at_long_put.abs()));
+        assert_eq!(max_loss, f2p!(loss_at_long_put.abs()));
     }
 
     #[test]
     fn test_total_cost() {
         let butterfly = create_test_butterfly();
         let total_cost = butterfly.total_cost();
-        let expected_cost = pos!(6.0); // 2.0 + 2.0 + 1.0 + 1.0
+        let expected_cost = f2p!(6.0); // 2.0 + 2.0 + 1.0 + 1.0
         assert_eq!(total_cost, expected_cost);
     }
 
@@ -1184,15 +1184,15 @@ mod tests_iron_butterfly_strategies {
     fn test_with_multiple_contracts() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(100.0),
-            pos!(110.0),
-            pos!(90.0),
+            f2p!(100.0),
+            f2p!(100.0),
+            f2p!(110.0),
+            f2p!(90.0),
             ExpirationDate::Days(30.0),
             0.20,
             0.05,
             0.0,
-            pos!(2.0), // quantity = 2
+            f2p!(2.0), // quantity = 2
             2.0,
             2.0,
             1.0,
@@ -1208,15 +1208,15 @@ mod tests_iron_butterfly_strategies {
     fn test_with_asymmetric_premiums() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(100.0),
-            pos!(110.0),
-            pos!(90.0),
+            f2p!(100.0),
+            f2p!(100.0),
+            f2p!(110.0),
+            f2p!(90.0),
             ExpirationDate::Days(30.0),
             0.20,
             0.05,
             0.0,
-            pos!(1.0),
+            f2p!(1.0),
             3.0, // Higher short call premium
             2.0, // Lower short put premium
             1.0,
@@ -1234,21 +1234,21 @@ mod tests_iron_butterfly_optimizable {
     use super::*;
     use crate::chains::chain::OptionData;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
+    use crate::f2p;
     use crate::spos;
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            f2p!(100.0), // underlying_price
+            f2p!(100.0), // short strike (both call and put)
+            f2p!(110.0), // long call strike
+            f2p!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
             0.20,      // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // quantity
+            f2p!(1.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
             1.0,       // premium_long_call
@@ -1259,12 +1259,12 @@ mod tests_iron_butterfly_optimizable {
     }
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-12-31".to_string(), None, None);
 
         // Add options at various strikes
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
             chain.add_option(
-                pos!(strike),
+                f2p!(strike),
                 spos!(5.0),   // call_bid
                 spos!(5.2),   // call_ask
                 spos!(5.0),   // put_bid
@@ -1320,14 +1320,14 @@ mod tests_iron_butterfly_optimizable {
 
         butterfly.find_optimal(
             &chain,
-            FindOptimalSide::Range(pos!(95.0), pos!(105.0)),
+            FindOptimalSide::Range(f2p!(95.0), f2p!(105.0)),
             OptimizationCriteria::Ratio,
         );
 
         assert!(butterfly.validate());
         // Short strikes should be within the specified range
-        assert!(butterfly.short_call.option.strike_price >= pos!(95.0));
-        assert!(butterfly.short_call.option.strike_price <= pos!(105.0));
+        assert!(butterfly.short_call.option.strike_price >= f2p!(95.0));
+        assert!(butterfly.short_call.option.strike_price <= f2p!(105.0));
         // And should be equal
         assert_eq!(
             butterfly.short_call.option.strike_price,
@@ -1339,7 +1339,7 @@ mod tests_iron_butterfly_optimizable {
     fn test_is_valid_long_option() {
         let butterfly = create_test_butterfly();
         let option = OptionData::new(
-            pos!(90.0),
+            f2p!(90.0),
             spos!(5.0),
             spos!(5.2),
             spos!(5.0),
@@ -1360,7 +1360,7 @@ mod tests_iron_butterfly_optimizable {
     fn test_is_valid_short_option() {
         let butterfly = create_test_butterfly();
         let option = OptionData::new(
-            pos!(100.0), // At the money
+            f2p!(100.0), // At the money
             spos!(5.0),
             spos!(5.2),
             spos!(5.0),
@@ -1374,7 +1374,7 @@ mod tests_iron_butterfly_optimizable {
         // Test with different sides - should prefer at-the-money options
         assert!(butterfly.is_valid_short_option(&option, &FindOptimalSide::All));
         assert!(butterfly
-            .is_valid_short_option(&option, &FindOptimalSide::Range(pos!(95.0), pos!(105.0))));
+            .is_valid_short_option(&option, &FindOptimalSide::Range(f2p!(95.0), f2p!(105.0))));
     }
 
     #[test]
@@ -1392,10 +1392,10 @@ mod tests_iron_butterfly_optimizable {
 
         let new_strategy = butterfly.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
-        assert_eq!(new_strategy.long_put.option.strike_price, pos!(90.0));
-        assert_eq!(new_strategy.short_put.option.strike_price, pos!(100.0));
-        assert_eq!(new_strategy.short_call.option.strike_price, pos!(100.0));
-        assert_eq!(new_strategy.long_call.option.strike_price, pos!(110.0));
+        assert_eq!(new_strategy.long_put.option.strike_price, f2p!(90.0));
+        assert_eq!(new_strategy.short_put.option.strike_price, f2p!(100.0));
+        assert_eq!(new_strategy.short_call.option.strike_price, f2p!(100.0));
+        assert_eq!(new_strategy.long_call.option.strike_price, f2p!(110.0));
     }
 
     #[test]
@@ -1418,20 +1418,20 @@ mod tests_iron_butterfly_optimizable {
 mod tests_iron_butterfly_profit {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
+    use crate::f2p;
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            f2p!(100.0), // underlying_price
+            f2p!(100.0), // short strike (both call and put)
+            f2p!(110.0), // long call strike
+            f2p!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
             0.20,      // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // quantity
+            f2p!(1.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
             1.0,       // premium_long_call
@@ -1452,7 +1452,7 @@ mod tests_iron_butterfly_profit {
     #[test]
     fn test_profit_below_long_put() {
         let butterfly = create_test_butterfly();
-        let profit = butterfly.calculate_profit_at(pos!(85.0));
+        let profit = butterfly.calculate_profit_at(f2p!(85.0));
         // Maximum loss = width of wing - net premium = 10 - 2 = 8
         assert_eq!(profit, -8.0);
     }
@@ -1468,7 +1468,7 @@ mod tests_iron_butterfly_profit {
     #[test]
     fn test_profit_between_put_wing() {
         let butterfly = create_test_butterfly();
-        let profit = butterfly.calculate_profit_at(pos!(95.0));
+        let profit = butterfly.calculate_profit_at(f2p!(95.0));
         let max_loss = -8.0;
         let max_profit = 2.0;
         assert!(profit > max_loss && profit < max_profit);
@@ -1485,7 +1485,7 @@ mod tests_iron_butterfly_profit {
     #[test]
     fn test_profit_between_call_wing() {
         let butterfly = create_test_butterfly();
-        let profit = butterfly.calculate_profit_at(pos!(105.0));
+        let profit = butterfly.calculate_profit_at(f2p!(105.0));
         let max_loss = -8.0;
         let max_profit = 2.0;
         assert!(profit > max_loss && profit < max_profit);
@@ -1502,7 +1502,7 @@ mod tests_iron_butterfly_profit {
     #[test]
     fn test_profit_above_long_call() {
         let butterfly = create_test_butterfly();
-        let profit = butterfly.calculate_profit_at(pos!(115.0));
+        let profit = butterfly.calculate_profit_at(f2p!(115.0));
         // Maximum loss = width of wing - net premium = 10 - 2 = 8
         assert_eq!(profit, -8.0);
     }
@@ -1511,15 +1511,15 @@ mod tests_iron_butterfly_profit {
     fn test_profit_with_fees() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(100.0),
-            pos!(110.0),
-            pos!(90.0),
+            f2p!(100.0),
+            f2p!(100.0),
+            f2p!(110.0),
+            f2p!(90.0),
             ExpirationDate::Days(30.0),
             0.20,
             0.05,
             0.0,
-            pos!(1.0),
+            f2p!(1.0),
             2.0,
             2.0,
             1.0,
@@ -1528,7 +1528,7 @@ mod tests_iron_butterfly_profit {
             0.5, // closing fee
         );
 
-        let profit = butterfly.calculate_profit_at(pos!(100.0));
+        let profit = butterfly.calculate_profit_at(f2p!(100.0));
         // Net premium = 2.0 - fees = 2.0 - 4.0 = -2.0
         assert_eq!(profit, -2.0);
     }
@@ -1537,15 +1537,15 @@ mod tests_iron_butterfly_profit {
     fn test_profit_with_multiple_contracts() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(100.0),
-            pos!(110.0),
-            pos!(90.0),
+            f2p!(100.0),
+            f2p!(100.0),
+            f2p!(110.0),
+            f2p!(90.0),
             ExpirationDate::Days(30.0),
             0.20,
             0.05,
             0.0,
-            pos!(2.0), // quantity = 2
+            f2p!(2.0), // quantity = 2
             2.0,
             2.0,
             1.0,
@@ -1565,8 +1565,8 @@ mod tests_iron_butterfly_profit {
 
         // Break-evens should be equidistant from short strike
         let short_strike = butterfly.short_call.option.strike_price;
-        let lower_break_even = pos!((short_strike - 2.0).value());
-        let upper_break_even = pos!((short_strike + 2.0).value());
+        let lower_break_even = f2p!((short_strike - 2.0).value());
+        let upper_break_even = f2p!((short_strike + 2.0).value());
 
         let lower_profit = butterfly.calculate_profit_at(lower_break_even);
         let upper_profit = butterfly.calculate_profit_at(upper_break_even);
@@ -1588,8 +1588,8 @@ mod tests_iron_butterfly_profit {
 
         // Test points equidistant from short strike should have equal profits
         for offset in [2.0, 4.0, 6.0, 8.0] {
-            let up_profit = butterfly.calculate_profit_at(pos!((short_strike + offset).value()));
-            let down_profit = butterfly.calculate_profit_at(pos!((short_strike - offset).value()));
+            let up_profit = butterfly.calculate_profit_at(f2p!((short_strike + offset).value()));
+            let down_profit = butterfly.calculate_profit_at(f2p!((short_strike - offset).value()));
             assert!((up_profit - down_profit).abs() < 0.001);
         }
     }
@@ -1599,20 +1599,20 @@ mod tests_iron_butterfly_profit {
 mod tests_iron_butterfly_graph {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
+    use crate::f2p;
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            f2p!(100.0), // underlying_price
+            f2p!(100.0), // short strike (both call and put)
+            f2p!(110.0), // long call strike
+            f2p!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
             0.20,      // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(2.0), // quantity
+            f2p!(2.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
             1.0,       // premium_long_call
@@ -1750,8 +1750,8 @@ mod tests_iron_butterfly_graph {
 
         // Test points equidistant from short strike should have equal profits
         for offset in [2.0, 4.0, 6.0, 8.0] {
-            let profit_up = butterfly.calculate_profit_at(pos!(short_strike + offset));
-            let profit_down = butterfly.calculate_profit_at(pos!(short_strike - offset));
+            let profit_up = butterfly.calculate_profit_at(f2p!(short_strike + offset));
+            let profit_down = butterfly.calculate_profit_at(f2p!(short_strike - offset));
             assert!((profit_up - profit_down).abs() < 0.001);
         }
     }
@@ -1759,25 +1759,25 @@ mod tests_iron_butterfly_graph {
 
 #[cfg(test)]
 mod tests_iron_condor_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
-    use crate::{d2fu, pos};
+    use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
 
-    fn get_strategy(underlying_price: PositiveF64) -> IronButterfly {
+    fn get_strategy(underlying_price: Positive) -> IronButterfly {
         IronButterfly::new(
             "GOLD".to_string(),
             underlying_price, // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
+            f2p!(2725.0),     // short_call_strike
+            f2p!(2800.0),     // long_call_strike
+            f2p!(2500.0),     // long_put_strike
             ExpirationDate::Days(30.0),
             0.1548,    // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // quantity
+            f2p!(1.0), // quantity
             38.8,      // premium_short_call
             30.4,      // premium_short_put
             23.3,      // premium_long_call
@@ -1789,7 +1789,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(2900.0));
+        let strategy = get_strategy(f2p!(2900.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1801,22 +1801,22 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.06566830350547599),
-                strike: pos!(2800.0),
+                quantity: f2p!(0.06566830350547599),
+                strike: f2p!(2800.0),
                 option_type: OptionStyle::Call
             }
         );
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.8309463413138212),
-                strike: pos!(2725.0),
+                quantity: f2p!(0.8309463413138212),
+                strike: f2p!(2725.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.06566830350547599);
+        option.quantity = f2p!(0.06566830350547599);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.053677, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1828,7 +1828,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(2500.0));
+        let strategy = get_strategy(f2p!(2500.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1840,22 +1840,22 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(1.068371502787395),
-                strike: pos!(2500.0),
+                quantity: f2p!(1.068371502787395),
+                strike: f2p!(2500.0),
                 option_type: OptionStyle::Put
             }
         );
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(14.339865587583922),
-                strike: pos!(2725.0),
+                quantity: f2p!(14.339865587583922),
+                strike: f2p!(2725.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(1.068371502787395);
+        option.quantity = f2p!(1.068371502787395);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.485367, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1867,7 +1867,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(2100.0));
+        let strategy = get_strategy(f2p!(2100.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1882,25 +1882,25 @@ mod tests_iron_condor_delta {
 
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
+    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
-    use crate::{d2fu, pos};
+    use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
 
-    fn get_strategy(underlying_price: PositiveF64) -> IronButterfly {
+    fn get_strategy(underlying_price: Positive) -> IronButterfly {
         IronButterfly::new(
             "GOLD".to_string(),
             underlying_price, // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
+            f2p!(2725.0),     // short_call_strike
+            f2p!(2800.0),     // long_call_strike
+            f2p!(2500.0),     // long_put_strike
             ExpirationDate::Days(30.0),
             0.1548,    // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(2.0), // quantity
+            f2p!(2.0), // quantity
             38.8,      // premium_short_call
             30.4,      // premium_short_put
             23.3,      // premium_long_call
@@ -1912,7 +1912,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(2900.0));
+        let strategy = get_strategy(f2p!(2900.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1924,22 +1924,22 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.13133660701095198),
-                strike: pos!(2800.0),
+                quantity: f2p!(0.13133660701095198),
+                strike: f2p!(2800.0),
                 option_type: OptionStyle::Call
             }
         );
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(1.6618926826276423),
-                strike: pos!(2725.0),
+                quantity: f2p!(1.6618926826276423),
+                strike: f2p!(2725.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.13133660701095198);
+        option.quantity = f2p!(0.13133660701095198);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.10735, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1951,7 +1951,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(2700.0));
+        let strategy = get_strategy(f2p!(2700.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1963,22 +1963,22 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(17.514681033591106),
-                strike: pos!(2500.0),
+                quantity: f2p!(17.514681033591106),
+                strike: f2p!(2500.0),
                 option_type: OptionStyle::Put
             }
         );
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(1.2193578542229133),
-                strike: pos!(2725.0),
+                quantity: f2p!(1.2193578542229133),
+                strike: f2p!(2725.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(1.2193578542229133);
+        option.quantity = f2p!(1.2193578542229133);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.5645, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1990,7 +1990,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(2100.0));
+        let strategy = get_strategy(f2p!(2100.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,

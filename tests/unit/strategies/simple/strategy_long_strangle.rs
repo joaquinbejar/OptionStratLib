@@ -1,12 +1,12 @@
 use approx::assert_relative_eq;
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::model::types::{PositiveF64, PZERO};
+use optionstratlib::Positive;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::strangle::LongStrangle;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
-use optionstratlib::{assert_positivef64_relative_eq, pos};
+use optionstratlib::{assert_positivef64_relative_eq, f2p};
 use std::error::Error;
 
 #[test]
@@ -14,18 +14,18 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the LongStrangle strategy
-    let underlying_price = pos!(7138.5);
+    let underlying_price = f2p!(7138.5);
 
     let strategy = LongStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        pos!(7450.0),     // call_strike
-        pos!(7050.0),     // put_strike
+        f2p!(7450.0),     // call_strike
+        f2p!(7050.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(1.0), // quantity
+        f2p!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.0,       // open_fee_short_call
@@ -40,12 +40,12 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     assert_relative_eq!(strategy.net_premium_received(), ZERO, epsilon = 0.001);
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(465.4299), pos!(0.0001));
-    assert_positivef64_relative_eq!(strategy.total_cost(), pos!(465.4299), pos!(0.0001));
+    assert_positivef64_relative_eq!(strategy.max_loss()?, f2p!(465.4299), f2p!(0.0001));
+    assert_positivef64_relative_eq!(strategy.total_cost(), f2p!(465.4299), f2p!(0.0001));
     assert_eq!(strategy.fees(), 28.03);
 
     // Test range calculations
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
     assert!(!price_range.is_empty());
     let break_even_points = strategy.get_break_even_points();
     let range = break_even_points[1] - break_even_points[0];
@@ -70,7 +70,7 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
 
     // Validate strike prices relationship (characteristic of Long Strangle)
     assert!(
-        pos!(7050.0) < pos!(7450.0),
+        f2p!(7050.0) < f2p!(7450.0),
         "Put strike should be less than call strike in a strangle"
     );
 

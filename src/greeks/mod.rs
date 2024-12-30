@@ -39,19 +39,19 @@
 //! use optionstratlib::greeks::equations::{delta, gamma, rho, theta, vega};
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
-//! use optionstratlib::pos;
-//! use optionstratlib::model::types::PositiveF64;
+//! use optionstratlib::f2p;
+//! use optionstratlib::Positive;
 //!
 //! // Create a sample option
 //! let option = Options {
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
+//!             strike_price: f2p!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
 //!             implied_volatility: 0.2,
 //!             quantity: SIZE_ONE,
-//!             underlying_price: pos!(105.0),
+//!             underlying_price: f2p!(105.0),
 //!             risk_free_rate: 0.05,
 //!             option_style: OptionStyle::Call,
 //!             dividend_yield: 0.01,

@@ -5,9 +5,9 @@
 ******************************************************************************/
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::model::types::{ExpirationDate, PZERO};
-use optionstratlib::pos;
+use optionstratlib::Positive;
+use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -24,14 +24,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut strategy = CallButterfly::new(
         "".to_string(),
         underlying_price, // underlying_price
-        PZERO,            // long_strike_itm
-        PZERO,            // long_strike_otm
-        PZERO,            // short_strike
+        Positive::ZERO,            // long_strike_itm
+        Positive::ZERO,            // long_strike_otm
+        Positive::ZERO,            // short_strike
         ExpirationDate::Days(2.0),
         ZERO,      // implied_volatility
         0.05,      // risk_free_rate
         ZERO,      // dividend_yield
-        pos!(2.0), // long quantity
+        f2p!(2.0), // long quantity
         ZERO,      // short_quantity
         ZERO,      // premium_long_itm
         ZERO,      // premium_long_otm
@@ -45,18 +45,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     strategy.best_ratio(
         &option_chain,
-        FindOptimalSide::Range(pos!(5700.0), pos!(6000.0)),
+        FindOptimalSide::Range(f2p!(5700.0), f2p!(6000.0)),
     );
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let range = strategy.range_of_profit().unwrap_or(PZERO);
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
-    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(PZERO));
+    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(Positive::ZERO));
+    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(Positive::ZERO));
     info!("Total Fees: ${:.2}", strategy.fees());
     info!(
         "Range of Profit: ${:.2} {:.2}%",

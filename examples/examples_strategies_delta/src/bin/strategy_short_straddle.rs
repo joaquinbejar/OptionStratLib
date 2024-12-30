@@ -1,6 +1,6 @@
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::model::types::{ExpirationDate, PZERO};
-use optionstratlib::pos;
+use optionstratlib::Positive;
+use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+use optionstratlib::f2p;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::straddle::ShortStraddle;
@@ -13,17 +13,17 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(7138.5);
+    let underlying_price = f2p!(7138.5);
 
     let strategy = ShortStraddle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        pos!(7460.0),     // call_strike
+        f2p!(7460.0),     // call_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.0,       // risk_free_rate
         0.0,       // dividend_yield
-        pos!(1.0), // quantity
+        f2p!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.01,      // open_fee_short_call
@@ -39,8 +39,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
-    info!("Max Loss: ${}", strategy.max_loss().unwrap_or(PZERO));
+    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(Positive::ZERO));
+    info!("Max Loss: ${}", strategy.max_loss().unwrap_or(Positive::ZERO));
     info!("Total Fees: ${:.2}", strategy.fees());
     info!(
         "Range of Profit: ${:.2} {:.2}%",

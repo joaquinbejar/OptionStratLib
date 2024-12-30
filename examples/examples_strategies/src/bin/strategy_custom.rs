@@ -1,8 +1,8 @@
 use chrono::Utc;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side};
-use optionstratlib::pos;
+use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
+use optionstratlib::f2p;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::utils::logger::setup_logger;
@@ -13,7 +13,7 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(2340.0);
+    let underlying_price = f2p!(2340.0);
     let underlying_symbol = "GAS".to_string();
     let expiration = ExpirationDate::Days(6.0);
     let implied_volatility = 0.73;
@@ -21,23 +21,23 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dividend_yield = 0.0;
 
     // Short Call 1
-    let short_strike_1_strike = pos!(2100.0);
-    let short_strike_1_quantity = pos!(2.0);
+    let short_strike_1_strike = f2p!(2100.0);
+    let short_strike_1_quantity = f2p!(2.0);
     let short_strike_1_premium = 192.0;
     let short_strike_1_open_fee = 7.51;
     let short_strike_1_close_fee = 7.51;
 
     // Short Call 2
-    let short_strike_2_strike = pos!(2250.0);
-    let short_strike_2_quantity = pos!(2.0);
+    let short_strike_2_strike = f2p!(2250.0);
+    let short_strike_2_quantity = f2p!(2.0);
     let short_strike_2_premium = 88.0;
     let short_strike_2_open_fee = 6.68;
     let short_strike_2_close_fee = 6.68;
 
     // Short Put
-    let short_put_strike = pos!(2500.0);
+    let short_put_strike = f2p!(2500.0);
     let short_put_premium = 55.0;
-    let short_put_quantity = pos!(1.0);
+    let short_put_quantity = f2p!(1.0);
     let short_put_open_fee = 6.68;
     let short_put_close_fee = 6.68;
 
@@ -104,8 +104,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         short_put_close_fee,
     );
 
-    let extra_strike = pos!(2150.0);
-    let extra_quantity = pos!(2.5);
+    let extra_strike = f2p!(2150.0);
+    let extra_quantity = f2p!(2.5);
     let extra_premium = 21.0;
     let extra_open_fee = 4.91;
     let extra_close_fee = 4.91;
@@ -143,7 +143,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         100,
         0.1,
     );
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
 
     info!("Title: {}", strategy.title());
     info!(

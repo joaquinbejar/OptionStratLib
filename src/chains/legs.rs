@@ -86,19 +86,21 @@ impl Display for StrategyLegs<'_> {
 
 #[cfg(test)]
 mod tests {
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
     use super::*;
-    use crate::model::types::PositiveF64;
-    use crate::pos;
+    use crate::Positive;
+    use crate::{f2p, pos};
 
     // Helper function to create a test OptionData with a specific strike price
-    fn create_test_option(strike: f64) -> OptionData {
+    fn create_test_option(strike: Decimal) -> OptionData {
         OptionData::new(pos!(strike), None, None, None, None, None, None, None, None)
     }
 
     #[test]
     fn test_two_legs_creation() {
-        let option1 = create_test_option(100.0);
-        let option2 = create_test_option(110.0);
+        let option1 = create_test_option(dec!(100.0));
+        let option2 = create_test_option(dec!(110.0));
 
         let strategy = StrategyLegs::TwoLegs {
             first: &option1,
@@ -107,8 +109,8 @@ mod tests {
 
         match strategy {
             StrategyLegs::TwoLegs { first, second } => {
-                assert_eq!(first.strike_price, pos!(100.0));
-                assert_eq!(second.strike_price, pos!(110.0));
+                assert_eq!(first.strike_price, f2p!(100.0));
+                assert_eq!(second.strike_price, f2p!(110.0));
             }
             _ => panic!("Expected TwoLegs variant"),
         }
@@ -116,10 +118,10 @@ mod tests {
 
     #[test]
     fn test_four_legs_creation() {
-        let option1 = create_test_option(100.0);
-        let option2 = create_test_option(110.0);
-        let option3 = create_test_option(120.0);
-        let option4 = create_test_option(130.0);
+        let option1 = create_test_option(dec!(100.0));
+        let option2 = create_test_option(dec!(110.0));
+        let option3 = create_test_option(dec!(120.0));
+        let option4 = create_test_option(dec!(130.0));
 
         let strategy = StrategyLegs::FourLegs {
             first: &option1,
@@ -135,10 +137,10 @@ mod tests {
                 third,
                 fourth,
             } => {
-                assert_eq!(first.strike_price, pos!(100.0));
-                assert_eq!(second.strike_price, pos!(110.0));
-                assert_eq!(third.strike_price, pos!(120.0));
-                assert_eq!(fourth.strike_price, pos!(130.0));
+                assert_eq!(first.strike_price, f2p!(100.0));
+                assert_eq!(second.strike_price, f2p!(110.0));
+                assert_eq!(third.strike_price, f2p!(120.0));
+                assert_eq!(fourth.strike_price, f2p!(130.0));
             }
             _ => panic!("Expected FourLegs variant"),
         }
@@ -146,12 +148,12 @@ mod tests {
 
     #[test]
     fn test_six_legs_creation() {
-        let option1 = create_test_option(100.0);
-        let option2 = create_test_option(110.0);
-        let option3 = create_test_option(120.0);
-        let option4 = create_test_option(130.0);
-        let option5 = create_test_option(140.0);
-        let option6 = create_test_option(150.0);
+        let option1 = create_test_option(dec!(100.0));
+        let option2 = create_test_option(dec!(110.0));
+        let option3 = create_test_option(dec!(120.0));
+        let option4 = create_test_option(dec!(130.0));
+        let option5 = create_test_option(dec!(140.0));
+        let option6 = create_test_option(dec!(150.0));
 
         let strategy = StrategyLegs::SixLegs {
             first: &option1,
@@ -171,12 +173,12 @@ mod tests {
                 fifth,
                 sixth,
             } => {
-                assert_eq!(first.strike_price, pos!(100.0));
-                assert_eq!(second.strike_price, pos!(110.0));
-                assert_eq!(third.strike_price, pos!(120.0));
-                assert_eq!(fourth.strike_price, pos!(130.0));
-                assert_eq!(fifth.strike_price, pos!(140.0));
-                assert_eq!(sixth.strike_price, pos!(150.0));
+                assert_eq!(first.strike_price, f2p!(100.0));
+                assert_eq!(second.strike_price, f2p!(110.0));
+                assert_eq!(third.strike_price, f2p!(120.0));
+                assert_eq!(fourth.strike_price, f2p!(130.0));
+                assert_eq!(fifth.strike_price, f2p!(140.0));
+                assert_eq!(sixth.strike_price, f2p!(150.0));
             }
             _ => panic!("Expected SixLegs variant"),
         }
@@ -184,8 +186,8 @@ mod tests {
 
     #[test]
     fn test_display_two_legs() {
-        let option1 = create_test_option(100.0);
-        let option2 = create_test_option(110.0);
+        let option1 = create_test_option(dec!(100.0));
+        let option2 = create_test_option(dec!(110.0));
 
         let strategy = StrategyLegs::TwoLegs {
             first: &option1,
@@ -200,10 +202,10 @@ mod tests {
 
     #[test]
     fn test_display_four_legs() {
-        let option1 = create_test_option(100.0);
-        let option2 = create_test_option(110.0);
-        let option3 = create_test_option(120.0);
-        let option4 = create_test_option(130.0);
+        let option1 = create_test_option(dec!(100.0));
+        let option2 = create_test_option(dec!(110.0));
+        let option3 = create_test_option(dec!(120.0));
+        let option4 = create_test_option(dec!(130.0));
 
         let strategy = StrategyLegs::FourLegs {
             first: &option1,
@@ -222,12 +224,12 @@ mod tests {
 
     #[test]
     fn test_display_six_legs() {
-        let option1 = create_test_option(100.0);
-        let option2 = create_test_option(110.0);
-        let option3 = create_test_option(120.0);
-        let option4 = create_test_option(130.0);
-        let option5 = create_test_option(140.0);
-        let option6 = create_test_option(150.0);
+        let option1 = create_test_option(dec!(100.0));
+        let option2 = create_test_option(dec!(110.0));
+        let option3 = create_test_option(dec!(120.0));
+        let option4 = create_test_option(dec!(130.0));
+        let option5 = create_test_option(dec!(140.0));
+        let option6 = create_test_option(dec!(150.0));
 
         let strategy = StrategyLegs::SixLegs {
             first: &option1,
@@ -250,8 +252,8 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let option1 = create_test_option(100.0);
-        let option2 = create_test_option(110.0);
+        let option1 = create_test_option(dec!(100.0));
+        let option2 = create_test_option(dec!(110.0));
 
         let strategy = StrategyLegs::TwoLegs {
             first: &option1,
@@ -262,8 +264,8 @@ mod tests {
 
         match cloned_strategy {
             StrategyLegs::TwoLegs { first, second } => {
-                assert_eq!(first.strike_price, pos!(100.0));
-                assert_eq!(second.strike_price, pos!(110.0));
+                assert_eq!(first.strike_price, f2p!(100.0));
+                assert_eq!(second.strike_price, f2p!(110.0));
             }
             _ => panic!("Expected TwoLegs variant after cloning"),
         }

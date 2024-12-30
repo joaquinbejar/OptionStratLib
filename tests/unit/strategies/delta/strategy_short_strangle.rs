@@ -1,12 +1,12 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::model::types::PositiveF64;
+use optionstratlib::Positive;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::strangle::ShortStrangle;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::{assert_decimal_eq, pos};
+use optionstratlib::{assert_decimal_eq, f2p};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -15,18 +15,18 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the ShortStrangle strategy
-    let underlying_price = pos!(7138.5);
+    let underlying_price = f2p!(7138.5);
 
     let strategy = ShortStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        pos!(7450.0),     // call_strike
-        pos!(7050.0),     // put_strike
+        f2p!(7450.0),     // call_strike
+        f2p!(7050.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(1.0), // quantity
+        f2p!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.01,      // open_fee_short_call

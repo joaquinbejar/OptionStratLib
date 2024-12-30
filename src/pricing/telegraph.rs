@@ -284,9 +284,9 @@ pub fn telegraph(
 #[cfg(test)]
 mod tests_telegraph_process_basis {
     use super::*;
-    use crate::model::types::PositiveF64;
-    use crate::model::types::{OptionStyle, OptionType, Side, PZERO, SIZE_ONE};
-    use crate::pos;
+    use crate::model::types::Positive;
+    use crate::model::types::{OptionStyle, OptionType, Side, Positive::ZERO, SIZE_ONE};
+    use crate::f2p;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -337,8 +337,8 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
@@ -360,15 +360,15 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
-            quantity: PZERO,
+            quantity: Positive::ZERO,
             exotic_params: None,
         };
 
@@ -383,15 +383,15 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
-            quantity: PZERO,
+            quantity: Positive::ZERO,
             exotic_params: None,
         };
 
@@ -406,9 +406,9 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
-    use crate::model::types::PositiveF64;
-    use crate::model::types::{OptionStyle, OptionType, Side, PZERO};
-    use crate::pos;
+    use crate::model::types::Positive;
+    use crate::model::types::{OptionStyle, OptionType, Side, Positive::ZERO};
+    use crate::f2p;
     use rust_decimal_macros::dec;
 
     // Helper function to create a mock Options struct
@@ -416,15 +416,15 @@ mod tests_telegraph_process_extended {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.0,
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
-            quantity: PZERO,
+            quantity: Positive::ZERO,
             exotic_params: None,
         }
     }

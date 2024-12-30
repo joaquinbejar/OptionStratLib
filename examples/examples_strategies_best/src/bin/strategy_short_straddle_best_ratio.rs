@@ -1,9 +1,9 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::model::types::{ExpirationDate, PZERO};
-use optionstratlib::pos;
+use optionstratlib::Positive;
+use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::straddle::ShortStraddle;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -21,12 +21,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut strategy = ShortStraddle::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        PZERO,            // strike
+        Positive::ZERO,            // strike
         ExpirationDate::Days(5.0),
         ZERO,      // implied_volatility
         ZERO,      // risk_free_rate
         ZERO,      // dividend_yield
-        pos!(1.0), // quantity
+        f2p!(1.0), // quantity
         ZERO,      // premium_short_call
         ZERO,      // premium_short_put
         0.82,      // open_fee_short_call
@@ -37,16 +37,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let range = strategy.range_of_profit().unwrap_or(PZERO);
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
-    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(PZERO));
+    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(Positive::ZERO));
+    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(Positive::ZERO));
     info!("Total Fees: ${:.2}", strategy.fees());
     info!(
         "Range of Profit: ${:.2} {:.2}%",

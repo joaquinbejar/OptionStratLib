@@ -1,12 +1,12 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::types::PositiveF64;
+use optionstratlib::Positive;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::{assert_decimal_eq, pos};
+use optionstratlib::{assert_decimal_eq, f2p};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -14,19 +14,19 @@ use std::error::Error;
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(2703.3);
+    let underlying_price = f2p!(2703.3);
 
     let strategy = PoorMansCoveredCall::new(
         "GOLD".to_string(),          // underlying_symbol
         underlying_price,            // underlying_price
-        pos!(2600.0),                // long_call_strike
-        pos!(2800.0),                // short_call_strike OTM
+        f2p!(2600.0),                // long_call_strike
+        f2p!(2800.0),                // short_call_strike OTM
         ExpirationDate::Days(120.0), // long_call_expiration
         ExpirationDate::Days(30.0),  // short_call_expiration 30-45 days delta 0.30 or less
         0.17,                        // implied_volatility
         0.05,                        // risk_free_rate
         0.0,                         // dividend_yield
-        pos!(2.0),                   // quantity
+        f2p!(2.0),                   // quantity
         154.7,                       // premium_short_call
         30.8,                        // premium_short_put
         1.74,                        // open_fee_short_call
@@ -66,8 +66,8 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: pos!(3.415412207592465),
-            strike: pos!(2800.0),
+            quantity: f2p!(3.415412207592465),
+            strike: f2p!(2800.0),
             option_type: OptionStyle::Call
         }
     );

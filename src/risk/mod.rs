@@ -47,9 +47,9 @@
 //! ```rust
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
-//! use optionstratlib::model::types::PositiveF64;
+//! use optionstratlib::Positive;
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::pos;
+//! use optionstratlib::f2p;
 //! use chrono::Utc;
 //! use optionstratlib::risk::SPANMargin;
 //!
@@ -58,11 +58,11 @@
 //!     OptionType::European,
 //!     Side::Short,
 //!     "STOCK".to_string(),
-//!     pos!(150.0),              // Strike price
+//!     f2p!(150.0),              // Strike price
 //!     ExpirationDate::Days(30.0),
 //!     0.2,                      // Volatility
 //!     SIZE_ONE,                 // Quantity
-//!     pos!(155.0),              // Current price
+//!     f2p!(155.0),              // Current price
 //!     0.05,                     // Risk-free rate
 //!     OptionStyle::Call,
 //!     0.0,                      // Dividend yield
@@ -96,19 +96,19 @@
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
 //! use optionstratlib::risk::SPANMargin;
 //!
 //! let option = Options {
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
+//!             strike_price: f2p!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
 //!             implied_volatility: 0.2,
 //!             quantity: SIZE_ONE,
-//!             underlying_price: pos!(105.0),
+//!             underlying_price: f2p!(105.0),
 //!             risk_free_rate: 0.05,
 //!             option_style: OptionStyle::Call,
 //!             dividend_yield: 0.01,

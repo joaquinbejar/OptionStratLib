@@ -4,7 +4,7 @@
    Date: 16/8/24
 ******************************************************************************/
 
-use crate::model::types::PositiveF64;
+use crate::model::types::Positive;
 use chrono::{DateTime, Utc};
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.
@@ -41,14 +41,14 @@ impl PnL {
 }
 
 pub trait PnLCalculator {
-    fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: PositiveF64) -> PnL;
-    fn calculate_pnl_at_expiration(&self, underlying_price: Option<PositiveF64>) -> PnL;
+    fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: Positive) -> PnL;
+    fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> PnL;
 }
 
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
     use chrono::Utc;
 
     #[test]
@@ -78,11 +78,11 @@ mod tests_pnl_calculator {
     struct DummyOption;
 
     impl PnLCalculator for DummyOption {
-        fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: PositiveF64) -> PnL {
+        fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: Positive) -> PnL {
             PnL::new(Some(market_price.value()), None, 10.0, 20.0, date_time)
         }
 
-        fn calculate_pnl_at_expiration(&self, underlying_price: Option<PositiveF64>) -> PnL {
+        fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> PnL {
             let underlying_price = Some(underlying_price.unwrap().value());
             PnL::new(underlying_price, None, 10.0, 20.0, Utc::now())
         }
@@ -93,14 +93,14 @@ mod tests_pnl_calculator {
         let dummy = DummyOption;
         let now = Utc::now();
 
-        let pnl = dummy.calculate_pnl(now, pos!(100.0));
+        let pnl = dummy.calculate_pnl(now, f2p!(100.0));
         assert_eq!(pnl.realized, Some(100.0));
         assert_eq!(pnl.unrealized, None);
         assert_eq!(pnl.initial_costs, 10.0);
         assert_eq!(pnl.initial_income, 20.0);
         assert_eq!(pnl.date_time, now);
 
-        let pnl_at_expiration = dummy.calculate_pnl_at_expiration(Some(pos!(150.0)));
+        let pnl_at_expiration = dummy.calculate_pnl_at_expiration(Some(f2p!(150.0)));
         assert_eq!(pnl_at_expiration.realized, Some(150.0));
         assert_eq!(pnl_at_expiration.unrealized, None);
         assert_eq!(pnl_at_expiration.initial_costs, 10.0);

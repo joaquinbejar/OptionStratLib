@@ -62,9 +62,9 @@ pub fn monte_carlo_option_pricing(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::PositiveF64;
+    use crate::model::types::Positive;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{assert_decimal_eq, f2du, pos};
+    use crate::{assert_decimal_eq, f2du, f2p};
     use rust_decimal_macros::dec;
 
     fn create_test_option() -> Options {
@@ -72,11 +72,11 @@ mod tests {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
-            strike_price: pos!(100.0),
+            strike_price: f2p!(100.0),
             expiration_date: ExpirationDate::Days(365.0), // 1 year
             implied_volatility: 0.2,
-            quantity: pos!(1.0),
-            underlying_price: pos!(100.0),
+            quantity: f2p!(1.0),
+            underlying_price: f2p!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_out_of_the_money() {
         let mut option = create_test_option();
-        option.strike_price = pos!(120.0);
+        option.strike_price = f2p!(120.0);
         let price = monte_carlo_option_pricing(&option, 252, 10000).unwrap();
         // The price should be lower for an out-of-the-money option
         assert!(price < dec!(5.0));
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_in_the_money() {
         let mut option = create_test_option();
-        option.strike_price = pos!(80.0);
+        option.strike_price = f2p!(80.0);
         let price = monte_carlo_option_pricing(&option, 252, 10000).unwrap();
         // The price should be higher for an in-the-money option
         assert!(price > dec!(20.0));

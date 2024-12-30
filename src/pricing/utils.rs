@@ -6,7 +6,7 @@
 use crate::error::decimal::DecimalError;
 use crate::greeks::utils::{big_n, d2};
 use crate::model::option::Options;
-use crate::model::types::{PositiveF64, Side};
+use crate::model::types::{Positive, Side};
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
@@ -340,7 +340,7 @@ pub(crate) fn wiener_increment(dt: Decimal) -> Result<Decimal, DecimalError> {
 /// A `f64` value representing the calculated probability.
 pub fn probability_keep_under_strike(
     option: Options,
-    strike: Option<PositiveF64>,
+    strike: Option<Positive>,
 ) -> Result<Decimal, DecimalError> {
     let strike_price = match strike {
         Some(strike) => strike,
@@ -604,9 +604,9 @@ mod tests_utils {
 mod tests_probability_keep_under_strike {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::PositiveF64;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PZERO, SIZE_ONE};
-    use crate::{assert_decimal_eq, pos};
+    use crate::model::types::Positive;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive::ZERO, SIZE_ONE};
+    use crate::{assert_decimal_eq, f2p};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -615,8 +615,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(100.0),
             risk_free_rate: ZERO,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
@@ -626,7 +626,7 @@ mod tests_probability_keep_under_strike {
             quantity: SIZE_ONE,
             exotic_params: None,
         };
-        let strike = Some(pos!(100.0));
+        let strike = Some(f2p!(100.0));
         let probability = probability_keep_under_strike(option, strike).unwrap();
         info!("{:?} {}", strike, probability);
         assert_decimal_eq!(probability, dec!(0.5), dec!(0.001));
@@ -637,15 +637,15 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(110.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(110.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
             expiration_date: ExpirationDate::Days(365.0),
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
-            quantity: PZERO,
+            quantity: Positive::ZERO,
             exotic_params: None,
         };
         let strike = None;
@@ -662,15 +662,15 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(100.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
             expiration_date: ExpirationDate::Days(365.0),
             implied_volatility: ZERO,
             underlying_symbol: "".to_string(),
-            quantity: PZERO,
+            quantity: Positive::ZERO,
             exotic_params: None,
         };
         let strike = None;
@@ -682,15 +682,15 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(110.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(110.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
             expiration_date: ExpirationDate::Days(365.0),
             implied_volatility: 5.0, // Alta volatilidad
             underlying_symbol: "".to_string(),
-            quantity: PZERO,
+            quantity: Positive::ZERO,
             exotic_params: None,
         };
         let strike = None;
@@ -706,15 +706,15 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(110.0),
+            underlying_price: f2p!(100.0),
+            strike_price: f2p!(110.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
             expiration_date: ExpirationDate::Days(1.0),
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
-            quantity: PZERO,
+            quantity: Positive::ZERO,
             exotic_params: None,
         };
         let strike = None;
