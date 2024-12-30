@@ -271,9 +271,7 @@ pub fn telegraph(
         let drift = option.risk_free_rate - 0.5 * option.implied_volatility.powi(2);
         let volatility = option.implied_volatility * state as f64;
 
-        price *= (drift * dt.to_f64().unwrap()
-            + volatility * (dt.sqrt().unwrap().to_f64().unwrap() * random::<f64>()))
-        .exp();
+        price *= (drift * dt + volatility * (dt.sqrt().unwrap() * random::<f64>())).exp();
     }
 
     let payoff = option.payoff_at_price(price.into());
@@ -284,9 +282,8 @@ pub fn telegraph(
 #[cfg(test)]
 mod tests_telegraph_process_basis {
     use super::*;
-    use crate::model::types::Positive;
-    use crate::model::types::{OptionStyle, OptionType, Side, Positive::ZERO, SIZE_ONE};
-    use crate::f2p;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::{f2p, Positive};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -345,7 +342,7 @@ mod tests_telegraph_process_basis {
             implied_volatility: 0.2,
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
-            quantity: SIZE_ONE,
+            quantity: Positive::ONE,
             exotic_params: None,
         };
 
@@ -406,9 +403,9 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
-    use crate::model::types::Positive;
-    use crate::model::types::{OptionStyle, OptionType, Side, Positive::ZERO};
     use crate::f2p;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::Positive;
     use rust_decimal_macros::dec;
 
     // Helper function to create a mock Options struct

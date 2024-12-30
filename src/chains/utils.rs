@@ -10,6 +10,7 @@ use crate::model::types::{ExpirationDate};
 use crate::{f2p, Positive};
 use std::collections::BTreeSet;
 use std::fmt::Display;
+use rust_decimal::Decimal;
 
 #[derive(Debug)]
 pub enum OptionDataGroup<'a> {
@@ -270,7 +271,7 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
     let remainder = price % interval;
     let base = price - remainder;
 
-    let rounded = if remainder >= interval / 2.0 {
+    let rounded = if remainder >= interval / Decimal::TWO {
         base + interval
     } else {
         base
@@ -306,7 +307,7 @@ mod tests_rounder {
 #[cfg(test)]
 mod tests_generate_list_of_strikes {
     use super::*;
-    use crate::model::types::Positive;
+    use crate::Positive;
 
     #[test]
     fn test_generate_list_of_strikes_basic() {

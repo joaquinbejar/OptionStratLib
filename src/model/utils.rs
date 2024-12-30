@@ -4,8 +4,8 @@
    Date: 21/8/24
 ******************************************************************************/
 use crate::model::option::Options;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
-use crate::f2p;
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::{f2p, Positive};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 
 pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
@@ -184,7 +184,6 @@ mod tests_positive_f64_to_f64 {
 #[cfg(test)]
 mod tests_mean_and_std {
     use super::*;
-    use crate::model::types::Positive::ZERO;
     use crate::f2p;
     use approx::assert_relative_eq;
 

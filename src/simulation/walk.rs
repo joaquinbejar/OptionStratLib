@@ -3,13 +3,14 @@
    Email: jb@taunais.com
    Date: 22/10/24
 ******************************************************************************/
+use num_traits::ToPrimitive;
 use crate::chains::utils::OptionDataPriceParams;
 use crate::constants::ZERO;
-use crate::model::types::{ExpirationDate, Positive, Positive::ZERO};
+use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::Graph;
-use crate::{f2p, spos};
+use crate::{f2p, Positive};
 use rand::distributions::Distribution;
 use rand::thread_rng;
 use statrs::distribution::Normal;
@@ -42,12 +43,12 @@ pub trait Walkable {
 
         for _ in 0..n_steps - 1 {
             if std_dev_change > Positive::ZERO {
-                current_std_dev = Normal::new(std_dev.value(), std_dev_change.value())
+                current_std_dev = Normal::new(std_dev.into(), std_dev_change.into())
                     .unwrap()
                     .sample(&mut rng)
-                    .max(0.0);
+                    .max(0.0).into();
             }
-            let normal = Normal::new(mean, current_std_dev).unwrap();
+            let normal = Normal::new(mean, current_std_dev.to_f64().unwrap()).unwrap();
             let step = normal.sample(&mut rng);
             current_value = (current_value + step).max(ZERO);
             values.push(f2p!(current_value));
@@ -95,7 +96,7 @@ impl RandomWalkGraph {
 
         let returns: Vec<f64> = self.values[..self.current_index]
             .windows(2)
-            .map(|w| (w[1].value() - w[0].value()) / w[0].value())
+            .map(|w| ((w[1] - w[0]) / w[0]).to_f64())
             .collect();
 
         if returns.is_empty() {
@@ -120,7 +121,7 @@ impl RandomWalkGraph {
         if volatility < ZERO || volatility.is_nan() {
             None
         } else {
-            spos!(volatility)
+            Some(volatility.into())
         }
     }
 
@@ -141,7 +142,7 @@ impl Walkable for RandomWalkGraph {
 
 impl Profit for RandomWalkGraph {
     fn calculate_profit_at(&self, price: Positive) -> f64 {
-        price.value()
+        price.into()
     }
 }
 
@@ -154,7 +155,7 @@ impl Graph for RandomWalkGraph {
         info!("Number of values: {}", self.values.len());
         info!("First value: {:?}", self.values.first().unwrap());
         info!("Last value: {:?}", self.values.last().unwrap());
-        self.values.iter().map(|x| x.value()).collect()
+        self.values.iter().map(|x| x.to_f64()).collect()
     }
 }
 
@@ -226,7 +227,6 @@ impl Iterator for RandomWalkGraph {
 #[cfg(test)]
 mod tests_random_walk {
     use super::*;
-    use crate::model::types::Positive::ZERO;
     use statrs::statistics::Statistics;
 
     struct TestWalk {
@@ -286,7 +286,7 @@ mod tests_random_walk {
         let std_dev = f2p!(1.0);
         let std_dev_change = f2p!(0.01);
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
-        assert!(walk.values.iter().all(|x| x.value() > 0.0));
+        assert!(walk.values.iter().all(|x| x > 0.0));
     }
 
     #[test]
@@ -302,7 +302,7 @@ mod tests_random_walk {
         let changes: Vec<f64> = walk
             .values
             .windows(2)
-            .map(|w| w[1].value() - w[0].value())
+            .map(|w| (w[1] - w[0]).to_f64())
             .collect();
 
         let empirical_mean = changes.mean();
@@ -321,7 +321,7 @@ mod tests_random_walk {
 
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
         assert_eq!(walk.values.len(), n_steps);
-        assert!(walk.values.iter().all(|x| x.value() > 0.0));
+        assert!(walk.values.iter().all(|x| x > 0.0));
     }
 
     #[test]
@@ -330,13 +330,13 @@ mod tests_random_walk {
 
         walk.generate_random_walk(1, f2p!(100.0), 0.0, f2p!(1.0), f2p!(0.01));
         assert_eq!(walk.values.len(), 1);
-        assert_eq!(walk.values[0].value(), 100.0);
+        assert_eq!(walk.values[0], 100.0);
 
         walk.generate_random_walk(100, f2p!(0.1), 0.0, f2p!(0.01), f2p!(0.001));
-        assert!(walk.values.iter().all(|x| x.value() >= 0.0));
+        assert!(walk.values.iter().all(|x| x >= 0.0));
 
         walk.generate_random_walk(100, f2p!(1e6), 0.0, f2p!(100.0), f2p!(1.0));
-        assert!(walk.values.iter().all(|x| x.value() >= 0.0));
+        assert!(walk.values.iter().all(|x| x >= 0.0));
     }
 
     #[test]
@@ -366,7 +366,7 @@ mod tests {
             Some(0.02),     // dividend_yield
             TimeFrame::Day, // time_frame (2 years)
             4,              // volatility_window
-            spos!(0.2),     // initial_volatility
+            0.2f64.into(),     // initial_volatility
         );
 
         walk.generate_random_walk(

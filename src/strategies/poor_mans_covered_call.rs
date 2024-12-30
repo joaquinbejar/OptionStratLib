@@ -40,7 +40,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -48,7 +48,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2p};
+use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -421,8 +421,8 @@ impl Optimizable for PoorMansCoveredCall {
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            long.call_ask.unwrap().value(),
-            short.call_bid.unwrap().value(),
+            long.call_ask.unwrap().to_f64(),
+            short.call_bid.unwrap().to_f64(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
@@ -604,7 +604,6 @@ impl DeltaNeutrality for PoorMansCoveredCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::{ExpirationDate, Positive::ZERO};
     use crate::f2p;
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
@@ -1290,7 +1289,8 @@ mod tests_pmcc_best_ratio {
 
 #[cfg(test)]
 mod tests_short_straddle_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
@@ -1398,7 +1398,8 @@ mod tests_short_straddle_delta {
 
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;

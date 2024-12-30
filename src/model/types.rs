@@ -1,11 +1,5 @@
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use approx::{AbsDiffEq, RelativeEq};
 use chrono::{DateTime, Duration, Utc};
-use num_traits::{FromPrimitive, ToPrimitive};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
-use std::str::FromStr;
 use crate::constants::ZERO;
 use crate::Positive;
 
@@ -296,7 +290,7 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
     };
     match info.style {
         OptionStyle::Call => (average - info.strike).max(ZERO),
-        OptionStyle::Put => (info.strike.value() - average).max(ZERO),
+        OptionStyle::Put => (info.strike - average).max(Positive::ZERO).into(),
     }
 }
 
@@ -306,8 +300,8 @@ fn calculate_barrier_payoff(
     info: &PayoffInfo,
 ) -> f64 {
     let barrier_condition = match barrier_type {
-        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot.value() >= *barrier_level.to_f64(),
-        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot.value() <= *barrier_level.to_f64(),
+        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
+        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
     };
     let std_payoff = standard_payoff(info);
     match barrier_type {
@@ -830,7 +824,6 @@ mod tests_option_type {
 #[cfg(test)]
 mod tests_vec_collection {
     use crate::model::positive::Positive;
-    use super::*;
     use crate::f2p;
 
     #[test]
@@ -871,7 +864,7 @@ mod tests_vec_collection {
     fn test_collect_from_map() {
         let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
         let collected: Vec<Positive> =
-            values.into_iter().map(|x| f2p!(x.value() * 2.0)).collect();
+            values.into_iter().map(|x| f2p!(x.to_f64() * 2.0)).collect();
         assert_eq!(collected.len(), 3);
         assert_eq!(collected[0], f2p!(2.0));
         assert_eq!(collected[1], f2p!(4.0));

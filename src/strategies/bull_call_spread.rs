@@ -26,7 +26,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
@@ -38,7 +38,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2p};
+use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -234,7 +234,7 @@ impl Strategies for BullCallSpread {
         match (max_profit, max_loss) {
             (Positive::ZERO, _) => ZERO,
             (_, Positive::ZERO) => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).value(),
+            _ => (max_profit / max_loss * 100.0).into(),
         }
     }
 
@@ -351,8 +351,8 @@ impl Optimizable for BullCallSpread {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long.call_ask.unwrap().value(),
-            short.call_bid.unwrap().value(),
+            long.call_ask.unwrap().to_f64(),
+            short.call_bid.unwrap().to_f64(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
@@ -1762,11 +1762,11 @@ mod tests_bull_call_spread_probability {
 
 #[cfg(test)]
 mod tests_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, f2p, Positive};
     use approx::assert_relative_eq;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
@@ -1870,11 +1870,11 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, f2p, Positive};
     use approx::assert_relative_eq;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {

@@ -7,12 +7,12 @@ use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
-use crate::model::types::{ExpirationDate, OptionStyle, Positive, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::{f2p, spos};
+use crate::{f2p, spos, Positive};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use tracing::{debug, trace};
@@ -82,16 +82,16 @@ impl Position {
 
         match (self.option.side.clone(), self.option.option_style.clone()) {
             (Side::Long, OptionStyle::Call) => {
-                self.premium = option_data.call_ask.unwrap().value();
+                self.premium = option_data.call_ask.unwrap().to_f64();
             }
             (Side::Long, OptionStyle::Put) => {
-                self.premium = option_data.put_ask.unwrap().value();
+                self.premium = option_data.put_ask.unwrap().to_f64();
             }
             (Side::Short, OptionStyle::Call) => {
-                self.premium = option_data.call_bid.unwrap().value();
+                self.premium = option_data.call_bid.unwrap().to_f64();
             }
             (Side::Short, OptionStyle::Put) => {
-                self.premium = option_data.put_bid.unwrap().value();
+                self.premium = option_data.put_bid.unwrap().to_f64();
             }
         }
         trace!("Updated position: {:#?}", self);
@@ -113,8 +113,8 @@ impl Position {
     ///
     pub fn total_cost(&self) -> Positive {
         let f64_total_cost = match self.option.side {
-            Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
-            Side::Short => (self.open_fee + self.close_fee) * self.option.quantity,
+            Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity.to_f64(),
+            Side::Short => (self.open_fee + self.close_fee) * self.option.quantity.to_f64(),
         };
         f2p!(f64_total_cost)
     }
@@ -122,14 +122,14 @@ impl Position {
     pub fn premium_received(&self) -> f64 {
         match self.option.side {
             Side::Long => ZERO,
-            Side::Short => self.premium * self.option.quantity,
+            Side::Short => self.premium * self.option.quantity.to_f64(),
         }
     }
 
     pub fn net_premium_received(&self) -> f64 {
         match self.option.side {
             Side::Long => ZERO,
-            Side::Short => self.premium_received() - self.total_cost(),
+            Side::Short => self.premium_received() - self.total_cost().to_f64(),
         }
     }
 
@@ -200,7 +200,7 @@ impl Position {
     /// in short positions
     pub(crate) fn net_cost(&self) -> f64 {
         match self.option.side {
-            Side::Long => self.total_cost().value(),
+            Side::Long => self.total_cost().into(),
             Side::Short => {
                 (self.open_fee + self.close_fee - self.premium).abs() * self.option.quantity
             }
@@ -224,13 +224,13 @@ impl Position {
                 spos!(self.option.strike_price.value() + total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Call) => {
-                spos!(self.option.strike_price.value() + self.premium - total_cost_per_contract)
+                Some(self.option.strike_price + self.premium - total_cost_per_contract)
             }
             (Side::Long, OptionStyle::Put) => {
                 spos!(self.option.strike_price.value() - total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Put) => {
-                spos!(self.option.strike_price.value() - self.premium + total_cost_per_contract)
+                Some(self.option.strike_price- self.premium + total_cost_per_contract)
             }
         }
     }
@@ -245,7 +245,7 @@ impl Position {
     #[allow(dead_code)]
     pub(crate) fn max_loss(&self) -> f64 {
         match self.option.side {
-            Side::Long => self.total_cost().value(),
+            Side::Long => self.total_cost().into(),
             Side::Short => f64::INFINITY,
         }
     }
@@ -309,7 +309,7 @@ impl PnLCalculator for Position {
         PnL::new(
             None,
             Some(self.unrealized_pnl(market_price)),
-            self.total_cost().value(),
+            self.total_cost().into(),
             self.premium_received(),
             date_time,
         )
@@ -319,7 +319,7 @@ impl PnLCalculator for Position {
         PnL::new(
             Some(self.pnl_at_expiration(&underlying_price)),
             None,
-            self.total_cost().value(),
+            self.total_cost().into(),
             self.premium_received(),
             self.option.expiration_date.get_date(),
         )
@@ -348,7 +348,7 @@ impl Graph for Position {
         match self.break_even() {
             Some(break_even) => {
                 let vertical_lines = vec![ChartVerticalLine {
-                    x_coordinate: break_even.value(),
+                    x_coordinate: break_even.into(),
                     y_range: (-50000.0, 50000.0),
                     label: "Break Even".to_string(),
                     label_offset: (5.0, 5.0),
@@ -369,7 +369,7 @@ impl Graph for Position {
 mod tests_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
     use chrono::Duration;
 
@@ -823,8 +823,7 @@ mod tests_position {
 mod tests_valid_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::Positive;
-    use crate::model::types::{OptionType, Positive::ZERO};
+    use crate::model::types::{OptionType};
     use crate::f2p;
     use chrono::Utc;
 
@@ -909,7 +908,7 @@ mod tests_valid_position {
 mod tests_position_break_even {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
 
     fn setup_option(
@@ -1053,7 +1052,7 @@ mod tests_position_break_even {
 mod tests_position_max_loss_profit {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
     use approx::assert_relative_eq;
 

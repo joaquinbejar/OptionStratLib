@@ -13,9 +13,8 @@ use crate::constants::{
 use crate::error::position::PositionError;
 use crate::error::strategies::StrategyError;
 use crate::model::position::Position;
-use crate::model::types::{Positive, Positive::ZERO};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::{f2p, spos};
+use crate::{f2p, Positive};
 use std::f64;
 use tracing::error;
 
@@ -149,8 +148,8 @@ pub trait Strategies: Validable + Positionable {
 
         // Calculate limits in a single step
         all_points
-            .push(f2p!((underlying_price.value() - max_diff.value()).max(0.0)).min(first_strike));
-        all_points.push(f2p!(underlying_price.value() + max_diff.value()).max(last_strike));
+            .push((underlying_price - max_diff).max(Positive::ZERO).min(first_strike));
+        all_points.push((underlying_price + max_diff).max(last_strike));
         all_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let start_price = *all_points.first().unwrap() * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
@@ -180,11 +179,11 @@ pub trait Strategies: Validable + Positionable {
         let mut min = strikes
             .iter()
             .cloned()
-            .fold(Positive::new(f64::INFINITY).unwrap(), Positive::min);
+            .fold(Positive::INFINITY, Positive::min);
         let mut max = strikes
             .iter()
             .cloned()
-            .fold(Positive::new(0.0).unwrap(), Positive::max);
+            .fold(Positive::ZERO, Positive::max);
 
         // If underlying_price is not Positive::ZERO, adjust min and max values
         let underlying_price = self.get_underlying_price();
@@ -218,7 +217,7 @@ pub trait Strategies: Validable + Positionable {
     fn range_of_profit(&self) -> Option<Positive> {
         match self.get_break_even_points().len() {
             0 => None,
-            1 => spos!(f64::INFINITY),
+            1 => Some(Positive::INFINITY),
             2 => Some(self.get_break_even_points()[1] - self.get_break_even_points()[0]),
             _ => {
                 // sort break even points and then get last minus first
@@ -341,7 +340,7 @@ pub trait Positionable {
 mod tests_strategies {
     use super::*;
     use crate::model::position::Position;
-    use crate::model::types::{OptionStyle, Positive, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
 
     #[test]
@@ -380,11 +379,11 @@ mod tests_strategies {
 
     impl Strategies for MockStrategy {
         fn break_even(&self) -> Vec<Positive> {
-            vec![Positive::new(100.0).unwrap()]
+            vec![Positive::HUNDRED]
         }
 
         fn max_profit(&self) -> Result<Positive, StrategyError> {
-            Ok(f2p!(1000.0))
+            Ok(Positive::THOUSAND)
         }
 
         fn max_loss(&self) -> Result<Positive, StrategyError> {
@@ -426,7 +425,7 @@ mod tests_strategies {
         // Test other methods
         assert_eq!(
             mock_strategy.break_even(),
-            vec![Positive::new(100.0).unwrap()]
+            vec![Positive::HUNDRED]
         );
         assert_eq!(mock_strategy.max_profit().unwrap_or(Positive::ZERO), 1000.0);
         assert_eq!(mock_strategy.max_loss().unwrap_or(Positive::ZERO), 500.0);
@@ -476,7 +475,7 @@ mod tests_strategies {
 mod tests_strategies_extended {
     use super::*;
     use crate::model::position::Position;
-    use crate::model::types::{OptionStyle, Positive, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
     use crate::f2p;
 

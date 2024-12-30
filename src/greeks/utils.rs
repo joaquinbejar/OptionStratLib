@@ -57,10 +57,10 @@ use statrs::distribution::{ContinuousCDF, Normal};
 ///
 /// ```rust
 /// use optionstratlib::greeks::d1;
-/// use optionstratlib::Positive;
+/// use optionstratlib::{f2p, Positive};
 ///
-/// let underlying_price = Positive::new(100.0).unwrap();
-/// let strike_price = Positive::new(95.0).unwrap();
+/// let underlying_price = f2p!(100.0);
+/// let strike_price = f2p!(95.0);
 /// let risk_free_rate = 0.05;
 /// let expiration_date = 0.5; // 6 months
 /// let implied_volatility = 0.2;
@@ -432,7 +432,6 @@ mod tests_exp {
 mod tests_calculate_d_values {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::Positive;
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::f2p;
     use approx::assert_relative_eq;
@@ -580,7 +579,6 @@ mod tests_src_greeks_utils {
 #[cfg(test)]
 mod calculate_d1_values {
     use super::*;
-    use crate::model::types::Positive::ZERO;
     use crate::f2p;
 
     #[test]
@@ -886,7 +884,6 @@ mod calculate_d1_values_bis {
 #[cfg(test)]
 mod calculate_d2_values {
     use super::*;
-    use crate::model::types::Positive::ZERO;
     use crate::f2p;
 
     #[test]

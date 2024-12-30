@@ -1,8 +1,9 @@
 use crate::constants::{DARK_GREEN, ZERO};
-use crate::model::types::{OptionStyle, Positive, Side, Positive::ZERO};
+use crate::model::types::{OptionStyle, Side};
 use crate::visualization::model::{ChartPoint, LabelOffsetType};
 use plotters::prelude::RED;
 use tracing::trace;
+use crate::Positive;
 
 pub trait Payoff {
     fn payoff(&self, info: &PayoffInfo) -> f64;
@@ -92,7 +93,7 @@ pub trait Profit {
             RED
         };
         ChartPoint {
-            coordinates: (price.value(), value_at_current_price),
+            coordinates: (price.into(), value_at_current_price),
             label: format!("{:.2}", value_at_current_price),
             label_offset: LabelOffsetType::Relative(4.0, 1.0),
             point_color: color,

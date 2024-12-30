@@ -39,7 +39,7 @@
 //!
 //! ```rust
 //! use optionstratlib::model::option::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
+//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, Positive::ONE};
 //! use optionstratlib::volatility::implied_volatility;
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
@@ -51,7 +51,7 @@
 //!     f2p!(100.0),              // Strike price
 //!     ExpirationDate::Days(30.0),
 //!     0.2,                      // Initial volatility guess
-//!     SIZE_ONE,                 // Quantity
+//!     Positive::ONE,                 // Quantity
 //!     f2p!(100.0),              // Current price
 //!     0.05,                     // Risk-free rate
 //!     OptionStyle::Call,

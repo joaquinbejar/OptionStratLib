@@ -1,23 +1,23 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 30/12/24
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 30/12/24
+******************************************************************************/
 
-use std::cmp::Ordering;
-use std::fmt;
-use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
-use std::str::FromStr;
+use crate::constants::EPSILON;
 use approx::{AbsDiffEq, RelativeEq};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use crate::constants::EPSILON;
+use std::cmp::Ordering;
+use std::fmt;
+use std::iter::Sum;
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
+use std::str::FromStr;
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct Positive(Decimal);
+pub struct Positive(pub(crate) Decimal);
 
 #[macro_export]
 macro_rules! pos {
@@ -36,39 +36,37 @@ macro_rules! spos {
 #[macro_export]
 macro_rules! f2p {
     ($val:expr) => {
-        Positive::new(Decimal::from_f64($val).unwrap_or(Decimal::ZERO)).unwrap_or(Positive::ZERO)
+        crate::Positive::new(
+            rust_decimal::Decimal::try_from($val).unwrap_or(rust_decimal::Decimal::ZERO),
+        )
+        .unwrap_or(crate::Positive::ZERO)
     };
 }
 
 #[macro_export]
 macro_rules! sf2p {
     ($val:expr) => {
-        Some(Positive::new(dec!($val)).unwrap())
+        Some(crate::Positive::new($val).unwrap())
     };
 }
 
-
 impl Positive {
-    
     pub const ZERO: Positive = Positive(Decimal::ZERO);
-    
+
     pub const ONE: Positive = Positive(Decimal::ONE);
 
     pub const TWO: Positive = Positive(Decimal::TWO);
-    
+
     pub const INFINITY: Positive = Positive(Decimal::MAX);
     
-    pub const TEN : Positive = Positive(Decimal::from(10));
+    pub const TEN: Positive = Positive(Decimal::TEN);
+
+    pub const HUNDRED: Positive = Positive(Decimal::ONE_HUNDRED);
+
+    pub const THOUSAND: Positive = Positive(Decimal::ONE_THOUSAND);
     
-    pub const HUNDRED : Positive = Positive(Decimal::from(100));
-    
-    pub const THOUSAND : Positive = Positive(Decimal::from(1000));
-    
-    pub const MILLION : Positive = Positive(Decimal::from(1000000));
-    
-    pub  const PI: Positive = Positive(Decimal::PI);
-    
-    
+    pub const PI: Positive = Positive(Decimal::PI);
+
     pub fn new(value: Decimal) -> Result<Self, String> {
         if value >= Decimal::ZERO {
             Ok(Positive(value))
@@ -110,15 +108,157 @@ impl Positive {
     }
 }
 
-impl From<Positive> for Decimal {
-    fn from(pos_decimal: Positive) -> Self {
-        pos_decimal.0
-    }
-}
-
 impl From<Positive> for u64 {
     fn from(pos_u64: Positive) -> Self {
         pos_u64.0.to_u64().unwrap()
+    }
+}
+
+impl From<&Positive> for f64 {
+    fn from(value: &Positive) -> Self {
+        value.0.to_f64().unwrap_or(0.0)
+    }
+}
+
+impl From<Positive> for f64 {
+    fn from(value: Positive) -> Self {
+        value.0.to_f64().unwrap_or(0.0)
+    }
+}
+
+impl PartialEq<&Positive> for f64 {
+    fn eq(&self, other: &&Positive) -> bool {
+        self == &other.0.to_f64().unwrap_or(0.0)
+    }
+}
+
+impl PartialOrd<&Positive> for f64 {
+    fn partial_cmp(&self, other: &&Positive) -> Option<std::cmp::Ordering> {
+        self.partial_cmp(&other.0.to_f64().unwrap_or(0.0))
+    }
+}
+
+impl PartialEq<Positive> for f64 {
+    fn eq(&self, other: &Positive) -> bool {
+        self == &other.0.to_f64().unwrap_or(0.0)
+    }
+}
+
+impl PartialOrd<Positive> for f64 {
+    fn partial_cmp(&self, other: &Positive) -> Option<std::cmp::Ordering> {
+        self.partial_cmp(&other.0.to_f64().unwrap_or(0.0))
+    }
+}
+
+impl Mul<Positive> for f64 {
+    type Output = f64;
+
+    fn mul(self, rhs: Positive) -> Self::Output {
+        self * rhs.to_f64()
+    }
+}
+
+impl Div<Positive> for f64 {
+    type Output = f64;
+
+    fn div(self, rhs: Positive) -> Self::Output {
+        self / rhs.to_f64()
+    }
+}
+
+impl Sub<Positive> for f64 {
+    type Output = f64;
+
+    fn sub(self, rhs: Positive) -> Self::Output {
+        self - rhs.to_f64()
+    }
+}
+
+impl Add<Positive> for f64 {
+    type Output = f64;
+
+    fn add(self, rhs: Positive) -> Self::Output {
+        self + rhs.to_f64()
+    }
+}
+
+impl FromStr for Positive {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.parse::<Decimal>() {
+            Ok(value) if value > Decimal::ZERO => Ok(Positive(value)),
+            Ok(value) => Err(format!("Value must be positive, got {}", value)),
+            Err(e) => Err(format!("Failed to parse as Decimal: {}", e)),
+        }
+    }
+}
+
+impl From<f64> for Positive {
+    fn from(value: f64) -> Self {
+        Positive::new(Decimal::try_from(value).unwrap()).expect("Value must be positive")
+    }
+}
+
+impl From<Decimal> for Positive {
+    fn from(value: Decimal) -> Self {
+        Positive::new(value).expect("Value must be positive")
+    }
+}
+
+impl From<&Decimal> for Positive {
+    fn from(value: &Decimal) -> Self {
+        Positive::new(*value).expect("Value must be positive")
+    }
+}
+
+impl Mul<f64> for Positive {
+    type Output = Positive;
+
+    fn mul(self, rhs: f64) -> Positive {
+        (self.to_f64() * rhs).into()
+    }
+}
+
+impl Div<f64> for Positive {
+    type Output = Positive;
+
+    fn div(self, rhs: f64) -> Positive {
+        (self.to_f64() / rhs).into()
+    }
+}
+
+impl Sub<f64> for Positive {
+    type Output = Positive;
+
+    fn sub(self, rhs: f64) -> Self::Output {
+        (self.to_f64() - rhs).into()
+    }
+}
+
+impl Add<f64> for Positive {
+    type Output = Positive;
+
+    fn add(self, rhs: f64) -> Self::Output {
+        (self.to_f64() + rhs).into()
+    }
+}
+
+impl PartialOrd<f64> for Positive {
+    fn partial_cmp(&self, other: &f64) -> Option<Ordering> {
+        self.0.to_f64().unwrap_or(0.0).partial_cmp(other)
+    }
+}
+
+impl PartialEq<f64> for &Positive {
+    fn eq(&self, other: &f64) -> bool {
+        self.0.to_f64().unwrap_or(0.0) == *other
+    }
+}
+
+impl PartialOrd<f64> for &Positive {
+    fn partial_cmp(&self, other: &f64) -> Option<Ordering> {
+        self.0.to_f64().unwrap_or(0.0).partial_cmp(other)
     }
 }
 
@@ -159,7 +299,7 @@ impl Serialize for Positive {
     where
         S: Serializer,
     {
-        serializer.serialize_Decimal(self.0)
+        serializer.serialize_f64(self.into())
     }
 }
 
@@ -205,11 +345,27 @@ impl Add<Decimal> for Positive {
     }
 }
 
+impl Add<&Decimal> for Positive {
+    type Output = Positive;
+
+    fn add(self, rhs: &Decimal) -> Self::Output {
+        (self.0 + rhs).into()
+    }
+}
+
 impl Sub<Decimal> for Positive {
     type Output = Positive;
 
     fn sub(self, rhs: Decimal) -> Positive {
         Positive(self.0 - rhs)
+    }
+}
+
+impl Sub<&Decimal> for Positive {
+    type Output = Positive;
+
+    fn sub(self, rhs: &Decimal) -> Self::Output {
+        (self.0 - rhs).into()
     }
 }
 
@@ -236,6 +392,14 @@ impl Div<Decimal> for Positive {
 
     fn div(self, rhs: Decimal) -> Positive {
         Positive(self.0 / rhs)
+    }
+}
+
+impl Div<&Decimal> for Positive {
+    type Output = Positive;
+
+    fn div(self, rhs: &Decimal) -> Self::Output {
+        (self.0 / rhs).into()
     }
 }
 
@@ -285,41 +449,9 @@ impl Mul<Decimal> for Positive {
     }
 }
 
-impl Mul<Decimal> for Positive {
-    type Output = Positive;
-
-    fn mul(self, rhs: Decimal) -> Positive {
-        Positive(self.0 * rhs)
-    }
-}
-
 impl Default for Positive {
     fn default() -> Self {
         Positive::ZERO
-    }
-}
-
-impl FromStr for Positive {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.parse::<Decimal>() {
-            Ok(value) if value > Decimal::ZERO => Ok(Positive(value)),
-            Ok(value) => Err(format!("Value must be positive, got {}", value)),
-            Err(e) => Err(format!("Failed to parse as Decimal: {}", e)),
-        }
-    }
-}
-
-impl From<Decimal> for Positive {
-    fn from(value: Decimal) -> Self {
-        Positive::new(value).expect("Value must be positive")
-    }
-}
-
-impl From<Decimal> for Positive {
-    fn from(value: Decimal) -> Self {
-        Positive::new(value).expect("Value must be positive")
     }
 }
 
@@ -370,49 +502,11 @@ impl<'a> Sum<&'a Positive> for Positive {
     }
 }
 
-impl AddAssign<Positive> for Decimal {
-    fn add_assign(&mut self, rhs: Positive) {
-        *self += rhs.0;
-    }
-}
-
-impl Div<Positive> for Decimal {
-    type Output = Decimal;
-
-    fn div(self, rhs: Positive) -> Decimal {
-        self / rhs.0
-    }
-}
-
-impl Sub<Positive> for Decimal {
-    type Output = Decimal;
-
-    fn sub(self, rhs: Positive) -> Self::Output {
-        self - rhs.0
-    }
-}
-
-impl Mul<Positive> for Decimal {
-    type Output = Decimal;
-
-    fn mul(self, rhs: Positive) -> Decimal {
-        self * rhs.0
-    }
-}
-
-impl Add<Positive> for Decimal {
-    type Output = Decimal;
-
-    fn add(self, rhs: Positive) -> Decimal {
-        self + rhs.0
-    }
-}
-
 #[cfg(test)]
 mod tests_positive_decimal {
     use super::*;
-    use std::panic;
     use rust_decimal_macros::dec;
+    use std::panic;
 
     #[test]
     fn test_positive_decimal_creation() {
@@ -478,7 +572,7 @@ mod tests_positive_decimal {
     #[test]
     fn test_positive_decimal_div_decimal() {
         let a = Positive::new(dec!(6.0)).unwrap();
-        assert_eq!((a / 2.0).value(), 3.0);
+        assert_eq!((a / 2.0), 3.0);
     }
 
     #[test]
@@ -498,7 +592,7 @@ mod tests_positive_decimal {
     #[test]
     fn test_positive_decimal_mul_decimal() {
         let a = Positive::new(dec!(2.0)).unwrap();
-        assert_eq!((a * 3.0).value(), 6.0);
+        assert_eq!((a * 3.0), 6.0);
     }
 
     #[test]

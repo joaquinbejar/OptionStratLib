@@ -142,8 +142,8 @@ fn calculate_call_option_price(option: &Options, d1: f64, d2: f64, t: f64) -> f6
     let big_n_d1 = big_n(d1).unwrap().to_f64().unwrap();
     let big_n_d2 = big_n(d2).unwrap().to_f64().unwrap();
 
-    option.underlying_price.value() * big_n_d1
-        - option.strike_price.value() * (-option.risk_free_rate * t).exp() * big_n_d2
+    option.underlying_price.to_f64() * big_n_d1
+        - option.strike_price.to_f64() * (-option.risk_free_rate * t).exp() * big_n_d2
 }
 
 /// Calculates the price of a European put option using the Black-Scholes model.
@@ -181,8 +181,8 @@ fn calculate_put_option_price(option: &Options, d1: f64, d2: f64, t: f64) -> f64
     let big_n_d1 = big_n(-d1).unwrap().to_f64().unwrap();
     let big_n_d2 = big_n(-d2).unwrap().to_f64().unwrap();
 
-    option.strike_price.value() * (-option.risk_free_rate * t).exp() * big_n_d2
-        - option.underlying_price.value() * big_n_d1
+    option.strike_price.into() * (-option.risk_free_rate * t).exp() * big_n_d2
+        - option.underlying_price.into() * big_n_d1
 }
 
 pub trait BlackScholes {
@@ -199,9 +199,8 @@ mod tests_black_scholes {
     use super::*;
     use crate::greeks::utils::{d1, d2};
     use crate::model::option::Options;
-    use crate::model::types::Positive;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, Positive::ZERO, SIZE_ONE};
-    use crate::f2p;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side };
+    use crate::{f2p, Positive};
     use approx::assert_relative_eq;
 
     fn mock_options_call() -> Options {
@@ -215,7 +214,7 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(3.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
-            quantity: SIZE_ONE,
+            quantity: Positive::ONE,
             dividend_yield: ZERO,
             exotic_params: None,
         }
@@ -232,7 +231,7 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(365.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
-            quantity: SIZE_ONE,
+            quantity: Positive::ONE,
             dividend_yield: ZERO,
 
             exotic_params: None,
@@ -282,13 +281,13 @@ mod tests_black_scholes {
         let big_n_d1 = big_n(d1).unwrap();
         assert_relative_eq!(big_n_d1.to_f64().unwrap(), 0.501994, epsilon = 0.00001);
         let big_n_d2 = big_n(d2).unwrap();
-        assert_relative_eq!(big_n_d2.to_f64().unwrap(), 0.498005, epsilon = 0.00001);
+        assert_relative_eq!(big_n_d2, 0.498005, epsilon = 0.00001);
 
         let option_value = option.strike_price * big_n_d1.to_f64().unwrap()
             - option.underlying_price * big_n_d2.to_f64().unwrap();
-        assert_relative_eq!(option_value.value(), 0.3989406, epsilon = 0.00001);
+        assert_relative_eq!(option_value, 0.3989406, epsilon = 0.00001);
         let volatility = 0.2;
-        let value_at_20 = volatility * option.strike_price * option_value;
+        let value_at_20 = volatility * option.strike_price.into() * option_value.into();
         assert_relative_eq!(value_at_20, 7.97881, epsilon = 0.00001);
 
         let price = black_scholes(&option);
@@ -323,7 +322,7 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(365.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
-            quantity: SIZE_ONE,
+            quantity: Positive::ONE,
             dividend_yield: ZERO,
 
             exotic_params: None,
@@ -377,7 +376,7 @@ mod tests_black_scholes {
             expiration_date: ExpirationDate::Days(365.0 / 4.0),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
-            quantity: SIZE_ONE,
+            quantity: Positive::ONE,
             dividend_yield: ZERO,
 
             exotic_params: None,
@@ -457,7 +456,6 @@ mod tests_black_scholes {
 #[cfg(test)]
 mod tests_black_scholes_trait {
     use super::*;
-    use crate::model::types::Positive;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::f2p;
@@ -619,7 +617,6 @@ mod tests_black_scholes_trait {
 #[cfg(test)]
 mod tests_black_scholes_trait_bis {
     use super::*;
-    use crate::model::types::Positive;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::f2p;

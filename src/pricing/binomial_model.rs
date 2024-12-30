@@ -1,11 +1,7 @@
-use crate::model::types::{OptionStyle, OptionType, Positive, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
-use crate::pricing::utils::{
-    calculate_discount_factor, calculate_discounted_payoff, calculate_down_factor,
-    calculate_option_price, calculate_probability, calculate_up_factor, option_node_value,
-    option_node_value_wrapper,
-};
-use crate::{d2f, f2d, pos};
+use crate::pricing::utils::*;
+use crate::{d2f, f2d, pos, Positive};
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 
@@ -612,7 +608,7 @@ mod tests_generate_binomial_tree {
 
         assert_decimal_eq!(
             option_tree[1][1],
-            p2du!(params.strike).unwrap() - asset_tree[1][1],
+            params.strike - asset_tree[1][1],
             EPSILON
         );
         assert_decimal_eq!(option_tree[0][0], dec!(4.887966), EPSILON);

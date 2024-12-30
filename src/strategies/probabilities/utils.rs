@@ -8,9 +8,9 @@ use crate::error::probability::{
 };
 use crate::greeks::utils::big_n;
 use crate::model::decimal::f64_to_decimal;
-use crate::model::types::{ExpirationDate, Positive, Positive::ZERO};
-use crate::f2p;
+use crate::{f2p, Positive};
 use num_traits::ToPrimitive;
+use crate::model::ExpirationDate;
 
 /// Struct to hold volatility adjustment parameters
 #[derive(Debug, Clone)]

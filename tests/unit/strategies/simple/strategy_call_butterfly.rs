@@ -1,7 +1,7 @@
 use approx::assert_relative_eq;
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::model::types::{Positive, Positive::ZERO, P_INFINITY};
+use optionstratlib::model::types::{Positive, Positive::ZERO, Positive::INFINITY};
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::utils::logger::setup_logger;
@@ -45,7 +45,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(42.319), f2p!(0.0001));
-    assert_eq!(strategy.max_loss()?, P_INFINITY);
+    assert_eq!(strategy.max_loss()?, Positive::INFINITY);
     assert_positivef64_relative_eq!(strategy.total_cost(), f2p!(89.57), f2p!(0.0001));
     assert_eq!(strategy.fees(), 4.53);
 

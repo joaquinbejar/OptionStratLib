@@ -20,7 +20,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
@@ -32,7 +32,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2p};
+use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -1818,7 +1818,7 @@ mod tests_long_strangle {
 #[cfg(test)]
 mod tests_short_strangle_probability {
     use super::*;
-    use crate::model::types::{ExpirationDate, Positive};
+    use crate::model::types::{ExpirationDate};
     use crate::f2p;
     use crate::strategies::probabilities::utils::PriceTrend;
 

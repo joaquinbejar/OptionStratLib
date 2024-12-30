@@ -660,8 +660,8 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
-    use crate::model::types::Positive;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
+    use crate::Positive;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
@@ -675,7 +675,7 @@ mod tests_implied_volatility {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             0.02, // initial implied volatility
-            SIZE_ONE,
+            Positive::ONE,
             f2p!(100.0),
             0.05,
             OptionStyle::Call,
@@ -1149,8 +1149,8 @@ mod tests_interpolate_volatility_surface {
 mod tests_uncertain_volatility_bounds {
 
     use super::*;
-    use crate::model::types::Positive;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
+    use crate::Positive;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
 
     fn create_test_option() -> Options {
@@ -1161,7 +1161,7 @@ mod tests_uncertain_volatility_bounds {
             f2p!(100.0), // strike price
             ExpirationDate::Days(30.0),
             0.2,         // implied volatility
-            SIZE_ONE,    // quantity
+            Positive::ONE,    // quantity
             f2p!(100.0), // underlying price
             0.05,        // risk-free rate
             OptionStyle::Call,
@@ -1242,7 +1242,7 @@ mod tests_uncertain_volatility_bounds {
             "Lower bound should be positive even with very low volatility"
         );
         assert!(
-            upper < option.underlying_price.value(),
+            upper < option.underlying_price,
             "Upper bound should not exceed underlying price for a call option"
         );
     }
@@ -1252,9 +1252,8 @@ mod tests_uncertain_volatility_bounds {
 mod tests_uncertain_volatility_bounds_side {
     use super::*;
     use crate::model::types::{
-        ExpirationDate, OptionStyle, OptionType, Positive, Side, SIZE_ONE,
-    };
-    use crate::f2p;
+        ExpirationDate, OptionStyle, OptionType, Side   };
+    use crate::{f2p, Positive};
     use approx::assert_relative_eq;
     use tracing::info;
 
@@ -1266,7 +1265,7 @@ mod tests_uncertain_volatility_bounds_side {
             f2p!(100.0), // strike price
             ExpirationDate::Days(30.0),
             0.2,         // implied volatility
-            SIZE_ONE,    // quantity
+            Positive::ONE,    // quantity
             f2p!(100.0), // underlying price
             0.05,        // risk-free rate
             option_style,
@@ -1366,7 +1365,7 @@ mod tests_uncertain_volatility_bounds_side {
             "Lower bound should be positive even with very low volatility"
         );
         assert!(
-            upper < option.underlying_price.value(),
+            upper < option.underlying_price,
             "Upper bound should not exceed underlying price for a call option"
         );
     }

@@ -2,9 +2,9 @@ use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::GreeksError;
-use crate::f2du;
+use crate::{f2du, Positive};
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::binomial_model::{
     generate_binomial_tree, price_binomial, BinomialPricingParams,
@@ -77,7 +77,7 @@ impl Options {
 
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.strike_price = option_data.strike_price;
-        self.implied_volatility = option_data.implied_volatility.unwrap_or(Positive::ZERO).value();
+        self.implied_volatility = option_data.implied_volatility.unwrap_or(Positive::ZERO).to_f64();
         trace!("Updated Option: {:#?}", self);
     }
 
@@ -151,7 +151,7 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        self.option_type.payoff(&payoff_info) * self.quantity
+        self.option_type.payoff(&payoff_info) * self.quantity.to_f64()
     }
 
     pub fn payoff_at_price(&self, price: Positive) -> f64 {
@@ -164,7 +164,7 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        self.option_type.payoff(&payoff_info) * self.quantity
+        self.option_type.payoff(&payoff_info) * self.quantity.to_f64()
     }
 
     pub fn intrinsic_value(&self, underlying_price: Positive) -> f64 {
@@ -177,7 +177,7 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        self.option_type.payoff(&payoff_info) * self.quantity
+        self.option_type.payoff(&payoff_info) * self.quantity.to_f64()
     }
 
     pub fn delta(&self) -> Result<Decimal, GreeksError> {
@@ -319,7 +319,7 @@ impl Graph for Options {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.strike_price.value(),
+            x_coordinate: self.strike_price.to_f64(),
             y_range: (-50000.0, 50000.0),
             label: "Strike".to_string(),
             label_offset: (5.0, 5.0),
@@ -336,7 +336,6 @@ impl Graph for Options {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::model::types::SIZE_ONE;
     use crate::model::utils::create_sample_option_simplest;
     use crate::f2p;
     use chrono::{Duration, Utc};
@@ -362,7 +361,7 @@ mod tests_options {
             f2p!(100.0),
             ExpirationDate::DateTime(future_date),
             0.2,
-            SIZE_ONE,
+            Positive::ONE,
             f2p!(105.0),
             0.05,
             OptionStyle::Call,
@@ -386,7 +385,7 @@ mod tests_options {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             0.2,
-            SIZE_ONE,
+            Positive::ONE,
             f2p!(105.0),
             0.05,
             OptionStyle::Call,
@@ -442,7 +441,7 @@ mod tests_options {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             0.2,
-            SIZE_ONE,
+            Positive::ONE,
             f2p!(95.0),
             0.05,
             OptionStyle::Put,
@@ -462,7 +461,7 @@ mod tests_options {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             0.2,
-            SIZE_ONE,
+            Positive::ONE,
             f2p!(105.0),
             0.05,
             OptionStyle::Call,
@@ -479,7 +478,6 @@ mod tests_options {
 #[cfg(test)]
 mod tests_valid_option {
     use super::*;
-    use crate::model::types::SIZE_ONE;
     use crate::f2p;
 
     fn create_valid_option() -> Options {
@@ -490,7 +488,7 @@ mod tests_valid_option {
             strike_price: f2p!(100.0),
             expiration_date: ExpirationDate::Days(30.0),
             implied_volatility: 0.2,
-            quantity: SIZE_ONE,
+            quantity: Positive::ONE,
             underlying_price: f2p!(105.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
@@ -801,7 +799,6 @@ mod tests_options_payoff_at_price {
 #[cfg(test)]
 mod tests_options_payoffs_with_quantity {
     use super::*;
-    use crate::model::types::Positive;
     use crate::model::utils::create_sample_option;
     use crate::f2p;
 

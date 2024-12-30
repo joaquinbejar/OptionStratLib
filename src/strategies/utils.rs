@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use crate::model::types::Positive;
+use crate::Positive;
 use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy)]
@@ -50,6 +50,7 @@ mod tests_strategies_utils {
     use super::*;
     use crate::f2p;
     use approx::assert_relative_eq;
+    use crate::constants::EPSILON;
 
     #[test]
     fn test_find_optimal_side_variants() {
@@ -124,10 +125,10 @@ mod tests_strategies_utils {
         let range = calculate_price_range(start, end, step);
 
         assert_eq!(range.len(), 5);
-        assert_relative_eq!(range[0], f2p!(1.0), epsilon = f64::EPSILON);
-        assert_relative_eq!(range[1], f2p!(1.3), epsilon = f64::EPSILON);
-        assert_relative_eq!(range[2], f2p!(1.6), epsilon = f64::EPSILON);
-        assert_relative_eq!(range[3], f2p!(1.9), epsilon = f64::EPSILON);
+        assert_relative_eq!(range[0], 1.0, epsilon = EPSILON);
+        assert_relative_eq!(range[1], f2p!(1.3), epsilon = EPSILON);
+        assert_relative_eq!(range[2], f2p!(1.6), epsilon = EPSILON);
+        assert_relative_eq!(range[3], f2p!(1.9), epsilon = EPSILON);
     }
 
     #[test]

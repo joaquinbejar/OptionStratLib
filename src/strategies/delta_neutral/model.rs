@@ -6,8 +6,8 @@
 
 //! # Delta Neutral Strategies Module
 use crate::greeks::equations::Greeks;
-use crate::model::types::{OptionStyle, Positive};
-use crate::f2p;
+use crate::model::types::{OptionStyle};
+use crate::{f2p, Positive};
 use std::fmt;
 
 pub const DELTA_THRESHOLD: f64 = 0.005;

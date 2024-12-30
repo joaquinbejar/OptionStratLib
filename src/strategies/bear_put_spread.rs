@@ -25,7 +25,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
@@ -37,7 +37,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2p};
+use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -235,7 +235,7 @@ impl Strategies for BearPutSpread {
         match (max_profit, max_loss) {
             (Positive::ZERO, _) => ZERO,
             (_, Positive::ZERO) => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).value(),
+            _ => (max_profit / max_loss * 100.0).into(),
         }
     }
 
@@ -1168,7 +1168,7 @@ mod tests_bear_put_spread_optimization {
 #[cfg(test)]
 mod tests_bear_put_spread_optimizable {
     use super::*;
-    use crate::model::types::{ExpirationDate, Positive};
+    use crate::model::types::{ExpirationDate};
     use crate::spos;
     use crate::strategies::utils::FindOptimalSide;
     use crate::utils::setup_logger;
@@ -1873,7 +1873,8 @@ mod tests_bear_put_spread_graph {
 
 #[cfg(test)]
 mod tests_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::f2p;
     use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
@@ -1981,7 +1982,8 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::f2p;
     use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;

@@ -157,7 +157,6 @@ mod tests_approx_equal {
 mod tests_get_random_element {
     use super::*;
     use crate::chains::chain::OptionData;
-    use crate::model::types::Positive;
     use crate::f2p;
     use std::collections::BTreeSet;
 

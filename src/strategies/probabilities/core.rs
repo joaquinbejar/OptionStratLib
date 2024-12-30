@@ -4,9 +4,8 @@
    Date: 30/11/24
 ******************************************************************************/
 use crate::error::probability::ProbabilityError;
-use crate::model::types::{ExpirationDate, Positive, Positive::ZERO};
-use crate::model::ProfitLossRange;
-use crate::f2p;
+use crate::model::{ExpirationDate, ProfitLossRange};
+use crate::{f2p, Positive};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
@@ -237,7 +236,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 #[cfg(test)]
 mod tests_probability_analysis {
     use super::*;
-    use crate::model::types::{ExpirationDate, Positive};
+    use crate::model::types::{ExpirationDate};
     use crate::f2p;
     use crate::pricing::payoff::Profit;
     use crate::strategies::base::{Positionable, Strategies, Validable};

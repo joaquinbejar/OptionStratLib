@@ -19,7 +19,7 @@ pub(crate) const DAYS_IN_A_YEAR: i64 = 365;
 
 pub(crate) const TOLERANCE: f64 = 1e-8;
 
-pub const EPSILON: Decimal = Decimal::new(1, 16);
+pub const EPSILON: Decimal = dec!(1e-16);
 
 pub(crate) const MIN_VOLATILITY: f64 = 1e-16;
 pub(crate) const MAX_VOLATILITY: f64 = 100.0; // 10000%

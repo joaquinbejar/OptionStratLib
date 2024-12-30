@@ -8,8 +8,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::position::Position;
-use crate::model::types::{Positive, Positive::ZERO};
-use crate::f2p;
+use crate::{f2p, Positive};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
@@ -466,7 +465,7 @@ impl Greeks for CustomStrategy {
 mod tests_custom_strategy {
     use super::*;
     use crate::model::option::Options;
-    use crate::model::types::{ExpirationDate, OptionType, Positive};
+    use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::f2p;
@@ -698,7 +697,7 @@ mod tests_custom_strategy {
 mod tests_max_profit {
     use super::*;
     use crate::model::option::Options;
-    use crate::model::types::{ExpirationDate, OptionType, Positive};
+    use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::f2p;
     use crate::utils::logger::setup_logger;
@@ -835,7 +834,7 @@ mod tests_max_profit {
 mod tests_max_loss {
     use super::*;
     use crate::model::option::Options;
-    use crate::model::types::{ExpirationDate, OptionType, Positive};
+    use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::f2p;
     use crate::utils::logger::setup_logger;

@@ -6,7 +6,7 @@
 use crate::error::decimal::DecimalError;
 use crate::greeks::utils::{big_n, d2};
 use crate::model::option::Options;
-use crate::model::types::{Positive, Side};
+use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
@@ -15,6 +15,7 @@ use rand::distributions::Distribution;
 use rand::Rng;
 use rust_decimal::{Decimal, MathematicalOps};
 use statrs::distribution::Normal;
+use crate::Positive;
 
 /// Simulates stock returns based on a normal distribution using pure decimal arithmetic.
 ///
@@ -604,8 +605,8 @@ mod tests_utils {
 mod tests_probability_keep_under_strike {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::Positive;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive::ZERO, SIZE_ONE};
+    use crate::Positive;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
     use crate::{assert_decimal_eq, f2p};
     use rust_decimal_macros::dec;
     use tracing::info;
@@ -623,7 +624,7 @@ mod tests_probability_keep_under_strike {
             expiration_date: ExpirationDate::Days(365.0),
             implied_volatility: 0.001,
             underlying_symbol: "".to_string(),
-            quantity: SIZE_ONE,
+            quantity: Positive::ONE,
             exotic_params: None,
         };
         let strike = Some(f2p!(100.0));

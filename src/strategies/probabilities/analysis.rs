@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use crate::model::types::Positive;
+use crate::Positive;
 
 #[allow(dead_code)]
 #[derive(Debug)]

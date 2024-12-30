@@ -13,10 +13,8 @@ use crate::error::position::PositionError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
-use crate::model::position::Position;
 use crate::model::types::{
-    ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO, P_INFINITY,
-};
+    ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -24,11 +22,12 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2p, spos};
+use crate::{d2fu, f2p, spos, Positive};
 use chrono::Utc;
 use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
 use tracing::{error, info};
+use crate::model::Position;
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -251,7 +250,7 @@ impl Strategies for CallButterfly {
     }
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
-        Ok(P_INFINITY)
+        Ok(Positive::INFINITY)
     }
 
     fn total_cost(&self) -> Positive {
@@ -295,7 +294,7 @@ impl Strategies for CallButterfly {
     fn profit_ratio(&self) -> f64 {
         let max_loss = match self.max_loss().unwrap_or(Positive::ZERO) {
             Positive::ZERO => spos!(1.0),
-            P_INFINITY => spos!(1.0),
+            Positive::INFINITY => spos!(1.0),
             value => Some(value),
         };
 
@@ -971,7 +970,8 @@ mod tests_call_butterfly_graph {
 
 #[cfg(test)]
 mod tests_iron_condor_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -1089,7 +1089,8 @@ mod tests_iron_condor_delta {
 
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};

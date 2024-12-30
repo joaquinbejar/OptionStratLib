@@ -141,7 +141,7 @@ impl OptionData {
             "OptionData".to_string(),
             self.strike_price,
             price_params.expiration_date.clone(),
-            implied_volatility,
+            implied_volatility.to_f64().unwrap(),
             f2p!(1.0),
             price_params.underlying_price,
             price_params.risk_free_rate,
@@ -181,7 +181,7 @@ impl OptionData {
     ) -> Result<(), ChainError> {
         let mut option: Options = self.get_option(price_params, Side::Long, OptionStyle::Call)?;
 
-        self.call_ask = sf2p!(black_scholes(&option).abs());
+        self.call_ask = Some(black_scholes(&option).abs().into());
         option.side = Side::Short;
         self.call_bid = sf2p!(black_scholes(&option).abs());
         option.option_style = OptionStyle::Put;

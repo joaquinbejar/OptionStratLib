@@ -4,7 +4,7 @@
    Date: 16/8/24
 ******************************************************************************/
 
-use crate::model::types::Positive;
+use crate::Positive;
 use chrono::{DateTime, Utc};
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.

@@ -21,7 +21,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -29,7 +29,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2p};
+use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -690,7 +690,6 @@ impl DeltaNeutrality for IronButterfly {
 #[cfg(test)]
 mod tests_iron_butterfly {
     use super::*;
-    use crate::model::types::SIZE_ONE;
     use crate::f2p;
     use chrono::{TimeZone, Utc};
 
@@ -707,7 +706,7 @@ mod tests_iron_butterfly {
             0.2,      // implied volatility
             0.01,     // risk free rate
             0.02,     // dividend yield
-            SIZE_ONE, // quantity
+            Positive::ONE, // quantity
             1.5,      // premium short call
             1.5,      // premium short put
             1.0,      // premium long call
@@ -742,7 +741,7 @@ mod tests_iron_butterfly {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.5,
             1.0,
@@ -769,7 +768,7 @@ mod tests_iron_butterfly {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             3.5,
             3.5,
             2.0,
@@ -795,7 +794,7 @@ mod tests_iron_butterfly {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.5,
             1.0,
@@ -827,7 +826,7 @@ mod tests_iron_butterfly {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.5,
             1.0,
@@ -860,7 +859,7 @@ mod tests_iron_butterfly {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.5,
             1.0,
@@ -1759,7 +1758,8 @@ mod tests_iron_butterfly_graph {
 
 #[cfg(test)]
 mod tests_iron_condor_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
@@ -1882,7 +1882,8 @@ mod tests_iron_condor_delta {
 
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;

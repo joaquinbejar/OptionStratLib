@@ -19,7 +19,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -27,7 +27,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2p};
+use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -719,7 +719,6 @@ impl DeltaNeutrality for IronCondor {
 #[cfg(test)]
 mod tests_iron_condor {
     use super::*;
-    use crate::model::types::SIZE_ONE;
     use crate::f2p;
     use chrono::{TimeZone, Utc};
 
@@ -737,7 +736,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.0,
             2.0,
@@ -770,7 +769,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.0,
             2.0,
@@ -796,7 +795,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             3.5,
             3.3,
             3.0,
@@ -823,7 +822,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.0,
             2.0,
@@ -852,7 +851,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.0,
             2.0,
@@ -886,7 +885,7 @@ mod tests_iron_condor {
             0.2,
             0.01,
             0.02,
-            SIZE_ONE,
+            Positive::ONE,
             1.5,
             1.0,
             2.0,
@@ -1947,11 +1946,11 @@ mod tests_iron_condor_graph {
 
 #[cfg(test)]
 mod tests_iron_condor_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_condor::IronCondor;
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, f2p, Positive};
     use approx::assert_relative_eq;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
@@ -2071,7 +2070,8 @@ mod tests_iron_condor_delta {
 
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_condor::IronCondor;

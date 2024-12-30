@@ -5,7 +5,6 @@
 ******************************************************************************/
 
 use crate::model::position::Position;
-use crate::model::types::Positive;
 use crate::f2p;
 
 #[allow(dead_code)]
@@ -48,7 +47,7 @@ impl SPANMargin {
         let mut risk_array = Vec::new();
         let option = &position.option;
 
-        let price_scenarios = self.generate_price_scenarios(option.underlying_price.value());
+        let price_scenarios = self.generate_price_scenarios(option.underlying_price.into());
         let volatility_scenarios = self.generate_volatility_scenarios(option.implied_volatility);
 
         for &price in &price_scenarios {
@@ -109,7 +108,6 @@ impl SPANMargin {
 #[cfg(test)]
 mod tests_span {
     use super::*;
-    use crate::model::types::Positive;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::f2p;

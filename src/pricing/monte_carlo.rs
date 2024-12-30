@@ -1,7 +1,7 @@
 use crate::constants::ZERO;
 use crate::model::option::Options;
 use crate::pricing::utils::wiener_increment;
-use crate::{d2f, f2d};
+use crate::{f2d, Positive};
 use rust_decimal::Decimal;
 use std::error::Error;
 
@@ -47,10 +47,10 @@ pub fn monte_carlo_option_pricing(
         let mut st = option.underlying_price;
         for _ in 0..steps {
             let w = wiener_increment(dt)?;
-            st *= d2f!(Decimal::ONE + risk_free_rate * dt + implied_volatility * w);
+            st *= Decimal::ONE + risk_free_rate * dt + implied_volatility * w;
         }
         // Calculate the payoff for a call option
-        let payoff = f64::max(st.value() - option.strike_price.value(), ZERO);
+        let payoff :f64 = (st - option.strike_price).max(Positive::ZERO).into();
         payoff_sum += payoff;
     }
     // Average value of the payoffs discounted to present value
@@ -62,7 +62,6 @@ pub fn monte_carlo_option_pricing(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::Positive;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, f2du, f2p};
     use rust_decimal_macros::dec;
@@ -117,8 +116,9 @@ mod tests {
         option.implied_volatility = 0.0;
         let price = monte_carlo_option_pricing(&option, 252, 10000).unwrap();
         let expected_price = f64::max(
-            option.underlying_price.value()
-                - option.strike_price.value() * (-option.risk_free_rate * 1.0).exp(),
+            (option.underlying_price
+                - option.strike_price 
+                * (-option.risk_free_rate * 1.0).exp()).into(),
             ZERO,
         );
         assert_decimal_eq!(price, f2du!(expected_price).unwrap(), dec!(0.1));

@@ -4,10 +4,9 @@
    Date: 20/8/24
 ******************************************************************************/
 use crate::constants::{DARK_GREEN, DARK_RED};
-use crate::model::types::{Positive, Positive::ZERO};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::{create_drawing_area, f2p};
+use crate::{create_drawing_area, f2p, Positive};
 use plotters::backend::BitMapBackend;
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
@@ -332,7 +331,7 @@ mod tests_calculate_axis_range {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::Positive;
+    use crate::Positive;
     use crate::f2p;
     use crate::visualization::model::LabelOffsetType;
     use plotters::style::RGBColor;

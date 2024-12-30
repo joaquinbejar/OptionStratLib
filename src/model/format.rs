@@ -295,7 +295,7 @@ impl fmt::Debug for Strategy {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::model::types::{BarrierType, Positive};
+    use crate::model::types::{BarrierType};
     use crate::f2p;
     use chrono::{NaiveDate, TimeZone, Utc};
 
@@ -785,7 +785,6 @@ mod tests_option_type_display_debug {
 #[cfg(test)]
 mod tests_position_type_display_debug {
     use super::*;
-    use crate::model::types::Positive;
     use crate::f2p;
     use chrono::{DateTime, NaiveDate, TimeZone};
 
@@ -882,7 +881,6 @@ mod tests_position_type_display_debug {
 #[cfg(test)]
 mod tests_strategy_type_display_debug {
     use super::*;
-    use crate::model::types::Positive;
     use crate::model::utils::create_sample_option_with_date;
     use crate::f2p;
     use crate::strategies::base::StrategyType;

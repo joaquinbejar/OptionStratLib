@@ -1,3 +1,4 @@
+
 #[macro_export]
 macro_rules! assert_positivef64_relative_eq {
     ($left:expr, $right:expr, $epsilon:expr) => {{
@@ -5,7 +6,7 @@ macro_rules! assert_positivef64_relative_eq {
         let right: Positive = $right;
         let epsilon: Positive = $epsilon;
 
-        let abs_diff = pos!((left.value() - right.value()).abs());
+        let abs_diff: Positive = (left.to_64() - right.to_64()).abs();
         let max_abs = left.max(right);
 
         if left == Positive::ZERO || right == Positive::ZERO {
@@ -36,8 +37,7 @@ macro_rules! assert_positivef64_relative_eq {
 
 #[cfg(test)]
 mod tests_assert_positivef64_relative_eq {
-    use crate::model::types::Positive;
-    use crate::model::types::Positive::ZERO;
+    use crate::Positive;
     use crate::f2p;
 
     #[test]

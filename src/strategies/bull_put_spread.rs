@@ -25,7 +25,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side, Positive::ZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
@@ -37,7 +37,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{d2fu, f2p};
+use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -196,7 +196,7 @@ impl Strategies for BullPutSpread {
     fn max_loss(&self) -> Result<Positive, StrategyError> {
         let width = self.short_put.option.strike_price - self.long_put.option.strike_price;
         let max_loss =
-            (width * self.short_put.option.quantity).value() - self.net_premium_received();
+            (width * self.short_put.option.quantity) - self.net_premium_received();
         if max_loss < ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -1697,7 +1697,8 @@ mod tests_bull_put_spread_probability {
 
 #[cfg(test)]
 mod tests_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bull_put_spread::BullPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -1804,7 +1805,8 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, Positive};
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bull_put_spread::BullPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};

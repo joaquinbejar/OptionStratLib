@@ -4,13 +4,11 @@
    Date: 25/12/24
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
-use crate::model::types::Positive;
-use crate::{f2p, Positive};
+use crate::Positive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
-use std::error::Error;
-use std::ops::Mul;
+use std::ops::{Add, AddAssign, Div, Mul, Sub};
 
 pub const ONE_DAY: Decimal = dec!(0.00396825397);
 
@@ -36,6 +34,27 @@ pub trait DecimalStats {
     fn std_dev(&self) -> Decimal;
 }
 
+
+impl From<Positive> for Decimal {
+    fn from(pos: Positive) -> Self {
+        pos.0
+    }
+}
+
+impl From<&Positive> for Decimal {
+    fn from(pos: &Positive) -> Self {
+        pos.0
+    }
+}
+
+impl Mul<Positive> for Decimal {
+    type Output = Decimal;
+
+    fn mul(self, rhs: Positive) -> Decimal {
+        self * rhs.0
+    }
+}
+
 impl DecimalStats for Vec<Decimal> {
     fn mean(&self) -> Decimal {
         if self.is_empty() {
@@ -55,13 +74,72 @@ impl DecimalStats for Vec<Decimal> {
     }
 }
 
-impl Mul<Positive> for Decimal {
+impl Div<Positive> for Decimal {
     type Output = Decimal;
 
-    fn mul(self, rhs: Positive) -> Self::Output {
-        self * Decimal::from_f64(rhs.value()).unwrap()
+    fn div(self, rhs: Positive) -> Decimal {
+        self / rhs.0
     }
 }
+
+impl Sub<Positive> for Decimal {
+    type Output = Decimal;
+
+    fn sub(self, rhs: Positive) -> Self::Output {
+        self - rhs.0
+    }
+}
+
+impl Sub<&Positive> for Decimal {
+    type Output = Decimal;
+
+    fn sub(self, rhs: &Positive) -> Self::Output {
+        self - rhs.0
+    }
+}
+
+impl Add<Positive> for Decimal {
+    type Output = Decimal;
+
+    fn add(self, rhs: Positive) -> Self::Output {
+        self + rhs.0
+    }
+}
+
+impl Add<&Positive> for Decimal {
+    type Output = Decimal;
+
+    fn add(self, rhs: &Positive) -> Decimal {
+        self + rhs.0
+    }
+}
+
+impl AddAssign<Positive> for Decimal {
+    fn add_assign(&mut self, rhs: Positive) {
+        *self += rhs.0;
+    }
+}
+
+impl AddAssign<&Positive> for Decimal {
+    fn add_assign(&mut self, rhs: &Positive) {
+        *self += rhs.0;
+    }
+}
+
+
+impl PartialEq<Positive> for Decimal {
+    fn eq(&self, other: &Positive) -> bool {
+        *self == other.0
+    }
+}
+
+impl PartialOrd<Decimal> for Positive {
+    fn partial_cmp(&self, other: &Decimal) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(other)
+    }
+}
+
+
 
 pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     if value == f64::NEG_INFINITY {
@@ -80,8 +158,6 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
         }),
     }
 }
-
-
 
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
@@ -122,7 +198,7 @@ macro_rules! f2d {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::f2p;
+
     use std::str::FromStr;
 
     #[test]

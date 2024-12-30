@@ -64,7 +64,7 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
 //! use optionstratlib::model::option::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
+//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, Positive::ONE};
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
 //!
@@ -79,7 +79,7 @@
 //!             strike_price: f2p!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
 //!             implied_volatility: 0.2,
-//!             quantity: SIZE_ONE,
+//!             quantity: Positive::ONE,
 //!             underlying_price: f2p!(105.0),
 //!             risk_free_rate: 0.05,
 //!             option_style: OptionStyle::Call,
@@ -94,7 +94,7 @@
 //! ```rust
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::model::option::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
+//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, Positive::ONE};
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
 //! use optionstratlib::pricing::{
@@ -109,7 +109,7 @@
 //!             strike_price: f2p!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
 //!             implied_volatility: 0.2,
-//!             quantity: SIZE_ONE,
+//!             quantity: Positive::ONE,
 //!             underlying_price: f2p!(105.0),
 //!             risk_free_rate: 0.05,
 //!             option_style: OptionStyle::Call,
