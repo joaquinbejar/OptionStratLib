@@ -1538,10 +1538,10 @@ mod tests_option_data {
 
         assert!(result.is_ok());
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, sf2p!(10.412135042233587));
-        assert_eq!(option_data.call_bid, sf2p!(10.412135042233587));
-        assert_eq!(option_data.put_ask, sf2p!(0.002019418653973759));
-        assert_eq!(option_data.put_bid, sf2p!(0.002019418653973759));
+        assert_eq!(option_data.call_ask, sf2p!(10.41213504223361));
+        assert_eq!(option_data.call_bid, sf2p!(10.41213504223361));
+        assert_eq!(option_data.put_ask, sf2p!(0.002019418653973704));
+        assert_eq!(option_data.put_bid, sf2p!(0.002019418653973704));
         option_data.apply_spread(f2p!(0.02), 2);
         info!("{}", option_data);
         assert_eq!(option_data.call_ask, sf2p!(10.42));
