@@ -89,6 +89,13 @@ pub fn d1(
     let expiration_date: Decimal = f64_to_decimal(expiration_date)?;
     let implied_volatility: Decimal = f64_to_decimal(implied_volatility)?;
 
+    if underlying_price == Decimal::ZERO {
+        return Err(GreeksError::InputError(InputErrorKind::InvalidStrike {
+            value: underlying_price.to_f64().unwrap(),
+            reason: "Underlying price price cannot be zero".to_string(),
+        }));
+    }
+    
     if strike_price == Decimal::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidStrike {
             value: strike_price.to_f64().unwrap(),
