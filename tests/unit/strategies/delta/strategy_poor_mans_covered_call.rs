@@ -1,6 +1,5 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::Positive;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;

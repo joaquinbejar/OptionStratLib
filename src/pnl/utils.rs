@@ -84,8 +84,8 @@ mod tests_pnl_calculator {
         }
 
         fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> PnL {
-            let underlying_price = Some(underlying_price.unwrap().value());
-            PnL::new(underlying_price.unwrap().to_f64(), None, 10.0, 20.0, Utc::now())
+            let underlying_price = underlying_price.unwrap().value();
+            PnL::new(underlying_price.to_f64(), None, 10.0, 20.0, Utc::now())
         }
     }
 

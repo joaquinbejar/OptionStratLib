@@ -8,7 +8,6 @@ use crate::constants::EPSILON;
 use approx::{AbsDiffEq, RelativeEq};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
-use rust_decimal_macros::dec;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt;
@@ -36,14 +35,14 @@ macro_rules! spos {
 #[macro_export]
 macro_rules! f2p {
     ($val:expr) => {
-        crate::Positive::new($val).unwrap_or(crate::Positive::ZERO)
+        $crate::Positive::new($val).unwrap_or($crate::Positive::ZERO)
     };
 }
 
 #[macro_export]
 macro_rules! sf2p {
     ($val:expr) => {
-        Some(crate::Positive::new($val).unwrap())
+        Some($crate::Positive::new($val).unwrap())
     };
 }
 
@@ -649,6 +648,7 @@ mod tests_positive_decimal {
 
 #[cfg(test)]
 mod tests_positive_decimal_extended {
+    use rust_decimal_macros::dec;
     use super::*;
 
     #[test]

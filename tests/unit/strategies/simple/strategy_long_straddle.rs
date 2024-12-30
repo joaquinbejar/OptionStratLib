@@ -49,7 +49,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     let break_even_points = strategy.get_break_even_points();
     let range = break_even_points[1] - break_even_points[0];
     assert_relative_eq!(
-        (range.value() / 2.0) / underlying_price.value() * 100.0,
+        (range.to_f64() / 2.0) / underlying_price.to_f64() * 100.0,
         6.6409,
         epsilon = 0.001
     );
@@ -68,7 +68,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Validate that max loss is equal to net premium paid (characteristic of Long Straddle)
-    assert_relative_eq!(strategy.max_loss()?.value(), 465.4299, epsilon = 0.001);
+    assert_relative_eq!(strategy.max_loss()?.to_f64(), 465.4299, epsilon = 0.001);
 
     Ok(())
 }

@@ -59,8 +59,8 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Verify butterfly spread width is symmetrical
     let width_lower = f2p!(5780.0) - f2p!(5700.0);
     let width_upper = f2p!(5850.0) - f2p!(5780.0);
-    assert_relative_eq!(width_lower.value(), 80.0, epsilon = 0.001);
-    assert_relative_eq!(width_upper.value(), 70.0, epsilon = 0.001);
+    assert_relative_eq!(width_lower.to_f64(), 80.0, epsilon = 0.001);
+    assert_relative_eq!(width_upper.to_f64(), 70.0, epsilon = 0.001);
 
     Ok(())
 }

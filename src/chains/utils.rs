@@ -7,7 +7,7 @@ use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::error::chains::ChainError;
 use crate::model::types::{ExpirationDate};
-use crate::{f2p, Positive};
+use crate::Positive;
 use std::collections::BTreeSet;
 use std::fmt::Display;
 use rust_decimal::Decimal;
@@ -565,7 +565,7 @@ mod tests_adjust_volatility {
 #[cfg(test)]
 mod tests_option_data_price_params {
     use super::*;
-    use crate::spos;
+    use crate::{f2p, spos};
 
     #[test]
     fn test_new_price_params() {
@@ -620,7 +620,7 @@ mod tests_option_data_price_params {
 #[cfg(test)]
 mod tests_option_chain_build_params {
     use super::*;
-    use crate::spos;
+    use crate::{f2p, spos};
 
     #[test]
     fn test_new_chain_build_params() {
@@ -673,6 +673,7 @@ mod tests_option_chain_build_params {
 
 #[cfg(test)]
 mod tests_random_positions_params_extended {
+    use crate::f2p;
     use super::*;
 
     #[test]

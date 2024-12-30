@@ -278,7 +278,7 @@ pub fn telegraph(
         price *= update;
     }
 
-    let payoff = option.payoff_at_price(price.into());
+    let payoff = option.payoff_at_price(price);
     let result = payoff * (-option.risk_free_rate * option.time_to_expiration()).exp();
     Ok(Decimal::from_f64(result).unwrap())
 }

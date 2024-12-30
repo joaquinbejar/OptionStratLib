@@ -2,7 +2,7 @@ use chrono::Utc;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
+use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::{assert_decimal_eq, f2p};

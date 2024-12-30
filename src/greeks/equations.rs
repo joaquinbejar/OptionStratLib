@@ -378,7 +378,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Decimal =  f2du!(option.expiration_date.get_years())?;
     let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
     let underlying_price: Decimal = option.underlying_price.to_dec();
-    let implied_volatility: Decimal = f2du!(option.implied_volatility.into())?;
+    let implied_volatility: Decimal = f2du!(option.implied_volatility)?;
 
     let common_term: Decimal =
         -underlying_price * implied_volatility * (-dividend_yield * expiration_date).exp() * n(d1)?

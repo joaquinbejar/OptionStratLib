@@ -45,7 +45,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     let break_even_points = strategy.get_break_even_points();
     let range = break_even_points[1] - break_even_points[0];
     assert_relative_eq!(
-        (range.value() / 2.0) / underlying_price.value() * 100.0,
+        (range.to_f64() / 2.0) / underlying_price.to_f64() * 100.0,
         5.7345,
         epsilon = 0.001
     );
@@ -65,7 +65,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
 
     // Validate that max profit equals net premium received (characteristic of Short Straddle)
     assert_relative_eq!(
-        strategy.max_profit()?.value(),
+        strategy.max_profit()?.to_f64(),
         strategy.net_premium_received(),
         epsilon = 0.001
     );

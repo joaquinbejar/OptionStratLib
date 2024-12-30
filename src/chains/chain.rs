@@ -15,7 +15,6 @@ use crate::pricing::black_scholes_model::black_scholes;
 use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
 use crate::{f2p, sf2p, Positive};
-use crate::constants::ZERO;
 use chrono::Utc;
 use csv::WriterBuilder;
 use num_traits::ToPrimitive;
@@ -1357,6 +1356,7 @@ mod tests_option_data {
     use crate::sf2p;
     use crate::utils::logger::setup_logger;
     use tracing::info;
+    use crate::constants::ZERO;
 
     fn create_valid_option_data() -> OptionData {
         OptionData::new(

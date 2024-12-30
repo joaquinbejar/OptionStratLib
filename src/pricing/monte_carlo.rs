@@ -1,4 +1,3 @@
-use crate::constants::ZERO;
 use crate::model::option::Options;
 use crate::pricing::utils::wiener_increment;
 use crate::{f2d, Positive};
@@ -65,6 +64,7 @@ mod tests {
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, f2du, f2p};
     use rust_decimal_macros::dec;
+    use crate::constants::ZERO;
 
     fn create_test_option() -> Options {
         Options {

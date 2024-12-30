@@ -9,7 +9,7 @@ use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::Graph;
-use crate::{f2p, Positive};
+use crate::Positive;
 use rand::distributions::Distribution;
 use rand::thread_rng;
 use statrs::distribution::Normal;
@@ -228,6 +228,7 @@ impl Iterator for RandomWalkGraph {
 mod tests_random_walk {
     use super::*;
     use statrs::statistics::Statistics;
+    use crate::f2p;
 
     struct TestWalk {
         values: Vec<Positive>,
@@ -353,7 +354,7 @@ mod tests {
     use super::*;
     use crate::utils::logger::setup_logger_with_level;
     use tracing::debug;
-    use crate::spos;
+    use crate::{f2p, spos};
 
     #[test]
     fn test_random_walk_iterator() {

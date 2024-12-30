@@ -51,7 +51,7 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     let break_even_points = strategy.get_break_even_points();
     let range = break_even_points[1] - break_even_points[0];
     assert_relative_eq!(
-        (range.value() / 2.0) / underlying_price.value() * 100.0,
+        (range.to_f64() / 2.0) / underlying_price.to_f64() * 100.0,
         0.809,
         epsilon = 0.001
     );
@@ -60,7 +60,7 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         price_range[..4],
         vec![2443.924, 2444.924, 2445.924, 2446.924]
     );
-    assert_relative_eq!(range.value(), 42.84, epsilon = 0.001);
+    assert_relative_eq!(range.to_f64(), 42.84, epsilon = 0.001);
 
     assert!(strategy.profit_area() > 0.0);
 

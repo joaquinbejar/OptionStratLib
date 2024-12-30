@@ -14,7 +14,7 @@ use crate::error::position::PositionError;
 use crate::error::strategies::StrategyError;
 use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::{f2p, Positive};
+use crate::Positive;
 use std::f64;
 use tracing::error;
 
@@ -338,6 +338,7 @@ pub trait Positionable {
 
 #[cfg(test)]
 mod tests_strategies {
+    use crate::f2p;
     use super::*;
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};

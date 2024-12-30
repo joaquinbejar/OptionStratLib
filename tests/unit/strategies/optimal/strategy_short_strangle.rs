@@ -1,7 +1,6 @@
 use approx::assert_relative_eq;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::strangle::ShortStrangle;

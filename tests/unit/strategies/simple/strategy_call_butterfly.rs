@@ -1,12 +1,11 @@
 use approx::assert_relative_eq;
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::model::types::{Positive, Positive::ZERO, Positive::INFINITY};
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
-use optionstratlib::{assert_positivef64_relative_eq, f2p};
+use optionstratlib::{assert_positivef64_relative_eq, f2p, Positive};
 use std::error::Error;
 
 #[test]
@@ -53,9 +52,9 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
     assert!(!price_range.is_empty());
     let range = strategy.range_of_profit().unwrap();
-    assert_relative_eq!(range.value(), 134.639, epsilon = 0.001);
+    assert_relative_eq!(range.to_f64(), 134.639, epsilon = 0.001);
     assert_relative_eq!(
-        (range.value() / 2.0) / underlying_price * 100.0,
+        (range.to_f64() / 2.0) / underlying_price * 100.0,
         1.164,
         epsilon = 0.001
     );

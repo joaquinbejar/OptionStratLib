@@ -3,7 +3,7 @@ use chrono::Utc;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
+use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;

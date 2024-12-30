@@ -1,5 +1,4 @@
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::f2p;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
