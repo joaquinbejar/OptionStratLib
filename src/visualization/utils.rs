@@ -161,11 +161,11 @@ pub(crate) fn calculate_axis_range(
     y_axis_data: &[f64],
 ) -> (Positive, Positive, f64, f64) {
     let (min_x_value, max_x_value) = if x_axis_data.is_empty() {
-        (Positive::ZERO, f2p!(f64::INFINITY))
+        (Positive::ZERO, Positive::INFINITY)
     } else {
         x_axis_data
             .iter()
-            .fold((f2p!(f64::INFINITY), Positive::ZERO), |(min_x, max_x), &value| {
+            .fold((Positive::INFINITY, Positive::ZERO), |(min_x, max_x), &value| {
                 (min_x.min(value), max_x.max(value))
             })
     };
@@ -341,7 +341,7 @@ mod tests {
 
     impl Profit for MockGraph {
         fn calculate_profit_at(&self, price: Positive) -> f64 {
-            (price * 2.0 - 100.0).into()
+            (price * 2.0).into()
         }
     }
 
@@ -390,7 +390,7 @@ mod tests {
         let mock_graph = MockGraph;
         let x_axis_data = vec![f2p!(0.0), f2p!(50.0), f2p!(100.0)];
         let values = mock_graph.get_values(&x_axis_data);
-        assert_eq!(values, vec![-100.0, 0.0, 100.0]);
+        assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }
 
     #[test]
@@ -443,7 +443,7 @@ mod tests {
         let y_data: Vec<f64> = vec![];
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
         assert_eq!(min_x, Positive::ZERO);
-        assert_eq!(max_x, f2p!(f64::INFINITY));
+        assert_eq!(max_x, Positive::INFINITY);
         assert_eq!(min_y, f64::NEG_INFINITY);
         assert_eq!(max_y, f64::INFINITY);
     }
