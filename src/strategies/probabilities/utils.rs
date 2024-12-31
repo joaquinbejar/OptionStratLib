@@ -362,7 +362,7 @@ mod tests_calculate_bounds_probability {
         let error = result.unwrap_err();
         match error {
             ProbabilityError::PriceError(PriceErrorKind::InvalidPriceRange { range, reason }) => {
-                assert_eq!(range, "bounds: [100.0, 95.0, 105.0]");
+                assert_eq!(range, "bounds: [100, 95, 105]");
                 assert_eq!(reason, "Bounds must be in ascending order");
             }
             _ => panic!("Unexpected error type"),
