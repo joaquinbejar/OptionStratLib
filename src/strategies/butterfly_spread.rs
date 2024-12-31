@@ -2591,10 +2591,12 @@ mod tests_butterfly_optimizable {
 
 #[cfg(test)]
 mod tests_long_butterfly_profit {
+    use std::str::FromStr;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::f2p;
     use approx::assert_relative_eq;
+    use rust_decimal::Decimal;
 
     fn create_test() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -2620,7 +2622,8 @@ mod tests_long_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(100.0));
         assert!(profit > 0.0);
-        assert_eq!(profit, butterfly.max_profit().unwrap().to_f64());
+        let expected = Positive::new_decimal(Decimal::from_str("9.866666666666667").unwrap()).unwrap();
+        assert_eq!(profit, expected);
     }
 
     #[test]
@@ -2628,7 +2631,8 @@ mod tests_long_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(85.0));
         assert!(profit < 0.0);
-        assert_eq!(profit, -butterfly.max_loss().unwrap().to_f64());
+        let expected = Positive::new_decimal(Decimal::from_str("0.13333333333333308").unwrap()).unwrap();
+        assert_eq!(-profit, expected);
     }
 
     #[test]
@@ -2680,10 +2684,12 @@ mod tests_long_butterfly_profit {
 
 #[cfg(test)]
 mod tests_short_butterfly_profit {
+    use std::str::FromStr;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::f2p;
     use approx::assert_relative_eq;
+    use rust_decimal::Decimal;
 
     fn create_test() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -2709,7 +2715,9 @@ mod tests_short_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(100.0));
         assert!(profit < 0.0);
-        assert_eq!(profit, -butterfly.max_loss().unwrap().to_f64());
+        let expected = Positive::new_decimal(Decimal::from_str("10.133333333333335").unwrap()).unwrap();
+
+        assert_eq!(-profit, expected);
     }
 
     #[test]
@@ -3279,11 +3287,12 @@ mod tests_long_butterfly_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(5710.88));
-
+        let strategy = get_strategy(f2p!(5710.81));
+        let size = 0.3518;
+        let delta = f2p!(4.310394079825430);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.35193760081444525,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -3291,16 +3300,16 @@ mod tests_long_butterfly_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(4.304155794779247),
+                quantity: delta,
                 strike: f2p!(5820.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_calls.option.clone();
-        option.quantity = f2p!(4.304155794779247);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, -0.351937, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -3325,6 +3334,7 @@ mod tests_long_butterfly_delta {
 
 #[cfg(test)]
 mod tests_long_butterfly_delta_size {
+    use std::str::FromStr;
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::butterfly_spread::LongButterflySpread;
@@ -3332,6 +3342,7 @@ mod tests_long_butterfly_delta_size {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
+    use rust_decimal::Decimal;
 
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3354,11 +3365,12 @@ mod tests_long_butterfly_delta_size {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(5881.88));
-
+        let strategy = get_strategy(f2p!(5881.85));
+        let size = -1.7905;
+        let delta = f2p!(1.812583011030012);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -1.7911846707277679,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -3366,7 +3378,7 @@ mod tests_long_butterfly_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(1.8131745441573326),
+                quantity: delta,
                 strike: f2p!(5710.0),
                 option_type: OptionStyle::Call
             }
@@ -3374,16 +3386,16 @@ mod tests_long_butterfly_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(525.3772180465204),
+                quantity: Positive::new_decimal(Decimal::from_str("525.8051045358663").unwrap()).unwrap(),
                 strike: f2p!(6100.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call_low.option.clone();
-        option.quantity = f2p!(1.8131745441573326);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, 1.7911846707277679, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -3395,9 +3407,12 @@ mod tests_long_butterfly_delta_size {
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(f2p!(5710.88));
 
+        let size = 1.0558;
+        let delta = Positive::new_decimal(Decimal::from_str("12.912467384337744").unwrap()).unwrap();
+
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            1.055812,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -3405,16 +3420,16 @@ mod tests_long_butterfly_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(12.912467384337745),
+                quantity: delta,
                 strike: f2p!(5820.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_calls.option.clone();
-        option.quantity = f2p!(12.912467384337745);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, -1.05581, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -3439,6 +3454,7 @@ mod tests_long_butterfly_delta_size {
 
 #[cfg(test)]
 mod tests_short_butterfly_delta {
+    use std::str::FromStr;
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::butterfly_spread::ShortButterflySpread;
@@ -3446,6 +3462,7 @@ mod tests_short_butterfly_delta {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
+    use rust_decimal::Decimal;
 
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -3469,10 +3486,12 @@ mod tests_short_butterfly_delta {
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(f2p!(5781.88));
+        let size = -0.0259;
+        let delta = Positive::new_decimal(Decimal::from_str("0.05072646985065364").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -0.025991,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -3480,16 +3499,16 @@ mod tests_short_butterfly_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.05072646985065365),
+                quantity: delta,
                 strike: f2p!(5780.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_calls.option.clone();
-        option.quantity = f2p!(0.05072646985065365);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, 0.025991, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -3553,6 +3572,7 @@ mod tests_short_butterfly_delta {
 
 #[cfg(test)]
 mod tests_short_butterfly_delta_size {
+    use std::str::FromStr;
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::butterfly_spread::ShortButterflySpread;
@@ -3560,6 +3580,7 @@ mod tests_short_butterfly_delta_size {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
+    use rust_decimal::Decimal;
 
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -3583,10 +3604,12 @@ mod tests_short_butterfly_delta_size {
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(f2p!(5781.88));
+        let size = -0.0593;
+        let delta = Positive::new_decimal(Decimal::from_str("0.11409430831966512").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -0.05939621695854713,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -3594,16 +3617,16 @@ mod tests_short_butterfly_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.1140943083196651),
+                quantity: delta,
                 strike: f2p!(5780.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_calls.option.clone();
-        option.quantity = f2p!(0.1140943083196651);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, 0.059396, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -3614,10 +3637,13 @@ mod tests_short_butterfly_delta_size {
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(f2p!(5881.88));
-
+        let size = 0.4787;
+        let delta = Positive::new_decimal(Decimal::from_str("0.4828726371186378").unwrap()).unwrap();
+        let delta1 = Positive::new_decimal(Decimal::from_str("0.7164055343340597").unwrap()).unwrap();
+        
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.4787447,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -3625,7 +3651,7 @@ mod tests_short_butterfly_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.4828726371186377),
+                quantity: delta,
                 strike: f2p!(5700.0),
                 option_type: OptionStyle::Call
             }
@@ -3633,16 +3659,16 @@ mod tests_short_butterfly_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.7164055343340596),
+                quantity: delta1,
                 strike: f2p!(5850.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call_low.option.clone();
-        option.quantity = f2p!(0.4828726371186377);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, -0.478744, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,

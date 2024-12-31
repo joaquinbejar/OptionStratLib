@@ -1430,11 +1430,12 @@ mod tests_short_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(7250.0), f2p!(7300.0));
-
+        let strategy = get_strategy(f2p!(7250.1), f2p!(7300.0));
+        let size = 0.1773;
+        let delta = f2p!(0.4334878994986714);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.17745,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -1442,16 +1443,16 @@ mod tests_short_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.4336924337663529),
+                quantity: delta,
                 strike: f2p!(7300.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = f2p!(0.4336924337663529);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, -0.17745, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,

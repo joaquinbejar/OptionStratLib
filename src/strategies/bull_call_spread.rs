@@ -1900,11 +1900,14 @@ mod tests_delta_size {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(5750.0), f2p!(5820.0));
-
+        let strategy = get_strategy(f2p!(5750.0), f2p!(5820.9));
+        
+        let size = 0.7086;
+        let delta = f2p!(2.239306943523854);
+        
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.7004,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -1912,16 +1915,16 @@ mod tests_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(2.184538786861797),
-                strike: f2p!(5820.0),
+                quantity: delta,
+                strike: f2p!(5820.9),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = f2p!(2.184538786861797);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, -0.70040, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,

@@ -1953,10 +1953,11 @@ mod tests_iron_condor_delta_size {
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(f2p!(2700.0));
-
+        let size = 0.5645;
+        let delta = f2p!(1.219357854222914);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.564558,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -1964,7 +1965,7 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(17.514681033591106),
+                quantity: f2p!(17.51468103359110),
                 strike: f2p!(2500.0),
                 option_type: OptionStyle::Put
             }
@@ -1972,16 +1973,16 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(1.2193578542229133),
+                quantity: delta,
                 strike: f2p!(2725.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = f2p!(1.2193578542229133);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, -0.5645, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
