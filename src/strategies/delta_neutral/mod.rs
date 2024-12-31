@@ -37,8 +37,8 @@
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::greeks::equations::{Greek, Greeks};
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::{d2fu, pos};
+//! use optionstratlib::Positive;
+//! use optionstratlib::{d2fu, f2p};
 //! use optionstratlib::strategies::delta_neutral::{DeltaNeutrality, DeltaAdjustment, DeltaInfo};
 //!
 //! struct MyStrategy { /* Implementation specifics */ }
@@ -63,11 +63,11 @@
 //!            individual_deltas: vec![],
 //!            is_neutral: false,
 //!            neutrality_threshold: 0.0,
-//!            underlying_price: pos!(0.0),
+//!            underlying_price: f2p!(0.0),
 //!         }
 //!     }
 //!
-//! fn get_atm_strike(&self) -> PositiveF64 { pos!(0.0) } }
+//! fn get_atm_strike(&self) -> Positive { f2p!(0.0) } }
 //!
 //! // Calculate net delta
 //! let delta_info = strategy.calculate_net_delta();

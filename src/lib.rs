@@ -175,11 +175,11 @@
 //!  +option_type: OptionType
 //!  +side: Side
 //!  +underlying_symbol: String
-//!  +strike_price: PositiveF64
+//!  +strike_price: Positive
 //!  +expiration_date: ExpirationDate
 //!  +implied_volatility: f64
-//!  +quantity: PositiveF64
-//!  +underlying_price: PositiveF64
+//!  +quantity: Positive
+//!  +underlying_price: Positive
 //!  +risk_free_rate: f64
 //!  +option_style: OptionStyle
 //!  +dividend_yield: f64
@@ -320,7 +320,7 @@
 //!  class Options {
 //!  +option_type: OptionType
 //!  +side: Side
-//!  +strike_price: PositiveF64
+//!  +strike_price: Positive
 //!  +expiration_date: ExpirationDate
 //!  +implied_volatility: f64
 //!  +calculate_price_black_scholes()
@@ -342,7 +342,7 @@
 //!  
 //!  class OptionChain {
 //!  +symbol: String
-//!  +underlying_price: PositiveF64
+//!  +underlying_price: Positive
 //!  +options: BTreeSet<OptionData>
 //!  +build_chain()
 //!  +add_option()
@@ -546,27 +546,27 @@
 //!  
 //!  Here are some examples of how to use the library for option pricing and analysis:
 //!  
-//!  ```rust
+//!```rust
 //! use optionstratlib::greeks::equations::Greeks;
 //! use optionstratlib::model::option::Options;
-//! use optionstratlib::model::types::PositiveF64;
+//! use optionstratlib::Positive;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-//! use optionstratlib::pos;
+//! use optionstratlib::f2p;
 //! use optionstratlib::utils::logger::setup_logger;
 //! use optionstratlib::visualization::utils::Graph;
 //! use std::error::Error;
 //! use tracing::info;
 //!
 //! fn create_sample_option() -> Options {
-//!     Options::new(
+//!     use optionstratlib::f2p;Options::new(
 //!         OptionType::European,
 //!         Side::Long,
 //!         "AAPL".to_string(),
-//!         pos!(100.0),
+//!         f2p!(100.0),
 //!         ExpirationDate::Days(30.0),
 //!         0.2,
-//!         pos!(1.0),
-//!         pos!(105.0),
+//!         f2p!(1.0),
+//!         f2p!(105.0),
 //!         0.05,
 //!         OptionStyle::Call,
 //!         0.0,
@@ -580,8 +580,8 @@
 //!     info!("Greeks: {:?}", option.greeks());
 //!
 //!     // Define a range of prices for the graph
-//!     let price_range: Vec<PositiveF64> = (50..150)
-//!         .map(|x| PositiveF64::new(x as f64).unwrap())
+//!     let price_range: Vec<Positive> = (50..150)
+//!         .map(|x| f2p!(x as f64))
 //!         .collect();
 //!
 //!     // Generate the intrinsic value graph
@@ -597,9 +597,9 @@
 //!  ```
 //!  
 //!```rust
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::model::types::{ExpirationDate, PZERO};
-//! use optionstratlib::pos;
+//! use optionstratlib::Positive;
+//! use optionstratlib::model::types::ExpirationDate;
+//! use optionstratlib::f2p;
 //! use optionstratlib::strategies::base::Strategies;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 //! use optionstratlib::utils::logger::setup_logger;
@@ -610,18 +610,18 @@
 //! fn main() -> Result<(), Box<dyn Error>> {
 //!     setup_logger();
 //!
-//!     let underlying_price = pos!(5781.88);
+//!     let underlying_price = f2p!(5781.88);
 //!
 //!     let strategy = BullCallSpread::new(
 //!         "SP500".to_string(),
 //!         underlying_price, // underlying_price
-//!         pos!(5750.0),     // long_strike_itm
-//!         pos!(5820.0),     // short_strike
+//!         f2p!(5750.0),     // long_strike_itm
+//!         f2p!(5820.0),     // short_strike
 //!         ExpirationDate::Days(2.0),
 //!         0.18,      // implied_volatility
 //!         0.05,      // risk_free_rate
 //!         0.0,       // dividend_yield
-//!         pos!(2.0), // long quantity
+//!         f2p!(2.0), // long quantity
 //!         85.04,     // premium_long
 //!         29.85,     // premium_short
 //!         0.78,      // open_fee_long
@@ -630,7 +630,7 @@
 //!         0.73,      // close_fee_short
 //!     );
 //!
-//!     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+//!     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
 //!
 //!     info!("Title: {}", strategy.title());
 //!     info!("Break Even Points: {:?}", strategy.break_even_points);
@@ -638,8 +638,8 @@
 //!         "Net Premium Received: ${:.2}",
 //!         strategy.net_premium_received()
 //!     );
-//!     info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
-//!     info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(PZERO));
+//!     info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(Positive::ZERO));
+//!     info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(Positive::ZERO));
 //!     info!("Total Fees: ${:.2}", strategy.fees());
 //!     info!("Profit Area: {:.2}%", strategy.profit_area());
 //!     info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
@@ -704,3 +704,5 @@ pub mod surfaces;
 pub mod utils;
 pub mod visualization;
 pub mod volatility;
+
+pub use model::positive::Positive;

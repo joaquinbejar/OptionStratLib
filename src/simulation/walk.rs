@@ -5,35 +5,35 @@
 ******************************************************************************/
 use crate::chains::utils::OptionDataPriceParams;
 use crate::constants::ZERO;
-use crate::model::types::{ExpirationDate, PositiveF64, PZERO};
+use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::Graph;
-use crate::{pos, spos};
+use crate::{f2p, Positive};
 use rand::distributions::Distribution;
 use rand::thread_rng;
 use statrs::distribution::Normal;
 use tracing::{info, trace};
 
 pub trait Walkable {
-    fn get_y_values(&mut self) -> &mut Vec<PositiveF64>;
+    fn get_y_values(&mut self) -> &mut Vec<Positive>;
 
     fn generate_random_walk(
         &mut self,
         n_steps: usize,
-        initial_price: PositiveF64,
+        initial_price: Positive,
         mean: f64,
-        std_dev: PositiveF64,
-        std_dev_change: PositiveF64,
+        std_dev: Positive,
+        std_dev_change: Positive,
     ) {
         if n_steps == 0 {
             panic!("Number of steps must be greater than zero");
         }
         let mut rng = thread_rng();
-        let mut current_std_dev = std_dev.value();
+        let mut current_std_dev = std_dev;
         let mut result = Vec::with_capacity(n_steps);
         result.push(initial_price);
-        let mut current_value = initial_price.value();
+        let mut current_value = initial_price;
 
         let values = self.get_y_values();
         values.clear();
@@ -41,30 +41,31 @@ pub trait Walkable {
         values.push(initial_price);
 
         for _ in 0..n_steps - 1 {
-            if std_dev_change > PZERO {
-                current_std_dev = Normal::new(std_dev.value(), std_dev_change.value())
+            if std_dev_change > Positive::ZERO {
+                current_std_dev = Normal::new(std_dev.into(), std_dev_change.into())
                     .unwrap()
                     .sample(&mut rng)
-                    .max(0.0);
+                    .max(ZERO)
+                    .into();
             }
-            let normal = Normal::new(mean, current_std_dev).unwrap();
+            let normal = Normal::new(mean, current_std_dev.to_f64()).unwrap();
             let step = normal.sample(&mut rng);
-            current_value = (current_value + step).max(ZERO);
-            values.push(pos!(current_value));
+            current_value = f2p!((current_value.to_f64() + step).max(ZERO));
+            values.push(current_value);
             trace!("Current value: {}", current_value);
         }
     }
 }
 
 pub struct RandomWalkGraph {
-    values: Vec<PositiveF64>,
+    values: Vec<Positive>,
     title_text: String,
     current_index: usize,
     risk_free_rate: Option<f64>,
     dividend_yield: Option<f64>,
     time_frame: TimeFrame,
     volatility_window: usize,
-    initial_volatility: Option<PositiveF64>,
+    initial_volatility: Option<Positive>,
 }
 
 impl RandomWalkGraph {
@@ -74,7 +75,7 @@ impl RandomWalkGraph {
         dividend_yield: Option<f64>,
         time_frame: TimeFrame,
         volatility_window: usize,
-        initial_volatility: Option<PositiveF64>,
+        initial_volatility: Option<Positive>,
     ) -> Self {
         Self {
             values: Vec::new(),
@@ -88,14 +89,14 @@ impl RandomWalkGraph {
         }
     }
 
-    fn calculate_current_volatility(&self) -> Option<PositiveF64> {
+    fn calculate_current_volatility(&self) -> Option<Positive> {
         if self.current_index < 2 {
             return self.initial_volatility;
         }
 
         let returns: Vec<f64> = self.values[..self.current_index]
             .windows(2)
-            .map(|w| (w[1].value() - w[0].value()) / w[0].value())
+            .map(|w| ((w[1] - w[0]) / w[0]).to_f64())
             .collect();
 
         if returns.is_empty() {
@@ -120,7 +121,7 @@ impl RandomWalkGraph {
         if volatility < ZERO || volatility.is_nan() {
             None
         } else {
-            spos!(volatility)
+            Some(volatility.into())
         }
     }
 
@@ -134,14 +135,14 @@ impl RandomWalkGraph {
 }
 
 impl Walkable for RandomWalkGraph {
-    fn get_y_values(&mut self) -> &mut Vec<PositiveF64> {
+    fn get_y_values(&mut self) -> &mut Vec<Positive> {
         &mut self.values
     }
 }
 
 impl Profit for RandomWalkGraph {
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
-        price.value()
+    fn calculate_profit_at(&self, price: Positive) -> f64 {
+        price.into()
     }
 }
 
@@ -150,11 +151,11 @@ impl Graph for RandomWalkGraph {
         self.title_text.clone()
     }
 
-    fn get_values(&self, _data: &[PositiveF64]) -> Vec<f64> {
+    fn get_values(&self, _data: &[Positive]) -> Vec<f64> {
         info!("Number of values: {}", self.values.len());
         info!("First value: {:?}", self.values.first().unwrap());
         info!("Last value: {:?}", self.values.last().unwrap());
-        self.values.iter().map(|x| x.value()).collect()
+        self.values.iter().map(|x| x.to_f64()).collect()
     }
 }
 
@@ -226,11 +227,11 @@ impl Iterator for RandomWalkGraph {
 #[cfg(test)]
 mod tests_random_walk {
     use super::*;
-    use crate::model::types::PZERO;
     use statrs::statistics::Statistics;
+    use crate::f2p;
 
     struct TestWalk {
-        values: Vec<PositiveF64>,
+        values: Vec<Positive>,
     }
 
     impl TestWalk {
@@ -240,7 +241,7 @@ mod tests_random_walk {
     }
 
     impl Walkable for TestWalk {
-        fn get_y_values(&mut self) -> &mut Vec<PositiveF64> {
+        fn get_y_values(&mut self) -> &mut Vec<Positive> {
             &mut self.values
         }
     }
@@ -248,9 +249,9 @@ mod tests_random_walk {
     #[test]
     fn test_walk_initialization() {
         let mut walk = TestWalk::new();
-        let initial_price = pos!(100.0);
+        let initial_price = f2p!(100.0);
 
-        walk.generate_random_walk(10, initial_price, 0.0, pos!(1.0), pos!(0.01));
+        walk.generate_random_walk(10, initial_price, 0.0, f2p!(1.0), f2p!(0.01));
 
         assert_eq!(walk.values.len(), 10);
         assert_eq!(walk.values[0], initial_price);
@@ -260,10 +261,10 @@ mod tests_random_walk {
     fn test_random_walk_length() {
         let mut walk = TestWalk::new();
         let n_steps = 100;
-        let initial_price = pos!(100.0);
+        let initial_price = f2p!(100.0);
         let mean = 0.0;
-        let std_dev = pos!(1.0);
-        let std_dev_change = pos!(0.01);
+        let std_dev = f2p!(1.0);
+        let std_dev_change = f2p!(0.01);
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
         assert_eq!(walk.values.len(), n_steps);
     }
@@ -272,8 +273,8 @@ mod tests_random_walk {
     fn test_random_walk_starts_at_initial_price() {
         let mut walk = TestWalk::new();
 
-        let initial_price = pos!(100.0);
-        walk.generate_random_walk(10, initial_price, 0.0, pos!(1.0), pos!(0.01));
+        let initial_price = f2p!(100.0);
+        walk.generate_random_walk(10, initial_price, 0.0, f2p!(1.0), f2p!(0.01));
         assert_eq!(walk.values[0], initial_price);
     }
 
@@ -281,12 +282,12 @@ mod tests_random_walk {
     fn test_all_values_are_positive() {
         let mut walk = TestWalk::new();
         let n_steps = 1000;
-        let initial_price = pos!(100.0);
+        let initial_price = f2p!(100.0);
         let mean = 0.0;
-        let std_dev = pos!(1.0);
-        let std_dev_change = pos!(0.01);
+        let std_dev = f2p!(1.0);
+        let std_dev_change = f2p!(0.01);
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
-        assert!(walk.values.iter().all(|x| x.value() > 0.0));
+        assert!(walk.values.iter().all(|x| x > 0.0));
     }
 
     #[test]
@@ -294,15 +295,15 @@ mod tests_random_walk {
         let mut walk = TestWalk::new();
 
         let n_steps = 10000;
-        let initial_price = pos!(100.0);
+        let initial_price = f2p!(100.0);
         let mean = 0.1;
-        let std_dev = pos!(1.0);
-        let std_dev_change = pos!(0.01);
+        let std_dev = f2p!(1.0);
+        let std_dev_change = f2p!(0.01);
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
         let changes: Vec<f64> = walk
             .values
             .windows(2)
-            .map(|w| w[1].value() - w[0].value())
+            .map(|w| (w[1] - w[0]).to_f64())
             .collect();
 
         let empirical_mean = changes.mean();
@@ -314,29 +315,29 @@ mod tests_random_walk {
         let mut walk = TestWalk::new();
 
         let n_steps = 100;
-        let initial_price = pos!(100.0);
+        let initial_price = f2p!(100.0);
         let mean = 0.0;
-        let std_dev = pos!(1.0);
-        let std_dev_change = PZERO;
+        let std_dev = f2p!(1.0);
+        let std_dev_change = Positive::ZERO;
 
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
         assert_eq!(walk.values.len(), n_steps);
-        assert!(walk.values.iter().all(|x| x.value() > 0.0));
+        assert!(walk.values.iter().all(|x| x > 0.0));
     }
 
     #[test]
     fn test_edge_cases() {
         let mut walk = TestWalk::new();
 
-        walk.generate_random_walk(1, pos!(100.0), 0.0, pos!(1.0), pos!(0.01));
+        walk.generate_random_walk(1, f2p!(100.0), 0.0, f2p!(1.0), f2p!(0.01));
         assert_eq!(walk.values.len(), 1);
-        assert_eq!(walk.values[0].value(), 100.0);
+        assert_eq!(walk.values[0], 100.0);
 
-        walk.generate_random_walk(100, pos!(0.1), 0.0, pos!(0.01), pos!(0.001));
-        assert!(walk.values.iter().all(|x| x.value() >= 0.0));
+        walk.generate_random_walk(100, f2p!(0.1), 0.0, f2p!(0.01), f2p!(0.001));
+        assert!(walk.values.iter().all(|x| x >= 0.0));
 
-        walk.generate_random_walk(100, pos!(1e6), 0.0, pos!(100.0), pos!(1.0));
-        assert!(walk.values.iter().all(|x| x.value() >= 0.0));
+        walk.generate_random_walk(100, f2p!(1e6), 0.0, f2p!(100.0), f2p!(1.0));
+        assert!(walk.values.iter().all(|x| x >= 0.0));
     }
 
     #[test]
@@ -344,7 +345,7 @@ mod tests_random_walk {
     fn test_zero_steps_should_panic() {
         let mut walk = TestWalk::new();
 
-        walk.generate_random_walk(0, pos!(100.0), 0.0, pos!(1.0), pos!(0.01));
+        walk.generate_random_walk(0, f2p!(100.0), 0.0, f2p!(1.0), f2p!(0.01));
     }
 }
 
@@ -353,6 +354,7 @@ mod tests {
     use super::*;
     use crate::utils::logger::setup_logger_with_level;
     use tracing::debug;
+    use crate::{f2p, spos};
 
     #[test]
     fn test_random_walk_iterator() {
@@ -371,10 +373,10 @@ mod tests {
 
         walk.generate_random_walk(
             steps,       // n_steps
-            pos!(100.0), // initial_price
+            f2p!(100.0), // initial_price
             0.0,         // mean
-            pos!(0.2),   // std_dev
-            pos!(0.01),  // std_dev_change
+            f2p!(0.2),   // std_dev
+            f2p!(0.01),  // std_dev_change
         );
 
         for (i, params) in walk.enumerate() {
@@ -383,7 +385,7 @@ mod tests {
                 i, params.underlying_price, params.implied_volatility, params.expiration_date
             );
 
-            assert!(params.underlying_price > PZERO, "Price should be positive");
+            assert!(params.underlying_price > Positive::ZERO, "Price should be positive");
             assert!(
                 params.risk_free_rate >= ZERO,
                 "Risk-free rate should be non-negative"
@@ -394,7 +396,7 @@ mod tests {
             );
 
             if let Some(iv) = params.implied_volatility {
-                assert!(iv >= PZERO, "Implied volatility should be positive");
+                assert!(iv >= Positive::ZERO, "Implied volatility should be positive");
             }
         }
     }

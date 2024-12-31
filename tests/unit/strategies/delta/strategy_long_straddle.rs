@@ -1,12 +1,11 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::straddle::LongStraddle;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::{assert_decimal_eq, pos};
+use optionstratlib::{assert_decimal_eq, f2p};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -15,17 +14,17 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the LongStraddle strategy
-    let underlying_price = pos!(7008.5);
+    let underlying_price = f2p!(7008.5);
 
     let strategy = LongStraddle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        pos!(7140.0),     // put_strike
+        f2p!(7140.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(1.0), // quantity
+        f2p!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.0,       // open_fee_short_call
@@ -65,8 +64,8 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: pos!(0.04693144355338067),
-            strike: pos!(7140.0),
+            quantity: f2p!(0.04693144355338067),
+            strike: f2p!(7140.0),
             option_type: OptionStyle::Call,
         }
     );

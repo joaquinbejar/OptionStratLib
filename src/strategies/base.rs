@@ -13,9 +13,8 @@ use crate::constants::{
 use crate::error::position::PositionError;
 use crate::error::strategies::StrategyError;
 use crate::model::position::Position;
-use crate::model::types::{PositiveF64, PZERO};
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::{pos, spos};
+use crate::Positive;
 use std::f64;
 use tracing::error;
 
@@ -63,7 +62,7 @@ pub struct Strategy {
     pub legs: Vec<Position>,
     pub max_profit: Option<f64>,
     pub max_loss: Option<f64>,
-    pub break_even_points: Vec<PositiveF64>,
+    pub break_even_points: Vec<Positive>,
 }
 
 impl Strategy {
@@ -81,35 +80,35 @@ impl Strategy {
 }
 
 pub trait Strategies: Validable + Positionable {
-    fn get_underlying_price(&self) -> PositiveF64 {
+    fn get_underlying_price(&self) -> Positive {
         panic!("Underlying price is not applicable for this strategy");
     }
 
     // Maintained for Back-compatibility
-    fn break_even(&self) -> Vec<PositiveF64> {
+    fn break_even(&self) -> Vec<Positive> {
         self.get_break_even_points()
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
+    fn max_profit(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "max_profit",
             std::any::type_name::<Self>(),
         ))
     }
 
-    fn max_profit_iter(&mut self) -> PositiveF64 {
-        self.max_profit().unwrap_or(PZERO)
+    fn max_profit_iter(&mut self) -> Positive {
+        self.max_profit().unwrap_or(Positive::ZERO)
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
+    fn max_loss(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "max_loss",
             std::any::type_name::<Self>(),
         ))
     }
 
-    fn max_loss_iter(&mut self) -> PositiveF64 {
-        self.max_loss().unwrap_or(PZERO)
+    fn max_loss_iter(&mut self) -> Positive {
+        self.max_loss().unwrap_or(Positive::ZERO)
     }
 
     /// Calculates the total cost (premium paid Long - premium get short) of the strategy.
@@ -117,8 +116,8 @@ pub trait Strategies: Validable + Positionable {
     /// # Returns
     /// `f64` - The total cost will be zero if the strategy is not applicable.
     ///
-    fn total_cost(&self) -> PositiveF64 {
-        PZERO
+    fn total_cost(&self) -> Positive {
+        Positive::ZERO
     }
 
     fn net_premium_received(&self) -> f64 {
@@ -137,20 +136,20 @@ pub trait Strategies: Validable + Positionable {
         ZERO
     }
 
-    fn range_to_show(&self) -> (PositiveF64, PositiveF64) {
+    fn range_to_show(&self) -> (Positive, Positive) {
         let mut all_points = self.get_break_even_points();
         let (first_strike, last_strike) = self.max_min_strikes();
         let underlying_price = self.get_underlying_price();
 
         // Calculate the largest difference from the underlying price
-        let max_diff = pos!((last_strike.value() - underlying_price.value())
+        let max_diff = (last_strike.value() - underlying_price.value())
             .abs()
-            .max((first_strike.value() - underlying_price.value()).abs()));
+            .max((first_strike.value() - underlying_price.value()).abs());
 
         // Calculate limits in a single step
         all_points
-            .push(pos!((underlying_price.value() - max_diff.value()).max(0.0)).min(first_strike));
-        all_points.push(pos!(underlying_price.value() + max_diff.value()).max(last_strike));
+            .push((underlying_price - max_diff).max(Positive::ZERO).min(first_strike));
+        all_points.push((underlying_price + max_diff).max(last_strike));
         all_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let start_price = *all_points.first().unwrap() * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
@@ -158,12 +157,12 @@ pub trait Strategies: Validable + Positionable {
         (start_price, end_price)
     }
 
-    fn best_range_to_show(&self, step: PositiveF64) -> Option<Vec<PositiveF64>> {
+    fn best_range_to_show(&self, step: Positive) -> Option<Vec<Positive>> {
         let (start_price, end_price) = self.range_to_show();
         Some(calculate_price_range(start_price, end_price, step))
     }
 
-    fn strikes(&self) -> Vec<PositiveF64> {
+    fn strikes(&self) -> Vec<Positive> {
         self.get_positions()
             .unwrap_or_default()
             .iter()
@@ -171,24 +170,24 @@ pub trait Strategies: Validable + Positionable {
             .collect()
     }
 
-    fn max_min_strikes(&self) -> (PositiveF64, PositiveF64) {
+    fn max_min_strikes(&self) -> (Positive, Positive) {
         if self.strikes().is_empty() {
-            return (PZERO, PZERO);
+            return (Positive::ZERO, Positive::ZERO);
         }
 
         let strikes = self.strikes();
         let mut min = strikes
             .iter()
             .cloned()
-            .fold(PositiveF64::new(f64::INFINITY).unwrap(), PositiveF64::min);
+            .fold(Positive::INFINITY, Positive::min);
         let mut max = strikes
             .iter()
             .cloned()
-            .fold(PositiveF64::new(0.0).unwrap(), PositiveF64::max);
+            .fold(Positive::ZERO, Positive::max);
 
-        // If underlying_price is not PZERO, adjust min and max values
+        // If underlying_price is not Positive::ZERO, adjust min and max values
         let underlying_price = self.get_underlying_price();
-        if underlying_price != PZERO {
+        if underlying_price != Positive::ZERO {
             // If min is greater than underlying_price, use underlying_price as min
             if min > underlying_price {
                 min = underlying_price;
@@ -202,7 +201,7 @@ pub trait Strategies: Validable + Positionable {
         (min, max)
     }
 
-    fn get_break_even_points(&self) -> Vec<PositiveF64> {
+    fn get_break_even_points(&self) -> Vec<Positive> {
         panic!("Break even points is not applicable for this strategy");
     }
 
@@ -212,13 +211,13 @@ pub trait Strategies: Validable + Positionable {
     /// # Returns
     ///
     /// * `None` - if there are less than two break-even points.
-    /// * `Some(PositiveF64)` - the difference between the highest and lowest break-even points,
+    /// * `Some(Positive)` - the difference between the highest and lowest break-even points,
     ///   or the difference between the first and second break-even points if there are exactly two.
     ///
-    fn range_of_profit(&self) -> Option<PositiveF64> {
+    fn range_of_profit(&self) -> Option<Positive> {
         match self.get_break_even_points().len() {
             0 => None,
-            1 => spos!(f64::INFINITY),
+            1 => Some(Positive::INFINITY),
             2 => Some(self.get_break_even_points()[1] - self.get_break_even_points()[0]),
             _ => {
                 // sort break even points and then get last minus first
@@ -313,7 +312,7 @@ pub trait Optimizable: Validable + Strategies {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        long.call_ask.unwrap_or(PZERO) > PZERO && short.call_bid.unwrap_or(PZERO) > PZERO
+        long.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO && short.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
     }
 
     fn create_strategy(&self, _chain: &OptionChain, _legs: &StrategyLegs) -> Self::Strategy {
@@ -339,9 +338,10 @@ pub trait Positionable {
 
 #[cfg(test)]
 mod tests_strategies {
+    use crate::f2p;
     use super::*;
     use crate::model::position::Position;
-    use crate::model::types::{OptionStyle, PositiveF64, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
 
     #[test]
@@ -379,20 +379,20 @@ mod tests_strategies {
     }
 
     impl Strategies for MockStrategy {
-        fn break_even(&self) -> Vec<PositiveF64> {
-            vec![PositiveF64::new(100.0).unwrap()]
+        fn break_even(&self) -> Vec<Positive> {
+            vec![Positive::HUNDRED]
         }
 
-        fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
-            Ok(pos!(1000.0))
+        fn max_profit(&self) -> Result<Positive, StrategyError> {
+            Ok(Positive::THOUSAND)
         }
 
-        fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
-            Ok(pos!(500.0))
+        fn max_loss(&self) -> Result<Positive, StrategyError> {
+            Ok(f2p!(500.0))
         }
 
-        fn total_cost(&self) -> PositiveF64 {
-            pos!(200.0)
+        fn total_cost(&self) -> Positive {
+            f2p!(200.0)
         }
 
         fn net_premium_received(&self) -> f64 {
@@ -426,10 +426,10 @@ mod tests_strategies {
         // Test other methods
         assert_eq!(
             mock_strategy.break_even(),
-            vec![PositiveF64::new(100.0).unwrap()]
+            vec![Positive::HUNDRED]
         );
-        assert_eq!(mock_strategy.max_profit().unwrap_or(PZERO), 1000.0);
-        assert_eq!(mock_strategy.max_loss().unwrap_or(PZERO), 500.0);
+        assert_eq!(mock_strategy.max_profit().unwrap_or(Positive::ZERO), 1000.0);
+        assert_eq!(mock_strategy.max_loss().unwrap_or(Positive::ZERO), 500.0);
         assert_eq!(mock_strategy.total_cost(), 200.0);
         assert_eq!(mock_strategy.net_premium_received(), 300.0);
         assert_eq!(mock_strategy.fees(), 50.0);
@@ -450,8 +450,8 @@ mod tests_strategies {
 
         let strategy = DefaultStrategy;
 
-        assert_eq!(strategy.max_profit().unwrap_or(PZERO), ZERO);
-        assert_eq!(strategy.max_loss().unwrap_or(PZERO), ZERO);
+        assert_eq!(strategy.max_profit().unwrap_or(Positive::ZERO), ZERO);
+        assert_eq!(strategy.max_loss().unwrap_or(Positive::ZERO), ZERO);
         assert_eq!(strategy.total_cost(), ZERO);
         assert_eq!(strategy.profit_area(), ZERO);
         assert_eq!(strategy.profit_ratio(), ZERO);
@@ -476,9 +476,9 @@ mod tests_strategies {
 mod tests_strategies_extended {
     use super::*;
     use crate::model::position::Position;
-    use crate::model::types::{OptionStyle, PositiveF64, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
+    use crate::f2p;
 
     #[test]
     fn test_strategy_enum() {
@@ -553,8 +553,8 @@ mod tests_strategies_extended {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
-                Ok(pos!(100.0))
+            fn max_profit(&self) -> Result<Positive, StrategyError> {
+                Ok(f2p!(100.0))
             }
         }
 
@@ -568,8 +568,8 @@ mod tests_strategies_extended {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
-                Ok(pos!(50.0))
+            fn max_loss(&self) -> Result<Positive, StrategyError> {
+                Ok(f2p!(50.0))
             }
         }
 
@@ -589,8 +589,8 @@ mod tests_strategies_extended {
         impl Strategies for EmptyStrategy {}
 
         let strategy = EmptyStrategy;
-        assert_eq!(strategy.strikes(), Vec::<PositiveF64>::new());
-        assert_eq!(strategy.max_min_strikes(), (PZERO, PZERO));
+        assert_eq!(strategy.strikes(), Vec::<Positive>::new());
+        assert_eq!(strategy.max_min_strikes(), (Positive::ZERO, Positive::ZERO));
     }
 }
 
@@ -655,15 +655,15 @@ mod tests_strategy_type {
 #[cfg(test)]
 mod tests_max_min_strikes {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     struct TestStrategy {
-        strikes: Vec<PositiveF64>,
-        underlying_price: PositiveF64,
+        strikes: Vec<Positive>,
+        underlying_price: Positive,
     }
 
     impl TestStrategy {
-        fn new(strikes: Vec<PositiveF64>, underlying_price: PositiveF64) -> Self {
+        fn new(strikes: Vec<Positive>, underlying_price: Positive) -> Self {
             Self {
                 strikes,
                 underlying_price,
@@ -680,20 +680,20 @@ mod tests_max_min_strikes {
     impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
-        fn get_underlying_price(&self) -> PositiveF64 {
+        fn get_underlying_price(&self) -> Positive {
             self.underlying_price
         }
-        fn break_even(&self) -> Vec<PositiveF64> {
+        fn break_even(&self) -> Vec<Positive> {
             vec![]
         }
-        fn max_profit(&self) -> Result<PositiveF64, StrategyError> {
-            Ok(PZERO)
+        fn max_profit(&self) -> Result<Positive, StrategyError> {
+            Ok(Positive::ZERO)
         }
-        fn max_loss(&self) -> Result<PositiveF64, StrategyError> {
-            Ok(PZERO)
+        fn max_loss(&self) -> Result<Positive, StrategyError> {
+            Ok(Positive::ZERO)
         }
-        fn total_cost(&self) -> PositiveF64 {
-            PZERO
+        fn total_cost(&self) -> Positive {
+            Positive::ZERO
         }
         fn net_premium_received(&self) -> f64 {
             0.0
@@ -707,31 +707,31 @@ mod tests_max_min_strikes {
         fn profit_ratio(&self) -> f64 {
             0.0
         }
-        fn best_range_to_show(&self, _step: PositiveF64) -> Option<Vec<PositiveF64>> {
+        fn best_range_to_show(&self, _step: Positive) -> Option<Vec<Positive>> {
             None
         }
-        fn strikes(&self) -> Vec<PositiveF64> {
+        fn strikes(&self) -> Vec<Positive> {
             self.strikes.clone()
         }
     }
 
     #[test]
     fn test_empty_strikes() {
-        let strategy = TestStrategy::new(vec![], PZERO);
-        assert_eq!(strategy.max_min_strikes(), (PZERO, PZERO));
+        let strategy = TestStrategy::new(vec![], Positive::ZERO);
+        assert_eq!(strategy.max_min_strikes(), (Positive::ZERO, Positive::ZERO));
     }
 
     #[test]
     fn test_single_strike() {
-        let strike = pos!(100.0);
-        let strategy = TestStrategy::new(vec![strike], PZERO);
+        let strike = f2p!(100.0);
+        let strategy = TestStrategy::new(vec![strike], Positive::ZERO);
         assert_eq!(strategy.max_min_strikes(), (strike, strike));
     }
 
     #[test]
     fn test_multiple_strikes_no_underlying() {
-        let strikes = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
-        let strategy = TestStrategy::new(strikes.clone(), PZERO);
+        let strikes = vec![f2p!(90.0), f2p!(100.0), f2p!(110.0)];
+        let strategy = TestStrategy::new(strikes.clone(), Positive::ZERO);
         assert_eq!(
             strategy.max_min_strikes(),
             (*strikes.first().unwrap(), *strikes.last().unwrap())
@@ -740,75 +740,75 @@ mod tests_max_min_strikes {
 
     #[test]
     fn test_underlying_price_between_strikes() {
-        let strikes = vec![pos!(90.0), pos!(110.0)];
-        let underlying = pos!(100.0);
+        let strikes = vec![f2p!(90.0), f2p!(110.0)];
+        let underlying = f2p!(100.0);
         let strategy = TestStrategy::new(strikes, underlying);
-        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(110.0)));
+        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(110.0)));
     }
 
     #[test]
     fn test_underlying_price_below_min_strike() {
-        let strikes = vec![pos!(100.0), pos!(110.0)];
-        let underlying = pos!(90.0);
+        let strikes = vec![f2p!(100.0), f2p!(110.0)];
+        let underlying = f2p!(90.0);
         let strategy = TestStrategy::new(strikes, underlying);
-        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(110.0)));
+        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(110.0)));
     }
 
     #[test]
     fn test_underlying_price_above_max_strike() {
-        let strikes = vec![pos!(90.0), pos!(100.0)];
-        let underlying = pos!(110.0);
+        let strikes = vec![f2p!(90.0), f2p!(100.0)];
+        let underlying = f2p!(110.0);
         let strategy = TestStrategy::new(strikes, underlying);
-        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(110.0)));
+        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(110.0)));
     }
 
     #[test]
     fn test_strikes_with_duplicates() {
-        let strikes = vec![pos!(100.0), pos!(100.0), pos!(110.0)];
-        let strategy = TestStrategy::new(strikes, PZERO);
-        assert_eq!(strategy.max_min_strikes(), (pos!(100.0), pos!(110.0)));
+        let strikes = vec![f2p!(100.0), f2p!(100.0), f2p!(110.0)];
+        let strategy = TestStrategy::new(strikes, Positive::ZERO);
+        assert_eq!(strategy.max_min_strikes(), (f2p!(100.0), f2p!(110.0)));
     }
 
     #[test]
     fn test_underlying_equals_min_strike() {
-        let strikes = vec![pos!(100.0), pos!(110.0)];
-        let underlying = pos!(100.0);
+        let strikes = vec![f2p!(100.0), f2p!(110.0)];
+        let underlying = f2p!(100.0);
         let strategy = TestStrategy::new(strikes, underlying);
-        assert_eq!(strategy.max_min_strikes(), (pos!(100.0), pos!(110.0)));
+        assert_eq!(strategy.max_min_strikes(), (f2p!(100.0), f2p!(110.0)));
     }
 
     #[test]
     fn test_underlying_equals_max_strike() {
-        let strikes = vec![pos!(90.0), pos!(100.0)];
-        let underlying = pos!(100.0);
+        let strikes = vec![f2p!(90.0), f2p!(100.0)];
+        let underlying = f2p!(100.0);
         let strategy = TestStrategy::new(strikes, underlying);
-        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(100.0)));
+        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(100.0)));
     }
 
     #[test]
     fn test_unordered_strikes() {
-        let strikes = vec![pos!(110.0), pos!(90.0), pos!(100.0)];
-        let strategy = TestStrategy::new(strikes, PZERO);
-        assert_eq!(strategy.max_min_strikes(), (pos!(90.0), pos!(110.0)));
+        let strikes = vec![f2p!(110.0), f2p!(90.0), f2p!(100.0)];
+        let strategy = TestStrategy::new(strikes, Positive::ZERO);
+        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(110.0)));
     }
 }
 
 #[cfg(test)]
 mod tests_best_range_to_show {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     struct TestStrategy {
-        underlying_price: PositiveF64,
-        break_even_points: Vec<PositiveF64>,
-        strikes: Vec<PositiveF64>,
+        underlying_price: Positive,
+        break_even_points: Vec<Positive>,
+        strikes: Vec<Positive>,
     }
 
     impl TestStrategy {
         fn new(
-            underlying_price: PositiveF64,
-            break_even_points: Vec<PositiveF64>,
-            strikes: Vec<PositiveF64>,
+            underlying_price: Positive,
+            break_even_points: Vec<Positive>,
+            strikes: Vec<Positive>,
         ) -> Self {
             Self {
                 underlying_price,
@@ -823,15 +823,15 @@ mod tests_best_range_to_show {
     impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
-        fn get_underlying_price(&self) -> PositiveF64 {
+        fn get_underlying_price(&self) -> Positive {
             self.underlying_price
         }
 
-        fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        fn get_break_even_points(&self) -> Vec<Positive> {
             self.break_even_points.clone()
         }
 
-        fn strikes(&self) -> Vec<PositiveF64> {
+        fn strikes(&self) -> Vec<Positive> {
             self.strikes.clone()
         }
     }
@@ -839,47 +839,47 @@ mod tests_best_range_to_show {
     #[test]
     fn test_basic_range_with_step() {
         let strategy = TestStrategy::new(
-            pos!(100.0),
-            vec![pos!(90.0), pos!(110.0)],
-            vec![pos!(95.0), pos!(105.0)],
+            f2p!(100.0),
+            vec![f2p!(90.0), f2p!(110.0)],
+            vec![f2p!(95.0), f2p!(105.0)],
         );
-        let range = strategy.best_range_to_show(pos!(5.0)).unwrap();
+        let range = strategy.best_range_to_show(f2p!(5.0)).unwrap();
         assert!(!range.is_empty());
-        assert_eq!(range[1] - range[0], pos!(5.0));
+        assert_eq!(range[1] - range[0], f2p!(5.0));
     }
 
     #[test]
     fn test_range_with_small_step() {
         let strategy = TestStrategy::new(
-            pos!(100.0),
-            vec![pos!(95.0), pos!(105.0)],
-            vec![pos!(97.0), pos!(103.0)],
+            f2p!(100.0),
+            vec![f2p!(95.0), f2p!(105.0)],
+            vec![f2p!(97.0), f2p!(103.0)],
         );
-        let range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+        let range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
         assert!(!range.is_empty());
-        assert_eq!(range[1] - range[0], pos!(1.0));
+        assert_eq!(range[1] - range[0], f2p!(1.0));
     }
 
     #[test]
     fn test_range_boundaries() {
         let strategy = TestStrategy::new(
-            pos!(100.0),
-            vec![pos!(90.0), pos!(110.0)],
-            vec![pos!(95.0), pos!(105.0)],
+            f2p!(100.0),
+            vec![f2p!(90.0), f2p!(110.0)],
+            vec![f2p!(95.0), f2p!(105.0)],
         );
-        let range = strategy.best_range_to_show(pos!(5.0)).unwrap();
-        assert!(range.first().unwrap() < &pos!(90.0));
-        assert!(range.last().unwrap() > &pos!(110.0));
+        let range = strategy.best_range_to_show(f2p!(5.0)).unwrap();
+        assert!(range.first().unwrap() < &f2p!(90.0));
+        assert!(range.last().unwrap() > &f2p!(110.0));
     }
 
     #[test]
     fn test_range_step_size() {
         let strategy = TestStrategy::new(
-            pos!(100.0),
-            vec![pos!(90.0), pos!(110.0)],
-            vec![pos!(95.0), pos!(105.0)],
+            f2p!(100.0),
+            vec![f2p!(90.0), f2p!(110.0)],
+            vec![f2p!(95.0), f2p!(105.0)],
         );
-        let step = pos!(5.0);
+        let step = f2p!(5.0);
         let range = strategy.best_range_to_show(step).unwrap();
 
         for i in 1..range.len() {
@@ -889,13 +889,13 @@ mod tests_best_range_to_show {
 
     #[test]
     fn test_range_includes_underlying() {
-        let underlying_price = pos!(100.0);
+        let underlying_price = f2p!(100.0);
         let strategy = TestStrategy::new(
             underlying_price,
-            vec![pos!(90.0), pos!(110.0)],
-            vec![pos!(95.0), pos!(105.0)],
+            vec![f2p!(90.0), f2p!(110.0)],
+            vec![f2p!(95.0), f2p!(105.0)],
         );
-        let range = strategy.best_range_to_show(pos!(5.0)).unwrap();
+        let range = strategy.best_range_to_show(f2p!(5.0)).unwrap();
 
         assert!(range.iter().any(|&price| price <= underlying_price));
         assert!(range.iter().any(|&price| price >= underlying_price));
@@ -904,33 +904,33 @@ mod tests_best_range_to_show {
     #[test]
     fn test_range_with_extreme_values() {
         let strategy = TestStrategy::new(
-            pos!(100.0),
-            vec![pos!(50.0), pos!(150.0)],
-            vec![pos!(75.0), pos!(125.0)],
+            f2p!(100.0),
+            vec![f2p!(50.0), f2p!(150.0)],
+            vec![f2p!(75.0), f2p!(125.0)],
         );
-        let range = strategy.best_range_to_show(pos!(10.0)).unwrap();
+        let range = strategy.best_range_to_show(f2p!(10.0)).unwrap();
 
-        assert!(range.first().unwrap() <= &pos!(50.0));
-        assert!(range.last().unwrap() >= &pos!(150.0));
+        assert!(range.first().unwrap() <= &f2p!(50.0));
+        assert!(range.last().unwrap() >= &f2p!(150.0));
     }
 }
 
 #[cfg(test)]
 mod tests_range_to_show {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     struct TestStrategy {
-        underlying_price: PositiveF64,
-        break_even_points: Vec<PositiveF64>,
-        strikes: Vec<PositiveF64>,
+        underlying_price: Positive,
+        break_even_points: Vec<Positive>,
+        strikes: Vec<Positive>,
     }
 
     impl TestStrategy {
         fn new(
-            underlying_price: PositiveF64,
-            break_even_points: Vec<PositiveF64>,
-            strikes: Vec<PositiveF64>,
+            underlying_price: Positive,
+            break_even_points: Vec<Positive>,
+            strikes: Vec<Positive>,
         ) -> Self {
             Self {
                 underlying_price,
@@ -945,15 +945,15 @@ mod tests_range_to_show {
     impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
-        fn get_underlying_price(&self) -> PositiveF64 {
+        fn get_underlying_price(&self) -> Positive {
             self.underlying_price
         }
 
-        fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        fn get_break_even_points(&self) -> Vec<Positive> {
             self.break_even_points.clone()
         }
 
-        fn strikes(&self) -> Vec<PositiveF64> {
+        fn strikes(&self) -> Vec<Positive> {
             self.strikes.clone()
         }
     }
@@ -961,50 +961,50 @@ mod tests_range_to_show {
     #[test]
     fn test_basic_range() {
         let strategy = TestStrategy::new(
-            pos!(100.0),
-            vec![pos!(90.0), pos!(110.0)],
-            vec![pos!(95.0), pos!(105.0)],
+            f2p!(100.0),
+            vec![f2p!(90.0), f2p!(110.0)],
+            vec![f2p!(95.0), f2p!(105.0)],
         );
         let (start, end) = strategy.range_to_show();
-        assert!(start < pos!(90.0));
-        assert!(end > pos!(110.0));
+        assert!(start < f2p!(90.0));
+        assert!(end > f2p!(110.0));
     }
 
     #[test]
     fn test_range_with_far_strikes() {
         let strategy = TestStrategy::new(
-            pos!(100.0),
-            vec![pos!(90.0), pos!(110.0)],
-            vec![pos!(80.0), pos!(120.0)],
+            f2p!(100.0),
+            vec![f2p!(90.0), f2p!(110.0)],
+            vec![f2p!(80.0), f2p!(120.0)],
         );
         let (start, end) = strategy.range_to_show();
-        assert!(start < pos!(80.0));
-        assert!(end > pos!(120.0));
+        assert!(start < f2p!(80.0));
+        assert!(end > f2p!(120.0));
     }
 
     #[test]
     fn test_range_with_underlying_outside_strikes() {
         let strategy = TestStrategy::new(
-            pos!(150.0),
-            vec![pos!(90.0), pos!(110.0)],
-            vec![pos!(95.0), pos!(105.0)],
+            f2p!(150.0),
+            vec![f2p!(90.0), f2p!(110.0)],
+            vec![f2p!(95.0), f2p!(105.0)],
         );
         let (_start, end) = strategy.range_to_show();
-        assert!(end > pos!(150.0));
+        assert!(end > f2p!(150.0));
     }
 }
 
 #[cfg(test)]
 mod tests_range_of_profit {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     struct TestStrategy {
-        break_even_points: Vec<PositiveF64>,
+        break_even_points: Vec<Positive>,
     }
 
     impl TestStrategy {
-        fn new(break_even_points: Vec<PositiveF64>) -> Self {
+        fn new(break_even_points: Vec<Positive>) -> Self {
             Self { break_even_points }
         }
     }
@@ -1014,7 +1014,7 @@ mod tests_range_of_profit {
     impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
-        fn get_break_even_points(&self) -> Vec<PositiveF64> {
+        fn get_break_even_points(&self) -> Vec<Positive> {
             self.break_even_points.clone()
         }
     }
@@ -1027,25 +1027,25 @@ mod tests_range_of_profit {
 
     #[test]
     fn test_single_break_even_point() {
-        let strategy = TestStrategy::new(vec![pos!(100.0)]);
-        assert_eq!(strategy.range_of_profit(), Some(pos!(f64::INFINITY)));
+        let strategy = TestStrategy::new(vec![f2p!(100.0)]);
+        assert_eq!(strategy.range_of_profit(), Some(Positive::INFINITY));
     }
 
     #[test]
     fn test_two_break_even_points() {
-        let strategy = TestStrategy::new(vec![pos!(90.0), pos!(110.0)]);
-        assert_eq!(strategy.range_of_profit(), Some(pos!(20.0)));
+        let strategy = TestStrategy::new(vec![f2p!(90.0), f2p!(110.0)]);
+        assert_eq!(strategy.range_of_profit(), Some(f2p!(20.0)));
     }
 
     #[test]
     fn test_multiple_break_even_points() {
-        let strategy = TestStrategy::new(vec![pos!(80.0), pos!(100.0), pos!(120.0)]);
-        assert_eq!(strategy.range_of_profit(), Some(pos!(40.0)));
+        let strategy = TestStrategy::new(vec![f2p!(80.0), f2p!(100.0), f2p!(120.0)]);
+        assert_eq!(strategy.range_of_profit(), Some(f2p!(40.0)));
     }
 
     #[test]
     fn test_unordered_break_even_points() {
-        let strategy = TestStrategy::new(vec![pos!(120.0), pos!(80.0), pos!(100.0)]);
-        assert_eq!(strategy.range_of_profit(), Some(pos!(40.0)));
+        let strategy = TestStrategy::new(vec![f2p!(120.0), f2p!(80.0), f2p!(100.0)]);
+        assert_eq!(strategy.range_of_profit(), Some(f2p!(40.0)));
     }
 }

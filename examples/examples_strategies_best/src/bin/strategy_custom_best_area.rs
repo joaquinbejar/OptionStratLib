@@ -2,9 +2,9 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::position::Position;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::model::types::{ExpirationDate, PZERO};
-use optionstratlib::pos;
+use optionstratlib::Positive;
+use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(1), // qty_calls_long
         Some(1), // qty_calls_short
         ExpirationDate::Days(30.0),
-        pos!(1.0),
+        f2p!(1.0),
         0.05,
         0.02,
         1.0,
@@ -48,13 +48,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
     info!(
         "Price Range from: {} to: {}",
         price_range.first().unwrap(),
         price_range.last().unwrap()
     );
-    let range = strategy.range_of_profit().unwrap_or(PZERO);
+    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(

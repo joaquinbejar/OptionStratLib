@@ -4,13 +4,11 @@
    Date: 25/12/24
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
-use crate::model::types::PositiveF64;
-use crate::pos;
+use crate::Positive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
-use std::error::Error;
-use std::ops::Mul;
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
 
 pub const ONE_DAY: Decimal = dec!(0.00396825397);
 
@@ -36,6 +34,27 @@ pub trait DecimalStats {
     fn std_dev(&self) -> Decimal;
 }
 
+
+impl From<Positive> for Decimal {
+    fn from(pos: Positive) -> Self {
+        pos.0
+    }
+}
+
+impl From<&Positive> for Decimal {
+    fn from(pos: &Positive) -> Self {
+        pos.0
+    }
+}
+
+impl Mul<Positive> for Decimal {
+    type Output = Decimal;
+
+    fn mul(self, rhs: Positive) -> Decimal {
+        self * rhs.0
+    }
+}
+
 impl DecimalStats for Vec<Decimal> {
     fn mean(&self) -> Decimal {
         if self.is_empty() {
@@ -55,55 +74,76 @@ impl DecimalStats for Vec<Decimal> {
     }
 }
 
-impl Mul<PositiveF64> for Decimal {
+impl Div<Positive> for Decimal {
     type Output = Decimal;
 
-    fn mul(self, rhs: PositiveF64) -> Self::Output {
-        self * Decimal::from_f64(rhs.value()).unwrap()
+    fn div(self, rhs: Positive) -> Decimal {
+        self / rhs.0
     }
 }
 
-pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
-    if value == f64::NEG_INFINITY {
-        return Ok(Decimal::MIN);
-    }
-    if value == f64::INFINITY {
-        return Ok(Decimal::MAX);
-    }
-    let result = Decimal::from_f64(value);
-    match result {
-        Some(decimal) => Ok(decimal),
-        None => Err(DecimalError::ConversionError {
-            from_type: format!("f64: {}", value),
-            to_type: "Decimal".to_string(),
-            reason: "Failed to convert f64 to Decimal".to_string(),
-        }),
+impl Sub<Positive> for Decimal {
+    type Output = Decimal;
+
+    fn sub(self, rhs: Positive) -> Self::Output {
+        self - rhs.0
     }
 }
 
-pub fn positive_f64_to_decimal(value: PositiveF64) -> Result<Decimal, DecimalError> {
-    let result = Decimal::from_f64(value.value());
-    match result {
-        Some(decimal) => Ok(decimal),
-        None => Err(DecimalError::ConversionError {
-            from_type: format!("PositiveF64: {}", value.value()),
-            to_type: "Decimal".to_string(),
-            reason: "Failed to convert f64 to Decimal".to_string(),
-        }),
+impl Sub<&Positive> for Decimal {
+    type Output = Decimal;
+
+    fn sub(self, rhs: &Positive) -> Self::Output {
+        self - rhs.0
     }
 }
 
-pub fn decimal_to_positive_f64(value: Decimal) -> Result<PositiveF64, Box<dyn Error>> {
-    let result = value.to_f64();
-    match result {
-        Some(decimal) => Ok(pos!(decimal)),
-        None => Err(Box::new(DecimalError::ConversionError {
-            from_type: format!("Decimal: {}", value),
-            to_type: "PositiveF64".to_string(),
-            reason: "Failed to convert Decimal to f64".to_string(),
-        })),
+impl Add<Positive> for Decimal {
+    type Output = Decimal;
+
+    fn add(self, rhs: Positive) -> Self::Output {
+        self + rhs.0
     }
 }
+
+impl Add<&Positive> for Decimal {
+    type Output = Decimal;
+
+    fn add(self, rhs: &Positive) -> Decimal {
+        self + rhs.0
+    }
+}
+
+impl AddAssign<Positive> for Decimal {
+    fn add_assign(&mut self, rhs: Positive) {
+        *self += rhs.0;
+    }
+}
+
+impl AddAssign<&Positive> for Decimal {
+    fn add_assign(&mut self, rhs: &Positive) {
+        *self += rhs.0;
+    }
+}
+
+impl MulAssign<Positive> for Decimal {
+    fn mul_assign(&mut self, rhs: Positive) {
+        *self *= rhs.0;
+    }
+}
+
+impl MulAssign<&Positive> for Decimal {
+    fn mul_assign(&mut self, rhs: &Positive) {
+        *self *= rhs.0;
+    }
+}
+
+impl PartialEq<Positive> for Decimal {
+    fn eq(&self, other: &Positive) -> bool {
+        *self == other.0
+    }
+}
+
 
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
@@ -113,31 +153,18 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     })
 }
 
+pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
+    Decimal::from_f64(value).ok_or(DecimalError::ConversionError {
+        from_type: format!("f64: {}", value),
+        to_type: "Decimal".to_string(),
+        reason: "Failed to convert f64 to Decimal".to_string(),
+    })
+}
+
 #[macro_export]
 macro_rules! d2fu {
     ($val:expr) => {
         $crate::model::decimal::decimal_to_f64($val)
-    };
-}
-
-#[macro_export]
-macro_rules! d2p {
-    ($val:expr) => {
-        $crate::model::decimal::decimal_to_positive_f64($val)
-    };
-}
-
-#[macro_export]
-macro_rules! p2du {
-    ($val:expr) => {
-        $crate::model::decimal::positive_f64_to_decimal($val)
-    };
-}
-
-#[macro_export]
-macro_rules! p2d {
-    ($val:expr) => {
-        $crate::model::decimal::positive_f64_to_decimal($val)?
     };
 }
 
@@ -165,7 +192,7 @@ macro_rules! f2d {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+
     use std::str::FromStr;
 
     #[test]
@@ -199,12 +226,5 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0.0);
     }
-
-    #[test]
-    fn test_positive_f64_to_decimal() {
-        let value = pos!(42.42);
-        let result = positive_f64_to_decimal(value);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Decimal::from_str("42.42").unwrap());
-    }
+    
 }

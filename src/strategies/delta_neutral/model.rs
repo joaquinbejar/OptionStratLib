@@ -6,8 +6,8 @@
 
 //! # Delta Neutral Strategies Module
 use crate::greeks::equations::Greeks;
-use crate::model::types::{OptionStyle, PositiveF64};
-use crate::pos;
+use crate::model::types::{OptionStyle};
+use crate::{f2p, Positive};
 use std::fmt;
 
 pub const DELTA_THRESHOLD: f64 = 0.005;
@@ -18,25 +18,25 @@ pub enum DeltaAdjustment {
     /// Buy options with specified parameters
     BuyOptions {
         /// Number of contracts to buy
-        quantity: PositiveF64,
+        quantity: Positive,
         /// Strike price of the options
-        strike: PositiveF64,
+        strike: Positive,
         /// Type of option (Call or Put)
         option_type: OptionStyle,
     },
     /// Sell options with specified parameters
     SellOptions {
         /// Number of contracts to sell
-        quantity: PositiveF64,
+        quantity: Positive,
         /// Strike price of the options
-        strike: PositiveF64,
+        strike: Positive,
         /// Type of option (Call or Put)
         option_type: OptionStyle,
     },
     /// Buy underlying asset with specified quantity
-    BuyUnderlying(PositiveF64),
+    BuyUnderlying(Positive),
     /// Sell underlying asset with specified quantity
-    SellUnderlying(PositiveF64),
+    SellUnderlying(Positive),
     /// No adjustment needed, strategy is already neutral within threshold
     NoAdjustmentNeeded,
 }
@@ -53,7 +53,7 @@ pub struct DeltaInfo {
     /// The threshold used to determine neutrality
     pub neutrality_threshold: f64,
     /// The current underlying price
-    pub underlying_price: PositiveF64,
+    pub underlying_price: Positive,
 }
 
 impl fmt::Display for DeltaInfo {
@@ -116,7 +116,7 @@ pub trait DeltaNeutrality: Greeks {
         self.calculate_net_delta().net_delta.abs() <= DELTA_THRESHOLD
     }
 
-    fn get_atm_strike(&self) -> PositiveF64 {
+    fn get_atm_strike(&self) -> Positive {
         panic!("get_atm_strike Not implemented");
     }
 
@@ -162,14 +162,14 @@ pub trait DeltaNeutrality: Greeks {
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         vec![
-            DeltaAdjustment::SellUnderlying(pos!(net_delta.abs())),
+            DeltaAdjustment::SellUnderlying(f2p!(net_delta.abs())),
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(net_delta.abs() / 0.5),
+                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Put,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!(net_delta.abs() / 0.5),
+                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
@@ -190,14 +190,14 @@ pub trait DeltaNeutrality: Greeks {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         vec![
-            DeltaAdjustment::BuyUnderlying(pos!(net_delta.abs())),
+            DeltaAdjustment::BuyUnderlying(f2p!(net_delta.abs())),
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(net_delta.abs() / 0.5),
+                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!(net_delta.abs() / 0.5),
+                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Put,
             },
@@ -216,7 +216,7 @@ mod tests {
     // Mock struct to implement required traits for testing
     struct MockStrategy {
         delta: Decimal,
-        underlying_price: PositiveF64,
+        underlying_price: Positive,
         individual_deltas: Vec<f64>,
     }
 
@@ -246,8 +246,8 @@ mod tests {
             }
         }
 
-        fn get_atm_strike(&self) -> PositiveF64 {
-            pos!(100.0)
+        fn get_atm_strike(&self) -> Positive {
+            f2p!(100.0)
         }
     }
 
@@ -255,7 +255,7 @@ mod tests {
     fn create_mock_strategy(delta: Decimal, price: f64) -> MockStrategy {
         MockStrategy {
             delta,
-            underlying_price: pos!(price),
+            underlying_price: f2p!(price),
             individual_deltas: vec![delta.to_f64().unwrap()],
         }
     }
@@ -268,7 +268,7 @@ mod tests {
         assert_eq!(info.net_delta, 0.5);
         assert_eq!(info.individual_deltas, vec![0.5]);
         assert!(!info.is_neutral);
-        assert_eq!(info.underlying_price, pos!(100.0));
+        assert_eq!(info.underlying_price, f2p!(100.0));
     }
 
     #[test]
@@ -296,15 +296,15 @@ mod tests {
         assert_eq!(
             adjustments,
             vec![
-                DeltaAdjustment::SellUnderlying(pos!(0.5)),
+                DeltaAdjustment::SellUnderlying(f2p!(0.5)),
                 DeltaAdjustment::BuyOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: f2p!(1.0),
+                    strike: f2p!(100.0),
                     option_type: OptionStyle::Put,
                 },
                 DeltaAdjustment::SellOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: f2p!(1.0),
+                    strike: f2p!(100.0),
                     option_type: OptionStyle::Call,
                 }
             ]
@@ -319,15 +319,15 @@ mod tests {
         assert_eq!(
             adjustments,
             vec![
-                DeltaAdjustment::BuyUnderlying(pos!(0.5)),
+                DeltaAdjustment::BuyUnderlying(f2p!(0.5)),
                 DeltaAdjustment::BuyOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: f2p!(1.0),
+                    strike: f2p!(100.0),
                     option_type: OptionStyle::Call,
                 },
                 DeltaAdjustment::SellOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: f2p!(1.0),
+                    strike: f2p!(100.0),
                     option_type: OptionStyle::Put,
                 }
             ]
@@ -354,15 +354,15 @@ mod tests {
         assert_eq!(
             adjustments,
             vec![
-                DeltaAdjustment::SellUnderlying(pos!(0.5)),
+                DeltaAdjustment::SellUnderlying(f2p!(0.5)),
                 DeltaAdjustment::BuyOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: f2p!(1.0),
+                    strike: f2p!(100.0),
                     option_type: OptionStyle::Put,
                 },
                 DeltaAdjustment::SellOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: f2p!(1.0),
+                    strike: f2p!(100.0),
                     option_type: OptionStyle::Call,
                 }
             ]
@@ -377,15 +377,15 @@ mod tests {
         assert_eq!(
             adjustments,
             vec![
-                DeltaAdjustment::BuyUnderlying(pos!(0.5)),
+                DeltaAdjustment::BuyUnderlying(f2p!(0.5)),
                 DeltaAdjustment::BuyOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: f2p!(1.0),
+                    strike: f2p!(100.0),
                     option_type: OptionStyle::Call,
                 },
                 DeltaAdjustment::SellOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: f2p!(1.0),
+                    strike: f2p!(100.0),
                     option_type: OptionStyle::Put,
                 }
             ]

@@ -28,7 +28,7 @@
 //! ### Basic Volatility Calculations
 //!
 //! ```rust
-//! use optionstratlib::model::types::PositiveF64;
+//! use optionstratlib::Positive;
 //! use optionstratlib::volatility::constant_volatility;
 //!
 //! let returns = vec![0.01, -0.02, 0.015, -0.01];
@@ -39,20 +39,20 @@
 //!
 //! ```rust
 //! use optionstratlib::model::option::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
+//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::volatility::implied_volatility;
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
 //!
 //! let mut option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     "STOCK".to_string(),
-//!     pos!(100.0),              // Strike price
+//!     f2p!(100.0),              // Strike price
 //!     ExpirationDate::Days(30.0),
 //!     0.2,                      // Initial volatility guess
-//!     SIZE_ONE,                 // Quantity
-//!     pos!(100.0),              // Current price
+//!     Positive::ONE,                 // Quantity
+//!     f2p!(100.0),              // Current price
 //!     0.05,                     // Risk-free rate
 //!     OptionStyle::Call,
 //!     0.0,                      // Dividend yield

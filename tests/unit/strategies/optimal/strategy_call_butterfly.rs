@@ -1,8 +1,7 @@
 use approx::assert_relative_eq;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::pos;
+use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -14,19 +13,19 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the CallButterfly strategy
-    let underlying_price = pos!(5781.88);
+    let underlying_price = f2p!(5781.88);
 
     let mut strategy = CallButterfly::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        pos!(5750.0),     // long_call_strike
-        pos!(5800.0),     // short_call_low_strike
-        pos!(5850.0),     // short_call_high_strike
+        f2p!(5750.0),     // long_call_strike
+        f2p!(5800.0),     // short_call_low_strike
+        f2p!(5850.0),     // short_call_high_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(1.0), // long quantity
+        f2p!(1.0), // long quantity
         85.04,     // premium_long_itm
         53.04,     // premium_long_otm
         28.85,     // premium_short

@@ -4,10 +4,9 @@
    Date: 20/8/24
 ******************************************************************************/
 use crate::constants::{DARK_GREEN, DARK_RED};
-use crate::model::types::{PositiveF64, PZERO};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::{create_drawing_area, pos};
+use crate::{create_drawing_area, f2p, Positive};
 use plotters::backend::BitMapBackend;
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
@@ -60,7 +59,7 @@ macro_rules! configure_chart_and_draw_mesh {
 #[macro_export]
 macro_rules! draw_line_segments {
     ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr) => {{
-        let mut last_point: Option<(PositiveF64, f64)> = None;
+        let mut last_point: Option<(Positive, f64)> = None;
         for (&price, &value) in $x_axis_data.iter().zip($y_axis_data.iter()) {
             if let Some((last_price, last_profit)) = last_point {
                 let color = if value > 0.0 {
@@ -70,7 +69,7 @@ macro_rules! draw_line_segments {
                 };
 
                 let points: Vec<(f64, f64)> =
-                    vec![(last_price.value(), last_profit), (price.value(), value)];
+                    vec![(last_price.to_f64(), last_profit), (price.to_f64(), value)];
 
                 $chart.draw_series(LineSeries::new(points, color))?;
             }
@@ -83,7 +82,7 @@ macro_rules! draw_line_segments {
 pub trait Graph: Profit {
     fn graph(
         &self,
-        x_axis_data: &[PositiveF64], // TODO: it should be Optional
+        x_axis_data: &[Positive], // TODO: it should be Optional
         file_path: &str,
         title_size: u32,         // 15
         canvas_size: (u32, u32), // (1200, 800)
@@ -93,8 +92,8 @@ pub trait Graph: Profit {
 
         let x_axis_point = if x_axis_data.is_empty() {
             &mut (0..y_axis_data.len())
-                .map(|i| pos!(i as f64))
-                .collect::<Vec<PositiveF64>>()
+                .map(|i| f2p!(i as f64))
+                .collect::<Vec<Positive>>()
         } else {
             x_axis_data
         };
@@ -110,12 +109,12 @@ pub trait Graph: Profit {
             &root,
             self.title(),
             title_size,
-            min_x_value.value(),
-            max_x_value.value(),
+            min_x_value.to_f64(),
+            max_x_value.to_f64(),
             min_y_value,
             max_y_value
         );
-        configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value.value(), max_x_value.value());
+        configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value.to_f64(), max_x_value.to_f64());
         draw_line_segments!(chart, x_axis_point, y_axis_data, DARK_GREEN, DARK_RED);
 
         draw_points_on_chart(&mut chart, &self.get_points())?;
@@ -126,7 +125,7 @@ pub trait Graph: Profit {
 
     fn title(&self) -> String;
 
-    fn get_values(&self, data: &[PositiveF64]) -> Vec<f64> {
+    fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
             .map(|&price| self.calculate_profit_at(price))
             .collect()
@@ -158,15 +157,15 @@ pub trait Graph: Profit {
 /// * `min_y_value` - The minimum value in `y_axis_data`, adjusted to include a margin.
 ///
 pub(crate) fn calculate_axis_range(
-    x_axis_data: &[PositiveF64],
+    x_axis_data: &[Positive],
     y_axis_data: &[f64],
-) -> (PositiveF64, PositiveF64, f64, f64) {
+) -> (Positive, Positive, f64, f64) {
     let (min_x_value, max_x_value) = if x_axis_data.is_empty() {
-        (PZERO, pos!(f64::INFINITY))
+        (Positive::ZERO, Positive::INFINITY)
     } else {
         x_axis_data
             .iter()
-            .fold((pos!(f64::INFINITY), PZERO), |(min_x, max_x), &value| {
+            .fold((Positive::INFINITY, Positive::ZERO), |(min_x, max_x), &value| {
                 (min_x.min(value), max_x.max(value))
             })
     };
@@ -271,14 +270,14 @@ where
     Ok(())
 }
 
-// TODO: fix this
+
 #[cfg(test)]
 mod tests_calculate_axis_range {
     use super::*;
 
     #[test]
     fn test_calculate_axis_range() {
-        let x_data = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
+        let x_data = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0), f2p!(4.0), f2p!(5.0)];
         let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -291,33 +290,33 @@ mod tests_calculate_axis_range {
 
     #[test]
     fn test_calculate_axis_range_single_value() {
-        let x_data = vec![pos!(1.0)];
+        let x_data = vec![f2p!(1.0)];
         let y_data = vec![0.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
 
-        assert_eq!(max_x, pos!(1.0));
-        assert_eq!(min_x, pos!(1.0));
+        assert_eq!(max_x, f2p!(1.0));
+        assert_eq!(min_x, f2p!(1.0));
         assert_eq!(max_y, 0.0);
         assert_eq!(min_y, 0.0);
     }
 
     #[test]
     fn test_calculate_axis_range_zero_values() {
-        let x_data = vec![pos!(0.0), pos!(0.0), pos!(0.0)];
+        let x_data = vec![f2p!(0.0), f2p!(0.0), f2p!(0.0)];
         let y_data = vec![0.0, 0.0, 0.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
 
-        assert_eq!(max_x, PZERO);
-        assert_eq!(min_x, PZERO);
+        assert_eq!(max_x, Positive::ZERO);
+        assert_eq!(min_x, Positive::ZERO);
         assert_eq!(max_y, 0.0);
         assert_eq!(min_y, 0.0);
     }
 
     #[test]
     fn test_calculate_axis_range_large_values() {
-        let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
+        let x_data = vec![f2p!(1e6), f2p!(2e6), f2p!(3e6)];
         let y_data = vec![1e9, 2e9, 3e9];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -332,8 +331,8 @@ mod tests_calculate_axis_range {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::PositiveF64;
-    use crate::pos;
+    use crate::Positive;
+    use crate::f2p;
     use crate::visualization::model::LabelOffsetType;
     use plotters::style::RGBColor;
     use std::error::Error;
@@ -341,8 +340,8 @@ mod tests {
     struct MockGraph;
 
     impl Profit for MockGraph {
-        fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
-            price.value() * 2.0 - 100.0
+        fn calculate_profit_at(&self, price: Positive) -> f64 {
+            (price * 2.0).into()
         }
     }
 
@@ -380,7 +379,7 @@ mod tests {
     #[test]
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
+        let x_axis_data = vec![f2p!(0.0), f2p!(50.0), f2p!(100.0)];
         mock_graph.graph(&x_axis_data, "test_graph.png", 20, (800, 600))?;
         std::fs::remove_file("test_graph.png")?;
         Ok(())
@@ -389,16 +388,16 @@ mod tests {
     #[test]
     fn test_get_values() {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
+        let x_axis_data = vec![f2p!(0.0), f2p!(50.0), f2p!(100.0)];
         let values = mock_graph.get_values(&x_axis_data);
-        assert_eq!(values, vec![-100.0, 0.0, 100.0]);
+        assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }
 
     #[test]
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: PositiveF64) -> f64 {
+            fn calculate_profit_at(&self, _: Positive) -> f64 {
                 0.0
             }
         }
@@ -415,7 +414,7 @@ mod tests {
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: PositiveF64) -> f64 {
+            fn calculate_profit_at(&self, _: Positive) -> f64 {
                 0.0
             }
         }
@@ -440,11 +439,11 @@ mod tests {
 
     #[test]
     fn test_calculate_axis_range_empty() {
-        let x_data: Vec<PositiveF64> = vec![];
+        let x_data: Vec<Positive> = vec![];
         let y_data: Vec<f64> = vec![];
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
-        assert_eq!(min_x, PZERO);
-        assert_eq!(max_x, pos!(f64::INFINITY));
+        assert_eq!(min_x, Positive::ZERO);
+        assert_eq!(max_x, Positive::INFINITY);
         assert_eq!(min_y, f64::NEG_INFINITY);
         assert_eq!(max_y, f64::INFINITY);
     }

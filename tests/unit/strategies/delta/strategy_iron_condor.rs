@@ -1,34 +1,35 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::{assert_decimal_eq, pos};
+use optionstratlib::{assert_decimal_eq, f2p, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use std::str::FromStr;
+use rust_decimal::Decimal;
 
 #[test]
 fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the IronCondor strategy
-    let underlying_price = pos!(2646.9);
+    let underlying_price = f2p!(2646.9);
 
     let strategy = IronCondor::new(
         "GOLD".to_string(),
         underlying_price, // underlying_price
-        pos!(2725.0),     // short_call_strike
-        pos!(2560.0),     // short_put_strike
-        pos!(2800.0),     // long_call_strike
-        pos!(2500.0),     // long_put_strike
+        f2p!(2725.0),     // short_call_strike
+        f2p!(2560.0),     // short_put_strike
+        f2p!(2800.0),     // long_call_strike
+        f2p!(2500.0),     // long_put_strike
         ExpirationDate::Days(30.0),
         0.1548,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(2.0), // quantity
+        f2p!(2.0), // quantity
         38.8,      // premium_short_call
         30.4,      // premium_short_put
         23.3,      // premium_long_call
@@ -68,8 +69,8 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: pos!(0.921345173469527),
-            strike: pos!(2800.0),
+            quantity: Positive::new_decimal(Decimal::from_str("0.921345173469528").unwrap()).unwrap(),
+            strike: f2p!(2800.0),
             option_type: OptionStyle::Call
         }
     );

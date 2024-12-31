@@ -660,9 +660,9 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
-    use crate::model::types::PositiveF64;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
-    use crate::pos;
+    use crate::Positive;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::f2p;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use tracing::info;
@@ -672,11 +672,11 @@ mod tests_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
             0.02, // initial implied volatility
-            SIZE_ONE,
-            pos!(100.0),
+            Positive::ONE,
+            f2p!(100.0),
             0.05,
             OptionStyle::Call,
             ZERO,
@@ -1149,20 +1149,20 @@ mod tests_interpolate_volatility_surface {
 mod tests_uncertain_volatility_bounds {
 
     use super::*;
-    use crate::model::types::PositiveF64;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
-    use crate::pos;
+    use crate::Positive;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::f2p;
 
     fn create_test_option() -> Options {
         Options::new(
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0), // strike price
+            f2p!(100.0), // strike price
             ExpirationDate::Days(30.0),
             0.2,         // implied volatility
-            SIZE_ONE,    // quantity
-            pos!(100.0), // underlying price
+            Positive::ONE,    // quantity
+            f2p!(100.0), // underlying price
             0.05,        // risk-free rate
             OptionStyle::Call,
             ZERO, // dividend yield
@@ -1193,10 +1193,10 @@ mod tests_uncertain_volatility_bounds {
     #[test]
     fn test_uncertain_volatility_bounds_different_strikes() {
         let mut itm_option = create_test_option();
-        itm_option.strike_price = pos!(90.0); // In-the-money
+        itm_option.strike_price = f2p!(90.0); // In-the-money
 
         let mut otm_option = create_test_option();
-        otm_option.strike_price = pos!(110.0); // Out-of-the-money
+        otm_option.strike_price = f2p!(110.0); // Out-of-the-money
 
         let (itm_lower, itm_upper) = uncertain_volatility_bounds(&itm_option, 0.1, 0.3);
         let (otm_lower, otm_upper) = uncertain_volatility_bounds(&otm_option, 0.1, 0.3);
@@ -1242,7 +1242,7 @@ mod tests_uncertain_volatility_bounds {
             "Lower bound should be positive even with very low volatility"
         );
         assert!(
-            upper < option.underlying_price.value(),
+            upper < option.underlying_price,
             "Upper bound should not exceed underlying price for a call option"
         );
     }
@@ -1252,9 +1252,8 @@ mod tests_uncertain_volatility_bounds {
 mod tests_uncertain_volatility_bounds_side {
     use super::*;
     use crate::model::types::{
-        ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, SIZE_ONE,
-    };
-    use crate::pos;
+        ExpirationDate, OptionStyle, OptionType, Side   };
+    use crate::{f2p, Positive};
     use approx::assert_relative_eq;
     use tracing::info;
 
@@ -1263,11 +1262,11 @@ mod tests_uncertain_volatility_bounds_side {
             OptionType::European,
             side,
             "TEST".to_string(),
-            pos!(100.0), // strike price
+            f2p!(100.0), // strike price
             ExpirationDate::Days(30.0),
             0.2,         // implied volatility
-            SIZE_ONE,    // quantity
-            pos!(100.0), // underlying price
+            Positive::ONE,    // quantity
+            f2p!(100.0), // underlying price
             0.05,        // risk-free rate
             option_style,
             ZERO, // dividend yield
@@ -1334,10 +1333,10 @@ mod tests_uncertain_volatility_bounds_side {
     #[test]
     fn test_uncertain_volatility_bounds_different_strikes() {
         let mut itm_option = create_test_option(OptionStyle::Call, Side::Long);
-        itm_option.strike_price = pos!(90.0); // In-the-money
+        itm_option.strike_price = f2p!(90.0); // In-the-money
 
         let mut otm_option = create_test_option(OptionStyle::Call, Side::Long);
-        otm_option.strike_price = pos!(110.0); // Out-of-the-money
+        otm_option.strike_price = f2p!(110.0); // Out-of-the-money
 
         let (itm_lower, itm_upper) = uncertain_volatility_bounds(&itm_option, 0.1, 0.3);
         let (otm_lower, otm_upper) = uncertain_volatility_bounds(&otm_option, 0.1, 0.3);
@@ -1366,7 +1365,7 @@ mod tests_uncertain_volatility_bounds_side {
             "Lower bound should be positive even with very low volatility"
         );
         assert!(
-            upper < option.underlying_price.value(),
+            upper < option.underlying_price,
             "Upper bound should not exceed underlying price for a call option"
         );
     }

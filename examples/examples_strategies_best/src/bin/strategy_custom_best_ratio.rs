@@ -2,8 +2,8 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{ExpirationDate, PositiveF64, PZERO};
-use optionstratlib::pos;
+use optionstratlib::model::types::ExpirationDate;
+use optionstratlib::{f2p, Positive};
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         None,    // qty_calls_long
         Some(1), // qty_calls_short
         ExpirationDate::Days(30.0),
-        pos!(1.0),
+        f2p!(1.0),
         0.05,
         0.02,
         1.0,
@@ -46,8 +46,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.1,
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::All);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let range = strategy.range_of_profit().unwrap_or(PZERO);
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!(
         "Range of analysis: {} - {}",
         price_range.first().unwrap(),

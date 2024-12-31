@@ -1,8 +1,7 @@
 use approx::assert_relative_eq;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::pos;
+use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -14,19 +13,19 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the LongButterflySpread strategy
-    let underlying_price = pos!(5795.88);
+    let underlying_price = f2p!(5795.88);
 
     let mut strategy = LongButterflySpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        pos!(5710.0),     // long_strike_itm
-        pos!(5780.0),     // short_strike
-        pos!(5850.0),     // long_strike_otm
+        f2p!(5710.0),     // long_strike_itm
+        f2p!(5780.0),     // short_strike
+        f2p!(5850.0),     // long_strike_otm
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(1.0), // long quantity
+        f2p!(1.0), // long quantity
         113.30,    // premium_long_low
         64.20,     // premium_short
         31.65,     // premium_long_high

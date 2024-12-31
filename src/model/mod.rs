@@ -43,7 +43,7 @@
 //!
 //! Robust type definitions ensuring type safety:
 //!
-//! * `PositiveF64` for non-negative numbers
+//! * `Positive` for non-negative numbers
 //! * `ExpirationDate` handling
 //! * Option styles and types
 //! * Side (Long/Short) definitions
@@ -72,18 +72,18 @@
 //! use tracing::info;
 //! use optionstratlib::model::option::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-//! use optionstratlib::pos;
-//! use optionstratlib::model::types::PositiveF64;
+//! use optionstratlib::f2p;
+//! use optionstratlib::Positive;
 //!
 //! let option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     "AAPL".to_string(),
-//!     pos!(100.0),
+//!     f2p!(100.0),
 //!     ExpirationDate::Days(30.0),
 //!     0.2,
-//!     pos!(1.0),
-//!     pos!(105.0),
+//!     f2p!(1.0),
+//!     f2p!(105.0),
 //!     0.05,
 //!     OptionStyle::Call,
 //!     0.01,
@@ -101,5 +101,9 @@ pub mod position;
 mod profit_range;
 pub mod types;
 pub mod utils;
+pub mod positive;
 
 pub use profit_range::ProfitLossRange;
+pub use option::Options;
+pub use position::Position;
+pub use types::{ExpirationDate, OptionStyle, OptionType, Side};
