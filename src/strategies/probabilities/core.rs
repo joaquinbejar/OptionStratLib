@@ -34,7 +34,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 probability_of_max_loss: Positive::ZERO,   // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
-                risk_reward_ratio: f2p!(self.profit_ratio()),
+                risk_reward_ratio: self.profit_ratio().unwrap().into(),
             });
         }
         // If we have adjustments, calculate with them
@@ -43,7 +43,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         let expected_value = self.expected_value(volatility_adj.clone(), trend.clone())?;
         let (prob_max_profit, prob_max_loss) =
             self.calculate_extreme_probabilities(volatility_adj, trend)?;
-        let risk_reward_ratio = f2p!(self.profit_ratio());
+        let risk_reward_ratio = self.profit_ratio().unwrap().into();
 
         Ok(StrategyProbabilityAnalysis {
             probability_of_profit,
@@ -235,6 +235,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
 #[cfg(test)]
 mod tests_probability_analysis {
+    use rust_decimal::Decimal;
+    use crate::error::strategies::StrategyError;
     use super::*;
     use crate::model::types::{ExpirationDate};
     use crate::f2p;
@@ -257,8 +259,8 @@ mod tests_probability_analysis {
             self.underlying_price
         }
 
-        fn profit_ratio(&self) -> f64 {
-            2.0
+        fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+            Ok(Decimal::TWO)
         }
 
         fn best_range_to_show(&self, _step: Positive) -> Option<Vec<Positive>> {

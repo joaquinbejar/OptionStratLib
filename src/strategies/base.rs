@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -16,6 +15,7 @@ use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::Positive;
 use std::f64;
+use rust_decimal::Decimal;
 use tracing::error;
 
 /// This enum represents different types of trading strategies.
@@ -120,20 +120,32 @@ pub trait Strategies: Validable + Positionable {
         Positive::ZERO
     }
 
-    fn net_premium_received(&self) -> f64 {
-        panic!("Net premium received is not applicable");
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "net_premium_received",
+            std::any::type_name::<Self>(),
+        ))
     }
 
-    fn fees(&self) -> f64 {
-        panic!("Fees is not applicable for this strategy");
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "fees",
+            std::any::type_name::<Self>(),
+        ))
     }
 
-    fn profit_area(&self) -> f64 {
-        ZERO
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "profit_area",
+            std::any::type_name::<Self>(),
+        ))
     }
 
-    fn profit_ratio(&self) -> f64 {
-        ZERO
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "profit_ratio",
+            std::any::type_name::<Self>(),
+        ))
     }
 
     fn range_to_show(&self) -> (Positive, Positive) {
@@ -338,6 +350,7 @@ pub trait Positionable {
 
 #[cfg(test)]
 mod tests_strategies {
+    use rust_decimal_macros::dec;
     use crate::f2p;
     use super::*;
     use crate::model::position::Position;
@@ -395,20 +408,20 @@ mod tests_strategies {
             f2p!(200.0)
         }
 
-        fn net_premium_received(&self) -> f64 {
-            300.0
+        fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+            Ok(dec!(300.0))
         }
 
-        fn fees(&self) -> f64 {
-            50.0
+        fn fees(&self) -> Result<Decimal, StrategyError>  {
+            Ok(dec!(50.0))
         }
 
-        fn profit_area(&self) -> f64 {
-            5000.0
+        fn profit_area(&self) -> Result<Decimal, StrategyError>  {
+            Ok(dec!(5000.0))
         }
 
-        fn profit_ratio(&self) -> f64 {
-            2.0
+        fn profit_ratio(&self) -> Result<Decimal, StrategyError>  {
+            Ok(dec!(2.0))
         }
     }
 
@@ -431,10 +444,10 @@ mod tests_strategies {
         assert_eq!(mock_strategy.max_profit().unwrap_or(Positive::ZERO), 1000.0);
         assert_eq!(mock_strategy.max_loss().unwrap_or(Positive::ZERO), 500.0);
         assert_eq!(mock_strategy.total_cost(), 200.0);
-        assert_eq!(mock_strategy.net_premium_received(), 300.0);
-        assert_eq!(mock_strategy.fees(), 50.0);
-        assert_eq!(mock_strategy.profit_area(), 5000.0);
-        assert_eq!(mock_strategy.profit_ratio(), 2.0);
+        assert_eq!(mock_strategy.net_premium_received().unwrap(), dec!(300.0));
+        assert_eq!(mock_strategy.fees().unwrap(), dec!(50.0));
+        assert_eq!(mock_strategy.profit_area().unwrap(), dec!(5000.0));
+        assert_eq!(mock_strategy.profit_ratio().unwrap(), dec!(2.0));
     }
 
     #[test]
@@ -453,8 +466,8 @@ mod tests_strategies {
         assert_eq!(strategy.max_profit().unwrap_or(Positive::ZERO), ZERO);
         assert_eq!(strategy.max_loss().unwrap_or(Positive::ZERO), ZERO);
         assert_eq!(strategy.total_cost(), ZERO);
-        assert_eq!(strategy.profit_area(), ZERO);
-        assert_eq!(strategy.profit_ratio(), ZERO);
+        assert_eq!(strategy.profit_area().unwrap(), Decimal::ZERO);
+        assert_eq!(strategy.profit_ratio().unwrap(), Decimal::ZERO);
         assert!(strategy.validate());
     }
 
@@ -695,17 +708,17 @@ mod tests_max_min_strikes {
         fn total_cost(&self) -> Positive {
             Positive::ZERO
         }
-        fn net_premium_received(&self) -> f64 {
-            0.0
+        fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+            Ok(Decimal::ZERO)
         }
-        fn fees(&self) -> f64 {
-            0.0
+        fn fees(&self) -> Result<Decimal, StrategyError> {
+            Ok(Decimal::ZERO)
         }
-        fn profit_area(&self) -> f64 {
-            0.0
+        fn profit_area(&self) -> Result<Decimal, StrategyError> {
+            Ok(Decimal::ZERO)
         }
-        fn profit_ratio(&self) -> f64 {
-            0.0
+        fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+            Ok(Decimal::ZERO)
         }
         fn best_range_to_show(&self, _step: Positive) -> Option<Vec<Positive>> {
             None
