@@ -37,7 +37,8 @@ use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use std::f64;
+use num_traits::{FromPrimitive, ToPrimitive};
+use rust_decimal::Decimal;
 use tracing::{info, trace};
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
@@ -156,10 +157,10 @@ impl ShortStraddle {
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
         strategy
             .break_even_points
-            .push(strike - strategy.net_premium_received() / net_quantity);
+            .push(strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity);
         strategy
             .break_even_points
-            .push(strike + strategy.net_premium_received() / net_quantity);
+            .push(strike + strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity);
 
         strategy.break_even_points.sort();
         strategy
@@ -191,7 +192,7 @@ impl Strategies for ShortStraddle {
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let max_profit = self.net_premium_received();
+        let max_profit = self.net_premium_received()?.to_f64().unwrap();
         if max_profit < ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -211,26 +212,30 @@ impl Strategies for ShortStraddle {
         f2p!(self.short_call.net_cost() + self.short_put.net_cost())
     }
 
-    fn net_premium_received(&self) -> f64 {
-        self.short_call.net_premium_received() + self.short_put.net_premium_received()
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call.net_premium_received() + self.short_put.net_premium_received();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.short_call.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call.open_fee
             + self.short_call.close_fee
             + self.short_put.open_fee
-            + self.short_put.close_fee
+            + self.short_put.close_fee;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
         let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
-        (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()))
+        let result = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        self.max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0
+        let result = self.max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn get_break_even_points(&self) -> Vec<Positive> {
@@ -284,7 +289,7 @@ impl Optimizable for ShortStraddle {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -302,8 +307,8 @@ impl Optimizable for ShortStraddle {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -746,30 +751,34 @@ impl Strategies for LongStraddle {
         f2p!(self.long_call.net_cost() + self.long_put.net_cost())
     }
 
-    fn net_premium_received(&self) -> f64 {
-        0.0 // Long Straddle doesn't receive premium
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        Ok(Decimal::ZERO) // Long Straddle doesn't receive premium
     }
 
-    fn fees(&self) -> f64 {
-        self.long_call.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.long_call.open_fee
             + self.long_call.close_fee
             + self.long_put.open_fee
-            + self.long_put.close_fee
+            + self.long_put.close_fee;
+        
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
         let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
         let loss_area = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
-        (1.0 / loss_area) * 10000.0 // Invert the value to get the profit area: the lower, the better
+        let result = (1.0 / loss_area) * 10000.0; // Invert the value to get the profit area: the lower, the better
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        match self.max_loss() {
+        let result = match self.max_loss() {
             Ok(max_loss) => ((break_even_diff / max_loss) * 100.0).to_f64(),
             Err(_) => ZERO,
-        }
+        };
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn get_break_even_points(&self) -> Vec<Positive> {
@@ -823,7 +832,7 @@ impl Optimizable for LongStraddle {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -841,8 +850,8 @@ impl Optimizable for LongStraddle {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -1107,6 +1116,7 @@ impl DeltaNeutrality for LongStraddle {
 
 #[cfg(test)]
 mod tests_short_straddle {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::{f2p, spos};
@@ -1228,7 +1238,7 @@ mod tests_short_straddle {
         let strategy = setup();
         assert_eq!(
             strategy.max_profit().unwrap_or(Positive::ZERO),
-            strategy.net_premium_received()
+            strategy.net_premium_received().unwrap().to_f64().unwrap()
         );
     }
 
@@ -1251,7 +1261,7 @@ mod tests_short_straddle {
     fn test_net_premium_received() {
         let strategy = setup();
         assert_eq!(
-            strategy.net_premium_received(),
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
             strategy.short_call.net_premium_received() + strategy.short_put.net_premium_received()
         );
     }
@@ -1260,13 +1270,13 @@ mod tests_short_straddle {
     fn test_fees() {
         let strategy = setup();
         let expected_fees = 0.4;
-        assert_eq!(strategy.fees(), expected_fees);
+        assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
     #[test]
     fn test_area() {
         let strategy = setup();
-        assert_eq!(strategy.profit_area(), 0.9610000000000001);
+        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 0.9610000000000001);
     }
 
     #[test]
@@ -1319,7 +1329,7 @@ mod tests_short_straddle {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
         let expected_ratio = strategy.max_profit().unwrap_or(Positive::ZERO) / break_even_diff * 100.0;
-        assert_eq!(strategy.profit_ratio(), expected_ratio.to_f64());
+        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), expected_ratio.to_f64());
     }
 
     #[test]
@@ -1434,6 +1444,7 @@ mod tests_short_straddle {
 
 #[cfg(test)]
 mod tests_long_straddle {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::{f2p, spos};
@@ -1556,26 +1567,26 @@ mod tests_long_straddle {
     fn test_fees() {
         let strategy = setup_long_straddle();
         let expected_fees = 2.0; // 0.5 * 4 fees
-        assert_eq!(strategy.fees(), expected_fees);
+        assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
     #[test]
     fn test_net_premium_received() {
         let strategy = setup_long_straddle();
-        assert_eq!(strategy.net_premium_received(), 0.0);
+        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 0.0);
     }
 
     #[test]
     fn test_profit_area() {
         let strategy = setup_long_straddle();
         let area = strategy.profit_area();
-        assert!(area > 0.0);
+        assert!(area.unwrap().to_f64().unwrap() > 0.0);
     }
 
     #[test]
     fn test_profit_ratio() {
         let strategy = setup_long_straddle();
-        assert_eq!(strategy.profit_ratio(), 20.0);
+        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 20.0);
     }
 
     #[test]
