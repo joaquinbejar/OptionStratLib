@@ -1,7 +1,7 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
 use optionstratlib::Positive;
-use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;

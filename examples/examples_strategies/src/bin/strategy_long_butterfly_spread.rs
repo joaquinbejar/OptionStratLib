@@ -6,7 +6,7 @@
 
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::Positive;
-use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::butterfly_spread::LongButterflySpread;

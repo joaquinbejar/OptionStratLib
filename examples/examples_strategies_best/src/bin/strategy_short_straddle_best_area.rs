@@ -2,7 +2,7 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::Positive;
-use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::straddle::ShortStraddle;

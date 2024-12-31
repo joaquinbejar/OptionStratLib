@@ -3,7 +3,7 @@ use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::constants::ZERO;
 use optionstratlib::model::position::Position;
 use optionstratlib::Positive;
-use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
