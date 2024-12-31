@@ -1028,7 +1028,7 @@ mod tests_range_of_profit {
     #[test]
     fn test_single_break_even_point() {
         let strategy = TestStrategy::new(vec![f2p!(100.0)]);
-        assert_eq!(strategy.range_of_profit(), Some(f2p!(f64::INFINITY)));
+        assert_eq!(strategy.range_of_profit(), Some(Positive::INFINITY));
     }
 
     #[test]

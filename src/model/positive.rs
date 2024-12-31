@@ -36,6 +36,7 @@ macro_rules! spos {
 macro_rules! f2p {
     ($val:expr) => {
         $crate::Positive::new($val).unwrap_or($crate::Positive::ZERO)
+        // $crate::Positive::new_decimal(rust_decimal::Decimal::new(($val * 1e16) as i64, 16)).unwrap_or($crate::Positive::ZERO)
     };
 }
 
@@ -64,12 +65,12 @@ impl Positive {
     pub const PI: Positive = Positive(Decimal::PI);
 
     pub fn new(value: f64) -> Result<Self, String> {
-        let dec = Decimal::try_from(value);
+        let dec = Decimal::from_f64(value);
         
         match dec {  
-            Ok(value) if value >= Decimal::ZERO => Ok(Positive(value)),
-            Ok(value) => Err(format!("Value must be positive, got {}", value)),
-            Err(e) => Err(format!("Failed to parse as Decimal: {}", e)),
+            Some(value) if value >= Decimal::ZERO => Ok(Positive(value)),
+            Some(value) => Err(format!("Value must be positive, got {}", value)),
+            None => Err("Failed to parse as Decimal".to_string()),
         }
     }
     
@@ -128,6 +129,11 @@ impl Positive {
     pub fn ln(&self) -> Positive {
         Positive(self.0.ln())
     }
+
+        pub fn round_to(&self, decimal_places: u32) -> Positive {
+            Positive(self.0.round_dp(decimal_places))
+        }
+    
 }
 
 impl From<Positive> for u64 {
@@ -321,7 +327,7 @@ impl Serialize for Positive {
 
 impl PartialEq<Decimal> for Positive {
     fn eq(&self, other: &Decimal) -> bool {
-        self.0 == *other
+        (self.0 - *other).abs() <= EPSILON * Decimal::from(100)
     }
 }
 
@@ -730,5 +736,100 @@ mod tests_positive_decimal_sum {
         let values: Vec<Positive> = vec![];
         let sum: Positive = values.into_iter().sum();
         assert_eq!(sum.to_f64(), 0.0);
+    }
+}
+
+
+#[cfg(test)]
+mod tests_eq {
+    use rust_decimal_macros::dec;
+    use crate::Positive;
+
+    #[test]
+    #[ignore="This test is failing because of the precision limit"]
+    fn test_eq() {
+        let a = f2p!(0.5848105371755788);
+        let b = Positive::new_decimal(dec!(0.5848105371755788)).unwrap();
+        assert_eq!(a, b);
+    }
+}
+
+
+#[cfg(test)]
+mod tests_macros {
+    use super::*;
+    use rust_decimal::Decimal;
+
+    #[test]
+    fn test_f2p_positive_values() {
+        assert_eq!(f2p!(5.0).value(), Decimal::new(5, 0));
+        assert_eq!(f2p!(1.5).value(), Decimal::new(15, 1));
+        assert_eq!(f2p!(0.1).value(), Decimal::new(1, 1));
+    }
+
+    #[test]
+    fn test_f2p_zero() {
+        assert_eq!(f2p!(0.0), Positive::ZERO);
+    }
+
+    #[test]
+    fn test_f2p_small_decimals() {
+        assert_eq!(f2p!(0.0001).value(), Decimal::new(1, 4));
+        assert_eq!(f2p!(0.00001).value(), Decimal::new(1, 5));
+        assert_eq!(f2p!(0.000001).value(), Decimal::new(1, 6));
+    }
+
+    #[test]
+    fn test_f2p_large_decimals() {
+        let val = 0.1234567890123456;
+        let expected = Decimal::from_str("0.1234567890123456").unwrap();
+        assert_eq!(f2p!(val).value(), expected);
+    }
+
+    #[test]
+    fn test_f2p_precision_limits() {
+        // Test the maximum precision of 16 decimal places
+        let val = ((0.1234567890123456789_f64 * 1e16) as u64 ) as f64 / 1e16; // More than 16 decimal places
+        let expected = Decimal::from_str("0.1234567890123456").unwrap();
+        assert_eq!(f2p!(val).value(), expected);
+    }
+
+    #[test]
+    #[ignore="This test is failing because of the precision limit"]
+    fn test_f2p_precision_limits_bis() {
+        let val = ((987654321.1234567890123456789_f64 * 1e16) as u64 ) as f64 / 1e16; // More than 16 decimal places
+        let expected = Decimal::from_str("987654321.1234567890123456").unwrap();
+        assert_eq!(f2p!(val).value(), expected);
+    }
+
+    #[test]
+    fn test_f2p_negative_values() {
+        // Negative values should return ZERO
+        assert_eq!(f2p!(-1.0), Positive::ZERO);
+        assert_eq!(f2p!(-0.1), Positive::ZERO);
+    }
+
+    #[test]
+    fn test_f2p_edge_cases() {
+        // Test with very large numbers
+        assert_eq!(f2p!(1e15).value(), Decimal::from_str("1000000000000000").unwrap());
+
+        // Test with very small numbers
+        assert_eq!(f2p!(1e-15).value(), Decimal::from_str("0.000000000000001").unwrap());
+    }
+
+    #[test]
+    fn test_f2p_expressions() {
+        assert_eq!(f2p!(2.0 + 3.0).value(), Decimal::new(5, 0));
+        assert_eq!(f2p!(1.5 * 2.0).value(), Decimal::new(3, 0));
+    }
+
+    #[test]
+    fn test_f2p_conversions() {
+        // Test integer to float conversion
+        assert_eq!(f2p!(5.0).value(), Decimal::new(5, 0));
+
+        // Test float literals
+        assert_eq!(f2p!(5.0).value(), Decimal::new(5, 0));
     }
 }

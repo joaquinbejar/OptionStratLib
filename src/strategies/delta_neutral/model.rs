@@ -164,12 +164,12 @@ pub trait DeltaNeutrality: Greeks {
         vec![
             DeltaAdjustment::SellUnderlying(f2p!(net_delta.abs())),
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(net_delta.abs() / 0.5),
+                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Put,
             },
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(net_delta.abs() / 0.5),
+                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
@@ -192,12 +192,12 @@ pub trait DeltaNeutrality: Greeks {
         vec![
             DeltaAdjustment::BuyUnderlying(f2p!(net_delta.abs())),
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(net_delta.abs() / 0.5),
+                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(net_delta.abs() / 0.5),
+                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Put,
             },
