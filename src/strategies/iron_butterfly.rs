@@ -31,8 +31,10 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType
 use crate::visualization::utils::Graph;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
+use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use rust_decimal::Decimal;
 use tracing::{error, info};
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
@@ -189,8 +191,10 @@ impl IronButterfly {
             .expect("Invalid long put");
 
         // Calculate break-even points
-        let net_credit = (strategy.long_put.premium + strategy.long_call.premium) + strategy.fees()
-            - (strategy.short_put.premium + strategy.short_call.premium);
+        let net_credit = (strategy.long_put.premium + strategy.long_call.premium) 
+            + strategy.fees().unwrap().to_f64().unwrap()
+            - (strategy.short_put.premium 
+            + strategy.short_call.premium);
         strategy.break_even_points.push(short_strike + net_credit);
         strategy.break_even_points.push(short_strike - net_credit);
 
@@ -299,24 +303,26 @@ impl Strategies for IronButterfly {
         )
     }
 
-    fn net_premium_received(&self) -> f64 {
-        self.short_call.net_premium_received() + self.short_put.net_premium_received()
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let net_prem = self.short_call.net_premium_received() + self.short_put.net_premium_received()
             - self.long_call.total_cost()
-            - self.long_put.total_cost()
+            - self.long_put.total_cost();
+        Ok(Decimal::from_f64(net_prem).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.short_call.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call.open_fee
             + self.short_call.close_fee
             + self.short_put.open_fee
             + self.short_put.close_fee
             + self.long_call.open_fee
             + self.long_call.close_fee
             + self.long_put.open_fee
-            + self.long_put.close_fee
+            + self.long_put.close_fee;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let inner_width =
             (self.short_call.option.strike_price - self.short_put.option.strike_price).to_f64();
         let outer_width =
@@ -326,16 +332,17 @@ impl Strategies for IronButterfly {
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
-        (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64()
+        let result = (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (value, _) if value == Positive::ZERO => ZERO,
-            (_, value) if value == Positive::ZERO => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).to_f64(),
+            (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
+            (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
+            _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
 
@@ -389,7 +396,7 @@ impl Optimizable for IronButterfly {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -409,8 +416,8 @@ impl Optimizable for IronButterfly {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -444,8 +451,8 @@ impl Optimizable for IronButterfly {
                 short_strike.put_bid.unwrap().to_f64(),
                 long_call.call_ask.unwrap().to_f64(),
                 long_put.put_ask.unwrap().to_f64(),
-                self.fees() / 8.0,
-                self.fees() / 8.0,
+                self.fees().unwrap().to_f64().unwrap() / 8.0,
+                self.fees().unwrap().to_f64().unwrap() / 8.0,
             ),
             _ => panic!("Invalid number of legs for Iron Butterfly strategy"),
         }
@@ -751,8 +758,8 @@ mod tests_iron_butterfly {
         );
 
         // Max loss should be width of the wing minus net credit received
-        let expected_loss = 10.0 - butterfly.net_premium_received();
-        assert_eq!(butterfly.max_loss().unwrap(), f2p!(expected_loss));
+        let expected_loss:Positive = Positive::TEN - butterfly.net_premium_received().unwrap();
+        assert_eq!(butterfly.max_loss().unwrap(), expected_loss);
     }
 
     #[test]
@@ -777,8 +784,8 @@ mod tests_iron_butterfly {
             0.07,
         );
 
-        let expected_profit = butterfly.net_premium_received();
-        assert_eq!(butterfly.max_profit().unwrap(), f2p!(expected_profit));
+        let expected_profit: Positive = butterfly.net_premium_received().unwrap().into();
+        assert_eq!(butterfly.max_profit().unwrap(), expected_profit);
     }
 
     #[test]
@@ -843,7 +850,7 @@ mod tests_iron_butterfly {
             + butterfly.long_call.close_fee
             + butterfly.long_put.open_fee
             + butterfly.long_put.close_fee;
-        assert_eq!(butterfly.fees(), expected_fees);
+        assert_eq!(butterfly.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
     #[test]
@@ -1162,21 +1169,21 @@ mod tests_iron_butterfly_strategies {
     #[test]
     fn test_net_premium_received() {
         let butterfly = create_test_butterfly();
-        assert_eq!(butterfly.net_premium_received(), -2.0);
+        assert_eq!(butterfly.net_premium_received().unwrap().to_f64().unwrap(), -2.0);
     }
 
     #[test]
     fn test_fees() {
         let butterfly = create_test_butterfly();
         let expected_fees = 4.0; // (0.5 + 0.5) * 4 legs
-        assert_eq!(butterfly.fees(), expected_fees);
+        assert_eq!(butterfly.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
     #[test]
     fn test_profit_area() {
         let butterfly = create_test_butterfly();
         // Profit area should be smaller than Iron Condor due to higher concentration
-        assert!(butterfly.profit_area() < 1.0);
+        assert!(butterfly.profit_area().unwrap().to_f64().unwrap() < 1.0);
     }
 
     #[test]
@@ -1200,7 +1207,7 @@ mod tests_iron_butterfly_strategies {
             0.5,
         );
 
-        assert_eq!(butterfly.net_premium_received(), -4.0);
+        assert_eq!(butterfly.net_premium_received().unwrap().to_f64().unwrap(), -4.0);
     }
 
     #[test]
@@ -1224,7 +1231,7 @@ mod tests_iron_butterfly_strategies {
             0.5,
         );
 
-        assert_eq!(butterfly.net_premium_received(), -1.0);
+        assert_eq!(butterfly.net_premium_received().unwrap().to_f64().unwrap(), -1.0);
     }
 }
 
