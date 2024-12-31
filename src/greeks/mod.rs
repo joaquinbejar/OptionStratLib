@@ -38,7 +38,7 @@
 //! ```rust
 //! use optionstratlib::greeks::equations::{delta, gamma, rho, theta, vega};
 //! use optionstratlib::model::option::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, Positive::ONE};
+//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::f2p;
 //! use optionstratlib::Positive;
 //!

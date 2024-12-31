@@ -42,7 +42,7 @@
 //!
 //! ```rust
 //! use tracing::info;
-//! use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+//! use optionstratlib::model::types::ExpirationDate;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
@@ -148,7 +148,7 @@
 //!
 //! ```rust
 //! use tracing::info;
-//! use optionstratlib::model::types::{ExpirationDate, Positive::ZERO};
+//! use optionstratlib::model::types::ExpirationDate;
 //! use optionstratlib::strategies::iron_condor::IronCondor;
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;

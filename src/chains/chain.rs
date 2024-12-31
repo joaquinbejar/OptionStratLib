@@ -325,7 +325,7 @@ impl fmt::Display for OptionData {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OptionChain {
-    pub(crate) symbol: String,
+    pub symbol: String,
     pub underlying_price: Positive,
     expiration_date: String,
     pub(crate) options: BTreeSet<OptionData>,

@@ -54,7 +54,7 @@
 //! impl PnLCalculator for MyOption {
 //!     fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: Positive) -> PnL {
 //!         // Implement PnL calculation logic
-//!         PnL::new(None, Some(market_price.value()), 10.0, 0.0, date_time)
+//!         PnL::new(None, Some(market_price.to_f64()), 10.0, 0.0, date_time)
 //!     }
 //!
 //!     fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> PnL {

@@ -56,7 +56,7 @@
 //! ### Basic Random Walk Generation
 //!
 //! ```rust
-//! use optionstratlib::model::types::{Positive, Positive::ONE};
+//! use optionstratlib::Positive;
 //! use optionstratlib::utils::time::TimeFrame;
 //! use optionstratlib::f2p;
 //! use optionstratlib::simulation::{RandomWalkGraph, Walkable};

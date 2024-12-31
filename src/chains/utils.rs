@@ -6,11 +6,11 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::error::chains::ChainError;
-use crate::model::types::{ExpirationDate};
+use crate::model::types::ExpirationDate;
 use crate::Positive;
+use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 use std::fmt::Display;
-use rust_decimal::Decimal;
 
 #[derive(Debug)]
 pub enum OptionDataGroup<'a> {
@@ -61,6 +61,7 @@ impl OptionChainBuildParams {
     }
 }
 
+#[derive(Debug)]
 pub struct OptionDataPriceParams {
     pub(crate) underlying_price: Positive,
     pub(crate) expiration_date: ExpirationDate,
@@ -217,6 +218,11 @@ pub(crate) fn generate_list_of_strikes(
     let reference_price_rounded = rounder(reference_price, strike_interval);
 
     for i in 0..=chain_size {
+        let next_strike = i as f64 * strike_interval;
+        if reference_price_rounded < next_strike {
+            // panic!("Reference price is lower than the next strike: {}, {}", next_strike, reference_price_rounded);
+            break
+        }
         let lower_strike = (reference_price_rounded - (i as f64 * strike_interval)).floor();
         let upper_strike = (reference_price_rounded + (i as f64 * strike_interval)).floor();
 
@@ -307,7 +313,7 @@ mod tests_rounder {
 #[cfg(test)]
 mod tests_generate_list_of_strikes {
     use super::*;
-    use crate::{ Positive};
+    use crate::Positive;
 
     #[test]
     fn test_generate_list_of_strikes_basic() {
@@ -673,8 +679,8 @@ mod tests_option_chain_build_params {
 
 #[cfg(test)]
 mod tests_random_positions_params_extended {
-    use crate::f2p;
     use super::*;
+    use crate::f2p;
 
     #[test]
     fn test_partial_positions() {
@@ -741,5 +747,40 @@ mod tests_random_positions_params_extended {
             ExpirationDate::Days(days) => assert_eq!(days, 30.0),
             _ => panic!("Expected ExpirationDate::Days"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_sample {
+    use super::*;
+    use crate::chains::chain::OptionChain;
+
+    #[test]
+    fn test_chain() {
+        
+        let chain = OptionDataPriceParams::new(
+            Positive::new(2000.0).unwrap(),
+            ExpirationDate::Days(10.0),
+            Some(Positive::new(0.01).unwrap()),
+            0.01,
+            0.0,
+        );
+
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            Some(Positive::ONE),
+            5,
+            Positive::ONE,
+            0.0001,
+            Positive::new(0.02).unwrap(),
+            2,
+            chain,
+        );
+
+        let built_chain = OptionChain::build_chain(&params);
+        
+        assert_eq!(built_chain.symbol, "SP500");
+        assert_eq!(built_chain.underlying_price, Positive::new(2000.0).unwrap());
+        
     }
 }

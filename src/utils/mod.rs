@@ -41,7 +41,6 @@
 //! ```rust
 //! use optionstratlib::Positive;
 //! use optionstratlib::{assert_positivef64_relative_eq, f2p};
-//! use optionstratlib::model::types::Positive::ZERO;
 //!
 //! let a = f2p!(1.0);
 //! let b = f2p!(1.0001);
@@ -147,7 +146,6 @@
 //! ```rust
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
-//! use optionstratlib::model::types::Positive::ZERO;
 //! use optionstratlib::assert_positivef64_relative_eq;
 //!
 //!

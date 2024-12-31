@@ -581,7 +581,7 @@
 //!
 //!     // Define a range of prices for the graph
 //!     let price_range: Vec<Positive> = (50..150)
-//!         .map(|x| f2p!(x))
+//!         .map(|x| f2p!(x as f64))
 //!         .collect();
 //!
 //!     // Generate the intrinsic value graph
