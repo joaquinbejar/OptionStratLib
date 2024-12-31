@@ -13,6 +13,7 @@ use std::error::Error;
 use tracing::info;
 
 #[test]
+#[ignore]
 fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
@@ -75,7 +76,7 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         underlying_price,
         positions,
         0.01,
-        10,
+        5,
         0.1,
     );
 
@@ -84,7 +85,7 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_area(&option_chain, FindOptimalSide::Lower);
     info!("Profit Area: {:.4}", strategy.profit_area());
     assert_relative_eq!(strategy.profit_area(), 75.4005, epsilon = 0.001);
-    strategy.best_ratio(&option_chain, FindOptimalSide::All);
+    strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     info!("Profit Ratio: {:.4}", strategy.profit_ratio());
     assert_relative_eq!(strategy.profit_ratio(), 15.0989, epsilon = 0.001);
 

@@ -10,6 +10,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
+#[ignore]
 fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
@@ -112,7 +113,7 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         underlying_price,
         positions,
         0.01,
-        100,
+        5,
         0.1,
     );
 

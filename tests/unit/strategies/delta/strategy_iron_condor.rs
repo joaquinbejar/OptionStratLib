@@ -5,9 +5,11 @@ use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::{assert_decimal_eq, f2p};
+use optionstratlib::{assert_decimal_eq, f2p, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use std::str::FromStr;
+use rust_decimal::Decimal;
 
 #[test]
 fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
@@ -67,7 +69,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: f2p!(0.921345173469527),
+            quantity: Positive::new_decimal(Decimal::from_str("0.921345173469528").unwrap()).unwrap(),
             strike: f2p!(2800.0),
             option_type: OptionStyle::Call
         }

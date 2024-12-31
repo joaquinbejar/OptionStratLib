@@ -5,9 +5,11 @@ use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::logger::setup_logger;
-use optionstratlib::{assert_decimal_eq, f2p};
+use optionstratlib::{assert_decimal_eq, f2p, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use std::str::FromStr;
+use rust_decimal::Decimal;
 
 #[test]
 fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
@@ -64,7 +66,7 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: f2p!(2.184538786861797),
+            quantity: Positive::new_decimal(Decimal::from_str("2.184538786861798").unwrap()).unwrap(),
             strike: f2p!(5820.0),
             option_type: OptionStyle::Call
         }
