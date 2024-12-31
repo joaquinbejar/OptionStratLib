@@ -703,8 +703,6 @@ mod tests_calculate_floating_strike_payoff {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests_option_type {
     use crate::f2p;
@@ -819,8 +817,6 @@ mod tests_option_type {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests_vec_collection {
     use crate::model::positive::Positive;
@@ -881,5 +877,197 @@ mod tests_vec_collection {
         assert_eq!(collected[1], f2p!(2.0));
         assert_eq!(collected[2], f2p!(3.0));
         assert_eq!(collected[3], f2p!(4.0));
+    }
+}
+
+#[cfg(test)]
+mod test_expiration_date {
+    use crate::model::ExpirationDate;
+
+    #[test]
+    fn test_from_string_valid_days() {
+        let result = ExpirationDate::from_string(&"30.0".to_string());
+        assert!(result.is_ok());
+        match result.unwrap() {
+            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            _ => panic!("Expected Days variant"),
+        }
+    }
+
+    #[test]
+    fn test_from_string_valid_datetime() {
+        let result = ExpirationDate::from_string(&"2024-12-31T00:00:00Z".to_string());
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_from_string_invalid_format() {
+        let result = ExpirationDate::from_string(&"invalid date".to_string());
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod test_asian_options {
+    use crate::f2p;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::model::types::AsianAveragingType;
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_asian_arithmetic_put() {
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Arithmetic,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(90.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            spot_prices: Some(vec![85.0, 90.0, 95.0]),
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_asian_no_spot_prices() {
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Arithmetic,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(100.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod test_barrier_options {
+    use crate::f2p;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::model::types::BarrierType;
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_barrier_down_and_in_put() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::DownAndIn,
+            barrier_level: 90.0,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(100.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 0.0);
+    }
+
+    #[test]
+    fn test_barrier_up_and_out_call() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::UpAndOut,
+            barrier_level: 110.0,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(120.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod test_cliquet_options {
+    use crate::f2p;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_cliquet_option_with_resets() {
+        let option = OptionType::Cliquet {
+            reset_dates: vec![30.0, 60.0, 90.0],
+        };
+        let info = PayoffInfo {
+            spot: f2p!(120.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 20.0);
+    }
+}
+
+#[cfg(test)]
+mod test_rainbow_options {
+    use crate::f2p;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_rainbow_option_multiple_assets() {
+        let option = OptionType::Rainbow { num_assets: 3 };
+        let info = PayoffInfo {
+            spot: f2p!(120.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 20.0);
+    }
+}
+
+#[cfg(test)]
+mod test_exchange_options {
+    use crate::f2p;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_exchange_option_positive_diff() {
+        let option = OptionType::Exchange {
+            second_asset: 90.0,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(120.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 20.0);
+    }
+
+    #[test]
+    fn test_exchange_option_negative_diff() {
+        let option = OptionType::Exchange {
+            second_asset: 110.0,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
     }
 }

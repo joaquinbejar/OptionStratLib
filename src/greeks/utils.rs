@@ -1703,3 +1703,166 @@ mod calculate_big_n_values {
         assert_relative_eq!(calculated_big_n, expected_big_n, epsilon = 1e-12);
     }
 }
+
+#[cfg(test)]
+mod tests_d1_d2_edge_cases {
+    use rust_decimal_macros::dec;
+    use super::*;
+    use crate::{assert_decimal_eq, f2p};
+
+    #[test]
+    fn test_d1_zero_underlying_price() {
+        let result = d1(
+            Positive::ZERO,
+            f2p!(100.0),
+            0.05,
+            1.0,
+            0.2
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_d2_negative_rates_and_high_volatility() {
+        let result = d2(
+            f2p!(100.0),
+            f2p!(100.0),
+            -0.05,  // tasa negativa
+            1.0,
+            0.8    // alta volatilidad
+        ).unwrap();
+        assert_decimal_eq!(result, dec!(-0.4625), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_d1_d2_combination_extreme_values() {
+        let result_d1 = d1(
+            f2p!(1000.0),
+            f2p!(10.0),
+            0.15,
+            10.0,
+            0.9
+        ).unwrap();
+        let result_d2 = d2(
+            f2p!(1000.0),
+            f2p!(10.0),
+            0.15,
+            10.0,
+            0.9
+        ).unwrap();
+        assert_decimal_eq!(result_d1, dec!(3.5681), dec!(0.0001));
+        assert_decimal_eq!(result_d2, dec!(0.7221), dec!(0.0001));
+    }
+}
+
+#[cfg(test)]
+mod tests_probability_density {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_n_prime_symmetry() {
+        let x = dec!(1.5);
+        let n_prime_pos = n_prime(x).unwrap();
+        let n_prime_neg = n_prime(-x).unwrap();
+        assert_eq!(n_prime_pos, -n_prime_neg);
+    }
+
+    #[test]
+    fn test_n_integration_limits() {
+        let x_very_large = dec!(10.0);
+        let result = n(x_very_large).unwrap();
+        assert!(result < dec!(0.0001));
+    }
+
+    #[test]
+    fn test_n_prime_zero_crossing() {
+        let result = n_prime(dec!(0.0)).unwrap();
+        assert_eq!(result, dec!(0.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_cumulative_distribution {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_big_n_continuity() {
+        let x1 = dec!(0.001);
+        let x2 = dec!(-0.001);
+        let result1 = big_n(x1).unwrap();
+        let result2 = big_n(x2).unwrap();
+        assert!((result1 - result2).abs() < dec!(0.001));
+    }
+
+    #[test]
+    fn test_big_n_conversion_error() {
+        let x = Decimal::MAX;
+        let result = big_n(x);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_big_n_boundary_values() {
+        let result_zero = big_n(dec!(0.0)).unwrap();
+        assert_eq!(result_zero, dec!(0.5));
+    }
+}
+
+#[cfg(test)]
+mod tests_calculate_d_values_bis {
+    use rust_decimal_macros::dec;
+    use crate::{assert_decimal_eq, f2p};
+    use crate::model::ExpirationDate;
+    use super::*;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+
+    #[test]
+    fn test_calculate_d_values_with_expiration() {
+        let option = Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "TEST".to_string(),
+            strike_price: f2p!(100.0),
+            underlying_price: f2p!(100.0),
+            risk_free_rate: 0.05,
+            implied_volatility: 0.2,
+            expiration_date: ExpirationDate::Days(30.0),
+            quantity: f2p!(1.0),
+            option_style: OptionStyle::Call,
+            dividend_yield: 0.0,
+            exotic_params: None,
+        };
+        let (d1, d2) = calculate_d_values(&option).unwrap();
+        assert_decimal_eq!(d1, dec!(0.1003), dec!(0.0001));
+        assert_decimal_eq!(d2, dec!(0.0430), dec!(0.0001));
+    }
+}
+
+#[cfg(test)]
+mod tests_edge_cases_and_errors {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use crate::f2p;
+
+    #[test]
+    fn test_extreme_volatility_values() {
+        let result = d1(
+            f2p!(100.0),
+            f2p!(100.0),
+            0.05,
+            1.0,
+            1000.0  
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_precision_limits() {
+        let x = dec!(15.0);  
+        let n_result = n(x).unwrap();
+        assert!(n_result.to_f64().unwrap() == 0.0);
+    }
+    
+}

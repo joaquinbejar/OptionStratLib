@@ -1176,16 +1176,12 @@ mod tests_bear_put_spread_optimizable {
     fn create_mock_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-03-15".to_string(), None, None);
 
-        // Para un Bear Put Spread, necesitamos:
-        // - Strikes por encima y por debajo del precio actual
-        // - Puts con precios realistas basados en la distancia al strike
 
-        // Strike por debajo del spot (95)
         chain.add_option(
             f2p!(95.0),   // strike
             spos!(0.5),   // call_bid
             spos!(0.7),   // call_ask
-            spos!(2.0),   // put_bid - menor precio por estar OTM
+            spos!(2.0),   // put_bid -
             spos!(2.2),   // put_ask
             spos!(0.2),   // implied_vol
             Some(-0.3),   // delta
@@ -1206,12 +1202,11 @@ mod tests_bear_put_spread_optimizable {
             Some(100),
         );
 
-        // Strike por encima del spot (105)
         chain.add_option(
             f2p!(105.0),
             spos!(5.8),
             spos!(6.0),
-            spos!(8.8), // put_bid - mayor precio por estar ITM
+            spos!(8.8), // put_bid 
             spos!(9.0), // put_ask
             spos!(0.2),
             Some(-0.7),

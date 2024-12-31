@@ -488,7 +488,7 @@ mod tests_simulate_returns_bis {
         let returns = simulate_returns(dec!(0.05), dec!(0.2), 100, dec!(1.0)).unwrap();
         assert_eq!(returns.len(), 100);
         for r in returns {
-            assert!(r > dec!(-1.0)); // Los retornos no deberían ser menores que -100%
+            assert!(r > dec!(-1.0)); 
         }
     }
 
