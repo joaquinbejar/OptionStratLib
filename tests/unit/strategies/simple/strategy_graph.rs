@@ -33,7 +33,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
 
     // Validate strategy properties
     assert_eq!(strategy.title(), "Bull Call Spread Strategy:\n\tUnderlying: GOLD @ $2460 Long Call European Option\n\tUnderlying: GOLD @ $2515 Short Call European Option");
-    assert_eq!(strategy.get_break_even_points().len(), 1);
+    assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
 
     // Validate financial calculations
     assert_relative_eq!(
@@ -62,7 +62,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Validate break-even point
-    let break_even = strategy.get_break_even_points();
+    let break_even = strategy.get_break_even_points().unwrap();
     assert!(
         break_even[0] > f2p!(2460.0),
         "Break-even should be between strikes"

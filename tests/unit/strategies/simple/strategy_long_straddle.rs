@@ -36,7 +36,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.title(), "Long Straddle Strategy: \n\tUnderlying: CL @ $7140 Long Call European Option\n\tUnderlying: CL @ $7140 Long Put European Option");
-    assert_eq!(strategy.get_break_even_points().len(), 2);
+    assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64().unwrap(),
         ZERO,
@@ -51,7 +51,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     // Test range calculations
     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
     assert!(!price_range.is_empty());
-    let break_even_points = strategy.get_break_even_points();
+    let break_even_points = strategy.get_break_even_points().unwrap();
     let range = break_even_points[1] - break_even_points[0];
     assert_relative_eq!(
         (range.to_f64() / 2.0) / underlying_price.to_f64() * 100.0,
@@ -68,7 +68,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
 
     // Additional strategy-specific validations
     assert!(
-        strategy.get_break_even_points()[0] < strategy.get_break_even_points()[1],
+        strategy.get_break_even_points().unwrap()[0] < strategy.get_break_even_points().unwrap()[1],
         "Lower break-even point should be less than upper break-even point"
     );
 

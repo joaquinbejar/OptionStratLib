@@ -33,7 +33,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Assertions to validate strategy properties and computations
-    assert_eq!(strategy.get_break_even_points().len(), 1);
+    assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(141.8399), f2p!(0.0001));
@@ -47,7 +47,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert!(!price_range.is_empty());
 
     // Validate price range in relation to break even points
-    let break_even_points = strategy.get_break_even_points();
+    let break_even_points = strategy.get_break_even_points().unwrap();
     assert!(price_range[0] < break_even_points[0]);
     assert!(price_range[price_range.len() - 1] > break_even_points[0]);
 

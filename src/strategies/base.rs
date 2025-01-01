@@ -8,7 +8,7 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::position::PositionError;
-use crate::error::strategies::StrategyError;
+use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
 use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::Positive;
@@ -225,6 +225,7 @@ pub trait Strategies: Validable + Positionable {
     fn range_of_profit(&self) -> Result<Positive, StrategyError> {
         let mut break_even_points = self.get_break_even_points()?.clone();
         match break_even_points.len() {
+            0 => Err(StrategyError::BreakEvenError(BreakEvenErrorKind::NoBreakEvenPoints)),
             1 => Ok(Positive::INFINITY),
             2 => Ok(break_even_points[1] - break_even_points[0]),
             _ => {

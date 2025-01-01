@@ -269,11 +269,7 @@ impl Strategies for CustomStrategy {
     }
 
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
-        if self.break_even_points.is_empty() {
-            panic!("No break-even points found");
-        } else {
-            Ok(&self.break_even_points)
-        }
+        Ok(&self.break_even_points)
     }
 }
 
@@ -1078,10 +1074,10 @@ mod tests_total_cost {
     #[test]
     fn test_total_cost_with_different_premiums_and_fees() {
         let positions = vec![
-            create_test_position(Side::Long, 10.0, 1.0), // net cost = 12.0
-            create_test_position(Side::Short, 5.0, 0.5), // net cost = 1.0
-            create_test_position(Side::Long, 7.0, 0.75), // net cost = 8.5
-            create_test_position(Side::Short, 3.0, 0.25), // net cost = 0.5
+            create_test_position(Side::Long, 10.0, 1.0),
+            create_test_position(Side::Short, 5.0, 0.5), 
+            create_test_position(Side::Short, 3.0, 0.25),
+            create_test_position(Side::Long, 7.0, 0.75),
         ];
 
         let strategy = CustomStrategy::new(
@@ -1094,7 +1090,6 @@ mod tests_total_cost {
             100,
             1.0,
         );
-
         assert_eq!(strategy.total_cost(), 22.0); // 12.0 + 1.0 + 8.5 + 0.5
     }
 }

@@ -36,7 +36,7 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.title(), "Bull Put Spread Strategy:\n\tUnderlying: SP500 @ $5750 Long Put European Option\n\tUnderlying: SP500 @ $5920 Short Put European Option");
-    assert_eq!(strategy.get_break_even_points().len(), 1);
+    assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64().unwrap(),
         143.58,
@@ -53,8 +53,8 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
     // Validate price range calculations
     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
     assert!(!price_range.is_empty());
-    assert!(price_range[0] < strategy.get_break_even_points()[0]);
-    assert!(price_range[price_range.len() - 1] > strategy.get_break_even_points()[0]);
+    assert!(price_range[0] < strategy.get_break_even_points().unwrap()[0]);
+    assert!(price_range[price_range.len() - 1] > strategy.get_break_even_points().unwrap()[0]);
 
     Ok(())
 }
