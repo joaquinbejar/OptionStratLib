@@ -64,7 +64,6 @@ mod tests {
     use crate::constants::ZERO;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, f2du, f2p};
-    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_option() -> Options {
