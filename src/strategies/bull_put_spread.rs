@@ -313,7 +313,7 @@ impl Optimizable for BullPutSpread {
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::chains::utils::OptionDataGroup;
-    /// use optionstratlib::model::types::ExpirationDate;
+    /// use optionstratlib::ExpirationDate;
     /// use optionstratlib::Positive;
     /// use optionstratlib::f2p;
     /// use optionstratlib::strategies::base::Optimizable;

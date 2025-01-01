@@ -5,7 +5,7 @@
 ******************************************************************************/
 use optionstratlib::f2p;
 use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::Positive;

@@ -1,12 +1,12 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
 use optionstratlib::f2p;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use std::error::Error;
 use tracing::{debug, info};

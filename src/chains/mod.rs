@@ -29,7 +29,7 @@
 //! ```rust
 //! use optionstratlib::chains::chain::{OptionChain, OptionData};
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-//! use optionstratlib::model::types::ExpirationDate;
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::{spos, Positive};
 //! let chain = OptionDataPriceParams::new(
 //!     Positive::new(2000.0).unwrap(),

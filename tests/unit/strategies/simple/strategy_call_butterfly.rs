@@ -1,11 +1,11 @@
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::constants::ZERO;
-use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::strategies::Strategies;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::ExpirationDate;
 use optionstratlib::{assert_positivef64_relative_eq, f2p, Positive};
 use std::error::Error;
 

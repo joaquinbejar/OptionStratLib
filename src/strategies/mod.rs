@@ -42,11 +42,11 @@
 //!
 //! ```rust
 //! use tracing::info;
-//! use optionstratlib::model::types::ExpirationDate;
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
-//! use optionstratlib::strategies::base::Strategies;
+//! use optionstratlib::strategies::Strategies;
 //!
 //! let spread = BullCallSpread::new(
 //!     "SP500".to_string(),
@@ -148,11 +148,11 @@
 //!
 //! ```rust
 //! use tracing::info;
-//! use optionstratlib::model::types::ExpirationDate;
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::iron_condor::IronCondor;
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
-//! use optionstratlib::strategies::base::Strategies;
+//! use optionstratlib::strategies::Strategies;
 //!
 //! let condor = IronCondor::new(
 //!     "AAPL".to_string(),
@@ -200,3 +200,21 @@ pub mod protective_put;
 pub mod straddle;
 pub mod strangle;
 pub mod utils;
+
+pub use base::Strategies;
+pub use bear_call_spread::BearCallSpread;
+pub use bear_put_spread::BearPutSpread;
+pub use bull_call_spread::BullCallSpread;
+pub use bull_put_spread::BullPutSpread;
+pub use butterfly_spread::{LongButterflySpread, ShortButterflySpread};
+pub use call_butterfly::CallButterfly;
+// pub use collar::Collar;
+// pub use covered_call::CoveredCall;
+pub use custom::CustomStrategy;
+pub use delta_neutral::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD};
+pub use iron_butterfly::IronButterfly;
+pub use iron_condor::IronCondor;
+pub use poor_mans_covered_call::PoorMansCoveredCall;
+pub use straddle::{LongStraddle, ShortStraddle};
+pub use strangle::{LongStrangle, ShortStrangle};
+pub use utils::FindOptimalSide;

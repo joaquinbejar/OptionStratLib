@@ -7,7 +7,7 @@ use optionstratlib::f2p;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::Positive;
 use std::error::Error;

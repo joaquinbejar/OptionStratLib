@@ -4,7 +4,7 @@ use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_decimal_eq, f2p, Positive};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

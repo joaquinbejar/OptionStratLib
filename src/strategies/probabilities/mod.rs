@@ -31,7 +31,7 @@
 //! ```rust
 //! use optionstratlib::Positive;
 //! use optionstratlib::pricing::Profit;
-//! use optionstratlib::strategies::base::Strategies;
+//! use optionstratlib::strategies::Strategies;
 //!
 //! use optionstratlib::strategies::probabilities::{PriceTrend, StrategyProbabilityAnalysis, VolatilityAdjustment};
 //!
@@ -87,7 +87,7 @@
 //! ### Analysis with Volatility Adjustment
 //!
 //! ```rust
-//! use optionstratlib::model::types::ExpirationDate;
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
@@ -122,7 +122,7 @@
 //! ### Analysis with Price Trend
 //!
 //! ```rust
-//! use optionstratlib::model::types::ExpirationDate;
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
@@ -157,7 +157,7 @@
 //! ```rust
 //! use tracing::info;
 //! use optionstratlib::strategies::probabilities::calculate_price_probability;
-//! use optionstratlib::model::types::ExpirationDate;
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
 //!

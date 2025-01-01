@@ -5,11 +5,11 @@
 ******************************************************************************/
 
 use optionstratlib::f2p;
-use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::strategies::Strategies;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use std::error::Error;
 use tracing::info;

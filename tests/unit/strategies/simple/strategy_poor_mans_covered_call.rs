@@ -1,8 +1,8 @@
 use num_traits::ToPrimitive;
-use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::strategies::Strategies;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::{assert_positivef64_relative_eq, f2p};
 use std::error::Error;

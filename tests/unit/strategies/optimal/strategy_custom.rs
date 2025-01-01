@@ -9,7 +9,7 @@ use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use std::error::Error;
 use tracing::info;
 

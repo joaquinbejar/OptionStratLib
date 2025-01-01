@@ -4,7 +4,7 @@
    Date: 26/9/24
 ******************************************************************************/
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::Positive;
 use optionstratlib::{f2p, spos};
 use tracing::info;

@@ -2,11 +2,11 @@ use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::f2p;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
-use optionstratlib::strategies::strangle::ShortStrangle;
 use optionstratlib::strategies::utils::FindOptimalSide;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::strategies::ShortStrangle;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::ExpirationDate;
 use std::error::Error;
 
 #[test]

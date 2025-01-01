@@ -1,10 +1,10 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::strangle::ShortStrangle;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::strategies::ShortStrangle;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::ExpirationDate;
 use optionstratlib::{assert_decimal_eq, f2p};
 use rust_decimal_macros::dec;
 use std::error::Error;

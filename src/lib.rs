@@ -552,7 +552,7 @@
 //! use optionstratlib::Positive;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::f2p;
-//! use optionstratlib::utils::logger::setup_logger;
+//! use optionstratlib::utils::setup_logger;
 //! use optionstratlib::visualization::utils::Graph;
 //! use std::error::Error;
 //! use tracing::info;
@@ -598,11 +598,11 @@
 //!  
 //!```rust
 //! use optionstratlib::Positive;
-//! use optionstratlib::model::types::ExpirationDate;
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::f2p;
-//! use optionstratlib::strategies::base::Strategies;
+//! use optionstratlib::strategies::Strategies;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-//! use optionstratlib::utils::logger::setup_logger;
+//! use optionstratlib::utils::setup_logger;
 //! use optionstratlib::visualization::utils::Graph;
 //! use std::error::Error;
 //! use tracing::info;
@@ -706,3 +706,5 @@ pub mod visualization;
 pub mod volatility;
 
 pub use model::positive::Positive;
+pub use model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+

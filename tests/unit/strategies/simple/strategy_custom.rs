@@ -5,9 +5,9 @@ use optionstratlib::f2p;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::custom::CustomStrategy;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::strategies::Strategies;
+use optionstratlib::utils::setup_logger;
 use std::error::Error;
 
 #[test]
