@@ -7,6 +7,7 @@ use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use std::error::Error;
+use num_traits::ToPrimitive;
 
 #[test]
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
@@ -40,9 +41,9 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     strategy.best_area(&option_chain, FindOptimalSide::All);
-    assert_relative_eq!(strategy.profit_area(), 68391.6908, epsilon = 0.001);
+    assert_relative_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 68391.6908, epsilon = 0.001);
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-    assert_relative_eq!(strategy.profit_ratio(), 10660.0, epsilon = 0.001);
+    assert_relative_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 10660.0, epsilon = 0.001);
 
     Ok(())
 }

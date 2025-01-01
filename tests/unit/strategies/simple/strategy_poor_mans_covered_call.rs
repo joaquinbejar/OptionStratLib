@@ -5,6 +5,7 @@ use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::{assert_positivef64_relative_eq, f2p};
 use std::error::Error;
+use num_traits::ToPrimitive;
 
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
@@ -37,9 +38,9 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(141.8399), f2p!(0.0001));
     assert_positivef64_relative_eq!(strategy.max_loss()?, f2p!(258.16), f2p!(0.0001));
-    assert_eq!(strategy.fees(), 10.36);
-    assert!(strategy.profit_area() > 0.0);
-    assert!(strategy.profit_ratio() > 0.0);
+    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 10.36);
+    assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Test range calculations
     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();

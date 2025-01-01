@@ -7,6 +7,7 @@ use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{assert_positivef64_relative_eq, f2p};
 use std::error::Error;
+use num_traits::ToPrimitive;
 
 #[test]
 fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
@@ -35,13 +36,13 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.get_break_even_points().len(), 1);
 
     // Validate financial calculations
-    assert_relative_eq!(strategy.net_premium_received(), -24.18, epsilon = 0.001);
+    assert_relative_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), -24.18, epsilon = 0.001);
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(30.82), f2p!(0.0001));
     assert_positivef64_relative_eq!(strategy.max_loss()?, f2p!(24.18), f2p!(0.0001));
     assert_positivef64_relative_eq!(strategy.total_cost(), f2p!(32.66), f2p!(0.0001));
-    assert_eq!(strategy.fees(), 2.25);
+    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 2.25);
 
     // Test price range calculations
     let test_price_range: Vec<Positive> = (2400..2600)

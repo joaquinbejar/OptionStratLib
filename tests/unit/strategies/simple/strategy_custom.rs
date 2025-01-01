@@ -8,6 +8,7 @@ use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::utils::logger::setup_logger;
 use std::error::Error;
+use num_traits::ToPrimitive;
 
 #[test]
 #[ignore]
@@ -118,8 +119,8 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Test strategy properties and calculations
-    assert_relative_eq!(strategy.net_premium_received(), 572.83, epsilon = 0.001);
-    assert_relative_eq!(strategy.fees(), 51.56, epsilon = 0.001);
+    assert_relative_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 572.83, epsilon = 0.001);
+    assert_relative_eq!(strategy.fees().unwrap().to_f64().unwrap(), 51.56, epsilon = 0.001);
 
     // Test range and break-even points
     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
@@ -127,11 +128,11 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
 
     // Test profit metrics
     assert!(
-        strategy.profit_area() > 0.0 && strategy.profit_area() <= 100.0,
+        strategy.profit_area().unwrap().to_f64().unwrap() > 0.0 && strategy.profit_area().unwrap().to_f64().unwrap() <= 100.0,
         "Profit area should be between 0 and 100%"
     );
     assert!(
-        strategy.profit_ratio() > 0.0,
+        strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0,
         "Profit ratio should be positive"
     );
 

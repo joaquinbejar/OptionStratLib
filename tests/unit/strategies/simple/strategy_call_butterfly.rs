@@ -7,6 +7,7 @@ use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{assert_positivef64_relative_eq, f2p, Positive};
 use std::error::Error;
+use num_traits::ToPrimitive;
 
 #[test]
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
@@ -40,13 +41,13 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.title(), "Ratio Call Spread Strategy: CallButterfly\n\tUnderlying: SP500 @ $5750 Long Call European Option\n\tUnderlying: SP500 @ $5800 Short Call European Option\n\tUnderlying: SP500 @ $5850 Short Call European Option");
     assert_eq!(strategy.get_break_even_points().len(), 2);
-    assert_relative_eq!(strategy.net_premium_received(), ZERO, epsilon = 0.001);
+    assert_relative_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), ZERO, epsilon = 0.001);
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(42.319), f2p!(0.0001));
     assert_eq!(strategy.max_loss()?, Positive::INFINITY);
     assert_positivef64_relative_eq!(strategy.total_cost(), f2p!(89.57), f2p!(0.0001));
-    assert_eq!(strategy.fees(), 4.53);
+    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 4.53);
 
     // Test range calculations
     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
@@ -59,8 +60,8 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         epsilon = 0.001
     );
 
-    assert!(strategy.profit_area() > 0.0);
-    assert!(strategy.profit_ratio() > 0.0);
+    assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Validate price range in relation to break even points
     let break_even_points = strategy.get_break_even_points();

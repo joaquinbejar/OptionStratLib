@@ -7,6 +7,7 @@ use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use std::error::Error;
+use num_traits::ToPrimitive;
 
 #[test]
 fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
@@ -35,9 +36,9 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     strategy.best_area(&option_chain, FindOptimalSide::All);
-    assert_relative_eq!(strategy.profit_area(), 399.5201, epsilon = 0.001);
+    assert_relative_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 399.5201, epsilon = 0.001);
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-    assert_relative_eq!(strategy.profit_ratio(), 1793.9393, epsilon = 0.001);
+    assert_relative_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 1793.9393, epsilon = 0.001);
 
     Ok(())
 }
