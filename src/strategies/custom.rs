@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
+use num_traits::FromPrimitive;
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
@@ -19,6 +20,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use tracing::{debug, error};
+use crate::error::strategies::{OperationErrorKind, StrategyError};
 
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
@@ -227,23 +229,28 @@ impl Strategies for CustomStrategy {
         self.positions.iter().map(Position::total_cost).sum()
     }
 
-    fn net_premium_received(&self) -> f64 {
-        self.positions
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let restult = self.positions
             .iter()
             .map(|position| position.net_premium_received())
-            .sum::<f64>()
+            .sum::<f64>();
+        Ok(Decimal::from_f64(restult).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.positions
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let restult = self.positions
             .iter()
             .map(|position| position.open_fee + position.close_fee)
-            .sum::<f64>()
+            .sum::<f64>();
+        Ok(Decimal::from_f64(restult).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         if self.positions.is_empty() {
-            panic!("No positions found");
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "profit_area".to_string(),
+                reason: "No positions found".to_string(),
+            }));
         }
 
         let mut total_profit: f64 = ZERO;
@@ -255,11 +262,14 @@ impl Strategies for CustomStrategy {
             }
             current_price += f2p!(self.step_by);
         }
-        total_profit / self.underlying_price.to_f64()
+        let restult = total_profit / self.underlying_price.to_f64();
+        Ok(Decimal::from_f64(restult).unwrap())
+        
     }
 
-    fn profit_ratio(&self) -> f64 {
-        (self.max_profit_point.unwrap().1 / self.max_loss_point.unwrap().1).abs() * 100.0
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        let restult = (self.max_profit_point.unwrap().1 / self.max_loss_point.unwrap().1).abs() * 100.0;
+        Ok(Decimal::from_f64(restult).unwrap())
     }
 
     fn get_break_even_points(&self) -> Vec<Positive> {
@@ -303,7 +313,7 @@ impl Optimizable for CustomStrategy {
         let positions = self.positions.clone();
         let options: Vec<&OptionData> = option_chain.filter_option_data(side);
 
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let mut best_positions = positions.clone();
 
         debug!("Starting optimization with {} positions", positions.len());
@@ -327,14 +337,13 @@ impl Optimizable for CustomStrategy {
             // Evaluate the current combination
             self.update_positions(current_positions.clone());
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => self.profit_ratio(),
-                OptimizationCriteria::Area => self.profit_area(),
+                OptimizationCriteria::Ratio => self.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => self.profit_area().unwrap(),
             };
 
             if current_value > best_value {
                 debug!("Found better value: {} > {}", current_value, best_value);
                 best_value = current_value;
-
                 best_positions = current_positions.clone();
             }
 
@@ -342,7 +351,7 @@ impl Optimizable for CustomStrategy {
         })
         .unwrap();
 
-        if best_value == f64::NEG_INFINITY {
+        if best_value ==  Decimal::MIN {
             error!("No valid combinations found");
         }
 
@@ -1233,7 +1242,7 @@ mod tests_best_range_to_show {
 
 #[cfg(test)]
 mod tests_best_area {
-
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::utils::RandomPositionsParams;
     use crate::error::chains::ChainError;
@@ -1284,8 +1293,8 @@ mod tests_best_area {
     fn test_calls() {
         let (mut strategy, option_chain) = set_up(None, None, Some(1), Some(1)).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::All);
-        assert_eq!(strategy.profit_area(), 93.64800030502528);
-        assert_eq!(strategy.profit_ratio(), 73.48561515107706);
+        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 93.64800030502528);
+        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 73.48561515107706);
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5520 Long Call European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
@@ -1295,8 +1304,8 @@ mod tests_best_area {
         assert_eq!(strategy.max_profit_iter(), 203.32);
         assert_eq!(strategy.max_loss_iter(), 276.68);
         assert_eq!(strategy.total_cost(), 280.06);
-        assert_eq!(strategy.net_premium_received(), 1.38);
-        assert_eq!(strategy.fees(), 4.0);
+        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 1.38);
+        assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 4.0);
     }
 
     #[test]
@@ -1304,8 +1313,8 @@ mod tests_best_area {
     fn test_shorts() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, Some(1)).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
-        assert_eq!(strategy.profit_area(), 74.96815658589438);
-        assert_eq!(strategy.profit_ratio(), 67.08108880168896);
+        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 74.96815658589438);
+        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 67.08108880168896);
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6000 Short Put European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
@@ -1315,8 +1324,8 @@ mod tests_best_area {
         assert_eq!(strategy.max_profit_iter(), 219.81480000199196);
         assert_eq!(strategy.max_loss_iter(), 327.68519999999984);
         assert_eq!(strategy.total_cost(), 4.0);
-        assert_eq!(strategy.net_premium_received(), 219.82999999999998);
-        assert_eq!(strategy.fees(), 4.0);
+        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 219.82999999999998);
+        assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 4.0);
     }
 
     #[test]
@@ -1324,8 +1333,8 @@ mod tests_best_area {
     fn test_put() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, None).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
-        assert_eq!(strategy.profit_area(), 237.05879174440312);
-        assert_eq!(strategy.profit_ratio(), 78.1948201762769);
+        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 237.05879174440312);
+        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 78.1948201762769);
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6200 Short Put European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
@@ -1335,13 +1344,14 @@ mod tests_best_area {
         assert_eq!(strategy.max_profit_iter(), 414.03);
         assert_eq!(strategy.max_loss_iter(), 529.4851999999998);
         assert_eq!(strategy.total_cost(), 2.0);
-        assert_eq!(strategy.net_premium_received(), 414.03);
-        assert_eq!(strategy.fees(), 2.0);
+        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 414.03);
+        assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 2.0);
     }
 }
 
 #[cfg(test)]
 mod tests_best_ratio {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::utils::RandomPositionsParams;
     use crate::error::chains::ChainError;
@@ -1392,16 +1402,16 @@ mod tests_best_ratio {
     fn test_calls() {
         let (mut strategy, option_chain) = set_up(None, None, Some(1), Some(1)).unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::All);
-        assert_eq!(strategy.profit_area(), 22.674299155552024);
-        assert_eq!(strategy.profit_ratio(), 441.4185165132647);
+        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 22.674299155552024);
+        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 441.4185165132647);
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5900 Long Call European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(strategy.get_break_even_points()[0].to_f64(), 5918.475000004);
         assert_eq!(strategy.max_profit_iter(), 81.53);
         assert_eq!(strategy.max_loss_iter(), 18.470000000000002);
         assert_eq!(strategy.total_cost(), 21.85);
-        assert_eq!(strategy.net_premium_received(), 1.38);
-        assert_eq!(strategy.fees(), 4.0);
+        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 1.38);
+        assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 4.0);
     }
 
     #[test]
@@ -1409,13 +1419,15 @@ mod tests_best_ratio {
     fn test_put() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, None).unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
+        let profit_area = strategy.profit_area().unwrap().to_f64().unwrap();
+        let profit_ratio = strategy.profit_ratio().unwrap().to_f64().unwrap();
         assert!(
-            strategy.profit_area() == 237.05879174440312
-                || strategy.profit_area() == 16.538740211215906
+            profit_area == 237.05879174440312
+                || profit_area == 16.538740211215906
         );
         assert!(
-            strategy.profit_ratio() == 78.1948201762769
-                || strategy.profit_ratio() == 96.22317698867245
+            profit_ratio == 78.1948201762769
+                || profit_ratio == 96.22317698867245
         );
     }
 }
