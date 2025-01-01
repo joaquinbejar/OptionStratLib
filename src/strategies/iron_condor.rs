@@ -262,11 +262,6 @@ impl Strategies for IronCondor {
         self.long_put.option.underlying_price
     }
 
-    fn break_even(&self) -> Vec<Positive> {
-        // Iron Condor has two break-even points, we'll return the lower one
-        self.break_even_points.clone()
-    }
-
     fn max_profit(&self) -> Result<Positive, StrategyError> {
         let left_profit = self.calculate_profit_at(self.short_call.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_put.option.strike_price);
@@ -349,8 +344,8 @@ impl Strategies for IronCondor {
         }
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -823,7 +818,7 @@ mod tests_iron_condor {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
@@ -846,7 +841,7 @@ mod tests_iron_condor {
         );
 
         assert_eq!(
-            iron_condor.break_even()[0],
+            iron_condor.get_break_even_points().unwrap()[0],
             iron_condor.break_even_points[0]
         );
     }
@@ -1133,9 +1128,9 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let condor = create_test_condor();
-        let break_even_points = condor.break_even();
+        let break_even_points = condor.get_break_even_points().unwrap();
 
         assert_eq!(break_even_points.len(), 2);
         assert!(break_even_points[0] > condor.short_put.option.strike_price);

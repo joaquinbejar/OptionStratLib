@@ -146,7 +146,7 @@ impl ShortStrangle {
         strategy.break_even_points.push(
             call_strike + strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
         );
-
+        strategy.break_even_points.sort();
         strategy
     }
 }
@@ -237,18 +237,16 @@ impl Strategies for ShortStrangle {
         Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn best_range_to_show(&self, step: Positive) -> Option<Vec<Positive>> {
+    fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
         let start_price = first_option - max_profit;
         let end_price = last_option + max_profit;
-        Some(calculate_price_range(start_price, end_price, step))
+        Ok(calculate_price_range(start_price, end_price, step))
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        let mut break_even_points = self.break_even_points.clone();
-        break_even_points.sort();
-        break_even_points
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -503,7 +501,7 @@ impl ProbabilityAnalysis for ShortStrangle {
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(option.implied_volatility),
@@ -532,7 +530,7 @@ impl ProbabilityAnalysis for ShortStrangle {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(option.implied_volatility),
@@ -739,6 +737,8 @@ impl LongStrangle {
         strategy
             .break_even_points
             .push(call_strike + strategy.total_cost() / net_quantity);
+        
+        strategy.break_even_points.sort();
 
         strategy
     }
@@ -823,7 +823,7 @@ impl Strategies for LongStrangle {
         Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn best_range_to_show(&self, step: Positive) -> Option<Vec<Positive>> {
+    fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
         info!("First: {} Last: {}", first_option, last_option);
         let diff = last_option - first_option;
@@ -835,13 +835,11 @@ impl Strategies for LongStrangle {
         debug!("Start price: {}", start_price);
         let end_price = last_option + diff;
         debug!("End price: {}", end_price);
-        Some(calculate_price_range(start_price, end_price, step))
+        Ok(calculate_price_range(start_price, end_price, step))
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        let mut break_even_points = self.break_even_points.clone();
-        break_even_points.sort();
-        break_even_points
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -1068,7 +1066,7 @@ impl ProbabilityAnalysis for LongStrangle {
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(option.implied_volatility),
@@ -1108,7 +1106,7 @@ impl ProbabilityAnalysis for LongStrangle {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(option.implied_volatility),
@@ -1264,9 +1262,9 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let strategy = setup();
-        assert_eq!(strategy.break_even()[0], 141.9);
+        assert_eq!(strategy.get_break_even_points().unwrap()[0], 141.9);
     }
 
     #[test]
@@ -1549,9 +1547,9 @@ mod tests_long_strangle {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let long_strangle = setup_long_strangle();
-        assert_eq!(long_strangle.break_even()[0], 128.0);
+        assert_eq!(long_strangle.get_break_even_points().unwrap()[0], 128.0);
     }
 
     #[test]

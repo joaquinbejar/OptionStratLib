@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|x| Positive::new(x as f64).unwrap())
         .collect();
     info!("Title: {}", strategy.title());
-    info!("Break Even {:?}", strategy.break_even());
+    info!("Break Even {:?}", strategy.get_break_even_points());
     info!("Net Premium Received: {}", strategy.net_premium_received()?);
     info!(
         "Max Profit: {}",

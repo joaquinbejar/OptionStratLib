@@ -88,7 +88,7 @@ impl CustomStrategy {
         let step = self.step_by;
 
         let mut current_price = Positive::ZERO;
-        let (_, max_search_price) = self.range_to_show();
+        let (_, max_search_price) = self.range_to_show().unwrap();
         let mut last_profit = self.calculate_profit_at(current_price);
 
         while current_price < max_search_price {
@@ -177,21 +177,13 @@ impl Strategies for CustomStrategy {
         self.underlying_price
     }
 
-    fn break_even(&self) -> Vec<Positive> {
-        if self.break_even_points.is_empty() {
-            panic!("No break-even points found");
-        } else {
-            self.break_even_points.clone()
-        }
-    }
-
     fn max_profit_iter(&mut self) -> Positive {
         if self.positions.is_empty() {
             panic!("No positions found");
         }
         let step = self.step_by;
         let mut max_profit: f64 = f64::NEG_INFINITY;
-        let (mut current_price, max_search_price) = self.range_to_show();
+        let (mut current_price, max_search_price) = self.range_to_show().unwrap();
         while current_price < max_search_price {
             let current_profit = self.calculate_profit_at(current_price);
             if current_profit > max_profit {
@@ -209,7 +201,7 @@ impl Strategies for CustomStrategy {
         }
         let step = self.step_by;
         let mut max_loss: f64 = f64::INFINITY;
-        let (mut current_price, max_search_price) = self.range_to_show();
+        let (mut current_price, max_search_price) = self.range_to_show().unwrap();
         while current_price < max_search_price {
             let current_profit = self.calculate_profit_at(current_price);
             if current_profit < max_loss {
@@ -258,7 +250,7 @@ impl Strategies for CustomStrategy {
         }
 
         let mut total_profit: f64 = ZERO;
-        let (mut current_price, max_search_price) = self.range_to_show();
+        let (mut current_price, max_search_price) = self.range_to_show()?;
         while current_price < max_search_price {
             let current_profit = self.calculate_profit_at(current_price);
             if current_profit > ZERO {
@@ -276,8 +268,12 @@ impl Strategies for CustomStrategy {
         Ok(Decimal::from_f64(restult).unwrap())
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        if self.break_even_points.is_empty() {
+            panic!("No break-even points found");
+        } else {
+            Ok(&self.break_even_points)
+        }
     }
 }
 
@@ -687,7 +683,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
-    fn test_calculate_break_even_points_no_break_even() {
+    fn test_calculate_break_even_points_no_get_break_even_points() {
         let mut strategy = create_test_strategy();
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1306,9 +1302,9 @@ mod tests_best_area {
             73.48561515107706
         );
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5520 Long Call European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
-        assert_eq!(strategy.get_break_even_points().len(), 1);
+        assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
         assert_eq!(
-            strategy.get_break_even_points()[0].to_f64(),
+            strategy.get_break_even_points().unwrap()[0].to_f64(),
             5796.675000003557
         );
         assert_eq!(strategy.max_profit_iter(), 203.32);
@@ -1335,9 +1331,9 @@ mod tests_best_area {
             67.08108880168896
         );
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6000 Short Put European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
-        assert_eq!(strategy.get_break_even_points().len(), 1);
+        assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
         assert_eq!(
-            strategy.get_break_even_points()[0].to_f64(),
+            strategy.get_break_even_points().unwrap()[0].to_f64(),
             5780.175000003497
         );
         assert_eq!(strategy.max_profit_iter(), 219.81480000199196);
@@ -1364,9 +1360,9 @@ mod tests_best_area {
             78.1948201762769
         );
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6200 Short Put European Option");
-        assert_eq!(strategy.get_break_even_points().len(), 1);
+        assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
         assert_eq!(
-            strategy.get_break_even_points()[0].to_f64(),
+            strategy.get_break_even_points().unwrap()[0].to_f64(),
             5785.975000003518
         );
         assert_eq!(strategy.max_profit_iter(), 414.03);
@@ -1442,8 +1438,8 @@ mod tests_best_ratio {
             441.4185165132647
         );
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5900 Long Call European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
-        assert_eq!(strategy.get_break_even_points().len(), 1);
-        assert_eq!(strategy.get_break_even_points()[0].to_f64(), 5918.475000004);
+        assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
+        assert_eq!(strategy.get_break_even_points().unwrap()[0].to_f64(), 5918.475000004);
         assert_eq!(strategy.max_profit_iter(), 81.53);
         assert_eq!(strategy.max_loss_iter(), 18.470000000000002);
         assert_eq!(strategy.total_cost(), 21.85);

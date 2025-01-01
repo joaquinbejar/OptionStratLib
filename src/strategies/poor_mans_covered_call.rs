@@ -37,7 +37,6 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::payoff::Profit;
@@ -47,6 +46,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::Options;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -199,10 +199,6 @@ impl Strategies for PoorMansCoveredCall {
         self.long_call.option.underlying_price
     }
 
-    fn break_even(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
-    }
-
     fn max_profit(&self) -> Result<Positive, StrategyError> {
         let profit = self.calculate_profit_at(self.short_call.option.strike_price);
         if profit <= ZERO {
@@ -264,8 +260,8 @@ impl Strategies for PoorMansCoveredCall {
         Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -675,9 +671,9 @@ mod tests {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let pmcc = create_pmcc_strategy();
-        let break_even = pmcc.break_even();
+        let break_even = pmcc.get_break_even_points().unwrap();
         assert_eq!(break_even.len(), 1);
         assert!(break_even[0].to_f64() > 0.0);
     }
@@ -715,7 +711,7 @@ mod tests {
         let pmcc = create_pmcc_strategy();
         let step = f2p!(1.0);
         let range = pmcc.best_range_to_show(step);
-        assert!(range.is_some());
+        assert!(range.is_ok());
         let range_values = range.unwrap();
         assert!(!range_values.is_empty());
     }

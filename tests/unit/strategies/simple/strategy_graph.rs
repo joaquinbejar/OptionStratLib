@@ -62,7 +62,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Validate break-even point
-    let break_even = strategy.break_even();
+    let break_even = strategy.get_break_even_points();
     assert!(
         break_even[0] > f2p!(2460.0),
         "Break-even should be between strikes"

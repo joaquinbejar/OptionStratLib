@@ -241,8 +241,8 @@ impl Strategies for BearPutSpread {
         }
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -457,7 +457,7 @@ impl ProbabilityAnalysis for BearPutSpread {
     }
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()[0];
+        let break_even_point = self.get_break_even_points()?[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(self.long_put.option.implied_volatility),
@@ -485,7 +485,7 @@ impl ProbabilityAnalysis for BearPutSpread {
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()[0];
+        let break_even_point = self.get_break_even_points()?[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(self.long_put.option.implied_volatility),
@@ -708,7 +708,7 @@ mod tests_bear_put_spread_strategy {
     #[test]
     fn test_break_even_points() {
         let spread = create_test_spread();
-        let break_even_points = spread.get_break_even_points();
+        let break_even_points = spread.get_break_even_points().unwrap();
 
         assert_eq!(break_even_points.len(), 1);
         // Break-even = Long Strike - Net Premium / Quantity
@@ -1474,7 +1474,7 @@ mod tests_bear_put_spread_profit {
     }
 
     #[test]
-    fn test_profit_at_break_even() {
+    fn test_profit_at_get_break_even_points() {
         let spread = create_test_spread();
         let price = f2p!(103.0); // Break even = long strike - net premium = 105 - 2
 
