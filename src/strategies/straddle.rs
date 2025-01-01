@@ -1276,7 +1276,7 @@ mod tests_short_straddle {
     #[test]
     fn test_area() {
         let strategy = setup();
-        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 0.9610000000000001);
+        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 0.961);
     }
 
     #[test]

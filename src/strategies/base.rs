@@ -545,7 +545,7 @@ mod tests_strategies_extended {
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
-        strategy.net_premium_received();
+        let _ = strategy.net_premium_received();
     }
 
     #[test]
@@ -557,7 +557,7 @@ mod tests_strategies_extended {
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
-        strategy.fees();
+        let _ = strategy.fees();
     }
 
     #[test]
