@@ -2,7 +2,7 @@ use approx::assert_relative_eq;
 use chrono::Utc;
 use num_traits::ToPrimitive;
 use optionstratlib::f2p;
-use optionstratlib::model::option::Options;
+use optionstratlib::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;

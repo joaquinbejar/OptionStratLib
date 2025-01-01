@@ -478,7 +478,7 @@ impl Greeks for CustomStrategy {
 mod tests_custom_strategy {
     use super::*;
     use crate::f2p;
-    use crate::model::option::Options;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
@@ -710,7 +710,7 @@ mod tests_custom_strategy {
 mod tests_max_profit {
     use super::*;
     use crate::f2p;
-    use crate::model::option::Options;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::utils::logger::setup_logger;
@@ -847,7 +847,7 @@ mod tests_max_profit {
 mod tests_max_loss {
     use super::*;
     use crate::f2p;
-    use crate::model::option::Options;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::utils::logger::setup_logger;
@@ -984,7 +984,7 @@ mod tests_max_loss {
 mod tests_total_cost {
     use super::*;
     use crate::f2p;
-    use crate::model::option::Options;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use chrono::Utc;
 
@@ -1107,7 +1107,7 @@ mod tests_total_cost {
 mod tests_best_range_to_show {
     use super::*;
     use crate::constants::STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-    use crate::model::option::Options;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use chrono::Utc;
 
@@ -1470,7 +1470,7 @@ mod tests_best_ratio {
 mod tests_greeks {
     use super::*;
     use crate::assert_decimal_eq;
-    use crate::model::option::Options;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use chrono::Utc;
     use rust_decimal_macros::dec;

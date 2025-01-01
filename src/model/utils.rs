@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use crate::model::option::Options;
+use crate::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::{f2p, Positive};
 use chrono::{NaiveDateTime, TimeZone, Utc};

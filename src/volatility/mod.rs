@@ -38,7 +38,7 @@
 //! ### Implied Volatility Calculation
 //!
 //! ```rust
-//! use optionstratlib::model::option::Options;
+//! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::volatility::implied_volatility;
 //! use optionstratlib::Positive;

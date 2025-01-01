@@ -36,7 +36,7 @@ use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::model::option::Options;
+use crate::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -839,7 +839,7 @@ mod tests_bear_call_spread_strategies {
 #[cfg(test)]
 mod tests_bear_call_spread_positionable {
     use super::*;
-    use crate::model::option::Options;
+    use crate::Options;
     use crate::model::position::Position;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use chrono::Utc;

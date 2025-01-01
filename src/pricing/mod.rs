@@ -63,7 +63,7 @@
 //! ```rust
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
-//! use optionstratlib::model::option::Options;
+//! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;
@@ -93,7 +93,7 @@
 //!
 //! ```rust
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::model::option::Options;
+//! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::Positive;
 //! use optionstratlib::f2p;

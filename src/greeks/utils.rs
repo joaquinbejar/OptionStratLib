@@ -7,7 +7,7 @@ use crate::constants::PI;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{GreeksError, InputErrorKind};
 use crate::model::decimal::f64_to_decimal;
-use crate::model::option::Options;
+use crate::Options;
 use crate::Positive;
 use core::f64;
 use num_traits::{FromPrimitive, ToPrimitive};

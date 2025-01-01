@@ -77,7 +77,7 @@
 //! for your specific model.
 
 use crate::error::decimal::DecimalError;
-use crate::model::option::Options;
+use crate::Options;
 use crate::pricing::utils::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;

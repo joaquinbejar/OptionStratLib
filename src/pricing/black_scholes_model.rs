@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, calculate_d_values};
-use crate::model::option::Options;
+use crate::Options;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
@@ -202,7 +202,7 @@ pub trait BlackScholes {
 mod tests_black_scholes {
     use super::*;
     use crate::greeks::utils::{d1, d2};
-    use crate::model::option::Options;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{f2p, Positive};
     use approx::assert_relative_eq;

@@ -6,7 +6,7 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
-use crate::model::option::Options;
+use crate::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;

@@ -1,4 +1,4 @@
-use crate::model::option::Options;
+use crate::Options;
 use crate::pricing::utils::wiener_increment;
 use crate::{f2d, Positive};
 use rust_decimal::Decimal;

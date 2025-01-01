@@ -45,7 +45,7 @@
 //! ### Basic Margin Calculation
 //!
 //! ```rust
-//! use optionstratlib::model::option::Options;
+//! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::Positive;
 //! use optionstratlib::model::position::Position;
@@ -93,7 +93,7 @@
 //!
 //! ```rust
 //! use chrono::Utc;
-//! use optionstratlib::model::option::Options;
+//! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::Positive;

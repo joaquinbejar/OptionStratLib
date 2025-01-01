@@ -548,7 +548,7 @@
 //!  
 //!```rust
 //! use optionstratlib::greeks::equations::Greeks;
-//! use optionstratlib::model::option::Options;
+//! use optionstratlib::Options;
 //! use optionstratlib::Positive;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::f2p;
@@ -707,4 +707,6 @@ pub mod volatility;
 
 pub use model::positive::Positive;
 pub use model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+pub use model::Options;
+
 

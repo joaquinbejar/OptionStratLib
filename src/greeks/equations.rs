@@ -7,7 +7,7 @@ use crate::constants::ZERO;
 use crate::error::greeks::GreeksError;
 use crate::f2du;
 use crate::greeks::utils::{big_n, d1, d2, n};
-use crate::model::option::Options;
+use crate::Options;
 use crate::model::types::OptionStyle;
 use rust_decimal::{Decimal, MathematicalOps};
 
@@ -83,7 +83,7 @@ pub trait Greeks {
 /// use rust_decimal::Decimal;
 /// use optionstratlib::constants::ZERO;
 /// use optionstratlib::greeks::equations::delta;
-/// use optionstratlib::model::option::Options;
+/// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::{f2p, Positive};
 /// let option = Options {
@@ -204,7 +204,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use optionstratlib::greeks::equations::gamma;
-/// use optionstratlib::model::option::Options;
+/// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::f2p;
 /// let option = Options {
@@ -330,7 +330,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use optionstratlib::greeks::equations::theta;
-/// use optionstratlib::model::option::Options;
+/// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::f2p;
 /// let option = Options {
@@ -468,7 +468,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use optionstratlib::greeks::equations::vega;
-/// use optionstratlib::model::option::Options;
+/// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::f2p;
 ///
@@ -585,7 +585,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use optionstratlib::greeks::equations::rho;
-/// use optionstratlib::model::option::Options;
+/// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::f2p;
 ///
@@ -715,7 +715,7 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use optionstratlib::greeks::equations::rho_d;
-/// use optionstratlib::model::option::Options;
+/// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::f2p;
 ///

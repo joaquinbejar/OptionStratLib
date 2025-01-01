@@ -12,7 +12,7 @@ use crate::constants::{DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::model::option::Options;
+use crate::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::Position;
 use crate::pricing::payoff::Profit;

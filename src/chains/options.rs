@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 12/12/24
 ******************************************************************************/
-use crate::model::option::Options;
+use crate::Options;
 use rust_decimal::Decimal;
 use std::error::Error;
 
