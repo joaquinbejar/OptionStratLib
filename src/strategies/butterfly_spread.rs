@@ -15,7 +15,6 @@ Key characteristics:
 - Maximum loss is limited to the net premium paid
 - All options must have same expiration date
 */
-
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -41,8 +40,10 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType
 use crate::visualization::utils::Graph;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
+use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use rust_decimal::Decimal;
 use tracing::{debug, info};
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =
@@ -286,23 +287,26 @@ impl Strategies for LongButterflySpread {
         )
     }
 
-    fn net_premium_received(&self) -> f64 {
-        self.short_calls.net_premium_received()
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_calls.net_premium_received()
             - self.long_call_low.net_cost()
-            - self.long_call_high.net_cost()
+            - self.long_call_high.net_cost();
+
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        (self.long_call_low.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = (self.long_call_low.open_fee
             + self.long_call_low.close_fee
             + self.short_calls.open_fee
             + self.short_calls.close_fee
             + self.long_call_high.open_fee
             + self.long_call_high.close_fee)
-            * self.long_call_low.option.quantity.to_f64()
+            * self.long_call_low.option.quantity.to_f64();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
         let break_even_points = self.get_break_even_points();
 
@@ -317,16 +321,16 @@ impl Strategies for LongButterflySpread {
                 f2p!(self.calculate_profit_at(self.long_call_low.option.strike_price))
             }
         };
-        (high * base / 200.0).to_f64()
+        Ok((high * base / 200.0).into())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (value, _) if value == Positive::ZERO => ZERO,
-            (_, value) if value == Positive::ZERO => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).to_f64(),
+            (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
+            (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
+            _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
 
@@ -385,7 +389,7 @@ impl Optimizable for LongButterflySpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -404,8 +408,8 @@ impl Optimizable for LongButterflySpread {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -437,7 +441,7 @@ impl Optimizable for LongButterflySpread {
                 low_strike.call_ask.unwrap().to_f64(),
                 middle_strike.call_bid.unwrap().to_f64(),
                 high_strike.call_ask.unwrap().to_f64(),
-                self.fees() / 8.0,
+                self.fees().unwrap().to_f64().unwrap() / 8.0,
             ),
             _ => panic!("Invalid number of legs for Long Butterfly strategy"),
         }
@@ -996,40 +1000,45 @@ impl Strategies for ShortButterflySpread {
         )
     }
 
-    fn net_premium_received(&self) -> f64 {
-        self.short_call_low.net_premium_received() + self.short_call_high.net_premium_received()
-            - self.long_calls.net_cost()
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call_low.net_premium_received() 
+            + self.short_call_high.net_premium_received()
+            - self.long_calls.net_cost();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        (self.short_call_low.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = (self.short_call_low.open_fee
             + self.short_call_low.close_fee
             + self.long_calls.open_fee
             + self.long_calls.close_fee
             + self.short_call_high.open_fee
             + self.short_call_high.close_fee)
-            * self.short_call_low.option.quantity.to_f64()
+            * self.short_call_low.option.quantity.to_f64();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let break_even_points = self.get_break_even_points();
         let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
 
-        if break_even_points.len() == 2 {
+        let result = if break_even_points.len() == 2 {
             left_profit + right_profit
         } else {
             left_profit.max(right_profit)
-        }
+        };
+        Ok(Decimal::from_f64(result).unwrap())
+        
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (value, _) if value == Positive::ZERO=> ZERO,
-            (_, value) if value == Positive::ZERO=> f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).to_f64(),
+            (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
+            (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
+            _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
 
@@ -1088,7 +1097,7 @@ impl Optimizable for ShortButterflySpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -1107,8 +1116,8 @@ impl Optimizable for ShortButterflySpread {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -1140,7 +1149,7 @@ impl Optimizable for ShortButterflySpread {
                 low_strike.call_bid.unwrap().to_f64(),
                 middle_strike.call_ask.unwrap().to_f64(),
                 high_strike.call_bid.unwrap().to_f64(),
-                self.fees() / 8.0,
+                self.fees().unwrap().to_f64().unwrap() / 8.0,
             ),
             _ => panic!("Invalid number of legs for Short Butterfly strategy"),
         }
@@ -1245,7 +1254,10 @@ impl Graph for ShortButterflySpread {
 
         // Maximum profit points (at wing strikes)
         points.push(ChartPoint {
-            coordinates: (self.short_call_low.option.strike_price.to_f64(), left_profit),
+            coordinates: (
+                self.short_call_low.option.strike_price.to_f64(),
+                left_profit,
+            ),
             label: format!("Left Profit {:.2}", left_profit),
             label_offset: LabelOffsetType::Relative(-30.0, 3.0),
             point_color: left_color,
@@ -1451,8 +1463,8 @@ impl DeltaNeutrality for ShortButterflySpread {
 #[cfg(test)]
 mod tests_long_butterfly_spread {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -1655,8 +1667,8 @@ mod tests_long_butterfly_spread {
 #[cfg(test)]
 mod tests_short_butterfly_spread {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -1896,11 +1908,7 @@ mod tests_short_butterfly_spread {
 mod tests_long_butterfly_validation {
     use super::*;
 
-    fn create_valid_position(
-        side: Side,
-        strike_price: Positive,
-        quantity: Positive,
-    ) -> Position {
+    fn create_valid_position(side: Side, strike_price: Positive, quantity: Positive) -> Position {
         Position::new(
             Options::new(
                 OptionType::European,
@@ -2036,11 +2044,7 @@ mod tests_long_butterfly_validation {
 mod tests_short_butterfly_validation {
     use super::*;
 
-    fn create_valid_position(
-        side: Side,
-        strike_price: Positive,
-        quantity: Positive,
-    ) -> Position {
+    fn create_valid_position(side: Side, strike_price: Positive, quantity: Positive) -> Position {
         Position::new(
             Options::new(
                 OptionType::European,
@@ -2175,8 +2179,8 @@ mod tests_short_butterfly_validation {
 #[cfg(test)]
 mod tests_butterfly_strategies {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_long() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -2349,7 +2353,7 @@ mod tests_butterfly_strategies {
             1.0,
             3.0, // total fees
         );
-        assert_eq!(butterfly.fees(), 6.0);
+        assert_eq!(butterfly.fees().unwrap().to_f64().unwrap(), 6.0);
     }
 
     #[test]
@@ -2371,20 +2375,20 @@ mod tests_butterfly_strategies {
             3.0, // total fees
         );
 
-        assert_eq!(butterfly.fees(), 12.0);
+        assert_eq!(butterfly.fees().unwrap().to_f64().unwrap(), 12.0);
     }
 
     #[test]
     fn test_profit_area_long_butterfly() {
         let butterfly = create_test_long();
-        let area = butterfly.profit_area();
+        let area = butterfly.profit_area().unwrap().to_f64().unwrap();
         assert!(area > ZERO);
     }
 
     #[test]
     fn test_profit_area_short_butterfly() {
         let butterfly = create_test_short();
-        let area = butterfly.profit_area();
+        let area = butterfly.profit_area().unwrap().to_f64().unwrap();
         assert!(area >= ZERO);
     }
 
@@ -2393,8 +2397,8 @@ mod tests_butterfly_strategies {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
 
-        assert!(long_butterfly.profit_ratio() > ZERO);
-        assert!(short_butterfly.profit_ratio() >= ZERO);
+        assert!(long_butterfly.profit_ratio().unwrap().to_f64().unwrap() > ZERO);
+        assert!(short_butterfly.profit_ratio().unwrap().to_f64().unwrap() >= ZERO);
     }
 
     #[test]
@@ -2436,8 +2440,8 @@ mod tests_butterfly_strategies {
 #[cfg(test)]
 mod tests_butterfly_optimizable {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::spos;
 
     fn create_test_option_chain() -> OptionChain {
@@ -2501,12 +2505,12 @@ mod tests_butterfly_optimizable {
     fn test_find_optimal_area() {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
-        let initial_area = butterfly.profit_area();
+        let initial_area = butterfly.profit_area().unwrap();
 
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(butterfly.validate());
-        assert!(butterfly.profit_area() >= initial_area);
+        assert!(butterfly.profit_area().unwrap() >= initial_area);
     }
 
     #[test]
@@ -2529,24 +2533,24 @@ mod tests_butterfly_optimizable {
     fn test_find_optimal_ratio_short() {
         let mut butterfly = create_test_short();
         let chain = create_test_option_chain();
-        let initial_ratio = butterfly.profit_ratio();
+        let initial_ratio = butterfly.profit_ratio().unwrap();
 
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
 
         assert!(butterfly.validate());
-        assert!(butterfly.profit_ratio() >= initial_ratio);
+        assert!(butterfly.profit_ratio().unwrap() >= initial_ratio);
     }
 
     #[test]
     fn test_find_optimal_area_long() {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
-        let initial_area = butterfly.profit_area();
+        let initial_area = butterfly.profit_area().unwrap();
 
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(butterfly.validate());
-        assert!(butterfly.profit_area() >= initial_area);
+        assert!(butterfly.profit_area().unwrap() >= initial_area);
     }
 
     #[test]
@@ -2591,12 +2595,12 @@ mod tests_butterfly_optimizable {
 
 #[cfg(test)]
 mod tests_long_butterfly_profit {
-    use std::str::FromStr;
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
+    use std::str::FromStr;
 
     fn create_test() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -2622,7 +2626,8 @@ mod tests_long_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(100.0));
         assert!(profit > 0.0);
-        let expected = Positive::new_decimal(Decimal::from_str("9.866666666666667").unwrap()).unwrap();
+        let expected =
+            Positive::new_decimal(Decimal::from_str("9.866666666666667").unwrap()).unwrap();
         assert_eq!(profit, expected);
     }
 
@@ -2631,7 +2636,8 @@ mod tests_long_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(85.0));
         assert!(profit < 0.0);
-        let expected = Positive::new_decimal(Decimal::from_str("0.13333333333333308").unwrap()).unwrap();
+        let expected =
+            Positive::new_decimal(Decimal::from_str("0.13333333333333308").unwrap()).unwrap();
         assert_eq!(-profit, expected);
     }
 
@@ -2684,12 +2690,12 @@ mod tests_long_butterfly_profit {
 
 #[cfg(test)]
 mod tests_short_butterfly_profit {
-    use std::str::FromStr;
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
+    use std::str::FromStr;
 
     fn create_test() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -2715,7 +2721,8 @@ mod tests_short_butterfly_profit {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(f2p!(100.0));
         assert!(profit < 0.0);
-        let expected = Positive::new_decimal(Decimal::from_str("10.133333333333335").unwrap()).unwrap();
+        let expected =
+            Positive::new_decimal(Decimal::from_str("10.133333333333335").unwrap()).unwrap();
 
         assert_eq!(-profit, expected);
     }
@@ -2792,8 +2799,8 @@ mod tests_short_butterfly_profit {
 #[cfg(test)]
 mod tests_long_butterfly_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -2901,8 +2908,8 @@ mod tests_long_butterfly_graph {
 #[cfg(test)]
 mod tests_short_butterfly_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -3003,8 +3010,8 @@ mod tests_short_butterfly_graph {
 #[cfg(test)]
 mod tests_butterfly_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_long() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3334,7 +3341,6 @@ mod tests_long_butterfly_delta {
 
 #[cfg(test)]
 mod tests_long_butterfly_delta_size {
-    use std::str::FromStr;
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::butterfly_spread::LongButterflySpread;
@@ -3343,6 +3349,7 @@ mod tests_long_butterfly_delta_size {
     use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
+    use std::str::FromStr;
 
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3386,7 +3393,8 @@ mod tests_long_butterfly_delta_size {
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::BuyOptions {
-                quantity: Positive::new_decimal(Decimal::from_str("525.8051045358663").unwrap()).unwrap(),
+                quantity: Positive::new_decimal(Decimal::from_str("525.8051045358663").unwrap())
+                    .unwrap(),
                 strike: f2p!(6100.0),
                 option_type: OptionStyle::Call
             }
@@ -3408,7 +3416,8 @@ mod tests_long_butterfly_delta_size {
         let strategy = get_strategy(f2p!(5710.88));
 
         let size = 1.0558;
-        let delta = Positive::new_decimal(Decimal::from_str("12.912467384337744").unwrap()).unwrap();
+        let delta =
+            Positive::new_decimal(Decimal::from_str("12.912467384337744").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -3454,7 +3463,6 @@ mod tests_long_butterfly_delta_size {
 
 #[cfg(test)]
 mod tests_short_butterfly_delta {
-    use std::str::FromStr;
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::butterfly_spread::ShortButterflySpread;
@@ -3463,6 +3471,7 @@ mod tests_short_butterfly_delta {
     use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
+    use std::str::FromStr;
 
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -3487,7 +3496,8 @@ mod tests_short_butterfly_delta {
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(f2p!(5781.88));
         let size = -0.0259;
-        let delta = Positive::new_decimal(Decimal::from_str("0.05072646985065364").unwrap()).unwrap();
+        let delta =
+            Positive::new_decimal(Decimal::from_str("0.05072646985065364").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -3572,7 +3582,6 @@ mod tests_short_butterfly_delta {
 
 #[cfg(test)]
 mod tests_short_butterfly_delta_size {
-    use std::str::FromStr;
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::butterfly_spread::ShortButterflySpread;
@@ -3581,6 +3590,7 @@ mod tests_short_butterfly_delta_size {
     use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
+    use std::str::FromStr;
 
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -3605,7 +3615,8 @@ mod tests_short_butterfly_delta_size {
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(f2p!(5781.88));
         let size = -0.0593;
-        let delta = Positive::new_decimal(Decimal::from_str("0.11409430831966512").unwrap()).unwrap();
+        let delta =
+            Positive::new_decimal(Decimal::from_str("0.11409430831966512").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -3638,9 +3649,11 @@ mod tests_short_butterfly_delta_size {
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(f2p!(5881.88));
         let size = 0.4787;
-        let delta = Positive::new_decimal(Decimal::from_str("0.4828726371186378").unwrap()).unwrap();
-        let delta1 = Positive::new_decimal(Decimal::from_str("0.7164055343340597").unwrap()).unwrap();
-        
+        let delta =
+            Positive::new_decimal(Decimal::from_str("0.4828726371186378").unwrap()).unwrap();
+        let delta1 =
+            Positive::new_decimal(Decimal::from_str("0.7164055343340597").unwrap()).unwrap();
+
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
             size,

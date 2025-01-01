@@ -39,8 +39,10 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType
 use crate::visualization::utils::Graph;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
+use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use rust_decimal::Decimal;
 use tracing::{debug, info};
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
@@ -148,9 +150,9 @@ impl BearPutSpread {
         strategy.validate();
 
         // Calculate break-even point
-        strategy
-            .break_even_points
-            .push(long_strike - strategy.net_premium_received() / quantity);
+        strategy.break_even_points.push(
+            long_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / quantity,
+        );
 
         strategy
     }
@@ -210,32 +212,32 @@ impl Strategies for BearPutSpread {
         f2p!(self.long_put.net_cost() - self.short_put.net_premium_received())
     }
 
-    fn net_premium_received(&self) -> f64 {
-        // self.short_put.net_premium_received() - self.long_put.net_cost()
-
-        self.long_put.net_cost() - self.short_put.net_premium_received()
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let result = self.long_put.net_cost() - self.short_put.net_premium_received();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.long_put.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.long_put.open_fee
             + self.long_put.close_fee
             + self.short_put.open_fee
-            + self.short_put.close_fee
+            + self.short_put.close_fee;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
         let base = self.break_even_points[0] - self.short_put.option.strike_price;
-        (high * base / 200.0).to_f64()
+        Ok((high * base / 200.0).into())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (value, _) if value == Positive::ZERO => ZERO,
-            (_, value) if value == Positive::ZERO => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).into(),
+            (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
+            (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
+            _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
 
@@ -284,7 +286,8 @@ impl Optimizable for BearPutSpread {
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(short, long)| {
-                long.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO && short.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+                long.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && short.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |(short, long)| {
@@ -305,7 +308,7 @@ impl Optimizable for BearPutSpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -323,8 +326,8 @@ impl Optimizable for BearPutSpread {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -412,7 +415,10 @@ impl Graph for BearPutSpread {
                 self.short_put.option.strike_price.to_f64(),
                 self.max_profit().unwrap_or(Positive::ZERO).to_f64(),
             ),
-            label: format!("Max Profit {:.2}", self.max_profit().unwrap_or(Positive::ZERO)),
+            label: format!(
+                "Max Profit {:.2}",
+                self.max_profit().unwrap_or(Positive::ZERO)
+            ),
             label_offset: LabelOffsetType::Relative(10.0, 5.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
@@ -568,8 +574,8 @@ impl DeltaNeutrality for BearPutSpread {
 #[cfg(test)]
 mod tests_bear_put_spread_strategy {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
@@ -670,7 +676,7 @@ mod tests_bear_put_spread_strategy {
     fn test_net_premium_received() {
         let spread = create_test_spread();
         // Net Premium Received is actually Net Premium Paid in this case
-        assert_eq!(spread.net_premium_received(), 2.0);
+        assert_eq!(spread.net_premium_received().unwrap().to_f64().unwrap(), 2.0);
     }
 
     #[test]
@@ -693,7 +699,7 @@ mod tests_bear_put_spread_strategy {
             0.5, // close_fee_short_put
         );
 
-        assert_eq!(spread.fees(), 2.0); // Total fees = 0.5 * 4
+        assert_eq!(spread.fees().unwrap().to_f64().unwrap(), 2.0); // Total fees = 0.5 * 4
     }
 
     #[test]
@@ -709,14 +715,14 @@ mod tests_bear_put_spread_strategy {
     #[test]
     fn test_profit_area() {
         let spread = create_test_spread();
-        let area = spread.profit_area();
+        let area = spread.profit_area().unwrap().to_f64().unwrap();
         assert!(area > 0.0);
     }
 
     #[test]
     fn test_profit_ratio() {
         let spread = create_test_spread();
-        let ratio = spread.profit_ratio();
+        let ratio = spread.profit_ratio().unwrap().to_f64().unwrap();
         // Ratio = (max_profit / max_loss) * 100
         // = (8.0 / 2.0) * 100 = 400.0
         assert_eq!(ratio, 400.0);
@@ -1028,7 +1034,7 @@ mod tests_bear_put_spread_optimization {
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
-            spread.profit_ratio() > 0.0,
+            spread.profit_ratio().unwrap().to_f64().unwrap() > 0.0,
             "Profit ratio should be positive"
         );
 
@@ -1044,7 +1050,7 @@ mod tests_bear_put_spread_optimization {
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(spread.validate(), "Optimized spread should be valid");
-        assert!(spread.profit_area() > 0.0, "Profit area should be positive");
+        assert!(spread.profit_area().unwrap().to_f64().unwrap() > 0.0, "Profit area should be positive");
 
         // Area optimization should favor wider spreads with good probability of profit
         assert!(spread.long_put.option.strike_price > chain.underlying_price);
@@ -1168,14 +1174,13 @@ mod tests_bear_put_spread_optimization {
 #[cfg(test)]
 mod tests_bear_put_spread_optimizable {
     use super::*;
-    use crate::model::types::{ExpirationDate};
+    use crate::model::types::ExpirationDate;
     use crate::spos;
     use crate::strategies::utils::FindOptimalSide;
     use crate::utils::setup_logger;
 
     fn create_mock_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-03-15".to_string(), None, None);
-
 
         chain.add_option(
             f2p!(95.0),   // strike
@@ -1206,7 +1211,7 @@ mod tests_bear_put_spread_optimizable {
             f2p!(105.0),
             spos!(5.8),
             spos!(6.0),
-            spos!(8.8), // put_bid 
+            spos!(8.8), // put_bid
             spos!(9.0), // put_ask
             spos!(0.2),
             Some(-0.7),
@@ -1403,8 +1408,8 @@ mod tests_bear_put_spread_optimizable {
 #[cfg(test)]
 mod tests_bear_put_spread_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
@@ -1705,8 +1710,8 @@ mod tests_bear_put_spread_probability {
 #[cfg(test)]
 mod tests_bear_put_spread_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
@@ -1869,8 +1874,8 @@ mod tests_bear_put_spread_graph {
 #[cfg(test)]
 mod tests_delta {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::f2p;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -1978,8 +1983,8 @@ mod tests_delta {
 #[cfg(test)]
 mod tests_delta_size {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::f2p;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
