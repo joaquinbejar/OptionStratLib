@@ -39,8 +39,10 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType
 use crate::visualization::utils::Graph;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
+use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use rust_decimal::Decimal;
 use tracing::debug;
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =
@@ -148,9 +150,9 @@ impl BullPutSpread {
         strategy.validate();
 
         // Calculate break-even point
-        strategy
-            .break_even_points
-            .push(short_strike - strategy.net_premium_received() / quantity);
+        strategy.break_even_points.push(
+            short_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / quantity,
+        );
 
         strategy
     }
@@ -181,22 +183,21 @@ impl Strategies for BullPutSpread {
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let net_premium_received = self.net_premium_received();
-        if net_premium_received < ZERO {
+        let net_premium_received = self.net_premium_received()?;
+        if net_premium_received < Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
                     reason: "Net premium received is negative".to_string(),
                 },
             ))
         } else {
-            Ok(f2p!(net_premium_received))
+            Ok(net_premium_received.into())
         }
     }
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
         let width = self.short_put.option.strike_price - self.long_put.option.strike_price;
-        let max_loss =
-            (width * self.short_put.option.quantity) - self.net_premium_received();
+        let max_loss = (width * self.short_put.option.quantity) - self.net_premium_received()?;
         if max_loss < ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -212,32 +213,35 @@ impl Strategies for BullPutSpread {
         f2p!(self.long_put.net_cost() + self.short_put.net_cost())
     }
 
-    fn net_premium_received(&self) -> f64 {
-        self.short_put.net_premium_received() - self.long_put.net_cost()
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_put.net_premium_received() - self.long_put.net_cost();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.long_put.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.long_put.open_fee
             + self.long_put.close_fee
             + self.short_put.open_fee
-            + self.short_put.close_fee
+            + self.short_put.close_fee;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
         let base = self.short_put.option.strike_price - self.break_even_points[0];
-        (high * base / 200.0).to_f64()
+        Ok((high * base / 200.0).into())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (value, _) if value == Positive::ZERO => ZERO,
-            (_, value) if value == Positive::ZERO => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).to_f64(),
+            (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
+            (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
+            _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
+    
 
     fn get_break_even_points(&self) -> Vec<Positive> {
         self.break_even_points.clone()
@@ -377,7 +381,8 @@ impl Optimizable for BullPutSpread {
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(long, short)| {
-                long.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO && short.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+                long.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && short.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |(long_option, short_option)| {
@@ -398,7 +403,7 @@ impl Optimizable for BullPutSpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -416,8 +421,8 @@ impl Optimizable for BullPutSpread {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -505,7 +510,10 @@ impl Graph for BullPutSpread {
                 self.short_put.option.strike_price.to_f64(),
                 self.max_profit().unwrap_or(Positive::ZERO).to_f64(),
             ),
-            label: format!("Max Profit {:.2}", self.max_profit().unwrap_or(Positive::ZERO)),
+            label: format!(
+                "Max Profit {:.2}",
+                self.max_profit().unwrap_or(Positive::ZERO)
+            ),
             label_offset: LabelOffsetType::Relative(10.0, 10.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
@@ -661,8 +669,8 @@ impl DeltaNeutrality for BullPutSpread {
 #[cfg(test)]
 mod tests_bull_put_spread_strategy {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
@@ -759,7 +767,10 @@ mod tests_bull_put_spread_strategy {
     #[test]
     fn test_net_premium_received() {
         let spread = create_test_spread();
-        assert_eq!(spread.net_premium_received(), 1.0);
+        assert_eq!(
+            spread.net_premium_received().unwrap().to_f64().unwrap(),
+            1.0
+        );
     }
 
     #[test]
@@ -782,7 +793,7 @@ mod tests_bull_put_spread_strategy {
             0.5, // close_fee_short_put
         );
 
-        assert_eq!(spread.fees(), 2.0);
+        assert_eq!(spread.fees().unwrap().to_f64().unwrap(), 2.0);
     }
 
     #[test]
@@ -797,14 +808,14 @@ mod tests_bull_put_spread_strategy {
     #[test]
     fn test_profit_area() {
         let spread = create_test_spread();
-        let area = spread.profit_area();
+        let area = spread.profit_area().unwrap().to_f64().unwrap();
         assert!(area > 0.0);
     }
 
     #[test]
     fn test_profit_ratio() {
         let spread = create_test_spread();
-        let ratio = spread.profit_ratio();
+        let ratio = spread.profit_ratio().unwrap().to_f64().unwrap();
 
         // Ratio = (max_profit / max_loss) * 100
         // = (1.0 / 4.0) * 100 = 25
@@ -1100,7 +1111,7 @@ mod tests_bull_put_spread_optimization {
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
-            spread.profit_ratio() > 0.0,
+            spread.profit_ratio().unwrap().to_f64().unwrap() > 0.0,
             "Profit ratio should be positive"
         );
     }
@@ -1113,7 +1124,10 @@ mod tests_bull_put_spread_optimization {
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(spread.validate(), "Optimized spread should be valid");
-        assert!(spread.profit_area() > 0.0, "Profit area should be positive");
+        assert!(
+            spread.profit_area().unwrap().to_f64().unwrap() > 0.0,
+            "Profit area should be positive"
+        );
     }
 
     #[test]
@@ -1261,8 +1275,8 @@ mod tests_bull_put_spread_optimization {
 #[cfg(test)]
 mod tests_bull_put_spread_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
@@ -1379,8 +1393,8 @@ mod tests_bull_put_spread_profit {
 #[cfg(test)]
 mod tests_bull_put_spread_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
