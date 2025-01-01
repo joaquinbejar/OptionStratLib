@@ -2121,7 +2121,7 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.8293986515885990),
+                quantity: f2p!(0.829_398_651_588_599),
                 strike: f2p!(2800.0),
                 option_type: OptionStyle::Call
             }

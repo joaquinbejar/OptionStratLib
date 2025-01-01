@@ -789,7 +789,7 @@ mod tests_macros {
     #[test]
     fn test_f2p_precision_limits() {
         // Test the maximum precision of 16 decimal places
-        let val = ((0.1234567890123456789_f64 * 1e16) as u64 ) as f64 / 1e16; // More than 16 decimal places
+        let val = ((0.123_456_789_012_345_68_f64 * 1e16) as u64 ) as f64 / 1e16; // More than 16 decimal places
         let expected = Decimal::from_str("0.1234567890123456").unwrap();
         assert_eq!(f2p!(val).value(), expected);
     }
@@ -797,7 +797,7 @@ mod tests_macros {
     #[test]
     #[ignore="This test is failing because of the precision limit"]
     fn test_f2p_precision_limits_bis() {
-        let val = ((987654321.1234567890123456789_f64 * 1e16) as u64 ) as f64 / 1e16; // More than 16 decimal places
+        let val = ((987_654_321.123_456_8_f64 * 1e16) as u64 ) as f64 / 1e16; // More than 16 decimal places
         let expected = Decimal::from_str("987654321.1234567890123456").unwrap();
         assert_eq!(f2p!(val).value(), expected);
     }

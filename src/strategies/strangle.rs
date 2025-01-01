@@ -1312,7 +1312,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_area() {
         let strategy = setup();
-        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 27.073333333333338);
+        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 27.07333333333334);
     }
 
     #[test]
@@ -1649,8 +1649,7 @@ mod tests_long_strangle {
     #[test]
     fn test_profit_ratio() {
         let strategy = setup_long_strangle();
-        let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
-        let expected_ratio = 1.0 / (strategy.max_loss().unwrap_or(Positive::ZERO) / break_even_diff * 100.0);
+        let expected_ratio = 0.003666666666666666;
         assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), expected_ratio);
     }
 
@@ -2544,7 +2543,7 @@ mod tests_short_strangle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: quantity,
+                quantity,
                 strike: f2p!(7050.0),
                 option_type: OptionStyle::Put
             }

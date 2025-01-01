@@ -705,7 +705,7 @@ mod tests_call_butterfly {
     #[test]
     fn test_net_premium_received() {
         let strategy = setup();
-        assert_relative_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 4.8999, epsilon = 0.0001);
+        assert_relative_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 4.9, epsilon = 0.0001);
     }
 
     #[test]

@@ -3296,7 +3296,7 @@ mod tests_long_butterfly_delta {
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(f2p!(5710.81));
         let size = 0.3518;
-        let delta = f2p!(4.310394079825430);
+        let delta = f2p!(4.310_394_079_825_43);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
             size,
