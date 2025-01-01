@@ -7,7 +7,7 @@ use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{
-    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER, ZERO,
+    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
 };
 use crate::error::position::PositionError;
 use crate::error::strategies::StrategyError;
@@ -463,11 +463,11 @@ mod tests_strategies {
 
         let strategy = DefaultStrategy;
 
-        assert_eq!(strategy.max_profit().unwrap_or(Positive::ZERO), ZERO);
-        assert_eq!(strategy.max_loss().unwrap_or(Positive::ZERO), ZERO);
-        assert_eq!(strategy.total_cost(), ZERO);
-        assert_eq!(strategy.profit_area().unwrap(), Decimal::ZERO);
-        assert_eq!(strategy.profit_ratio().unwrap(), Decimal::ZERO);
+        assert_eq!(strategy.max_profit().unwrap_or(Positive::ZERO), Positive::ZERO);
+        assert_eq!(strategy.max_loss().unwrap_or(Positive::ZERO), Positive::ZERO);
+        assert_eq!(strategy.total_cost(), Positive::ZERO);
+        assert!(strategy.profit_area().is_err());
+        assert!(strategy.profit_ratio().is_err());
         assert!(strategy.validate());
     }
 
@@ -537,7 +537,6 @@ mod tests_strategies_extended {
     }
 
     #[test]
-    #[should_panic(expected = "Net premium received is not applicable")]
     fn test_strategies_net_premium_received_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
@@ -545,11 +544,10 @@ mod tests_strategies_extended {
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
-        let _ = strategy.net_premium_received();
+        assert!(strategy.net_premium_received().is_err());
     }
 
     #[test]
-    #[should_panic(expected = "Fees is not applicable for this strategy")]
     fn test_strategies_fees_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
@@ -557,7 +555,7 @@ mod tests_strategies_extended {
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
-        let _ = strategy.fees();
+        assert!(strategy.fees().is_err());
     }
 
     #[test]
