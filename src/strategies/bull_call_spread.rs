@@ -40,8 +40,10 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType
 use crate::visualization::utils::Graph;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
+use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
+use rust_decimal::Decimal;
 use tracing::{debug, error, info};
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
@@ -151,7 +153,7 @@ impl BullCallSpread {
         // Calculate break-even point
         strategy
             .break_even_points
-            .push(long_strike - strategy.net_premium_received() / quantity);
+            .push(long_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / quantity);
 
         strategy
     }
@@ -211,30 +213,32 @@ impl Strategies for BullCallSpread {
         f2p!(self.long_call.net_cost() + self.short_call.net_cost())
     }
 
-    fn net_premium_received(&self) -> f64 {
-        self.short_call.net_premium_received() - self.long_call.net_cost()
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call.net_premium_received() - self.long_call.net_cost();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.long_call.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.long_call.open_fee
             + self.long_call.close_fee
             + self.short_call.open_fee
-            + self.short_call.close_fee
+            + self.short_call.close_fee;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
         let base = self.short_call.option.strike_price - self.break_even_points[0];
-        (high * base / 200.0).to_f64()
+        Ok((high * base / 200.0).into())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
-            (value, _) if value == Positive::ZERO => ZERO,
-            (_, value) if value == Positive::ZERO => f64::INFINITY,
-            _ => (max_profit / max_loss * 100.0).into(),
+            (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
+            (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
+            _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
 
@@ -305,7 +309,7 @@ impl Optimizable for BullCallSpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -323,8 +327,8 @@ impl Optimizable for BullCallSpread {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -686,7 +690,7 @@ mod tests_bull_call_spread_strategy {
             0.5, // close_fee_short_call
         );
 
-        assert_eq!(spread.fees(), 2.0);
+        assert_eq!(spread.fees().unwrap().to_f64().unwrap(), 2.0);
     }
 
     #[test]
@@ -702,17 +706,14 @@ mod tests_bull_call_spread_strategy {
     #[test]
     fn test_profit_area() {
         let spread = create_test_spread();
-        let area = spread.profit_area();
+        let area = spread.profit_area().unwrap().to_f64().unwrap();
         assert_eq!(area, 0.08);
     }
 
     #[test]
     fn test_profit_ratio() {
         let spread = create_test_spread();
-        let ratio = spread.profit_ratio();
-
-        // Ratio = (max_profit / max_loss) * 100
-        // = (4.0 / 1.0) * 100 = 400
+        let ratio = spread.profit_ratio().unwrap().to_f64().unwrap();
         assert_eq!(ratio, 400.0);
     }
 
@@ -1027,7 +1028,7 @@ mod tests_bull_call_spread_optimization {
 
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
-            spread.profit_ratio() > 0.0,
+            spread.profit_ratio().unwrap().to_f64().unwrap() > 0.0,
             "Profit ratio should be positive"
         );
     }
@@ -1040,7 +1041,7 @@ mod tests_bull_call_spread_optimization {
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(spread.validate(), "Optimized spread should be valid");
-        assert!(spread.profit_area() > 0.0, "Profit area should be positive");
+        assert!(spread.profit_area().unwrap().to_f64().unwrap() > 0.0, "Profit area should be positive");
     }
 
     #[test]
