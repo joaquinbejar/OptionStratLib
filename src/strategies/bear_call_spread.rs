@@ -736,7 +736,7 @@ mod tests_bear_call_spread_strategies {
         // Modify strikes to create zero max loss scenario
         spread.long_call.option.strike_price = spread.short_call.option.strike_price;
 
-        assert!(spread.profit_ratio().unwrap().to_f64().unwrap().is_infinite());
+        assert_eq!(spread.profit_ratio().unwrap(), Decimal::MAX);
     }
 
     #[test]
