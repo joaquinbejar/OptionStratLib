@@ -10,11 +10,11 @@ use crate::chains::StrategyLegs;
 use crate::constants::DARK_BLUE;
 use crate::constants::{DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::option::Options;
-use crate::model::types::{
-    ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::Position;
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -24,10 +24,11 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType
 use crate::visualization::utils::Graph;
 use crate::{d2fu, f2p, spos, Positive};
 use chrono::Utc;
+use num_traits::FromPrimitive;
 use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
+use rust_decimal::Decimal;
 use tracing::{error, info};
-use crate::model::Position;
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -259,49 +260,48 @@ impl Strategies for CallButterfly {
             + self.long_call.total_cost()
     }
 
-    fn net_premium_received(&self) -> f64 {
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         let premium = self.short_call_low.net_premium_received()
             + self.short_call_high.net_premium_received()
             - self.long_call.net_cost();
-        if premium > ZERO {
-            premium
-        } else {
-            ZERO
-        }
+        let result = if premium > ZERO { premium } else { ZERO };
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.short_call_low.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call_low.open_fee
             + self.short_call_low.close_fee
             + self.short_call_high.open_fee
             + self.short_call_high.close_fee
             + self.long_call.open_fee * self.long_call.option.quantity
-            + self.long_call.close_fee * self.long_call.option.quantity
+            + self.long_call.close_fee * self.long_call.option.quantity;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let break_even = self.break_even();
         if break_even.len() != 2 {
-            panic!("Invalid break-even points");
+            return Err(StrategyError::BreakEvenError(
+                BreakEvenErrorKind::NoBreakEvenPoints,
+            ));
         }
         let base_low = break_even[1] - break_even[0];
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let base_high =
             self.short_call_high.option.strike_price - self.short_call_low.option.strike_price;
-        ((base_low + base_high) * max_profit / 2.0).to_f64()
+        Ok(((base_low + base_high) * max_profit / 2.0).into())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_loss = match self.max_loss().unwrap() {
-            value if value == Positive::ZERO=> spos!(1.0),
+            value if value == Positive::ZERO => spos!(1.0),
             value if value == Positive::INFINITY => spos!(1.0),
             value => Some(value),
-
         };
 
         match (self.max_profit(), max_loss) {
-            (Ok(max_profit), Some(ml)) => (max_profit / ml * 100.0).to_f64(),
-            _ => 0.0,
+            (Ok(max_profit), Some(ml)) => Ok((max_profit / ml * 100.0).into()),
+            _ => Ok(Decimal::ZERO),
         }
     }
 
@@ -387,7 +387,7 @@ impl Optimizable for CallButterfly {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -406,8 +406,8 @@ impl Optimizable for CallButterfly {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -550,7 +550,10 @@ impl Graph for CallButterfly {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.short_call_high.option.strike_price.to_f64(), upper_loss),
+            coordinates: (
+                self.short_call_high.option.strike_price.to_f64(),
+                upper_loss,
+            ),
             label: format!("Right High {:.2}", upper_loss),
             label_offset: LabelOffsetType::Relative(3.0, 3.0),
             point_color: DARK_GREEN,
@@ -644,6 +647,7 @@ mod tests_call_butterfly {
     use super::*;
     use crate::constants::ZERO;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     fn setup() -> CallButterfly {
         CallButterfly::new(
@@ -701,13 +705,13 @@ mod tests_call_butterfly {
     #[test]
     fn test_net_premium_received() {
         let strategy = setup();
-        assert_relative_eq!(strategy.net_premium_received(), 4.8999, epsilon = 0.0001);
+        assert_relative_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 4.8999, epsilon = 0.0001);
     }
 
     #[test]
     fn test_fees() {
         let strategy = setup();
-        assert_relative_eq!(strategy.fees(), 0.6, epsilon = f64::EPSILON);
+        assert_relative_eq!(strategy.fees().unwrap().to_f64().unwrap(), 0.6, epsilon = f64::EPSILON);
     }
 
     #[test]
@@ -787,6 +791,7 @@ mod tests_call_butterfly_validation {
 
 #[cfg(test)]
 mod tests_call_butterfly_pnl {
+    use num_traits::ToPrimitive;
     use super::*;
 
     fn setup_test_strategy() -> CallButterfly {
@@ -830,7 +835,7 @@ mod tests_call_butterfly_pnl {
     #[test]
     fn test_profit_ratio() {
         let strategy = setup_test_strategy();
-        let ratio = strategy.profit_ratio();
+        let ratio = strategy.profit_ratio().unwrap().to_f64().unwrap();
         assert!(ratio > ZERO);
     }
 }
