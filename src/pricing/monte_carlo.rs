@@ -49,7 +49,7 @@ pub fn monte_carlo_option_pricing(
             st *= Decimal::ONE + risk_free_rate * dt + implied_volatility * w;
         }
         // Calculate the payoff for a call option
-        let payoff :f64 = (st - option.strike_price).max(Positive::ZERO).into();
+        let payoff: f64 = (st - option.strike_price).max(Positive::ZERO).into();
         payoff_sum += payoff;
     }
     // Average value of the payoffs discounted to present value
@@ -61,10 +61,11 @@ pub fn monte_carlo_option_pricing(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::constants::ZERO;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, f2du, f2p};
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::constants::ZERO;
 
     fn create_test_option() -> Options {
         Options {
@@ -116,9 +117,8 @@ mod tests {
         option.implied_volatility = 0.0;
         let price = monte_carlo_option_pricing(&option, 25, 100).unwrap();
         let expected_price = f64::max(
-            (option.underlying_price
-                - option.strike_price 
-                * (-option.risk_free_rate * 1.0).exp()).into(),
+            (option.underlying_price - option.strike_price * (-option.risk_free_rate * 1.0).exp())
+                .into(),
             ZERO,
         );
         assert_decimal_eq!(price, f2du!(expected_price).unwrap(), dec!(0.1));
@@ -148,7 +148,7 @@ mod tests {
         option.expiration_date = ExpirationDate::Days(730.0); // 2 years
         let price = monte_carlo_option_pricing(&option, 25, 1000).unwrap();
         // The price should be higher for a longer expiration
-        assert!(price > dec!(15.0));
+        assert!(price.to_f64().unwrap() > 15.0);
     }
 
     #[test]

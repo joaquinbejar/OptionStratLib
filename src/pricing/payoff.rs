@@ -1,9 +1,9 @@
 use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::types::{OptionStyle, Side};
 use crate::visualization::model::{ChartPoint, LabelOffsetType};
+use crate::Positive;
 use plotters::prelude::RED;
 use tracing::trace;
-use crate::Positive;
 
 pub trait Payoff {
     fn payoff(&self, info: &PayoffInfo) -> f64;
@@ -107,8 +107,8 @@ pub trait Profit {
 #[cfg(test)]
 mod tests_standard_payoff {
     use super::*;
-    use crate::model::types::OptionType;
     use crate::f2p;
+    use crate::model::types::OptionType;
 
     #[test]
     fn test_call_option_in_the_money() {

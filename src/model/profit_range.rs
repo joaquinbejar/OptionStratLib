@@ -4,11 +4,11 @@
    Date: 30/11/24
 ******************************************************************************/
 use crate::error::probability::{PriceErrorKind, ProbabilityError};
-use crate::model::types::{ExpirationDate};
-use crate::Positive;
+use crate::model::types::ExpirationDate;
 use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
+use crate::Positive;
 
 /// Represents a price range where a strategy is profitable
 #[derive(Debug, Clone)]
@@ -65,7 +65,9 @@ impl ProfitLossRange {
         expiration_date: ExpirationDate,
         risk_free_rate: Option<f64>,
     ) -> Result<(), ProbabilityError> {
-        if self.lower_bound.unwrap_or(Positive::ZERO) > self.upper_bound.unwrap_or(Positive::INFINITY) {
+        if self.lower_bound.unwrap_or(Positive::ZERO)
+            > self.upper_bound.unwrap_or(Positive::INFINITY)
+        {
             return Err(ProbabilityError::PriceError(
                 PriceErrorKind::InvalidPriceRange {
                     range: format!(

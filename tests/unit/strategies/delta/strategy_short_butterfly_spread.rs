@@ -6,10 +6,10 @@ use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::{assert_decimal_eq, f2p, Positive};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use std::str::FromStr;
-use rust_decimal::Decimal;
 
 #[test]
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
@@ -66,7 +66,8 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: Positive::new_decimal(Decimal::from_str("0.11409430831966512").unwrap()).unwrap(),
+            quantity: Positive::new_decimal(Decimal::from_str("0.11409430831966512").unwrap())
+                .unwrap(),
             strike: f2p!(5780.0),
             option_type: OptionStyle::Call
         }

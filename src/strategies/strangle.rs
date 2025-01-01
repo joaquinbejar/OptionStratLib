@@ -34,9 +34,9 @@ use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType
 use crate::visualization::utils::Graph;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
+use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 use tracing::{debug, info, trace};
 
@@ -140,12 +140,12 @@ impl ShortStrangle {
             .expect("Invalid position");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
-        strategy
-            .break_even_points
-            .push(put_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity);
-        strategy
-            .break_even_points
-            .push(call_strike + strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity);
+        strategy.break_even_points.push(
+            put_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+        );
+        strategy.break_even_points.push(
+            call_strike + strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+        );
 
         strategy
     }
@@ -203,7 +203,6 @@ impl Strategies for ShortStrangle {
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         let result = self.short_call.net_premium_received() + self.short_put.net_premium_received();
         Ok(Decimal::from_f64(result).unwrap())
-
     }
 
     fn fees(&self) -> Result<Decimal, StrategyError> {
@@ -224,7 +223,8 @@ impl Strategies for ShortStrangle {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
         let outer_square = break_even_diff * max_profit;
         let triangles = (outer_square - inner_square) / 2.0;
-        let result = ((inner_square + triangles) / self.short_call.option.underlying_price).to_f64();
+        let result =
+            ((inner_square + triangles) / self.short_call.option.underlying_price).to_f64();
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -539,7 +539,8 @@ impl ProbabilityAnalysis for ShortStrangle {
             f2p!(self.short_put.option.implied_volatility),
         ]);
 
-        let mut lower_loss_range = ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
+        let mut lower_loss_range =
+            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
 
         lower_loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -552,7 +553,8 @@ impl ProbabilityAnalysis for ShortStrangle {
             self.get_risk_free_rate(),
         )?;
 
-        let mut upper_loss_range = ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
+        let mut upper_loss_range =
+            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
 
         upper_loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -783,7 +785,7 @@ impl Strategies for LongStrangle {
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-       Ok(Decimal::ZERO)
+        Ok(Decimal::ZERO)
     }
 
     fn fees(&self) -> Result<Decimal, StrategyError> {
@@ -817,7 +819,7 @@ impl Strategies for LongStrangle {
         }
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
         let ratio = max_loss / break_even_diff * 100.0;
-        let result= 1.0 / ratio ; // Invert the value to get the profit ratio: the lower, the better
+        let result = 1.0 / ratio; // Invert the value to get the profit ratio: the lower, the better
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -1033,7 +1035,10 @@ impl Graph for LongStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.long_put.option.strike_price.to_f64(), -max_loss.to_f64()),
+            coordinates: (
+                self.long_put.option.strike_price.to_f64(),
+                -max_loss.to_f64(),
+            ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
                 max_loss, self.long_put.option.strike_price
@@ -1070,7 +1075,8 @@ impl ProbabilityAnalysis for LongStrangle {
             f2p!(self.long_put.option.implied_volatility),
         ]);
 
-        let mut lower_profit_range = ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
+        let mut lower_profit_range =
+            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
 
         lower_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -1083,7 +1089,8 @@ impl ProbabilityAnalysis for LongStrangle {
             self.get_risk_free_rate(),
         )?;
 
-        let mut upper_profit_range = ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
+        let mut upper_profit_range =
+            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
 
         upper_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -1190,10 +1197,10 @@ impl DeltaNeutrality for LongStrangle {
 
 #[cfg(test)]
 mod tests_short_strangle {
-    use approx::assert_relative_eq;
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::{f2p, spos};
+    use approx::assert_relative_eq;
 
     fn setup() -> ShortStrangle {
         ShortStrangle::new(
@@ -1281,7 +1288,10 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_max_loss() {
         let strategy = setup();
-        assert_eq!(strategy.max_loss().unwrap_or(Positive::ZERO), Positive::INFINITY);
+        assert_eq!(
+            strategy.max_loss().unwrap_or(Positive::ZERO),
+            Positive::INFINITY
+        );
     }
 
     #[test]
@@ -1312,7 +1322,10 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_area() {
         let strategy = setup();
-        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 27.07333333333334);
+        assert_eq!(
+            strategy.profit_area().unwrap().to_f64().unwrap(),
+            27.07333333333334
+        );
     }
 
     #[test]
@@ -1364,8 +1377,13 @@ is expected and the underlying asset's price is anticipated to remain stable."
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
-        let expected_ratio = strategy.max_profit().unwrap_or(Positive::ZERO) / break_even_diff * 100.0;
-        assert_relative_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), expected_ratio.to_f64(), epsilon = 0.0001);
+        let expected_ratio =
+            strategy.max_profit().unwrap_or(Positive::ZERO) / break_even_diff * 100.0;
+        assert_relative_eq!(
+            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            expected_ratio.to_f64(),
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -1614,7 +1632,10 @@ mod tests_long_strangle {
     #[test]
     fn test_max_profit() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.max_profit().unwrap_or(Positive::ZERO), Positive::INFINITY);
+        assert_eq!(
+            strategy.max_profit().unwrap_or(Positive::ZERO),
+            Positive::INFINITY
+        );
     }
 
     #[test]
@@ -1636,7 +1657,10 @@ mod tests_long_strangle {
     #[test]
     fn test_net_premium_received() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 0.0);
+        assert_eq!(
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            0.0
+        );
     }
 
     #[test]
@@ -1650,7 +1674,10 @@ mod tests_long_strangle {
     fn test_profit_ratio() {
         let strategy = setup_long_strangle();
         let expected_ratio = 0.003666666666666666;
-        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), expected_ratio);
+        assert_eq!(
+            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            expected_ratio
+        );
     }
 
     #[test]
@@ -1827,8 +1854,8 @@ mod tests_long_strangle {
 #[cfg(test)]
 mod tests_short_strangle_probability {
     use super::*;
-    use crate::model::types::{ExpirationDate};
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::strategies::probabilities::utils::PriceTrend;
 
     /// Helper function that creates a basic short strangle for testing purposes
@@ -1957,15 +1984,18 @@ mod tests_short_strangle_probability {
         let range = &ranges[0];
         assert!(range.lower_bound.is_some(), "Lower bound should be defined");
         assert!(range.upper_bound.is_some(), "Upper bound should be defined");
-        assert!(range.probability > Positive::ZERO, "Probability should be positive");
+        assert!(
+            range.probability > Positive::ZERO,
+            "Probability should be positive"
+        );
     }
 }
 
 #[cfg(test)]
 mod tests_short_strangle_probability_bis {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::strategies::probabilities::utils::PriceTrend;
 
     fn create_test() -> ShortStrangle {
@@ -2106,8 +2136,8 @@ mod tests_short_strangle_probability_bis {
 #[cfg(test)]
 mod tests_long_strangle_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::strategies::probabilities::utils::PriceTrend;
 
     fn create_test_long_strangle() -> LongStrangle {
@@ -2221,7 +2251,10 @@ mod tests_long_strangle_probability {
 
         assert!(result.is_ok());
         let ev = result.unwrap();
-        assert!(ev >= Positive::ZERO, "Expected value should be non-negative");
+        assert!(
+            ev >= Positive::ZERO,
+            "Expected value should be non-negative"
+        );
 
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: f2p!(0.25),
@@ -2523,7 +2556,7 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-    #[ignore="This test is failing because of the precision limit"]
+    #[ignore = "This test is failing because of the precision limit"]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(f2p!(7150.0), f2p!(7050.0));
 
@@ -2534,7 +2567,6 @@ mod tests_short_strangle_delta_size {
         );
         assert!(!strategy.is_delta_neutral());
         let suggestion = strategy.suggest_delta_adjustments();
-        
 
         // let int = (0.5848105371755788 * 1e16) as i64;
         // let decimal = Decimal::new(int, 16);
@@ -2637,7 +2669,7 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-    #[ignore="This test is failing because of the precision limit"]
+    #[ignore = "This test is failing because of the precision limit"]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(f2p!(7150.0), f2p!(7050.0));
 

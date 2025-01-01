@@ -1,12 +1,12 @@
 use approx::assert_relative_eq;
+use num_traits::ToPrimitive;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::strangle::ShortStrangle;
 use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::Positive;
 use optionstratlib::{assert_positivef64_relative_eq, f2p};
 use std::error::Error;
-use num_traits::ToPrimitive;
 
 #[test]
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
@@ -35,7 +35,11 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().len(), 2);
-    assert_relative_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 409.36, epsilon = 0.001);
+    assert_relative_eq!(
+        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        409.36,
+        epsilon = 0.001
+    );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(409.36), f2p!(0.0001));

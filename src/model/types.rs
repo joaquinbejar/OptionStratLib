@@ -1,7 +1,7 @@
-use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use chrono::{DateTime, Duration, Utc};
 use crate::constants::ZERO;
+use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use crate::Positive;
+use chrono::{DateTime, Duration, Utc};
 
 #[allow(dead_code)]
 #[derive(Clone, PartialEq)]
@@ -358,8 +358,8 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
 
 #[cfg(test)]
 mod tests_payoff {
-    use crate::f2p;
     use super::*;
+    use crate::f2p;
 
     #[test]
     fn test_european_call() {
@@ -615,8 +615,8 @@ mod tests_expiration_date {
 
 #[cfg(test)]
 mod tests_calculate_floating_strike_payoff {
-    use crate::f2p;
     use super::*;
+    use crate::f2p;
 
     #[test]
     fn test_call_option_with_spot_min() {
@@ -705,8 +705,8 @@ mod tests_calculate_floating_strike_payoff {
 
 #[cfg(test)]
 mod tests_option_type {
-    use crate::f2p;
     use super::*;
+    use crate::f2p;
 
     #[test]
     fn test_asian_geometric_call() {
@@ -819,8 +819,8 @@ mod tests_option_type {
 
 #[cfg(test)]
 mod tests_vec_collection {
-    use crate::model::positive::Positive;
     use crate::f2p;
+    use crate::model::positive::Positive;
 
     #[test]
     fn test_collect_empty_iterator() {
@@ -859,8 +859,7 @@ mod tests_vec_collection {
     #[test]
     fn test_collect_from_map() {
         let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
-        let collected: Vec<Positive> =
-            values.into_iter().map(|x| f2p!(x.to_f64() * 2.0)).collect();
+        let collected: Vec<Positive> = values.into_iter().map(|x| f2p!(x.to_f64() * 2.0)).collect();
         assert_eq!(collected.len(), 3);
         assert_eq!(collected[0], f2p!(2.0));
         assert_eq!(collected[1], f2p!(4.0));
@@ -910,8 +909,8 @@ mod test_expiration_date {
 #[cfg(test)]
 mod test_asian_options {
     use crate::f2p;
-    use crate::model::{OptionStyle, OptionType, Side};
     use crate::model::types::AsianAveragingType;
+    use crate::model::{OptionStyle, OptionType, Side};
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -950,8 +949,8 @@ mod test_asian_options {
 #[cfg(test)]
 mod test_barrier_options {
     use crate::f2p;
-    use crate::model::{OptionStyle, OptionType, Side};
     use crate::model::types::BarrierType;
+    use crate::model::{OptionStyle, OptionType, Side};
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -1041,9 +1040,7 @@ mod test_exchange_options {
 
     #[test]
     fn test_exchange_option_positive_diff() {
-        let option = OptionType::Exchange {
-            second_asset: 90.0,
-        };
+        let option = OptionType::Exchange { second_asset: 90.0 };
         let info = PayoffInfo {
             spot: f2p!(120.0),
             strike: f2p!(100.0),

@@ -1,13 +1,13 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::Positive;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Positive;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -20,9 +20,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut strategy = LongButterflySpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        Positive::ZERO,            // long_strike_itm
-        Positive::ZERO,            // middle_strike
-        Positive::ZERO,            // long_strike_otm
+        Positive::ZERO,   // long_strike_itm
+        Positive::ZERO,   // middle_strike
+        Positive::ZERO,   // long_strike_otm
         ExpirationDate::Days(5.0),
         ZERO,      // implied_volatility
         ZERO,      // risk_free_rate
@@ -43,19 +43,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()
+        strategy.net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(Positive::ZERO));
-    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(Positive::ZERO));
-    info!("Total Fees: ${:.2}", strategy.fees());
+    info!(
+        "Max Profit: ${:.2}",
+        strategy.max_profit().unwrap_or(Positive::ZERO)
+    );
+    info!(
+        "Max Loss: ${:0.2}",
+        strategy.max_loss().unwrap_or(Positive::ZERO)
+    );
+    info!("Total Fees: ${:.2}", strategy.fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
+    info!("Profit Ratio: {:.2}%", strategy.profit_ratio()?);
 
-    if strategy.profit_ratio() > ZERO {
+    if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,

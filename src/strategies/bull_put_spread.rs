@@ -241,7 +241,6 @@ impl Strategies for BullPutSpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 
     fn get_break_even_points(&self) -> Vec<Positive> {
         self.break_even_points.clone()

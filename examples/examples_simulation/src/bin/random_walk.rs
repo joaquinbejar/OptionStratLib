@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 22/10/24
 ******************************************************************************/
-use optionstratlib::Positive;
 use optionstratlib::f2p;
 use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Positive;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

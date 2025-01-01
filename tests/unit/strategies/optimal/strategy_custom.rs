@@ -1,16 +1,16 @@
 use approx::assert_relative_eq;
 use chrono::Utc;
+use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::f2p;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use std::error::Error;
-use num_traits::ToPrimitive;
 use tracing::info;
 
 #[test]
@@ -85,10 +85,21 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     strategy.best_area(&option_chain, FindOptimalSide::Lower);
     info!("Profit Area: {:.4}", strategy.profit_area().unwrap());
-    assert_relative_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 75.4005, epsilon = 0.001);
+    assert_relative_eq!(
+        strategy.profit_area().unwrap().to_f64().unwrap(),
+        75.4005,
+        epsilon = 0.001
+    );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-    info!("Profit Ratio: {:.4}", strategy.profit_ratio().unwrap().to_f64().unwrap());
-    assert_relative_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 15.0989, epsilon = 0.001);
+    info!(
+        "Profit Ratio: {:.4}",
+        strategy.profit_ratio().unwrap().to_f64().unwrap()
+    );
+    assert_relative_eq!(
+        strategy.profit_ratio().unwrap().to_f64().unwrap(),
+        15.0989,
+        epsilon = 0.001
+    );
 
     Ok(())
 }

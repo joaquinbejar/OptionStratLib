@@ -4,8 +4,8 @@
    Date: 2/10/24
 ******************************************************************************/
 
-use crate::model::position::Position;
 use crate::f2p;
+use crate::model::position::Position;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -108,9 +108,9 @@ impl SPANMargin {
 #[cfg(test)]
 mod tests_span {
     use super::*;
+    use crate::f2p;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::f2p;
     use crate::utils::logger::setup_logger;
     use chrono::Utc;
     use tracing::info;

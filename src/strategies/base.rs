@@ -6,16 +6,14 @@
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
-use crate::constants::{
-    STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER,
-};
+use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::position::PositionError;
 use crate::error::strategies::StrategyError;
 use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::Positive;
-use std::f64;
 use rust_decimal::Decimal;
+use std::f64;
 use tracing::error;
 
 /// This enum represents different types of trading strategies.
@@ -159,8 +157,11 @@ pub trait Strategies: Validable + Positionable {
             .max((first_strike.value() - underlying_price.value()).abs());
 
         // Calculate limits in a single step
-        all_points
-            .push((underlying_price - max_diff).max(Positive::ZERO).min(first_strike));
+        all_points.push(
+            (underlying_price - max_diff)
+                .max(Positive::ZERO)
+                .min(first_strike),
+        );
         all_points.push((underlying_price + max_diff).max(last_strike));
         all_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
@@ -192,10 +193,7 @@ pub trait Strategies: Validable + Positionable {
             .iter()
             .cloned()
             .fold(Positive::INFINITY, Positive::min);
-        let mut max = strikes
-            .iter()
-            .cloned()
-            .fold(Positive::ZERO, Positive::max);
+        let mut max = strikes.iter().cloned().fold(Positive::ZERO, Positive::max);
 
         // If underlying_price is not Positive::ZERO, adjust min and max values
         let underlying_price = self.get_underlying_price();
@@ -324,7 +322,8 @@ pub trait Optimizable: Validable + Strategies {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        long.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO && short.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+        long.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+            && short.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
     }
 
     fn create_strategy(&self, _chain: &OptionChain, _legs: &StrategyLegs) -> Self::Strategy {
@@ -350,12 +349,12 @@ pub trait Positionable {
 
 #[cfg(test)]
 mod tests_strategies {
-    use rust_decimal_macros::dec;
-    use crate::f2p;
     use super::*;
+    use crate::f2p;
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_strategy_new() {
@@ -412,15 +411,15 @@ mod tests_strategies {
             Ok(dec!(300.0))
         }
 
-        fn fees(&self) -> Result<Decimal, StrategyError>  {
+        fn fees(&self) -> Result<Decimal, StrategyError> {
             Ok(dec!(50.0))
         }
 
-        fn profit_area(&self) -> Result<Decimal, StrategyError>  {
+        fn profit_area(&self) -> Result<Decimal, StrategyError> {
             Ok(dec!(5000.0))
         }
 
-        fn profit_ratio(&self) -> Result<Decimal, StrategyError>  {
+        fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
             Ok(dec!(2.0))
         }
     }
@@ -437,10 +436,7 @@ mod tests_strategies {
             .expect("Error adding position");
 
         // Test other methods
-        assert_eq!(
-            mock_strategy.break_even(),
-            vec![Positive::HUNDRED]
-        );
+        assert_eq!(mock_strategy.break_even(), vec![Positive::HUNDRED]);
         assert_eq!(mock_strategy.max_profit().unwrap_or(Positive::ZERO), 1000.0);
         assert_eq!(mock_strategy.max_loss().unwrap_or(Positive::ZERO), 500.0);
         assert_eq!(mock_strategy.total_cost(), 200.0);
@@ -463,8 +459,14 @@ mod tests_strategies {
 
         let strategy = DefaultStrategy;
 
-        assert_eq!(strategy.max_profit().unwrap_or(Positive::ZERO), Positive::ZERO);
-        assert_eq!(strategy.max_loss().unwrap_or(Positive::ZERO), Positive::ZERO);
+        assert_eq!(
+            strategy.max_profit().unwrap_or(Positive::ZERO),
+            Positive::ZERO
+        );
+        assert_eq!(
+            strategy.max_loss().unwrap_or(Positive::ZERO),
+            Positive::ZERO
+        );
         assert_eq!(strategy.total_cost(), Positive::ZERO);
         assert!(strategy.profit_area().is_err());
         assert!(strategy.profit_ratio().is_err());
@@ -488,10 +490,10 @@ mod tests_strategies {
 #[cfg(test)]
 mod tests_strategies_extended {
     use super::*;
+    use crate::f2p;
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
-    use crate::f2p;
 
     #[test]
     fn test_strategy_enum() {

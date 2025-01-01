@@ -5,13 +5,13 @@
 ******************************************************************************/
 use crate::error::probability::ProbabilityError;
 use crate::model::{ExpirationDate, ProfitLossRange};
-use crate::{f2p, Positive};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
 use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
+use crate::{f2p, Positive};
 use tracing::warn;
 
 /// Trait for analyzing probabilities and risk metrics of option strategies
@@ -31,7 +31,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             return Ok(StrategyProbabilityAnalysis {
                 probability_of_profit,
                 probability_of_max_profit: Positive::ZERO, // Default value when no volatility adjustment
-                probability_of_max_loss: Positive::ZERO,   // Default value when no volatility adjustment
+                probability_of_max_loss: Positive::ZERO, // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
                 risk_reward_ratio: self.profit_ratio().unwrap().into(),
@@ -87,7 +87,9 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ) -> Result<Positive, ProbabilityError> {
         // Special case: when volatility is zero, return the current value
         if let Some(ref vol_adj) = volatility_adj {
-            if vol_adj.base_volatility == Positive::ZERO && vol_adj.std_dev_adjustment == Positive::ZERO {
+            if vol_adj.base_volatility == Positive::ZERO
+                && vol_adj.std_dev_adjustment == Positive::ZERO
+            {
                 let current_profit = self.calculate_profit_at(self.get_underlying_price());
                 return if current_profit <= 0.0 {
                     Ok(Positive::ZERO)
@@ -235,13 +237,13 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
 #[cfg(test)]
 mod tests_probability_analysis {
-    use rust_decimal::Decimal;
-    use crate::error::strategies::StrategyError;
     use super::*;
-    use crate::model::types::{ExpirationDate};
+    use crate::error::strategies::StrategyError;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::pricing::payoff::Profit;
     use crate::strategies::base::{Positionable, Strategies, Validable};
+    use rust_decimal::Decimal;
 
     // Mock struct para testing
     struct MockStrategy {
@@ -519,7 +521,11 @@ mod tests_expected_value {
         }
 
         fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-            Ok(vec![ProfitLossRange::new(None, Some(f2p!(95.0)), Positive::ZERO)?])
+            Ok(vec![ProfitLossRange::new(
+                None,
+                Some(f2p!(95.0)),
+                Positive::ZERO,
+            )?])
         }
     }
 
@@ -530,7 +536,10 @@ mod tests_expected_value {
 
         assert!(result.is_ok(), "Expected value calculation should succeed");
         let ev = result.unwrap();
-        assert!(ev >= Positive::ZERO, "Expected value should be non-negative");
+        assert!(
+            ev >= Positive::ZERO,
+            "Expected value should be non-negative"
+        );
     }
 
     #[test]

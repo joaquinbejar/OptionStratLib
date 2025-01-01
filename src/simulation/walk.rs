@@ -227,8 +227,8 @@ impl Iterator for RandomWalkGraph {
 #[cfg(test)]
 mod tests_random_walk {
     use super::*;
-    use statrs::statistics::Statistics;
     use crate::f2p;
+    use statrs::statistics::Statistics;
 
     struct TestWalk {
         values: Vec<Positive>,
@@ -353,8 +353,8 @@ mod tests_random_walk {
 mod tests {
     use super::*;
     use crate::utils::logger::setup_logger_with_level;
-    use tracing::debug;
     use crate::{f2p, spos};
+    use tracing::debug;
 
     #[test]
     fn test_random_walk_iterator() {
@@ -385,7 +385,10 @@ mod tests {
                 i, params.underlying_price, params.implied_volatility, params.expiration_date
             );
 
-            assert!(params.underlying_price > Positive::ZERO, "Price should be positive");
+            assert!(
+                params.underlying_price > Positive::ZERO,
+                "Price should be positive"
+            );
             assert!(
                 params.risk_free_rate >= ZERO,
                 "Risk-free rate should be non-negative"
@@ -396,7 +399,10 @@ mod tests {
             );
 
             if let Some(iv) = params.implied_volatility {
-                assert!(iv >= Positive::ZERO, "Implied volatility should be positive");
+                assert!(
+                    iv >= Positive::ZERO,
+                    "Implied volatility should be positive"
+                );
             }
         }
     }

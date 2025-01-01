@@ -705,13 +705,21 @@ mod tests_call_butterfly {
     #[test]
     fn test_net_premium_received() {
         let strategy = setup();
-        assert_relative_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 4.9, epsilon = 0.0001);
+        assert_relative_eq!(
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            4.9,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
     fn test_fees() {
         let strategy = setup();
-        assert_relative_eq!(strategy.fees().unwrap().to_f64().unwrap(), 0.6, epsilon = f64::EPSILON);
+        assert_relative_eq!(
+            strategy.fees().unwrap().to_f64().unwrap(),
+            0.6,
+            epsilon = f64::EPSILON
+        );
     }
 
     #[test]
@@ -791,8 +799,8 @@ mod tests_call_butterfly_validation {
 
 #[cfg(test)]
 mod tests_call_butterfly_pnl {
-    use num_traits::ToPrimitive;
     use super::*;
+    use num_traits::ToPrimitive;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(

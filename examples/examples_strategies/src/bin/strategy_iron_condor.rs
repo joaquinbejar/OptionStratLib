@@ -1,10 +1,10 @@
-use optionstratlib::Positive;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::{Strategies, Validable};
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Positive;
 use std::error::Error;
 use tracing::info;
 
@@ -43,17 +43,23 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()
+        strategy.net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(Positive::ZERO));
-    info!("Max Loss: ${:.2}", strategy.max_loss().unwrap_or(Positive::ZERO));
-    info!("Total Fees: ${:.2}", strategy.fees());
+    info!(
+        "Max Profit: ${:.2}",
+        strategy.max_profit().unwrap_or(Positive::ZERO)
+    );
+    info!(
+        "Max Loss: ${:.2}",
+        strategy.max_loss().unwrap_or(Positive::ZERO)
+    );
+    info!("Total Fees: ${:.2}", strategy.fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Area: {:.2}%", strategy.profit_area()?);
 
     // Generate the profit/loss graph
     strategy.graph(

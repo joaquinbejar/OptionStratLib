@@ -1001,7 +1001,7 @@ impl Strategies for ShortButterflySpread {
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call_low.net_premium_received() 
+        let result = self.short_call_low.net_premium_received()
             + self.short_call_high.net_premium_received()
             - self.long_calls.net_cost();
         Ok(Decimal::from_f64(result).unwrap())
@@ -1029,7 +1029,6 @@ impl Strategies for ShortButterflySpread {
             left_profit.max(right_profit)
         };
         Ok(Decimal::from_f64(result).unwrap())
-        
     }
 
     fn profit_ratio(&self) -> Result<Decimal, StrategyError> {

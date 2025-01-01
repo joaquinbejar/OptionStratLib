@@ -4,12 +4,12 @@
    Date: 20/8/24
 ******************************************************************************/
 use chrono::Utc;
+use optionstratlib::f2p;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
-use optionstratlib::Positive;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::f2p;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Positive;
 use std::error::Error;
 
 fn create_sample_option() -> Options {

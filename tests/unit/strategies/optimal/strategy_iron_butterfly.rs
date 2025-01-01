@@ -1,13 +1,13 @@
 use approx::assert_relative_eq;
+use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::iron_butterfly::IronButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use std::error::Error;
-use num_traits::ToPrimitive;
 
 #[test]
 fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
@@ -38,9 +38,17 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     strategy.best_area(&option_chain, FindOptimalSide::All);
-    assert_relative_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 23.3347, epsilon = 0.001);
+    assert_relative_eq!(
+        strategy.profit_area().unwrap().to_f64().unwrap(),
+        23.3347,
+        epsilon = 0.001
+    );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-    assert_relative_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 387.3294, epsilon = 0.001);
+    assert_relative_eq!(
+        strategy.profit_ratio().unwrap().to_f64().unwrap(),
+        387.3294,
+        epsilon = 0.001
+    );
 
     Ok(())
 }

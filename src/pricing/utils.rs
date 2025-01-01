@@ -10,12 +10,12 @@ use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
+use crate::Positive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::distributions::Distribution;
 use rand::Rng;
 use rust_decimal::{Decimal, MathematicalOps};
 use statrs::distribution::Normal;
-use crate::Positive;
 
 /// Simulates stock returns based on a normal distribution using pure decimal arithmetic.
 ///
@@ -488,7 +488,7 @@ mod tests_simulate_returns_bis {
         let returns = simulate_returns(dec!(0.05), dec!(0.2), 100, dec!(1.0)).unwrap();
         assert_eq!(returns.len(), 100);
         for r in returns {
-            assert!(r > dec!(-1.0)); 
+            assert!(r > dec!(-1.0));
         }
     }
 
@@ -605,8 +605,8 @@ mod tests_utils {
 mod tests_probability_keep_under_strike {
     use super::*;
     use crate::constants::ZERO;
-    use crate::Positive;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
+    use crate::Positive;
     use crate::{assert_decimal_eq, f2p};
     use rust_decimal_macros::dec;
     use tracing::info;

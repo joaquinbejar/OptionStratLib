@@ -240,7 +240,7 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn fees(&self) -> Result<Decimal, StrategyError> {
-        let restult = (self.long_call.open_fee + self.long_call.close_fee) 
+        let restult = (self.long_call.open_fee + self.long_call.close_fee)
             * self.long_call.option.quantity
             + (self.short_call.open_fee + self.short_call.close_fee)
                 * self.short_call.option.quantity;
@@ -252,7 +252,7 @@ impl Strategies for PoorMansCoveredCall {
             - (self.short_call.option.strike_price - self.max_profit().unwrap_or(Positive::ZERO)))
         .to_f64();
         let high = self.max_profit().unwrap_or(Positive::ZERO).to_f64();
-       let result = base * high / 200.0;
+        let result = base * high / 200.0;
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -610,9 +610,9 @@ impl DeltaNeutrality for PoorMansCoveredCall {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::f2p;
+    use num_traits::ToPrimitive;
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
         let underlying_symbol = "AAPL".to_string();
@@ -999,8 +999,8 @@ mod tests_pmcc_optimization {
 
 #[cfg(test)]
 mod tests_pmcc_pnl {
-    use num_traits::ToPrimitive;
     use super::*;
+    use num_traits::ToPrimitive;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1157,9 +1157,9 @@ mod tests_pmcc_graph {
 
 #[cfg(test)]
 mod tests_pmcc_best_area {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::utils::logger::setup_logger;
+    use num_traits::ToPrimitive;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1231,9 +1231,9 @@ mod tests_pmcc_best_area {
 
 #[cfg(test)]
 mod tests_pmcc_best_ratio {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::utils::logger::setup_logger;
+    use num_traits::ToPrimitive;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();

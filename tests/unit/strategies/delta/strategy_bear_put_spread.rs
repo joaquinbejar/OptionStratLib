@@ -6,10 +6,10 @@ use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::{assert_decimal_eq, f2p, Positive};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use std::str::FromStr;
-use rust_decimal::Decimal;
 
 #[test]
 fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
@@ -67,7 +67,8 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: Positive::new_decimal(Decimal::from_str("5.952144261472912").unwrap()).unwrap(),
+            quantity: Positive::new_decimal(Decimal::from_str("5.952144261472912").unwrap())
+                .unwrap(),
             strike: f2p!(5720.0),
             option_type: OptionStyle::Put
         }

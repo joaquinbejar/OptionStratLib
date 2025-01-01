@@ -268,12 +268,15 @@ pub fn telegraph(
     let mut telegraph_process = tp.clone();
     for _ in 0..no_steps {
         let state = telegraph_process.next_state(dt);
-        let drift = Decimal::from_f64(option.risk_free_rate - 0.5 * option.implied_volatility.powi(2)).unwrap();
-        let volatility: Decimal = Decimal::from_f64(option.implied_volatility * state as f64).unwrap();
-        
+        let drift =
+            Decimal::from_f64(option.risk_free_rate - 0.5 * option.implied_volatility.powi(2))
+                .unwrap();
+        let volatility: Decimal =
+            Decimal::from_f64(option.implied_volatility * state as f64).unwrap();
+
         let rh = Decimal::from_f64(dt.sqrt().unwrap().to_f64().unwrap() * random::<f64>()).unwrap();
         let lhs = drift * dt + volatility;
-        
+
         let update = (lhs * rh).exp();
         price *= update;
     }

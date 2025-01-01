@@ -191,10 +191,9 @@ impl IronButterfly {
             .expect("Invalid long put");
 
         // Calculate break-even points
-        let net_credit = (strategy.long_put.premium + strategy.long_call.premium) 
+        let net_credit = (strategy.long_put.premium + strategy.long_call.premium)
             + strategy.fees().unwrap().to_f64().unwrap()
-            - (strategy.short_put.premium 
-            + strategy.short_call.premium);
+            - (strategy.short_put.premium + strategy.short_call.premium);
         strategy.break_even_points.push(short_strike + net_credit);
         strategy.break_even_points.push(short_strike - net_credit);
 
@@ -304,7 +303,8 @@ impl Strategies for IronButterfly {
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let net_prem = self.short_call.net_premium_received() + self.short_put.net_premium_received()
+        let net_prem = self.short_call.net_premium_received()
+            + self.short_put.net_premium_received()
             - self.long_call.total_cost()
             - self.long_put.total_cost();
         Ok(Decimal::from_f64(net_prem).unwrap())
@@ -332,7 +332,8 @@ impl Strategies for IronButterfly {
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
-        let result = (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64();
+        let result =
+            (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64();
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -710,16 +711,16 @@ mod tests_iron_butterfly {
             f2p!(160.0), // long call strike
             f2p!(140.0), // long put strike
             ExpirationDate::DateTime(date),
-            0.2,      // implied volatility
-            0.01,     // risk free rate
-            0.02,     // dividend yield
+            0.2,           // implied volatility
+            0.01,          // risk free rate
+            0.02,          // dividend yield
             Positive::ONE, // quantity
-            1.5,      // premium short call
-            1.5,      // premium short put
-            1.0,      // premium long call
-            1.0,      // premium long put
-            5.0,      // open fee
-            5.0,      // close fee
+            1.5,           // premium short call
+            1.5,           // premium short put
+            1.0,           // premium long call
+            1.0,           // premium long put
+            5.0,           // open fee
+            5.0,           // close fee
         );
 
         assert_eq!(butterfly.name, "Iron Butterfly");
@@ -758,7 +759,7 @@ mod tests_iron_butterfly {
         );
 
         // Max loss should be width of the wing minus net credit received
-        let expected_loss:Positive = Positive::TEN - butterfly.net_premium_received().unwrap();
+        let expected_loss: Positive = Positive::TEN - butterfly.net_premium_received().unwrap();
         assert_eq!(butterfly.max_loss().unwrap(), expected_loss);
     }
 
@@ -888,8 +889,8 @@ mod tests_iron_butterfly {
 #[cfg(test)]
 mod tests_iron_butterfly_validable {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_valid_position(
         side: Side,
@@ -977,7 +978,8 @@ mod tests_iron_butterfly_validable {
     fn test_validate_invalid_long_put() {
         let mut butterfly = create_valid_butterfly();
         // Make long put invalid by setting quantity to zero
-        butterfly.long_put = create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
+        butterfly.long_put =
+            create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
         assert!(!butterfly.validate());
     }
 
@@ -991,7 +993,8 @@ mod tests_iron_butterfly_validable {
             create_valid_position(Side::Short, OptionStyle::Put, f2p!(100.0), Positive::ZERO);
         butterfly.long_call =
             create_valid_position(Side::Long, OptionStyle::Call, f2p!(110.0), Positive::ZERO);
-        butterfly.long_put = create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
+        butterfly.long_put =
+            create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
         assert!(!butterfly.validate());
     }
 
@@ -1021,8 +1024,8 @@ mod tests_iron_butterfly_validable {
 #[cfg(test)]
 mod tests_iron_butterfly_strategies {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
@@ -1169,7 +1172,10 @@ mod tests_iron_butterfly_strategies {
     #[test]
     fn test_net_premium_received() {
         let butterfly = create_test_butterfly();
-        assert_eq!(butterfly.net_premium_received().unwrap().to_f64().unwrap(), -2.0);
+        assert_eq!(
+            butterfly.net_premium_received().unwrap().to_f64().unwrap(),
+            -2.0
+        );
     }
 
     #[test]
@@ -1207,7 +1213,10 @@ mod tests_iron_butterfly_strategies {
             0.5,
         );
 
-        assert_eq!(butterfly.net_premium_received().unwrap().to_f64().unwrap(), -4.0);
+        assert_eq!(
+            butterfly.net_premium_received().unwrap().to_f64().unwrap(),
+            -4.0
+        );
     }
 
     #[test]
@@ -1231,7 +1240,10 @@ mod tests_iron_butterfly_strategies {
             0.5,
         );
 
-        assert_eq!(butterfly.net_premium_received().unwrap().to_f64().unwrap(), -1.0);
+        assert_eq!(
+            butterfly.net_premium_received().unwrap().to_f64().unwrap(),
+            -1.0
+        );
     }
 }
 
@@ -1239,8 +1251,8 @@ mod tests_iron_butterfly_strategies {
 mod tests_iron_butterfly_optimizable {
     use super::*;
     use crate::chains::chain::OptionData;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::spos;
 
     fn create_test_butterfly() -> IronButterfly {
@@ -1423,8 +1435,8 @@ mod tests_iron_butterfly_optimizable {
 #[cfg(test)]
 mod tests_iron_butterfly_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
@@ -1604,8 +1616,8 @@ mod tests_iron_butterfly_profit {
 #[cfg(test)]
 mod tests_iron_butterfly_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(

@@ -113,7 +113,9 @@ impl Position {
     ///
     pub fn total_cost(&self) -> Positive {
         let f64_total_cost = match self.option.side {
-            Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity.to_f64(),
+            Side::Long => {
+                (self.premium + self.open_fee + self.close_fee) * self.option.quantity.to_f64()
+            }
             Side::Short => (self.open_fee + self.close_fee) * self.option.quantity.to_f64(),
         };
         f2p!(f64_total_cost)
@@ -230,7 +232,7 @@ impl Position {
                 Some(self.option.strike_price - total_cost_per_contract)
             }
             (Side::Short, OptionStyle::Put) => {
-                Some(self.option.strike_price- self.premium + total_cost_per_contract)
+                Some(self.option.strike_price - self.premium + total_cost_per_contract)
             }
         }
     }
@@ -369,8 +371,8 @@ impl Graph for Position {
 mod tests_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use chrono::Duration;
 
     fn setup_option(
@@ -823,8 +825,8 @@ mod tests_position {
 mod tests_valid_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{OptionType};
     use crate::f2p;
+    use crate::model::types::OptionType;
     use chrono::Utc;
 
     fn create_valid_option() -> Options {
@@ -908,8 +910,8 @@ mod tests_valid_position {
 mod tests_position_break_even {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 
     fn setup_option(
         side: Side,
@@ -1052,8 +1054,8 @@ mod tests_position_break_even {
 mod tests_position_max_loss_profit {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
 
     fn setup_option(

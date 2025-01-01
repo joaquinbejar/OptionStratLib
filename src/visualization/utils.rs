@@ -163,11 +163,10 @@ pub(crate) fn calculate_axis_range(
     let (min_x_value, max_x_value) = if x_axis_data.is_empty() {
         (Positive::ZERO, Positive::INFINITY)
     } else {
-        x_axis_data
-            .iter()
-            .fold((Positive::INFINITY, Positive::ZERO), |(min_x, max_x), &value| {
-                (min_x.min(value), max_x.max(value))
-            })
+        x_axis_data.iter().fold(
+            (Positive::INFINITY, Positive::ZERO),
+            |(min_x, max_x), &value| (min_x.min(value), max_x.max(value)),
+        )
     };
 
     let (min_y_temp, max_y_temp) = if y_axis_data.is_empty() {
@@ -270,7 +269,6 @@ where
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests_calculate_axis_range {
     use super::*;
@@ -331,9 +329,9 @@ mod tests_calculate_axis_range {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Positive;
     use crate::f2p;
     use crate::visualization::model::LabelOffsetType;
+    use crate::Positive;
     use plotters::style::RGBColor;
     use std::error::Error;
 

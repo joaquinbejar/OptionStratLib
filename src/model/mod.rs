@@ -98,12 +98,12 @@ pub mod decimal;
 mod format;
 pub mod option;
 pub mod position;
+pub mod positive;
 mod profit_range;
 pub mod types;
 pub mod utils;
-pub mod positive;
 
-pub use profit_range::ProfitLossRange;
 pub use option::Options;
 pub use position::Position;
+pub use profit_range::ProfitLossRange;
 pub use types::{ExpirationDate, OptionStyle, OptionType, Side};

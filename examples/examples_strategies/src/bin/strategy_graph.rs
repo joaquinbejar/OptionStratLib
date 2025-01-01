@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
-use optionstratlib::Positive;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Positive;
 use std::error::Error;
 use tracing::info;
 
@@ -37,9 +37,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         .collect();
     info!("Title: {}", strategy.title());
     info!("Break Even {:?}", strategy.break_even());
-    info!("Net Premium Received: {}", strategy.net_premium_received());
-    info!("Max Profit: {}", strategy.max_profit().unwrap_or(Positive::ZERO));
-    info!("Max Loss: {}", strategy.max_loss().unwrap_or(Positive::ZERO));
+    info!("Net Premium Received: {}", strategy.net_premium_received()?);
+    info!(
+        "Max Profit: {}",
+        strategy.max_profit().unwrap_or(Positive::ZERO)
+    );
+    info!(
+        "Max Loss: {}",
+        strategy.max_loss().unwrap_or(Positive::ZERO)
+    );
     info!("Total Cost: {}", strategy.total_cost());
 
     // Generate the intrinsic value graph

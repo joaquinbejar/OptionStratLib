@@ -6,13 +6,13 @@
 use crate::constants::PI;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{GreeksError, InputErrorKind};
+use crate::model::decimal::f64_to_decimal;
 use crate::model::option::Options;
 use crate::Positive;
 use core::f64;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use statrs::distribution::{ContinuousCDF, Normal};
-use crate::model::decimal::f64_to_decimal;
 
 /// Calculates the `d1` parameter used in the Black-Scholes options pricing model.
 ///
@@ -95,7 +95,7 @@ pub fn d1(
             reason: "Underlying price price cannot be zero".to_string(),
         }));
     }
-    
+
     if strike_price == Decimal::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidStrike {
             value: strike_price.to_f64().unwrap(),
@@ -439,8 +439,8 @@ mod tests_exp {
 mod tests_calculate_d_values {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::f2p;
+    use crate::model::types::{OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
 
     #[test]
@@ -1706,19 +1706,13 @@ mod calculate_big_n_values {
 
 #[cfg(test)]
 mod tests_d1_d2_edge_cases {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::{assert_decimal_eq, f2p};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_d1_zero_underlying_price() {
-        let result = d1(
-            Positive::ZERO,
-            f2p!(100.0),
-            0.05,
-            1.0,
-            0.2
-        );
+        let result = d1(Positive::ZERO, f2p!(100.0), 0.05, 1.0, 0.2);
         assert!(result.is_err());
     }
 
@@ -1727,29 +1721,18 @@ mod tests_d1_d2_edge_cases {
         let result = d2(
             f2p!(100.0),
             f2p!(100.0),
-            -0.05,  // tasa negativa
+            -0.05, // tasa negativa
             1.0,
-            0.8    // alta volatilidad
-        ).unwrap();
+            0.8, // alta volatilidad
+        )
+        .unwrap();
         assert_decimal_eq!(result, dec!(-0.4625), dec!(0.000001));
     }
 
     #[test]
     fn test_d1_d2_combination_extreme_values() {
-        let result_d1 = d1(
-            f2p!(1000.0),
-            f2p!(10.0),
-            0.15,
-            10.0,
-            0.9
-        ).unwrap();
-        let result_d2 = d2(
-            f2p!(1000.0),
-            f2p!(10.0),
-            0.15,
-            10.0,
-            0.9
-        ).unwrap();
+        let result_d1 = d1(f2p!(1000.0), f2p!(10.0), 0.15, 10.0, 0.9).unwrap();
+        let result_d2 = d2(f2p!(1000.0), f2p!(10.0), 0.15, 10.0, 0.9).unwrap();
         assert_decimal_eq!(result_d1, dec!(3.5681), dec!(0.0001));
         assert_decimal_eq!(result_d2, dec!(0.7221), dec!(0.0001));
     }
@@ -1812,11 +1795,11 @@ mod tests_cumulative_distribution {
 
 #[cfg(test)]
 mod tests_calculate_d_values_bis {
-    use rust_decimal_macros::dec;
-    use crate::{assert_decimal_eq, f2p};
-    use crate::model::ExpirationDate;
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::ExpirationDate;
+    use crate::{assert_decimal_eq, f2p};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_calculate_d_values_with_expiration() {
@@ -1843,26 +1826,19 @@ mod tests_calculate_d_values_bis {
 #[cfg(test)]
 mod tests_edge_cases_and_errors {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::f2p;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_extreme_volatility_values() {
-        let result = d1(
-            f2p!(100.0),
-            f2p!(100.0),
-            0.05,
-            1.0,
-            1000.0  
-        );
+        let result = d1(f2p!(100.0), f2p!(100.0), 0.05, 1.0, 1000.0);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_precision_limits() {
-        let x = dec!(15.0);  
+        let x = dec!(15.0);
         let n_result = n(x).unwrap();
         assert!(n_result.to_f64().unwrap() == 0.0);
     }
-    
 }

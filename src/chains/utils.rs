@@ -221,7 +221,7 @@ pub(crate) fn generate_list_of_strikes(
         let next_strike = i as f64 * strike_interval;
         if reference_price_rounded < next_strike {
             // panic!("Reference price is lower than the next strike: {}, {}", next_strike, reference_price_rounded);
-            break
+            break;
         }
         let lower_strike = (reference_price_rounded - (i as f64 * strike_interval)).floor();
         let upper_strike = (reference_price_rounded + (i as f64 * strike_interval)).floor();
@@ -757,7 +757,6 @@ mod tests_sample {
 
     #[test]
     fn test_chain() {
-        
         let chain = OptionDataPriceParams::new(
             Positive::new(2000.0).unwrap(),
             ExpirationDate::Days(10.0),
@@ -778,9 +777,8 @@ mod tests_sample {
         );
 
         let built_chain = OptionChain::build_chain(&params);
-        
+
         assert_eq!(built_chain.symbol, "SP500");
         assert_eq!(built_chain.underlying_price, Positive::new(2000.0).unwrap());
-        
     }
 }

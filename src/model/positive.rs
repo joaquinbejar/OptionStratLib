@@ -55,25 +55,25 @@ impl Positive {
     pub const TWO: Positive = Positive(Decimal::TWO);
 
     pub const INFINITY: Positive = Positive(Decimal::MAX);
-    
+
     pub const TEN: Positive = Positive(Decimal::TEN);
 
     pub const HUNDRED: Positive = Positive(Decimal::ONE_HUNDRED);
 
     pub const THOUSAND: Positive = Positive(Decimal::ONE_THOUSAND);
-    
+
     pub const PI: Positive = Positive(Decimal::PI);
 
     pub fn new(value: f64) -> Result<Self, String> {
         let dec = Decimal::from_f64(value);
-        
-        match dec {  
+
+        match dec {
             Some(value) if value >= Decimal::ZERO => Ok(Positive(value)),
             Some(value) => Err(format!("Value must be positive, got {}", value)),
             None => Err("Failed to parse as Decimal".to_string()),
         }
     }
-    
+
     pub fn new_decimal(value: Decimal) -> Result<Self, String> {
         if value >= Decimal::ZERO {
             Ok(Positive(value))
@@ -113,27 +113,26 @@ impl Positive {
     pub fn floor(&self) -> Positive {
         Positive(self.0.floor())
     }
-    
-    pub  fn powi(&self, n: i64) -> Positive {
+
+    pub fn powi(&self, n: i64) -> Positive {
         Positive(self.0.powi(n))
     }
-    
+
     pub fn round(&self) -> Positive {
         Positive(self.0.round())
     }
-    
+
     pub fn sqrt(&self) -> Positive {
         Positive(self.0.ln())
     }
-    
+
     pub fn ln(&self) -> Positive {
         Positive(self.0.ln())
     }
 
-        pub fn round_to(&self, decimal_places: u32) -> Positive {
-            Positive(self.0.round_dp(decimal_places))
-        }
-    
+    pub fn round_to(&self, decimal_places: u32) -> Positive {
+        Positive(self.0.round_dp(decimal_places))
+    }
 }
 
 impl From<Positive> for u64 {
@@ -524,7 +523,6 @@ impl RelativeEq for Positive {
     }
 }
 
-
 impl Sum for Positive {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         let sum = iter.fold(Decimal::ZERO, |acc, x| acc + x.value());
@@ -543,7 +541,6 @@ impl<'a> Sum<&'a Positive> for Positive {
 mod tests_positive_decimal {
     use super::*;
     use rust_decimal_macros::dec;
-
 
     #[test]
     fn test_positive_decimal_creation() {
@@ -643,7 +640,6 @@ mod tests_positive_decimal {
         let b = Positive::new_decimal(dec!(2.0)).unwrap();
         assert_eq!(a / b, dec!(3.0));
     }
-    
 
     #[test]
     fn test_constants() {
@@ -654,8 +650,8 @@ mod tests_positive_decimal {
 
 #[cfg(test)]
 mod tests_positive_decimal_extended {
-    use rust_decimal_macros::dec;
     use super::*;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_positive_decimal_ordering() {
@@ -739,21 +735,19 @@ mod tests_positive_decimal_sum {
     }
 }
 
-
 #[cfg(test)]
 mod tests_eq {
-    use rust_decimal_macros::dec;
     use crate::Positive;
+    use rust_decimal_macros::dec;
 
     #[test]
-    #[ignore="This test is failing because of the precision limit"]
+    #[ignore = "This test is failing because of the precision limit"]
     fn test_eq() {
         let a = f2p!(0.5848105371755788);
         let b = Positive::new_decimal(dec!(0.5848105371755788)).unwrap();
         assert_eq!(a, b);
     }
 }
-
 
 #[cfg(test)]
 mod tests_macros {
@@ -789,15 +783,15 @@ mod tests_macros {
     #[test]
     fn test_f2p_precision_limits() {
         // Test the maximum precision of 16 decimal places
-        let val = ((0.123_456_789_012_345_68_f64 * 1e16) as u64 ) as f64 / 1e16; // More than 16 decimal places
+        let val = ((0.123_456_789_012_345_68_f64 * 1e16) as u64) as f64 / 1e16; // More than 16 decimal places
         let expected = Decimal::from_str("0.1234567890123456").unwrap();
         assert_eq!(f2p!(val).value(), expected);
     }
 
     #[test]
-    #[ignore="This test is failing because of the precision limit"]
+    #[ignore = "This test is failing because of the precision limit"]
     fn test_f2p_precision_limits_bis() {
-        let val = ((987_654_321.123_456_8_f64 * 1e16) as u64 ) as f64 / 1e16; // More than 16 decimal places
+        let val = ((987_654_321.123_456_8_f64 * 1e16) as u64) as f64 / 1e16; // More than 16 decimal places
         let expected = Decimal::from_str("987654321.1234567890123456").unwrap();
         assert_eq!(f2p!(val).value(), expected);
     }
@@ -812,10 +806,16 @@ mod tests_macros {
     #[test]
     fn test_f2p_edge_cases() {
         // Test with very large numbers
-        assert_eq!(f2p!(1e15).value(), Decimal::from_str("1000000000000000").unwrap());
+        assert_eq!(
+            f2p!(1e15).value(),
+            Decimal::from_str("1000000000000000").unwrap()
+        );
 
         // Test with very small numbers
-        assert_eq!(f2p!(1e-15).value(), Decimal::from_str("0.000000000000001").unwrap());
+        assert_eq!(
+            f2p!(1e-15).value(),
+            Decimal::from_str("0.000000000000001").unwrap()
+        );
     }
 
     #[test]

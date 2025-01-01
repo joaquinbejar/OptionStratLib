@@ -6,7 +6,7 @@
 
 //! # Delta Neutral Strategies Module
 use crate::greeks::equations::Greeks;
-use crate::model::types::{OptionStyle};
+use crate::model::types::OptionStyle;
 use crate::{f2p, Positive};
 use std::fmt;
 

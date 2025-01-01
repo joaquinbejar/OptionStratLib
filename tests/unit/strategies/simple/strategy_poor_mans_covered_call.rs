@@ -1,11 +1,11 @@
+use num_traits::ToPrimitive;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::strategies::base::Strategies;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::Positive;
 use optionstratlib::{assert_positivef64_relative_eq, f2p};
 use std::error::Error;
-use num_traits::ToPrimitive;
 
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {

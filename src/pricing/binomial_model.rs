@@ -224,7 +224,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
 #[cfg(test)]
 mod tests_price_binomial {
     use super::*;
-    use crate::model::types::{OptionType};
+    use crate::model::types::OptionType;
     use crate::{assert_decimal_eq, f2p};
     use rust_decimal_macros::dec;
 
@@ -328,8 +328,8 @@ mod tests_price_binomial {
 
         let price = price_binomial(params).unwrap();
 
-        let exact_price =
-            (asset * (int_rate * expiry).exp() - strike).max(Positive::ZERO) * (-int_rate * expiry).exp();
+        let exact_price = (asset * (int_rate * expiry).exp() - strike).max(Positive::ZERO)
+            * (-int_rate * expiry).exp();
 
         assert_decimal_eq!(price, exact_price, EPSILON);
     }
@@ -606,11 +606,7 @@ mod tests_generate_binomial_tree {
         assert_decimal_eq!(option_tree[2][2], dec!(18.483997), EPSILON);
         assert_decimal_eq!(option_tree[1][0], dec!(0.803801), EPSILON);
 
-        assert_decimal_eq!(
-            option_tree[1][1],
-            params.strike - asset_tree[1][1],
-            EPSILON
-        );
+        assert_decimal_eq!(option_tree[1][1], params.strike - asset_tree[1][1], EPSILON);
         assert_decimal_eq!(option_tree[0][0], dec!(4.887966), EPSILON);
     }
 }

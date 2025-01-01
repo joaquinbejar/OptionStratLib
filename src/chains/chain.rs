@@ -10,7 +10,7 @@ use crate::chains::utils::{
 use crate::chains::{DeltasInStrike, OptionsInStrike};
 use crate::error::chains::ChainError;
 use crate::greeks::equations::delta;
-use crate::model::{ExpirationDate, OptionStyle, OptionType, Side,Position,Options};
+use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
@@ -18,13 +18,13 @@ use crate::{f2p, sf2p, Positive};
 use chrono::Utc;
 use csv::WriterBuilder;
 use num_traits::ToPrimitive;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
-use rust_decimal::Decimal;
 use tracing::debug;
 
 /// Struct representing a row in an option chain.
@@ -1351,12 +1351,12 @@ mod tests_chain_base {
 #[cfg(test)]
 mod tests_option_data {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::constants::ZERO;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::sf2p;
     use crate::utils::logger::setup_logger;
     use tracing::info;
-    use crate::constants::ZERO;
 
     fn create_valid_option_data() -> OptionData {
         OptionData::new(
@@ -1585,8 +1585,8 @@ mod tests_option_data {
 mod tests_get_random_positions {
     use super::*;
     use crate::error::chains::ChainBuildErrorKind;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::utils::logger::setup_logger;
 
     fn create_test_chain() -> OptionChain {

@@ -5,11 +5,11 @@
 ******************************************************************************/
 use crate::constants::ZERO;
 use crate::error::greeks::GreeksError;
+use crate::f2du;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::option::Options;
 use crate::model::types::OptionStyle;
 use rust_decimal::{Decimal, MathematicalOps};
-use crate::f2du;
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
@@ -375,7 +375,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date: Decimal =  f2du!(option.expiration_date.get_years())?;
+    let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
     let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
     let underlying_price: Decimal = option.underlying_price.to_dec();
     let implied_volatility: Decimal = f2du!(option.implied_volatility)?;
@@ -784,9 +784,9 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
 mod tests_delta_equations {
     use super::*;
     use crate::constants::ZERO;
+    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::f2p;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1002,9 +1002,9 @@ mod tests_delta_equations {
 #[cfg(test)]
 mod tests_gamma_equations {
     use super::*;
+    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::f2p;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1218,8 +1218,8 @@ mod tests_vega_equation {
 #[cfg(test)]
 mod tests_rho_equations {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::f2p;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
@@ -1298,9 +1298,9 @@ mod tests_rho_equations {
 #[cfg(test)]
 mod tests_theta_long_equations {
     use super::*;
+    use crate::f2p;
     use crate::model::types::{ExpirationDate, Side};
     use crate::model::utils::create_sample_option;
-    use crate::f2p;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
@@ -1398,9 +1398,9 @@ mod tests_theta_long_equations {
 #[cfg(test)]
 mod tests_theta_short_equations {
     use super::*;
+    use crate::f2p;
     use crate::model::types::{ExpirationDate, Side};
     use crate::model::utils::create_sample_option;
-    use crate::f2p;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 

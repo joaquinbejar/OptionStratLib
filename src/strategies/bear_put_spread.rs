@@ -676,7 +676,10 @@ mod tests_bear_put_spread_strategy {
     fn test_net_premium_received() {
         let spread = create_test_spread();
         // Net Premium Received is actually Net Premium Paid in this case
-        assert_eq!(spread.net_premium_received().unwrap().to_f64().unwrap(), 2.0);
+        assert_eq!(
+            spread.net_premium_received().unwrap().to_f64().unwrap(),
+            2.0
+        );
     }
 
     #[test]
@@ -1050,7 +1053,10 @@ mod tests_bear_put_spread_optimization {
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(spread.validate(), "Optimized spread should be valid");
-        assert!(spread.profit_area().unwrap().to_f64().unwrap() > 0.0, "Profit area should be positive");
+        assert!(
+            spread.profit_area().unwrap().to_f64().unwrap() > 0.0,
+            "Profit area should be positive"
+        );
 
         // Area optimization should favor wider spreads with good probability of profit
         assert!(spread.long_put.option.strike_price > chain.underlying_price);

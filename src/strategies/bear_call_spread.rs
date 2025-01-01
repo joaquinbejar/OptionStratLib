@@ -649,8 +649,8 @@ mod tests_bear_call_spread_strategies {
 
         let width =
             (spread.long_call.option.strike_price - spread.short_call.option.strike_price).to_f64();
-        let expected_loss =
-            width * spread.short_call.option.quantity.to_f64() - spread.net_premium_received().unwrap().to_f64().unwrap();
+        let expected_loss = width * spread.short_call.option.quantity.to_f64()
+            - spread.net_premium_received().unwrap().to_f64().unwrap();
         assert_relative_eq!(result.unwrap().to_f64(), expected_loss, epsilon = 0.0001);
     }
 
@@ -699,7 +699,11 @@ mod tests_bear_call_spread_strategies {
             + spread.short_call.close_fee
             + spread.long_call.open_fee
             + spread.long_call.close_fee;
-        assert_relative_eq!(spread.fees().unwrap().to_f64().unwrap(), expected_fees, epsilon = 0.0001);
+        assert_relative_eq!(
+            spread.fees().unwrap().to_f64().unwrap(),
+            expected_fees,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -708,7 +712,11 @@ mod tests_bear_call_spread_strategies {
         let high = spread.max_profit().unwrap_or(Positive::ZERO);
         let base = spread.break_even_points[0] - spread.short_call.option.strike_price;
         let expected_area = (high * base / 200.0).to_f64();
-        assert_relative_eq!(spread.profit_area().unwrap().to_f64().unwrap(), expected_area, epsilon = 0.0001);
+        assert_relative_eq!(
+            spread.profit_area().unwrap().to_f64().unwrap(),
+            expected_area,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -717,7 +725,11 @@ mod tests_bear_call_spread_strategies {
         let max_profit = spread.max_profit().unwrap();
         let max_loss = spread.max_loss().unwrap();
         let expected_ratio = (max_profit / max_loss * 100.0).to_f64();
-        assert_relative_eq!(spread.profit_ratio().unwrap().to_f64().unwrap(), expected_ratio, epsilon = 0.0001);
+        assert_relative_eq!(
+            spread.profit_ratio().unwrap().to_f64().unwrap(),
+            expected_ratio,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -727,7 +739,11 @@ mod tests_bear_call_spread_strategies {
         spread.short_call.premium = 1.0;
         spread.long_call.premium = 1.0;
 
-        assert_relative_eq!(spread.profit_ratio().unwrap().to_f64().unwrap(), 0.0, epsilon = 0.0001);
+        assert_relative_eq!(
+            spread.profit_ratio().unwrap().to_f64().unwrap(),
+            0.0,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -748,7 +764,10 @@ mod tests_bear_call_spread_strategies {
 
         // Break even should be short strike plus net premium received per contract
         let expected_break_even = spread.short_call.option.strike_price
-            + f2p!(spread.net_premium_received().unwrap().to_f64().unwrap() / spread.short_call.option.quantity.to_f64());
+            + f2p!(
+                spread.net_premium_received().unwrap().to_f64().unwrap()
+                    / spread.short_call.option.quantity.to_f64()
+            );
         assert_relative_eq!(
             break_even_points[0].to_f64(),
             expected_break_even.to_f64(),
@@ -1292,7 +1311,8 @@ mod tests_bear_call_spread_profit {
         let profit = spread.calculate_profit_at(test_price);
         // Between strikes, only short call is in-the-money
         let intrinsic_value = test_price - spread.short_call.option.strike_price;
-        let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap() - intrinsic_value.to_f64();
+        let expected_profit =
+            spread.net_premium_received().unwrap().to_f64().unwrap() - intrinsic_value.to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
@@ -1303,8 +1323,9 @@ mod tests_bear_call_spread_profit {
         // At long strike, both options are in-the-money
         let short_intrinsic = f2p!(105.0) - spread.short_call.option.strike_price;
         let long_intrinsic = f2p!(105.0) - spread.long_call.option.strike_price;
-        let expected_profit =
-            spread.net_premium_received().unwrap().to_f64().unwrap() - short_intrinsic.to_f64() + long_intrinsic.to_f64();
+        let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap()
+            - short_intrinsic.to_f64()
+            + long_intrinsic.to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
@@ -1387,11 +1408,11 @@ mod tests_bear_call_spread_profit {
 
 #[cfg(test)]
 mod tests_bear_call_spread_optimizable {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::spos;
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+    use num_traits::ToPrimitive;
 
     // Helper function to create a mock OptionChain for testing
     fn create_mock_option_chain() -> OptionChain {

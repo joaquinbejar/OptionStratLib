@@ -1,13 +1,13 @@
 use approx::assert_relative_eq;
+use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::f2p;
+use optionstratlib::model::types::ExpirationDate;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use std::error::Error;
-use num_traits::ToPrimitive;
 
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
@@ -37,9 +37,17 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     strategy.best_area(&option_chain, FindOptimalSide::All);
-    assert_relative_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 817.2115, epsilon = 0.001);
+    assert_relative_eq!(
+        strategy.profit_area().unwrap().to_f64().unwrap(),
+        817.2115,
+        epsilon = 0.001
+    );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
-    assert_relative_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 408.9058, epsilon = 0.001);
+    assert_relative_eq!(
+        strategy.profit_ratio().unwrap().to_f64().unwrap(),
+        408.9058,
+        epsilon = 0.001
+    );
 
     Ok(())
 }

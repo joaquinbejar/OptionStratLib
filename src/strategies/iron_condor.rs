@@ -190,7 +190,7 @@ impl IronCondor {
             .expect("Invalid long put");
 
         // Calculate break-even points
-        let net_credit = (strategy.long_put.premium + strategy.long_call.premium) 
+        let net_credit = (strategy.long_put.premium + strategy.long_call.premium)
             + strategy.fees().unwrap().to_f64().unwrap()
             - (strategy.short_put.premium + strategy.short_call.premium);
         strategy
@@ -306,8 +306,7 @@ impl Strategies for IronCondor {
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call.net_premium_received() 
-            + self.short_put.net_premium_received()
+        let result = self.short_call.net_premium_received() + self.short_put.net_premium_received()
             - self.long_call.total_cost()
             - self.long_put.total_cost();
         Ok(Decimal::from_f64(result).unwrap())
@@ -335,7 +334,8 @@ impl Strategies for IronCondor {
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
-        let result = (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64();
+        let result =
+            (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64();
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -811,8 +811,15 @@ mod tests_iron_condor {
             0.07,
         );
 
-        let expected_profit = iron_condor.net_premium_received().unwrap().to_f64().unwrap();
-        assert_eq!(iron_condor.max_profit().unwrap_or(Positive::ZERO), expected_profit);
+        let expected_profit = iron_condor
+            .net_premium_received()
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        assert_eq!(
+            iron_condor.max_profit().unwrap_or(Positive::ZERO),
+            expected_profit
+        );
     }
 
     #[test]
@@ -913,8 +920,8 @@ mod tests_iron_condor {
 #[cfg(test)]
 mod tests_iron_condor_validable {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_valid_position(
         side: Side,
@@ -985,7 +992,8 @@ mod tests_iron_condor_validable {
     fn test_validate_invalid_short_put() {
         let mut condor = create_valid_condor();
         // Make short put invalid by setting quantity to zero
-        condor.short_put = create_valid_position(Side::Short, OptionStyle::Put, f2p!(95.0), Positive::ZERO);
+        condor.short_put =
+            create_valid_position(Side::Short, OptionStyle::Put, f2p!(95.0), Positive::ZERO);
         assert!(!condor.validate());
     }
 
@@ -993,7 +1001,8 @@ mod tests_iron_condor_validable {
     fn test_validate_invalid_long_call() {
         let mut condor = create_valid_condor();
         // Make long call invalid by setting quantity to zero
-        condor.long_call = create_valid_position(Side::Long, OptionStyle::Call, f2p!(110.0), Positive::ZERO);
+        condor.long_call =
+            create_valid_position(Side::Long, OptionStyle::Call, f2p!(110.0), Positive::ZERO);
         assert!(!condor.validate());
     }
 
@@ -1001,7 +1010,8 @@ mod tests_iron_condor_validable {
     fn test_validate_invalid_long_put() {
         let mut condor = create_valid_condor();
         // Make long put invalid by setting quantity to zero
-        condor.long_put = create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
+        condor.long_put =
+            create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
         assert!(!condor.validate());
     }
 
@@ -1011,9 +1021,12 @@ mod tests_iron_condor_validable {
         // Make all positions invalid
         condor.short_call =
             create_valid_position(Side::Short, OptionStyle::Call, f2p!(105.0), Positive::ZERO);
-        condor.short_put = create_valid_position(Side::Short, OptionStyle::Put, f2p!(95.0), Positive::ZERO);
-        condor.long_call = create_valid_position(Side::Long, OptionStyle::Call, f2p!(110.0), Positive::ZERO);
-        condor.long_put = create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
+        condor.short_put =
+            create_valid_position(Side::Short, OptionStyle::Put, f2p!(95.0), Positive::ZERO);
+        condor.long_call =
+            create_valid_position(Side::Long, OptionStyle::Call, f2p!(110.0), Positive::ZERO);
+        condor.long_put =
+            create_valid_position(Side::Long, OptionStyle::Put, f2p!(90.0), Positive::ZERO);
         assert!(!condor.validate());
     }
 }
@@ -1021,8 +1034,8 @@ mod tests_iron_condor_validable {
 #[cfg(test)]
 mod tests_iron_condor_strategies {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -1240,7 +1253,10 @@ mod tests_iron_condor_strategies {
     #[test]
     fn test_net_premium_received() {
         let condor = create_test_condor();
-        assert_eq!(condor.net_premium_received().unwrap().to_f64().unwrap(), -2.0);
+        assert_eq!(
+            condor.net_premium_received().unwrap().to_f64().unwrap(),
+            -2.0
+        );
     }
 
     #[test]
@@ -1264,7 +1280,10 @@ mod tests_iron_condor_strategies {
             0.0,       // open_fee
             0.0,       // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64().unwrap(), ZERO);
+        assert_eq!(
+            condor.net_premium_received().unwrap().to_f64().unwrap(),
+            ZERO
+        );
     }
 
     #[test]
@@ -1288,7 +1307,10 @@ mod tests_iron_condor_strategies {
             1.0,       // open_fee
             1.0,       // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64().unwrap(), -8.0);
+        assert_eq!(
+            condor.net_premium_received().unwrap().to_f64().unwrap(),
+            -8.0
+        );
     }
 
     #[test]
@@ -1312,7 +1334,10 @@ mod tests_iron_condor_strategies {
             1.0,       // open_fee
             1.0,       // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64().unwrap(), -8.0);
+        assert_eq!(
+            condor.net_premium_received().unwrap().to_f64().unwrap(),
+            -8.0
+        );
     }
 
     #[test]
@@ -1336,7 +1361,10 @@ mod tests_iron_condor_strategies {
             1.0,       // open_fee
             1.0,       // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64().unwrap(), 2.0);
+        assert_eq!(
+            condor.net_premium_received().unwrap().to_f64().unwrap(),
+            2.0
+        );
     }
 
     #[test]
@@ -1360,7 +1388,10 @@ mod tests_iron_condor_strategies {
             1.0,       // open_fee
             1.0,       // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64().unwrap(), -18.0);
+        assert_eq!(
+            condor.net_premium_received().unwrap().to_f64().unwrap(),
+            -18.0
+        );
     }
 
     #[test]
@@ -1420,7 +1451,10 @@ mod tests_iron_condor_strategies {
         condor.long_call.premium = 1.0;
         condor.long_put.premium = 1.0;
 
-        assert_eq!(condor.net_premium_received().unwrap().to_f64().unwrap(), -4.0);
+        assert_eq!(
+            condor.net_premium_received().unwrap().to_f64().unwrap(),
+            -4.0
+        );
         assert!(condor.max_profit().is_err());
     }
 }
@@ -1429,8 +1463,8 @@ mod tests_iron_condor_strategies {
 mod tests_iron_condor_optimizable {
     use super::*;
     use crate::chains::chain::OptionData;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::spos;
 
     fn create_test_condor() -> IronCondor {
@@ -1614,8 +1648,8 @@ mod tests_iron_condor_optimizable {
 #[cfg(test)]
 mod tests_iron_condor_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -1784,8 +1818,8 @@ mod tests_iron_condor_profit {
 #[cfg(test)]
 mod tests_iron_condor_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(

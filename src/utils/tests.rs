@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! assert_positivef64_relative_eq {
     ($left:expr, $right:expr, $epsilon:expr) => {{
@@ -37,8 +36,8 @@ macro_rules! assert_positivef64_relative_eq {
 
 #[cfg(test)]
 mod tests_assert_positivef64_relative_eq {
-    use crate::Positive;
     use crate::f2p;
+    use crate::Positive;
 
     #[test]
     fn test_exact_equality() {

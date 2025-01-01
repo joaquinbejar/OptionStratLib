@@ -3,24 +3,24 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-use num_traits::FromPrimitive;
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
+use crate::error::strategies::{OperationErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::position::Position;
-use crate::{f2p, Positive};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::{f2p, Positive};
+use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use tracing::{debug, error};
-use crate::error::strategies::{OperationErrorKind, StrategyError};
 
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
@@ -230,7 +230,8 @@ impl Strategies for CustomStrategy {
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let restult = self.positions
+        let restult = self
+            .positions
             .iter()
             .map(|position| position.net_premium_received())
             .sum::<f64>();
@@ -238,7 +239,8 @@ impl Strategies for CustomStrategy {
     }
 
     fn fees(&self) -> Result<Decimal, StrategyError> {
-        let restult = self.positions
+        let restult = self
+            .positions
             .iter()
             .map(|position| position.open_fee + position.close_fee)
             .sum::<f64>();
@@ -247,10 +249,12 @@ impl Strategies for CustomStrategy {
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         if self.positions.is_empty() {
-            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
-                operation: "profit_area".to_string(),
-                reason: "No positions found".to_string(),
-            }));
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "profit_area".to_string(),
+                    reason: "No positions found".to_string(),
+                },
+            ));
         }
 
         let mut total_profit: f64 = ZERO;
@@ -264,11 +268,11 @@ impl Strategies for CustomStrategy {
         }
         let restult = total_profit / self.underlying_price.to_f64();
         Ok(Decimal::from_f64(restult).unwrap())
-        
     }
 
     fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let restult = (self.max_profit_point.unwrap().1 / self.max_loss_point.unwrap().1).abs() * 100.0;
+        let restult =
+            (self.max_profit_point.unwrap().1 / self.max_loss_point.unwrap().1).abs() * 100.0;
         Ok(Decimal::from_f64(restult).unwrap())
     }
 
@@ -351,7 +355,7 @@ impl Optimizable for CustomStrategy {
         })
         .unwrap();
 
-        if best_value ==  Decimal::MIN {
+        if best_value == Decimal::MIN {
             error!("No valid combinations found");
         }
 
@@ -473,11 +477,11 @@ impl Greeks for CustomStrategy {
 #[cfg(test)]
 mod tests_custom_strategy {
     use super::*;
+    use crate::f2p;
     use crate::model::option::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::f2p;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use chrono::Utc;
@@ -525,8 +529,8 @@ mod tests_custom_strategy {
             f2p!(100.0), // underlying_price
             vec![short_call],
             1e-5, // epsilon
-            1000,  // max_iterations
-            0.1,   // step_by
+            1000, // max_iterations
+            0.1,  // step_by
         )
     }
 
@@ -705,10 +709,10 @@ mod tests_custom_strategy {
 #[cfg(test)]
 mod tests_max_profit {
     use super::*;
+    use crate::f2p;
     use crate::model::option::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
-    use crate::f2p;
     use crate::utils::logger::setup_logger;
     use chrono::Utc;
 
@@ -842,10 +846,10 @@ mod tests_max_profit {
 #[cfg(test)]
 mod tests_max_loss {
     use super::*;
+    use crate::f2p;
     use crate::model::option::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
-    use crate::f2p;
     use crate::utils::logger::setup_logger;
     use chrono::Utc;
 
@@ -979,9 +983,9 @@ mod tests_max_loss {
 #[cfg(test)]
 mod tests_total_cost {
     use super::*;
+    use crate::f2p;
     use crate::model::option::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::f2p;
     use chrono::Utc;
 
     fn create_test_position(side: Side, premium: f64, fees: f64) -> Position {
@@ -1242,12 +1246,12 @@ mod tests_best_range_to_show {
 
 #[cfg(test)]
 mod tests_best_area {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::utils::RandomPositionsParams;
     use crate::error::chains::ChainError;
     use crate::model::types::ExpirationDate;
     use crate::utils::logger::setup_logger;
+    use num_traits::ToPrimitive;
 
     fn set_up(
         qty_puts_long: Option<usize>,
@@ -1293,8 +1297,14 @@ mod tests_best_area {
     fn test_calls() {
         let (mut strategy, option_chain) = set_up(None, None, Some(1), Some(1)).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::All);
-        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 93.64800030502528);
-        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 73.48561515107706);
+        assert_eq!(
+            strategy.profit_area().unwrap().to_f64().unwrap(),
+            93.64800030502528
+        );
+        assert_eq!(
+            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            73.48561515107706
+        );
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5520 Long Call European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
@@ -1304,7 +1314,10 @@ mod tests_best_area {
         assert_eq!(strategy.max_profit_iter(), 203.32);
         assert_eq!(strategy.max_loss_iter(), 276.68);
         assert_eq!(strategy.total_cost(), 280.06);
-        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 1.38);
+        assert_eq!(
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            1.38
+        );
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 4.0);
     }
 
@@ -1313,8 +1326,14 @@ mod tests_best_area {
     fn test_shorts() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, Some(1)).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
-        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 74.96815658589438);
-        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 67.08108880168896);
+        assert_eq!(
+            strategy.profit_area().unwrap().to_f64().unwrap(),
+            74.96815658589438
+        );
+        assert_eq!(
+            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            67.08108880168896
+        );
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6000 Short Put European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
@@ -1324,7 +1343,10 @@ mod tests_best_area {
         assert_eq!(strategy.max_profit_iter(), 219.81480000199196);
         assert_eq!(strategy.max_loss_iter(), 327.68519999999984);
         assert_eq!(strategy.total_cost(), 4.0);
-        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 219.82999999999998);
+        assert_eq!(
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            219.82999999999998
+        );
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 4.0);
     }
 
@@ -1333,8 +1355,14 @@ mod tests_best_area {
     fn test_put() {
         let (mut strategy, option_chain) = set_up(None, Some(1), None, None).unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
-        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 237.05879174440312);
-        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 78.1948201762769);
+        assert_eq!(
+            strategy.profit_area().unwrap().to_f64().unwrap(),
+            237.05879174440312
+        );
+        assert_eq!(
+            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            78.1948201762769
+        );
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $6200 Short Put European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(
@@ -1344,19 +1372,22 @@ mod tests_best_area {
         assert_eq!(strategy.max_profit_iter(), 414.03);
         assert_eq!(strategy.max_loss_iter(), 529.4851999999998);
         assert_eq!(strategy.total_cost(), 2.0);
-        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 414.03);
+        assert_eq!(
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            414.03
+        );
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 2.0);
     }
 }
 
 #[cfg(test)]
 mod tests_best_ratio {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::utils::RandomPositionsParams;
     use crate::error::chains::ChainError;
     use crate::model::types::ExpirationDate;
     use crate::utils::logger::setup_logger;
+    use num_traits::ToPrimitive;
 
     fn set_up(
         qty_puts_long: Option<usize>,
@@ -1402,15 +1433,24 @@ mod tests_best_ratio {
     fn test_calls() {
         let (mut strategy, option_chain) = set_up(None, None, Some(1), Some(1)).unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::All);
-        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 22.674299155552024);
-        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 441.4185165132647);
+        assert_eq!(
+            strategy.profit_area().unwrap().to_f64().unwrap(),
+            22.674299155552024
+        );
+        assert_eq!(
+            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            441.4185165132647
+        );
         assert_eq!(strategy.title(), "Custom Strategy Strategy: Custom on SP500\n\tUnderlying: SP500 @ $5900 Long Call European Option\n\tUnderlying: SP500 @ $6000 Short Call European Option");
         assert_eq!(strategy.get_break_even_points().len(), 1);
         assert_eq!(strategy.get_break_even_points()[0].to_f64(), 5918.475000004);
         assert_eq!(strategy.max_profit_iter(), 81.53);
         assert_eq!(strategy.max_loss_iter(), 18.470000000000002);
         assert_eq!(strategy.total_cost(), 21.85);
-        assert_eq!(strategy.net_premium_received().unwrap().to_f64().unwrap(), 1.38);
+        assert_eq!(
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            1.38
+        );
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 4.0);
     }
 
@@ -1421,14 +1461,8 @@ mod tests_best_ratio {
         strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
         let profit_area = strategy.profit_area().unwrap().to_f64().unwrap();
         let profit_ratio = strategy.profit_ratio().unwrap().to_f64().unwrap();
-        assert!(
-            profit_area == 237.05879174440312
-                || profit_area == 16.538740211215906
-        );
-        assert!(
-            profit_ratio == 78.1948201762769
-                || profit_ratio == 96.22317698867245
-        );
+        assert!(profit_area == 237.05879174440312 || profit_area == 16.538740211215906);
+        assert!(profit_ratio == 78.1948201762769 || profit_ratio == 96.22317698867245);
     }
 }
 
@@ -1444,11 +1478,7 @@ mod tests_greeks {
     const EPSILON: Decimal = dec!(1e-10);
 
     // Helper function to create a test position
-    fn create_test_position(
-        strike: Positive,
-        side: Side,
-        option_style: OptionStyle,
-    ) -> Position {
+    fn create_test_position(strike: Positive, side: Side, option_style: OptionStyle) -> Position {
         Position::new(
             Options::new(
                 OptionType::European,

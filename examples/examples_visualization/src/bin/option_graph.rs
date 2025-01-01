@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
+use optionstratlib::f2p;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::option::Options;
-use optionstratlib::Positive;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::f2p;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Positive;
 use std::error::Error;
 use tracing::info;
 

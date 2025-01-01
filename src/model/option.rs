@@ -2,7 +2,6 @@ use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::GreeksError;
-use crate::{f2du, Positive};
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -14,6 +13,7 @@ use crate::pricing::payoff::{Payoff, PayoffInfo, Profit};
 use crate::pricing::telegraph;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
+use crate::{f2du, Positive};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
@@ -77,7 +77,10 @@ impl Options {
 
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.strike_price = option_data.strike_price;
-        self.implied_volatility = option_data.implied_volatility.unwrap_or(Positive::ZERO).to_f64();
+        self.implied_volatility = option_data
+            .implied_volatility
+            .unwrap_or(Positive::ZERO)
+            .to_f64();
         trace!("Updated Option: {:#?}", self);
     }
 
@@ -336,8 +339,8 @@ impl Graph for Options {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::model::utils::create_sample_option_simplest;
     use crate::f2p;
+    use crate::model::utils::create_sample_option_simplest;
     use chrono::{Duration, Utc};
 
     #[test]
@@ -516,7 +519,6 @@ mod tests_valid_option {
         option.strike_price = Positive::ZERO;
         assert!(!option.validate());
     }
-    
 
     #[test]
     fn test_negative_implied_volatility() {
@@ -538,7 +540,6 @@ mod tests_valid_option {
         option.underlying_price = Positive::ZERO;
         assert!(!option.validate());
     }
-    
 
     #[test]
     fn test_negative_risk_free_rate() {
@@ -558,8 +559,8 @@ mod tests_valid_option {
 #[cfg(test)]
 mod tests_time_value {
     use super::*;
-    use crate::model::utils::create_sample_option_simplest_strike;
     use crate::f2p;
+    use crate::model::utils::create_sample_option_simplest_strike;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use tracing::debug;
@@ -646,8 +647,8 @@ mod tests_time_value {
 #[cfg(test)]
 mod tests_options_payoffs {
     use super::*;
-    use crate::model::utils::create_sample_option_simplest_strike;
     use crate::f2p;
+    use crate::model::utils::create_sample_option_simplest_strike;
     use crate::utils::logger::setup_logger;
 
     #[test]
@@ -708,8 +709,8 @@ mod tests_options_payoffs {
 #[cfg(test)]
 mod tests_options_payoff_at_price {
     use super::*;
-    use crate::model::utils::create_sample_option_simplest;
     use crate::f2p;
+    use crate::model::utils::create_sample_option_simplest;
 
     #[test]
     fn test_payoff_european_call_long() {
@@ -759,8 +760,8 @@ mod tests_options_payoff_at_price {
 #[cfg(test)]
 mod tests_options_payoffs_with_quantity {
     use super::*;
-    use crate::model::utils::create_sample_option;
     use crate::f2p;
+    use crate::model::utils::create_sample_option;
 
     #[test]
     fn test_payoff_call_long() {
@@ -940,8 +941,8 @@ mod tests_options_payoffs_with_quantity {
 #[cfg(test)]
 mod tests_in_the_money {
     use super::*;
-    use crate::model::utils::create_sample_option;
     use crate::f2p;
+    use crate::model::utils::create_sample_option;
 
     #[test]
     fn test_call_in_the_money() {
@@ -1175,8 +1176,8 @@ mod tests_greek_trait {
 #[cfg(test)]
 mod tests_graph {
     use super::*;
-    use crate::model::utils::create_sample_option_simplest;
     use crate::f2p;
+    use crate::model::utils::create_sample_option_simplest;
     use crate::visualization::utils::Graph;
     use approx::assert_relative_eq;
 

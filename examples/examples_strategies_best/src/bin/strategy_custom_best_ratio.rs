@@ -1,14 +1,15 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::constants::ZERO;
+use optionstratlib::error::greeks::CalculationErrorKind::DecimalError;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::{f2p, Positive};
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::{f2p, Positive};
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -57,19 +58,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()
+        strategy.net_premium_received()?
     );
     info!("Max Profit: ${:.2}", strategy.max_profit_iter());
     info!("Max Loss: ${:0.2}", strategy.max_loss_iter());
-    info!("Total Fees: ${:.2}", strategy.fees());
+    info!("Total Fees: ${:.2}", strategy.fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Ratio: {:.2}%", strategy.profit_ratio());
+    info!("Profit Ratio: {:.2}%", strategy.profit_ratio()?);
 
-    if strategy.profit_ratio() > ZERO {
+    if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,

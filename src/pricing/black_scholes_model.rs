@@ -74,7 +74,12 @@ pub fn black_scholes(option: &Options) -> f64 {
 /// The calculated price of the European option as a floating-point number.
 ///
 /// Note: This example uses placeholder values and the `Options` and `Side` structs should be defined accordingly in your codebase.
-fn calculate_european_option_price(option: &Options, d1: Decimal, d2: Decimal, expiry_time: Decimal) -> f64 {
+fn calculate_european_option_price(
+    option: &Options,
+    d1: Decimal,
+    d2: Decimal,
+    expiry_time: Decimal,
+) -> f64 {
     match option.side {
         Side::Long => calculate_long_position(option, d1, d2, expiry_time),
         Side::Short => -calculate_long_position(option, d1, d2, expiry_time),
@@ -95,7 +100,12 @@ fn calculate_european_option_price(option: &Options, d1: Decimal, d2: Decimal, e
 /// A floating-point value representing the calculated price of the long position.
 ///
 /// The function matches on the style of the option (Call or Put) and calls the respective price calculation function.
-fn calculate_long_position(option: &Options, d1: Decimal, d2: Decimal, expiry_time: Decimal) -> f64 {
+fn calculate_long_position(
+    option: &Options,
+    d1: Decimal,
+    d2: Decimal,
+    expiry_time: Decimal,
+) -> f64 {
     match option.option_style {
         OptionStyle::Call => calculate_call_option_price(option, d1, d2, expiry_time),
         OptionStyle::Put => calculate_put_option_price(option, d1, d2, expiry_time),
@@ -116,13 +126,10 @@ fn calculate_long_position(option: &Options, d1: Decimal, d2: Decimal, expiry_ti
 /// - `time_to_expiry`: The calculated or given time to expiry in years.
 ///
 fn calculate_d1_d2_and_time(option: &Options) -> (Decimal, Decimal, Decimal) {
-    let calculated_time_to_expiry: Decimal = Decimal::from_f64(option.time_to_expiration()).unwrap();
+    let calculated_time_to_expiry: Decimal =
+        Decimal::from_f64(option.time_to_expiration()).unwrap();
     let (d1, d2) = calculate_d_values(option).unwrap();
-    (
-        d1,
-        d2,
-        calculated_time_to_expiry,
-    )
+    (d1, d2, calculated_time_to_expiry)
 }
 
 /// Calculates the price of a call option using the Black-Scholes formula.
@@ -137,15 +144,12 @@ fn calculate_d1_d2_and_time(option: &Options) -> (Decimal, Decimal, Decimal) {
 /// The price of the call option.
 ///
 fn calculate_call_option_price(option: &Options, d1: Decimal, d2: Decimal, t: Decimal) -> f64 {
-
     let big_n_d1 = big_n(d1).unwrap();
     let big_n_d2 = big_n(d2).unwrap();
 
-    (option.underlying_price
-        * big_n_d1
-        - option.strike_price
-        * (-option.risk_free_rate * t.to_f64().unwrap()).exp() 
-        * big_n_d2).to_f64()
+    (option.underlying_price * big_n_d1
+        - option.strike_price * (-option.risk_free_rate * t.to_f64().unwrap()).exp() * big_n_d2)
+        .to_f64()
 }
 
 /// Calculates the price of a European put option using the Black-Scholes model.
@@ -178,15 +182,11 @@ fn calculate_call_option_price(option: &Options, d1: Decimal, d2: Decimal, t: De
 /// # Example
 ///
 fn calculate_put_option_price(option: &Options, d1: Decimal, d2: Decimal, t: Decimal) -> f64 {
-
     let big_n_d1 = big_n(-d1).unwrap().to_f64().unwrap();
     let big_n_d2 = big_n(-d2).unwrap().to_f64().unwrap();
 
-    option.strike_price .to_f64()
-        * (-option.risk_free_rate * t.to_f64().unwrap()).exp() 
-        * big_n_d2
-        - option.underlying_price
-        * big_n_d1
+    option.strike_price.to_f64() * (-option.risk_free_rate * t.to_f64().unwrap()).exp() * big_n_d2
+        - option.underlying_price * big_n_d1
 }
 
 pub trait BlackScholes {
@@ -203,7 +203,7 @@ mod tests_black_scholes {
     use super::*;
     use crate::greeks::utils::{d1, d2};
     use crate::model::option::Options;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side };
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{f2p, Positive};
     use approx::assert_relative_eq;
 
@@ -460,9 +460,9 @@ mod tests_black_scholes {
 #[cfg(test)]
 mod tests_black_scholes_trait {
     use super::*;
+    use crate::f2p;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::f2p;
     use approx::assert_relative_eq;
 
     // Mock struct to implement BlackScholes trait
@@ -621,9 +621,9 @@ mod tests_black_scholes_trait {
 #[cfg(test)]
 mod tests_black_scholes_trait_bis {
     use super::*;
+    use crate::f2p;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::f2p;
     use approx::assert_relative_eq;
 
     struct MockOption {

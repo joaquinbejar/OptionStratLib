@@ -34,7 +34,6 @@ pub trait DecimalStats {
     fn std_dev(&self) -> Decimal;
 }
 
-
 impl From<Positive> for Decimal {
     fn from(pos: Positive) -> Self {
         pos.0
@@ -144,7 +143,6 @@ impl PartialEq<Positive> for Decimal {
     }
 }
 
-
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
         from_type: format!("Decimal: {}", value),
@@ -226,5 +224,4 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0.0);
     }
-    
 }

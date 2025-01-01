@@ -151,9 +151,9 @@ impl BullCallSpread {
         strategy.validate();
 
         // Calculate break-even point
-        strategy
-            .break_even_points
-            .push(long_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / quantity);
+        strategy.break_even_points.push(
+            long_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / quantity,
+        );
 
         strategy
     }
@@ -288,7 +288,8 @@ impl Optimizable for BullCallSpread {
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(long, short)| {
-                long.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO && short.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+                long.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && short.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |(long, short)| {
@@ -416,7 +417,10 @@ impl Graph for BullCallSpread {
                 self.short_call.option.strike_price.to_f64(),
                 self.max_profit().unwrap_or(Positive::ZERO).to_f64(),
             ),
-            label: format!("Max Profit {:.2}", self.max_profit().unwrap_or(Positive::ZERO)),
+            label: format!(
+                "Max Profit {:.2}",
+                self.max_profit().unwrap_or(Positive::ZERO)
+            ),
             label_offset: LabelOffsetType::Relative(10.0, 10.0),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
@@ -573,8 +577,8 @@ impl DeltaNeutrality for BullCallSpread {
 #[cfg(test)]
 mod tests_bull_call_spread_strategy {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
@@ -1041,7 +1045,10 @@ mod tests_bull_call_spread_optimization {
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(spread.validate(), "Optimized spread should be valid");
-        assert!(spread.profit_area().unwrap().to_f64().unwrap() > 0.0, "Profit area should be positive");
+        assert!(
+            spread.profit_area().unwrap().to_f64().unwrap() > 0.0,
+            "Profit area should be positive"
+        );
     }
 
     #[test]
@@ -1232,8 +1239,8 @@ mod tests_bull_call_spread_optimization {
 #[cfg(test)]
 mod tests_bull_call_spread_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
@@ -1363,8 +1370,8 @@ mod tests_bull_call_spread_profit {
 #[cfg(test)]
 mod tests_bull_call_spread_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
     use crate::f2p;
+    use crate::model::types::ExpirationDate;
 
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
@@ -1902,10 +1909,10 @@ mod tests_delta_size {
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(f2p!(5750.0), f2p!(5820.9));
-        
+
         let size = 0.7086;
         let delta = f2p!(2.239306943523854);
-        
+
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
             size,

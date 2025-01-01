@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use rust_decimal::Decimal;
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
 use crate::greeks::utils::big_n;
-use crate::{f2du, f2p, Positive};
 use crate::model::ExpirationDate;
+use crate::{f2du, f2p, Positive};
+use rust_decimal::Decimal;
 
 /// Struct to hold volatility adjustment parameters
 #[derive(Debug, Clone)]
@@ -67,10 +67,9 @@ pub fn calculate_single_point_probability(
     expiration_date: ExpirationDate,
     risk_free_rate: Option<f64>,
 ) -> Result<(Positive, Positive), ProbabilityError> {
-    
-    if target_price == Positive::ZERO { 
+    if target_price == Positive::ZERO {
         return Ok((Positive::ZERO, Positive::ONE));
-    } 
+    }
     let time_to_expiry = expiration_date.get_years();
     if time_to_expiry <= 0.0 {
         return Err(ProbabilityError::ExpirationError(
@@ -118,11 +117,11 @@ pub fn calculate_single_point_probability(
     let std_dev = volatility * time_to_expiry.sqrt();
 
     // Calculate z-score considering drift
-    let z_score: Decimal = f2du!((log_ratio.to_f64() - drift_rate * time_to_expiry) / std_dev).unwrap();
-    
+    let z_score: Decimal =
+        f2du!((log_ratio.to_f64() - drift_rate * time_to_expiry) / std_dev).unwrap();
 
     // Calculate probabilities using the standard normal distribution
-    let prob_below :Positive = big_n(z_score).unwrap().into();
+    let prob_below: Positive = big_n(z_score).unwrap().into();
     let prob_above: Positive = (1.0 - prob_below).into();
 
     Ok((prob_below, prob_above))

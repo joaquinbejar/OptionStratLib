@@ -6,10 +6,10 @@ use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::utils::logger::setup_logger;
 use optionstratlib::{assert_decimal_eq, f2p, Positive};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use std::str::FromStr;
-use rust_decimal::Decimal;
 
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
@@ -67,7 +67,8 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: Positive::new_decimal(Decimal::from_str("3.415412207592464").unwrap()).unwrap(),
+            quantity: Positive::new_decimal(Decimal::from_str("3.415412207592464").unwrap())
+                .unwrap(),
             strike: f2p!(2800.0),
             option_type: OptionStyle::Call
         }

@@ -86,14 +86,24 @@ impl Display for StrategyLegs<'_> {
 
 #[cfg(test)]
 mod tests {
-    use rust_decimal::Decimal;
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::f2p;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
 
     // Helper function to create a test OptionData with a specific strike price
     fn create_test_option(strike: Decimal) -> OptionData {
-        OptionData::new(strike.into(), None, None, None, None, None, None, None, None)
+        OptionData::new(
+            strike.into(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
     }
 
     #[test]
