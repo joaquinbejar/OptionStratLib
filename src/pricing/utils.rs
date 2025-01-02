@@ -5,11 +5,11 @@
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
 use crate::greeks::utils::{big_n, d2};
-use crate::Options;
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
+use crate::Options;
 use crate::Positive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::distributions::Distribution;

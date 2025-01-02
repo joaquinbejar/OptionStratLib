@@ -6,12 +6,12 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::greeks::equations::{Greek, Greeks};
-use crate::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
+use crate::Options;
 use crate::{f2p, Positive};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};

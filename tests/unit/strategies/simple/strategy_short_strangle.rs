@@ -8,7 +8,6 @@ use optionstratlib::Positive;
 use optionstratlib::{assert_positivef64_relative_eq, f2p};
 use std::error::Error;
 
-
 #[test]
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();

@@ -276,7 +276,7 @@ mod tests_probability_analysis {
             ])
         }
 
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
             // Ok(&vec![f2p!(95.0), f2p!(105.0)])
             Ok(&self.break_points)
         }
@@ -461,8 +461,8 @@ mod tests_probability_analysis {
 
 #[cfg(test)]
 mod tests_expected_value {
-    use crate::error::strategies::StrategyError;
     use super::*;
+    use crate::error::strategies::StrategyError;
     use crate::strategies::base::{Positionable, Validable};
 
     // Helper function to create a test strategy

@@ -1,5 +1,5 @@
-use crate::Options;
 use crate::pricing::utils::wiener_increment;
+use crate::Options;
 use crate::{f2d, Positive};
 use rust_decimal::Decimal;
 use std::error::Error;

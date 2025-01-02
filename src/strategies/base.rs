@@ -8,7 +8,7 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::position::PositionError;
-use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
+use crate::error::strategies::{BreakEvenErrorKind, OperationErrorKind, StrategyError};
 use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::Positive;
@@ -143,7 +143,7 @@ pub trait Strategies: Validable + Positionable {
 
     fn range_to_show(&self) -> Result<(Positive, Positive), StrategyError> {
         let mut all_points = self.get_break_even_points()?.clone();
-        let (first_strike, last_strike) = self.max_min_strikes();
+        let (first_strike, last_strike) = self.max_min_strikes()?;
         let underlying_price = self.get_underlying_price();
 
         // Calculate the largest difference from the underlying price
@@ -170,20 +170,36 @@ pub trait Strategies: Validable + Positionable {
         Ok(calculate_price_range(start_price, end_price, step))
     }
 
-    fn strikes(&self) -> Vec<Positive> {
-        self.get_positions()
-            .unwrap_or_default()
+    fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
+        let positions = match self.get_positions() {
+            Ok(positions) => positions,
+            Err(_) => {
+                return Err(StrategyError::OperationError(
+                    OperationErrorKind::InvalidParameters {
+                        operation: "get_positions".to_string(),
+                        reason: "No positions found".to_string(),
+                    },
+                ))
+            }
+        };
+
+        Ok(positions
             .iter()
             .map(|leg| leg.option.strike_price)
-            .collect()
+            .collect())
     }
 
-    fn max_min_strikes(&self) -> (Positive, Positive) {
-        if self.strikes().is_empty() {
-            return (Positive::ZERO, Positive::ZERO);
+    fn max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
+        let strikes = self.strikes()?;
+        if strikes.is_empty() {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "max_min_strikes".to_string(),
+                    reason: "No strikes found".to_string(),
+                },
+            ));
         }
 
-        let strikes = self.strikes();
         let mut min = strikes
             .iter()
             .cloned()
@@ -203,7 +219,7 @@ pub trait Strategies: Validable + Positionable {
             }
         }
 
-        (min, max)
+        Ok((min, max))
     }
 
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
@@ -608,8 +624,8 @@ mod tests_strategies_extended {
         impl Strategies for EmptyStrategy {}
 
         let strategy = EmptyStrategy;
-        assert_eq!(strategy.strikes(), Vec::<Positive>::new());
-        assert_eq!(strategy.max_min_strikes(), (Positive::ZERO, Positive::ZERO));
+        assert_eq!(strategy.strikes().unwrap(), Vec::<Positive>::new());
+        assert!(strategy.max_min_strikes().is_err());
     }
 }
 
@@ -735,22 +751,22 @@ mod tests_max_min_strikes {
         fn best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
             Ok(vec![])
         }
-        fn strikes(&self) -> Vec<Positive> {
-            self.strikes.clone()
+        fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
+            Ok(self.strikes.clone())
         }
     }
 
     #[test]
     fn test_empty_strikes() {
         let strategy = TestStrategy::new(vec![], Positive::ZERO, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (Positive::ZERO, Positive::ZERO));
+        assert!(strategy.max_min_strikes().is_err());
     }
 
     #[test]
     fn test_single_strike() {
         let strike = f2p!(100.0);
         let strategy = TestStrategy::new(vec![strike], Positive::ZERO, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (strike, strike));
+        assert_eq!(strategy.max_min_strikes().unwrap(), (strike, strike));
     }
 
     #[test]
@@ -758,7 +774,7 @@ mod tests_max_min_strikes {
         let strikes = vec![f2p!(90.0), f2p!(100.0), f2p!(110.0)];
         let strategy = TestStrategy::new(strikes.clone(), Positive::ZERO, vec![]);
         assert_eq!(
-            strategy.max_min_strikes(),
+            strategy.max_min_strikes().unwrap(),
             (*strikes.first().unwrap(), *strikes.last().unwrap())
         );
     }
@@ -768,7 +784,10 @@ mod tests_max_min_strikes {
         let strikes = vec![f2p!(90.0), f2p!(110.0)];
         let underlying = f2p!(100.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(110.0)));
+        assert_eq!(
+            strategy.max_min_strikes().unwrap(),
+            (f2p!(90.0), f2p!(110.0))
+        );
     }
 
     #[test]
@@ -776,7 +795,10 @@ mod tests_max_min_strikes {
         let strikes = vec![f2p!(100.0), f2p!(110.0)];
         let underlying = f2p!(90.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(110.0)));
+        assert_eq!(
+            strategy.max_min_strikes().unwrap(),
+            (f2p!(90.0), f2p!(110.0))
+        );
     }
 
     #[test]
@@ -784,14 +806,20 @@ mod tests_max_min_strikes {
         let strikes = vec![f2p!(90.0), f2p!(100.0)];
         let underlying = f2p!(110.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(110.0)));
+        assert_eq!(
+            strategy.max_min_strikes().unwrap(),
+            (f2p!(90.0), f2p!(110.0))
+        );
     }
 
     #[test]
     fn test_strikes_with_duplicates() {
         let strikes = vec![f2p!(100.0), f2p!(100.0), f2p!(110.0)];
         let strategy = TestStrategy::new(strikes, Positive::ZERO, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (f2p!(100.0), f2p!(110.0)));
+        assert_eq!(
+            strategy.max_min_strikes().unwrap(),
+            (f2p!(100.0), f2p!(110.0))
+        );
     }
 
     #[test]
@@ -799,7 +827,10 @@ mod tests_max_min_strikes {
         let strikes = vec![f2p!(100.0), f2p!(110.0)];
         let underlying = f2p!(100.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (f2p!(100.0), f2p!(110.0)));
+        assert_eq!(
+            strategy.max_min_strikes().unwrap(),
+            (f2p!(100.0), f2p!(110.0))
+        );
     }
 
     #[test]
@@ -807,14 +838,20 @@ mod tests_max_min_strikes {
         let strikes = vec![f2p!(90.0), f2p!(100.0)];
         let underlying = f2p!(100.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(100.0)));
+        assert_eq!(
+            strategy.max_min_strikes().unwrap(),
+            (f2p!(90.0), f2p!(100.0))
+        );
     }
 
     #[test]
     fn test_unordered_strikes() {
         let strikes = vec![f2p!(110.0), f2p!(90.0), f2p!(100.0)];
         let strategy = TestStrategy::new(strikes, Positive::ZERO, vec![]);
-        assert_eq!(strategy.max_min_strikes(), (f2p!(90.0), f2p!(110.0)));
+        assert_eq!(
+            strategy.max_min_strikes().unwrap(),
+            (f2p!(90.0), f2p!(110.0))
+        );
     }
 }
 
@@ -856,8 +893,8 @@ mod tests_best_range_to_show {
             Ok(&self.break_even_points)
         }
 
-        fn strikes(&self) -> Vec<Positive> {
-            self.strikes.clone()
+        fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
+            Ok(self.strikes.clone())
         }
     }
 
@@ -978,8 +1015,8 @@ mod tests_range_to_show {
             Ok(&self.break_even_points)
         }
 
-        fn strikes(&self) -> Vec<Positive> {
-            self.strikes.clone()
+        fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
+            Ok(self.strikes.clone())
         }
     }
 

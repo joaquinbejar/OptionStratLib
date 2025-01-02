@@ -23,7 +23,6 @@ use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -37,6 +36,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::Options;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -241,7 +241,7 @@ impl Strategies for BearPutSpread {
         }
     }
 
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
     }
 }

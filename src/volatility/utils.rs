@@ -6,8 +6,8 @@
 
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
 use crate::d2fu;
-use crate::Options;
 use crate::utils::time::TimeFrame;
+use crate::Options;
 use std::f64;
 use tracing::debug;
 
