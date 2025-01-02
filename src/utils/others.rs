@@ -59,25 +59,6 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 /// # Errors:
 /// This function will return an error if the `positions` slice is empty.
 ///
-// pub fn process_n_times_iter<T, Y, F>(
-//     positions: &[T],
-//     n: usize,
-//     mut process_combination: F,
-// ) -> Result<Vec<Y>, String>
-// where
-//     F: FnMut(&[&T]) -> Vec<Y>,
-//     T: Clone,
-// {
-//     if positions.is_empty() {
-//         return Err("Vector empty".to_string());
-//     }
-//
-//     Ok(positions
-//         .iter()
-//         .combinations_with_replacement(n)
-//         .flat_map(|combination| process_combination(&combination))
-//         .collect())
-// }
 use rayon::prelude::*;
 
 pub fn process_n_times_iter<T, Y, F>(
@@ -86,7 +67,7 @@ pub fn process_n_times_iter<T, Y, F>(
     process_combination: F,
 ) -> Result<Vec<Y>, String>
 where
-    F: FnMut(&[&T]) -> Vec<Y> + Send + Sync, // Mantenemos FnMut
+    F: FnMut(&[&T]) -> Vec<Y> + Send + Sync,
     T: Clone + Send + Sync,
     Y: Send,
 {
@@ -94,13 +75,9 @@ where
         return Err("Vector empty".to_string());
     }
 
-    // Generamos todas las combinaciones primero
     let combinations: Vec<_> = positions.iter().combinations_with_replacement(n).collect();
-
-    // Para usar FnMut en paralelo, necesitamos envolverlo en Mutex
     let process_combination = std::sync::Mutex::new(process_combination);
 
-    // Procesamos en paralelo usando el Mutex
     Ok(combinations
         .par_iter()
         .flat_map(|combination| {
@@ -180,8 +157,7 @@ mod tests_approx_equal {
 mod tests_get_random_element {
     use super::*;
     use crate::chains::chain::OptionData;
-    use crate::model::types::PositiveF64;
-    use crate::pos;
+    use crate::f2p;
     use std::collections::BTreeSet;
 
     #[test]
@@ -213,7 +189,7 @@ mod tests_get_random_element {
         let mut set = BTreeSet::new();
         for i in 0..5 {
             let option_data = OptionData::new(
-                pos!(100.0 + i as f64), // strike_price
+                f2p!(100.0 + i as f64), // strike_price
                 None,                   // call_bid
                 None,                   // call_ask
                 None,                   // put_bid
@@ -230,7 +206,7 @@ mod tests_get_random_element {
         assert!(random_option.is_some());
 
         let strike = random_option.unwrap().strike_price;
-        assert!(strike >= pos!(100.0) && strike <= pos!(104.0));
+        assert!(strike >= f2p!(100.0) && strike <= f2p!(104.0));
     }
 
     #[test]

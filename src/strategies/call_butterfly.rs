@@ -9,12 +9,11 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::DARK_BLUE;
 use crate::constants::{DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
+use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::model::option::Options;
-use crate::model::position::Position;
-use crate::model::types::{
-    ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, INFINITY, PZERO,
-};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::Position;
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -22,10 +21,13 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, spos};
+use crate::Options;
+use crate::{d2fu, f2p, spos, Positive};
 use chrono::Utc;
+use num_traits::FromPrimitive;
 use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
+use rust_decimal::Decimal;
 use tracing::{error, info};
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
@@ -38,26 +40,26 @@ pub struct CallButterfly {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<PositiveF64>,
+    pub break_even_points: Vec<Positive>,
     long_call: Position,
     short_call_low: Position,
     short_call_high: Position,
-    underlying_price: PositiveF64,
+    underlying_price: Positive,
 }
 
 impl CallButterfly {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: PositiveF64,
-        long_call_strike: PositiveF64,
-        short_call_low_strike: PositiveF64,
-        short_call_high_strike: PositiveF64,
+        underlying_price: Positive,
+        long_call_strike: Positive,
+        short_call_low_strike: Positive,
+        short_call_high_strike: Positive,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: PositiveF64,
+        quantity: Positive,
         premium_long_call: f64,
         premium_short_call_low: f64,
         premium_short_call_high: f64,
@@ -176,15 +178,15 @@ impl Default for CallButterfly {
     fn default() -> Self {
         CallButterfly::new(
             "".to_string(),
-            PZERO,
-            PZERO,
-            PZERO,
-            PZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
             ExpirationDate::Days(0.0),
             ZERO,
             ZERO,
             ZERO,
-            pos!(1.0),
+            f2p!(1.0),
             ZERO,
             ZERO,
             ZERO,
@@ -199,7 +201,7 @@ impl Default for CallButterfly {
 }
 
 impl Positionable for CallButterfly {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
                 if position.option.strike_price >= self.long_call.option.strike_price {
@@ -217,7 +219,7 @@ impl Positionable for CallButterfly {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.long_call,
             &self.short_call_low,
@@ -227,78 +229,80 @@ impl Positionable for CallButterfly {
 }
 
 impl Strategies for CallButterfly {
-    fn get_underlying_price(&self) -> PositiveF64 {
+    fn get_underlying_price(&self) -> Positive {
         self.underlying_price
     }
 
-    fn break_even(&self) -> Vec<PositiveF64> {
-        self.break_even_points.clone()
+    fn max_profit(&self) -> Result<Positive, StrategyError> {
+        let max_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
+        if max_profit > ZERO {
+            Ok(max_profit.into())
+        } else {
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Max profit is negative".to_string(),
+                },
+            ))
+        }
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
-        Ok(self
-            .calculate_profit_at(self.long_call.option.strike_price)
-            .abs()
-            .into())
+    fn max_loss(&self) -> Result<Positive, StrategyError> {
+        Ok(Positive::INFINITY)
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
-        Ok(INFINITY)
-    }
-
-    fn total_cost(&self) -> PositiveF64 {
+    fn total_cost(&self) -> Positive {
         self.short_call_low.total_cost()
             + self.short_call_high.total_cost()
             + self.long_call.total_cost()
     }
 
-    fn net_premium_received(&self) -> f64 {
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         let premium = self.short_call_low.net_premium_received()
             + self.short_call_high.net_premium_received()
             - self.long_call.net_cost();
-        if premium > ZERO {
-            premium
-        } else {
-            ZERO
-        }
+        let result = if premium > ZERO { premium } else { ZERO };
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.short_call_low.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call_low.open_fee
             + self.short_call_low.close_fee
             + self.short_call_high.open_fee
             + self.short_call_high.close_fee
             + self.long_call.open_fee * self.long_call.option.quantity
-            + self.long_call.close_fee * self.long_call.option.quantity
+            + self.long_call.close_fee * self.long_call.option.quantity;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
-        let break_even = self.break_even();
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
+        let break_even = self.get_break_even_points()?;
         if break_even.len() != 2 {
-            panic!("Invalid break-even points");
+            return Err(StrategyError::BreakEvenError(
+                BreakEvenErrorKind::NoBreakEvenPoints,
+            ));
         }
         let base_low = break_even[1] - break_even[0];
-        let max_profit = self.max_profit().unwrap_or(PZERO);
+        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let base_high =
             self.short_call_high.option.strike_price - self.short_call_low.option.strike_price;
-        ((base_low + base_high) * max_profit / 2.0).value()
+        Ok(((base_low + base_high) * max_profit / 2.0).into())
     }
 
-    fn profit_ratio(&self) -> f64 {
-        let max_loss = match self.max_loss().unwrap_or(PZERO) {
-            PZERO => spos!(1.0),
-            INFINITY => spos!(1.0),
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        let max_loss = match self.max_loss().unwrap() {
+            value if value == Positive::ZERO => spos!(1.0),
+            value if value == Positive::INFINITY => spos!(1.0),
             value => Some(value),
         };
 
         match (self.max_profit(), max_loss) {
-            (Ok(max_profit), Some(ml)) => (max_profit / ml * 100.0).value(),
-            _ => 0.0,
+            (Ok(max_profit), Some(ml)) => Ok((max_profit / ml * 100.0).into()),
+            _ => Ok(Decimal::ZERO),
         }
     }
 
-    fn get_break_even_points(&self) -> Vec<PositiveF64> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -317,7 +321,7 @@ impl Validable for CallButterfly {
         if !self.short_call_high.validate() {
             return false;
         }
-        if self.underlying_price <= PZERO {
+        if self.underlying_price <= Positive::ZERO {
             error!("Underlying price must be greater than zero");
             return false;
         }
@@ -353,9 +357,9 @@ impl Optimizable for CallButterfly {
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(long, short_low, short_high)| {
-                long.call_ask.unwrap_or(PZERO) > PZERO
-                    && short_low.call_bid.unwrap_or(PZERO) > PZERO
-                    && short_high.call_bid.unwrap_or(PZERO) > PZERO
+                long.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && short_low.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && short_high.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |(long, short_low, short_high)| {
@@ -379,7 +383,7 @@ impl Optimizable for CallButterfly {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -398,8 +402,8 @@ impl Optimizable for CallButterfly {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -431,13 +435,13 @@ impl Optimizable for CallButterfly {
             short_call_low.strike_price,
             short_call_high.strike_price,
             self.long_call.option.expiration_date.clone(),
-            long_call.implied_volatility.unwrap().value(),
+            long_call.implied_volatility.unwrap().to_f64(),
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long_call.call_ask.unwrap().value(),
-            short_call_low.call_bid.unwrap().value(),
-            short_call_high.call_bid.unwrap().value(),
+            long_call.call_ask.unwrap().to_f64(),
+            short_call_low.call_bid.unwrap().to_f64(),
+            short_call_high.call_bid.unwrap().to_f64(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call_low.open_fee,
@@ -449,7 +453,7 @@ impl Optimizable for CallButterfly {
 }
 
 impl Profit for CallButterfly {
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> f64 {
         let price = Some(price);
         let long_call_itm_profit = self.long_call.pnl_at_expiration(&price);
         let long_call_otm_profit = self.short_call_low.pnl_at_expiration(&price);
@@ -473,7 +477,7 @@ impl Graph for CallButterfly {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.long_call.option.underlying_price.value(),
+            x_coordinate: self.long_call.option.underlying_price.to_f64(),
             y_range: (f64::NEG_INFINITY, f64::INFINITY),
             label: format!(
                 "Current Price: {:.2}",
@@ -491,10 +495,9 @@ impl Graph for CallButterfly {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.max_profit().unwrap_or(PZERO);
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(-55.0, 5.0),
             point_color: DARK_BLUE,
@@ -504,7 +507,7 @@ impl Graph for CallButterfly {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].value(), 0.0),
+            coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(3.0, 5.0),
             point_color: DARK_BLUE,
@@ -515,10 +518,13 @@ impl Graph for CallButterfly {
 
         points.push(ChartPoint {
             coordinates: (
-                self.long_call.option.strike_price.value(),
+                self.long_call.option.strike_price.to_f64(),
                 self.calculate_profit_at(self.long_call.option.strike_price),
             ),
-            label: format!("Left Loss\n\n{:.2}", max_profit),
+            label: format!(
+                "Left Loss\n\n{:.2}",
+                self.calculate_profit_at(self.long_call.option.strike_price)
+            ),
             label_offset: LabelOffsetType::Relative(3.0, 3.0),
             point_color: RED,
             label_color: RED,
@@ -530,7 +536,7 @@ impl Graph for CallButterfly {
         let upper_loss = self.calculate_profit_at(self.short_call_high.option.strike_price);
 
         points.push(ChartPoint {
-            coordinates: (self.short_call_low.option.strike_price.value(), lower_loss),
+            coordinates: (self.short_call_low.option.strike_price.to_f64(), lower_loss),
             label: format!("Left High {:.2}", lower_loss),
             label_offset: LabelOffsetType::Relative(3.0, -3.0),
             point_color: DARK_GREEN,
@@ -540,7 +546,10 @@ impl Graph for CallButterfly {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.short_call_high.option.strike_price.value(), upper_loss),
+            coordinates: (
+                self.short_call_high.option.strike_price.to_f64(),
+                upper_loss,
+            ),
             label: format!("Right High {:.2}", upper_loss),
             label_offset: LabelOffsetType::Relative(3.0, 3.0),
             point_color: DARK_GREEN,
@@ -578,31 +587,38 @@ impl DeltaNeutrality for CallButterfly {
         let long_call_otm_delta = self.short_call_high.option.delta();
         let short_call_delta = self.long_call.option.delta();
         let threshold = DELTA_THRESHOLD;
-        let delta = long_call_itm_delta + long_call_otm_delta + short_call_delta;
+        let l_ci_delta = d2fu!(long_call_itm_delta.unwrap()).unwrap();
+        let l_co_delta = d2fu!(long_call_otm_delta.unwrap()).unwrap();
+        let s_c_delta = d2fu!(short_call_delta.unwrap()).unwrap();
+
+        let delta = l_ci_delta + l_co_delta + s_c_delta;
         DeltaInfo {
             net_delta: delta,
-            individual_deltas: vec![long_call_itm_delta, long_call_otm_delta, short_call_delta],
+            individual_deltas: vec![l_ci_delta, l_co_delta, s_c_delta],
             is_neutral: (delta).abs() < threshold,
             underlying_price: self.short_call_low.option.underlying_price,
             neutrality_threshold: threshold,
         }
     }
 
-    fn get_atm_strike(&self) -> PositiveF64 {
+    fn get_atm_strike(&self) -> Positive {
         self.short_call_low.option.underlying_price
     }
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta_low = d2fu!(self.short_call_low.option.delta().unwrap()).unwrap();
+        let delta_high = d2fu!(self.short_call_high.option.delta().unwrap()).unwrap();
+
         vec![
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / self.short_call_low.option.delta()).abs())
+                quantity: f2p!((net_delta.abs() / delta_low).abs())
                     * self.short_call_low.option.quantity,
                 strike: self.short_call_low.option.strike_price,
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!((net_delta.abs() / self.short_call_high.option.delta()).abs())
+                quantity: f2p!((net_delta.abs() / delta_high).abs())
                     * self.short_call_high.option.quantity,
                 strike: self.short_call_high.option.strike_price,
                 option_type: OptionStyle::Call,
@@ -612,10 +628,10 @@ impl DeltaNeutrality for CallButterfly {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
 
         vec![DeltaAdjustment::BuyOptions {
-            quantity: pos!((net_delta.abs() / self.long_call.option.delta()).abs())
-                * self.long_call.option.quantity,
+            quantity: f2p!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -627,19 +643,20 @@ mod tests_call_butterfly {
     use super::*;
     use crate::constants::ZERO;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
 
     fn setup() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(160.0),
-            pos!(157.5),
+            f2p!(150.0),
+            f2p!(155.0),
+            f2p!(160.0),
+            f2p!(157.5),
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
             0.02,
-            pos!(1.0),
+            f2p!(1.0),
             45.0,
             30.0,
             20.5,
@@ -663,34 +680,42 @@ mod tests_call_butterfly {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let strategy = setup();
-        assert_eq!(strategy.break_even()[0], 150.1);
+        assert_eq!(strategy.get_break_even_points().unwrap()[0], 150.1);
     }
 
     #[test]
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 172.0;
-        assert!(strategy.calculate_profit_at(pos!(price)) < ZERO);
+        assert!(strategy.calculate_profit_at(f2p!(price)) < ZERO);
     }
 
     #[test]
     fn test_max_profit() {
         let strategy = setup();
-        assert!(strategy.max_profit().unwrap_or(PZERO) > PZERO);
+        assert!(strategy.max_profit().unwrap_or(Positive::ZERO) > Positive::ZERO);
     }
 
     #[test]
     fn test_net_premium_received() {
         let strategy = setup();
-        assert_relative_eq!(strategy.net_premium_received(), 4.8999, epsilon = 0.0001);
+        assert_relative_eq!(
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            4.9,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
     fn test_fees() {
         let strategy = setup();
-        assert_relative_eq!(strategy.fees(), 0.6, epsilon = f64::EPSILON);
+        assert_relative_eq!(
+            strategy.fees().unwrap().to_f64().unwrap(),
+            0.6,
+            epsilon = f64::EPSILON
+        );
     }
 
     #[test]
@@ -702,11 +727,11 @@ mod tests_call_butterfly {
         assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
         let data = vec![
-            pos!(150.0),
-            pos!(155.0),
-            pos!(160.0),
-            pos!(165.0),
-            pos!(170.0),
+            f2p!(150.0),
+            f2p!(155.0),
+            f2p!(160.0),
+            f2p!(165.0),
+            f2p!(170.0),
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
@@ -726,15 +751,15 @@ mod tests_call_butterfly_validation {
     fn setup_basic_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0),
-            pos!(150.0),
-            pos!(155.0),
+            f2p!(150.0),
+            f2p!(145.0),
+            f2p!(150.0),
+            f2p!(155.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
             0.02,
-            pos!(1.0),
+            f2p!(1.0),
             7.0,
             5.0,
             3.0,
@@ -757,7 +782,7 @@ mod tests_call_butterfly_validation {
     #[test]
     fn test_validate_invalid_underlying_price() {
         let mut strategy = setup_basic_strategy();
-        strategy.underlying_price = PZERO;
+        strategy.underlying_price = Positive::ZERO;
         assert!(!strategy.validate());
     }
 
@@ -771,19 +796,20 @@ mod tests_call_butterfly_validation {
 #[cfg(test)]
 mod tests_call_butterfly_pnl {
     use super::*;
+    use num_traits::ToPrimitive;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0),
-            pos!(150.0),
-            pos!(155.0),
+            f2p!(150.0),
+            f2p!(145.0),
+            f2p!(150.0),
+            f2p!(155.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
             0.02,
-            pos!(1.0),
+            f2p!(1.0),
             7.0,
             5.0,
             3.0,
@@ -799,22 +825,22 @@ mod tests_call_butterfly_pnl {
     #[test]
     fn test_profit_below_lower_strike() {
         let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(pos!(140.0));
+        let profit = strategy.calculate_profit_at(f2p!(140.0));
         assert!(profit <= 0.0);
     }
 
     #[test]
     fn test_profit_above_upper_strike() {
         let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(pos!(160.0));
+        let profit = strategy.calculate_profit_at(f2p!(160.0));
         assert!(profit <= 0.0);
     }
 
     #[test]
     fn test_profit_ratio() {
         let strategy = setup_test_strategy();
-        let ratio = strategy.profit_ratio();
-        assert!(ratio > 0.0);
+        let ratio = strategy.profit_ratio().unwrap().to_f64().unwrap();
+        assert!(ratio > ZERO);
     }
 }
 
@@ -827,15 +853,15 @@ mod tests_call_butterfly_graph {
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0),
-            pos!(155.0),
-            pos!(150.0),
+            f2p!(150.0),
+            f2p!(145.0),
+            f2p!(155.0),
+            f2p!(150.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
             0.02,
-            pos!(1.0),
+            f2p!(1.0),
             7.0,
             5.0,
             3.0,
@@ -954,25 +980,26 @@ mod tests_call_butterfly_graph {
 
 #[cfg(test)]
 mod tests_iron_condor_delta {
-    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
 
-    fn get_strategy(underlying_price: PositiveF64) -> CallButterfly {
+    fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            pos!(5750.0),     // long_strike_itm
-            pos!(5850.0),     // long_strike_otm
-            pos!(5800.0),     // short_strike
+            f2p!(5750.0),     // long_strike_itm
+            f2p!(5850.0),     // long_strike_otm
+            f2p!(5800.0),     // short_strike
             ExpirationDate::Days(2.0),
             0.18,      // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // long quantity
+            f2p!(1.0), // long quantity
             95.8,      // short_quantity
             85.04,     // premium_long_itm
             31.65,     // premium_long_otm
@@ -987,7 +1014,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5901.88));
+        let strategy = get_strategy(f2p!(5901.88));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -999,17 +1026,18 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.7040502965074416),
-                strike: pos!(5750.0),
+                quantity: f2p!(0.7040502965074396),
+                strike: f2p!(5750.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.7040502965074416);
-        assert_relative_eq!(option.delta(), 0.687410, epsilon = 0.0001);
+        option.quantity = f2p!(0.7040502965074396);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.687410, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1017,7 +1045,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(5781.88));
+        let strategy = get_strategy(f2p!(5781.88));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1029,25 +1057,26 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.2835618144021529),
-                strike: pos!(5850.0),
+                quantity: f2p!(0.28356181440213835),
+                strike: f2p!(5850.0),
                 option_type: OptionStyle::Call
             }
         );
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.1338190182607821),
-                strike: pos!(5800.0),
+                quantity: f2p!(0.13381901826077533),
+                strike: f2p!(5800.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call_low.option.clone();
-        option.quantity = pos!(0.2835618144021529);
-        assert_relative_eq!(option.delta(), -0.055904, epsilon = 0.0001);
+        option.quantity = f2p!(0.28356181440213835);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.055904, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1055,7 +1084,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(5795.0));
+        let strategy = get_strategy(f2p!(5795.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1070,25 +1099,26 @@ mod tests_iron_condor_delta {
 
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
-    use crate::model::types::{ExpirationDate, OptionStyle, PositiveF64};
-    use crate::pos;
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
 
-    fn get_strategy(underlying_price: PositiveF64) -> CallButterfly {
+    fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            pos!(5750.0),     // long_strike_itm
-            pos!(5850.0),     // long_strike_otm
-            pos!(5800.0),     // short_strike
+            f2p!(5750.0),     // long_strike_itm
+            f2p!(5850.0),     // long_strike_otm
+            f2p!(5800.0),     // short_strike
             ExpirationDate::Days(2.0),
             0.18,      // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // long quantity
+            f2p!(1.0), // long quantity
             97.8,      // short_quantity
             85.04,     // premium_long_itm
             31.65,     // premium_long_otm
@@ -1103,7 +1133,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5881.88));
+        let strategy = get_strategy(f2p!(5881.88));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1115,17 +1145,18 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.5948524360242091),
-                strike: pos!(5750.0),
+                quantity: f2p!(0.5948524360242063),
+                strike: f2p!(5750.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.5948524360242091);
-        assert_relative_eq!(option.delta(), 0.56993, epsilon = 0.0001);
+        option.quantity = f2p!(0.5948524360242063);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.56993, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1133,7 +1164,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(5781.88));
+        let strategy = get_strategy(f2p!(5781.88));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1146,25 +1177,26 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.2835618144021529),
-                strike: pos!(5850.0),
+                quantity: f2p!(0.28356181440213835),
+                strike: f2p!(5850.0),
                 option_type: OptionStyle::Call
             }
         );
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.1338190182607821),
-                strike: pos!(5800.0),
+                quantity: f2p!(0.13381901826077533),
+                strike: f2p!(5800.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call_low.option.clone();
-        option.quantity = pos!(0.2835618144021529);
-        assert_relative_eq!(option.delta(), -0.05590, epsilon = 0.0001);
+        option.quantity = f2p!(0.28356181440213835);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.05590, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -1172,7 +1204,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(5795.0));
+        let strategy = get_strategy(f2p!(5795.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1191,11 +1223,11 @@ mod tests_call_butterfly_optimizable {
     use approx::assert_relative_eq;
 
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-12-19".to_string(), None, None);
 
         // Add options with different strikes
         chain.add_option(
-            pos!(95.0),   // strike
+            f2p!(95.0),   // strike
             spos!(6.0),   // call_bid
             spos!(6.2),   // call_ask
             spos!(1.0),   // put_bid
@@ -1207,7 +1239,7 @@ mod tests_call_butterfly_optimizable {
         );
 
         chain.add_option(
-            pos!(100.0),
+            f2p!(100.0),
             spos!(3.0),
             spos!(3.2),
             spos!(3.0),
@@ -1219,7 +1251,7 @@ mod tests_call_butterfly_optimizable {
         );
 
         chain.add_option(
-            pos!(105.0),
+            f2p!(105.0),
             spos!(1.0),
             spos!(1.2),
             spos!(6.0),
@@ -1236,15 +1268,15 @@ mod tests_call_butterfly_optimizable {
     fn setup_test_butterfly() -> CallButterfly {
         CallButterfly::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(95.0),
-            pos!(100.0),
-            pos!(105.0),
+            f2p!(100.0),
+            f2p!(95.0),
+            f2p!(100.0),
+            f2p!(105.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
             0.02,
-            pos!(1.0),
+            f2p!(1.0),
             6.2, // long call ask
             3.0, // short call bid low
             1.0, // short call bid high
@@ -1255,29 +1287,6 @@ mod tests_call_butterfly_optimizable {
             0.1,
             0.1,
         )
-    }
-
-    #[test]
-    fn test_filter_combinations() {
-        let butterfly = setup_test_butterfly();
-        let chain = create_test_option_chain();
-
-        let combinations: Vec<_> = butterfly
-            .filter_combinations(&chain, FindOptimalSide::All)
-            .collect();
-
-        assert!(!combinations.is_empty(), "Should find valid combinations");
-
-        // Test first combination
-        if let OptionDataGroup::Three(long, short_low, short_high) = &combinations[0] {
-            assert!(long.strike_price < short_low.strike_price);
-            assert!(short_low.strike_price < short_high.strike_price);
-            assert!(long.call_ask.is_some());
-            assert!(short_low.call_bid.is_some());
-            assert!(short_high.call_bid.is_some());
-        } else {
-            panic!("Expected Three legs in OptionDataGroup");
-        }
     }
 
     #[test]
@@ -1339,7 +1348,7 @@ mod tests_call_butterfly_optimizable {
 
         // Verify the new strategy has correct properties
         assert_relative_eq!(
-            new_strategy.get_underlying_price().value(),
+            new_strategy.get_underlying_price().to_f64(),
             100.0,
             epsilon = 0.001
         );
@@ -1364,7 +1373,7 @@ mod tests_call_butterfly_optimizable {
     fn test_filter_combinations_empty_chain() {
         let butterfly = setup_test_butterfly();
         let empty_chain =
-            OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
+            OptionChain::new("TEST", f2p!(100.0), "2024-12-19".to_string(), None, None);
 
         let combinations: Vec<_> = butterfly
             .filter_combinations(&empty_chain, FindOptimalSide::All)

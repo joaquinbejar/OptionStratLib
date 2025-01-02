@@ -28,27 +28,31 @@
 //!
 //! ```rust
 //! use optionstratlib::chains::chain::{OptionChain, OptionData};
-//! use optionstratlib::chains::utils::OptionChainBuildParams;
-//! use optionstratlib::model::types::{ExpirationDate, PositiveF64};
-//!
-//! // Create a new option chain
-//! let chain = OptionChain::new(
-//!     "SP500",
-//!     PositiveF64::new(100.0).unwrap(),
-//!     "2024-12-31".to_string(),
-//!     None,
-//!     None
+//! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+//! use optionstratlib::ExpirationDate;
+//! use optionstratlib::{spos, Positive};
+//! let chain = OptionDataPriceParams::new(
+//!     Positive::new(2000.0).unwrap(),
+//!     ExpirationDate::Days(10.0),
+//!     Some(Positive::new(0.01).unwrap()),
+//!     0.01,
+//!     0.0,
 //! );
 //!
-//! // Build chain with specific parameters
-//! let params = OptionChainBuildParams::new("SP500".to_string(),
-//! None,
-//! 10,
-//! PositiveF64::new(1.0).unwrap(),
-//! 0.0,
-//! PositiveF64::new(0.02).unwrap(), 2, Default::default());
+//! let params = OptionChainBuildParams::new(
+//!     "SP500".to_string(),
+//!     Some(Positive::ONE),
+//!     5,
+//!     Positive::ONE,
+//!     0.0001,
+//!     Positive::new(0.02).unwrap(),
+//!     2,
+//!     chain,
+//! );
 //!
 //! let built_chain = OptionChain::build_chain(&params);
+//! assert_eq!(built_chain.symbol, "SP500");
+//! assert_eq!(built_chain.underlying_price, Positive::new(2000.0).unwrap());
 //! ```
 //!
 //! ## Strategy Legs Support

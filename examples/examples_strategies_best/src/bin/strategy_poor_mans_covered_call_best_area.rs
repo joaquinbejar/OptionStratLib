@@ -1,13 +1,13 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::model::types::{ExpirationDate, PZERO};
-use optionstratlib::pos;
+use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::utils::FindOptimalSide;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::ExpirationDate;
+use optionstratlib::Positive;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -20,14 +20,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut strategy = PoorMansCoveredCall::new(
         "SP500".to_string(),         // underlying_symbol
         underlying_price,            // underlying_price
-        PZERO,                       // long_call_strike
-        PZERO,                       // short_call_strike OTM
+        Positive::ZERO,              // long_call_strike
+        Positive::ZERO,              // short_call_strike OTM
         ExpirationDate::Days(120.0), // long_call_expiration
         ExpirationDate::Days(30.0),  // short_call_expiration 30-45 days delta 0.30 or less
         ZERO,                        // implied_volatility
         ZERO,                        // risk_free_rate
         ZERO,                        // dividend_yield
-        pos!(2.0),                   // quantity
+        f2p!(2.0),                   // quantity
         ZERO,                        // premium_short_call
         ZERO,                        // premium_short_put
         1.74,                        // open_fee_short_call
@@ -38,25 +38,31 @@ fn main() -> Result<(), Box<dyn Error>> {
     // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(5700.0), pos!(6100.0)));
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let range = strategy.range_of_profit().unwrap_or(PZERO);
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()
+        strategy.net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
-    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(PZERO));
-    info!("Total Fees: ${:.2}", strategy.fees());
+    info!(
+        "Max Profit: ${:.2}",
+        strategy.max_profit().unwrap_or(Positive::ZERO)
+    );
+    info!(
+        "Max Loss: ${:0.2}",
+        strategy.max_loss().unwrap_or(Positive::ZERO)
+    );
+    info!("Total Fees: ${:.2}", strategy.fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Area: {:.2}%", strategy.profit_area()?);
 
-    if strategy.profit_area() > ZERO {
+    if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,

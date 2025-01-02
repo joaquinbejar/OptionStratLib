@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
+use optionstratlib::f2p;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::option::Options;
-use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::pos;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Options;
+use optionstratlib::Positive;
 use std::error::Error;
 use tracing::info;
 
@@ -18,11 +18,11 @@ fn create_sample_option() -> Options {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        pos!(100.0),
+        f2p!(100.0),
         ExpirationDate::Days(30.0),
         0.2,
-        pos!(1.0),
-        pos!(105.0),
+        f2p!(1.0),
+        f2p!(105.0),
         0.05,
         OptionStyle::Call,
         0.0,
@@ -36,8 +36,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Greeks: {:?}", option.greeks());
 
     // Define a range of prices for the graph
-    let price_range: Vec<PositiveF64> = (50..150)
-        .map(|x| PositiveF64::new(x as f64).unwrap())
+    let price_range: Vec<Positive> = (50..150)
+        .map(|x| Positive::new(x as f64).unwrap())
         .collect();
 
     // Generate the intrinsic value graph

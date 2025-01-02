@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 12/12/24
 ******************************************************************************/
-use crate::model::option::Options;
+use crate::Options;
+use rust_decimal::Decimal;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct OptionsInStrike {
@@ -28,20 +30,20 @@ impl OptionsInStrike {
         }
     }
 
-    pub fn deltas(&self) -> DeltasInStrike {
-        DeltasInStrike {
-            long_call: self.long_call.delta(),
-            short_call: self.short_call.delta(),
-            long_put: self.long_put.delta(),
-            short_put: self.short_put.delta(),
-        }
+    pub fn deltas(&self) -> Result<DeltasInStrike, Box<dyn Error>> {
+        Ok(DeltasInStrike {
+            long_call: self.long_call.delta()?,
+            short_call: self.short_call.delta()?,
+            long_put: self.long_put.delta()?,
+            short_put: self.short_put.delta()?,
+        })
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct DeltasInStrike {
-    pub long_call: f64,
-    pub short_call: f64,
-    pub long_put: f64,
-    pub short_put: f64,
+    pub long_call: Decimal,
+    pub short_call: Decimal,
+    pub long_put: Decimal,
+    pub short_put: Decimal,
 }

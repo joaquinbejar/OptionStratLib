@@ -1,6 +1,7 @@
 use crate::constants::{DARK_GREEN, ZERO};
-use crate::model::types::{OptionStyle, PositiveF64, Side, PZERO};
+use crate::model::types::{OptionStyle, Side};
 use crate::visualization::model::{ChartPoint, LabelOffsetType};
+use crate::Positive;
 use plotters::prelude::RED;
 use tracing::trace;
 
@@ -21,8 +22,8 @@ pub trait Payoff {
 ///
 #[derive(Debug)]
 pub struct PayoffInfo {
-    pub spot: PositiveF64,
-    pub strike: PositiveF64,
+    pub spot: Positive,
+    pub strike: Positive,
     pub style: OptionStyle,
     pub side: Side,
     pub spot_prices: Option<Vec<f64>>, // Asian
@@ -33,8 +34,8 @@ pub struct PayoffInfo {
 impl Default for PayoffInfo {
     fn default() -> Self {
         PayoffInfo {
-            spot: PZERO,
-            strike: PZERO,
+            spot: Positive::ZERO,
+            strike: Positive::ZERO,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -71,8 +72,8 @@ pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
         info.spot - info.strike
     );
     let payoff = match info.style {
-        OptionStyle::Call => (info.spot - info.strike).max(PZERO).into(),
-        OptionStyle::Put => (info.strike - info.spot).max(PZERO).into(),
+        OptionStyle::Call => (info.spot - info.strike).max(Positive::ZERO).into(),
+        OptionStyle::Put => (info.strike - info.spot).max(Positive::ZERO).into(),
     };
 
     match info.side {
@@ -82,9 +83,9 @@ pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
 }
 
 pub trait Profit {
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64;
+    fn calculate_profit_at(&self, price: Positive) -> f64;
 
-    fn get_point_at_price(&self, price: PositiveF64) -> ChartPoint<(f64, f64)> {
+    fn get_point_at_price(&self, price: Positive) -> ChartPoint<(f64, f64)> {
         let value_at_current_price = self.calculate_profit_at(price);
         let color = if value_at_current_price >= ZERO {
             DARK_GREEN
@@ -92,7 +93,7 @@ pub trait Profit {
             RED
         };
         ChartPoint {
-            coordinates: (price.value(), value_at_current_price),
+            coordinates: (price.into(), value_at_current_price),
             label: format!("{:.2}", value_at_current_price),
             label_offset: LabelOffsetType::Relative(4.0, 1.0),
             point_color: color,
@@ -106,15 +107,15 @@ pub trait Profit {
 #[cfg(test)]
 mod tests_standard_payoff {
     use super::*;
+    use crate::f2p;
     use crate::model::types::OptionType;
-    use crate::pos;
 
     #[test]
     fn test_call_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -128,8 +129,8 @@ mod tests_standard_payoff {
     fn test_call_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(100.0),
+            spot: f2p!(100.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -143,8 +144,8 @@ mod tests_standard_payoff {
     fn test_call_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(90.0),
-            strike: pos!(100.0),
+            spot: f2p!(90.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -158,8 +159,8 @@ mod tests_standard_payoff {
     fn test_put_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(90.0),
-            strike: pos!(100.0),
+            spot: f2p!(90.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -173,8 +174,8 @@ mod tests_standard_payoff {
     fn test_put_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(100.0),
+            spot: f2p!(100.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -188,8 +189,8 @@ mod tests_standard_payoff {
     fn test_put_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,

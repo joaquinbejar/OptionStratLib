@@ -1,28 +1,28 @@
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::model::types::{ExpirationDate, PZERO};
-use optionstratlib::pos;
-use optionstratlib::strategies::base::Strategies;
-use optionstratlib::strategies::strangle::ShortStrangle;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::f2p;
+use optionstratlib::strategies::ShortStrangle;
+use optionstratlib::strategies::Strategies;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::ExpirationDate;
+use optionstratlib::Positive;
 use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(7250.6);
+    let underlying_price = f2p!(7250.6);
 
     let strategy = ShortStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        pos!(7450.0),     // call_strike
-        pos!(7050.0),     // put_strike
+        f2p!(7450.0),     // call_strike
+        f2p!(7050.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(2.0), // quantity
+        f2p!(2.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.01,      // open_fee_short_call
@@ -31,23 +31,29 @@ fn main() -> Result<(), Box<dyn Error>> {
         7.01,      // close_fee_short_put
     );
 
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    let range = strategy.range_of_profit().unwrap_or(PZERO);
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()
+        strategy.net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(PZERO));
-    info!("Max Loss: ${}", strategy.max_loss().unwrap_or(PZERO));
-    info!("Total Fees: ${:.2}", strategy.fees());
+    info!(
+        "Max Profit: ${:.2}",
+        strategy.max_profit().unwrap_or(Positive::ZERO)
+    );
+    info!(
+        "Max Loss: ${}",
+        strategy.max_loss().unwrap_or(Positive::ZERO)
+    );
+    info!("Total Fees: ${:.2}", strategy.fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Area: {:.2}%", strategy.profit_area()?);
 
     // Generate the profit/loss graph
     strategy.graph(

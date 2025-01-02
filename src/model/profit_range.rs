@@ -3,24 +3,26 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use crate::model::types::{ExpirationDate, PositiveF64, PZERO, P_INFINITY};
+use crate::error::probability::{PriceErrorKind, ProbabilityError};
+use crate::model::types::ExpirationDate;
 use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
+use crate::Positive;
 
 /// Represents a price range where a strategy is profitable
 #[derive(Debug, Clone)]
 pub struct ProfitLossRange {
     /// Lower price boundary of the profitable range
     /// None represents negative infinity
-    pub lower_bound: Option<PositiveF64>,
+    pub lower_bound: Option<Positive>,
 
     /// Upper price boundary of the profitable range
     /// None represents positive infinity
-    pub upper_bound: Option<PositiveF64>,
+    pub upper_bound: Option<Positive>,
 
     /// Probability of the underlying price ending within this range
-    pub probability: PositiveF64,
+    pub probability: Positive,
 }
 
 impl ProfitLossRange {
@@ -37,9 +39,9 @@ impl ProfitLossRange {
     /// Returns a Result containing the ProfitRange if the boundaries are valid,
     /// or an error if the boundaries are invalid
     pub fn new(
-        lower_bound: Option<PositiveF64>,
-        upper_bound: Option<PositiveF64>,
-        probability: PositiveF64,
+        lower_bound: Option<Positive>,
+        upper_bound: Option<Positive>,
+        probability: Positive,
     ) -> Result<Self, String> {
         // Validate boundaries if both are present
         if let (Some(lower), Some(upper)) = (lower_bound, upper_bound) {
@@ -57,19 +59,30 @@ impl ProfitLossRange {
 
     pub fn calculate_probability(
         &mut self,
-        current_price: PositiveF64,
+        current_price: Positive,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
         expiration_date: ExpirationDate,
         risk_free_rate: Option<f64>,
-    ) -> Result<(), String> {
-        if self.lower_bound.unwrap_or(PZERO) > self.upper_bound.unwrap_or(P_INFINITY) {
-            return Err("Lower bound must be less than upper bound".to_string());
+    ) -> Result<(), ProbabilityError> {
+        if self.lower_bound.unwrap_or(Positive::ZERO)
+            > self.upper_bound.unwrap_or(Positive::INFINITY)
+        {
+            return Err(ProbabilityError::PriceError(
+                PriceErrorKind::InvalidPriceRange {
+                    range: format!(
+                        "lower_bound: {} upper_bound: {}",
+                        self.lower_bound.unwrap().value(),
+                        self.upper_bound.unwrap().value()
+                    ),
+                    reason: "Lower bound must be less than upper bound".to_string(),
+                },
+            ));
         }
         // Calculate probabilities for the lower bound
         let (prob_below_lower, _) = calculate_single_point_probability(
             current_price,
-            self.lower_bound.unwrap_or(PZERO),
+            self.lower_bound.unwrap_or(Positive::ZERO),
             volatility_adj.clone(),
             trend.clone(),
             expiration_date.clone(),
@@ -79,7 +92,7 @@ impl ProfitLossRange {
         // Calculate probabilities for the upper bound
         let (prob_below_upper, _) = calculate_single_point_probability(
             current_price,
-            self.upper_bound.unwrap_or(P_INFINITY),
+            self.upper_bound.unwrap_or(Positive::INFINITY),
             volatility_adj,
             trend,
             expiration_date,
@@ -99,7 +112,7 @@ impl ProfitLossRange {
     /// # Returns
     ///
     /// Returns true if the price is within the range, false otherwise
-    pub fn contains(&self, price: PositiveF64) -> bool {
+    pub fn contains(&self, price: Positive) -> bool {
         let above_lower = match self.lower_bound {
             Some(lower) => price >= lower,
             None => true,
@@ -117,66 +130,66 @@ impl ProfitLossRange {
 #[cfg(test)]
 mod tests_profit_range {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     #[test]
     fn test_profit_range_creation() {
-        let range = ProfitLossRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5));
+        let range = ProfitLossRange::new(Some(f2p!(100.0)), Some(f2p!(110.0)), f2p!(0.5));
         assert!(range.is_ok());
     }
 
     #[test]
     fn test_invalid_bounds() {
-        let range = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(100.0)), pos!(0.5));
+        let range = ProfitLossRange::new(Some(f2p!(110.0)), Some(f2p!(100.0)), f2p!(0.5));
         assert!(range.is_err());
     }
 
     #[test]
     fn test_infinite_bounds() {
-        let range = ProfitLossRange::new(None, Some(pos!(100.0)), pos!(0.5));
+        let range = ProfitLossRange::new(None, Some(f2p!(100.0)), f2p!(0.5));
         assert!(range.is_ok());
 
-        let range = ProfitLossRange::new(Some(pos!(100.0)), None, pos!(0.5));
+        let range = ProfitLossRange::new(Some(f2p!(100.0)), None, f2p!(0.5));
         assert!(range.is_ok());
     }
 
     #[test]
     fn test_contains() {
-        let range = ProfitLossRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5)).unwrap();
+        let range = ProfitLossRange::new(Some(f2p!(100.0)), Some(f2p!(110.0)), f2p!(0.5)).unwrap();
 
-        assert!(!range.contains(pos!(99.0)));
-        assert!(range.contains(pos!(100.0)));
-        assert!(range.contains(pos!(105.0)));
-        assert!(range.contains(pos!(110.0)));
-        assert!(!range.contains(pos!(111.0)));
+        assert!(!range.contains(f2p!(99.0)));
+        assert!(range.contains(f2p!(100.0)));
+        assert!(range.contains(f2p!(105.0)));
+        assert!(range.contains(f2p!(110.0)));
+        assert!(!range.contains(f2p!(111.0)));
     }
 
     #[test]
     fn test_contains_infinite_bounds() {
-        let lower_infinite = ProfitLossRange::new(None, Some(pos!(100.0)), pos!(0.5)).unwrap();
-        assert!(lower_infinite.contains(pos!(50.0)));
-        assert!(!lower_infinite.contains(pos!(101.0)));
+        let lower_infinite = ProfitLossRange::new(None, Some(f2p!(100.0)), f2p!(0.5)).unwrap();
+        assert!(lower_infinite.contains(f2p!(50.0)));
+        assert!(!lower_infinite.contains(f2p!(101.0)));
 
-        let upper_infinite = ProfitLossRange::new(Some(pos!(100.0)), None, pos!(0.5)).unwrap();
-        assert!(!upper_infinite.contains(pos!(99.0)));
-        assert!(upper_infinite.contains(pos!(150.0)));
+        let upper_infinite = ProfitLossRange::new(Some(f2p!(100.0)), None, f2p!(0.5)).unwrap();
+        assert!(!upper_infinite.contains(f2p!(99.0)));
+        assert!(upper_infinite.contains(f2p!(150.0)));
     }
 }
 
 #[cfg(test)]
 mod tests_calculate_probability {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     fn create_basic_range() -> ProfitLossRange {
-        ProfitLossRange::new(Some(pos!(90.0)), Some(pos!(110.0)), pos!(0.0)).unwrap()
+        ProfitLossRange::new(Some(f2p!(90.0)), Some(f2p!(110.0)), f2p!(0.0)).unwrap()
     }
 
     #[test]
     fn test_basic_probability_calculation() {
         let mut range = create_basic_range();
         let result = range.calculate_probability(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             ExpirationDate::Days(30.0),
@@ -184,26 +197,26 @@ mod tests_calculate_probability {
         );
 
         assert!(result.is_ok());
-        assert!(range.probability > PZERO);
-        assert!(range.probability <= pos!(1.0));
+        assert!(range.probability > Positive::ZERO);
+        assert!(range.probability <= f2p!(1.0));
     }
 
     #[test]
     #[should_panic(expected = "Lower bound must be less than upper bound")]
     fn test_invalid_bounds() {
-        let _ = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(90.0)), pos!(0.0)).unwrap();
+        let _ = ProfitLossRange::new(Some(f2p!(110.0)), Some(f2p!(90.0)), f2p!(0.0)).unwrap();
     }
 
     #[test]
     fn test_with_volatility_adjustment() {
         let mut range = create_basic_range();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: f2p!(0.25),
+            std_dev_adjustment: f2p!(0.05),
         });
 
         let result = range.calculate_probability(
-            pos!(100.0),
+            f2p!(100.0),
             vol_adj,
             None,
             ExpirationDate::Days(30.0),
@@ -211,7 +224,7 @@ mod tests_calculate_probability {
         );
 
         assert!(result.is_ok());
-        assert!(range.probability > PZERO);
+        assert!(range.probability > Positive::ZERO);
     }
 
     #[test]
@@ -223,7 +236,7 @@ mod tests_calculate_probability {
         });
 
         let result = range.calculate_probability(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             trend,
             ExpirationDate::Days(30.0),
@@ -231,7 +244,7 @@ mod tests_calculate_probability {
         );
 
         assert!(result.is_ok());
-        assert!(range.probability > PZERO);
+        assert!(range.probability > Positive::ZERO);
     }
 
     #[test]
@@ -243,7 +256,7 @@ mod tests_calculate_probability {
         });
 
         let result = range.calculate_probability(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             trend,
             ExpirationDate::Days(30.0),
@@ -251,15 +264,15 @@ mod tests_calculate_probability {
         );
 
         assert!(result.is_ok());
-        assert!(range.probability > PZERO);
+        assert!(range.probability > Positive::ZERO);
     }
 
     #[test]
     fn test_infinite_lower_bound() {
-        let mut range = ProfitLossRange::new(None, Some(pos!(110.0)), pos!(0.0)).unwrap();
+        let mut range = ProfitLossRange::new(None, Some(f2p!(110.0)), f2p!(0.0)).unwrap();
 
         let result = range.calculate_probability(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             ExpirationDate::Days(30.0),
@@ -267,15 +280,15 @@ mod tests_calculate_probability {
         );
 
         assert!(result.is_ok());
-        assert!(range.probability > PZERO);
+        assert!(range.probability > Positive::ZERO);
     }
 
     #[test]
     fn test_infinite_upper_bound() {
-        let mut range = ProfitLossRange::new(Some(pos!(90.0)), None, pos!(0.0)).unwrap();
+        let mut range = ProfitLossRange::new(Some(f2p!(90.0)), None, f2p!(0.0)).unwrap();
 
         let result = range.calculate_probability(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             ExpirationDate::Days(30.0),
@@ -283,15 +296,15 @@ mod tests_calculate_probability {
         );
 
         assert!(result.is_ok());
-        assert!(range.probability > PZERO);
+        assert!(range.probability > Positive::ZERO);
     }
 
     #[test]
     fn test_combined_adjustments() {
         let mut range = create_basic_range();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: f2p!(0.25),
+            std_dev_adjustment: f2p!(0.05),
         });
         let trend = Some(PriceTrend {
             drift_rate: 0.10,
@@ -299,7 +312,7 @@ mod tests_calculate_probability {
         });
 
         let result = range.calculate_probability(
-            pos!(100.0),
+            f2p!(100.0),
             vol_adj,
             trend,
             ExpirationDate::Days(30.0),
@@ -307,7 +320,7 @@ mod tests_calculate_probability {
         );
 
         assert!(result.is_ok());
-        assert!(range.probability > PZERO);
+        assert!(range.probability > Positive::ZERO);
     }
 
     #[test]
@@ -323,11 +336,11 @@ mod tests_calculate_probability {
 
         for expiration in expirations {
             let result =
-                range.calculate_probability(pos!(100.0), None, None, expiration, Some(0.05));
+                range.calculate_probability(f2p!(100.0), None, None, expiration, Some(0.05));
 
             assert!(result.is_ok());
-            assert!(range.probability > PZERO);
-            assert!(range.probability <= pos!(1.0));
+            assert!(range.probability > Positive::ZERO);
+            assert!(range.probability <= f2p!(1.0));
         }
     }
 
@@ -335,7 +348,7 @@ mod tests_calculate_probability {
     fn test_extreme_prices() {
         let mut range = create_basic_range();
 
-        let extreme_prices = vec![pos!(1.0), pos!(1000.0), pos!(10000.0)];
+        let extreme_prices = vec![f2p!(1.0), f2p!(1000.0), f2p!(10000.0)];
 
         for price in extreme_prices {
             let result = range.calculate_probability(
@@ -347,8 +360,8 @@ mod tests_calculate_probability {
             );
 
             assert!(result.is_ok());
-            assert!(range.probability >= PZERO);
-            assert!(range.probability <= pos!(1.0));
+            assert!(range.probability >= Positive::ZERO);
+            assert!(range.probability <= f2p!(1.0));
         }
     }
 }

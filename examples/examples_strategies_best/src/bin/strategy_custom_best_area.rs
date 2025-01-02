@@ -1,15 +1,15 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::constants::ZERO;
+use optionstratlib::f2p;
 use optionstratlib::model::position::Position;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::model::types::{ExpirationDate, PZERO};
-use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::ExpirationDate;
+use optionstratlib::Positive;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(1), // qty_calls_long
         Some(1), // qty_calls_short
         ExpirationDate::Days(30.0),
-        pos!(1.0),
+        f2p!(1.0),
         0.05,
         0.02,
         1.0,
@@ -42,36 +42,36 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        0.01,
+        f2p!(0.01),
         100,
-        0.1,
+        f2p!(0.1),
     );
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
     info!(
         "Price Range from: {} to: {}",
         price_range.first().unwrap(),
         price_range.last().unwrap()
     );
-    let range = strategy.range_of_profit().unwrap_or(PZERO);
+    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()
+        strategy.net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit_iter());
-    info!("Max Loss: ${:0.2}", strategy.max_loss_iter());
-    info!("Total Fees: ${:.2}", strategy.fees());
+    info!("Max Profit: ${:.2}", strategy.max_profit_iter()?);
+    info!("Max Loss: ${:0.2}", strategy.max_loss_iter()?);
+    info!("Total Fees: ${:.2}", strategy.fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Area: {:.2}%", strategy.profit_area());
+    info!("Profit Area: {:.2}%", strategy.profit_area()?);
 
-    if strategy.profit_area() > ZERO {
+    if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,

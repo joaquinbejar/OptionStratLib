@@ -1,341 +1,7 @@
 use crate::constants::ZERO;
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use approx::{AbsDiffEq, RelativeEq};
+use crate::Positive;
 use chrono::{DateTime, Duration, Utc};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::cmp::Ordering;
-use std::fmt;
-use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
-use std::str::FromStr;
-
-pub const PZERO: PositiveF64 = PositiveF64(ZERO);
-pub const INFINITY: PositiveF64 = PositiveF64(f64::INFINITY);
-pub const SIZE_ONE: PositiveF64 = PositiveF64(1.0);
-pub const P_INFINITY: PositiveF64 = PositiveF64(f64::INFINITY);
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct PositiveF64(f64);
-
-#[macro_export]
-macro_rules! pos {
-    ($val:expr) => {
-        PositiveF64::new($val).unwrap()
-    };
-}
-
-#[macro_export]
-macro_rules! spos {
-    ($val:expr) => {
-        Some(PositiveF64::new($val).unwrap())
-    };
-}
-
-impl PositiveF64 {
-    pub fn new(value: f64) -> Result<Self, String> {
-        if value >= ZERO {
-            Ok(PositiveF64(value))
-        } else {
-            Err(format!("PositiveF64 value must be positive, got {}", value))
-        }
-    }
-
-    pub fn value(&self) -> f64 {
-        self.0
-    }
-
-    pub fn max(self, other: PositiveF64) -> PositiveF64 {
-        if self.0 > other.0 {
-            self
-        } else {
-            other
-        }
-    }
-
-    pub fn min(self, other: PositiveF64) -> PositiveF64 {
-        if self.0 < other.0 {
-            self
-        } else {
-            other
-        }
-    }
-
-    pub fn floor(&self) -> PositiveF64 {
-        PositiveF64(self.0.floor())
-    }
-}
-
-impl From<PositiveF64> for f64 {
-    fn from(pos_f64: PositiveF64) -> Self {
-        pos_f64.0
-    }
-}
-
-impl From<PositiveF64> for u64 {
-    fn from(pos_u64: PositiveF64) -> Self {
-        pos_u64.0 as u64
-    }
-}
-
-impl PartialEq<f64> for PositiveF64 {
-    fn eq(&self, other: &f64) -> bool {
-        self.0 == *other
-    }
-}
-
-impl fmt::Display for PositiveF64 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(precision) = f.precision() {
-            write!(f, "{:.1$}", self.0, precision)
-        } else {
-            write!(f, "{}", self.0)
-        }
-    }
-}
-
-impl fmt::Debug for PositiveF64 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(precision) = f.precision() {
-            write!(f, "{:.1$}", self.0, precision)
-        } else {
-            write!(f, "{:?}", self.0)
-        }
-    }
-}
-
-impl Serialize for PositiveF64 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_f64(self.0)
-    }
-}
-
-impl<'de> Deserialize<'de> for PositiveF64 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = f64::deserialize(deserializer)?;
-        PositiveF64::new(value).map_err(serde::de::Error::custom)
-    }
-}
-
-impl Add for PositiveF64 {
-    type Output = PositiveF64;
-
-    fn add(self, other: PositiveF64) -> PositiveF64 {
-        PositiveF64(self.0 + other.0)
-    }
-}
-
-impl Sub for PositiveF64 {
-    type Output = PositiveF64;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        PositiveF64(self.0 - rhs.0)
-    }
-}
-
-impl Div for PositiveF64 {
-    type Output = PositiveF64;
-
-    fn div(self, other: PositiveF64) -> PositiveF64 {
-        PositiveF64(self.0 / other.0)
-    }
-}
-
-impl Add<f64> for PositiveF64 {
-    type Output = PositiveF64;
-
-    fn add(self, rhs: f64) -> PositiveF64 {
-        PositiveF64(self.0 + rhs)
-    }
-}
-
-impl Sub<f64> for PositiveF64 {
-    type Output = PositiveF64;
-
-    fn sub(self, rhs: f64) -> PositiveF64 {
-        PositiveF64(self.0 - rhs)
-    }
-}
-
-impl AddAssign for PositiveF64 {
-    fn add_assign(&mut self, other: PositiveF64) {
-        self.0 += other.0;
-    }
-}
-
-impl AddAssign<f64> for PositiveF64 {
-    fn add_assign(&mut self, rhs: f64) {
-        self.0 += rhs;
-    }
-}
-
-impl MulAssign<f64> for PositiveF64 {
-    fn mul_assign(&mut self, rhs: f64) {
-        self.0 *= rhs;
-    }
-}
-
-impl Div<f64> for PositiveF64 {
-    type Output = PositiveF64;
-
-    fn div(self, rhs: f64) -> PositiveF64 {
-        PositiveF64(self.0 / rhs)
-    }
-}
-
-impl PartialOrd for PositiveF64 {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-
-    fn le(&self, other: &Self) -> bool {
-        self.0 <= other.0
-    }
-
-    fn ge(&self, other: &Self) -> bool {
-        self.0 >= other.0
-    }
-}
-
-impl Eq for PositiveF64 {}
-
-impl Ord for PositiveF64 {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.partial_cmp(&other.0).unwrap()
-    }
-}
-
-impl Neg for PositiveF64 {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        panic!("Cannot negate a PositiveF64 value!");
-    }
-}
-
-impl Mul for PositiveF64 {
-    type Output = PositiveF64;
-
-    fn mul(self, other: PositiveF64) -> PositiveF64 {
-        PositiveF64(self.0 * other.0)
-    }
-}
-
-impl Mul<f64> for PositiveF64 {
-    type Output = PositiveF64;
-
-    fn mul(self, rhs: f64) -> PositiveF64 {
-        PositiveF64(self.0 * rhs)
-    }
-}
-
-impl Default for PositiveF64 {
-    fn default() -> Self {
-        PositiveF64(ZERO)
-    }
-}
-
-impl FromStr for PositiveF64 {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.parse::<f64>() {
-            Ok(value) if value > 0.0 => Ok(PositiveF64(value)),
-            Ok(value) => Err(format!("Value must be positive, got {}", value)),
-            Err(e) => Err(format!("Failed to parse as f64: {}", e)),
-        }
-    }
-}
-
-impl From<f64> for PositiveF64 {
-    fn from(value: f64) -> Self {
-        PositiveF64::new(value).expect("Value must be positive")
-    }
-}
-
-impl AbsDiffEq for PositiveF64 {
-    type Epsilon = f64;
-
-    fn default_epsilon() -> Self::Epsilon {
-        f64::default_epsilon()
-    }
-
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        f64::abs_diff_eq(&self.0, &other.0, epsilon)
-    }
-}
-
-impl RelativeEq for PositiveF64 {
-    fn default_max_relative() -> Self::Epsilon {
-        f64::default_max_relative()
-    }
-
-    fn relative_eq(
-        &self,
-        other: &Self,
-        epsilon: Self::Epsilon,
-        max_relative: Self::Epsilon,
-    ) -> bool {
-        f64::relative_eq(&self.0, &other.0, epsilon, max_relative)
-    }
-}
-
-impl Sum for PositiveF64 {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        let sum = iter.fold(0.0, |acc, x| acc + x.value());
-        PositiveF64::new(sum).unwrap_or(PZERO)
-    }
-}
-
-impl<'a> Sum<&'a PositiveF64> for PositiveF64 {
-    fn sum<I: Iterator<Item = &'a PositiveF64>>(iter: I) -> Self {
-        let sum = iter.fold(0.0, |acc, x| acc + x.value());
-        PositiveF64::new(sum).unwrap_or(PZERO)
-    }
-}
-
-impl AddAssign<PositiveF64> for f64 {
-    fn add_assign(&mut self, rhs: PositiveF64) {
-        *self += rhs.0;
-    }
-}
-
-impl Div<PositiveF64> for f64 {
-    type Output = f64;
-
-    fn div(self, rhs: PositiveF64) -> f64 {
-        self / rhs.0
-    }
-}
-
-impl Sub<PositiveF64> for f64 {
-    type Output = f64;
-
-    fn sub(self, rhs: PositiveF64) -> Self::Output {
-        self - rhs.0
-    }
-}
-
-impl Mul<PositiveF64> for f64 {
-    type Output = f64;
-
-    fn mul(self, rhs: PositiveF64) -> f64 {
-        self * rhs.0
-    }
-}
-
-impl Add<PositiveF64> for f64 {
-    type Output = f64;
-
-    fn add(self, rhs: PositiveF64) -> f64 {
-        self + rhs.0
-    }
-}
 
 #[allow(dead_code)]
 #[derive(Clone, PartialEq)]
@@ -593,19 +259,19 @@ impl Payoff for OptionType {
             },
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
             OptionType::Chooser { .. } => (info.spot - info.strike)
-                .max(PZERO)
-                .max((info.strike - info.spot).max(PZERO))
-                .value(),
+                .max(Positive::ZERO)
+                .max((info.strike - info.spot).max(Positive::ZERO))
+                .to_f64(),
             OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
             | OptionType::Exchange { .. } => standard_payoff(info),
             OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
             OptionType::Power { exponent } => match info.style {
-                OptionStyle::Call => (info.spot.value().powf(*exponent) - info.strike).max(ZERO),
-                OptionStyle::Put => (info.strike - info.spot.value().powf(*exponent))
-                    .max(PZERO)
-                    .value(),
+                OptionStyle::Call => (info.spot.to_f64().powf(*exponent) - info.strike).max(ZERO),
+                OptionStyle::Put => (info.strike - info.spot.to_f64().powf(*exponent))
+                    .max(Positive::ZERO)
+                    .to_f64(),
             },
         }
     }
@@ -624,7 +290,7 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
     };
     match info.style {
         OptionStyle::Call => (average - info.strike).max(ZERO),
-        OptionStyle::Put => (info.strike.value() - average).max(ZERO),
+        OptionStyle::Put => (info.strike - average).max(Positive::ZERO).into(),
     }
 }
 
@@ -634,8 +300,8 @@ fn calculate_barrier_payoff(
     info: &PayoffInfo,
 ) -> f64 {
     let barrier_condition = match barrier_type {
-        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot.value() >= *barrier_level,
-        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot.value() <= *barrier_level,
+        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
+        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
     };
     let std_payoff = standard_payoff(info);
     match barrier_type {
@@ -671,7 +337,7 @@ fn calculate_binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> f64 {
         }
         BinaryType::AssetOrNothing => {
             if is_in_the_money {
-                info.spot.value()
+                info.spot.to_f64()
             } else {
                 0.0
             }
@@ -685,21 +351,22 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
         OptionStyle::Put => info.spot_max,
     };
     match info.style {
-        OptionStyle::Call => info.spot.value() - extremum.unwrap_or(ZERO),
-        OptionStyle::Put => extremum.unwrap_or(ZERO) - info.spot,
+        OptionStyle::Call => info.spot.to_f64() - extremum.unwrap_or(ZERO),
+        OptionStyle::Put => extremum.unwrap_or(ZERO) - info.spot.to_f64(),
     }
 }
 
 #[cfg(test)]
 mod tests_payoff {
     use super::*;
+    use crate::f2p;
 
     #[test]
     fn test_european_call() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -711,8 +378,8 @@ mod tests_payoff {
     fn test_european_put() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(90.0),
-            strike: pos!(100.0),
+            spot: f2p!(90.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -726,8 +393,8 @@ mod tests_payoff {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(100.0),
+            spot: f2p!(100.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -743,8 +410,8 @@ mod tests_payoff {
             barrier_level: 120.0,
         };
         let info = PayoffInfo {
-            spot: pos!(130.0),
-            strike: pos!(100.0),
+            spot: f2p!(130.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -758,8 +425,8 @@ mod tests_payoff {
             binary_type: BinaryType::CashOrNothing,
         };
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -773,8 +440,8 @@ mod tests_payoff {
             lookback_type: LookbackType::FixedStrike,
         };
         let info = PayoffInfo {
-            spot: pos!(90.0),
-            strike: pos!(100.0),
+            spot: f2p!(90.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -786,8 +453,8 @@ mod tests_payoff {
     fn test_quanto_call() {
         let option = OptionType::Quanto { exchange_rate: 1.5 };
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -799,8 +466,8 @@ mod tests_payoff {
     fn test_power_call() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
-            spot: pos!(10.0),
-            strike: pos!(90.0),
+            spot: f2p!(10.0),
+            strike: f2p!(90.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -949,12 +616,13 @@ mod tests_expiration_date {
 #[cfg(test)]
 mod tests_calculate_floating_strike_payoff {
     use super::*;
+    use crate::f2p;
 
     #[test]
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(0.0), // Not used in floating strike
+            spot: f2p!(100.0),
+            strike: f2p!(0.0), // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -967,8 +635,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(0.0),
+            spot: f2p!(100.0),
+            strike: f2p!(0.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -981,8 +649,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(0.0),
+            spot: f2p!(100.0),
+            strike: f2p!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -995,8 +663,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(0.0),
+            spot: f2p!(100.0),
+            strike: f2p!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -1009,8 +677,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(0.0),
+            spot: f2p!(100.0),
+            strike: f2p!(0.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1023,8 +691,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(0.0),
+            spot: f2p!(100.0),
+            strike: f2p!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -1036,186 +704,9 @@ mod tests_calculate_floating_strike_payoff {
 }
 
 #[cfg(test)]
-mod tests_positive_f64 {
-    use super::*;
-    use std::panic;
-
-    #[test]
-    fn test_positive_f64_creation() {
-        assert!(PositiveF64::new(0.0).is_ok());
-        assert!(PositiveF64::new(1.0).is_ok());
-        assert!(PositiveF64::new(-1.0).is_err());
-    }
-
-    #[test]
-    fn test_positive_f64_value() {
-        let pos = PositiveF64::new(5.0).unwrap();
-        assert_eq!(pos.value(), 5.0);
-    }
-
-    #[test]
-    fn test_positive_f64_from() {
-        let pos = PositiveF64::new(3.0).unwrap();
-        let f: f64 = pos.into();
-        assert_eq!(f, 3.0);
-    }
-
-    #[test]
-    fn test_positive_f64_eq() {
-        let pos = PositiveF64::new(2.0).unwrap();
-        assert_eq!(pos, 2.0);
-        assert_ne!(pos, 3.0);
-    }
-
-    #[test]
-    fn test_positive_f64_display() {
-        let pos = PositiveF64::new(4.5).unwrap();
-        assert_eq!(format!("{}", pos), "4.5");
-    }
-
-    #[test]
-    fn test_positive_f64_debug() {
-        let pos = PositiveF64::new(4.5).unwrap();
-        assert_eq!(format!("{:?}", pos), "4.5");
-    }
-
-    #[test]
-    fn test_positive_f64_display_decimal_fix() {
-        let pos = PositiveF64::new(4.578923789423789).unwrap();
-        assert_eq!(format!("{:.2}", pos), "4.58");
-        assert_eq!(format!("{:.3}", pos), "4.579");
-        assert_eq!(format!("{:.0}", pos), "5");
-    }
-
-    #[test]
-    fn test_positive_f64_add() {
-        let a = PositiveF64::new(2.0).unwrap();
-        let b = PositiveF64::new(3.0).unwrap();
-        assert_eq!((a + b).value(), 5.0);
-    }
-
-    #[test]
-    fn test_positive_f64_div() {
-        let a = PositiveF64::new(6.0).unwrap();
-        let b = PositiveF64::new(2.0).unwrap();
-        assert_eq!((a / b).value(), 3.0);
-    }
-
-    #[test]
-    fn test_positive_f64_div_f64() {
-        let a = PositiveF64::new(6.0).unwrap();
-        assert_eq!((a / 2.0).value(), 3.0);
-    }
-
-    #[test]
-    fn test_f64_mul_positive_f64() {
-        let a = 2.0;
-        let b = PositiveF64::new(3.0).unwrap();
-        assert_eq!(a * b, 6.0);
-    }
-
-    #[test]
-    fn test_positive_f64_mul() {
-        let a = PositiveF64::new(2.0).unwrap();
-        let b = PositiveF64::new(3.0).unwrap();
-        assert_eq!((a * b).value(), 6.0);
-    }
-
-    #[test]
-    fn test_positive_f64_mul_f64() {
-        let a = PositiveF64::new(2.0).unwrap();
-        assert_eq!((a * 3.0).value(), 6.0);
-    }
-
-    #[test]
-    fn test_positive_f64_default() {
-        assert_eq!(PositiveF64::default().value(), 0.0);
-    }
-
-    #[test]
-    fn test_f64_div_positive_f64() {
-        let a = 6.0;
-        let b = PositiveF64::new(2.0).unwrap();
-        assert_eq!(a / b, 3.0);
-    }
-
-    #[test]
-    fn test_pos_macro() {
-        assert_eq!(pos!(5.0).value(), 5.0);
-        let result = panic::catch_unwind(|| pos!(-1.0));
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_constants() {
-        assert_eq!(PZERO.value(), 0.0);
-        assert_eq!(SIZE_ONE.value(), 1.0);
-    }
-}
-
-#[cfg(test)]
-mod tests_positive_f64_extended {
-    use super::*;
-
-    #[test]
-    fn test_positive_f64_ordering() {
-        let a = pos!(1.0);
-        let b = pos!(2.0);
-        let c = pos!(2.0);
-
-        assert!(a < b);
-        assert!(b > a);
-        assert!(b >= c);
-        assert!(b <= c);
-    }
-
-    #[test]
-    fn test_positive_f64_add_assign() {
-        let mut a = pos!(1.0);
-        let b = pos!(2.0);
-        a += b;
-        assert_eq!(a.value(), 3.0);
-    }
-
-    #[test]
-    fn test_positive_f64_mul_assign() {
-        let mut a = pos!(2.0);
-        a *= 3.0;
-        assert_eq!(a.value(), 6.0);
-    }
-
-    #[test]
-    fn test_positive_f64_from_string() {
-        assert_eq!(PositiveF64::from_str("1.5").unwrap().value(), 1.5);
-        assert!(PositiveF64::from_str("-1.5").is_err());
-        assert!(PositiveF64::from_str("invalid").is_err());
-    }
-
-    #[test]
-    fn test_positive_f64_max_min() {
-        let a = pos!(1.0);
-        let b = pos!(2.0);
-        assert_eq!(a.max(b).value(), 2.0);
-        assert_eq!(a.min(b).value(), 1.0);
-    }
-
-    #[test]
-    fn test_positive_f64_floor() {
-        let a = pos!(1.7);
-        assert_eq!(a.floor().value(), 1.0);
-    }
-
-    #[test]
-    #[should_panic(expected = "Cannot negate a PositiveF64 value!")]
-    fn test_positive_f64_neg() {
-        let a = pos!(1.0);
-        let _ = -a;
-    }
-}
-
-#[cfg(test)]
 mod tests_option_type {
     use super::*;
+    use crate::f2p;
 
     #[test]
     fn test_asian_geometric_call() {
@@ -1223,8 +714,8 @@ mod tests_option_type {
             averaging_type: AsianAveragingType::Geometric,
         };
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(100.0),
+            spot: f2p!(100.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -1240,8 +731,8 @@ mod tests_option_type {
             averaging_type: AsianAveragingType::Geometric,
         };
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(95.0),
+            spot: f2p!(100.0),
+            strike: f2p!(95.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -1259,8 +750,8 @@ mod tests_option_type {
             barrier_level: 90.0,
         };
         let info = PayoffInfo {
-            spot: pos!(95.0),
-            strike: pos!(100.0),
+            spot: f2p!(95.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -1274,8 +765,8 @@ mod tests_option_type {
             binary_type: BinaryType::AssetOrNothing,
         };
         let info = PayoffInfo {
-            spot: pos!(90.0),
-            strike: pos!(100.0),
+            spot: f2p!(90.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -1290,8 +781,8 @@ mod tests_option_type {
             underlying_option: Box::new(inner_option),
         };
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -1303,8 +794,8 @@ mod tests_option_type {
     fn test_chooser_option() {
         let option = OptionType::Chooser { choice_date: 30.0 };
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -1316,8 +807,8 @@ mod tests_option_type {
     fn test_power_put() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
-            spot: pos!(8.0),
-            strike: pos!(100.0),
+            spot: f2p!(8.0),
+            strike: f2p!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -1327,90 +818,253 @@ mod tests_option_type {
 }
 
 #[cfg(test)]
-mod tests_positive_f64_sum {
-    use super::*;
-
-    #[test]
-    fn test_sum_owned_values() {
-        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
-        let sum: PositiveF64 = values.into_iter().sum();
-        assert_eq!(sum.value(), 6.0);
-    }
-
-    #[test]
-    fn test_sum_referenced_values() {
-        let values = [pos!(1.0), pos!(2.0), pos!(3.0)];
-        let sum: PositiveF64 = values.iter().sum();
-        assert_eq!(sum.value(), 6.0);
-    }
-
-    #[test]
-    fn test_sum_empty_iterator() {
-        let values: Vec<PositiveF64> = vec![];
-        let sum: PositiveF64 = values.into_iter().sum();
-        assert_eq!(sum.value(), 0.0);
-    }
-}
-
-#[cfg(test)]
 mod tests_vec_collection {
-    use super::*;
-    use crate::pos;
+    use crate::f2p;
+    use crate::model::positive::Positive;
 
     #[test]
     fn test_collect_empty_iterator() {
-        let empty_vec: Vec<PositiveF64> = Vec::new();
-        let collected: Vec<PositiveF64> = empty_vec.into_iter().collect();
+        let empty_vec: Vec<Positive> = Vec::new();
+        let collected: Vec<Positive> = empty_vec.into_iter().collect();
         assert!(collected.is_empty());
     }
 
     #[test]
     fn test_collect_single_value() {
-        let values = vec![pos!(1.0)];
-        let collected: Vec<PositiveF64> = values.into_iter().collect();
+        let values = vec![f2p!(1.0)];
+        let collected: Vec<Positive> = values.into_iter().collect();
         assert_eq!(collected.len(), 1);
-        assert_eq!(collected[0], pos!(1.0));
+        assert_eq!(collected[0], f2p!(1.0));
     }
 
     #[test]
     fn test_collect_multiple_values() {
-        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
-        let collected: Vec<PositiveF64> = values.into_iter().collect();
+        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
+        let collected: Vec<Positive> = values.into_iter().collect();
         assert_eq!(collected.len(), 3);
-        assert_eq!(collected[0], pos!(1.0));
-        assert_eq!(collected[1], pos!(2.0));
-        assert_eq!(collected[2], pos!(3.0));
+        assert_eq!(collected[0], f2p!(1.0));
+        assert_eq!(collected[1], f2p!(2.0));
+        assert_eq!(collected[2], f2p!(3.0));
     }
 
     #[test]
     fn test_collect_from_filter() {
-        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0)];
-        let collected: Vec<PositiveF64> = values.into_iter().filter(|x| x.value() > 2.0).collect();
+        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0), f2p!(4.0)];
+        let collected: Vec<Positive> = values.into_iter().filter(|x| x.to_f64() > 2.0).collect();
         assert_eq!(collected.len(), 2);
-        assert_eq!(collected[0], pos!(3.0));
-        assert_eq!(collected[1], pos!(4.0));
+        assert_eq!(collected[0], f2p!(3.0));
+        assert_eq!(collected[1], f2p!(4.0));
     }
 
     #[test]
     fn test_collect_from_map() {
-        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
-        let collected: Vec<PositiveF64> =
-            values.into_iter().map(|x| pos!(x.value() * 2.0)).collect();
+        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
+        let collected: Vec<Positive> = values.into_iter().map(|x| f2p!(x.to_f64() * 2.0)).collect();
         assert_eq!(collected.len(), 3);
-        assert_eq!(collected[0], pos!(2.0));
-        assert_eq!(collected[1], pos!(4.0));
-        assert_eq!(collected[2], pos!(6.0));
+        assert_eq!(collected[0], f2p!(2.0));
+        assert_eq!(collected[1], f2p!(4.0));
+        assert_eq!(collected[2], f2p!(6.0));
     }
 
     #[test]
     fn test_collect_from_chain() {
-        let values1 = vec![pos!(1.0), pos!(2.0)];
-        let values2 = vec![pos!(3.0), pos!(4.0)];
-        let collected: Vec<PositiveF64> = values1.into_iter().chain(values2).collect();
+        let values1 = vec![f2p!(1.0), f2p!(2.0)];
+        let values2 = vec![f2p!(3.0), f2p!(4.0)];
+        let collected: Vec<Positive> = values1.into_iter().chain(values2).collect();
         assert_eq!(collected.len(), 4);
-        assert_eq!(collected[0], pos!(1.0));
-        assert_eq!(collected[1], pos!(2.0));
-        assert_eq!(collected[2], pos!(3.0));
-        assert_eq!(collected[3], pos!(4.0));
+        assert_eq!(collected[0], f2p!(1.0));
+        assert_eq!(collected[1], f2p!(2.0));
+        assert_eq!(collected[2], f2p!(3.0));
+        assert_eq!(collected[3], f2p!(4.0));
+    }
+}
+
+#[cfg(test)]
+mod test_expiration_date {
+    use crate::model::ExpirationDate;
+
+    #[test]
+    fn test_from_string_valid_days() {
+        let result = ExpirationDate::from_string(&"30.0".to_string());
+        assert!(result.is_ok());
+        match result.unwrap() {
+            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            _ => panic!("Expected Days variant"),
+        }
+    }
+
+    #[test]
+    fn test_from_string_valid_datetime() {
+        let result = ExpirationDate::from_string(&"2024-12-31T00:00:00Z".to_string());
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_from_string_invalid_format() {
+        let result = ExpirationDate::from_string(&"invalid date".to_string());
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod test_asian_options {
+    use crate::f2p;
+    use crate::model::types::AsianAveragingType;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_asian_arithmetic_put() {
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Arithmetic,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(90.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            spot_prices: Some(vec![85.0, 90.0, 95.0]),
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_asian_no_spot_prices() {
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Arithmetic,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(100.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod test_barrier_options {
+    use crate::f2p;
+    use crate::model::types::BarrierType;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_barrier_down_and_in_put() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::DownAndIn,
+            barrier_level: 90.0,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(100.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 0.0);
+    }
+
+    #[test]
+    fn test_barrier_up_and_out_call() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::UpAndOut,
+            barrier_level: 110.0,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(120.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod test_cliquet_options {
+    use crate::f2p;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_cliquet_option_with_resets() {
+        let option = OptionType::Cliquet {
+            reset_dates: vec![30.0, 60.0, 90.0],
+        };
+        let info = PayoffInfo {
+            spot: f2p!(120.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 20.0);
+    }
+}
+
+#[cfg(test)]
+mod test_rainbow_options {
+    use crate::f2p;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_rainbow_option_multiple_assets() {
+        let option = OptionType::Rainbow { num_assets: 3 };
+        let info = PayoffInfo {
+            spot: f2p!(120.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 20.0);
+    }
+}
+
+#[cfg(test)]
+mod test_exchange_options {
+    use crate::f2p;
+    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pricing::{Payoff, PayoffInfo};
+
+    #[test]
+    fn test_exchange_option_positive_diff() {
+        let option = OptionType::Exchange { second_asset: 90.0 };
+        let info = PayoffInfo {
+            spot: f2p!(120.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 20.0);
+    }
+
+    #[test]
+    fn test_exchange_option_negative_diff() {
+        let option = OptionType::Exchange {
+            second_asset: 110.0,
+        };
+        let info = PayoffInfo {
+            spot: f2p!(110.0),
+            strike: f2p!(100.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
     }
 }

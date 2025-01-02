@@ -42,22 +42,22 @@
 //!
 //! ```rust
 //! use tracing::info;
-//! use optionstratlib::model::types::{ExpirationDate, PZERO};
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
-//! use optionstratlib::strategies::base::Strategies;
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
+//! use optionstratlib::strategies::Strategies;
 //!
 //! let spread = BullCallSpread::new(
 //!     "SP500".to_string(),
-//!     pos!(5780.0), // underlying_price
-//!     pos!(5750.0), // long_strike_itm  
-//!     pos!(5820.0), // short_strike
+//!     f2p!(5780.0), // underlying_price
+//!     f2p!(5750.0), // long_strike_itm  
+//!     f2p!(5820.0), // short_strike
 //!     ExpirationDate::Days(2.0),
 //!     0.18,         // implied_volatility
 //!     0.05,         // risk_free_rate
 //!     0.0,          // dividend_yield
-//!     pos!(2.0),    // long quantity
+//!     f2p!(2.0),    // long quantity
 //!     85.04,        // premium_long
 //!     29.85,        // premium_short
 //!     0.78,         // open_fee_long
@@ -66,8 +66,8 @@
 //!     0.73,         // close_fee_short
 //! );
 //!
-//! let profit = spread.max_profit().unwrap_or(PZERO);
-//! let loss = spread.max_loss().unwrap_or(PZERO);
+//! let profit = spread.max_profit().unwrap_or(Positive::ZERO);
+//! let loss = spread.max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", profit, loss);
 //! ```
 //!
@@ -115,8 +115,9 @@
 //! Example:
 //!
 //! ```rust
+//! use optionstratlib::error::position::PositionError;
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::model::types::PositiveF64;
+//! use optionstratlib::Positive;
 //! use optionstratlib::strategies::base::{Positionable, Strategies, Validable};
 //!
 //! struct MyStrategy {
@@ -132,11 +133,11 @@
 //!
 //!
 //! impl Positionable for MyStrategy {
-//!     fn add_position(&mut self, position: &Position) -> Result<(), String> {
+//!     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
 //!         Ok(self.legs.push(position.clone()))
 //!     }
 //!
-//!  fn get_positions(&self) -> Result<Vec<&Position>, String> {
+//!  fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
 //!         Ok(self.legs.iter().collect())
 //!     }
 //! }
@@ -147,24 +148,24 @@
 //!
 //! ```rust
 //! use tracing::info;
-//! use optionstratlib::model::types::{ExpirationDate, PZERO};
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::iron_condor::IronCondor;
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
-//! use optionstratlib::strategies::base::Strategies;
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
+//! use optionstratlib::strategies::Strategies;
 //!
 //! let condor = IronCondor::new(
 //!     "AAPL".to_string(),
-//!     pos!(150.0), // underlying_price
-//!     pos!(155.0), // short_call_strike
-//!     pos!(145.0), // short_put_strike  
-//!     pos!(160.0), // long_call_strike
-//!     pos!(140.0), // long_put_strike
+//!     f2p!(150.0), // underlying_price
+//!     f2p!(155.0), // short_call_strike
+//!     f2p!(145.0), // short_put_strike  
+//!     f2p!(160.0), // long_call_strike
+//!     f2p!(140.0), // long_put_strike
 //!     ExpirationDate::Days(30.0),
 //!     0.2,         // implied_volatility
 //!     0.01,        // risk_free_rate
 //!     0.02,        // dividend_yield
-//!     pos!(1.0),   // quantity
+//!     f2p!(1.0),   // quantity
 //!     1.5,         // premium_short_call
 //!     1.0,         // premium_short_put
 //!     2.0,         // premium_long_call
@@ -173,8 +174,8 @@
 //!     5.0,         // close_fee
 //! );
 //!
-//! let max_profit = condor.max_profit().unwrap_or(PZERO);
-//! let max_loss = condor.max_loss().unwrap_or(PZERO);
+//! let max_profit = condor.max_profit().unwrap_or(Positive::ZERO);
+//! let max_loss = condor.max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", max_profit, max_loss);
 //! ```
 //!
@@ -199,3 +200,21 @@ pub mod protective_put;
 pub mod straddle;
 pub mod strangle;
 pub mod utils;
+
+pub use base::Strategies;
+pub use bear_call_spread::BearCallSpread;
+pub use bear_put_spread::BearPutSpread;
+pub use bull_call_spread::BullCallSpread;
+pub use bull_put_spread::BullPutSpread;
+pub use butterfly_spread::{LongButterflySpread, ShortButterflySpread};
+pub use call_butterfly::CallButterfly;
+// pub use collar::Collar;
+// pub use covered_call::CoveredCall;
+pub use custom::CustomStrategy;
+pub use delta_neutral::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD};
+pub use iron_butterfly::IronButterfly;
+pub use iron_condor::IronCondor;
+pub use poor_mans_covered_call::PoorMansCoveredCall;
+pub use straddle::{LongStraddle, ShortStraddle};
+pub use strangle::{LongStrangle, ShortStrangle};
+pub use utils::FindOptimalSide;

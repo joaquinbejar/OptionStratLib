@@ -1,12 +1,12 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::types::ExpirationDate;
-use optionstratlib::model::types::PositiveF64;
-use optionstratlib::pos;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::strangle::LongStrangle;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::strategies::LongStrangle;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::ExpirationDate;
+use optionstratlib::{assert_decimal_eq, f2p};
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
@@ -14,18 +14,18 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the LongStrangle strategy
-    let underlying_price = pos!(7138.5);
+    let underlying_price = f2p!(7138.5);
 
     let strategy = LongStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        pos!(7450.0),     // call_strike
-        pos!(7050.0),     // put_strike
+        f2p!(7450.0),     // call_strike
+        f2p!(7050.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(1.0), // quantity
+        f2p!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.0,       // open_fee_short_call
@@ -35,13 +35,14 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     );
 
     let greeks = strategy.greeks();
+    let epsilon = dec!(0.001);
 
-    assert_relative_eq!(greeks.delta, -0.0018, epsilon = 0.001);
-    assert_relative_eq!(greeks.gamma, 0.0008, epsilon = 0.001);
-    assert_relative_eq!(greeks.theta, -2942.0709, epsilon = 0.001);
-    assert_relative_eq!(greeks.vega, 2501.9092, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho, -72.0661, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho_d, 1.6100, epsilon = 0.001);
+    assert_decimal_eq!(greeks.delta, dec!(-0.0018), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(0.0008), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-2942.0709), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(2501.9092), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(-72.0661), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(1.6100), epsilon);
 
     assert_relative_eq!(
         strategy.calculate_net_delta().net_delta,

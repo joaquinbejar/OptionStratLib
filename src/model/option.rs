@@ -1,18 +1,22 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
+use crate::error::decimal::DecimalError;
+use crate::error::greeks::GreeksError;
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::binomial_model::{
     generate_binomial_tree, price_binomial, BinomialPricingParams,
 };
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::payoff::{Payoff, PayoffInfo, Profit};
-use crate::pricing::telegraph::telegraph;
+use crate::pricing::telegraph;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
+use crate::{f2du, Positive};
 use chrono::{DateTime, Utc};
 use plotters::prelude::{ShapeStyle, BLACK};
+use rust_decimal::Decimal;
 use tracing::{debug, error, trace};
 
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -28,11 +32,11 @@ pub struct Options {
     pub option_type: OptionType,
     pub side: Side,
     pub underlying_symbol: String,
-    pub strike_price: PositiveF64,
+    pub strike_price: Positive,
     pub expiration_date: ExpirationDate,
     pub implied_volatility: f64,
-    pub quantity: PositiveF64,
-    pub underlying_price: PositiveF64,
+    pub quantity: Positive,
+    pub underlying_price: Positive,
     pub risk_free_rate: f64,
     pub option_style: OptionStyle,
     pub dividend_yield: f64,
@@ -45,11 +49,11 @@ impl Options {
         option_type: OptionType,
         side: Side,
         underlying_symbol: String,
-        strike_price: PositiveF64,
+        strike_price: Positive,
         expiration_date: ExpirationDate,
         implied_volatility: f64,
-        quantity: PositiveF64,
-        underlying_price: PositiveF64,
+        quantity: Positive,
+        underlying_price: Positive,
         risk_free_rate: f64,
         option_style: OptionStyle,
         dividend_yield: f64,
@@ -73,7 +77,10 @@ impl Options {
 
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.strike_price = option_data.strike_price;
-        self.implied_volatility = option_data.implied_volatility.unwrap_or(PZERO).value();
+        self.implied_volatility = option_data
+            .implied_volatility
+            .unwrap_or(Positive::ZERO)
+            .to_f64();
         trace!("Updated Option: {:#?}", self);
     }
 
@@ -89,38 +96,39 @@ impl Options {
         matches!(self.side, Side::Short)
     }
 
-    pub fn calculate_price_binomial(&self, no_steps: usize) -> f64 {
+    pub fn calculate_price_binomial(&self, no_steps: usize) -> Decimal {
         let expiry = self.time_to_expiration();
         price_binomial(BinomialPricingParams {
             asset: self.underlying_price,
-            volatility: self.implied_volatility,
-            int_rate: self.risk_free_rate,
+            volatility: f2du!(self.implied_volatility).unwrap(),
+            int_rate: f2du!(self.risk_free_rate).unwrap(),
             strike: self.strike_price,
-            expiry,
+            expiry: f2du!(expiry).unwrap(),
             no_steps,
             option_type: &self.option_type,
             option_style: &self.option_style,
             side: &self.side,
         })
+        .unwrap()
     }
 
     pub fn calculate_price_binomial_tree(
         &self,
         no_steps: usize,
-    ) -> (f64, Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    ) -> (Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>) {
         let expiry = self.time_to_expiration();
         let params = BinomialPricingParams {
             asset: self.underlying_price,
-            volatility: self.implied_volatility,
-            int_rate: self.risk_free_rate,
+            volatility: f2du!(self.implied_volatility).unwrap(),
+            int_rate: f2du!(self.risk_free_rate).unwrap(),
             strike: self.strike_price,
-            expiry,
+            expiry: f2du!(expiry).unwrap(),
             no_steps,
             option_type: &self.option_type,
             option_style: &self.option_style,
             side: &self.side,
         };
-        let (asset_tree, option_tree) = generate_binomial_tree(&params);
+        let (asset_tree, option_tree) = generate_binomial_tree(&params).unwrap();
         let price = match self.side {
             Side::Long => option_tree[0][0],
             Side::Short => -option_tree[0][0],
@@ -132,7 +140,7 @@ impl Options {
         black_scholes(self)
     }
 
-    pub fn calculate_price_telegraph(&self, no_steps: usize) -> f64 {
+    pub fn calculate_price_telegraph(&self, no_steps: usize) -> Result<Decimal, DecimalError> {
         telegraph(self, no_steps, None, None)
     }
 
@@ -146,10 +154,10 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        self.option_type.payoff(&payoff_info) * self.quantity
+        self.option_type.payoff(&payoff_info) * self.quantity.to_f64()
     }
 
-    pub fn payoff_at_price(&self, price: PositiveF64) -> f64 {
+    pub fn payoff_at_price(&self, price: Positive) -> f64 {
         let payoff_info = PayoffInfo {
             spot: price,
             strike: self.strike_price,
@@ -159,10 +167,10 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        self.option_type.payoff(&payoff_info) * self.quantity
+        self.option_type.payoff(&payoff_info) * self.quantity.to_f64()
     }
 
-    pub fn intrinsic_value(&self, underlying_price: PositiveF64) -> f64 {
+    pub fn intrinsic_value(&self, underlying_price: Positive) -> f64 {
         let payoff_info = PayoffInfo {
             spot: underlying_price,
             strike: self.strike_price,
@@ -172,30 +180,30 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        self.option_type.payoff(&payoff_info) * self.quantity
+        self.option_type.payoff(&payoff_info) * self.quantity.to_f64()
     }
 
-    pub fn delta(&self) -> f64 {
+    pub fn delta(&self) -> Result<Decimal, GreeksError> {
         delta(self)
     }
 
-    pub fn gamma(&self) -> f64 {
+    pub fn gamma(&self) -> Result<Decimal, GreeksError> {
         gamma(self)
     }
 
-    pub fn theta(&self) -> f64 {
+    pub fn theta(&self) -> Result<Decimal, GreeksError> {
         theta(self)
     }
 
-    pub fn vega(&self) -> f64 {
+    pub fn vega(&self) -> Result<Decimal, GreeksError> {
         vega(self)
     }
 
-    pub fn rho(&self) -> f64 {
+    pub fn rho(&self) -> Result<Decimal, GreeksError> {
         rho(self)
     }
 
-    pub fn rho_d(&self) -> f64 {
+    pub fn rho_d(&self) -> Result<Decimal, GreeksError> {
         rho_d(self)
     }
 
@@ -218,7 +226,7 @@ impl Options {
             error!("Underlying symbol is empty");
             return false;
         }
-        if self.strike_price <= PZERO {
+        if self.strike_price <= Positive::ZERO {
             debug!("Strike price is less than or equal to zero");
             return false;
         }
@@ -230,7 +238,7 @@ impl Options {
             error!("Quantity is equal to zero");
             return false;
         }
-        if self.underlying_price <= PZERO {
+        if self.underlying_price <= Positive::ZERO {
             error!("Underlying price is less than or equal to zero");
             return false;
         }
@@ -252,11 +260,11 @@ impl Default for Options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "".to_string(),
-            strike_price: PZERO,
+            strike_price: Positive::ZERO,
             expiration_date: ExpirationDate::Days(0.0),
             implied_volatility: ZERO,
-            quantity: PZERO,
-            underlying_price: PZERO,
+            quantity: Positive::ZERO,
+            underlying_price: Positive::ZERO,
             risk_free_rate: ZERO,
             option_style: OptionStyle::Call,
             dividend_yield: ZERO,
@@ -268,28 +276,28 @@ impl Default for Options {
 impl Greeks for Options {
     fn greeks(&self) -> Greek {
         Greek {
-            delta: self.delta(),
-            gamma: self.gamma(),
-            theta: self.theta(),
-            vega: self.vega(),
-            rho: self.rho(),
-            rho_d: self.rho_d(),
+            delta: self.delta().unwrap(),
+            gamma: self.gamma().unwrap(),
+            theta: self.theta().unwrap(),
+            vega: self.vega().unwrap(),
+            rho: self.rho().unwrap(),
+            rho_d: self.rho_d().unwrap(),
         }
     }
 }
 
 impl PnLCalculator for Options {
-    fn calculate_pnl(&self, _date_time: DateTime<Utc>, _market_price: PositiveF64) -> PnL {
+    fn calculate_pnl(&self, _date_time: DateTime<Utc>, _market_price: Positive) -> PnL {
         todo!()
     }
 
-    fn calculate_pnl_at_expiration(&self, _underlying_price: Option<PositiveF64>) -> PnL {
+    fn calculate_pnl_at_expiration(&self, _underlying_price: Option<Positive>) -> PnL {
         todo!()
     }
 }
 
 impl Profit for Options {
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> f64 {
         self.payoff_at_price(price)
     }
 }
@@ -306,7 +314,7 @@ impl Graph for Options {
         )
     }
 
-    fn get_values(&self, data: &[PositiveF64]) -> Vec<f64> {
+    fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
             .map(|&price| self.intrinsic_value(price))
             .collect()
@@ -314,7 +322,7 @@ impl Graph for Options {
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.strike_price.value(),
+            x_coordinate: self.strike_price.to_f64(),
             y_range: (-50000.0, 50000.0),
             label: "Strike".to_string(),
             label_offset: (5.0, 5.0),
@@ -331,9 +339,8 @@ impl Graph for Options {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::model::types::SIZE_ONE;
+    use crate::f2p;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
     use chrono::{Duration, Utc};
 
     #[test]
@@ -354,11 +361,11 @@ mod tests_options {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::DateTime(future_date),
             0.2,
-            SIZE_ONE,
-            pos!(105.0),
+            Positive::ONE,
+            f2p!(105.0),
             0.05,
             OptionStyle::Call,
             0.01,
@@ -378,11 +385,11 @@ mod tests_options {
             OptionType::European,
             Side::Short,
             "AAPL".to_string(),
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
             0.2,
-            SIZE_ONE,
-            pos!(105.0),
+            Positive::ONE,
+            f2p!(105.0),
             0.05,
             OptionStyle::Call,
             0.01,
@@ -396,14 +403,14 @@ mod tests_options {
     fn test_calculate_price_binomial() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let price = option.calculate_price_binomial(100);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
     }
 
     #[test]
     fn test_calculate_price_binomial_tree() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
     }
@@ -412,7 +419,7 @@ mod tests_options {
     fn test_calculate_price_binomial_tree_short() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5);
-        assert!(price > ZERO);
+        assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
     }
@@ -434,11 +441,11 @@ mod tests_options {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
             0.2,
-            SIZE_ONE,
-            pos!(95.0),
+            Positive::ONE,
+            f2p!(95.0),
             0.05,
             OptionStyle::Put,
             0.01,
@@ -454,11 +461,11 @@ mod tests_options {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
             0.2,
-            SIZE_ONE,
-            pos!(105.0),
+            Positive::ONE,
+            f2p!(105.0),
             0.05,
             OptionStyle::Call,
             ZERO,
@@ -474,19 +481,18 @@ mod tests_options {
 #[cfg(test)]
 mod tests_valid_option {
     use super::*;
-    use crate::model::types::SIZE_ONE;
-    use crate::pos;
+    use crate::f2p;
 
     fn create_valid_option() -> Options {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
-            strike_price: pos!(100.0),
+            strike_price: f2p!(100.0),
             expiration_date: ExpirationDate::Days(30.0),
             implied_volatility: 0.2,
-            quantity: SIZE_ONE,
-            underlying_price: pos!(105.0),
+            quantity: Positive::ONE,
+            underlying_price: f2p!(105.0),
             risk_free_rate: 0.05,
             option_style: OptionStyle::Call,
             dividend_yield: 0.01,
@@ -510,29 +516,8 @@ mod tests_valid_option {
     #[test]
     fn test_zero_strike_price() {
         let mut option = create_valid_option();
-        option.strike_price = PZERO;
+        option.strike_price = Positive::ZERO;
         assert!(!option.validate());
-    }
-
-    #[test]
-    fn test_negative_strike_price() {
-        let mut option = create_valid_option();
-
-        // Isolate the potential panic-inducing operation outside the closure
-        let result = std::panic::catch_unwind(|| {
-            // We are only testing the invalid value creation here, not the assignment
-            pos!(-10.0);
-        });
-
-        assert!(
-            result.is_err(),
-            "PositiveF64 value must be positive, got -10"
-        );
-
-        // Proceed with assignment after the panic check
-        if result.is_ok() {
-            option.strike_price = pos!(-10.0); // This line won't run due to expected panic
-        }
     }
 
     #[test]
@@ -545,36 +530,15 @@ mod tests_valid_option {
     #[test]
     fn test_zero_quantity() {
         let mut option = create_valid_option();
-        option.quantity = PZERO;
+        option.quantity = Positive::ZERO;
         assert!(!option.validate());
     }
 
     #[test]
     fn test_zero_underlying_price() {
         let mut option = create_valid_option();
-        option.underlying_price = PZERO;
+        option.underlying_price = Positive::ZERO;
         assert!(!option.validate());
-    }
-
-    #[test]
-    fn test_negative_underlying_price() {
-        let mut option = create_valid_option();
-
-        // Isolate the potential panic-inducing operation outside the closure
-        let result = std::panic::catch_unwind(|| {
-            // We are only testing the invalid value creation here, not the assignment
-            pos!(-10.0);
-        });
-
-        assert!(
-            result.is_err(),
-            "PositiveF64 value must be positive, got -10"
-        );
-
-        // Proceed with assignment after the panic check
-        if result.is_ok() {
-            option.underlying_price = pos!(-10.0); // This line won't run due to expected panic
-        }
     }
 
     #[test]
@@ -595,16 +559,17 @@ mod tests_valid_option {
 #[cfg(test)]
 mod tests_time_value {
     use super::*;
+    use crate::f2p;
     use crate::model::utils::create_sample_option_simplest_strike;
-    use crate::pos;
     use crate::utils::logger::setup_logger;
+    use approx::assert_relative_eq;
     use tracing::debug;
 
     #[test]
     fn test_calculate_time_value_long_call() {
         setup_logger();
         let option =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, f2p!(105.0));
         let time_value = option.time_value();
         assert!(time_value > ZERO);
         assert!(time_value <= option.calculate_price_black_scholes());
@@ -613,7 +578,7 @@ mod tests_time_value {
     #[test]
     fn test_calculate_time_value_short_call() {
         let option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, f2p!(105.0));
         let time_value = option.time_value();
         assert!(time_value > ZERO);
         assert!(time_value <= option.calculate_price_black_scholes().abs());
@@ -622,7 +587,7 @@ mod tests_time_value {
     #[test]
     fn test_calculate_time_value_long_put() {
         setup_logger();
-        let option = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
+        let option = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, f2p!(95.0));
         let time_value = option.time_value();
         assert!(time_value > ZERO);
         assert!(time_value <= option.calculate_price_black_scholes());
@@ -631,7 +596,7 @@ mod tests_time_value {
     #[test]
     fn test_calculate_time_value_short_put() {
         let option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, f2p!(95.0));
         let time_value = option.time_value();
         assert!(time_value > ZERO);
         assert!(time_value <= option.calculate_price_black_scholes().abs());
@@ -639,8 +604,8 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_at_the_money() {
-        let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(100.0));
-        let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(100.0));
+        let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, f2p!(100.0));
+        let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, f2p!(100.0));
 
         let call_time_value = call.time_value();
         let put_time_value = put.time_value();
@@ -654,14 +619,22 @@ mod tests_time_value {
     #[test]
     fn test_calculate_time_value_deep_in_the_money() {
         setup_logger();
-        let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(150.0));
-        let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(50.0));
+        let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, f2p!(150.0));
+        let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, f2p!(50.0));
 
         let call_time_value = call.time_value();
         let put_time_value = put.time_value();
 
-        assert!(call_time_value > ZERO);
-        assert!(put_time_value > ZERO);
+        assert_relative_eq!(
+            call_time_value,
+            call.calculate_price_black_scholes(),
+            epsilon = 0.01
+        );
+        assert_relative_eq!(
+            put_time_value,
+            put.calculate_price_black_scholes(),
+            epsilon = 0.01
+        );
         debug!("Call time value: {}", call_time_value);
         debug!("Call BS price: {}", call.calculate_price_black_scholes());
         debug!("Put time value: {}", put_time_value);
@@ -674,20 +647,20 @@ mod tests_time_value {
 #[cfg(test)]
 mod tests_options_payoffs {
     use super::*;
+    use crate::f2p;
     use crate::model::utils::create_sample_option_simplest_strike;
-    use crate::pos;
     use crate::utils::logger::setup_logger;
 
     #[test]
     fn test_payoff_european_call_long() {
         setup_logger();
         let call_option =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, f2p!(95.0));
         let call_payoff = call_option.payoff();
         assert_eq!(call_payoff, 5.0); // max(100 - 95, 0) = 5
 
         let call_option_otm =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, f2p!(105.0));
         let call_payoff_otm = call_option_otm.payoff();
         assert_eq!(call_payoff_otm, ZERO); // max(100 - 105, 0) = 0
     }
@@ -696,12 +669,12 @@ mod tests_options_payoffs {
     fn test_payoff_european_call_short() {
         setup_logger();
         let call_option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, f2p!(95.0));
         let call_payoff = call_option.payoff();
         assert_eq!(call_payoff, -5.0); // -max(100 - 95, 0) = -5
 
         let call_option_otm =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, f2p!(105.0));
         let call_payoff_otm = call_option_otm.payoff();
         assert_eq!(call_payoff_otm, ZERO); // -max(95 - 100, 0) = 0
     }
@@ -709,12 +682,12 @@ mod tests_options_payoffs {
     #[test]
     fn test_payoff_european_put_long() {
         let put_option =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, f2p!(105.0));
         let put_payoff = put_option.payoff();
         assert_eq!(put_payoff, 5.0); // max(105 - 100, 0) = 5
 
         let put_option_otm =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, f2p!(95.0));
         let put_payoff_otm = put_option_otm.payoff();
         assert_eq!(put_payoff_otm, ZERO); // max(95 - 100, 0) = 0
     }
@@ -722,12 +695,12 @@ mod tests_options_payoffs {
     #[test]
     fn test_payoff_european_put_short() {
         let put_option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(105.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, f2p!(105.0));
         let put_payoff = put_option.payoff();
         assert_eq!(put_payoff, -5.0); // -max(105 - 100, 0) = -5
 
         let put_option_otm =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, f2p!(95.0));
         let put_payoff_otm = put_option_otm.payoff();
         assert_eq!(put_payoff_otm, ZERO); // -max(95 - 100, 0) = 0
     }
@@ -736,50 +709,50 @@ mod tests_options_payoffs {
 #[cfg(test)]
 mod tests_options_payoff_at_price {
     use super::*;
+    use crate::f2p;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
 
     #[test]
     fn test_payoff_european_call_long() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let call_payoff = call_option.payoff_at_price(pos!(105.0));
+        let call_payoff = call_option.payoff_at_price(f2p!(105.0));
         assert_eq!(call_payoff, 5.0); // max(105 - 100, 0) = 5
 
         let call_option_otm = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let call_payoff_otm = call_option_otm.payoff_at_price(pos!(95.0));
+        let call_payoff_otm = call_option_otm.payoff_at_price(f2p!(95.0));
         assert_eq!(call_payoff_otm, ZERO); // max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_call_short() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let call_payoff = call_option.payoff_at_price(pos!(105.0));
+        let call_payoff = call_option.payoff_at_price(f2p!(105.0));
         assert_eq!(call_payoff, -5.0); // -max(105 - 100, 0) = -5
 
         let call_option_otm = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let call_payoff_otm = call_option_otm.payoff_at_price(pos!(95.0));
+        let call_payoff_otm = call_option_otm.payoff_at_price(f2p!(95.0));
         assert_eq!(call_payoff_otm, ZERO); // -max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_long() {
         let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let put_payoff = put_option.payoff_at_price(pos!(95.0));
+        let put_payoff = put_option.payoff_at_price(f2p!(95.0));
         assert_eq!(put_payoff, 5.0); // max(100 - 95, 0) = 5
 
         let put_option_otm = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let put_payoff_otm = put_option_otm.payoff_at_price(pos!(105.0));
+        let put_payoff_otm = put_option_otm.payoff_at_price(f2p!(105.0));
         assert_eq!(put_payoff_otm, ZERO); // max(100 - 105, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_short() {
         let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Short);
-        let put_payoff = put_option.payoff_at_price(pos!(95.0));
+        let put_payoff = put_option.payoff_at_price(f2p!(95.0));
         assert_eq!(put_payoff, -5.0); // -max(100 - 95, 0) = -5
 
         let put_option_otm = create_sample_option_simplest(OptionStyle::Put, Side::Short);
-        let put_payoff_otm = put_option_otm.payoff_at_price(pos!(105.0));
+        let put_payoff_otm = put_option_otm.payoff_at_price(f2p!(105.0));
         assert_eq!(put_payoff_otm, ZERO); // -max(100 - 105, 0) = 0
     }
 }
@@ -787,18 +760,17 @@ mod tests_options_payoff_at_price {
 #[cfg(test)]
 mod tests_options_payoffs_with_quantity {
     use super::*;
-    use crate::model::types::PositiveF64;
+    use crate::f2p;
     use crate::model::utils::create_sample_option;
-    use crate::pos;
 
     #[test]
     fn test_payoff_call_long() {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(105.0),
-            pos!(10.0),
-            pos!(100.0),
+            f2p!(105.0),
+            f2p!(10.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option.payoff(), 50.0);
@@ -806,9 +778,9 @@ mod tests_options_payoffs_with_quantity {
         let option_otm = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(95.0),
-            pos!(4.0),
-            pos!(100.0),
+            f2p!(95.0),
+            f2p!(4.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option_otm.payoff(), ZERO);
@@ -819,9 +791,9 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(105.0),
-            pos!(3.0),
-            pos!(100.0),
+            f2p!(105.0),
+            f2p!(3.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option.payoff(), -15.0);
@@ -829,9 +801,9 @@ mod tests_options_payoffs_with_quantity {
         let option_otm = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(95.0),
-            pos!(7.0),
-            pos!(100.0),
+            f2p!(95.0),
+            f2p!(7.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option_otm.payoff(), ZERO);
@@ -842,9 +814,9 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(95.0),
-            pos!(2.0),
-            pos!(100.0),
+            f2p!(95.0),
+            f2p!(2.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option.payoff(), 10.0);
@@ -852,9 +824,9 @@ mod tests_options_payoffs_with_quantity {
         let option_otm = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(105.0),
-            pos!(7.0),
-            pos!(100.0),
+            f2p!(105.0),
+            f2p!(7.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option_otm.payoff(), ZERO);
@@ -865,9 +837,9 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(95.0),
-            pos!(3.0),
-            pos!(100.0),
+            f2p!(95.0),
+            f2p!(3.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option.payoff(), -15.0);
@@ -875,9 +847,9 @@ mod tests_options_payoffs_with_quantity {
         let option_otm = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(105.0),
-            pos!(3.0),
-            pos!(100.0),
+            f2p!(105.0),
+            f2p!(3.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option_otm.payoff(), ZERO);
@@ -888,9 +860,9 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(110.0),
-            pos!(3.0),
-            pos!(100.0),
+            f2p!(110.0),
+            f2p!(3.0),
+            f2p!(100.0),
             0.02,
         );
         assert_eq!(option.payoff(), 30.0); // (110 - 100) * 3
@@ -901,13 +873,13 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(11.0),
-            pos!(100.0),
+            f2p!(100.0),
+            f2p!(11.0),
+            f2p!(100.0),
             0.02,
         );
-        assert_eq!(option.intrinsic_value(pos!(105.0)), 55.0);
-        assert_eq!(option.intrinsic_value(pos!(95.0)), ZERO);
+        assert_eq!(option.intrinsic_value(f2p!(105.0)), 55.0);
+        assert_eq!(option.intrinsic_value(f2p!(95.0)), ZERO);
     }
 
     #[test]
@@ -915,13 +887,13 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(100.0),
-            pos!(13.0),
-            pos!(100.0),
+            f2p!(100.0),
+            f2p!(13.0),
+            f2p!(100.0),
             0.02,
         );
-        assert_eq!(option.intrinsic_value(pos!(105.0)), -65.0);
-        assert_eq!(option.intrinsic_value(pos!(95.0)), ZERO);
+        assert_eq!(option.intrinsic_value(f2p!(105.0)), -65.0);
+        assert_eq!(option.intrinsic_value(f2p!(95.0)), ZERO);
     }
 
     #[test]
@@ -929,13 +901,13 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(17.0),
-            pos!(100.0),
+            f2p!(100.0),
+            f2p!(17.0),
+            f2p!(100.0),
             0.02,
         );
-        assert_eq!(option.intrinsic_value(pos!(95.0)), 85.0);
-        assert_eq!(option.intrinsic_value(pos!(105.0)), ZERO);
+        assert_eq!(option.intrinsic_value(f2p!(95.0)), 85.0);
+        assert_eq!(option.intrinsic_value(f2p!(105.0)), ZERO);
     }
 
     #[test]
@@ -943,13 +915,13 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(100.0),
-            pos!(19.0),
-            pos!(100.0),
+            f2p!(100.0),
+            f2p!(19.0),
+            f2p!(100.0),
             0.02,
         );
-        assert_eq!(option.intrinsic_value(pos!(95.0)), -95.0);
-        assert_eq!(option.intrinsic_value(pos!(105.0)), ZERO);
+        assert_eq!(option.intrinsic_value(f2p!(95.0)), -95.0);
+        assert_eq!(option.intrinsic_value(f2p!(105.0)), ZERO);
     }
 
     #[test]
@@ -957,32 +929,32 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(23.0),
-            pos!(100.0),
+            f2p!(100.0),
+            f2p!(23.0),
+            f2p!(100.0),
             0.02,
         );
-        assert_eq!(option.intrinsic_value(pos!(110.0)), 230.0); // (110 - 100) * 23
+        assert_eq!(option.intrinsic_value(f2p!(110.0)), 230.0); // (110 - 100) * 23
     }
 }
 
 #[cfg(test)]
 mod tests_in_the_money {
     use super::*;
+    use crate::f2p;
     use crate::model::utils::create_sample_option;
-    use crate::pos;
 
     #[test]
     fn test_call_in_the_money() {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(110.0),
-            pos!(1.0),
-            pos!(110.0),
+            f2p!(110.0),
+            f2p!(1.0),
+            f2p!(110.0),
             0.02,
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = f2p!(100.0);
         assert!(option.is_in_the_money());
     }
 
@@ -991,12 +963,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(110.0),
+            f2p!(100.0),
+            f2p!(1.0),
+            f2p!(110.0),
             0.02,
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = f2p!(100.0);
         assert!(option.is_in_the_money());
     }
 
@@ -1005,12 +977,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(110.0),
+            f2p!(90.0),
+            f2p!(1.0),
+            f2p!(110.0),
             0.02,
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = f2p!(100.0);
         assert!(!option.is_in_the_money());
     }
 
@@ -1019,12 +991,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(110.0),
+            f2p!(90.0),
+            f2p!(1.0),
+            f2p!(110.0),
             0.02,
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = f2p!(100.0);
         assert!(option.is_in_the_money());
     }
 
@@ -1033,12 +1005,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(110.0),
+            f2p!(100.0),
+            f2p!(1.0),
+            f2p!(110.0),
             0.02,
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = f2p!(100.0);
         assert!(option.is_in_the_money());
     }
 
@@ -1047,12 +1019,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(110.0),
-            pos!(1.0),
-            pos!(110.0),
+            f2p!(110.0),
+            f2p!(1.0),
+            f2p!(110.0),
             0.02,
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = f2p!(100.0);
         assert!(!option.is_in_the_money());
     }
 }
@@ -1061,123 +1033,112 @@ mod tests_in_the_money {
 mod tests_greeks {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
-    use approx::assert_relative_eq;
+    use crate::{assert_decimal_eq, f2p};
+    use rust_decimal_macros::dec;
+
+    const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
     fn test_delta() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = delta(&option);
-        assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
+        let delta = create_sample_option_simplest(OptionStyle::Call, Side::Long)
+            .delta()
+            .unwrap();
+        assert_decimal_eq!(delta, dec!(0.539519922), EPSILON);
     }
 
     #[test]
     fn test_delta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
-        let expected = delta(&option);
-        assert_relative_eq!(option.delta(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.delta(), 0.5395199 * 2.0, epsilon = 1e-6);
+        option.quantity = f2p!(2.0);
+        assert_decimal_eq!(option.delta().unwrap(), dec!(1.0790398), EPSILON);
     }
 
     #[test]
     fn test_gamma() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = gamma(&option);
-        assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.gamma().unwrap(), dec!(0.0691707), EPSILON);
     }
 
     #[test]
     fn test_gamma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
-        let expected = gamma(&option);
-        assert_relative_eq!(option.gamma(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.gamma(), 0.1383415, epsilon = 1e-6);
+        option.quantity = f2p!(2.0);
+        assert_decimal_eq!(option.gamma().unwrap(), dec!(0.1383415), EPSILON);
     }
 
     #[test]
     fn test_theta() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = theta(&option);
-        assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.theta().unwrap(), dec!(-15.8697818), EPSILON);
     }
 
     #[test]
     fn test_theta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
-        let expected = theta(&option);
-        assert_relative_eq!(option.theta(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.theta(), -31.739563, epsilon = 1e-6);
+        option.quantity = f2p!(2.0);
+        assert_decimal_eq!(option.theta().unwrap(), dec!(-31.739563), EPSILON);
     }
 
     #[test]
     fn test_vega() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = vega(&option);
-        assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.vega().unwrap(), dec!(15.4675554), EPSILON);
     }
 
     #[test]
     fn test_vega_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
-        let expected = vega(&option);
-        assert_relative_eq!(option.vega(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.vega(), 30.9351108, epsilon = 1e-6);
+        option.quantity = f2p!(2.0);
+        assert_decimal_eq!(option.vega().unwrap(), dec!(30.9351108), EPSILON);
     }
 
     #[test]
     fn test_rho() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = rho(&option);
-        assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.rho().unwrap(), dec!(4.23312145), EPSILON);
     }
 
     #[test]
     fn test_rho_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
-        let expected = rho(&option);
-        assert_relative_eq!(option.rho(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.rho(), 8.46624291, epsilon = 1e-6);
+        option.quantity = f2p!(2.0);
+        assert_decimal_eq!(option.rho().unwrap(), dec!(8.46624291), EPSILON);
     }
 
     #[test]
     fn test_rho_d() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected = rho_d(&option);
-        assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
+        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-4.43441032), EPSILON);
     }
 
     #[test]
     fn test_rho_d_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
-        let expected = rho_d(&option);
-        assert_relative_eq!(option.rho_d(), expected, epsilon = 1e-6);
-        assert_relative_eq!(option.rho_d(), -8.86882064, epsilon = 1e-6);
+        option.quantity = f2p!(2.0);
+        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-8.86882064), EPSILON);
     }
 }
 
 #[cfg(test)]
 mod tests_greek_trait {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_option_simplest;
-    use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
+
+    const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
     fn test_greeks_implementation() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let greeks = option.greeks();
 
-        assert_relative_eq!(greeks.delta, option.delta(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.gamma, option.gamma(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.theta, option.theta(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.vega, option.vega(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.rho, option.rho(), epsilon = 1e-6);
-        assert_relative_eq!(greeks.rho_d, option.rho_d(), epsilon = 1e-6);
+        assert_decimal_eq!(greeks.delta, option.delta().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.gamma, option.gamma().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.theta, option.theta().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.vega, option.vega().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.rho, option.rho().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.rho_d, option.rho_d().unwrap(), EPSILON);
     }
 
     #[test]
@@ -1186,11 +1147,14 @@ mod tests_greek_trait {
         let greeks = option.greeks();
 
         assert!(
-            greeks.delta >= -1.0 && greeks.delta <= 1.0,
+            greeks.delta >= Decimal::NEGATIVE_ONE && greeks.delta <= Decimal::ONE,
             "Delta should be between -1 and 1"
         );
-        assert!(greeks.gamma >= 0.0, "Gamma should be non-negative");
-        assert!(greeks.vega >= 0.0, "Vega should be non-negative");
+        assert!(
+            greeks.gamma >= Decimal::ZERO,
+            "Gamma should be non-negative"
+        );
+        assert!(greeks.vega >= Decimal::ZERO, "Vega should be non-negative");
     }
 
     #[test]
@@ -1202,18 +1166,18 @@ mod tests_greek_trait {
         let call_greeks = call_option.greeks();
         let put_greeks = put_option.greeks();
 
-        // assert_relative_eq!(call_greeks.delta + put_greeks.delta, 0.0, epsilon = 1e-6); // TODO: Fix this
-        assert_relative_eq!(call_greeks.gamma, put_greeks.gamma, epsilon = 1e-6);
-        assert_relative_eq!(call_greeks.vega, put_greeks.vega, epsilon = 1e-6);
-        // assert_relative_eq!(call_greeks.rho, put_greeks.rho, epsilon = 1e-6); // TODO: Fix this
+        // assert_decimal_eq!(call_greeks.delta + put_greeks.delta, Decimal::ZERO, EPSILON); // TODO: Fix this
+        assert_decimal_eq!(call_greeks.gamma, put_greeks.gamma, EPSILON);
+        assert_decimal_eq!(call_greeks.vega, put_greeks.vega, EPSILON);
+        // assert_decimal_eq!(call_greeks.rho, put_greeks.rho, EPSILON); // TODO: Fix this
     }
 }
 
 #[cfg(test)]
 mod tests_graph {
     use super::*;
+    use crate::f2p;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
     use crate::visualization::utils::Graph;
     use approx::assert_relative_eq;
 
@@ -1227,7 +1191,7 @@ mod tests_graph {
     #[test]
     fn test_get_values() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
+        let prices = vec![f2p!(90.0), f2p!(100.0), f2p!(110.0)];
         let values = option.get_values(&prices);
 
         assert_eq!(values.len(), 3);
@@ -1256,7 +1220,7 @@ mod tests_graph {
     #[test]
     fn test_get_values_put_option() {
         let option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
+        let prices = vec![f2p!(90.0), f2p!(100.0), f2p!(110.0)];
         let values = option.get_values(&prices);
 
         assert_eq!(values.len(), 3);
@@ -1268,7 +1232,7 @@ mod tests_graph {
     #[test]
     fn test_get_values_short_option() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
+        let prices = vec![f2p!(90.0), f2p!(100.0), f2p!(110.0)];
         let values = option.get_values(&prices);
 
         assert_eq!(values.len(), 3);

@@ -15,13 +15,14 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::error::position::PositionError;
+use crate::error::probability::ProbabilityError;
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::model::option::Options;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
-use crate::pos;
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -31,10 +32,13 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::Options;
+use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
+use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
-use std::f64;
+use rust_decimal::Decimal;
 use tracing::{info, trace};
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
@@ -64,7 +68,7 @@ pub struct ShortStraddle {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<PositiveF64>,
+    pub break_even_points: Vec<Positive>,
     short_call: Position,
     short_put: Position,
 }
@@ -73,13 +77,13 @@ impl ShortStraddle {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: PositiveF64,
-        mut strike: PositiveF64,
+        underlying_price: Positive,
+        mut strike: Positive,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: PositiveF64,
+        quantity: Positive,
         premium_short_call: f64,
         premium_short_put: f64,
         open_fee_short_call: f64,
@@ -87,7 +91,7 @@ impl ShortStraddle {
         open_fee_short_put: f64,
         close_fee_short_put: f64,
     ) -> Self {
-        if strike == PZERO {
+        if strike == Positive::ZERO {
             strike = underlying_price;
         }
 
@@ -151,12 +155,12 @@ impl ShortStraddle {
             .expect("Invalid short put");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
-        strategy
-            .break_even_points
-            .push(strike - strategy.net_premium_received() / net_quantity);
-        strategy
-            .break_even_points
-            .push(strike + strategy.net_premium_received() / net_quantity);
+        strategy.break_even_points.push(
+            strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+        );
+        strategy.break_even_points.push(
+            strike + strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+        );
 
         strategy.break_even_points.sort();
         strategy
@@ -164,7 +168,7 @@ impl ShortStraddle {
 }
 
 impl Positionable for ShortStraddle {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.option_style {
             OptionStyle::Call => {
                 self.short_call = position.clone();
@@ -177,59 +181,65 @@ impl Positionable for ShortStraddle {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.short_call, &self.short_put])
     }
 }
 
 impl Strategies for ShortStraddle {
-    fn get_underlying_price(&self) -> PositiveF64 {
+    fn get_underlying_price(&self) -> Positive {
         self.short_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
-        let max_profit = self.net_premium_received();
+    fn max_profit(&self) -> Result<Positive, StrategyError> {
+        let max_profit = self.net_premium_received()?.to_f64().unwrap();
         if max_profit < ZERO {
-            Err("Max Profit is negative")
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Max profit is negative".to_string(),
+                },
+            ))
         } else {
             Ok(max_profit.into())
         }
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
-        Ok(f64::INFINITY.into())
+    fn max_loss(&self) -> Result<Positive, StrategyError> {
+        Ok(Positive::INFINITY)
     }
 
-    fn total_cost(&self) -> PositiveF64 {
-        pos!(self.short_call.net_cost() + self.short_put.net_cost())
+    fn total_cost(&self) -> Positive {
+        f2p!(self.short_call.net_cost() + self.short_put.net_cost())
     }
 
-    fn net_premium_received(&self) -> f64 {
-        self.short_call.net_premium_received() + self.short_put.net_premium_received()
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call.net_premium_received() + self.short_put.net_premium_received();
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> f64 {
-        self.short_call.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.short_call.open_fee
             + self.short_call.close_fee
             + self.short_put.open_fee
-            + self.short_put.close_fee
+            + self.short_put.close_fee;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
-        let cat = (strike_diff / 2.0_f64.sqrt()).value();
-        (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()))
+        let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
+        let result = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        self.max_profit().unwrap_or(PZERO).value() / break_even_diff * 100.0
+        let result = self.max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn get_break_even_points(&self) -> Vec<PositiveF64> {
-        let mut break_even_points = self.break_even_points.clone();
-        break_even_points.sort();
-        break_even_points
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -256,7 +266,8 @@ impl Optimizable for ShortStraddle {
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |both| both.is_valid_optimal_side(underlying_price, &side))
             .filter(|both| {
-                both.call_ask.unwrap_or(PZERO) > PZERO && both.call_bid.unwrap_or(PZERO) > PZERO
+                both.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && both.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |both| {
@@ -277,7 +288,7 @@ impl Optimizable for ShortStraddle {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -295,8 +306,8 @@ impl Optimizable for ShortStraddle {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -321,12 +332,12 @@ impl Optimizable for ShortStraddle {
             chain.underlying_price,
             call.strike_price,
             self.short_call.option.expiration_date.clone(),
-            call.implied_volatility.unwrap().value() / 100.0,
+            call.implied_volatility.unwrap().to_f64() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            call.call_bid.unwrap().value(),
-            put.put_bid.unwrap().value(),
+            call.call_bid.unwrap().to_f64(),
+            put.put_bid.unwrap().to_f64(),
             self.short_call.open_fee,
             self.short_call.close_fee,
             self.short_put.open_fee,
@@ -336,7 +347,7 @@ impl Optimizable for ShortStraddle {
 }
 
 impl Profit for ShortStraddle {
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> f64 {
         let price = Some(price);
         trace!(
             "Price: {:?} Strike: {} Call: {:.2} Strike: {} Put: {:.2} Profit: {:.2}",
@@ -371,7 +382,7 @@ impl Graph for ShortStraddle {
         let min_value = f64::NEG_INFINITY;
 
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.value(),
+            x_coordinate: self.short_call.option.underlying_price.to_f64(),
             y_range: (min_value, max_value),
             label: format!(
                 "Current Price: {:.2}",
@@ -389,10 +400,10 @@ impl Graph for ShortStraddle {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.max_profit().unwrap_or(PZERO);
+        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(0.0, -10.0),
             point_color: DARK_BLUE,
@@ -402,7 +413,7 @@ impl Graph for ShortStraddle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].value(), 0.0),
+            coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
             label_offset: LabelOffsetType::Relative(-230.0, -10.0),
             point_color: DARK_BLUE,
@@ -412,13 +423,13 @@ impl Graph for ShortStraddle {
         });
 
         let coordinates: (f64, f64) = (
-            -self.short_put.option.strike_price.value() / 30.0,
-            max_profit.value() / 15.0,
+            -self.short_put.option.strike_price.to_f64() / 30.0,
+            max_profit.to_f64() / 15.0,
         );
         points.push(ChartPoint {
             coordinates: (
-                self.short_put.option.strike_price.value(),
-                max_profit.value(),
+                self.short_put.option.strike_price.to_f64(),
+                max_profit.to_f64(),
             ),
             label: format!(
                 "Max Profit {:.2} at {:.0}",
@@ -437,7 +448,7 @@ impl Graph for ShortStraddle {
 }
 
 impl ProbabilityAnalysis for ShortStraddle {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         let option = &self.short_call.option;
         Ok(option.expiration_date.clone())
     }
@@ -446,19 +457,19 @@ impl ProbabilityAnalysis for ShortStraddle {
         Some(self.short_call.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(option.implied_volatility),
-            pos!(self.short_put.option.implied_volatility),
+            f2p!(option.implied_volatility),
+            f2p!(self.short_put.option.implied_volatility),
         ]);
 
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            PZERO,
+            Positive::ZERO,
         )?;
 
         profit_range.calculate_probability(
@@ -475,16 +486,17 @@ impl ProbabilityAnalysis for ShortStraddle {
         Ok(vec![profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(option.implied_volatility),
-            pos!(self.short_put.option.implied_volatility),
+            f2p!(option.implied_volatility),
+            f2p!(self.short_put.option.implied_volatility),
         ]);
 
-        let mut lower_loss_range = ProfitLossRange::new(None, Some(break_even_points[0]), PZERO)?;
+        let mut lower_loss_range =
+            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
 
         lower_loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -497,7 +509,8 @@ impl ProbabilityAnalysis for ShortStraddle {
             self.get_risk_free_rate(),
         )?;
 
-        let mut upper_loss_range = ProfitLossRange::new(Some(break_even_points[1]), None, PZERO)?;
+        let mut upper_loss_range =
+            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
 
         upper_loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -535,24 +548,28 @@ impl DeltaNeutrality for ShortStraddle {
         let call_delta = self.short_call.option.delta();
         let put_delta = self.short_put.option.delta();
         let threshold = DELTA_THRESHOLD;
+        let c_delta = d2fu!(call_delta.unwrap()).unwrap();
+        let p_delta = d2fu!(put_delta.unwrap()).unwrap();
+
         DeltaInfo {
-            net_delta: call_delta + put_delta,
-            individual_deltas: vec![call_delta, put_delta],
-            is_neutral: (call_delta + put_delta).abs() < threshold,
+            net_delta: c_delta + p_delta,
+            individual_deltas: vec![c_delta, p_delta],
+            is_neutral: (c_delta + p_delta).abs() < threshold,
             underlying_price: self.short_call.option.underlying_price,
             neutrality_threshold: threshold,
         }
     }
 
-    fn get_atm_strike(&self) -> PositiveF64 {
+    fn get_atm_strike(&self) -> Positive {
         self.short_call.option.underlying_price
     }
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.short_call.option.delta().unwrap()).unwrap();
+
         vec![DeltaAdjustment::SellOptions {
-            quantity: pos!((net_delta.abs() / self.short_call.option.delta()).abs())
-                * self.short_call.option.quantity,
+            quantity: f2p!((net_delta.abs() / delta).abs()) * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -560,9 +577,10 @@ impl DeltaNeutrality for ShortStraddle {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.short_put.option.delta().unwrap()).unwrap();
+
         vec![DeltaAdjustment::SellOptions {
-            quantity: pos!((net_delta.abs() / self.short_put.option.delta()).abs())
-                * self.short_put.option.quantity,
+            quantity: f2p!((net_delta.abs() / delta).abs()) * self.short_put.option.quantity,
             strike: self.short_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
@@ -597,7 +615,7 @@ pub struct LongStraddle {
     pub name: String,
     pub kind: StrategyType,
     pub description: String,
-    pub break_even_points: Vec<PositiveF64>,
+    pub break_even_points: Vec<Positive>,
     long_call: Position,
     long_put: Position,
 }
@@ -606,13 +624,13 @@ impl LongStraddle {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
-        underlying_price: PositiveF64,
-        mut strike: PositiveF64,
+        underlying_price: Positive,
+        mut strike: Positive,
         expiration: ExpirationDate,
         implied_volatility: f64,
         risk_free_rate: f64,
         dividend_yield: f64,
-        quantity: PositiveF64,
+        quantity: Positive,
         premium_long_call: f64,
         premium_long_put: f64,
         open_fee_long_call: f64,
@@ -620,7 +638,7 @@ impl LongStraddle {
         open_fee_long_put: f64,
         close_fee_long_put: f64,
     ) -> Self {
-        if strike == PZERO {
+        if strike == Positive::ZERO {
             strike = underlying_price;
         }
 
@@ -683,7 +701,7 @@ impl LongStraddle {
             .add_position(&long_put.clone())
             .expect("Invalid long put");
 
-        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
+        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / f2p!(2.0);
 
         strategy
             .break_even_points
@@ -699,7 +717,7 @@ impl LongStraddle {
 }
 
 impl Positionable for LongStraddle {
-    fn add_position(&mut self, position: &Position) -> Result<(), String> {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.option_style {
             OptionStyle::Call => {
                 self.long_call = position.clone();
@@ -712,58 +730,60 @@ impl Positionable for LongStraddle {
         }
     }
 
-    fn get_positions(&self) -> Result<Vec<&Position>, String> {
+    fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_call, &self.long_put])
     }
 }
 
 impl Strategies for LongStraddle {
-    fn get_underlying_price(&self) -> PositiveF64 {
+    fn get_underlying_price(&self) -> Positive {
         self.long_call.option.underlying_price
     }
 
-    fn max_profit(&self) -> Result<PositiveF64, &str> {
-        Ok(f64::INFINITY.into()) // Theoretically unlimited
+    fn max_profit(&self) -> Result<Positive, StrategyError> {
+        Ok(Positive::INFINITY) // Theoretically unlimited
     }
 
-    fn max_loss(&self) -> Result<PositiveF64, &str> {
+    fn max_loss(&self) -> Result<Positive, StrategyError> {
         Ok(self.total_cost())
     }
 
-    fn total_cost(&self) -> PositiveF64 {
-        pos!(self.long_call.net_cost() + self.long_put.net_cost())
+    fn total_cost(&self) -> Positive {
+        f2p!(self.long_call.net_cost() + self.long_put.net_cost())
     }
 
-    fn net_premium_received(&self) -> f64 {
-        0.0 // Long Straddle doesn't receive premium
+    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        Ok(Decimal::ZERO) // Long Straddle doesn't receive premium
     }
 
-    fn fees(&self) -> f64 {
-        self.long_call.open_fee
+    fn fees(&self) -> Result<Decimal, StrategyError> {
+        let result = self.long_call.open_fee
             + self.long_call.close_fee
             + self.long_put.open_fee
-            + self.long_put.close_fee
+            + self.long_put.close_fee;
+
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_area(&self) -> f64 {
+    fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
-        let cat = (strike_diff / 2.0_f64.sqrt()).value();
+        let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
         let loss_area = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
-        (1.0 / loss_area) * 10000.0 // Invert the value to get the profit area: the lower, the better
+        let result = (1.0 / loss_area) * 10000.0; // Invert the value to get the profit area: the lower, the better
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_ratio(&self) -> f64 {
+    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        match self.max_loss() {
-            Ok(max_loss) => ((break_even_diff / max_loss) * 100.0).value(),
+        let result = match self.max_loss() {
+            Ok(max_loss) => ((break_even_diff / max_loss) * 100.0).to_f64(),
             Err(_) => ZERO,
-        }
+        };
+        Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn get_break_even_points(&self) -> Vec<PositiveF64> {
-        let mut break_even_points = self.break_even_points.clone();
-        break_even_points.sort();
-        break_even_points
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -790,7 +810,8 @@ impl Optimizable for LongStraddle {
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |both| both.is_valid_optimal_side(underlying_price, &side))
             .filter(|both| {
-                both.call_ask.unwrap_or(PZERO) > PZERO && both.call_bid.unwrap_or(PZERO) > PZERO
+                both.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && both.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |both| {
@@ -811,7 +832,7 @@ impl Optimizable for LongStraddle {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
-        let mut best_value = f64::NEG_INFINITY;
+        let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -829,8 +850,8 @@ impl Optimizable for LongStraddle {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio(),
-                OptimizationCriteria::Area => strategy.profit_area(),
+                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -852,12 +873,12 @@ impl Optimizable for LongStraddle {
             chain.underlying_price,
             call.strike_price,
             self.long_call.option.expiration_date.clone(),
-            call.implied_volatility.unwrap().value() / 100.0,
+            call.implied_volatility.unwrap().to_f64() / 100.0,
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            call.call_ask.unwrap().value(),
-            put.put_ask.unwrap().value(),
+            call.call_ask.unwrap().to_f64(),
+            put.put_ask.unwrap().to_f64(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.long_put.open_fee,
@@ -867,7 +888,7 @@ impl Optimizable for LongStraddle {
 }
 
 impl Profit for LongStraddle {
-    fn calculate_profit_at(&self, price: PositiveF64) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> f64 {
         let price = Some(price);
         self.long_call.pnl_at_expiration(&price) + self.long_put.pnl_at_expiration(&price)
     }
@@ -893,7 +914,7 @@ impl Graph for LongStraddle {
         let min_value = f64::NEG_INFINITY;
 
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.long_call.option.underlying_price.value(),
+            x_coordinate: self.long_call.option.underlying_price.to_f64(),
             y_range: (min_value, max_value),
             label: format!(
                 "Current Price: {:.2}",
@@ -911,10 +932,10 @@ impl Graph for LongStraddle {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_loss = self.max_loss().unwrap_or(PZERO);
+        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].value(), 0.0),
+            coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Low Break Even {}", self.break_even_points[0]),
             label_offset: LabelOffsetType::Relative(10.0, -10.0),
             point_color: DARK_BLUE,
@@ -924,7 +945,7 @@ impl Graph for LongStraddle {
         });
 
         points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].value(), 0.0),
+            coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("High Break Even {}", self.break_even_points[1]),
             label_offset: LabelOffsetType::Relative(-60.0, -10.0),
             point_color: DARK_BLUE,
@@ -935,8 +956,8 @@ impl Graph for LongStraddle {
 
         points.push(ChartPoint {
             coordinates: (
-                self.long_call.option.strike_price.value(),
-                -max_loss.value(),
+                self.long_call.option.strike_price.to_f64(),
+                -max_loss.to_f64(),
             ),
             label: format!(
                 "Max Loss {:.2} at {:.0}",
@@ -956,7 +977,7 @@ impl Graph for LongStraddle {
 }
 
 impl ProbabilityAnalysis for LongStraddle {
-    fn get_expiration(&self) -> Result<ExpirationDate, String> {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         let option = &self.long_call.option;
         Ok(option.expiration_date.clone())
     }
@@ -965,16 +986,17 @@ impl ProbabilityAnalysis for LongStraddle {
         Some(self.long_call.option.risk_free_rate)
     }
 
-    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(option.implied_volatility),
-            pos!(self.long_put.option.implied_volatility),
+            f2p!(option.implied_volatility),
+            f2p!(self.long_put.option.implied_volatility),
         ]);
 
-        let mut lower_profit_range = ProfitLossRange::new(None, Some(break_even_points[0]), PZERO)?;
+        let mut lower_profit_range =
+            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
 
         lower_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -987,7 +1009,8 @@ impl ProbabilityAnalysis for LongStraddle {
             self.get_risk_free_rate(),
         )?;
 
-        let mut upper_profit_range = ProfitLossRange::new(Some(break_even_points[1]), None, PZERO)?;
+        let mut upper_profit_range =
+            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
 
         upper_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -1003,19 +1026,19 @@ impl ProbabilityAnalysis for LongStraddle {
         Ok(vec![lower_profit_range, upper_profit_range])
     }
 
-    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, String> {
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(option.implied_volatility),
-            pos!(self.long_call.option.implied_volatility),
+            f2p!(option.implied_volatility),
+            f2p!(self.long_call.option.implied_volatility),
         ]);
 
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            PZERO,
+            Positive::ZERO,
         )?;
 
         loss_range.calculate_probability(
@@ -1054,24 +1077,28 @@ impl DeltaNeutrality for LongStraddle {
         let call_delta = self.long_call.option.delta();
         let put_delta = self.long_put.option.delta();
         let threshold = DELTA_THRESHOLD;
+        let c_delta = d2fu!(call_delta.unwrap()).unwrap();
+        let p_delta = d2fu!(put_delta.unwrap()).unwrap();
+
         DeltaInfo {
-            net_delta: call_delta + put_delta,
-            individual_deltas: vec![call_delta, put_delta],
-            is_neutral: (call_delta + put_delta).abs() < threshold,
+            net_delta: c_delta + p_delta,
+            individual_deltas: vec![c_delta, p_delta],
+            is_neutral: (c_delta + p_delta).abs() < threshold,
             underlying_price: self.long_call.option.underlying_price,
             neutrality_threshold: threshold,
         }
     }
 
-    fn get_atm_strike(&self) -> PositiveF64 {
+    fn get_atm_strike(&self) -> Positive {
         self.long_call.option.underlying_price
     }
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.long_put.option.delta().unwrap()).unwrap();
+
         vec![DeltaAdjustment::BuyOptions {
-            quantity: pos!((net_delta.abs() / self.long_put.option.delta()).abs())
-                * self.long_put.option.quantity,
+            quantity: f2p!((net_delta.abs() / delta).abs()) * self.long_put.option.quantity,
             strike: self.long_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
@@ -1079,9 +1106,10 @@ impl DeltaNeutrality for LongStraddle {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
+        let delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
+
         vec![DeltaAdjustment::BuyOptions {
-            quantity: pos!((net_delta.abs() / self.long_call.option.delta()).abs())
-                * self.long_call.option.quantity,
+            quantity: f2p!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -1092,18 +1120,19 @@ impl DeltaNeutrality for LongStraddle {
 mod tests_short_straddle {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::{pos, spos};
+    use crate::{f2p, spos};
+    use num_traits::ToPrimitive;
 
     fn setup() -> ShortStraddle {
         ShortStraddle::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(150.0),
+            f2p!(150.0),
+            f2p!(150.0),
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
             0.02,
-            pos!(100.0),
+            f2p!(100.0),
             2.0,
             1.5,
             0.1,
@@ -1115,16 +1144,16 @@ mod tests_short_straddle {
 
     #[test]
     fn test_atm_strike_initialization() {
-        let underlying_price = pos!(150.0);
+        let underlying_price = f2p!(150.0);
         let strategy = ShortStraddle::new(
             "AAPL".to_string(),
             underlying_price,
-            PZERO,
+            Positive::ZERO,
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
             0.02,
-            pos!(100.0),
+            f2p!(100.0),
             2.0,
             1.5,
             0.1,
@@ -1135,7 +1164,7 @@ mod tests_short_straddle {
 
         assert_eq!(
             strategy.short_call.option.strike_price, underlying_price,
-            "Strike should default to underlying price when PZERO is provided"
+            "Strike should default to underlying price when Positive::ZERO is provided"
         );
     }
 
@@ -1172,13 +1201,13 @@ mod tests_short_straddle {
 
         let valid_strategy = ShortStraddle::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0), // Diferente strike
+            f2p!(150.0),
+            f2p!(145.0), // Diferente strike
             ExpirationDate::Days(30.0),
             0.2,
             0.01,
             0.02,
-            pos!(100.0),
+            f2p!(100.0),
             2.0,
             1.5,
             0.1,
@@ -1194,31 +1223,34 @@ mod tests_short_straddle {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let strategy = setup();
-        assert_eq!(strategy.break_even()[0], 146.9);
+        assert_eq!(strategy.get_break_even_points().unwrap()[0], 146.9);
     }
 
     #[test]
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 150.0;
-        assert_eq!(strategy.calculate_profit_at(pos!(price)), 310.0);
+        assert_eq!(strategy.calculate_profit_at(f2p!(price)), 310.0);
     }
 
     #[test]
     fn test_max_profit() {
         let strategy = setup();
         assert_eq!(
-            strategy.max_profit().unwrap_or(PZERO),
-            strategy.net_premium_received()
+            strategy.max_profit().unwrap_or(Positive::ZERO),
+            strategy.net_premium_received().unwrap().to_f64().unwrap()
         );
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup();
-        assert_eq!(strategy.max_loss().unwrap_or(PZERO), f64::INFINITY);
+        assert_eq!(
+            strategy.max_loss().unwrap_or(Positive::ZERO),
+            Positive::INFINITY
+        );
     }
 
     #[test]
@@ -1234,7 +1266,7 @@ mod tests_short_straddle {
     fn test_net_premium_received() {
         let strategy = setup();
         assert_eq!(
-            strategy.net_premium_received(),
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
             strategy.short_call.net_premium_received() + strategy.short_put.net_premium_received()
         );
     }
@@ -1243,13 +1275,13 @@ mod tests_short_straddle {
     fn test_fees() {
         let strategy = setup();
         let expected_fees = 0.4;
-        assert_eq!(strategy.fees(), expected_fees);
+        assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
     #[test]
     fn test_area() {
         let strategy = setup();
-        assert_eq!(strategy.profit_area(), 0.9609999999999962);
+        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 0.961);
     }
 
     #[test]
@@ -1261,11 +1293,11 @@ mod tests_short_straddle {
         assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
         let data = vec![
-            pos!(140.0),
-            pos!(145.0),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(160.0),
+            f2p!(140.0),
+            f2p!(145.0),
+            f2p!(150.0),
+            f2p!(155.0),
+            f2p!(160.0),
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
@@ -1301,8 +1333,12 @@ mod tests_short_straddle {
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
-        let expected_ratio = strategy.max_profit().unwrap_or(PZERO) / break_even_diff * 100.0;
-        assert_eq!(strategy.profit_ratio(), expected_ratio.value());
+        let expected_ratio =
+            strategy.max_profit().unwrap_or(Positive::ZERO) / break_even_diff * 100.0;
+        assert_eq!(
+            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            expected_ratio.to_f64()
+        );
     }
 
     #[test]
@@ -1326,7 +1362,7 @@ mod tests_short_straddle {
     #[test]
     fn test_best_range_to_show() {
         let strategy = setup();
-        let step = pos!(1.0);
+        let step = f2p!(1.0);
 
         let range = strategy.best_range_to_show(step).unwrap();
         assert!(!range.is_empty());
@@ -1389,13 +1425,13 @@ mod tests_short_straddle {
         assert_eq!(points.len(), 4);
 
         let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
-        assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
-        assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
+        assert!(break_even_points.contains(&strategy.break_even_points[0].to_f64()));
+        assert!(break_even_points.contains(&strategy.break_even_points[1].to_f64()));
     }
 
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
-            pos!(1150.0),
+            f2p!(1150.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
             0.01,
@@ -1405,9 +1441,9 @@ mod tests_short_straddle {
             "AAPL".to_string(),
             spos!(1.0),
             10,
-            pos!(10.0),
+            f2p!(10.0),
             0.00001,
-            pos!(0.01),
+            f2p!(0.01),
             2,
             option_data_price_params,
         );
@@ -1419,18 +1455,19 @@ mod tests_short_straddle {
 mod tests_long_straddle {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::{pos, spos};
+    use crate::{f2p, spos};
+    use num_traits::ToPrimitive;
 
     fn setup_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(150.0),
+            f2p!(150.0),
+            f2p!(150.0),
             ExpirationDate::Days(30.0),
             0.25,
             0.01,
             0.02,
-            pos!(10.0),
+            f2p!(10.0),
             5.0,
             5.0,
             0.5,
@@ -1443,13 +1480,13 @@ mod tests_long_straddle {
     #[test]
     fn test_long_straddle_new() {
         let underlying_symbol = "AAPL".to_string();
-        let underlying_price = pos!(150.0);
-        let call_strike = pos!(160.0);
+        let underlying_price = f2p!(150.0);
+        let call_strike = f2p!(160.0);
         let expiration = ExpirationDate::default();
         let implied_volatility = 0.25;
         let risk_free_rate = 0.01;
         let dividend_yield = 0.02;
-        let quantity = pos!(10.0);
+        let quantity = f2p!(10.0);
         let premium_long_call = 5.0;
         let premium_long_put = 5.0;
         let open_fee_long_call = 0.5;
@@ -1483,9 +1520,9 @@ mod tests_long_straddle {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let long_straddle = setup_long_straddle();
-        assert_eq!(long_straddle.break_even()[0], 138.0);
+        assert_eq!(long_straddle.get_break_even_points().unwrap()[0], 138.0);
     }
 
     #[test]
@@ -1500,7 +1537,7 @@ mod tests_long_straddle {
     #[test]
     fn test_calculate_profit_at() {
         let long_straddle = setup_long_straddle();
-        let price = pos!(150.0);
+        let price = f2p!(150.0);
         let expected_profit = long_straddle.long_call.pnl_at_expiration(&Some(price))
             + long_straddle.long_put.pnl_at_expiration(&Some(price));
         assert_eq!(long_straddle.calculate_profit_at(price), expected_profit);
@@ -1523,15 +1560,18 @@ mod tests_long_straddle {
     #[test]
     fn test_max_profit() {
         let strategy = setup_long_straddle();
-        assert_eq!(strategy.max_profit().unwrap_or(PZERO), f64::INFINITY);
+        assert_eq!(
+            strategy.max_profit().unwrap_or(Positive::ZERO),
+            Positive::INFINITY
+        );
     }
 
     #[test]
     fn test_max_loss() {
         let strategy = setup_long_straddle();
         assert_eq!(
-            strategy.max_loss().unwrap_or(PZERO),
-            strategy.total_cost().value()
+            strategy.max_loss().unwrap_or(Positive::ZERO),
+            strategy.total_cost().to_f64()
         );
     }
 
@@ -1539,26 +1579,29 @@ mod tests_long_straddle {
     fn test_fees() {
         let strategy = setup_long_straddle();
         let expected_fees = 2.0; // 0.5 * 4 fees
-        assert_eq!(strategy.fees(), expected_fees);
+        assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
     #[test]
     fn test_net_premium_received() {
         let strategy = setup_long_straddle();
-        assert_eq!(strategy.net_premium_received(), 0.0);
+        assert_eq!(
+            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            0.0
+        );
     }
 
     #[test]
     fn test_profit_area() {
         let strategy = setup_long_straddle();
         let area = strategy.profit_area();
-        assert!(area > 0.0);
+        assert!(area.unwrap().to_f64().unwrap() > 0.0);
     }
 
     #[test]
     fn test_profit_ratio() {
         let strategy = setup_long_straddle();
-        assert_eq!(strategy.profit_ratio(), 20.0);
+        assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 20.0);
     }
 
     #[test]
@@ -1588,11 +1631,11 @@ mod tests_long_straddle {
         assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
         let data = vec![
-            pos!(130.0),
-            pos!(140.0),
-            pos!(150.0),
-            pos!(160.0),
-            pos!(170.0),
+            f2p!(130.0),
+            f2p!(140.0),
+            f2p!(150.0),
+            f2p!(160.0),
+            f2p!(170.0),
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
@@ -1627,7 +1670,7 @@ mod tests_long_straddle {
     #[test]
     fn test_best_range_to_show() {
         let strategy = setup_long_straddle();
-        let step = pos!(1.0);
+        let step = f2p!(1.0);
 
         let range = strategy.best_range_to_show(step).unwrap();
         assert!(!range.is_empty());
@@ -1664,7 +1707,7 @@ mod tests_long_straddle {
         assert!(strategy.are_valid_prices(&legs));
 
         let mut invalid_call = call_option.clone();
-        invalid_call.call_ask = Some(pos!(0.0));
+        invalid_call.call_ask = Some(f2p!(0.0));
 
         let legs = StrategyLegs::TwoLegs {
             first: &invalid_call,
@@ -1696,13 +1739,13 @@ mod tests_long_straddle {
         assert_eq!(points.len(), 4);
 
         let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
-        assert!(break_even_points.contains(&strategy.break_even_points[0].value()));
-        assert!(break_even_points.contains(&strategy.break_even_points[1].value()));
+        assert!(break_even_points.contains(&strategy.break_even_points[0].to_f64()));
+        assert!(break_even_points.contains(&strategy.break_even_points[1].to_f64()));
     }
 
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
-            pos!(150.0),
+            f2p!(150.0),
             ExpirationDate::Days(30.0),
             spos!(0.65),
             0.01,
@@ -1712,9 +1755,9 @@ mod tests_long_straddle {
             "AAPL".to_string(),
             spos!(1.0),
             10,
-            pos!(5.0),
+            f2p!(5.0),
             0.00001,
-            pos!(0.01),
+            f2p!(0.01),
             2,
             option_data_price_params,
         );
@@ -1725,8 +1768,8 @@ mod tests_long_straddle {
 #[cfg(test)]
 mod tests_short_straddle_probability {
     use super::*;
-    use crate::model::types::{ExpirationDate, PositiveF64};
-    use crate::pos;
+    use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::strategies::probabilities::utils::PriceTrend;
 
     /// Helper function that creates a basic short Straddle for testing purposes
@@ -1734,13 +1777,13 @@ mod tests_short_straddle_probability {
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // strike
+            f2p!(100.0),                // underlying_price
+            f2p!(110.0),                // strike
             ExpirationDate::Days(30.0), // expiration
             0.20,                       // implied_volatility
             0.05,                       // risk_free_rate
             0.0,                        // dividend_yield
-            pos!(1.0),                  // quantity
+            f2p!(1.0),                  // quantity
             2.0,                        // premium_short_call
             2.0,                        // premium_short_put
             0.0,                        // open_fee_short_call
@@ -1757,16 +1800,16 @@ mod tests_short_straddle_probability {
 
         assert!(result.is_ok(), "Probability calculation should succeed");
         let prob = result.unwrap();
-        assert!(prob > PZERO, "Probability should be positive");
-        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
+        assert!(prob > Positive::ZERO, "Probability should be positive");
+        assert!(prob <= f2p!(1.0), "Probability should not exceed 1.0");
     }
 
     #[test]
     fn test_probability_of_profit_with_volatility_adjustment() {
         let straddle = create_test_short_straddle();
         let vol_adj = VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: f2p!(0.25),
+            std_dev_adjustment: f2p!(0.05),
         };
 
         let result = straddle.probability_of_profit(Some(vol_adj), None);
@@ -1776,8 +1819,8 @@ mod tests_short_straddle_probability {
             "Probability calculation with volatility adjustment should succeed"
         );
         let prob = result.unwrap();
-        assert!(prob > PZERO, "Probability should be positive");
-        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
+        assert!(prob > Positive::ZERO, "Probability should be positive");
+        assert!(prob <= f2p!(1.0), "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1795,8 +1838,8 @@ mod tests_short_straddle_probability {
             "Probability calculation with trend should succeed"
         );
         let prob = result.unwrap();
-        assert!(prob > PZERO, "Probability should be positive");
-        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
+        assert!(prob > Positive::ZERO, "Probability should be positive");
+        assert!(prob <= f2p!(1.0), "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1814,8 +1857,8 @@ mod tests_short_straddle_probability {
             "Probability calculation with downward trend should succeed"
         );
         let prob = result.unwrap();
-        assert!(prob > PZERO, "Probability should be positive");
-        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
+        assert!(prob > Positive::ZERO, "Probability should be positive");
+        assert!(prob <= f2p!(1.0), "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1825,7 +1868,7 @@ mod tests_short_straddle_probability {
 
         assert_eq!(
             result,
-            pos!(100.0),
+            f2p!(100.0),
             "Reference price should match underlying price"
         );
     }
@@ -1854,27 +1897,30 @@ mod tests_short_straddle_probability {
         let range = &ranges[0];
         assert!(range.lower_bound.is_some(), "Lower bound should be defined");
         assert!(range.upper_bound.is_some(), "Upper bound should be defined");
-        assert!(range.probability > PZERO, "Probability should be positive");
+        assert!(
+            range.probability > Positive::ZERO,
+            "Probability should be positive"
+        );
     }
 }
 
 #[cfg(test)]
 mod tests_short_straddle_probability_bis {
     use super::*;
+    use crate::f2p;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
 
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // strike
+            f2p!(100.0),                // underlying_price
+            f2p!(110.0),                // strike
             ExpirationDate::Days(30.0), // expiration
             0.20,                       // implied_volatility
             0.05,                       // risk_free_rate
             0.0,                        // dividend_yield
-            pos!(1.0),                  // quantity
+            f2p!(1.0),                  // quantity
             2.0,                        // premium_short_call
             2.0,                        // premium_short_put
             0.0,                        // open_fee_short_call
@@ -1936,23 +1982,23 @@ mod tests_short_straddle_probability_bis {
 
         assert!(result.is_ok());
         let prob = result.unwrap();
-        assert!(prob > PZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob > Positive::ZERO);
+        assert!(prob <= f2p!(1.0));
     }
 
     #[test]
     fn test_probability_with_volatility_adjustment() {
         let straddle = create_test_short_straddle();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.1),
+            base_volatility: f2p!(0.25),
+            std_dev_adjustment: f2p!(0.1),
         });
 
         let result = straddle.probability_of_profit(vol_adj, None);
         assert!(result.is_ok());
         let prob = result.unwrap();
-        assert!(prob > PZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob > Positive::ZERO);
+        assert!(prob <= f2p!(1.0));
     }
 
     #[test]
@@ -1966,8 +2012,8 @@ mod tests_short_straddle_probability_bis {
         let result = straddle.probability_of_profit(None, trend);
         assert!(result.is_ok());
         let prob = result.unwrap();
-        assert!(prob > PZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob > Positive::ZERO);
+        assert!(prob <= f2p!(1.0));
     }
 
     #[test]
@@ -1977,11 +2023,11 @@ mod tests_short_straddle_probability_bis {
 
         assert!(result.is_ok());
         let analysis = result.unwrap();
-        assert!(analysis.probability_of_profit > PZERO);
-        assert!(analysis.probability_of_max_profit >= PZERO);
-        assert!(analysis.probability_of_max_loss >= PZERO);
+        assert!(analysis.probability_of_profit > Positive::ZERO);
+        assert!(analysis.probability_of_max_profit >= Positive::ZERO);
+        assert!(analysis.probability_of_max_loss >= Positive::ZERO);
         assert!(!analysis.break_even_points.is_empty());
-        assert!(analysis.risk_reward_ratio > PZERO);
+        assert!(analysis.risk_reward_ratio > Positive::ZERO);
     }
 
     #[test]
@@ -1991,29 +2037,29 @@ mod tests_short_straddle_probability_bis {
 
         assert!(result.is_ok());
         let (max_profit_prob, max_loss_prob) = result.unwrap();
-        assert!(max_profit_prob >= PZERO);
-        assert!(max_loss_prob >= PZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+        assert!(max_profit_prob >= Positive::ZERO);
+        assert!(max_loss_prob >= Positive::ZERO);
+        assert!(max_profit_prob + max_loss_prob <= f2p!(1.0));
     }
 }
 
 #[cfg(test)]
 mod tests_long_straddle_probability {
     use super::*;
+    use crate::f2p;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
 
     fn create_test_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // strike
+            f2p!(100.0),                // underlying_price
+            f2p!(110.0),                // strike
             ExpirationDate::Days(30.0), // expiration
             0.20,                       // implied_volatility
             0.05,                       // risk_free_rate
             0.0,                        // dividend_yield
-            pos!(1.0),                  // quantity
+            f2p!(1.0),                  // quantity
             2.0,                        // premium_long_call
             2.0,                        // premium_long_put
             0.0,                        // open_fee_long_call
@@ -2073,23 +2119,23 @@ mod tests_long_straddle_probability {
 
         assert!(result.is_ok());
         let prob = result.unwrap();
-        assert!(prob > PZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob > Positive::ZERO);
+        assert!(prob <= f2p!(1.0));
     }
 
     #[test]
     fn test_probability_with_volatility_adjustment() {
         let straddle = create_test_long_straddle();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.1),
+            base_volatility: f2p!(0.25),
+            std_dev_adjustment: f2p!(0.1),
         });
 
         let result = straddle.probability_of_profit(vol_adj, None);
         assert!(result.is_ok());
         let prob = result.unwrap();
-        assert!(prob > PZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob > Positive::ZERO);
+        assert!(prob <= f2p!(1.0));
     }
 
     #[test]
@@ -2103,8 +2149,8 @@ mod tests_long_straddle_probability {
         let result = straddle.probability_of_profit(None, trend);
         assert!(result.is_ok());
         let prob = result.unwrap();
-        assert!(prob > PZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob > Positive::ZERO);
+        assert!(prob <= f2p!(1.0));
     }
 
     #[test]
@@ -2114,15 +2160,18 @@ mod tests_long_straddle_probability {
 
         assert!(result.is_ok());
         let ev = result.unwrap();
-        assert!(ev >= PZERO, "Expected value should be non-negative");
+        assert!(
+            ev >= Positive::ZERO,
+            "Expected value should be non-negative"
+        );
 
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.1),
+            base_volatility: f2p!(0.25),
+            std_dev_adjustment: f2p!(0.1),
         });
         let result_with_vol = straddle.expected_value(vol_adj, None);
         assert!(result_with_vol.is_ok());
-        assert!(result_with_vol.unwrap() >= PZERO);
+        assert!(result_with_vol.unwrap() >= Positive::ZERO);
     }
 
     #[test]
@@ -2132,24 +2181,24 @@ mod tests_long_straddle_probability {
 
         assert!(result.is_ok());
         let (max_profit_prob, max_loss_prob) = result.unwrap();
-        assert!(max_profit_prob >= PZERO);
-        assert!(max_loss_prob >= PZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+        assert!(max_profit_prob >= Positive::ZERO);
+        assert!(max_loss_prob >= Positive::ZERO);
+        assert!(max_profit_prob + max_loss_prob <= f2p!(1.0));
     }
 }
 
 #[cfg(test)]
 mod tests_short_straddle_delta {
     use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::pos;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::strategies::straddle::PositiveF64;
+    use crate::strategies::straddle::Positive;
     use crate::strategies::straddle::ShortStraddle;
+    use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
 
-    fn get_strategy(strike: PositiveF64) -> ShortStraddle {
-        let underlying_price = pos!(7138.5);
+    fn get_strategy(strike: Positive) -> ShortStraddle {
+        let underlying_price = f2p!(7138.5);
         ShortStraddle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
@@ -2158,7 +2207,7 @@ mod tests_short_straddle_delta {
             0.3745,    // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // quantity
+            f2p!(1.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
             7.01,      // open_fee_short_call
@@ -2170,7 +2219,7 @@ mod tests_short_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7460.0));
+        let strategy = get_strategy(f2p!(7460.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2182,17 +2231,18 @@ mod tests_short_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.4271447567333657),
-                strike: pos!(7460.0),
+                quantity: f2p!(0.42714475673336616),
+                strike: f2p!(7460.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(0.4271447567333657);
-        assert_relative_eq!(option.delta(), -0.175986, epsilon = 0.0001);
+        option.quantity = f2p!(0.42714475673336616);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.175986, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2200,7 +2250,7 @@ mod tests_short_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
-        let strategy = get_strategy(pos!(7050.0));
+        let strategy = get_strategy(f2p!(7050.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2212,17 +2262,18 @@ mod tests_short_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.39342797972712407),
-                strike: pos!(7050.0),
+                quantity: f2p!(0.3934279797271222),
+                strike: f2p!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.short_put.option.clone();
-        option.quantity = pos!(0.39342797972712407);
-        assert_relative_eq!(option.delta(), 0.164378, epsilon = 0.0001);
+        option.quantity = f2p!(0.3934279797271222);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.164378, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2230,7 +2281,7 @@ mod tests_short_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_no_adjustments() {
-        let strategy = get_strategy(pos!(7245.0));
+        let strategy = get_strategy(f2p!(7245.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2246,14 +2297,14 @@ mod tests_short_straddle_delta {
 #[cfg(test)]
 mod tests_long_straddle_delta {
     use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::pos;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::strategies::straddle::{LongStraddle, PositiveF64};
+    use crate::strategies::straddle::{LongStraddle, Positive};
+    use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
 
-    fn get_strategy(strike: PositiveF64) -> LongStraddle {
-        let underlying_price = pos!(7138.5);
+    fn get_strategy(strike: Positive) -> LongStraddle {
+        let underlying_price = f2p!(7138.5);
         LongStraddle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
@@ -2262,7 +2313,7 @@ mod tests_long_straddle_delta {
             0.3745,    // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(1.0), // quantity
+            f2p!(1.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
             7.01,      // open_fee_short_call
@@ -2274,7 +2325,7 @@ mod tests_long_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7450.0));
+        let strategy = get_strategy(f2p!(7450.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2286,17 +2337,18 @@ mod tests_long_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.4039537995372771),
-                strike: pos!(7450.0),
+                quantity: f2p!(0.4039537995372771),
+                strike: f2p!(7450.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.4039537995372771);
-        assert_relative_eq!(option.delta(), 0.168037255, epsilon = 0.0001);
+        option.quantity = f2p!(0.4039537995372771);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, 0.168037255, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2304,7 +2356,7 @@ mod tests_long_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
-        let strategy = get_strategy(pos!(7150.0));
+        let strategy = get_strategy(f2p!(7150.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2316,17 +2368,18 @@ mod tests_long_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.17382253382440507),
-                strike: pos!(7150.0),
+                quantity: f2p!(0.17382253382440663),
+                strike: f2p!(7150.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.17382253382440507);
-        assert_relative_eq!(option.delta(), -0.07996, epsilon = 0.0001);
+        option.quantity = f2p!(0.17382253382440663);
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -0.07996, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2334,7 +2387,7 @@ mod tests_long_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_no_adjustments() {
-        let strategy = get_strategy(pos!(7245.0));
+        let strategy = get_strategy(f2p!(7245.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2350,15 +2403,17 @@ mod tests_long_straddle_delta {
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
     use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::pos;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::strategies::straddle::PositiveF64;
+    use crate::strategies::straddle::Positive;
     use crate::strategies::straddle::ShortStraddle;
+    use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
+    use rust_decimal::Decimal;
+    use std::str::FromStr;
 
-    fn get_strategy(strike: PositiveF64) -> ShortStraddle {
-        let underlying_price = pos!(7138.5);
+    fn get_strategy(strike: Positive) -> ShortStraddle {
+        let underlying_price = f2p!(7138.5);
         ShortStraddle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
@@ -2367,7 +2422,7 @@ mod tests_short_straddle_delta_size {
             0.3745,    // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(2.0), // quantity
+            f2p!(2.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
             7.01,      // open_fee_short_call
@@ -2379,11 +2434,14 @@ mod tests_short_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7460.0));
+        let strategy = get_strategy(f2p!(7460.0));
+        let size = 0.3519;
+        let delta =
+            Positive::new_decimal(Decimal::from_str("0.8542895134667324").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.351973,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -2391,17 +2449,18 @@ mod tests_short_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.8542895134667314),
-                strike: pos!(7460.0),
+                quantity: delta,
+                strike: f2p!(7460.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(0.8542895134667314);
-        assert_relative_eq!(option.delta(), -0.35197, epsilon = 0.0001);
+        option.quantity = delta;
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2409,11 +2468,14 @@ mod tests_short_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
-        let strategy = get_strategy(pos!(7050.0));
+        let strategy = get_strategy(f2p!(7050.0));
+        let size = -0.3287;
+        let delta =
+            Positive::new_decimal(Decimal::from_str("0.7868559594542444").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -0.3287,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -2421,17 +2483,18 @@ mod tests_short_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.7868559594542481),
-                strike: pos!(7050.0),
+                quantity: delta,
+                strike: f2p!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.short_put.option.clone();
-        option.quantity = pos!(0.7868559594542481);
-        assert_relative_eq!(option.delta(), 0.32875, epsilon = 0.0001);
+        option.quantity = delta;
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2439,7 +2502,7 @@ mod tests_short_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_no_adjustments() {
-        let strategy = get_strategy(pos!(7245.0));
+        let strategy = get_strategy(f2p!(7245.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2455,14 +2518,16 @@ mod tests_short_straddle_delta_size {
 #[cfg(test)]
 mod tests_long_straddle_delta_size {
     use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::pos;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::strategies::straddle::{LongStraddle, PositiveF64};
+    use crate::strategies::straddle::{LongStraddle, Positive};
+    use crate::{d2fu, f2p};
     use approx::assert_relative_eq;
+    use rust_decimal::Decimal;
+    use std::str::FromStr;
 
-    fn get_strategy(strike: PositiveF64) -> LongStraddle {
-        let underlying_price = pos!(7138.5);
+    fn get_strategy(strike: Positive) -> LongStraddle {
+        let underlying_price = f2p!(7138.5);
         LongStraddle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
@@ -2471,7 +2536,7 @@ mod tests_long_straddle_delta_size {
             0.3745,    // implied_volatility
             0.05,      // risk_free_rate
             0.0,       // dividend_yield
-            pos!(2.0), // quantity
+            f2p!(2.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
             7.01,      // open_fee_short_call
@@ -2483,11 +2548,14 @@ mod tests_long_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7450.0));
+        let strategy = get_strategy(f2p!(7450.0));
+        let size = -0.3360;
+        let delta =
+            Positive::new_decimal(Decimal::from_str("0.8079075990745542").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -0.3360,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -2495,17 +2563,18 @@ mod tests_long_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.8079075990745542),
-                strike: pos!(7450.0),
+                quantity: delta,
+                strike: f2p!(7450.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.8079075990745542);
-        assert_relative_eq!(option.delta(), 0.33607, epsilon = 0.0001);
+        option.quantity = delta;
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2513,11 +2582,14 @@ mod tests_long_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
-        let strategy = get_strategy(pos!(7150.0));
+        let strategy = get_strategy(f2p!(7150.0));
+        let size = 0.1599;
+        let delta =
+            Positive::new_decimal(Decimal::from_str("0.3476450676488132").unwrap()).unwrap();
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.15992,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -2525,17 +2597,18 @@ mod tests_long_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.34764506764881015),
-                strike: pos!(7150.0),
+                quantity: delta,
+                strike: f2p!(7150.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.34764506764881015);
-        assert_relative_eq!(option.delta(), -0.15992, epsilon = 0.0001);
+        option.quantity = delta;
+        let delta = d2fu!(option.delta().unwrap()).unwrap();
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
-            option.delta() + strategy.calculate_net_delta().net_delta,
+            delta + strategy.calculate_net_delta().net_delta,
             0.0,
             epsilon = DELTA_THRESHOLD
         );
@@ -2543,7 +2616,7 @@ mod tests_long_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_no_adjustments() {
-        let strategy = get_strategy(pos!(7245.0));
+        let strategy = get_strategy(f2p!(7245.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,

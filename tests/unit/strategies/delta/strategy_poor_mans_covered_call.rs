@@ -1,31 +1,33 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
-use optionstratlib::pos;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::{assert_decimal_eq, f2p, Positive};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use std::error::Error;
+use std::str::FromStr;
 
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = pos!(2703.3);
+    let underlying_price = f2p!(2703.3);
 
     let strategy = PoorMansCoveredCall::new(
         "GOLD".to_string(),          // underlying_symbol
         underlying_price,            // underlying_price
-        pos!(2600.0),                // long_call_strike
-        pos!(2800.0),                // short_call_strike OTM
+        f2p!(2600.0),                // long_call_strike
+        f2p!(2800.0),                // short_call_strike OTM
         ExpirationDate::Days(120.0), // long_call_expiration
         ExpirationDate::Days(30.0),  // short_call_expiration 30-45 days delta 0.30 or less
         0.17,                        // implied_volatility
         0.05,                        // risk_free_rate
         0.0,                         // dividend_yield
-        pos!(2.0),                   // quantity
+        f2p!(2.0),                   // quantity
         154.7,                       // premium_short_call
         30.8,                        // premium_short_put
         1.74,                        // open_fee_short_call
@@ -35,13 +37,14 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     );
 
     let greeks = strategy.greeks();
+    let epsilon = dec!(0.001);
 
-    assert_relative_eq!(greeks.delta, 0.9225, epsilon = 0.001);
-    assert_relative_eq!(greeks.gamma, 0.0075, epsilon = 0.001);
-    assert_relative_eq!(greeks.theta, -1043.9572, epsilon = 0.001);
-    assert_relative_eq!(greeks.vega, 2686.1099, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho, 1290.9435, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho_d, -1420.1310, epsilon = 0.001);
+    assert_decimal_eq!(greeks.delta, dec!(0.9225), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(0.0075), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-1043.9572), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(2686.1099), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(1290.9435), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-1420.1310), epsilon);
 
     assert_relative_eq!(
         strategy.calculate_net_delta().net_delta,
@@ -64,8 +67,9 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: pos!(3.4154122075924565),
-            strike: pos!(2800.0),
+            quantity: Positive::new_decimal(Decimal::from_str("3.415412207592464").unwrap())
+                .unwrap(),
+            strike: f2p!(2800.0),
             option_type: OptionStyle::Call
         }
     );

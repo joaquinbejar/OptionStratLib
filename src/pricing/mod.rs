@@ -61,40 +61,42 @@
 //! ### Using the Telegraph Process
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
-//! use optionstratlib::model::option::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
+//! use optionstratlib::Options;
+//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
 //!
 //! // Create a Telegraph Process with transition rates
-//! let process = TelegraphProcess::new(0.5, 0.3);
+//! let process = TelegraphProcess::new(dec!(0.5), dec!(0.3));
 //!
 //! // Price an option using the Telegraph Process
 //! let option = Options {
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
+//!             strike_price: f2p!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
 //!             implied_volatility: 0.2,
-//!             quantity: SIZE_ONE,
-//!             underlying_price: pos!(105.0),
+//!             quantity: Positive::ONE,
+//!             underlying_price: f2p!(105.0),
 //!             risk_free_rate: 0.05,
 //!             option_style: OptionStyle::Call,
 //!             dividend_yield: 0.01,
 //!             exotic_params: None,
 //!         };
-//! let price = telegraph(&option, 1000, Some(0.5), Some(0.3));
+//! let price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
 //! ```
 //!
 //! ### Combined Model Analysis
 //!
 //! ```rust
-//! use optionstratlib::model::option::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side, SIZE_ONE};
-//! use optionstratlib::model::types::PositiveF64;
-//! use optionstratlib::pos;
+//! use rust_decimal_macros::dec;
+//! use optionstratlib::Options;
+//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+//! use optionstratlib::Positive;
+//! use optionstratlib::f2p;
 //! use optionstratlib::pricing::{
 //!     black_scholes_model::black_scholes,
 //!     monte_carlo::monte_carlo_option_pricing,
@@ -104,11 +106,11 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
+//!             strike_price: f2p!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
 //!             implied_volatility: 0.2,
-//!             quantity: SIZE_ONE,
-//!             underlying_price: pos!(105.0),
+//!             quantity: Positive::ONE,
+//!             underlying_price: f2p!(105.0),
 //!             risk_free_rate: 0.05,
 //!             option_style: OptionStyle::Call,
 //!             dividend_yield: 0.01,
@@ -116,8 +118,8 @@
 //!         };
 //! // Compare prices across different models
 //! let bs_price = black_scholes(&option);
-//! let mc_price = monte_carlo_option_pricing(&option, 1000, 10000);
-//! let tp_price = telegraph(&option, 1000, Some(0.5), Some(0.3));
+//! let mc_price = monte_carlo_option_pricing(&option, 2, 2);
+//! let tp_price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
 //! ```
 //!
 //! ## Implementation Notes

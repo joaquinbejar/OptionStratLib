@@ -8,23 +8,22 @@ use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
 };
 use crate::chains::{DeltasInStrike, OptionsInStrike};
-use crate::constants::ZERO;
+use crate::error::chains::ChainError;
 use crate::greeks::equations::delta;
-use crate::model::option::Options;
-use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, PositiveF64, Side, PZERO};
+use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
-use crate::{pos, spos};
+use crate::{f2p, sf2p, Positive};
 use chrono::Utc;
 use csv::WriterBuilder;
+use num_traits::ToPrimitive;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
-use std::fmt::Display;
 use std::fs::File;
 use tracing::debug;
 
@@ -44,28 +43,28 @@ use tracing::debug;
 ///
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionData {
-    pub(crate) strike_price: PositiveF64,
-    pub(crate) call_bid: Option<PositiveF64>,
-    pub(crate) call_ask: Option<PositiveF64>,
-    pub(crate) put_bid: Option<PositiveF64>,
-    pub(crate) put_ask: Option<PositiveF64>,
-    pub(crate) implied_volatility: Option<PositiveF64>,
+    pub(crate) strike_price: Positive,
+    pub(crate) call_bid: Option<Positive>,
+    pub(crate) call_ask: Option<Positive>,
+    pub(crate) put_bid: Option<Positive>,
+    pub(crate) put_ask: Option<Positive>,
+    pub(crate) implied_volatility: Option<Positive>,
     delta: Option<f64>,
-    volume: Option<PositiveF64>,
+    volume: Option<Positive>,
     open_interest: Option<u64>,
 }
 
 impl OptionData {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        strike_price: PositiveF64,
-        call_bid: Option<PositiveF64>,
-        call_ask: Option<PositiveF64>,
-        put_bid: Option<PositiveF64>,
-        put_ask: Option<PositiveF64>,
-        implied_volatility: Option<PositiveF64>,
+        strike_price: Positive,
+        call_bid: Option<Positive>,
+        call_ask: Option<Positive>,
+        put_bid: Option<Positive>,
+        put_ask: Option<Positive>,
+        implied_volatility: Option<Positive>,
         delta: Option<f64>,
-        volume: Option<PositiveF64>,
+        volume: Option<Positive>,
         open_interest: Option<u64>,
     ) -> Self {
         OptionData {
@@ -82,38 +81,38 @@ impl OptionData {
     }
 
     pub(crate) fn validate(&self) -> bool {
-        self.strike_price > PZERO
+        self.strike_price > Positive::ZERO
             && self.implied_volatility.is_some()
             && (self.valid_call() || self.valid_put())
     }
 
     pub(crate) fn valid_call(&self) -> bool {
-        self.strike_price > PZERO
+        self.strike_price > Positive::ZERO
             && self.implied_volatility.is_some()
             && self.call_bid.is_some()
             && self.call_ask.is_some()
     }
 
     pub(crate) fn valid_put(&self) -> bool {
-        self.strike_price > PZERO
+        self.strike_price > Positive::ZERO
             && self.implied_volatility.is_some()
             && self.put_bid.is_some()
             && self.put_ask.is_some()
     }
 
-    pub fn get_call_buy_price(&self) -> Option<PositiveF64> {
+    pub fn get_call_buy_price(&self) -> Option<Positive> {
         self.call_ask
     }
 
-    pub fn get_call_sell_price(&self) -> Option<PositiveF64> {
+    pub fn get_call_sell_price(&self) -> Option<Positive> {
         self.call_bid
     }
 
-    pub fn get_put_buy_price(&self) -> Option<PositiveF64> {
+    pub fn get_put_buy_price(&self) -> Option<Positive> {
         self.put_ask
     }
 
-    pub fn get_put_sell_price(&self) -> Option<PositiveF64> {
+    pub fn get_put_sell_price(&self) -> Option<Positive> {
         self.put_bid
     }
 
@@ -122,13 +121,16 @@ impl OptionData {
         price_params: &OptionDataPriceParams,
         side: Side,
         option_style: OptionStyle,
-    ) -> Result<Options, String> {
+    ) -> Result<Options, ChainError> {
         let implied_volatility = match price_params.implied_volatility {
             Some(iv) => iv.value(),
             None => match self.implied_volatility {
                 Some(iv) => iv.value(),
                 None => {
-                    return Err("Implied volatility not found".to_string());
+                    return Err(ChainError::invalid_volatility(
+                        None,
+                        "Implied volatility not found",
+                    ));
                 }
             },
         };
@@ -139,8 +141,8 @@ impl OptionData {
             "OptionData".to_string(),
             self.strike_price,
             price_params.expiration_date.clone(),
-            implied_volatility,
-            pos!(1.0),
+            implied_volatility.to_f64().unwrap(),
+            f2p!(1.0),
             price_params.underlying_price,
             price_params.risk_free_rate,
             option_style,
@@ -154,7 +156,7 @@ impl OptionData {
         price_params: &OptionDataPriceParams,
         side: Side,
         option_style: OptionStyle,
-    ) -> Result<OptionsInStrike, String> {
+    ) -> Result<OptionsInStrike, ChainError> {
         let mut option: Options = self.get_option(price_params, side, option_style)?;
         option.option_style = OptionStyle::Call;
         option.side = Side::Long;
@@ -173,57 +175,60 @@ impl OptionData {
         })
     }
 
-    pub fn calculate_prices(&mut self, price_params: &OptionDataPriceParams) -> Result<(), String> {
+    pub fn calculate_prices(
+        &mut self,
+        price_params: &OptionDataPriceParams,
+    ) -> Result<(), ChainError> {
         let mut option: Options = self.get_option(price_params, Side::Long, OptionStyle::Call)?;
 
-        self.call_ask = spos!(black_scholes(&option).abs());
+        self.call_ask = Some(black_scholes(&option).abs().into());
         option.side = Side::Short;
-        self.call_bid = spos!(black_scholes(&option).abs());
+        self.call_bid = sf2p!(black_scholes(&option).abs());
         option.option_style = OptionStyle::Put;
-        self.put_bid = spos!(black_scholes(&option).abs());
+        self.put_bid = sf2p!(black_scholes(&option).abs());
         option.side = Side::Long;
-        self.put_ask = spos!(black_scholes(&option).abs());
+        self.put_ask = sf2p!(black_scholes(&option).abs());
         Ok(())
     }
 
-    pub fn apply_spread(&mut self, spread: PositiveF64, decimal_places: i32) {
+    pub fn apply_spread(&mut self, spread: Positive, decimal_places: i32) {
         fn round_to_decimal(
-            number: PositiveF64,
+            number: Positive,
             decimal_places: i32,
-            shift: f64,
-        ) -> Option<PositiveF64> {
-            let multiplier = 10_f64.powi(decimal_places);
-            spos!(((number.value() + shift) * multiplier).round() / multiplier)
+            shift: Decimal,
+        ) -> Option<Positive> {
+            let multiplier = Positive::TEN.powi(decimal_places as i64);
+            Some(((number + shift) * multiplier).round() / multiplier)
         }
 
-        let half_spread = spread / 2.0;
+        let half_spread: Decimal = (spread / Positive::TWO).into();
 
         if let Some(call_ask) = self.call_ask {
             if call_ask < half_spread {
                 self.call_ask = None;
             } else {
-                self.call_ask = round_to_decimal(call_ask, decimal_places, half_spread.value());
+                self.call_ask = round_to_decimal(call_ask, decimal_places, half_spread);
             }
         }
         if let Some(call_bid) = self.call_bid {
             if call_bid < half_spread {
                 self.call_bid = None;
             } else {
-                self.call_bid = round_to_decimal(call_bid, decimal_places, -half_spread.value());
+                self.call_bid = round_to_decimal(call_bid, decimal_places, -half_spread);
             }
         }
         if let Some(put_ask) = self.put_ask {
             if put_ask < half_spread {
                 self.put_ask = None;
             } else {
-                self.put_ask = round_to_decimal(put_ask, decimal_places, half_spread.value());
+                self.put_ask = round_to_decimal(put_ask, decimal_places, half_spread);
             }
         }
         if let Some(put_bid) = self.put_bid {
             if put_bid < half_spread {
                 self.put_bid = None;
             } else {
-                self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread.value());
+                self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread);
             }
         }
     }
@@ -235,22 +240,25 @@ impl OptionData {
                 return;
             }
         };
-        self.delta = Some(delta(&option));
+
+        match delta(&option) {
+            Ok(d) => self.delta = d.to_f64(),
+            Err(_) => self.delta = None,
+        }
     }
 
     pub fn get_deltas(
         &self,
         price_params: &OptionDataPriceParams,
-    ) -> Result<DeltasInStrike, String> {
+    ) -> Result<DeltasInStrike, ChainError> {
         let options_in_strike =
             self.get_options_in_strike(price_params, Side::Long, OptionStyle::Call)?;
-        let deltas = options_in_strike.deltas();
-        Ok(deltas)
+        Ok(options_in_strike.deltas()?)
     }
 
     pub fn is_valid_optimal_side(
         &self,
-        underlying_price: PositiveF64,
+        underlying_price: Positive,
         side: &FindOptimalSide,
     ) -> bool {
         match side {
@@ -267,7 +275,7 @@ impl OptionData {
 impl Default for OptionData {
     fn default() -> Self {
         OptionData {
-            strike_price: PZERO,
+            strike_price: Positive::ZERO,
             call_bid: None,
             call_ask: None,
             put_bid: None,
@@ -280,10 +288,9 @@ impl Default for OptionData {
     }
 }
 
-#[allow(clippy::non_canonical_partial_ord_impl)]
 impl PartialOrd for OptionData {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.strike_price.partial_cmp(&other.strike_price)
+        Some(self.strike_price.cmp(&other.strike_price))
     }
 }
 
@@ -291,21 +298,11 @@ impl Eq for OptionData {}
 
 impl Ord for OptionData {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or_else(|| {
-            if self.strike_price.value().is_nan() {
-                if other.strike_price.value().is_nan() {
-                    Ordering::Equal
-                } else {
-                    Ordering::Greater
-                }
-            } else {
-                Ordering::Less
-            }
-        })
+        self.strike_price.cmp(&other.strike_price)
     }
 }
 
-impl Display for OptionData {
+impl fmt::Display for OptionData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -315,7 +312,7 @@ impl Display for OptionData {
             default_empty_string(self.call_ask),
             default_empty_string(self.put_bid),
             default_empty_string(self.put_ask),
-            self.implied_volatility.unwrap_or(pos!(0.0)),
+            self.implied_volatility.unwrap_or(f2p!(0.0)),
             " ".to_string(),
             self.delta.unwrap_or(0.0),
             " ".to_string(),
@@ -328,8 +325,8 @@ impl Display for OptionData {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OptionChain {
-    pub(crate) symbol: String,
-    pub underlying_price: PositiveF64,
+    pub symbol: String,
+    pub underlying_price: Positive,
     expiration_date: String,
     pub(crate) options: BTreeSet<OptionData>,
     pub(crate) risk_free_rate: Option<f64>,
@@ -339,7 +336,7 @@ pub struct OptionChain {
 impl OptionChain {
     pub fn new(
         symbol: &str,
-        underlying_price: PositiveF64,
+        underlying_price: Positive,
         expiration_date: String,
         risk_free_rate: Option<f64>,
         dividend_yield: Option<f64>,
@@ -370,11 +367,11 @@ impl OptionChain {
         );
 
         for strike in strikes {
-            let atm_distance = strike.value() - params.price_params.underlying_price.value();
+            let atm_distance = strike - params.price_params.underlying_price;
             let adjusted_volatility = adjust_volatility(
                 params.price_params.implied_volatility,
                 params.skew_factor,
-                atm_distance,
+                atm_distance.into(),
             );
             let mut option_data = OptionData::new(
                 strike,
@@ -425,7 +422,7 @@ impl OptionChain {
         &self,
         price_params: &OptionDataPriceParams,
         side: FindOptimalSide,
-    ) -> Result<Vec<OptionsInStrike>, String> {
+    ) -> Result<Vec<OptionsInStrike>, ChainError> {
         self.options
             .iter()
             .filter(|option| match side {
@@ -443,14 +440,14 @@ impl OptionChain {
     #[allow(clippy::too_many_arguments)]
     pub fn add_option(
         &mut self,
-        strike_price: PositiveF64,
-        call_bid: Option<PositiveF64>,
-        call_ask: Option<PositiveF64>,
-        put_bid: Option<PositiveF64>,
-        put_ask: Option<PositiveF64>,
-        implied_volatility: Option<PositiveF64>,
+        strike_price: Positive,
+        call_bid: Option<Positive>,
+        call_ask: Option<Positive>,
+        put_bid: Option<Positive>,
+        put_ask: Option<Positive>,
+        implied_volatility: Option<Positive>,
         delta: Option<f64>,
-        volume: Option<PositiveF64>,
+        volume: Option<Positive>,
         open_interest: Option<u64>,
     ) {
         let option_data = OptionData {
@@ -491,7 +488,7 @@ impl OptionChain {
         let underlying_price_str = parts[4].replace(",", ".");
 
         match underlying_price_str.parse::<f64>() {
-            Ok(price) => self.underlying_price = pos!(price),
+            Ok(price) => self.underlying_price = f2p!(price),
             Err(_) => panic!("Invalid underlying price format in file name"),
         }
     }
@@ -558,7 +555,7 @@ impl OptionChain {
 
         let mut option_chain = OptionChain {
             symbol: "unknown".to_string(),
-            underlying_price: PZERO,
+            underlying_price: Positive::ZERO,
             expiration_date: "unknown".to_string(),
             options,
             risk_free_rate: None,
@@ -584,8 +581,8 @@ impl OptionChain {
             let mut current_price = first.strike_price;
 
             while current_price <= last.strike_price {
-                range.push(current_price.value());
-                current_price += pos!(step);
+                range.push(current_price.to_f64());
+                current_price += f2p!(step);
             }
 
             Some(range)
@@ -605,13 +602,16 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Position>, String>` - Vector of created positions or error message
+    /// * `Result<Vec<Position>, ChainError>` - Vector of created positions or error message
     pub fn get_random_positions(
         &self,
         params: RandomPositionsParams,
-    ) -> Result<Vec<Position>, String> {
+    ) -> Result<Vec<Position>, ChainError> {
         if params.total_positions() == 0 {
-            return Err("The sum of the quantities must be greater than 0".to_string());
+            return Err(ChainError::invalid_parameters(
+                "total_positions",
+                "The sum of the quantities must be greater than 0",
+            ));
         }
 
         let mut positions = Vec::with_capacity(params.total_positions());
@@ -627,7 +627,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date.clone(),
-                            option.implied_volatility.unwrap_or(pos!(0.0)).value(),
+                            option.implied_volatility.unwrap_or(f2p!(0.0)).to_f64(),
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -635,7 +635,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.put_ask.unwrap_or(pos!(0.0)).value(),
+                        option.put_ask.unwrap_or(f2p!(0.0)).to_f64(),
                         Utc::now(),
                         params.open_put_fee,
                         params.close_put_fee,
@@ -656,7 +656,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date.clone(),
-                            option.implied_volatility.unwrap_or(pos!(0.0)).value(),
+                            option.implied_volatility.unwrap_or(f2p!(0.0)).to_f64(),
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -664,7 +664,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.put_bid.unwrap_or(pos!(0.0)).value(),
+                        option.put_bid.unwrap_or(f2p!(0.0)).to_f64(),
                         Utc::now(),
                         params.open_put_fee,
                         params.close_put_fee,
@@ -685,7 +685,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date.clone(),
-                            option.implied_volatility.unwrap_or(pos!(0.0)).value(),
+                            option.implied_volatility.unwrap_or(f2p!(0.0)).to_f64(),
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -693,7 +693,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.call_ask.unwrap_or(pos!(0.0)).value(),
+                        option.call_ask.unwrap_or(f2p!(0.0)).to_f64(),
                         Utc::now(),
                         params.open_call_fee,
                         params.close_call_fee,
@@ -714,7 +714,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date.clone(),
-                            option.implied_volatility.unwrap_or(pos!(0.0)).value(),
+                            option.implied_volatility.unwrap_or(f2p!(0.0)).to_f64(),
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -722,7 +722,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.call_bid.unwrap_or(pos!(0.0)).value(),
+                        option.call_bid.unwrap_or(f2p!(0.0)).to_f64(),
                         Utc::now(),
                         params.open_call_fee,
                         params.close_call_fee,
@@ -765,9 +765,8 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::model::types::PositiveF64;
-    /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// use optionstratlib::{f2p, Positive};
+    /// let mut option_chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
     /// }
@@ -796,9 +795,9 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::model::types::PositiveF64;
-    /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// use optionstratlib::Positive;
+    /// use optionstratlib::f2p;
+    /// let mut option_chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_inclusive_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
     /// }
@@ -824,9 +823,9 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::model::types::PositiveF64;
-    /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// use optionstratlib::Positive;
+    /// use optionstratlib::f2p;
+    /// let mut option_chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
     /// }
@@ -861,9 +860,9 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::model::types::PositiveF64;
-    /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// use optionstratlib::Positive;
+    /// use optionstratlib::f2p;
+    /// let mut option_chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
     /// }
@@ -899,9 +898,9 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::model::types::PositiveF64;
-    /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// use optionstratlib::Positive;
+    /// use optionstratlib::f2p;
+    /// let mut option_chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
     /// }
@@ -944,9 +943,9 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::model::types::PositiveF64;
-    /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// use optionstratlib::Positive;
+    /// use optionstratlib::f2p;
+    /// let mut option_chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
     /// }
@@ -976,28 +975,26 @@ impl OptionChain {
 }
 
 impl OptionChainParams for OptionChain {
-    fn get_params(&self, strike_price: PositiveF64) -> Result<OptionDataPriceParams, String> {
+    fn get_params(&self, strike_price: Positive) -> Result<OptionDataPriceParams, ChainError> {
         let option = self
             .options
             .iter()
             .find(|option| option.strike_price == strike_price);
         if option.is_none() {
-            return Err(format!(
-                "Option with strike price {} not found",
-                strike_price
-            ));
+            let reason = format!("Option with strike price {} not found", strike_price);
+            return Err(ChainError::invalid_strike(strike_price.to_f64(), &reason));
         }
         Ok(OptionDataPriceParams::new(
             self.underlying_price,
             ExpirationDate::from_string(&self.expiration_date)?,
             option.unwrap().implied_volatility,
-            self.risk_free_rate.unwrap_or(ZERO),
-            self.dividend_yield.unwrap_or(ZERO),
+            self.risk_free_rate.unwrap_or(0.0),
+            self.dividend_yield.unwrap_or(0.0),
         ))
     }
 }
 
-impl Display for OptionChain {
+impl fmt::Display for OptionChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Symbol: {}", self.symbol)?;
         writeln!(f, "Underlying Price: {:.1}", self.underlying_price)?;
@@ -1037,7 +1034,7 @@ impl Display for OptionChain {
 mod tests_chain_base {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::spos;
+    use crate::sf2p;
     use crate::utils::logger::setup_logger;
     use std::fs;
     use tracing::info;
@@ -1046,7 +1043,7 @@ mod tests_chain_base {
     fn test_new_option_chain() {
         let chain = OptionChain::new(
             "SP500",
-            pos!(5781.88),
+            f2p!(5781.88),
             "18-oct-2024".to_string(),
             None,
             None,
@@ -1064,14 +1061,14 @@ mod tests_chain_base {
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
+            f2p!(1.0),
             0.0,
-            pos!(0.02),
+            f2p!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
+                f2p!(100.0),
                 ExpirationDate::Days(30.0),
-                spos!(0.17),
+                sf2p!(0.17),
                 0.0,
                 0.05,
             ),
@@ -1082,17 +1079,17 @@ mod tests_chain_base {
         assert_eq!(chain.symbol, "SP500");
         info!("{}", chain);
         assert_eq!(chain.options.len(), 21);
-        assert_eq!(chain.underlying_price, pos!(100.0));
+        assert_eq!(chain.underlying_price, f2p!(100.0));
         let first = chain.options.iter().next().unwrap();
         assert_eq!(first.call_ask.unwrap(), 10.04);
         assert_eq!(first.call_bid.unwrap(), 10.02);
-        assert_eq!(first.put_ask, spos!(0.04));
-        assert_eq!(first.put_bid, spos!(0.02));
+        assert_eq!(first.put_ask, sf2p!(0.04));
+        assert_eq!(first.put_bid, sf2p!(0.02));
         let last = chain.options.iter().next_back().unwrap();
-        assert_eq!(last.call_ask, spos!(0.06));
-        assert_eq!(last.call_bid, spos!(0.04));
-        assert_eq!(last.put_ask, spos!(10.06));
-        assert_eq!(last.put_bid, spos!(10.04));
+        assert_eq!(last.call_ask, sf2p!(0.06));
+        assert_eq!(last.call_bid, sf2p!(0.04));
+        assert_eq!(last.put_ask, sf2p!(10.06));
+        assert_eq!(last.put_bid, sf2p!(10.04));
     }
 
     #[test]
@@ -1102,14 +1099,14 @@ mod tests_chain_base {
             "SP500".to_string(),
             None,
             25,
-            pos!(25.0),
+            f2p!(25.0),
             0.000002,
-            pos!(0.02),
+            f2p!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(5878.10),
+                f2p!(5878.10),
                 ExpirationDate::Days(60.0),
-                spos!(0.03),
+                sf2p!(0.03),
                 0.0,
                 0.05,
             ),
@@ -1119,7 +1116,7 @@ mod tests_chain_base {
         assert_eq!(chain.symbol, "SP500");
         info!("{}", chain);
         assert_eq!(chain.options.len(), 51);
-        assert_eq!(chain.underlying_price, pos!(5878.10));
+        assert_eq!(chain.underlying_price, f2p!(5878.10));
         let first = chain.options.iter().next().unwrap();
         assert_eq!(first.call_ask.unwrap(), 628.11);
         assert_eq!(first.call_bid.unwrap(), 628.09);
@@ -1128,28 +1125,28 @@ mod tests_chain_base {
         let last = chain.options.iter().next_back().unwrap();
         assert_eq!(last.call_ask, None);
         assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(621.91));
-        assert_eq!(last.put_bid, spos!(621.89));
+        assert_eq!(last.put_ask, sf2p!(621.91));
+        assert_eq!(last.put_bid, sf2p!(621.89));
     }
 
     #[test]
     fn test_add_option() {
         let mut chain = OptionChain::new(
             "SP500",
-            pos!(5781.88),
+            f2p!(5781.88),
             "18-oct-2024".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos!(5520.0),
-            spos!(274.26),
-            spos!(276.06),
-            spos!(13.22),
-            spos!(14.90),
-            spos!(16.31),
+            f2p!(5520.0),
+            sf2p!(274.26),
+            sf2p!(276.06),
+            sf2p!(13.22),
+            sf2p!(14.90),
+            sf2p!(16.31),
             Some(0.5),
-            spos!(100.0),
+            sf2p!(100.0),
             Some(100),
         );
         assert_eq!(chain.options.len(), 1);
@@ -1164,7 +1161,7 @@ mod tests_chain_base {
     fn test_get_title_i() {
         let chain = OptionChain::new(
             "SP500",
-            pos!(5781.88),
+            f2p!(5781.88),
             "18-oct-2024".to_string(),
             None,
             None,
@@ -1176,7 +1173,7 @@ mod tests_chain_base {
     fn test_get_title_ii() {
         let chain = OptionChain::new(
             "SP500",
-            pos!(5781.88),
+            f2p!(5781.88),
             "18 oct 2024".to_string(),
             None,
             None,
@@ -1186,7 +1183,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_i() {
-        let mut chain = OptionChain::new("", PZERO, "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         chain.set_from_title("SP500-18-oct-2024-5781.88.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -1195,7 +1192,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_ii() {
-        let mut chain = OptionChain::new("", PZERO, "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         chain.set_from_title("path/SP500-18-oct-2024-5781.88.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -1204,7 +1201,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_iii() {
-        let mut chain = OptionChain::new("", PZERO, "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         chain.set_from_title("path/SP500-18-oct-2024-5781.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -1213,7 +1210,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_iv() {
-        let mut chain = OptionChain::new("", PZERO, "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         chain.set_from_title("path/SP500-18-oct-2024-5781.88.json");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -1222,7 +1219,7 @@ mod tests_chain_base {
 
     #[test]
     fn test_set_from_title_v() {
-        let mut chain = OptionChain::new("", PZERO, "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         chain.set_from_title("path/SP500-18-oct-2024-5781.json");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
@@ -1233,20 +1230,20 @@ mod tests_chain_base {
     fn test_save_to_csv() {
         let mut chain = OptionChain::new(
             "SP500",
-            pos!(5781.88),
+            f2p!(5781.88),
             "18-oct-2024".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos!(5520.0),
-            spos!(274.26),
-            spos!(276.06),
-            spos!(13.22),
-            spos!(14.90),
-            spos!(16.31),
+            f2p!(5520.0),
+            sf2p!(274.26),
+            sf2p!(276.06),
+            sf2p!(13.22),
+            sf2p!(14.90),
+            sf2p!(16.31),
             Some(0.5),
-            spos!(100.0),
+            sf2p!(100.0),
             Some(100),
         );
         let result = chain.save_to_csv(".");
@@ -1260,20 +1257,20 @@ mod tests_chain_base {
     fn test_save_to_json() {
         let mut chain = OptionChain::new(
             "SP500",
-            pos!(5781.88),
+            f2p!(5781.88),
             "18-oct-2024".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos!(5520.0),
-            spos!(274.26),
-            spos!(276.06),
-            spos!(13.22),
-            spos!(14.90),
-            spos!(16.31),
+            f2p!(5520.0),
+            sf2p!(274.26),
+            sf2p!(276.06),
+            sf2p!(13.22),
+            sf2p!(14.90),
+            sf2p!(16.31),
             Some(0.5),
-            spos!(100.0),
+            sf2p!(100.0),
             Some(100),
         );
         let result = chain.save_to_json(".");
@@ -1289,20 +1286,20 @@ mod tests_chain_base {
         setup_logger();
         let mut chain = OptionChain::new(
             "SP500",
-            pos!(5781.89),
+            f2p!(5781.89),
             "18-oct-2024".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos!(5520.0),
-            spos!(274.26),
-            spos!(276.06),
-            spos!(13.22),
-            spos!(14.90),
-            spos!(16.31),
+            f2p!(5520.0),
+            sf2p!(274.26),
+            sf2p!(276.06),
+            sf2p!(13.22),
+            sf2p!(14.90),
+            sf2p!(16.31),
             Some(0.5),
-            spos!(100.0),
+            sf2p!(100.0),
             Some(100),
         );
         let result = chain.save_to_csv(".");
@@ -1323,16 +1320,16 @@ mod tests_chain_base {
     #[test]
     fn test_load_from_json() {
         let mut chain =
-            OptionChain::new("SP500", pos!(5781.9), "18-oct-2024".to_string(), None, None);
+            OptionChain::new("SP500", f2p!(5781.9), "18-oct-2024".to_string(), None, None);
         chain.add_option(
-            pos!(5520.0),
-            spos!(274.26),
-            spos!(276.06),
-            spos!(13.22),
-            spos!(14.90),
-            spos!(16.31),
+            f2p!(5520.0),
+            sf2p!(274.26),
+            sf2p!(276.06),
+            sf2p!(13.22),
+            sf2p!(14.90),
+            sf2p!(16.31),
             Some(0.5),
-            spos!(100.0),
+            sf2p!(100.0),
             Some(100),
         );
         let result = chain.save_to_json(".");
@@ -1355,22 +1352,22 @@ mod tests_chain_base {
 mod tests_option_data {
     use super::*;
     use crate::constants::ZERO;
+    use crate::f2p;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
-    use crate::spos;
+    use crate::sf2p;
     use crate::utils::logger::setup_logger;
     use tracing::info;
 
     fn create_valid_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),   // strike_price
-            spos!(9.5),    // call_bid
-            spos!(10.0),   // call_ask
-            spos!(8.5),    // put_bid
-            spos!(9.0),    // put_ask
-            spos!(0.2),    // implied_volatility
+            f2p!(100.0),   // strike_price
+            sf2p!(9.5),    // call_bid
+            sf2p!(10.0),   // call_ask
+            sf2p!(8.5),    // put_bid
+            sf2p!(9.0),    // put_ask
+            sf2p!(0.2),    // implied_volatility
             Some(-0.3),    // delta
-            spos!(1000.0), // volume
+            sf2p!(1000.0), // volume
             Some(500),     // open_interest
         )
     }
@@ -1378,14 +1375,14 @@ mod tests_option_data {
     #[test]
     fn test_new_option_data() {
         let option_data = create_valid_option_data();
-        assert_eq!(option_data.strike_price, pos!(100.0));
-        assert_eq!(option_data.call_bid, spos!(9.5));
-        assert_eq!(option_data.call_ask, spos!(10.0));
-        assert_eq!(option_data.put_bid, spos!(8.5));
-        assert_eq!(option_data.put_ask, spos!(9.0));
-        assert_eq!(option_data.implied_volatility, spos!(0.2));
+        assert_eq!(option_data.strike_price, f2p!(100.0));
+        assert_eq!(option_data.call_bid, sf2p!(9.5));
+        assert_eq!(option_data.call_ask, sf2p!(10.0));
+        assert_eq!(option_data.put_bid, sf2p!(8.5));
+        assert_eq!(option_data.put_ask, sf2p!(9.0));
+        assert_eq!(option_data.implied_volatility, sf2p!(0.2));
         assert_eq!(option_data.delta, Some(-0.3));
-        assert_eq!(option_data.volume, spos!(1000.0));
+        assert_eq!(option_data.volume, sf2p!(1000.0));
         assert_eq!(option_data.open_interest, Some(500));
     }
 
@@ -1398,7 +1395,7 @@ mod tests_option_data {
     #[test]
     fn test_validate_zero_strike() {
         let mut option_data = create_valid_option_data();
-        option_data.strike_price = PZERO;
+        option_data.strike_price = Positive::ZERO;
         assert!(!option_data.validate());
     }
 
@@ -1412,12 +1409,12 @@ mod tests_option_data {
     #[test]
     fn test_validate_missing_both_sides() {
         let option_data = OptionData::new(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             None,
             None,
-            spos!(0.2),
+            sf2p!(0.2),
             None,
             None,
             None,
@@ -1468,20 +1465,20 @@ mod tests_option_data {
     #[test]
     fn test_calculate_prices_success() {
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             None,
             None,
-            spos!(0.2),
+            sf2p!(0.2),
             None,
             None,
             None,
         );
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             ZERO,
             ZERO,
         );
@@ -1499,10 +1496,10 @@ mod tests_option_data {
     fn test_calculate_prices_missing_volatility() {
         setup_logger();
         let mut option_data =
-            OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None);
+            OptionData::new(f2p!(100.0), None, None, None, None, None, None, None, None);
 
         let price_params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, ZERO, ZERO);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, ZERO, ZERO);
         let _ = option_data.calculate_prices(&price_params);
 
         info!("{}", option_data);
@@ -1512,28 +1509,28 @@ mod tests_option_data {
         assert_eq!(option_data.put_bid, None);
         assert_eq!(option_data.implied_volatility, None);
         assert_eq!(option_data.delta, None);
-        assert_eq!(option_data.strike_price, pos!(100.0));
+        assert_eq!(option_data.strike_price, f2p!(100.0));
     }
 
     #[test]
     fn test_calculate_prices_override_volatility() {
         setup_logger();
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             None,
             None,
-            spos!(0.2),
+            sf2p!(0.2),
             None,
             None,
             None,
         );
 
         let price_params = OptionDataPriceParams::new(
-            pos!(110.0),
+            f2p!(110.0),
             ExpirationDate::Days(30.0),
-            spos!(0.12),
+            sf2p!(0.12),
             0.05,
             0.01,
         );
@@ -1541,14 +1538,14 @@ mod tests_option_data {
 
         assert!(result.is_ok());
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.412135042233558));
-        assert_eq!(option_data.call_bid, spos!(10.412135042233558));
-        assert_eq!(option_data.put_ask, spos!(0.002019418653974231));
-        assert_eq!(option_data.put_bid, spos!(0.002019418653974231));
-        option_data.apply_spread(pos!(0.02), 2);
+        assert_eq!(option_data.call_ask, sf2p!(10.41213504223361));
+        assert_eq!(option_data.call_bid, sf2p!(10.41213504223361));
+        assert_eq!(option_data.put_ask, sf2p!(0.002019418653973704));
+        assert_eq!(option_data.put_bid, sf2p!(0.002019418653973704));
+        option_data.apply_spread(f2p!(0.02), 2);
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.42));
-        assert_eq!(option_data.call_bid, spos!(10.4));
+        assert_eq!(option_data.call_ask, sf2p!(10.42));
+        assert_eq!(option_data.call_bid, sf2p!(10.4));
         assert_eq!(option_data.put_ask, None);
         assert_eq!(option_data.put_bid, None);
     }
@@ -1556,20 +1553,20 @@ mod tests_option_data {
     #[test]
     fn test_calculate_prices_with_all_parameters() {
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             None,
             None,
-            spos!(0.2),
+            sf2p!(0.2),
             None,
             None,
             None,
         );
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             0.05,
             0.01,
         );
@@ -1587,48 +1584,49 @@ mod tests_option_data {
 #[cfg(test)]
 mod tests_get_random_positions {
     use super::*;
-    use crate::model::types::{ExpirationDate, PositiveF64};
-    use crate::pos;
+    use crate::error::chains::ChainBuildErrorKind;
+    use crate::f2p;
+    use crate::model::types::ExpirationDate;
     use crate::utils::logger::setup_logger;
 
     fn create_test_chain() -> OptionChain {
         // Create a sample option chain
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
 
         // Add some test options with different strikes
         chain.add_option(
-            pos!(95.0),   // strike_price
-            spos!(4.0),   // call_bid
-            spos!(4.2),   // call_ask
-            spos!(3.0),   // put_bid
-            spos!(3.2),   // put_ask
-            spos!(0.2),   // implied_volatility
+            f2p!(95.0),   // strike_price
+            sf2p!(4.0),   // call_bid
+            sf2p!(4.2),   // call_ask
+            sf2p!(3.0),   // put_bid
+            sf2p!(3.2),   // put_ask
+            sf2p!(0.2),   // implied_volatility
             Some(0.5),    // delta
-            spos!(100.0), // volume
+            sf2p!(100.0), // volume
             Some(50),     // open_interest
         );
 
         chain.add_option(
-            pos!(100.0),
-            spos!(3.0),
-            spos!(3.2),
-            spos!(3.0),
-            spos!(3.2),
-            spos!(0.2),
+            f2p!(100.0),
+            sf2p!(3.0),
+            sf2p!(3.2),
+            sf2p!(3.0),
+            sf2p!(3.2),
+            sf2p!(0.2),
             Some(0.5),
-            spos!(100.0),
+            sf2p!(100.0),
             Some(50),
         );
 
         chain.add_option(
-            pos!(105.0),
-            spos!(2.0),
-            spos!(2.2),
-            spos!(4.0),
-            spos!(4.2),
-            spos!(0.2),
+            f2p!(105.0),
+            sf2p!(2.0),
+            sf2p!(2.2),
+            sf2p!(4.0),
+            sf2p!(4.2),
+            sf2p!(0.2),
             Some(0.5),
-            spos!(100.0),
+            sf2p!(100.0),
             Some(50),
         );
 
@@ -1645,7 +1643,7 @@ mod tests_get_random_positions {
             None,
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -1654,12 +1652,18 @@ mod tests_get_random_positions {
             1.0,
         );
         let result = chain.get_random_positions(params);
-
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "The sum of the quantities must be greater than 0".to_string()
-        );
+        let error = result.unwrap_err();
+        match error {
+            ChainError::ChainBuildError(ChainBuildErrorKind::InvalidParameters {
+                parameter,
+                reason,
+            }) => {
+                assert_eq!(parameter, "total_positions");
+                assert_eq!(reason, "The sum of the quantities must be greater than 0");
+            }
+            _ => panic!("Incorrect error type"),
+        }
     }
 
     #[test]
@@ -1672,7 +1676,7 @@ mod tests_get_random_positions {
             None,
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -1704,7 +1708,7 @@ mod tests_get_random_positions {
             None,
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -1736,7 +1740,7 @@ mod tests_get_random_positions {
             Some(2),
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -1768,7 +1772,7 @@ mod tests_get_random_positions {
             None,
             Some(2),
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -1800,7 +1804,7 @@ mod tests_get_random_positions {
             Some(1),
             Some(1),
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -1839,14 +1843,14 @@ mod tests_get_random_positions {
     #[test]
     fn test_empty_chain() {
         setup_logger();
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         let params = RandomPositionsParams::new(
             Some(1),
             None,
             None,
             None,
             ExpirationDate::Days(30.0),
-            pos!(1.0),
+            f2p!(1.0),
             0.05,
             0.02,
             1.0,
@@ -1865,19 +1869,19 @@ mod tests_get_random_positions {
 #[cfg(test)]
 mod tests_option_data_get_prices {
     use super::*;
-    use crate::pos;
-    use crate::spos;
+    use crate::f2p;
+    use crate::sf2p;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),
-            spos!(9.5),
-            spos!(10.0),
-            spos!(8.5),
-            spos!(9.0),
-            spos!(0.2),
+            f2p!(100.0),
+            sf2p!(9.5),
+            sf2p!(10.0),
+            sf2p!(8.5),
+            sf2p!(9.0),
+            sf2p!(0.2),
             Some(-0.3),
-            spos!(1000.0),
+            sf2p!(1000.0),
             Some(500),
         )
     }
@@ -1885,36 +1889,36 @@ mod tests_option_data_get_prices {
     #[test]
     fn test_get_call_buy_price() {
         let data = create_test_option_data();
-        assert_eq!(data.get_call_buy_price(), spos!(10.0));
+        assert_eq!(data.get_call_buy_price(), sf2p!(10.0));
     }
 
     #[test]
     fn test_get_call_sell_price() {
         let data = create_test_option_data();
-        assert_eq!(data.get_call_sell_price(), spos!(9.5));
+        assert_eq!(data.get_call_sell_price(), sf2p!(9.5));
     }
 
     #[test]
     fn test_get_put_buy_price() {
         let data = create_test_option_data();
-        assert_eq!(data.get_put_buy_price(), spos!(9.0));
+        assert_eq!(data.get_put_buy_price(), sf2p!(9.0));
     }
 
     #[test]
     fn test_get_put_sell_price() {
         let data = create_test_option_data();
-        assert_eq!(data.get_put_sell_price(), spos!(8.5));
+        assert_eq!(data.get_put_sell_price(), sf2p!(8.5));
     }
 
     #[test]
     fn test_get_prices_with_none_values() {
         let data = OptionData::new(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             None,
             None,
-            spos!(0.2),
+            sf2p!(0.2),
             None,
             None,
             None,
@@ -1929,20 +1933,20 @@ mod tests_option_data_get_prices {
 #[cfg(test)]
 mod tests_option_data_display {
     use super::*;
-    use crate::pos;
-    use crate::spos;
+    use crate::f2p;
+    use crate::sf2p;
 
     #[test]
     fn test_display_full_data() {
         let data = OptionData::new(
-            pos!(100.0),
-            spos!(9.5),
-            spos!(10.0),
-            spos!(8.5),
-            spos!(9.0),
-            spos!(0.2),
+            f2p!(100.0),
+            sf2p!(9.5),
+            sf2p!(10.0),
+            sf2p!(8.5),
+            sf2p!(9.0),
+            sf2p!(0.2),
             Some(-0.3),
-            spos!(1000.0),
+            sf2p!(1000.0),
             Some(500),
         );
         let display_string = format!("{}", data);
@@ -1970,19 +1974,19 @@ mod tests_option_data_display {
 #[cfg(test)]
 mod tests_filter_option_data {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
 
         for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
             chain.add_option(
-                pos!(*strike),
+                f2p!(*strike),
                 None,
                 None,
                 None,
                 None,
-                spos!(0.2),
+                sf2p!(0.2),
                 None,
                 None,
                 None,
@@ -2021,35 +2025,35 @@ mod tests_filter_option_data {
     #[test]
     fn test_filter_range() {
         let chain = create_test_chain();
-        let filtered = chain.filter_option_data(FindOptimalSide::Range(pos!(95.0), pos!(105.0)));
+        let filtered = chain.filter_option_data(FindOptimalSide::Range(f2p!(95.0), f2p!(105.0)));
         assert_eq!(filtered.len(), 3);
         assert!(filtered
             .iter()
-            .all(|opt| opt.strike_price >= pos!(95.0) && opt.strike_price <= pos!(105.0)));
+            .all(|opt| opt.strike_price >= f2p!(95.0) && opt.strike_price <= f2p!(105.0)));
     }
 }
 
 #[cfg(test)]
 mod tests_strike_price_range_vec {
     use super::*;
-    use crate::pos;
+    use crate::f2p;
 
     #[test]
     fn test_empty_chain() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         assert_eq!(chain.strike_price_range_vec(5.0), None);
     }
 
     #[test]
     fn test_single_option() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
-            pos!(100.0),
+            f2p!(100.0),
             None,
             None,
             None,
             None,
-            spos!(0.2),
+            sf2p!(0.2),
             None,
             None,
             None,
@@ -2061,15 +2065,15 @@ mod tests_strike_price_range_vec {
 
     #[test]
     fn test_multiple_options() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         for strike in [90.0, 95.0, 100.0].iter() {
             chain.add_option(
-                pos!(*strike),
+                f2p!(*strike),
                 None,
                 None,
                 None,
                 None,
-                spos!(0.2),
+                sf2p!(0.2),
                 None,
                 None,
                 None,
@@ -2081,15 +2085,15 @@ mod tests_strike_price_range_vec {
 
     #[test]
     fn test_step_size() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         for strike in [90.0, 100.0].iter() {
             chain.add_option(
-                pos!(*strike),
+                f2p!(*strike),
                 None,
                 None,
                 None,
                 None,
-                spos!(0.2),
+                sf2p!(0.2),
                 None,
                 None,
                 None,
@@ -2104,18 +2108,19 @@ mod tests_strike_price_range_vec {
 #[cfg(test)]
 mod tests_option_data_get_option {
     use super::*;
+    use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),   // strike_price
-            spos!(9.5),    // call_bid
-            spos!(10.0),   // call_ask
-            spos!(8.5),    // put_bid
-            spos!(9.0),    // put_ask
-            spos!(0.2),    // implied_volatility
+            f2p!(100.0),   // strike_price
+            sf2p!(9.5),    // call_bid
+            sf2p!(10.0),   // call_ask
+            sf2p!(8.5),    // put_bid
+            sf2p!(9.0),    // put_ask
+            sf2p!(0.2),    // implied_volatility
             Some(-0.3),    // delta
-            spos!(1000.0), // volume
+            sf2p!(1000.0), // volume
             Some(500),     // open_interest
         )
     }
@@ -2124,9 +2129,9 @@ mod tests_option_data_get_option {
     fn test_get_option_success() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.25),
+            sf2p!(0.25),
             0.05,
             0.02,
         );
@@ -2135,9 +2140,9 @@ mod tests_option_data_get_option {
         assert!(result.is_ok());
 
         let option = result.unwrap();
-        assert_eq!(option.strike_price, pos!(100.0));
+        assert_eq!(option.strike_price, f2p!(100.0));
         assert_eq!(option.implied_volatility, 0.25); // Uses provided IV
-        assert_eq!(option.underlying_price, pos!(100.0));
+        assert_eq!(option.underlying_price, f2p!(100.0));
         assert_eq!(option.risk_free_rate, 0.05);
         assert_eq!(option.dividend_yield, 0.02);
         assert_eq!(option.side, Side::Long);
@@ -2148,7 +2153,7 @@ mod tests_option_data_get_option {
     fn test_get_option_using_data_iv() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
             None, // No IV provided in params
             0.05,
@@ -2168,30 +2173,43 @@ mod tests_option_data_get_option {
         option_data.implied_volatility = None;
 
         let price_params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Implied volatility not found");
+
+        let error = result.unwrap_err();
+        match error {
+            ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility {
+                volatility,
+                reason,
+            }) => {
+                assert_eq!(volatility, None);
+                assert_eq!(reason, "Implied volatility not found");
+            }
+            _ => panic!("Incorrect error type"),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
     use super::*;
+    use crate::assert_decimal_eq;
+    use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
-    use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),   // strike_price
-            spos!(9.5),    // call_bid
-            spos!(10.0),   // call_ask
-            spos!(8.5),    // put_bid
-            spos!(9.0),    // put_ask
-            spos!(0.2),    // implied_volatility
+            f2p!(100.0),   // strike_price
+            sf2p!(9.5),    // call_bid
+            sf2p!(10.0),   // call_ask
+            sf2p!(8.5),    // put_bid
+            sf2p!(9.0),    // put_ask
+            sf2p!(0.2),    // implied_volatility
             Some(-0.3),    // delta
-            spos!(1000.0), // volume
+            sf2p!(1000.0), // volume
             Some(500),     // open_interest
         )
     }
@@ -2200,9 +2218,9 @@ mod tests_option_data_get_options_in_strike {
     fn test_get_options_in_strike_success() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.25),
+            sf2p!(0.25),
             0.05,
             0.02,
         );
@@ -2214,22 +2232,22 @@ mod tests_option_data_get_options_in_strike {
         let options = result.unwrap();
 
         // Check long call
-        assert_eq!(options.long_call.strike_price, pos!(100.0));
+        assert_eq!(options.long_call.strike_price, f2p!(100.0));
         assert_eq!(options.long_call.option_style, OptionStyle::Call);
         assert_eq!(options.long_call.side, Side::Long);
 
         // Check short call
-        assert_eq!(options.short_call.strike_price, pos!(100.0));
+        assert_eq!(options.short_call.strike_price, f2p!(100.0));
         assert_eq!(options.short_call.option_style, OptionStyle::Call);
         assert_eq!(options.short_call.side, Side::Short);
 
         // Check long put
-        assert_eq!(options.long_put.strike_price, pos!(100.0));
+        assert_eq!(options.long_put.strike_price, f2p!(100.0));
         assert_eq!(options.long_put.option_style, OptionStyle::Put);
         assert_eq!(options.long_put.side, Side::Long);
 
         // Check short put
-        assert_eq!(options.short_put.strike_price, pos!(100.0));
+        assert_eq!(options.short_put.strike_price, f2p!(100.0));
         assert_eq!(options.short_put.option_style, OptionStyle::Put);
         assert_eq!(options.short_put.side, Side::Short);
     }
@@ -2238,7 +2256,7 @@ mod tests_option_data_get_options_in_strike {
     fn test_get_options_in_strike_using_data_iv() {
         let option_data = create_test_option_data();
         let price_params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
 
         let result =
             option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
@@ -2257,21 +2275,31 @@ mod tests_option_data_get_options_in_strike {
         option_data.implied_volatility = None;
 
         let price_params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
 
         let result =
             option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Implied volatility not found");
+        let error = result.unwrap_err();
+        match error {
+            ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility {
+                volatility,
+                reason,
+            }) => {
+                assert_eq!(volatility, None);
+                assert_eq!(reason, "Implied volatility not found");
+            }
+            _ => panic!("Incorrect error type"),
+        }
     }
 
     #[test]
     fn test_get_options_in_strike_all_properties() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
-            pos!(110.0),
+            f2p!(110.0),
             ExpirationDate::Days(45.0),
-            spos!(0.3),
+            sf2p!(0.3),
             0.06,
             0.03,
         );
@@ -2284,13 +2312,13 @@ mod tests_option_data_get_options_in_strike {
 
         // Verify common properties across all options
         let check_common_properties = |option: &Options| {
-            assert_eq!(option.strike_price, pos!(100.0));
-            assert_eq!(option.underlying_price, pos!(110.0));
+            assert_eq!(option.strike_price, f2p!(100.0));
+            assert_eq!(option.underlying_price, f2p!(110.0));
             assert_eq!(option.implied_volatility, 0.3);
             assert_eq!(option.risk_free_rate, 0.06);
             assert_eq!(option.dividend_yield, 0.03);
             assert_eq!(option.option_type, OptionType::European);
-            assert_eq!(option.quantity, pos!(1.0));
+            assert_eq!(option.quantity, f2p!(1.0));
         };
 
         check_common_properties(&options.long_call);
@@ -2303,9 +2331,9 @@ mod tests_option_data_get_options_in_strike {
     fn test_get_options_in_strike_deltas() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
-            pos!(110.0),
+            f2p!(110.0),
             ExpirationDate::Days(45.0),
-            spos!(0.3),
+            sf2p!(0.3),
             0.06,
             0.03,
         );
@@ -2316,10 +2344,28 @@ mod tests_option_data_get_options_in_strike {
 
         let options = result.unwrap();
 
-        assert_relative_eq!(options.long_call.delta(), 0.844825189, epsilon = 1e-8);
-        assert_relative_eq!(options.short_call.delta(), -0.844825189, epsilon = 1e-8);
-        assert_relative_eq!(options.long_put.delta(), -0.151483012, epsilon = 1e-8);
-        assert_relative_eq!(options.short_put.delta(), 0.151483012, epsilon = 1e-8);
+        let epsilon = dec!(1e-8);
+
+        assert_decimal_eq!(
+            options.long_call.delta().unwrap(),
+            dec!(0.844825189),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.short_call.delta().unwrap(),
+            dec!(-0.844825189),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.long_put.delta().unwrap(),
+            dec!(-0.151483012),
+            epsilon
+        );
+        assert_decimal_eq!(
+            options.short_put.delta().unwrap(),
+            dec!(0.151483012),
+            epsilon
+        );
     }
 }
 
@@ -2327,21 +2373,22 @@ mod tests_option_data_get_options_in_strike {
 mod tests_filter_options_in_strike {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
+    use crate::{f2p, sf2p};
+    use rust_decimal::Decimal;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
 
         for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
             chain.add_option(
-                pos!(*strike),
-                spos!(1.0),    // call_bid
-                spos!(1.2),    // call_ask
-                spos!(1.0),    // put_bid
-                spos!(1.2),    // put_ask
-                spos!(0.2),    // implied_volatility
+                f2p!(*strike),
+                sf2p!(1.0),    // call_bid
+                sf2p!(1.2),    // call_ask
+                sf2p!(1.0),    // put_bid
+                sf2p!(1.2),    // put_ask
+                sf2p!(0.2),    // implied_volatility
                 Some(-0.3),    // delta
-                spos!(1000.0), // volume
+                sf2p!(1000.0), // volume
                 Some(500),     // open_interest
             );
         }
@@ -2352,9 +2399,9 @@ mod tests_filter_options_in_strike {
     fn test_filter_upper_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             0.05,
             0.02,
         );
@@ -2379,9 +2426,9 @@ mod tests_filter_options_in_strike {
     fn test_filter_lower_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             0.05,
             0.02,
         );
@@ -2401,9 +2448,9 @@ mod tests_filter_options_in_strike {
     fn test_filter_all_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             0.05,
             0.02,
         );
@@ -2419,16 +2466,16 @@ mod tests_filter_options_in_strike {
     fn test_filter_range_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             0.05,
             0.02,
         );
 
         let result = chain.filter_options_in_strike(
             &price_params,
-            FindOptimalSide::Range(pos!(95.0), pos!(105.0)),
+            FindOptimalSide::Range(f2p!(95.0), f2p!(105.0)),
         );
         assert!(result.is_ok());
 
@@ -2436,18 +2483,18 @@ mod tests_filter_options_in_strike {
         assert_eq!(filtered_options.len(), 3);
 
         for opt in filtered_options {
-            assert!(opt.long_call.strike_price >= pos!(95.0));
-            assert!(opt.long_call.strike_price <= pos!(105.0));
+            assert!(opt.long_call.strike_price >= f2p!(95.0));
+            assert!(opt.long_call.strike_price <= f2p!(105.0));
         }
     }
 
     #[test]
     fn test_filter_empty_chain() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             0.05,
             0.02,
         );
@@ -2463,16 +2510,16 @@ mod tests_filter_options_in_strike {
     fn test_filter_invalid_range() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             0.05,
             0.02,
         );
 
         let result = chain.filter_options_in_strike(
             &price_params,
-            FindOptimalSide::Range(pos!(200.0), pos!(300.0)),
+            FindOptimalSide::Range(f2p!(200.0), f2p!(300.0)),
         );
         assert!(result.is_ok());
 
@@ -2484,9 +2531,9 @@ mod tests_filter_options_in_strike {
     fn test_filter_all_strikes_deltas() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
+            f2p!(100.0),
             ExpirationDate::Days(30.0),
-            spos!(0.2),
+            sf2p!(0.2),
             0.05,
             0.02,
         );
@@ -2504,11 +2551,11 @@ mod tests_filter_options_in_strike {
             assert_eq!(opt.long_put.side, Side::Long);
             assert_eq!(opt.short_put.side, Side::Short);
 
-            let deltas = opt.deltas();
-            assert!(deltas.long_call > 0.0);
-            assert!(deltas.short_call < 0.0);
-            assert!(deltas.long_put < 0.0);
-            assert!(deltas.short_put > 0.0);
+            let deltas = opt.deltas().unwrap();
+            assert!(deltas.long_call > Decimal::ZERO);
+            assert!(deltas.short_call < Decimal::ZERO);
+            assert!(deltas.long_put < Decimal::ZERO);
+            assert!(deltas.short_put > Decimal::ZERO);
         }
     }
 }
@@ -2516,45 +2563,45 @@ mod tests_filter_options_in_strike {
 #[cfg(test)]
 mod tests_chain_iterators {
     use super::*;
-    use crate::spos;
+    use crate::sf2p;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
 
         // Add three options with different strikes
         chain.add_option(
-            pos!(90.0),   // strike_price
-            spos!(5.0),   // call_bid
-            spos!(5.5),   // call_ask
-            spos!(1.0),   // put_bid
-            spos!(1.5),   // put_ask
-            spos!(0.2),   // implied_volatility
+            f2p!(90.0),   // strike_price
+            sf2p!(5.0),   // call_bid
+            sf2p!(5.5),   // call_ask
+            sf2p!(1.0),   // put_bid
+            sf2p!(1.5),   // put_ask
+            sf2p!(0.2),   // implied_volatility
             Some(0.6),    // delta
-            spos!(100.0), // volume
+            sf2p!(100.0), // volume
             Some(50),     // open_interest
         );
 
         chain.add_option(
-            pos!(100.0),
-            spos!(3.0),
-            spos!(3.5),
-            spos!(3.0),
-            spos!(3.5),
-            spos!(0.25),
+            f2p!(100.0),
+            sf2p!(3.0),
+            sf2p!(3.5),
+            sf2p!(3.0),
+            sf2p!(3.5),
+            sf2p!(0.25),
             Some(0.5),
-            spos!(150.0),
+            sf2p!(150.0),
             Some(75),
         );
 
         chain.add_option(
-            pos!(110.0),
-            spos!(1.0),
-            spos!(1.5),
-            spos!(5.0),
-            spos!(5.5),
-            spos!(0.3),
+            f2p!(110.0),
+            sf2p!(1.0),
+            sf2p!(1.5),
+            sf2p!(5.0),
+            sf2p!(5.5),
+            sf2p!(0.3),
             Some(0.4),
-            spos!(80.0),
+            sf2p!(80.0),
             Some(40),
         );
 
@@ -2563,23 +2610,23 @@ mod tests_chain_iterators {
 
     #[test]
     fn test_get_double_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         let pairs: Vec<_> = chain.get_double_iter().collect();
         assert!(pairs.is_empty());
     }
 
     #[test]
     fn test_get_double_iter_single() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
-            pos!(100.0),
-            spos!(3.0),
-            spos!(3.5),
-            spos!(3.0),
-            spos!(3.5),
-            spos!(0.25),
+            f2p!(100.0),
+            sf2p!(3.0),
+            sf2p!(3.5),
+            sf2p!(3.0),
+            sf2p!(3.5),
+            sf2p!(0.25),
             Some(0.5),
-            spos!(150.0),
+            sf2p!(150.0),
             Some(75),
         );
 
@@ -2596,35 +2643,35 @@ mod tests_chain_iterators {
         assert_eq!(pairs.len(), 3);
 
         // Check strikes of pairs
-        assert_eq!(pairs[0].0.strike_price, pos!(90.0));
-        assert_eq!(pairs[0].1.strike_price, pos!(100.0));
+        assert_eq!(pairs[0].0.strike_price, f2p!(90.0));
+        assert_eq!(pairs[0].1.strike_price, f2p!(100.0));
 
-        assert_eq!(pairs[1].0.strike_price, pos!(90.0));
-        assert_eq!(pairs[1].1.strike_price, pos!(110.0));
+        assert_eq!(pairs[1].0.strike_price, f2p!(90.0));
+        assert_eq!(pairs[1].1.strike_price, f2p!(110.0));
 
-        assert_eq!(pairs[2].0.strike_price, pos!(100.0));
-        assert_eq!(pairs[2].1.strike_price, pos!(110.0));
+        assert_eq!(pairs[2].0.strike_price, f2p!(100.0));
+        assert_eq!(pairs[2].1.strike_price, f2p!(110.0));
     }
 
     #[test]
     fn test_get_double_inclusive_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
         assert!(pairs.is_empty());
     }
 
     #[test]
     fn test_get_double_inclusive_iter_single() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
-            pos!(100.0),
-            spos!(3.0),
-            spos!(3.5),
-            spos!(3.0),
-            spos!(3.5),
-            spos!(0.25),
+            f2p!(100.0),
+            sf2p!(3.0),
+            sf2p!(3.5),
+            sf2p!(3.0),
+            sf2p!(3.5),
+            sf2p!(0.25),
             Some(0.5),
-            spos!(150.0),
+            sf2p!(150.0),
             Some(75),
         );
 
@@ -2642,80 +2689,80 @@ mod tests_chain_iterators {
         assert_eq!(pairs.len(), 6);
 
         // Check strikes of pairs
-        assert_eq!(pairs[0].0.strike_price, pos!(90.0));
-        assert_eq!(pairs[0].1.strike_price, pos!(90.0));
+        assert_eq!(pairs[0].0.strike_price, f2p!(90.0));
+        assert_eq!(pairs[0].1.strike_price, f2p!(90.0));
 
-        assert_eq!(pairs[1].0.strike_price, pos!(90.0));
-        assert_eq!(pairs[1].1.strike_price, pos!(100.0));
+        assert_eq!(pairs[1].0.strike_price, f2p!(90.0));
+        assert_eq!(pairs[1].1.strike_price, f2p!(100.0));
 
-        assert_eq!(pairs[2].0.strike_price, pos!(90.0));
-        assert_eq!(pairs[2].1.strike_price, pos!(110.0));
+        assert_eq!(pairs[2].0.strike_price, f2p!(90.0));
+        assert_eq!(pairs[2].1.strike_price, f2p!(110.0));
 
-        assert_eq!(pairs[3].0.strike_price, pos!(100.0));
-        assert_eq!(pairs[3].1.strike_price, pos!(100.0));
+        assert_eq!(pairs[3].0.strike_price, f2p!(100.0));
+        assert_eq!(pairs[3].1.strike_price, f2p!(100.0));
 
-        assert_eq!(pairs[4].0.strike_price, pos!(100.0));
-        assert_eq!(pairs[4].1.strike_price, pos!(110.0));
+        assert_eq!(pairs[4].0.strike_price, f2p!(100.0));
+        assert_eq!(pairs[4].1.strike_price, f2p!(110.0));
 
-        assert_eq!(pairs[5].0.strike_price, pos!(110.0));
-        assert_eq!(pairs[5].1.strike_price, pos!(110.0));
+        assert_eq!(pairs[5].0.strike_price, f2p!(110.0));
+        assert_eq!(pairs[5].1.strike_price, f2p!(110.0));
     }
 }
 
 #[cfg(test)]
 mod tests_chain_iterators_bis {
     use super::*;
-    use crate::spos;
+    use crate::sf2p;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
 
         // Add four options with different strikes
         chain.add_option(
-            pos!(90.0),   // strike_price
-            spos!(5.0),   // call_bid
-            spos!(5.5),   // call_ask
-            spos!(1.0),   // put_bid
-            spos!(1.5),   // put_ask
-            spos!(0.2),   // implied_volatility
+            f2p!(90.0),   // strike_price
+            sf2p!(5.0),   // call_bid
+            sf2p!(5.5),   // call_ask
+            sf2p!(1.0),   // put_bid
+            sf2p!(1.5),   // put_ask
+            sf2p!(0.2),   // implied_volatility
             Some(0.6),    // delta
-            spos!(100.0), // volume
+            sf2p!(100.0), // volume
             Some(50),     // open_interest
         );
 
         chain.add_option(
-            pos!(100.0),
-            spos!(3.0),
-            spos!(3.5),
-            spos!(3.0),
-            spos!(3.5),
-            spos!(0.25),
+            f2p!(100.0),
+            sf2p!(3.0),
+            sf2p!(3.5),
+            sf2p!(3.0),
+            sf2p!(3.5),
+            sf2p!(0.25),
             Some(0.5),
-            spos!(150.0),
+            sf2p!(150.0),
             Some(75),
         );
 
         chain.add_option(
-            pos!(110.0),
-            spos!(1.0),
-            spos!(1.5),
-            spos!(5.0),
-            spos!(5.5),
-            spos!(0.3),
+            f2p!(110.0),
+            sf2p!(1.0),
+            sf2p!(1.5),
+            sf2p!(5.0),
+            sf2p!(5.5),
+            sf2p!(0.3),
             Some(0.4),
-            spos!(80.0),
+            sf2p!(80.0),
             Some(40),
         );
 
         chain.add_option(
-            pos!(120.0),
-            spos!(0.5),
-            spos!(1.0),
-            spos!(7.0),
-            spos!(7.5),
-            spos!(0.35),
+            f2p!(120.0),
+            sf2p!(0.5),
+            sf2p!(1.0),
+            sf2p!(7.0),
+            sf2p!(7.5),
+            sf2p!(0.35),
             Some(0.3),
-            spos!(60.0),
+            sf2p!(60.0),
             Some(30),
         );
 
@@ -2725,17 +2772,17 @@ mod tests_chain_iterators_bis {
     // Tests for Triple Iterator
     #[test]
     fn test_get_triple_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         let triples: Vec<_> = chain.get_triple_iter().collect();
         assert!(triples.is_empty());
     }
 
     #[test]
     fn test_get_triple_iter_two_elements() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         // Add two options
-        chain.add_option(pos!(90.0), None, None, None, None, None, None, None, None);
-        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None);
+        chain.add_option(f2p!(90.0), None, None, None, None, None, None, None, None);
+        chain.add_option(f2p!(100.0), None, None, None, None, None, None, None, None);
 
         let triples: Vec<_> = chain.get_triple_iter().collect();
         assert!(triples.is_empty()); // Not enough elements for a triple
@@ -2750,28 +2797,28 @@ mod tests_chain_iterators_bis {
         assert_eq!(triples.len(), 4);
 
         // Check first triple
-        assert_eq!(triples[0].0.strike_price, pos!(90.0));
-        assert_eq!(triples[0].1.strike_price, pos!(100.0));
-        assert_eq!(triples[0].2.strike_price, pos!(110.0));
+        assert_eq!(triples[0].0.strike_price, f2p!(90.0));
+        assert_eq!(triples[0].1.strike_price, f2p!(100.0));
+        assert_eq!(triples[0].2.strike_price, f2p!(110.0));
 
         // Check last triple
-        assert_eq!(triples[3].0.strike_price, pos!(100.0));
-        assert_eq!(triples[3].1.strike_price, pos!(110.0));
-        assert_eq!(triples[3].2.strike_price, pos!(120.0));
+        assert_eq!(triples[3].0.strike_price, f2p!(100.0));
+        assert_eq!(triples[3].1.strike_price, f2p!(110.0));
+        assert_eq!(triples[3].2.strike_price, f2p!(120.0));
     }
 
     // Tests for Triple Inclusive Iterator
     #[test]
     fn test_get_triple_inclusive_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
         assert!(triples.is_empty());
     }
 
     #[test]
     fn test_get_triple_inclusive_iter_single() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
-        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
+        chain.add_option(f2p!(100.0), None, None, None, None, None, None, None, None);
 
         let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
         assert_eq!(triples.len(), 1);
@@ -2788,26 +2835,26 @@ mod tests_chain_iterators_bis {
         assert_eq!(triples.len(), 20); // For 4 elements: 4*5*6/6 = 20
 
         // Check first few triples (including self-references)
-        assert_eq!(triples[0].0.strike_price, pos!(90.0));
-        assert_eq!(triples[0].1.strike_price, pos!(90.0));
-        assert_eq!(triples[0].2.strike_price, pos!(90.0));
+        assert_eq!(triples[0].0.strike_price, f2p!(90.0));
+        assert_eq!(triples[0].1.strike_price, f2p!(90.0));
+        assert_eq!(triples[0].2.strike_price, f2p!(90.0));
     }
 
     // Tests for Quad Iterator
     #[test]
     fn test_get_quad_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         let quads: Vec<_> = chain.get_quad_iter().collect();
         assert!(quads.is_empty());
     }
 
     #[test]
     fn test_get_quad_iter_three_elements() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         // Add three options
-        chain.add_option(pos!(90.0), None, None, None, None, None, None, None, None);
-        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None);
-        chain.add_option(pos!(110.0), None, None, None, None, None, None, None, None);
+        chain.add_option(f2p!(90.0), None, None, None, None, None, None, None, None);
+        chain.add_option(f2p!(100.0), None, None, None, None, None, None, None, None);
+        chain.add_option(f2p!(110.0), None, None, None, None, None, None, None, None);
 
         let quads: Vec<_> = chain.get_quad_iter().collect();
         assert!(quads.is_empty()); // Not enough elements for a quad
@@ -2822,24 +2869,24 @@ mod tests_chain_iterators_bis {
         assert_eq!(quads.len(), 1);
 
         // Check the quad
-        assert_eq!(quads[0].0.strike_price, pos!(90.0));
-        assert_eq!(quads[0].1.strike_price, pos!(100.0));
-        assert_eq!(quads[0].2.strike_price, pos!(110.0));
-        assert_eq!(quads[0].3.strike_price, pos!(120.0));
+        assert_eq!(quads[0].0.strike_price, f2p!(90.0));
+        assert_eq!(quads[0].1.strike_price, f2p!(100.0));
+        assert_eq!(quads[0].2.strike_price, f2p!(110.0));
+        assert_eq!(quads[0].3.strike_price, f2p!(120.0));
     }
 
     // Tests for Quad Inclusive Iterator
     #[test]
     fn test_get_quad_inclusive_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
         let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
         assert!(quads.is_empty());
     }
 
     #[test]
     fn test_get_quad_inclusive_iter_single() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
-        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None);
+        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
+        chain.add_option(f2p!(100.0), None, None, None, None, None, None, None, None);
 
         let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
         assert_eq!(quads.len(), 1);
@@ -2857,16 +2904,16 @@ mod tests_chain_iterators_bis {
         assert_eq!(quads.len(), 35); // For 4 elements: 7*6*5*4/24 = 35
 
         // Check first quad (self-reference)
-        assert_eq!(quads[0].0.strike_price, pos!(90.0));
-        assert_eq!(quads[0].1.strike_price, pos!(90.0));
-        assert_eq!(quads[0].2.strike_price, pos!(90.0));
-        assert_eq!(quads[0].3.strike_price, pos!(90.0));
+        assert_eq!(quads[0].0.strike_price, f2p!(90.0));
+        assert_eq!(quads[0].1.strike_price, f2p!(90.0));
+        assert_eq!(quads[0].2.strike_price, f2p!(90.0));
+        assert_eq!(quads[0].3.strike_price, f2p!(90.0));
 
         // Check last quad
-        assert_eq!(quads[34].0.strike_price, pos!(120.0));
-        assert_eq!(quads[34].1.strike_price, pos!(120.0));
-        assert_eq!(quads[34].2.strike_price, pos!(120.0));
-        assert_eq!(quads[34].3.strike_price, pos!(120.0));
+        assert_eq!(quads[34].0.strike_price, f2p!(120.0));
+        assert_eq!(quads[34].1.strike_price, f2p!(120.0));
+        assert_eq!(quads[34].2.strike_price, f2p!(120.0));
+        assert_eq!(quads[34].3.strike_price, f2p!(120.0));
     }
 }
 
@@ -2877,7 +2924,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_upper_side_valid() {
         let option_data = OptionData::new(
-            pos!(110.0), // strike price higher than underlying
+            f2p!(110.0), // strike price higher than underlying
             None,
             None,
             None,
@@ -2887,7 +2934,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos!(100.0);
+        let underlying_price = f2p!(100.0);
 
         assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper));
     }
@@ -2895,7 +2942,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_upper_side_invalid() {
         let option_data = OptionData::new(
-            pos!(90.0), // strike price lower than underlying
+            f2p!(90.0), // strike price lower than underlying
             None,
             None,
             None,
@@ -2905,7 +2952,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos!(100.0);
+        let underlying_price = f2p!(100.0);
 
         assert!(!option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper));
     }
@@ -2913,7 +2960,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_lower_side_valid() {
         let option_data = OptionData::new(
-            pos!(90.0), // strike price lower than underlying
+            f2p!(90.0), // strike price lower than underlying
             None,
             None,
             None,
@@ -2923,7 +2970,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos!(100.0);
+        let underlying_price = f2p!(100.0);
 
         assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower));
     }
@@ -2931,7 +2978,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_lower_side_invalid() {
         let option_data = OptionData::new(
-            pos!(110.0), // strike price higher than underlying
+            f2p!(110.0), // strike price higher than underlying
             None,
             None,
             None,
@@ -2941,7 +2988,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos!(100.0);
+        let underlying_price = f2p!(100.0);
 
         assert!(!option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower));
     }
@@ -2949,8 +2996,8 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_all_side() {
         let option_data =
-            OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None);
-        let underlying_price = pos!(100.0);
+            OptionData::new(f2p!(100.0), None, None, None, None, None, None, None, None);
+        let underlying_price = f2p!(100.0);
 
         assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::All));
     }
@@ -2958,7 +3005,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_valid() {
         let option_data = OptionData::new(
-            pos!(100.0), // strike price within range
+            f2p!(100.0), // strike price within range
             None,
             None,
             None,
@@ -2968,17 +3015,17 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let range_start = pos!(90.0);
-        let range_end = pos!(110.0);
+        let range_start = f2p!(90.0);
+        let range_end = f2p!(110.0);
 
         assert!(option_data
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+            .is_valid_optimal_side(f2p!(100.0), &FindOptimalSide::Range(range_start, range_end)));
     }
 
     #[test]
     fn test_range_side_invalid_below() {
         let option_data = OptionData::new(
-            pos!(80.0), // strike price below range
+            f2p!(80.0), // strike price below range
             None,
             None,
             None,
@@ -2988,17 +3035,17 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let range_start = pos!(90.0);
-        let range_end = pos!(110.0);
+        let range_start = f2p!(90.0);
+        let range_end = f2p!(110.0);
 
         assert!(!option_data
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+            .is_valid_optimal_side(f2p!(100.0), &FindOptimalSide::Range(range_start, range_end)));
     }
 
     #[test]
     fn test_range_side_invalid_above() {
         let option_data = OptionData::new(
-            pos!(120.0), // strike price above range
+            f2p!(120.0), // strike price above range
             None,
             None,
             None,
@@ -3008,17 +3055,17 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let range_start = pos!(90.0);
-        let range_end = pos!(110.0);
+        let range_start = f2p!(90.0);
+        let range_end = f2p!(110.0);
 
         assert!(!option_data
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+            .is_valid_optimal_side(f2p!(100.0), &FindOptimalSide::Range(range_start, range_end)));
     }
 
     #[test]
     fn test_range_side_at_boundaries() {
         let option_data_lower = OptionData::new(
-            pos!(90.0), // strike price at lower boundary
+            f2p!(90.0), // strike price at lower boundary
             None,
             None,
             None,
@@ -3029,7 +3076,7 @@ mod tests_is_valid_optimal_side {
             None,
         );
         let option_data_upper = OptionData::new(
-            pos!(110.0), // strike price at upper boundary
+            f2p!(110.0), // strike price at upper boundary
             None,
             None,
             None,
@@ -3039,12 +3086,12 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let range_start = pos!(90.0);
-        let range_end = pos!(110.0);
+        let range_start = f2p!(90.0);
+        let range_end = f2p!(110.0);
 
         assert!(option_data_lower
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+            .is_valid_optimal_side(f2p!(100.0), &FindOptimalSide::Range(range_start, range_end)));
         assert!(option_data_upper
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+            .is_valid_optimal_side(f2p!(100.0), &FindOptimalSide::Range(range_start, range_end)));
     }
 }

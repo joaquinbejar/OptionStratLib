@@ -1,12 +1,12 @@
 use approx::assert_relative_eq;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::types::PositiveF64;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
-use optionstratlib::pos;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::{assert_decimal_eq, f2p};
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
@@ -14,19 +14,19 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the CallButterfly strategy
-    let underlying_price = pos!(5781.88);
+    let underlying_price = f2p!(5781.88);
 
     let strategy = CallButterfly::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        pos!(5750.0),     // long_call_strike
-        pos!(5800.0),     // short_call_low_strike
-        pos!(5850.0),     // short_call_high_strike
+        f2p!(5750.0),     // long_call_strike
+        f2p!(5800.0),     // short_call_low_strike
+        f2p!(5850.0),     // short_call_high_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        pos!(1.0), // long quantity
+        f2p!(1.0), // long quantity
         85.04,     // premium_long_itm
         53.04,     // premium_long_otm
         28.85,     // premium_short
@@ -39,13 +39,14 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     );
 
     let greeks = strategy.greeks();
+    let epsilon = dec!(0.001);
 
-    assert_relative_eq!(greeks.delta, 0.0559, epsilon = 0.001);
-    assert_relative_eq!(greeks.gamma, 0.0133, epsilon = 0.001);
-    assert_relative_eq!(greeks.theta, -7606.7078, epsilon = 0.001);
-    assert_relative_eq!(greeks.vega, 550.2891, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho, 40.2857, epsilon = 0.001);
-    assert_relative_eq!(greeks.rho_d, -40.7342, epsilon = 0.001);
+    assert_decimal_eq!(greeks.delta, dec!(0.0559), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(0.0133), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-7606.7078), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(550.2891), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(40.2857), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-40.7342), epsilon);
 
     assert_relative_eq!(
         strategy.calculate_net_delta().net_delta,
@@ -68,8 +69,8 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: pos!(0.1338190182607821),
-            strike: pos!(5800.0),
+            quantity: f2p!(0.13381901826077533),
+            strike: f2p!(5800.0),
             option_type: OptionStyle::Call
         }
     );
