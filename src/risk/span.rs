@@ -4,7 +4,7 @@
    Date: 2/10/24
 ******************************************************************************/
 
-use crate::f2p;
+use crate::{f2p, Positive};
 use crate::model::position::Position;
 
 #[allow(dead_code)]
@@ -68,7 +68,7 @@ impl SPANMargin {
         ]
     }
 
-    fn generate_volatility_scenarios(&self, implied_volatility: f64) -> Vec<f64> {
+    fn generate_volatility_scenarios(&self, implied_volatility: Positive) -> Vec<Positive> {
         vec![
             implied_volatility * (1.0 - self.volatility_scan_range),
             implied_volatility,
@@ -80,7 +80,7 @@ impl SPANMargin {
         &self,
         position: &Position,
         scenario_price: f64,
-        scenario_volatility: f64,
+        scenario_volatility: Positive,
     ) -> f64 {
         let option = &position.option;
         let current_price = option.calculate_price_black_scholes();
@@ -108,7 +108,7 @@ impl SPANMargin {
 #[cfg(test)]
 mod tests_span {
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::utils::logger::setup_logger;
@@ -124,7 +124,7 @@ mod tests_span {
             f2p!(155.0),
             f2p!(1.0),
             f2p!(150.0),
-            0.2,
+            pos!(0.2),
         );
 
         let position = Position {

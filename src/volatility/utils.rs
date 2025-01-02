@@ -5,10 +5,12 @@
 ******************************************************************************/
 
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
-use crate::d2fu;
+use crate::{d2fu, pos, Positive};
 use crate::utils::time::TimeFrame;
 use crate::Options;
 use std::f64;
+use num_traits::FromPrimitive;
+use rust_decimal::Decimal;
 use tracing::debug;
 
 /// Calculates the constant volatility from a series of returns.
@@ -91,7 +93,7 @@ pub fn ewma_volatility(returns: &[f64], lambda: f64) -> Vec<f64> {
 ///   the current implied volatility is returned.
 /// - The function ensures that the implied volatility stays positive.
 ///
-pub fn implied_volatility(market_price: f64, options: &mut Options, max_iterations: i64) -> f64 {
+pub fn implied_volatility(market_price: f64, options: &mut Options, max_iterations: i64) -> Positive {
     let mut iv = options.implied_volatility;
     for _ in 0..max_iterations {
         options.implied_volatility = iv; // Update the implied volatility in the Options struct
@@ -109,20 +111,23 @@ pub fn implied_volatility(market_price: f64, options: &mut Options, max_iteratio
             break;
         }
 
-        iv -= price_diff / vega; // Newton-Raphson update step
+        let mut temp_vi: Decimal = iv.into();
+        temp_vi = temp_vi - Decimal::from_f64(price_diff / vega).unwrap(); // Newton-Raphson update step
 
-        if iv < ZERO {
-            iv = 1e-16; // Ensure volatility stays positive
+        if temp_vi < Decimal::ZERO {
+            iv = pos!(1e-16); // Ensure volatility stays positive
+        } else { 
+            iv = temp_vi.into();
         }
 
         let mut new_iv = iv - price_diff / vega;
         if new_iv < ZERO {
             debug!("New implied volatility is negative, stopping iteration");
-            new_iv = 1e-16; // Ensure volatility stays positive
+            new_iv = pos!(1e-16); // Ensure volatility stays positive
         }
 
         // Check if new_iv is NaN or infinite
-        if new_iv.is_nan() || new_iv.is_infinite() {
+        if new_iv == Positive::INFINITY {
             debug!("New implied volatility is NaN or infinite, stopping iteration");
             continue;
         }
@@ -297,8 +302,8 @@ pub fn interpolate_volatility_surface(
 /// A tuple of (lower_bound, upper_bound) for the option price.
 pub fn uncertain_volatility_bounds(
     option: &Options,
-    min_volatility: f64,
-    max_volatility: f64,
+    min_volatility: Positive,
+    max_volatility: Positive,
 ) -> (f64, f64) {
     // Create a clone of the option for lower bound calculation
     let mut lower_bound_option = option.clone();
@@ -665,6 +670,7 @@ mod tests_implied_volatility {
     use crate::utils::logger::setup_logger;
     use crate::Positive;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
     use tracing::info;
 
     fn create_test_option() -> Options {
@@ -674,12 +680,12 @@ mod tests_implied_volatility {
             "TEST".to_string(),
             f2p!(100.0),
             ExpirationDate::Days(30.0),
-            0.02, // initial implied volatility
+            pos!(0.02), // initial implied volatility
             Positive::ONE,
             f2p!(100.0),
-            0.05,
+            dec!(0.05),
             OptionStyle::Call,
-            ZERO,
+            Positive::ZERO,
             None,
         )
     }
@@ -737,8 +743,7 @@ mod tests_implied_volatility {
         let iv = implied_volatility(market_price, &mut option, 1); // Only allow 1 iteration
 
         // The IV might not have converged, but it should still be a valid number
-        assert!(!iv.is_nan());
-        assert!(!iv.is_infinite());
+        assert!(iv != Positive::INFINITY);
     }
 
     #[test]
@@ -1147,7 +1152,7 @@ mod tests_interpolate_volatility_surface {
 
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds {
-
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -1160,12 +1165,12 @@ mod tests_uncertain_volatility_bounds {
             "TEST".to_string(),
             f2p!(100.0), // strike price
             ExpirationDate::Days(30.0),
-            0.2,           // implied volatility
+            pos!(0.2),           // implied volatility
             Positive::ONE, // quantity
             f2p!(100.0),   // underlying price
-            0.05,          // risk-free rate
+            dec!(0.05),          // risk-free rate
             OptionStyle::Call,
-            ZERO, // dividend yield
+            Positive::ZERO, // dividend yield
             None, // exotic params
         )
     }
@@ -1173,7 +1178,7 @@ mod tests_uncertain_volatility_bounds {
     #[test]
     fn test_uncertain_volatility_bounds_basic() {
         let option = create_test_option();
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.1, 0.3);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
 
         assert!(lower < upper, "Lower bound should be less than upper bound");
         assert!(lower > ZERO, "Lower bound should be positive");
@@ -1182,7 +1187,7 @@ mod tests_uncertain_volatility_bounds {
     #[test]
     fn test_uncertain_volatility_bounds_same_volatility() {
         let option = create_test_option();
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.2, 0.2);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.2), pos!(0.2));
 
         assert!(
             (lower - upper).abs() < 1e-6,
@@ -1198,8 +1203,8 @@ mod tests_uncertain_volatility_bounds {
         let mut otm_option = create_test_option();
         otm_option.strike_price = f2p!(110.0); // Out-of-the-money
 
-        let (itm_lower, itm_upper) = uncertain_volatility_bounds(&itm_option, 0.1, 0.3);
-        let (otm_lower, otm_upper) = uncertain_volatility_bounds(&otm_option, 0.1, 0.3);
+        let (itm_lower, itm_upper) = uncertain_volatility_bounds(&itm_option, pos!(0.1), pos!(0.3));
+        let (otm_lower, otm_upper) = uncertain_volatility_bounds(&otm_option, pos!(0.1), pos!(0.3));
 
         assert!(
             itm_lower > otm_lower,
@@ -1216,7 +1221,7 @@ mod tests_uncertain_volatility_bounds {
         let mut put_option = create_test_option();
         put_option.option_style = OptionStyle::Put;
 
-        let (put_lower, put_upper) = uncertain_volatility_bounds(&put_option, 0.1, 0.3);
+        let (put_lower, put_upper) = uncertain_volatility_bounds(&put_option, pos!(0.1), pos!(0.3));
 
         assert!(
             put_lower < put_upper,
@@ -1231,7 +1236,7 @@ mod tests_uncertain_volatility_bounds {
     #[test]
     fn test_uncertain_volatility_bounds_extreme_volatilities() {
         let option = create_test_option();
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.01, 1.0);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.01), pos!(1.0));
 
         assert!(
             lower < upper,
@@ -1254,6 +1259,7 @@ mod tests_uncertain_volatility_bounds_side {
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{f2p, Positive};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
     use tracing::info;
 
     fn create_test_option(option_style: OptionStyle, side: Side) -> Options {
@@ -1263,12 +1269,12 @@ mod tests_uncertain_volatility_bounds_side {
             "TEST".to_string(),
             f2p!(100.0), // strike price
             ExpirationDate::Days(30.0),
-            0.2,           // implied volatility
+            pos!(0.2),           // implied volatility
             Positive::ONE, // quantity
             f2p!(100.0),   // underlying price
-            0.05,          // risk-free rate
+            dec!(0.05),          // risk-free rate
             option_style,
-            ZERO, // dividend yield
+            Positive::ZERO, // dividend yield
             None, // exotic params
         )
     }
@@ -1276,7 +1282,7 @@ mod tests_uncertain_volatility_bounds_side {
     #[test]
     fn test_uncertain_volatility_bounds_call_long() {
         let option = create_test_option(OptionStyle::Call, Side::Long);
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.1, 0.3);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
 
         assert!(
             lower < upper,
@@ -1288,7 +1294,7 @@ mod tests_uncertain_volatility_bounds_side {
     #[test]
     fn test_uncertain_volatility_bounds_call_short() {
         let option = create_test_option(OptionStyle::Call, Side::Short);
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.1, 0.3);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
 
         assert!(
             lower > upper,
@@ -1300,7 +1306,7 @@ mod tests_uncertain_volatility_bounds_side {
     #[test]
     fn test_uncertain_volatility_bounds_put_long() {
         let option = create_test_option(OptionStyle::Put, Side::Long);
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.1, 0.3);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
 
         assert!(
             lower < upper,
@@ -1312,7 +1318,7 @@ mod tests_uncertain_volatility_bounds_side {
     #[test]
     fn test_uncertain_volatility_bounds_put_short() {
         let option = create_test_option(OptionStyle::Put, Side::Short);
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.1, 0.3);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.1), pos!(0.3));
         info!("{} {}", lower, upper);
         assert!(
             lower > upper,
@@ -1324,7 +1330,7 @@ mod tests_uncertain_volatility_bounds_side {
     #[test]
     fn test_uncertain_volatility_bounds_same_volatility() {
         let option = create_test_option(OptionStyle::Call, Side::Long);
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.2, 0.2);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.2), pos!(0.2));
 
         assert_relative_eq!(lower, upper, epsilon = 1e-6);
     }
@@ -1337,8 +1343,8 @@ mod tests_uncertain_volatility_bounds_side {
         let mut otm_option = create_test_option(OptionStyle::Call, Side::Long);
         otm_option.strike_price = f2p!(110.0); // Out-of-the-money
 
-        let (itm_lower, itm_upper) = uncertain_volatility_bounds(&itm_option, 0.1, 0.3);
-        let (otm_lower, otm_upper) = uncertain_volatility_bounds(&otm_option, 0.1, 0.3);
+        let (itm_lower, itm_upper) = uncertain_volatility_bounds(&itm_option, pos!(0.1), pos!(0.3));
+        let (otm_lower, otm_upper) = uncertain_volatility_bounds(&otm_option, pos!(0.1), pos!(0.3));
 
         assert!(
             itm_lower > otm_lower,
@@ -1353,7 +1359,7 @@ mod tests_uncertain_volatility_bounds_side {
     #[test]
     fn test_uncertain_volatility_bounds_extreme_volatilities() {
         let option = create_test_option(OptionStyle::Call, Side::Long);
-        let (lower, upper) = uncertain_volatility_bounds(&option, 0.01, 1.0);
+        let (lower, upper) = uncertain_volatility_bounds(&option, pos!(0.01), pos!(1.0));
 
         assert!(
             lower < upper,

@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::constants::ZERO;
 use crate::error::greeks::GreeksError;
-use crate::f2du;
+use crate::{f2du, Positive};
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::types::OptionStyle;
 use crate::Options;
@@ -81,6 +81,7 @@ pub trait Greeks {
 ///
 /// ```rust
 /// use rust_decimal::Decimal;
+/// use rust_decimal_macros::dec;
 /// use optionstratlib::constants::ZERO;
 /// use optionstratlib::greeks::equations::delta;
 /// use optionstratlib::Options;
@@ -91,10 +92,10 @@ pub trait Greeks {
 ///     Side::Long,underlying_price:
 ///     f2p!(100.0),
 ///     strike_price: f2p!(95.0),
-///     risk_free_rate: 0.05,
+///     risk_free_rate: dec!(0.05),
 ///     expiration_date: ExpirationDate::Days(30.0),
-///     implied_volatility: 0.2,
-///     dividend_yield: ZERO,
+///     implied_volatility: f2p!(0.2),
+///     dividend_yield: Positive::ZERO,
 ///     quantity: f2p!(1.0),
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "AAPL".to_string(),
@@ -107,7 +108,7 @@ pub trait Greeks {
 /// }
 /// ```
 pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
-    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
+    let dividend_yield: Positive = option.dividend_yield;
 
     let sign = if option.is_long() {
         Decimal::ONE
@@ -203,6 +204,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Example
 ///
 /// ```rust
+/// use rust_decimal_macros::dec;
 /// use optionstratlib::greeks::equations::gamma;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -212,10 +214,10 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 ///     side: Side::Long,
 ///     underlying_price: f2p!(100.0),
 ///     strike_price: f2p!(95.0),
-///     risk_free_rate: 0.05,
+///     risk_free_rate: dec!(0.05),
 ///     expiration_date: ExpirationDate::Days(30.0),
-///     implied_volatility: 0.2,
-///     dividend_yield: 0.01,
+///     implied_volatility: f2p!(0.2),
+///     dividend_yield: f2p!(0.01),
 ///     quantity: f2p!(1.0),
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
@@ -248,11 +250,11 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     )?;
 
     let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
-    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
+    let dividend_yield: Decimal = option.dividend_yield.into();
     let underlying_price: Decimal = option.underlying_price.into();
-    let implied_volatility: Decimal = f2du!(option.implied_volatility)?;
+    let implied_volatility: Positive = option.implied_volatility;
 
-    let gamma = (-dividend_yield * expiration_date).exp() * n(d1)?
+    let gamma: Decimal = (-dividend_yield * expiration_date).exp() * n(d1)?
         / (underlying_price * implied_volatility * expiration_date.sqrt().unwrap());
 
     let quantity: Decimal = option.quantity.into();
@@ -329,6 +331,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Example
 ///
 /// ```rust
+/// use rust_decimal_macros::dec;
 /// use optionstratlib::greeks::equations::theta;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -338,10 +341,10 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 ///     side: Side::Long,
 ///     underlying_price: f2p!(100.0),
 ///     strike_price: f2p!(95.0),
-///     risk_free_rate: 0.05,
+///     risk_free_rate: dec!(0.05),
 ///     expiration_date: ExpirationDate::Days(30.0),
-///     implied_volatility: 0.2,
-///     dividend_yield: 0.01,
+///     implied_volatility: f2p!(0.2),
+///     dividend_yield: f2p!(0.01),
 ///     quantity: f2p!(1.0),
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
@@ -376,16 +379,16 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     )?;
 
     let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
-    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
+    let dividend_yield: Positive = option.dividend_yield;
     let underlying_price: Decimal = option.underlying_price.to_dec();
-    let implied_volatility: Decimal = f2du!(option.implied_volatility)?;
+    let implied_volatility: Positive = option.implied_volatility;
 
     let common_term: Decimal =
         -underlying_price * implied_volatility * (-dividend_yield * expiration_date).exp() * n(d1)?
             / (Decimal::TWO * expiration_date.sqrt().unwrap());
 
     let strike_price: Decimal = option.strike_price.to_dec();
-    let risk_free_rate: Decimal = f2du!(option.risk_free_rate)?;
+    let risk_free_rate: Decimal = option.risk_free_rate;
 
     let theta: Decimal = match option.option_style {
         OptionStyle::Call => {
@@ -467,6 +470,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Example
 ///
 /// ```rust
+/// use rust_decimal_macros::dec;
 /// use optionstratlib::greeks::equations::vega;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -477,10 +481,10 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 ///     side: Side::Long,
 ///     underlying_price: f2p!(100.0),
 ///     strike_price: f2p!(95.0),
-///     risk_free_rate: 0.05,
+///     risk_free_rate: dec!(0.05),
 ///     expiration_date: ExpirationDate::Days(30.0),
-///     implied_volatility: 0.2,
-///     dividend_yield: 0.01,
+///     implied_volatility: f2p!(0.2),
+///     dividend_yield: f2p!(0.01),
 ///     quantity: f2p!(1.0),
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
@@ -509,7 +513,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     )?;
 
     let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
-    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
+    let dividend_yield: Positive = option.dividend_yield;
     let underlying_price: Decimal = option.underlying_price.to_dec();
 
     let vega: Decimal = underlying_price
@@ -584,6 +588,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Example
 ///
 /// ```rust
+/// use rust_decimal_macros::dec;
 /// use optionstratlib::greeks::equations::rho;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -594,10 +599,10 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 ///     side: Side::Long,
 ///     underlying_price: f2p!(100.0),
 ///     strike_price: f2p!(95.0),
-///     risk_free_rate: 0.05,
+///     risk_free_rate: dec!(0.05),
 ///     expiration_date: ExpirationDate::Days(30.0),
-///     implied_volatility: 0.2,
-///     dividend_yield: 0.01,
+///     implied_volatility: f2p!(0.2),
+///     dividend_yield: f2p!(0.01),
 ///     quantity: f2p!(1.0),
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
@@ -625,7 +630,7 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let risk_free_rate: Decimal = f2du!(option.risk_free_rate)?;
+    let risk_free_rate: Decimal = option.risk_free_rate;
     let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
 
     let e_rt = (-risk_free_rate * expiration_date).exp();
@@ -714,6 +719,7 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Example
 ///
 /// ```rust
+/// use rust_decimal_macros::dec;
 /// use optionstratlib::greeks::equations::rho_d;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -724,10 +730,10 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 ///     side: Side::Long,
 ///     underlying_price: f2p!(100.0),
 ///     strike_price: f2p!(95.0),
-///     risk_free_rate: 0.05,
+///     risk_free_rate: dec!(0.05),
 ///     expiration_date: ExpirationDate::Days(30.0),
-///     implied_volatility: 0.2,
-///     dividend_yield: 0.01,
+///     implied_volatility: f2p!(0.2),
+///     dividend_yield: f2p!(0.01),
 ///     quantity: f2p!(1.0),
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
@@ -758,7 +764,7 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     )?;
 
     let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
-    let dividend_yield: Decimal = f2du!(option.dividend_yield)?;
+    let dividend_yield: Positive = option.dividend_yield;
     let underlying_price: Decimal = option.underlying_price.to_dec();
 
     let rhod = match option.option_style {
@@ -784,7 +790,7 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
 mod tests_delta_equations {
     use super::*;
     use crate::constants::ZERO;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::utils::logger::setup_logger;
@@ -801,7 +807,7 @@ mod tests_delta_equations {
             f2p!(150.0),
             f2p!(1.0),
             f2p!(150.0),
-            ZERO,
+            Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap();
         info!("Zero Volatility: {}", delta_value);
@@ -817,7 +823,7 @@ mod tests_delta_equations {
             f2p!(110.0),
             f2p!(1.0),
             f2p!(150.0),
-            ZERO,
+            Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
@@ -833,7 +839,7 @@ mod tests_delta_equations {
             f2p!(150.0),
             f2p!(1.0),
             f2p!(150.0),
-            ZERO,
+            Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
@@ -849,7 +855,7 @@ mod tests_delta_equations {
             f2p!(160.0),
             f2p!(1.0),
             f2p!(150.0),
-            ZERO,
+            Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
@@ -865,7 +871,7 @@ mod tests_delta_equations {
             f2p!(150.0),
             f2p!(1.0),
             f2p!(150.0),
-            ZERO,
+            Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
@@ -881,7 +887,7 @@ mod tests_delta_equations {
             f2p!(110.0),
             f2p!(1.0),
             f2p!(150.0),
-            ZERO,
+            Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
@@ -897,7 +903,7 @@ mod tests_delta_equations {
             f2p!(150.0),
             f2p!(1.0),
             f2p!(150.0),
-            ZERO,
+            Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
@@ -913,7 +919,7 @@ mod tests_delta_equations {
             f2p!(160.0),
             f2p!(1.0),
             f2p!(150.0),
-            ZERO,
+            Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility: {}", delta_value);
@@ -929,7 +935,7 @@ mod tests_delta_equations {
             f2p!(150.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.20,
+            pos!(0.20),
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Deep ITM Call Delta: {}", delta_value);
@@ -944,7 +950,7 @@ mod tests_delta_equations {
             f2p!(50.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.20,
+            pos!(0.20),
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Deep OTM Call Delta: {}", delta_value);
@@ -959,7 +965,7 @@ mod tests_delta_equations {
             f2p!(100.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.20,
+            pos!(0.20),
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("ATM Put Delta: {}", delta_value);
@@ -974,7 +980,7 @@ mod tests_delta_equations {
             f2p!(100.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.50,
+            pos!(0.50),
         );
         option.expiration_date = ExpirationDate::Days(7.0);
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -990,7 +996,7 @@ mod tests_delta_equations {
             f2p!(100.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.10,
+            pos!(0.10),
         );
         option.expiration_date = ExpirationDate::Days(365.0);
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -1002,7 +1008,7 @@ mod tests_delta_equations {
 #[cfg(test)]
 mod tests_gamma_equations {
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::utils::logger::setup_logger;
@@ -1019,7 +1025,7 @@ mod tests_gamma_equations {
             f2p!(150.0),
             f2p!(1.0),
             f2p!(120.0),
-            0.2,
+            pos!(0.2),
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Deep ITM Call Gamma: {}", gamma_value);
@@ -1034,7 +1040,7 @@ mod tests_gamma_equations {
             f2p!(50.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.20,
+            pos!(0.20),
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Deep OTM Call Gamma: {}", gamma_value);
@@ -1049,7 +1055,7 @@ mod tests_gamma_equations {
             f2p!(100.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.20,
+            pos!(0.20),
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("ATM Put Gamma: {}", gamma_value);
@@ -1064,7 +1070,7 @@ mod tests_gamma_equations {
             f2p!(100.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.50,
+            pos!(0.50),
         );
         option.expiration_date = ExpirationDate::Days(7.0);
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
@@ -1080,7 +1086,7 @@ mod tests_gamma_equations {
             f2p!(100.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.10,
+            pos!(0.10),
         );
         option.expiration_date = ExpirationDate::Days(365.0);
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
@@ -1096,7 +1102,7 @@ mod tests_gamma_equations {
             f2p!(100.0),
             f2p!(1.0),
             f2p!(100.0),
-            0.0,
+            Positive::ZERO,
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Zero Volatility Call Gamma: {}", gamma_value);
@@ -1111,7 +1117,7 @@ mod tests_gamma_equations {
             f2p!(100.0),
             f2p!(1.0),
             f2p!(100.0),
-            5.0,
+            pos!(5.0),
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
@@ -1123,14 +1129,15 @@ mod tests_gamma_equations {
 mod tests_vega_equation {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionType, Side};
-    use crate::{f2p, Positive};
+    use crate::{f2p, pos, Positive};
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_option(
         underlying_price: Positive,
         strike_price: Positive,
-        implied_volatility: f64,
-        dividend_yield: f64,
+        implied_volatility: Positive,
+        dividend_yield: Positive,
         expiration_in_days: f64,
     ) -> Options {
         Options::new(
@@ -1142,7 +1149,7 @@ mod tests_vega_equation {
             implied_volatility,
             f2p!(1.0), // Quantity
             underlying_price,
-            0.05, // Risk-free rate
+            dec!(0.05), // Risk-free rate
             OptionStyle::Call,
             dividend_yield,
             None, // No exotic params for this test
@@ -1151,7 +1158,7 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_atm() {
-        let option = create_test_option(f2p!(100.0), f2p!(100.0), 0.2, 0.0, 365.0);
+        let option = create_test_option(f2p!(100.0), f2p!(100.0), pos!(0.2), Positive::ZERO, 365.0);
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 63.68306511756191;
         assert!(
@@ -1164,7 +1171,7 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_otm() {
-        let option = create_test_option(f2p!(90.0), f2p!(100.0), 0.2, 0.0, 365.0);
+        let option = create_test_option(f2p!(90.0), f2p!(100.0), pos!(0.2), Positive::ZERO, 365.0);
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 38.68485587005888;
         assert!(
@@ -1177,7 +1184,7 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_short_expiration() {
-        let option = create_test_option(f2p!(100.0), f2p!(100.0), 0.2, 0.0, 1.0);
+        let option = create_test_option(f2p!(100.0), f2p!(100.0), pos!(0.2), Positive::ZERO, 1.0);
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 2.6553722124554757;
         assert!(
@@ -1190,7 +1197,7 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_with_dividends() {
-        let option = create_test_option(f2p!(100.0), f2p!(100.0), 0.2, 0.03, 1.0);
+        let option = create_test_option(f2p!(100.0), f2p!(100.0), pos!(0.2), pos!(0.03), 1.0);
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 2.6551539716535117;
         assert!(
@@ -1203,7 +1210,7 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_itm() {
-        let option = create_test_option(f2p!(110.0), f2p!(100.0), 0.2, 0.0, 1.0);
+        let option = create_test_option(f2p!(110.0), f2p!(100.0), pos!(0.2), Positive::ZERO, 1.0);
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 5.757663148492351;
         assert!(
@@ -1218,10 +1225,11 @@ mod tests_vega_equation {
 #[cfg(test)]
 mod tests_rho_equations {
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_option(style: OptionStyle) -> Options {
         Options {
@@ -1230,12 +1238,12 @@ mod tests_rho_equations {
             underlying_symbol: "TEST".to_string(),
             strike_price: f2p!(100.0),
             expiration_date: ExpirationDate::Days(365.0),
-            implied_volatility: 0.2,
+            implied_volatility: pos!(0.2),
             quantity: f2p!(1.0),
             underlying_price: f2p!(100.0),
-            risk_free_rate: 0.05,
+            risk_free_rate: dec!(0.05),
             option_style: style,
-            dividend_yield: 0.0,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -1265,7 +1273,7 @@ mod tests_rho_equations {
     #[test]
     fn test_rho_zero_risk_free_rate() {
         let mut option = create_test_option(OptionStyle::Call);
-        option.risk_free_rate = 0.0;
+        option.risk_free_rate = dec!(0.0);
         let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 46.0172162722971, epsilon = 1e-8);
     }
@@ -1289,7 +1297,7 @@ mod tests_rho_equations {
     #[test]
     fn test_rho_high_volatility() {
         let mut option = create_test_option(OptionStyle::Call);
-        option.implied_volatility = 1.0;
+        option.implied_volatility = Positive::ONE;
         let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 31.043868837728198, epsilon = 0.0001);
     }
@@ -1298,7 +1306,7 @@ mod tests_rho_equations {
 #[cfg(test)]
 mod tests_theta_long_equations {
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{ExpirationDate, Side};
     use crate::model::utils::create_sample_option;
     use approx::assert_relative_eq;
@@ -1313,7 +1321,7 @@ mod tests_theta_long_equations {
             f2p!(150.0), // underlying price
             f2p!(1.0),   // quantity
             f2p!(155.0), // strike price
-            0.20,        // implied volatility
+            pos!(0.20),        // implied volatility
         );
 
         // Expected theta value for a call option (precomputed or from known source)
@@ -1335,7 +1343,7 @@ mod tests_theta_long_equations {
             f2p!(150.0), // underlying price
             f2p!(1.0),   // quantity
             f2p!(145.0), // strike price
-            0.25,        // implied volatility
+            pos!(0.25),        // implied volatility
         );
 
         // Expected theta value for a put option (precomputed or from known source)
@@ -1357,7 +1365,7 @@ mod tests_theta_long_equations {
             f2p!(150.0), // underlying price
             f2p!(1.0),   // quantity
             f2p!(150.0), // strike price
-            0.15,        // implied volatility
+            pos!(0.15),        // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(1.0); // Option close to expiry
 
@@ -1380,7 +1388,7 @@ mod tests_theta_long_equations {
             f2p!(140.0), // underlying price
             f2p!(1.0),   // quantity
             f2p!(130.0), // strike price
-            0.30,        // implied volatility
+            pos!(0.30),        // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(365.0); // Option far from expiry
 
@@ -1398,7 +1406,7 @@ mod tests_theta_long_equations {
 #[cfg(test)]
 mod tests_theta_short_equations {
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{ExpirationDate, Side};
     use crate::model::utils::create_sample_option;
     use approx::assert_relative_eq;
@@ -1413,7 +1421,7 @@ mod tests_theta_short_equations {
             f2p!(150.0), // underlying price
             f2p!(1.0),   // quantity
             f2p!(155.0), // strike price
-            0.20,        // implied volatility
+            pos!(0.20),        // implied volatility
         );
 
         // Expected theta value for a short call option (precomputed or from known source)
@@ -1435,7 +1443,7 @@ mod tests_theta_short_equations {
             f2p!(150.0), // underlying price
             f2p!(1.0),   // quantity
             f2p!(145.0), // strike price
-            0.25,        // implied volatility
+            pos!(0.25),        // implied volatility
         );
 
         // Expected theta value for a short put option (precomputed or from known source)
@@ -1457,7 +1465,7 @@ mod tests_theta_short_equations {
             f2p!(150.0), // underlying price
             f2p!(1.0),   // quantity
             f2p!(150.0), // strike price
-            0.15,        // implied volatility
+            pos!(0.15),        // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(1.0); // Option close to expiry
 
@@ -1480,7 +1488,7 @@ mod tests_theta_short_equations {
             f2p!(140.0), // underlying price
             f2p!(1.0),   // quantity
             f2p!(130.0), // strike price
-            0.30,        // implied volatility
+            pos!(0.30),        // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(365.0); // Option far from expiry
 

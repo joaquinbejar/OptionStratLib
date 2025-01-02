@@ -12,6 +12,7 @@ use crate::visualization::utils::Graph;
 use crate::{f2p, Positive};
 use rand::distributions::Distribution;
 use rand::thread_rng;
+use rust_decimal::Decimal;
 use statrs::distribution::Normal;
 use tracing::{info, trace};
 
@@ -61,8 +62,8 @@ pub struct RandomWalkGraph {
     values: Vec<Positive>,
     title_text: String,
     current_index: usize,
-    risk_free_rate: Option<f64>,
-    dividend_yield: Option<f64>,
+    risk_free_rate: Option<Decimal>,
+    dividend_yield: Option<Positive>,
     time_frame: TimeFrame,
     volatility_window: usize,
     initial_volatility: Option<Positive>,
@@ -71,8 +72,8 @@ pub struct RandomWalkGraph {
 impl RandomWalkGraph {
     pub fn new(
         title: String,
-        risk_free_rate: Option<f64>,
-        dividend_yield: Option<f64>,
+        risk_free_rate: Option<Decimal>,
+        dividend_yield: Option<Positive>,
         time_frame: TimeFrame,
         volatility_window: usize,
         initial_volatility: Option<Positive>,
@@ -206,8 +207,8 @@ impl Iterator for RandomWalkGraph {
             return None;
         }
 
-        let risk_free_rate = self.risk_free_rate.unwrap_or(ZERO);
-        let dividend_yield = self.dividend_yield.unwrap_or(ZERO);
+        let risk_free_rate:Decimal = self.risk_free_rate.unwrap_or(Decimal::ZERO);
+        let dividend_yield:Positive = self.dividend_yield.unwrap_or(Positive::ZERO);
         let price = self.values[self.current_index];
         let remaining_days = self.get_remaining_time();
         let expiration_date = ExpirationDate::Days(remaining_days);
@@ -351,9 +352,10 @@ mod tests_random_walk {
 
 #[cfg(test)]
 mod tests {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::utils::logger::setup_logger_with_level;
-    use crate::{f2p, spos};
+    use crate::{f2p, pos, spos};
     use tracing::debug;
 
     #[test]
@@ -364,8 +366,8 @@ mod tests {
 
         let mut walk = RandomWalkGraph::new(
             "Test Walk".to_string(),
-            Some(0.05),     // risk_free_rate
-            Some(0.02),     // dividend_yield
+            Some(dec!(0.05)),     // risk_free_rate
+            Some(pos!(0.02)),     // dividend_yield
             TimeFrame::Day, // time_frame (2 years)
             4,              // volatility_window
             spos!(0.2),     // initial_volatility
@@ -390,11 +392,11 @@ mod tests {
                 "Price should be positive"
             );
             assert!(
-                params.risk_free_rate >= ZERO,
+                params.risk_free_rate >= Decimal::ZERO,
                 "Risk-free rate should be non-negative"
             );
             assert!(
-                params.dividend_yield >= ZERO,
+                params.dividend_yield >= Positive::ZERO,
                 "Dividend yield should be non-negative"
             );
 

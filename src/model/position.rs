@@ -371,9 +371,10 @@ impl Graph for Position {
 mod tests_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use chrono::Duration;
+    use rust_decimal_macros::dec;
 
     fn setup_option(
         side: Side,
@@ -389,12 +390,12 @@ mod tests_position {
             underlying_symbol: "".to_string(),
             strike_price,
             expiration_date: ExpirationDate::Days(expiration_days as f64),
-            implied_volatility: 0.2,
+            implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
-            risk_free_rate: 0.01,
+            risk_free_rate: dec!(0.01),
             option_style,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -825,9 +826,10 @@ mod tests_position {
 mod tests_valid_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::OptionType;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_valid_option() -> Options {
         Options {
@@ -836,12 +838,12 @@ mod tests_valid_position {
             underlying_symbol: "AAPL".to_string(),
             strike_price: f2p!(100.0),
             expiration_date: ExpirationDate::Days(30.0),
-            implied_volatility: 0.2,
+            implied_volatility: pos!(0.2),
             quantity: f2p!(1.0),
             underlying_price: f2p!(105.0),
-            risk_free_rate: 0.05,
+            risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.01,
+            dividend_yield: pos!(0.01),
             exotic_params: None,
         }
     }
@@ -908,9 +910,9 @@ mod tests_valid_position {
 
 #[cfg(test)]
 mod tests_position_break_even {
+    use rust_decimal_macros::dec;
     use super::*;
-    use crate::constants::ZERO;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 
     fn setup_option(
@@ -927,12 +929,12 @@ mod tests_position_break_even {
             underlying_symbol: "".to_string(),
             strike_price,
             expiration_date: ExpirationDate::Days(expiration_days as f64),
-            implied_volatility: 0.2,
+            implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
-            risk_free_rate: 0.01,
+            risk_free_rate: dec!(0.01),
             option_style,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -1053,10 +1055,10 @@ mod tests_position_break_even {
 #[cfg(test)]
 mod tests_position_max_loss_profit {
     use super::*;
-    use crate::constants::ZERO;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn setup_option(
         side: Side,
@@ -1072,12 +1074,12 @@ mod tests_position_max_loss_profit {
             underlying_symbol: "".to_string(),
             strike_price,
             expiration_date: ExpirationDate::Days(expiration_days as f64),
-            implied_volatility: 0.2,
+            implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
-            risk_free_rate: 0.01,
+            risk_free_rate: dec!(0.01),
             option_style,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -1205,6 +1207,7 @@ mod tests_position_max_loss_profit {
 
 #[cfg(test)]
 mod tests_update_from_option_data {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::{f2p, spos};
 
@@ -1216,7 +1219,7 @@ mod tests_update_from_option_data {
             spos!(8.5),
             spos!(9.0),
             spos!(0.25),
-            Some(-0.3),
+            Some(dec!(-0.3)),
             None,
             None,
         )

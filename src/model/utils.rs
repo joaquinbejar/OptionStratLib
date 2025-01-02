@@ -4,9 +4,10 @@
    Date: 21/8/24
 ******************************************************************************/
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use crate::Options;
+use crate::{pos, Options};
 use crate::{f2p, Positive};
 use chrono::{NaiveDateTime, TimeZone, Utc};
+use rust_decimal_macros::dec;
 
 pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
     vec.into_iter().map(|pos_f64| pos_f64.to_f64()).collect()
@@ -19,7 +20,7 @@ pub(crate) fn create_sample_option(
     underlying_price: Positive,
     quantity: Positive,
     strike_price: Positive,
-    volatility: f64,
+    volatility: Positive,
 ) -> Options {
     Options::new(
         OptionType::European,
@@ -30,9 +31,9 @@ pub(crate) fn create_sample_option(
         volatility,
         quantity,
         underlying_price,
-        0.05,
+        dec!(0.05),
         option_style,
-        0.01,
+        pos!(0.01),
         None,
     )
 }
@@ -44,7 +45,7 @@ pub(crate) fn create_sample_option_with_date(
     underlying_price: Positive,
     quantity: Positive,
     strike_price: Positive,
-    volatility: f64,
+    volatility: Positive,
     naive_date: NaiveDateTime,
 ) -> Options {
     Options::new(
@@ -56,9 +57,9 @@ pub(crate) fn create_sample_option_with_date(
         volatility,
         quantity,
         underlying_price,
-        0.05,
+        dec!(0.05),
         option_style,
-        0.01,
+        pos!(0.01),
         None,
     )
 }
@@ -71,12 +72,12 @@ pub(crate) fn create_sample_option_simplest(option_style: OptionStyle, side: Sid
         "AAPL".to_string(),
         f2p!(100.0),
         ExpirationDate::Days(30.0),
-        0.2,
+        pos!(0.2),
         f2p!(1.0),
         f2p!(100.0),
-        0.05,
+        dec!(0.05),
         option_style,
-        0.01,
+        pos!(0.01),
         None,
     )
 }
@@ -93,12 +94,12 @@ pub(crate) fn create_sample_option_simplest_strike(
         "AAPL".to_string(),
         strike,
         ExpirationDate::Days(30.0),
-        0.2,
+        pos!(0.2),
         f2p!(1.0),
         f2p!(100.0),
-        0.05,
+        dec!(0.05),
         option_style,
-        0.01,
+        pos!(0.01),
         None,
     )
 }

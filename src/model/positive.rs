@@ -117,6 +117,10 @@ impl Positive {
         Positive(self.0.powi(n))
     }
 
+    pub(crate) fn powd(&self, p0: Decimal) -> Positive {
+        Positive(self.0.powd(p0))
+    }
+
     pub fn round(&self) -> Positive {
         Positive(self.0.round())
     }
@@ -131,6 +135,10 @@ impl Positive {
 
     pub fn round_to(&self, decimal_places: u32) -> Positive {
         Positive(self.0.round_dp(decimal_places))
+    }
+    
+    pub fn exp(&self) -> Positive {
+        Positive(self.0.exp())
     }
 }
 

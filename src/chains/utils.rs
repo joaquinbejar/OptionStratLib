@@ -66,8 +66,8 @@ pub struct OptionDataPriceParams {
     pub(crate) underlying_price: Positive,
     pub(crate) expiration_date: ExpirationDate,
     pub(crate) implied_volatility: Option<Positive>,
-    pub(crate) risk_free_rate: f64,
-    pub(crate) dividend_yield: f64,
+    pub(crate) risk_free_rate: Decimal,
+    pub(crate) dividend_yield: Positive,
 }
 
 impl OptionDataPriceParams {
@@ -75,8 +75,8 @@ impl OptionDataPriceParams {
         underlying_price: Positive,
         expiration_date: ExpirationDate,
         implied_volatility: Option<Positive>,
-        risk_free_rate: f64,
-        dividend_yield: f64,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
     ) -> Self {
         Self {
             underlying_price,
@@ -99,11 +99,11 @@ impl OptionDataPriceParams {
         self.implied_volatility
     }
 
-    pub fn get_risk_free_rate(&self) -> f64 {
+    pub fn get_risk_free_rate(&self) -> Decimal {
         self.risk_free_rate
     }
 
-    pub fn get_dividend_yield(&self) -> f64 {
+    pub fn get_dividend_yield(&self) -> Positive {
         self.dividend_yield
     }
 }
@@ -114,8 +114,8 @@ impl Default for OptionDataPriceParams {
             underlying_price: Positive::ZERO,
             expiration_date: ExpirationDate::Days(0.0),
             implied_volatility: None,
-            risk_free_rate: ZERO,
-            dividend_yield: ZERO,
+            risk_free_rate: Decimal::ZERO,
+            dividend_yield: Positive::ZERO,
         }
     }
 }
@@ -154,9 +154,9 @@ pub struct RandomPositionsParams {
     /// Quantity for each option position
     pub option_qty: Positive,
     /// Risk free interest rate
-    pub risk_free_rate: f64,
+    pub risk_free_rate: Decimal,
     /// Dividend yield of the underlying
-    pub dividend_yield: f64,
+    pub dividend_yield: Positive,
     /// Fee for opening put positions
     pub open_put_fee: f64,
     /// Fee for opening call positions
@@ -176,8 +176,8 @@ impl RandomPositionsParams {
         qty_calls_short: Option<usize>,
         expiration_date: ExpirationDate,
         option_qty: Positive,
-        risk_free_rate: f64,
-        dividend_yield: f64,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
         open_put_fee: f64,
         open_call_fee: f64,
         close_put_fee: f64,
@@ -444,8 +444,10 @@ mod tests_default_empty_string {
 
 #[cfg(test)]
 mod tests_random_positions_params {
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
 
     fn create_test_params() -> RandomPositionsParams {
         RandomPositionsParams::new(
@@ -455,8 +457,8 @@ mod tests_random_positions_params {
             Some(1),
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -472,8 +474,8 @@ mod tests_random_positions_params {
         assert_eq!(params.qty_calls_long, Some(1));
         assert_eq!(params.qty_calls_short, Some(1));
         assert_eq!(params.option_qty, 1.0);
-        assert_eq!(params.risk_free_rate, 0.05);
-        assert_eq!(params.dividend_yield, 0.02);
+        assert_eq!(params.risk_free_rate.to_f64().unwrap(), 0.05);
+        assert_eq!(params.dividend_yield.to_f64(), 0.02);
         assert_eq!(params.open_put_fee, 1.0);
         assert_eq!(params.close_put_fee, 1.0);
         assert_eq!(params.open_call_fee, 1.0);
@@ -492,8 +494,8 @@ mod tests_random_positions_params {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -508,8 +510,8 @@ mod tests_random_positions_params {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -570,8 +572,10 @@ mod tests_adjust_volatility {
 
 #[cfg(test)]
 mod tests_option_data_price_params {
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
     use super::*;
-    use crate::{f2p, spos};
+    use crate::{f2p, pos, spos};
 
     #[test]
     fn test_new_price_params() {
@@ -579,13 +583,13 @@ mod tests_option_data_price_params {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         assert_eq!(params.underlying_price, f2p!(100.0));
-        assert_eq!(params.risk_free_rate, 0.05);
-        assert_eq!(params.dividend_yield, 0.02);
+        assert_eq!(params.risk_free_rate.to_f64().unwrap(), 0.05);
+        assert_eq!(params.dividend_yield.to_f64(), 0.02);
         assert_eq!(params.implied_volatility, spos!(0.2));
     }
 
@@ -593,8 +597,8 @@ mod tests_option_data_price_params {
     fn test_default_price_params() {
         let params = OptionDataPriceParams::default();
         assert_eq!(params.underlying_price, Positive::ZERO);
-        assert_eq!(params.risk_free_rate, ZERO);
-        assert_eq!(params.dividend_yield, ZERO);
+        assert_eq!(params.risk_free_rate.to_f64().unwrap(), ZERO);
+        assert_eq!(params.dividend_yield.to_f64(), ZERO);
         assert_eq!(params.implied_volatility, None);
     }
 
@@ -604,8 +608,8 @@ mod tests_option_data_price_params {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
         let display_string = format!("{}", params);
         assert!(display_string.contains("Underlying Price: 100.000"));
@@ -617,7 +621,7 @@ mod tests_option_data_price_params {
     #[test]
     fn test_display_price_params_no_volatility() {
         let params =
-            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
         let display_string = format!("{}", params);
         assert!(display_string.contains("Implied Volatility: 0.000"));
     }
@@ -625,8 +629,9 @@ mod tests_option_data_price_params {
 
 #[cfg(test)]
 mod tests_option_chain_build_params {
+    use rust_decimal_macros::dec;
     use super::*;
-    use crate::{f2p, spos};
+    use crate::{f2p, pos, spos};
 
     #[test]
     fn test_new_chain_build_params() {
@@ -634,8 +639,8 @@ mod tests_option_chain_build_params {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let params = OptionChainBuildParams::new(
@@ -679,8 +684,9 @@ mod tests_option_chain_build_params {
 
 #[cfg(test)]
 mod tests_random_positions_params_extended {
+    use rust_decimal_macros::dec;
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
 
     #[test]
     fn test_partial_positions() {
@@ -691,8 +697,8 @@ mod tests_random_positions_params_extended {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -715,8 +721,8 @@ mod tests_random_positions_params_extended {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -735,8 +741,8 @@ mod tests_random_positions_params_extended {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -752,6 +758,7 @@ mod tests_random_positions_params_extended {
 
 #[cfg(test)]
 mod tests_sample {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::chains::chain::OptionChain;
 
@@ -761,8 +768,8 @@ mod tests_sample {
             Positive::new(2000.0).unwrap(),
             ExpirationDate::Days(10.0),
             Some(Positive::new(0.01).unwrap()),
-            0.01,
-            0.0,
+            dec!(0.01),
+            Positive::ZERO,
         );
 
         let params = OptionChainBuildParams::new(

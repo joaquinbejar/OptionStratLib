@@ -12,6 +12,7 @@ use crate::model::types::{
 use crate::strategies::base::Strategy;
 use chrono::{Duration, Utc};
 use std::fmt;
+use rust_decimal_macros::dec;
 
 impl fmt::Display for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -33,7 +34,7 @@ impl fmt::Display for Options {
             self.implied_volatility * 100.0
         )?;
         writeln!(f, "Quantity: {}", self.quantity)?;
-        writeln!(f, "Risk-free Rate: {:.2}%", self.risk_free_rate * 100.0)?;
+        writeln!(f, "Risk-free Rate: {:.2}%", self.risk_free_rate * dec!(100.0))?;
         write!(f, "Dividend Yield: {:.2}%", self.dividend_yield * 100.0)?;
         if let Some(exotic) = &self.exotic_params {
             write!(f, "\nExotic Parameters: {:?}", exotic)?;
@@ -295,7 +296,7 @@ impl fmt::Debug for Strategy {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::BarrierType;
     use chrono::{NaiveDate, TimeZone, Utc};
 
@@ -312,12 +313,12 @@ mod tests_options {
             underlying_symbol: "AAPL".to_string(),
             strike_price: f2p!(150.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: 0.25,
+            implied_volatility: pos!(0.25),
             quantity: f2p!(10.0),
             underlying_price: f2p!(155.0),
-            risk_free_rate: 0.01,
+            risk_free_rate: dec!(0.01),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.02,
+            dividend_yield: pos!(0.02),
             exotic_params: None,
         };
 
@@ -353,12 +354,12 @@ mod tests_options {
             underlying_symbol: "AAPL".to_string(),
             strike_price: f2p!(150.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: 0.25,
+            implied_volatility: pos!(0.25),
             quantity: f2p!(10.0),
             underlying_price: f2p!(155.0),
-            risk_free_rate: 0.01,
+            risk_free_rate: dec!(0.01),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.02,
+            dividend_yield: pos!(0.02),
             exotic_params: None,
         };
 
@@ -397,12 +398,12 @@ mod tests_options {
             underlying_symbol: "GOOGL".to_string(),
             strike_price: f2p!(2000.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: 0.30,
+            implied_volatility: pos!(0.30),
             quantity: f2p!(5.0),
             underlying_price: f2p!(1900.0),
-            risk_free_rate: 0.015,
+            risk_free_rate: dec!(0.015),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.01,
+            dividend_yield: pos!(0.01),
             exotic_params: Some(exotic_params),
         };
 
@@ -785,7 +786,7 @@ mod tests_option_type_display_debug {
 #[cfg(test)]
 mod tests_position_type_display_debug {
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use chrono::{DateTime, NaiveDate, TimeZone};
 
     fn get_option() -> (Options, DateTime<Utc>) {
@@ -801,12 +802,12 @@ mod tests_position_type_display_debug {
                 underlying_symbol: "AAPL".to_string(),
                 strike_price: f2p!(150.0),
                 expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-                implied_volatility: 0.25,
+                implied_volatility: pos!(0.25),
                 quantity: f2p!(10.0),
                 underlying_price: f2p!(155.0),
-                risk_free_rate: 0.01,
+                risk_free_rate: dec!(0.01),
                 option_style: OptionStyle::Call,
-                dividend_yield: 0.02,
+                dividend_yield: pos!(0.02),
                 exotic_params: None,
             },
             Utc.from_utc_datetime(&naive_date),
@@ -881,7 +882,7 @@ mod tests_position_type_display_debug {
 #[cfg(test)]
 mod tests_strategy_type_display_debug {
     use super::*;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::utils::create_sample_option_with_date;
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
@@ -904,7 +905,7 @@ mod tests_strategy_type_display_debug {
                         f2p!(100.0),
                         f2p!(1.0),
                         f2p!(100.0),
-                        0.02,
+                        pos!(0.02),
                         naive_date,
                     ),
                     5.0,
@@ -919,7 +920,7 @@ mod tests_strategy_type_display_debug {
                         f2p!(100.0),
                         f2p!(1.0),
                         f2p!(100.0),
-                        0.02,
+                        pos!(0.02),
                         naive_date,
                     ),
                     5.0,
@@ -957,7 +958,7 @@ mod tests_strategy_type_display_debug {
                         f2p!(100.0),
                         f2p!(1.0),
                         f2p!(110.0),
-                        0.02,
+                        pos!(0.02),
                         naive_date,
                     ),
                     5.0,
@@ -972,7 +973,7 @@ mod tests_strategy_type_display_debug {
                         f2p!(100.0),
                         f2p!(1.0),
                         f2p!(110.0),
-                        0.02,
+                        pos!(0.02),
                         naive_date,
                     ),
                     5.0,

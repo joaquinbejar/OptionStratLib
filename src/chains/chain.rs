@@ -17,7 +17,7 @@ use crate::utils::others::get_random_element;
 use crate::{f2p, sf2p, Positive};
 use chrono::{NaiveDate, Utc};
 use csv::WriterBuilder;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -49,7 +49,7 @@ pub struct OptionData {
     pub(crate) put_bid: Option<Positive>,
     pub(crate) put_ask: Option<Positive>,
     pub(crate) implied_volatility: Option<Positive>,
-    delta: Option<f64>,
+    delta: Option<Decimal>,
     volume: Option<Positive>,
     open_interest: Option<u64>,
 }
@@ -63,7 +63,7 @@ impl OptionData {
         put_bid: Option<Positive>,
         put_ask: Option<Positive>,
         implied_volatility: Option<Positive>,
-        delta: Option<f64>,
+        delta: Option<Decimal>,
         volume: Option<Positive>,
         open_interest: Option<u64>,
     ) -> Self {
@@ -123,9 +123,9 @@ impl OptionData {
         option_style: OptionStyle,
     ) -> Result<Options, ChainError> {
         let implied_volatility = match price_params.implied_volatility {
-            Some(iv) => iv.value(),
+            Some(iv) => iv,
             None => match self.implied_volatility {
-                Some(iv) => iv.value(),
+                Some(iv) => iv,
                 None => {
                     return Err(ChainError::invalid_volatility(
                         None,
@@ -141,7 +141,7 @@ impl OptionData {
             "OptionData".to_string(),
             self.strike_price,
             price_params.expiration_date.clone(),
-            implied_volatility.to_f64().unwrap(),
+            implied_volatility,
             f2p!(1.0),
             price_params.underlying_price,
             price_params.risk_free_rate,
@@ -242,7 +242,7 @@ impl OptionData {
         };
 
         match delta(&option) {
-            Ok(d) => self.delta = d.to_f64(),
+            Ok(d) => self.delta = Some(d),
             Err(_) => self.delta = None,
         }
     }
@@ -312,9 +312,9 @@ impl fmt::Display for OptionData {
             default_empty_string(self.call_ask),
             default_empty_string(self.put_bid),
             default_empty_string(self.put_ask),
-            self.implied_volatility.unwrap_or(f2p!(0.0)),
+            self.implied_volatility.unwrap_or(Positive::ZERO),
             " ".to_string(),
-            self.delta.unwrap_or(0.0),
+            self.delta.unwrap_or(Decimal::ZERO),
             " ".to_string(),
             default_empty_string(self.volume),
             default_empty_string(self.open_interest),
@@ -329,8 +329,8 @@ pub struct OptionChain {
     pub underlying_price: Positive,
     expiration_date: String,
     pub(crate) options: BTreeSet<OptionData>,
-    pub(crate) risk_free_rate: Option<f64>,
-    pub(crate) dividend_yield: Option<f64>,
+    pub(crate) risk_free_rate: Option<Decimal>,
+    pub(crate) dividend_yield: Option<Positive>,
 }
 
 impl OptionChain {
@@ -338,8 +338,8 @@ impl OptionChain {
         symbol: &str,
         underlying_price: Positive,
         expiration_date: String,
-        risk_free_rate: Option<f64>,
-        dividend_yield: Option<f64>,
+        risk_free_rate: Option<Decimal>,
+        dividend_yield: Option<Positive>,
     ) -> Self {
         OptionChain {
             symbol: symbol.to_string(),
@@ -446,7 +446,7 @@ impl OptionChain {
         put_bid: Option<Positive>,
         put_ask: Option<Positive>,
         implied_volatility: Option<Positive>,
-        delta: Option<f64>,
+        delta: Option<Decimal>,
         volume: Option<Positive>,
         open_interest: Option<u64>,
     ) {
@@ -627,7 +627,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date.clone(),
-                            option.implied_volatility.unwrap_or(f2p!(0.0)).to_f64(),
+                            option.implied_volatility.unwrap_or(Positive::ZERO),
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -635,7 +635,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.put_ask.unwrap_or(f2p!(0.0)).to_f64(),
+                        option.put_ask.unwrap_or(Positive::ZERO).to_f64(),
                         Utc::now(),
                         params.open_put_fee,
                         params.close_put_fee,
@@ -656,7 +656,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date.clone(),
-                            option.implied_volatility.unwrap_or(f2p!(0.0)).to_f64(),
+                            option.implied_volatility.unwrap_or(Positive::ZERO),
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -664,7 +664,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.put_bid.unwrap_or(f2p!(0.0)).to_f64(),
+                        option.put_bid.unwrap_or(Positive::ZERO).to_f64(),
                         Utc::now(),
                         params.open_put_fee,
                         params.close_put_fee,
@@ -685,7 +685,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date.clone(),
-                            option.implied_volatility.unwrap_or(f2p!(0.0)).to_f64(),
+                            option.implied_volatility.unwrap_or(Positive::ZERO),
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -693,7 +693,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.call_ask.unwrap_or(f2p!(0.0)).to_f64(),
+                        option.call_ask.unwrap_or(Positive::ZERO).to_f64(),
                         Utc::now(),
                         params.open_call_fee,
                         params.close_call_fee,
@@ -714,7 +714,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date.clone(),
-                            option.implied_volatility.unwrap_or(f2p!(0.0)).to_f64(),
+                            option.implied_volatility.unwrap_or(Positive::ZERO),
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -722,7 +722,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.call_bid.unwrap_or(f2p!(0.0)).to_f64(),
+                        option.call_bid.unwrap_or(Positive::ZERO).to_f64(),
                         Utc::now(),
                         params.open_call_fee,
                         params.close_call_fee,
@@ -1047,8 +1047,8 @@ impl OptionChainParams for OptionChain {
             self.underlying_price,
             ExpirationDate::from_string(&self.expiration_date)?,
             option.unwrap().implied_volatility,
-            self.risk_free_rate.unwrap_or(0.0),
-            self.dividend_yield.unwrap_or(0.0),
+            self.risk_free_rate.unwrap_or(Decimal::ZERO),
+            self.dividend_yield.unwrap_or(Positive::ZERO),
         ))
     }
 }
@@ -1246,9 +1246,10 @@ impl fmt::Display for OptionChain {
 mod tests_chain_base {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::sf2p;
+    use crate::{pos, sf2p};
     use crate::utils::logger::setup_logger;
     use std::fs;
+    use rust_decimal_macros::dec;
     use tracing::info;
 
     #[test]
@@ -1281,8 +1282,8 @@ mod tests_chain_base {
                 f2p!(100.0),
                 ExpirationDate::Days(30.0),
                 sf2p!(0.17),
-                0.0,
-                0.05,
+                Decimal::ZERO,
+                pos!(0.05),
             ),
         );
 
@@ -1319,8 +1320,8 @@ mod tests_chain_base {
                 f2p!(5878.10),
                 ExpirationDate::Days(60.0),
                 sf2p!(0.03),
-                0.0,
-                0.05,
+                Decimal::ZERO,
+                pos!(0.05),
             ),
         );
         let chain = OptionChain::build_chain(&params);
@@ -1357,7 +1358,7 @@ mod tests_chain_base {
             sf2p!(13.22),
             sf2p!(14.90),
             sf2p!(16.31),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(100.0),
             Some(100),
         );
@@ -1454,7 +1455,7 @@ mod tests_chain_base {
             sf2p!(13.22),
             sf2p!(14.90),
             sf2p!(16.31),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(100.0),
             Some(100),
         );
@@ -1481,7 +1482,7 @@ mod tests_chain_base {
             sf2p!(13.22),
             sf2p!(14.90),
             sf2p!(16.31),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(100.0),
             Some(100),
         );
@@ -1510,7 +1511,7 @@ mod tests_chain_base {
             sf2p!(13.22),
             sf2p!(14.90),
             sf2p!(16.31),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(100.0),
             Some(100),
         );
@@ -1540,7 +1541,7 @@ mod tests_chain_base {
             sf2p!(13.22),
             sf2p!(14.90),
             sf2p!(16.31),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(100.0),
             Some(100),
         );
@@ -1562,9 +1563,10 @@ mod tests_chain_base {
 
 #[cfg(test)]
 mod tests_option_data {
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
     use super::*;
-    use crate::constants::ZERO;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::ExpirationDate;
     use crate::sf2p;
     use crate::utils::logger::setup_logger;
@@ -1578,7 +1580,7 @@ mod tests_option_data {
             sf2p!(8.5),    // put_bid
             sf2p!(9.0),    // put_ask
             sf2p!(0.2),    // implied_volatility
-            Some(-0.3),    // delta
+            Some(dec!(-0.3)),    // delta
             sf2p!(1000.0), // volume
             Some(500),     // open_interest
         )
@@ -1593,7 +1595,7 @@ mod tests_option_data {
         assert_eq!(option_data.put_bid, sf2p!(8.5));
         assert_eq!(option_data.put_ask, sf2p!(9.0));
         assert_eq!(option_data.implied_volatility, sf2p!(0.2));
-        assert_eq!(option_data.delta, Some(-0.3));
+        assert_eq!(option_data.delta.unwrap().to_f64(), Some(-0.3));
         assert_eq!(option_data.volume, sf2p!(1000.0));
         assert_eq!(option_data.open_interest, Some(500));
     }
@@ -1691,8 +1693,8 @@ mod tests_option_data {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            ZERO,
-            ZERO,
+            Decimal::ZERO,
+            Positive::ZERO,
         );
 
         let result = option_data.calculate_prices(&price_params);
@@ -1711,7 +1713,7 @@ mod tests_option_data {
             OptionData::new(f2p!(100.0), None, None, None, None, None, None, None, None);
 
         let price_params =
-            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, ZERO, ZERO);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, Decimal::ZERO, Positive::ZERO);
         let _ = option_data.calculate_prices(&price_params);
 
         info!("{}", option_data);
@@ -1743,8 +1745,8 @@ mod tests_option_data {
             f2p!(110.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.12),
-            0.05,
-            0.01,
+            dec!(0.05),
+            pos!(0.01),
         );
         let result = option_data.calculate_prices(&price_params);
 
@@ -1779,8 +1781,8 @@ mod tests_option_data {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            0.05,
-            0.01,
+            dec!(0.05),
+            pos!(0.01),
         );
 
         let result = option_data.calculate_prices(&price_params);
@@ -1795,9 +1797,10 @@ mod tests_option_data {
 
 #[cfg(test)]
 mod tests_get_random_positions {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::error::chains::ChainBuildErrorKind;
-    use crate::f2p;
+    use crate::{f2p, pos};
     use crate::model::types::ExpirationDate;
     use crate::utils::logger::setup_logger;
 
@@ -1813,7 +1816,7 @@ mod tests_get_random_positions {
             sf2p!(3.0),   // put_bid
             sf2p!(3.2),   // put_ask
             sf2p!(0.2),   // implied_volatility
-            Some(0.5),    // delta
+            Some(dec!(0.5)),    // delta
             sf2p!(100.0), // volume
             Some(50),     // open_interest
         );
@@ -1825,7 +1828,7 @@ mod tests_get_random_positions {
             sf2p!(3.0),
             sf2p!(3.2),
             sf2p!(0.2),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(100.0),
             Some(50),
         );
@@ -1837,7 +1840,7 @@ mod tests_get_random_positions {
             sf2p!(4.0),
             sf2p!(4.2),
             sf2p!(0.2),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(100.0),
             Some(50),
         );
@@ -1856,8 +1859,8 @@ mod tests_get_random_positions {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -1889,8 +1892,8 @@ mod tests_get_random_positions {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -1921,8 +1924,8 @@ mod tests_get_random_positions {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -1953,8 +1956,8 @@ mod tests_get_random_positions {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -1985,8 +1988,8 @@ mod tests_get_random_positions {
             Some(2),
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -2017,8 +2020,8 @@ mod tests_get_random_positions {
             Some(1),
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -2063,8 +2066,8 @@ mod tests_get_random_positions {
             None,
             ExpirationDate::Days(30.0),
             f2p!(1.0),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
             1.0,
             1.0,
             1.0,
@@ -2080,6 +2083,7 @@ mod tests_get_random_positions {
 
 #[cfg(test)]
 mod tests_option_data_get_prices {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::f2p;
     use crate::sf2p;
@@ -2092,7 +2096,7 @@ mod tests_option_data_get_prices {
             sf2p!(8.5),
             sf2p!(9.0),
             sf2p!(0.2),
-            Some(-0.3),
+            Some(dec!(-0.3)),
             sf2p!(1000.0),
             Some(500),
         )
@@ -2144,6 +2148,7 @@ mod tests_option_data_get_prices {
 
 #[cfg(test)]
 mod tests_option_data_display {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::f2p;
     use crate::sf2p;
@@ -2157,7 +2162,7 @@ mod tests_option_data_display {
             sf2p!(8.5),
             sf2p!(9.0),
             sf2p!(0.2),
-            Some(-0.3),
+            Some(dec!(-0.3)),
             sf2p!(1000.0),
             Some(500),
         );
@@ -2319,9 +2324,12 @@ mod tests_strike_price_range_vec {
 
 #[cfg(test)]
 mod tests_option_data_get_option {
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
@@ -2331,7 +2339,7 @@ mod tests_option_data_get_option {
             sf2p!(8.5),    // put_bid
             sf2p!(9.0),    // put_ask
             sf2p!(0.2),    // implied_volatility
-            Some(-0.3),    // delta
+            Some(dec!(-0.3)),    // delta
             sf2p!(1000.0), // volume
             Some(500),     // open_interest
         )
@@ -2344,8 +2352,8 @@ mod tests_option_data_get_option {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.25),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
@@ -2355,8 +2363,8 @@ mod tests_option_data_get_option {
         assert_eq!(option.strike_price, f2p!(100.0));
         assert_eq!(option.implied_volatility, 0.25); // Uses provided IV
         assert_eq!(option.underlying_price, f2p!(100.0));
-        assert_eq!(option.risk_free_rate, 0.05);
-        assert_eq!(option.dividend_yield, 0.02);
+        assert_eq!(option.risk_free_rate.to_f64().unwrap(), 0.05);
+        assert_eq!(option.dividend_yield.to_f64(), 0.02);
         assert_eq!(option.side, Side::Long);
         assert_eq!(option.option_style, OptionStyle::Call);
     }
@@ -2368,8 +2376,8 @@ mod tests_option_data_get_option {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             None, // No IV provided in params
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
@@ -2385,7 +2393,7 @@ mod tests_option_data_get_option {
         option_data.implied_volatility = None;
 
         let price_params =
-            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_err());
@@ -2406,8 +2414,9 @@ mod tests_option_data_get_option {
 
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
+    use num_traits::ToPrimitive;
     use super::*;
-    use crate::assert_decimal_eq;
+    use crate::{assert_decimal_eq, pos};
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
     use rust_decimal_macros::dec;
@@ -2420,7 +2429,7 @@ mod tests_option_data_get_options_in_strike {
             sf2p!(8.5),    // put_bid
             sf2p!(9.0),    // put_ask
             sf2p!(0.2),    // implied_volatility
-            Some(-0.3),    // delta
+            Some(dec!(-0.3)),    // delta
             sf2p!(1000.0), // volume
             Some(500),     // open_interest
         )
@@ -2433,8 +2442,8 @@ mod tests_option_data_get_options_in_strike {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.25),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result =
@@ -2468,7 +2477,7 @@ mod tests_option_data_get_options_in_strike {
     fn test_get_options_in_strike_using_data_iv() {
         let option_data = create_test_option_data();
         let price_params =
-            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
 
         let result =
             option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
@@ -2487,7 +2496,7 @@ mod tests_option_data_get_options_in_strike {
         option_data.implied_volatility = None;
 
         let price_params =
-            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, 0.05, 0.02);
+            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
 
         let result =
             option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
@@ -2512,8 +2521,8 @@ mod tests_option_data_get_options_in_strike {
             f2p!(110.0),
             ExpirationDate::Days(45.0),
             sf2p!(0.3),
-            0.06,
-            0.03,
+            dec!(0.06),
+            pos!(0.03),
         );
 
         let result =
@@ -2527,8 +2536,8 @@ mod tests_option_data_get_options_in_strike {
             assert_eq!(option.strike_price, f2p!(100.0));
             assert_eq!(option.underlying_price, f2p!(110.0));
             assert_eq!(option.implied_volatility, 0.3);
-            assert_eq!(option.risk_free_rate, 0.06);
-            assert_eq!(option.dividend_yield, 0.03);
+            assert_eq!(option.risk_free_rate.to_f64().unwrap(), 0.06);
+            assert_eq!(option.dividend_yield.to_f64(), 0.03);
             assert_eq!(option.option_type, OptionType::European);
             assert_eq!(option.quantity, f2p!(1.0));
         };
@@ -2546,8 +2555,8 @@ mod tests_option_data_get_options_in_strike {
             f2p!(110.0),
             ExpirationDate::Days(45.0),
             sf2p!(0.3),
-            0.06,
-            0.03,
+            dec!(0.06),
+            pos!(0.03),
         );
 
         let result =
@@ -2585,8 +2594,9 @@ mod tests_option_data_get_options_in_strike {
 mod tests_filter_options_in_strike {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::{f2p, sf2p};
+    use crate::{f2p, pos, sf2p};
     use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-01-01".to_string(), None, None);
@@ -2599,7 +2609,7 @@ mod tests_filter_options_in_strike {
                 sf2p!(1.0),    // put_bid
                 sf2p!(1.2),    // put_ask
                 sf2p!(0.2),    // implied_volatility
-                Some(-0.3),    // delta
+                Some(dec!(-0.3)),    // delta
                 sf2p!(1000.0), // volume
                 Some(500),     // open_interest
             );
@@ -2614,8 +2624,8 @@ mod tests_filter_options_in_strike {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::Upper);
@@ -2641,8 +2651,8 @@ mod tests_filter_options_in_strike {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::Lower);
@@ -2663,8 +2673,8 @@ mod tests_filter_options_in_strike {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
@@ -2681,8 +2691,8 @@ mod tests_filter_options_in_strike {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = chain.filter_options_in_strike(
@@ -2707,8 +2717,8 @@ mod tests_filter_options_in_strike {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
@@ -2725,8 +2735,8 @@ mod tests_filter_options_in_strike {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = chain.filter_options_in_strike(
@@ -2746,8 +2756,8 @@ mod tests_filter_options_in_strike {
             f2p!(100.0),
             ExpirationDate::Days(30.0),
             sf2p!(0.2),
-            0.05,
-            0.02,
+            dec!(0.05),
+            pos!(0.02),
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
@@ -2774,6 +2784,7 @@ mod tests_filter_options_in_strike {
 
 #[cfg(test)]
 mod tests_chain_iterators {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::sf2p;
 
@@ -2788,7 +2799,7 @@ mod tests_chain_iterators {
             sf2p!(1.0),   // put_bid
             sf2p!(1.5),   // put_ask
             sf2p!(0.2),   // implied_volatility
-            Some(0.6),    // delta
+            Some(dec!(0.6)),    // delta
             sf2p!(100.0), // volume
             Some(50),     // open_interest
         );
@@ -2800,7 +2811,7 @@ mod tests_chain_iterators {
             sf2p!(3.0),
             sf2p!(3.5),
             sf2p!(0.25),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(150.0),
             Some(75),
         );
@@ -2812,7 +2823,7 @@ mod tests_chain_iterators {
             sf2p!(5.0),
             sf2p!(5.5),
             sf2p!(0.3),
-            Some(0.4),
+            Some(dec!(0.4)),
             sf2p!(80.0),
             Some(40),
         );
@@ -2837,7 +2848,7 @@ mod tests_chain_iterators {
             sf2p!(3.0),
             sf2p!(3.5),
             sf2p!(0.25),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(150.0),
             Some(75),
         );
@@ -2882,7 +2893,7 @@ mod tests_chain_iterators {
             sf2p!(3.0),
             sf2p!(3.5),
             sf2p!(0.25),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(150.0),
             Some(75),
         );
@@ -2923,6 +2934,7 @@ mod tests_chain_iterators {
 
 #[cfg(test)]
 mod tests_chain_iterators_bis {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::sf2p;
 
@@ -2937,7 +2949,7 @@ mod tests_chain_iterators_bis {
             sf2p!(1.0),   // put_bid
             sf2p!(1.5),   // put_ask
             sf2p!(0.2),   // implied_volatility
-            Some(0.6),    // delta
+            Some(dec!(0.6)),    // delta
             sf2p!(100.0), // volume
             Some(50),     // open_interest
         );
@@ -2949,7 +2961,7 @@ mod tests_chain_iterators_bis {
             sf2p!(3.0),
             sf2p!(3.5),
             sf2p!(0.25),
-            Some(0.5),
+            Some(dec!(0.5)),
             sf2p!(150.0),
             Some(75),
         );
@@ -2961,7 +2973,7 @@ mod tests_chain_iterators_bis {
             sf2p!(5.0),
             sf2p!(5.5),
             sf2p!(0.3),
-            Some(0.4),
+            Some(dec!(0.4)),
             sf2p!(80.0),
             Some(40),
         );
@@ -2973,7 +2985,7 @@ mod tests_chain_iterators_bis {
             sf2p!(7.0),
             sf2p!(7.5),
             sf2p!(0.35),
-            Some(0.3),
+            Some(dec!(0.3)),
             sf2p!(60.0),
             Some(30),
         );
