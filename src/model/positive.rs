@@ -36,7 +36,6 @@ macro_rules! spos {
 macro_rules! f2p {
     ($val:expr) => {
         $crate::Positive::new($val).unwrap_or($crate::Positive::ZERO)
-        // $crate::Positive::new_decimal(rust_decimal::Decimal::new(($val * 1e16) as i64, 16)).unwrap_or($crate::Positive::ZERO)
     };
 }
 

@@ -33,7 +33,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Assertions to validate strategy properties and computations
-    assert_eq!(strategy.get_break_even_points().len(), 1);
+    assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64().unwrap(),
         18.580000,
@@ -56,7 +56,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert!(!price_range.is_empty());
 
     // Validate price range in relation to break even points
-    let break_even_points = strategy.get_break_even_points();
+    let break_even_points = strategy.get_break_even_points().unwrap();
     assert!(price_range[0] < break_even_points[0]);
 
     // Additional strategy-specific validations

@@ -5,10 +5,10 @@
 ******************************************************************************/
 use chrono::Utc;
 use optionstratlib::f2p;
-use optionstratlib::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Options;
 use optionstratlib::Positive;
 use std::error::Error;
 

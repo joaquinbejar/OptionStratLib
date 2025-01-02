@@ -19,7 +19,6 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pricing::payoff::Profit;
@@ -29,6 +28,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::Options;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -259,11 +259,6 @@ impl Strategies for IronButterfly {
         self.long_put.option.underlying_price
     }
 
-    fn break_even(&self) -> Vec<Positive> {
-        // Iron Condor has two break-even points, we'll return the lower one
-        self.break_even_points.clone()
-    }
-
     fn max_profit(&self) -> Result<Positive, StrategyError> {
         let left_profit = self.calculate_profit_at(self.short_call.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_put.option.strike_price);
@@ -347,8 +342,8 @@ impl Strategies for IronButterfly {
         }
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -790,7 +785,7 @@ mod tests_iron_butterfly {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
@@ -811,8 +806,14 @@ mod tests_iron_butterfly {
             5.0,
         );
 
-        assert_eq!(butterfly.break_even()[0], butterfly.break_even_points[0]);
-        assert_eq!(butterfly.break_even()[1], butterfly.break_even_points[1]);
+        assert_eq!(
+            butterfly.get_break_even_points().unwrap()[0],
+            butterfly.break_even_points[0]
+        );
+        assert_eq!(
+            butterfly.get_break_even_points().unwrap()[1],
+            butterfly.break_even_points[1]
+        );
 
         // Break-even points should be equidistant from short strike
         let distance_up = butterfly.break_even_points[1] - butterfly.short_call.option.strike_price;
@@ -1128,9 +1129,9 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let butterfly = create_test_butterfly();
-        let break_even_points = butterfly.break_even();
+        let break_even_points = butterfly.get_break_even_points().unwrap();
 
         assert_eq!(break_even_points.len(), 2);
 

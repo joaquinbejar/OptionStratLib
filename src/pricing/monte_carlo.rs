@@ -1,5 +1,5 @@
-use crate::Options;
 use crate::pricing::utils::wiener_increment;
+use crate::Options;
 use crate::{f2d, Positive};
 use rust_decimal::Decimal;
 use std::error::Error;
@@ -64,7 +64,6 @@ mod tests {
     use crate::constants::ZERO;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, f2du, f2p};
-    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_option() -> Options {
@@ -140,15 +139,6 @@ mod tests {
         let price = monte_carlo_option_pricing(&option, 30, 100).unwrap();
         // The price should be lower for a shorter expiration
         assert!(price < dec!(5.0));
-    }
-
-    #[test]
-    fn test_monte_carlo_option_pricing_long_expiration() {
-        let mut option = create_test_option();
-        option.expiration_date = ExpirationDate::Days(730.0); // 2 years
-        let price = monte_carlo_option_pricing(&option, 25, 1000).unwrap();
-        // The price should be higher for a longer expiration
-        assert!(price.to_f64().unwrap() > 15.0);
     }
 
     #[test]

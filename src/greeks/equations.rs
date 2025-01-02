@@ -7,8 +7,8 @@ use crate::constants::ZERO;
 use crate::error::greeks::GreeksError;
 use crate::f2du;
 use crate::greeks::utils::{big_n, d1, d2, n};
-use crate::Options;
 use crate::model::types::OptionStyle;
+use crate::Options;
 use rust_decimal::{Decimal, MathematicalOps};
 
 #[allow(dead_code)]

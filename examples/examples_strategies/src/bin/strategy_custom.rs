@@ -1,12 +1,12 @@
 use chrono::Utc;
 use optionstratlib::f2p;
-use optionstratlib::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Options;
 use std::error::Error;
 use tracing::info;
 
@@ -139,9 +139,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        0.01,
+        f2p!(0.01),
         100,
-        0.1,
+        f2p!(0.1),
     );
     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
 
@@ -150,8 +150,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit_iter());
-    info!("Max Loss: ${:.2}", strategy.max_loss_iter());
+    info!("Max Profit: ${:.2}", strategy.max_profit_iter()?);
+    info!("Max Loss: ${:.2}", strategy.max_loss_iter()?);
     info!("Total Fees: ${:.2}", strategy.fees()?);
 
     match strategy.break_even_points.len() {

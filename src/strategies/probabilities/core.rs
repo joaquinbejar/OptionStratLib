@@ -22,7 +22,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
     ) -> Result<StrategyProbabilityAnalysis, ProbabilityError> {
-        let break_even_points = self.get_break_even_points();
+        let break_even_points = self.get_break_even_points().unwrap();
         // If both parameters are None, return default probabilities based on profit ranges
         if volatility_adj.is_none() && trend.is_none() {
             let probability_of_profit = self.probability_of_profit(None, None)?;
@@ -250,6 +250,7 @@ mod tests_probability_analysis {
         underlying_price: Positive,
         expiration: ExpirationDate,
         risk_free_rate: f64,
+        break_points: Vec<Positive>,
     }
 
     impl Validable for MockStrategy {}
@@ -265,8 +266,8 @@ mod tests_probability_analysis {
             Ok(Decimal::TWO)
         }
 
-        fn best_range_to_show(&self, _step: Positive) -> Option<Vec<Positive>> {
-            Some(vec![
+        fn best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
+            Ok(vec![
                 f2p!(90.0),
                 f2p!(95.0),
                 f2p!(100.0),
@@ -275,8 +276,9 @@ mod tests_probability_analysis {
             ])
         }
 
-        fn get_break_even_points(&self) -> Vec<Positive> {
-            vec![f2p!(95.0), f2p!(105.0)]
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+            // Ok(&vec![f2p!(95.0), f2p!(105.0)])
+            Ok(&self.break_points)
         }
     }
 
@@ -292,6 +294,7 @@ mod tests_probability_analysis {
                 underlying_price: f2p!(100.0),
                 expiration: ExpirationDate::Days(30.0),
                 risk_free_rate: 0.05,
+                break_points: vec![f2p!(95.0), f2p!(105.0)],
             }
         }
     }
@@ -459,6 +462,7 @@ mod tests_probability_analysis {
 #[cfg(test)]
 mod tests_expected_value {
     use super::*;
+    use crate::error::strategies::StrategyError;
     use crate::strategies::base::{Positionable, Validable};
 
     // Helper function to create a test strategy
@@ -486,8 +490,8 @@ mod tests_expected_value {
             self.underlying_price
         }
 
-        fn best_range_to_show(&self, _step: Positive) -> Option<Vec<Positive>> {
-            Some(vec![
+        fn best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
+            Ok(vec![
                 f2p!(90.0),
                 f2p!(95.0),
                 f2p!(100.0),
@@ -634,8 +638,8 @@ mod tests_expected_value {
                 self.base.get_underlying_price()
             }
 
-            fn best_range_to_show(&self, _step: Positive) -> Option<Vec<Positive>> {
-                Some(vec![f2p!(1.0), f2p!(1000.0), f2p!(10000.0)])
+            fn best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
+                Ok(vec![f2p!(1.0), f2p!(1000.0), f2p!(10000.0)])
             }
         }
 

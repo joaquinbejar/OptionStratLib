@@ -19,7 +19,6 @@ use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -33,6 +32,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::Options;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -238,10 +238,8 @@ impl Strategies for ShortStraddle {
         Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        let mut break_even_points = self.break_even_points.clone();
-        break_even_points.sort();
-        break_even_points
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -461,7 +459,7 @@ impl ProbabilityAnalysis for ShortStraddle {
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(option.implied_volatility),
@@ -490,7 +488,7 @@ impl ProbabilityAnalysis for ShortStraddle {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.short_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(option.implied_volatility),
@@ -784,10 +782,8 @@ impl Strategies for LongStraddle {
         Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        let mut break_even_points = self.break_even_points.clone();
-        break_even_points.sort();
-        break_even_points
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -992,7 +988,7 @@ impl ProbabilityAnalysis for LongStraddle {
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(option.implied_volatility),
@@ -1032,7 +1028,7 @@ impl ProbabilityAnalysis for LongStraddle {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.long_call.option;
-        let break_even_points = &self.get_break_even_points();
+        let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(option.implied_volatility),
@@ -1227,9 +1223,9 @@ mod tests_short_straddle {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let strategy = setup();
-        assert_eq!(strategy.break_even()[0], 146.9);
+        assert_eq!(strategy.get_break_even_points().unwrap()[0], 146.9);
     }
 
     #[test]
@@ -1524,9 +1520,9 @@ mod tests_long_straddle {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let long_straddle = setup_long_straddle();
-        assert_eq!(long_straddle.break_even()[0], 138.0);
+        assert_eq!(long_straddle.get_break_even_points().unwrap()[0], 138.0);
     }
 
     #[test]

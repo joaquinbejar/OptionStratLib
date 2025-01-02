@@ -18,7 +18,7 @@
  [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
  [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
 
- # OptionStratLib v0.2.6: Financial Options Library
+ # OptionStratLib v0.3.0: Financial Options Library
 
  ## Table of Contents
  1. [Introduction](#introduction)
@@ -544,11 +544,11 @@
 
 ```rust
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::model::option::Options;
+use optionstratlib::Options;
 use optionstratlib::Positive;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::f2p;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::info;
@@ -598,7 +598,7 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::f2p;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-use optionstratlib::utils::logger::setup_logger;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::info;

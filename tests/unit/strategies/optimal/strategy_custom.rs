@@ -3,13 +3,13 @@ use chrono::Utc;
 use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::f2p;
-use optionstratlib::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
+use optionstratlib::Options;
 use std::error::Error;
 use tracing::info;
 
@@ -76,9 +76,9 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        0.01,
+        f2p!(0.01),
         5,
-        0.1,
+        f2p!(0.1),
     );
 
     let option_chain =

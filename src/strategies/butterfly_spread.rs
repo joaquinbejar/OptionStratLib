@@ -24,7 +24,6 @@ use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::Options;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -38,6 +37,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::approx_equal;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::Options;
 use crate::{d2fu, f2p, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -308,12 +308,12 @@ impl Strategies for LongButterflySpread {
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
-        let break_even_points = self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
 
         let base = if break_even_points.len() == 2 {
-            self.get_break_even_points()[1] - self.get_break_even_points()[0]
+            break_even_points[1] - break_even_points[0]
         } else {
-            let break_even_point = self.get_break_even_points()[0];
+            let break_even_point = break_even_points[0];
 
             if break_even_point < self.short_calls.option.strike_price {
                 f2p!(self.calculate_profit_at(self.long_call_high.option.strike_price))
@@ -334,8 +334,8 @@ impl Strategies for LongButterflySpread {
         }
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -588,7 +588,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
     }
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_points = self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(self.long_call_low.option.implied_volatility),
@@ -618,7 +618,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let mut ranges = Vec::new();
-        let break_even_points = self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(self.long_call_low.option.implied_volatility),
@@ -1019,7 +1019,7 @@ impl Strategies for ShortButterflySpread {
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
-        let break_even_points = self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
         let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price);
         let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
 
@@ -1041,8 +1041,8 @@ impl Strategies for ShortButterflySpread {
         }
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -1298,7 +1298,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let mut ranges = Vec::new();
-        let break_even_points = self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(self.short_call_low.option.implied_volatility),
@@ -1347,7 +1347,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_points = self.get_break_even_points();
+        let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             f2p!(self.short_call_low.option.implied_volatility),
@@ -2405,8 +2405,8 @@ mod tests_butterfly_strategies {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
 
-        assert_eq!(long_butterfly.get_break_even_points().len(), 2);
-        assert_eq!(short_butterfly.get_break_even_points().len(), 2);
+        assert_eq!(long_butterfly.get_break_even_points().unwrap().len(), 2);
+        assert_eq!(short_butterfly.get_break_even_points().unwrap().len(), 2);
     }
 
     #[test]
@@ -2655,9 +2655,9 @@ mod tests_long_butterfly_profit {
     #[test]
     fn test_profit_at_break_even_points() {
         let butterfly = create_test();
-        let break_even_points = butterfly.get_break_even_points();
+        let break_even_points = butterfly.get_break_even_points().unwrap();
 
-        for &point in &break_even_points {
+        for &point in break_even_points {
             let profit = butterfly.calculate_profit_at(point);
             assert_relative_eq!(profit, 0.0, epsilon = 0.01);
         }
@@ -2729,9 +2729,9 @@ mod tests_short_butterfly_profit {
     #[test]
     fn test_profit_at_break_even_points() {
         let butterfly = create_test();
-        let break_even_points = butterfly.get_break_even_points();
+        let break_even_points = butterfly.get_break_even_points().unwrap();
 
-        for &point in &break_even_points {
+        for &point in break_even_points {
             let profit = butterfly.calculate_profit_at(point);
             assert_relative_eq!(profit, 0.0, epsilon = 0.01);
         }
@@ -3077,7 +3077,7 @@ mod tests_butterfly_probability {
             assert_eq!(ranges.len(), 1);
             let range = &ranges[0];
 
-            let break_even_points = butterfly.get_break_even_points();
+            let break_even_points = butterfly.get_break_even_points().unwrap();
             assert_eq!(range.lower_bound.unwrap(), break_even_points[0]);
             assert_eq!(range.upper_bound.unwrap(), break_even_points[1]);
             assert!(range.probability > Positive::ZERO);
@@ -3097,14 +3097,14 @@ mod tests_butterfly_probability {
             );
             assert_eq!(
                 lower_range.upper_bound.unwrap(),
-                butterfly.get_break_even_points()[0]
+                butterfly.get_break_even_points().unwrap()[0]
             );
             assert!(lower_range.probability > Positive::ZERO);
 
             let upper_range = &ranges[1];
             assert_eq!(
                 upper_range.lower_bound.unwrap(),
-                butterfly.get_break_even_points()[1]
+                butterfly.get_break_even_points().unwrap()[1]
             );
             assert_eq!(
                 upper_range.upper_bound.unwrap(),
@@ -3147,14 +3147,14 @@ mod tests_butterfly_probability {
             );
             assert_eq!(
                 lower_range.upper_bound.unwrap(),
-                butterfly.get_break_even_points()[0]
+                butterfly.get_break_even_points().unwrap()[0]
             );
             assert!(lower_range.probability > Positive::ZERO);
 
             let upper_range = &ranges[1];
             assert_eq!(
                 upper_range.lower_bound.unwrap(),
-                butterfly.get_break_even_points()[1]
+                butterfly.get_break_even_points().unwrap()[1]
             );
             assert_eq!(
                 upper_range.upper_bound.unwrap(),
@@ -3171,7 +3171,7 @@ mod tests_butterfly_probability {
             assert_eq!(ranges.len(), 1);
             let range = &ranges[0];
 
-            let break_even_points = butterfly.get_break_even_points();
+            let break_even_points = butterfly.get_break_even_points().unwrap();
             assert_eq!(range.lower_bound.unwrap(), break_even_points[0]);
             assert_eq!(range.upper_bound.unwrap(), break_even_points[1]);
             assert!(range.probability > Positive::ZERO);

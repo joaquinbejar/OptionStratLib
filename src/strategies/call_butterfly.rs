@@ -12,7 +12,6 @@ use crate::constants::{DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::Options;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::Position;
 use crate::pricing::payoff::Profit;
@@ -22,6 +21,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::Options;
 use crate::{d2fu, f2p, spos, Positive};
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -233,10 +233,6 @@ impl Strategies for CallButterfly {
         self.underlying_price
     }
 
-    fn break_even(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
-    }
-
     fn max_profit(&self) -> Result<Positive, StrategyError> {
         let max_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
         if max_profit > ZERO {
@@ -279,7 +275,7 @@ impl Strategies for CallButterfly {
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
-        let break_even = self.break_even();
+        let break_even = self.get_break_even_points()?;
         if break_even.len() != 2 {
             return Err(StrategyError::BreakEvenError(
                 BreakEvenErrorKind::NoBreakEvenPoints,
@@ -305,8 +301,8 @@ impl Strategies for CallButterfly {
         }
     }
 
-    fn get_break_even_points(&self) -> Vec<Positive> {
-        self.break_even_points.clone()
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -684,9 +680,9 @@ mod tests_call_butterfly {
     }
 
     #[test]
-    fn test_break_even() {
+    fn test_get_break_even_points() {
         let strategy = setup();
-        assert_eq!(strategy.break_even()[0], 150.1);
+        assert_eq!(strategy.get_break_even_points().unwrap()[0], 150.1);
     }
 
     #[test]
