@@ -5,10 +5,10 @@
 ******************************************************************************/
 use optionstratlib::f2p;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::Options;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::Options;
 use optionstratlib::Positive;
 use std::error::Error;
 use tracing::info;

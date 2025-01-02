@@ -708,5 +708,3 @@ pub mod volatility;
 pub use model::positive::Positive;
 pub use model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 pub use model::Options;
-
-

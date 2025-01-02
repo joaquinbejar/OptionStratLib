@@ -89,8 +89,8 @@ pub trait Strategies: Validable + Positionable {
         ))
     }
 
-    fn max_profit_iter(&mut self) -> Positive {
-        self.max_profit().unwrap_or(Positive::ZERO)
+    fn max_profit_iter(&mut self) -> Result<Positive, StrategyError> {
+        self.max_profit()
     }
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
@@ -100,8 +100,8 @@ pub trait Strategies: Validable + Positionable {
         ))
     }
 
-    fn max_loss_iter(&mut self) -> Positive {
-        self.max_loss().unwrap_or(Positive::ZERO)
+    fn max_loss_iter(&mut self) -> Result<Positive, StrategyError> {
+        self.max_loss()
     }
 
     /// Calculates the total cost (premium paid Long - premium get short) of the strategy.
@@ -225,7 +225,9 @@ pub trait Strategies: Validable + Positionable {
     fn range_of_profit(&self) -> Result<Positive, StrategyError> {
         let mut break_even_points = self.get_break_even_points()?.clone();
         match break_even_points.len() {
-            0 => Err(StrategyError::BreakEvenError(BreakEvenErrorKind::NoBreakEvenPoints)),
+            0 => Err(StrategyError::BreakEvenError(
+                BreakEvenErrorKind::NoBreakEvenPoints,
+            )),
             1 => Ok(Positive::INFINITY),
             2 => Ok(break_even_points[1] - break_even_points[0]),
             _ => {
@@ -425,7 +427,10 @@ mod tests_strategies {
 
     #[test]
     fn test_strategies_trait() {
-        let mut mock_strategy = MockStrategy { legs: Vec::new(), break_even_points: vec![Positive::HUNDRED] };
+        let mut mock_strategy = MockStrategy {
+            legs: Vec::new(),
+            break_even_points: vec![Positive::HUNDRED],
+        };
 
         // Test add_leg and get_legs
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
@@ -435,7 +440,10 @@ mod tests_strategies {
             .expect("Error adding position");
 
         // Test other methods
-        assert_eq!(mock_strategy.get_break_even_points().unwrap(), &vec![Positive::HUNDRED]);
+        assert_eq!(
+            mock_strategy.get_break_even_points().unwrap(),
+            &vec![Positive::HUNDRED]
+        );
         assert_eq!(mock_strategy.max_profit().unwrap_or(Positive::ZERO), 1000.0);
         assert_eq!(mock_strategy.max_loss().unwrap_or(Positive::ZERO), 500.0);
         assert_eq!(mock_strategy.total_cost(), 200.0);
@@ -444,7 +452,6 @@ mod tests_strategies {
         assert_eq!(mock_strategy.profit_area().unwrap(), dec!(5000.0));
         assert_eq!(mock_strategy.profit_ratio().unwrap(), dec!(2.0));
     }
-    
 
     #[test]
     fn test_strategies_default_methods() {
@@ -571,7 +578,7 @@ mod tests_strategies_extended {
         }
 
         let mut strategy = TestStrategy;
-        assert_eq!(strategy.max_profit_iter(), 100.0);
+        assert_eq!(strategy.max_profit_iter().unwrap().to_f64(), 100.0);
     }
 
     #[test]
@@ -586,7 +593,7 @@ mod tests_strategies_extended {
         }
 
         let mut strategy = TestStrategy;
-        assert_eq!(strategy.max_loss_iter(), 50.0);
+        assert_eq!(strategy.max_loss_iter().unwrap().to_f64(), 50.0);
     }
 
     #[test]
@@ -676,7 +683,11 @@ mod tests_max_min_strikes {
     }
 
     impl TestStrategy {
-        fn new(strikes: Vec<Positive>, underlying_price: Positive,break_even_points: Vec<Positive>) -> Self {
+        fn new(
+            strikes: Vec<Positive>,
+            underlying_price: Positive,
+            break_even_points: Vec<Positive>,
+        ) -> Self {
             Self {
                 strikes,
                 underlying_price,
@@ -841,7 +852,7 @@ mod tests_best_range_to_show {
             self.underlying_price
         }
 
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
             Ok(&self.break_even_points)
         }
 
@@ -963,7 +974,7 @@ mod tests_range_to_show {
             self.underlying_price
         }
 
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
             Ok(&self.break_even_points)
         }
 
@@ -1028,7 +1039,7 @@ mod tests_range_of_profit {
     impl Positionable for TestStrategy {}
 
     impl Strategies for TestStrategy {
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError>  {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
             Ok(&self.break_even_points)
         }
     }

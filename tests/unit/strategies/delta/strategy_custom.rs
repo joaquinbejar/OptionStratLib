@@ -1,10 +1,10 @@
 use chrono::Utc;
 use optionstratlib::greeks::equations::Greeks;
-use optionstratlib::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::utils::setup_logger;
+use optionstratlib::Options;
 use optionstratlib::{assert_decimal_eq, f2p};
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -112,9 +112,9 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        0.01,
+        f2p!(0.01),
         5,
-        0.1,
+        f2p!(0.1),
     );
 
     let greeks = strategy.greeks();

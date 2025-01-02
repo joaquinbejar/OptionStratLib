@@ -42,9 +42,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        0.01,
+        f2p!(0.01),
         100,
-        0.1,
+        f2p!(0.1),
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::All);
     let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
@@ -60,8 +60,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Net Premium Received: ${:.2}",
         strategy.net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit_iter());
-    info!("Max Loss: ${:0.2}", strategy.max_loss_iter());
+    info!("Max Profit: ${:.2}", strategy.max_profit_iter()?);
+    info!("Max Loss: ${:0.2}", strategy.max_loss_iter()?);
     info!("Total Fees: ${:.2}", strategy.fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
