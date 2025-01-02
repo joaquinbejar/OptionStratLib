@@ -1254,7 +1254,6 @@ mod tests_bear_put_spread_optimizable {
         let spread = create_test_bear_put_spread();
         let chain = create_mock_option_chain();
 
-        // Debug output para ayudar en el diagnóstico
         info!("Chain options:");
         for option in chain.options.iter() {
             info!(

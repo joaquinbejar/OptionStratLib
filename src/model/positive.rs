@@ -21,14 +21,14 @@ pub struct Positive(pub(crate) Decimal);
 #[macro_export]
 macro_rules! pos {
     ($val:expr) => {
-        Positive::new($val).unwrap()
+        $crate::Positive::new($val).unwrap()
     };
 }
 
 #[macro_export]
 macro_rules! spos {
     ($val:expr) => {
-        Some(Positive::new($val).unwrap())
+        Some($crate::Positive::new($val).unwrap())
     };
 }
 
@@ -122,7 +122,7 @@ impl Positive {
     }
 
     pub fn sqrt(&self) -> Positive {
-        Positive(self.0.ln())
+        Positive(self.0.sqrt().unwrap())
     }
 
     pub fn ln(&self) -> Positive {
