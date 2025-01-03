@@ -140,11 +140,13 @@ impl ShortStrangle {
             .expect("Invalid position");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
+        
         strategy.break_even_points.push(
-            put_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+            (put_strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2),
+            
         );
         strategy.break_even_points.push(
-            call_strike + strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+            (call_strike + strategy.net_premium_received().unwrap()/ net_quantity).round_to(2),
         );
         strategy.break_even_points.sort();
         strategy
@@ -202,14 +204,6 @@ impl Strategies for ShortStrangle {
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         let result = self.short_call.net_premium_received() + self.short_put.net_premium_received();
-        Ok(Decimal::from_f64(result).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call.open_fee
-            + self.short_call.close_fee
-            + self.short_put.open_fee
-            + self.short_put.close_fee;
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -732,11 +726,11 @@ impl LongStrangle {
 
         strategy
             .break_even_points
-            .push(put_strike - strategy.total_cost() / net_quantity);
+            .push((put_strike - strategy.total_cost() / net_quantity).round_to(2));
 
         strategy
             .break_even_points
-            .push(call_strike + strategy.total_cost() / net_quantity);
+            .push((call_strike + strategy.total_cost() / net_quantity).round_to(2));
 
         strategy.break_even_points.sort();
 
@@ -786,14 +780,6 @@ impl Strategies for LongStrangle {
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         Ok(Decimal::ZERO)
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.long_call.open_fee
-            + self.long_call.close_fee
-            + self.long_put.open_fee
-            + self.long_put.close_fee;
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -1314,7 +1300,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_fees() {
         let strategy = setup();
-        let expected_fees = 0.4;
+        let expected_fees = 40.0;
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
@@ -1650,7 +1636,7 @@ mod tests_long_strangle {
     #[test]
     fn test_fees() {
         let strategy = setup_long_strangle();
-        let expected_fees = 2.0; // 0.5 * 4 fees
+        let expected_fees = 20.0; // 0.5 * 4 fees * 10 qty
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
