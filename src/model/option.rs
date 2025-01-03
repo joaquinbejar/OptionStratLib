@@ -235,6 +235,14 @@ impl Options {
             error!("Risk free rate is less than zero");
             return false;
         }
+        if self.strike_price == Positive::ZERO {
+            error!("Strike is zero");
+            return false;
+        }
+        if self.underlying_price == Positive::ZERO {
+            error!("Underlying price is zero");
+            return false;
+        }
         true
     }
 }

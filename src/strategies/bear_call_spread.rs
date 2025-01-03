@@ -1172,28 +1172,6 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    fn test_invalid_volatility() {
-        let spread = BearCallSpread::new(
-            "TEST".to_string(),
-            pos!(100.0),
-            pos!(95.0),
-            pos!(105.0),
-            ExpirationDate::Days(30.0),
-            -pos!(0.2),   // Invalid negative volatility
-            dec!(0.05),
-            Positive::ZERO,
-            pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-        );
-        assert!(!spread.validate());
-    }
-
-    #[test]
     fn test_invalid_underlying_price() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),

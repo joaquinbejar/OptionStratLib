@@ -41,6 +41,7 @@
 //! Example usage of the Bull Call Spread strategy:
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
@@ -54,7 +55,7 @@
 //!     pos!(5750.0),   // long_strike_itm  
 //!     pos!(5820.0),   // short_strike
 //!     ExpirationDate::Days(2.0),
-//!     0.18,   // implied_volatility
+//!     pos!(0.18),   // implied_volatility
 //!     dec!(0.05),   // risk_free_rate
 //!     Positive::ZERO,   // dividend_yield
 //!     pos!(2.0),   // long quantity
@@ -147,6 +148,7 @@
 //! //! Example usage of the Iron Condor strategy:
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::iron_condor::IronCondor;
@@ -163,8 +165,8 @@
 //!     pos!(140.0),   // long_put_strike
 //!     ExpirationDate::Days(30.0),
 //!     pos!(0.2),   // implied_volatility
-//!     0.01,   // risk_free_rate
-//!     0.02,   // dividend_yield
+//!     dec!(0.01),   // risk_free_rate
+//!     pos!(0.02),   // dividend_yield
 //!     pos!(1.0),   // quantity
 //!     1.5,   // premium_short_call
 //!     1.0,   // premium_short_put

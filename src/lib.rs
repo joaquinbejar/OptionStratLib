@@ -609,7 +609,8 @@
 //! use tracing::info;
 //!
 //! fn main() -> Result<(), Box<dyn Error>> {
-//!     setup_logger();
+//!     use rust_decimal_macros::dec;
+//! setup_logger();
 //!
 //!     let underlying_price = pos!(5781.88);
 //!

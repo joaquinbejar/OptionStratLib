@@ -82,7 +82,7 @@ pub enum InputErrorKind {
         reason: String,
     },
     InvalidStrike {
-        value: f64,
+        value: String,
         reason: String,
     },
 }

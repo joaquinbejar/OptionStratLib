@@ -791,10 +791,10 @@ mod tests_macros {
     }
 
     #[test]
+    #[should_panic(expected = "Value must be positive, got -1")]
     fn test_pos_negative_values() {
         // Negative values should return ZERO
         assert_eq!(pos!(-1.0), Positive::ZERO);
-        assert_eq!(pos!(-0.1), Positive::ZERO);
     }
 
     #[test]

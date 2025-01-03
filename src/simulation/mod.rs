@@ -56,7 +56,8 @@
 //! ### Basic Random Walk Generation
 //!
 //! ```rust
-//! use optionstratlib::Positive;
+//! use rust_decimal_macros::dec;
+//! use optionstratlib::{spos, Positive};
 //! use optionstratlib::utils::time::TimeFrame;
 //! use optionstratlib::pos;
 //! use optionstratlib::simulation::{RandomWalkGraph, Walkable};
@@ -64,8 +65,8 @@
 //! // Create a new random walk graph
 //! let mut walk = RandomWalkGraph::new(
 //!     "Asset Price Simulation".to_string(),
-//!     Some(0.05),   // risk-free rate
-//!     Some(0.02),   // dividend yield
+//!     Some(dec!(0.05)),   // risk-free rate
+//!     spos!(0.02),   // dividend yield
 //!     TimeFrame::Day,
 //!     20,   // volatility window
 //!     Some(pos!(0.2)) // initial volatility
@@ -84,6 +85,7 @@
 //! ### Using the Iterator Interface
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::Positive;
 //! use optionstratlib::utils::time::TimeFrame;
@@ -92,8 +94,8 @@
 //!
 //! let mut walk = RandomWalkGraph::new(
 //!     "Price Path".to_string(),
-//!     Some(0.05),
-//!     Some(0.02),
+//!     Some(dec!(0.05)),
+//!     Some(pos!(0.02)),
 //!     TimeFrame::Day,
 //!     20,
 //!     Some(pos!(0.2))
@@ -121,16 +123,17 @@
 //! ### Visualization Integration
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::visualization::utils::Graph;
-//! use optionstratlib::Positive;
+//! use optionstratlib::{spos, Positive};
 //! use optionstratlib::pos;
 //! use optionstratlib::simulation::RandomWalkGraph;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let mut walk = RandomWalkGraph::new(
 //!     "Price Path".to_string(),
-//!     Some(0.05),
-//!     Some(0.02),
+//!     Some(dec!(0.05)),
+//!     spos!(0.02),
 //!     TimeFrame::Day,
 //!     20,
 //!     Some(pos!(0.2))

@@ -51,6 +51,7 @@
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::pos;
 //! use chrono::Utc;
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::risk::SPANMargin;
 //!
 //! // Create an option position
@@ -60,12 +61,12 @@
 //!     "STOCK".to_string(),
 //!     pos!(150.0),   // Strike price
 //!     ExpirationDate::Days(30.0),
-//!     0.2,   // Volatility
+//!     pos!(0.2),   // Volatility
 //!     Positive::ONE,   // Quantity
 //!     pos!(155.0),   // Current price
-//!     0.05,   // Risk-free rate
+//!     dec!(0.05),   // Risk-free rate
 //!     OptionStyle::Call,
-//!     0.0,   // Dividend yield
+//!     Positive::ZERO,   // Dividend yield
 //!     None,   // Exotic parameters
 //! );
 //!
@@ -93,6 +94,7 @@
 //!
 //! ```rust
 //! use chrono::Utc;
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::model::position::Position;
@@ -106,12 +108,12 @@
 //!             underlying_symbol: "AAPL".to_string(),
 //!             strike_price: pos!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
-//!             implied_volatility: 0.2,
+//!             implied_volatility: pos!(0.2),
 //!             quantity: Positive::ONE,
 //!             underlying_price: pos!(105.0),
-//!             risk_free_rate: 0.05,
+//!             risk_free_rate: dec!(0.05),
 //!             option_style: OptionStyle::Call,
-//!             dividend_yield: 0.01,
+//!             dividend_yield: pos!(0.01),
 //!             exotic_params: None,
 //!         };
 //! // Create multiple positions

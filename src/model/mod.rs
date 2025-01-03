@@ -69,6 +69,7 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -81,12 +82,12 @@
 //!     "AAPL".to_string(),
 //!     pos!(100.0),
 //!     ExpirationDate::Days(30.0),
-//!     0.2,
+//!     pos!(0.2),
 //!     pos!(1.0),
 //!     pos!(105.0),
-//!     0.05,
+//!     dec!(0.05),
 //!     OptionStyle::Call,
-//!     0.01,
+//!     pos!(0.01),
 //!     None,
 //! );
 //!

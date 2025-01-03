@@ -494,6 +494,7 @@ mod tests_simulate_returns_bis {
     }
 
     #[test]
+    #[should_panic]
     fn test_simulate_returns_invalid_std_dev() {
         assert!(simulate_returns(
             dec!(0.05),
@@ -541,7 +542,7 @@ mod tests_utils {
         let volatility = pos!(0.09531018);
         let dt = dec!(1.0);
         let down_factor = calculate_down_factor(volatility, dt).unwrap();
-        let expected_down_factor = (-volatility * dt.sqrt().unwrap()).exp();
+        let expected_down_factor = (-dt.sqrt().unwrap() * volatility).exp();
         assert!(
             (down_factor - expected_down_factor).abs() < EPSILON,
             "Expected {}, got {}",

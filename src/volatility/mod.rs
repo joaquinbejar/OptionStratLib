@@ -38,6 +38,7 @@
 //! ### Implied Volatility Calculation
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::volatility::implied_volatility;
@@ -50,12 +51,12 @@
 //!     "STOCK".to_string(),
 //!     pos!(100.0),   // Strike price
 //!     ExpirationDate::Days(30.0),
-//!     0.2,   // Initial volatility guess
+//!     pos!(0.2),   // Initial volatility guess
 //!     Positive::ONE,   // Quantity
 //!     pos!(100.0),   // Current price
-//!     0.05,   // Risk-free rate
+//!     dec!(0.05),   // Risk-free rate
 //!     OptionStyle::Call,
-//!     0.0,   // Dividend yield
+//!     Positive::ZERO,   // Dividend yield
 //!     None,   // Exotic parameters
 //! );
 //!

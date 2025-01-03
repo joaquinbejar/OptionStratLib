@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::constants::PI;
 use crate::error::decimal::DecimalError;
-use crate::error::greeks::{GreeksError, InputErrorKind};
+use crate::error::greeks::{GreeksError, InputErrorKind, MathErrorKind};
 use crate::model::decimal::f64_to_decimal;
 use crate::Options;
 use crate::Positive;
@@ -85,19 +85,18 @@ pub fn d1(
     implied_volatility: Positive,
 ) -> Result<Decimal, GreeksError> {
     let underlying_price: Decimal = underlying_price.to_dec();
-    let strike_price: Decimal = strike_price.to_dec();
     let expiration_date: Decimal = f64_to_decimal(expiration_date)?;
 
     if underlying_price == Decimal::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidStrike {
-            value: underlying_price.to_f64().unwrap(),
+            value: underlying_price.to_string(),
             reason: "Underlying price price cannot be zero".to_string(),
         }));
     }
 
-    if strike_price == Decimal::ZERO {
+    if strike_price == Positive::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidStrike {
-            value: strike_price.to_f64().unwrap(),
+            value: strike_price.to_string(),
             reason: "Strike price cannot be zero".to_string(),
         }));
     }
@@ -116,12 +115,19 @@ pub fn d1(
 
     // d1 = (ln(S / K) + (r + σ² / 2) * T) / (σ * sqrt(T))
     let implied_volatility_squared = implied_volatility.powd(Decimal::TWO);
-    let ln_price_ratio = (underlying_price / strike_price).ln();
+    let ln_price_ratio = match strike_price { 
+        value if value == Positive::INFINITY => Decimal::MIN,
+        _ => (underlying_price / strike_price).ln() 
+    };
+
     let rate_vol_term = risk_free_rate + implied_volatility_squared / Decimal::TWO;
     let numerator = ln_price_ratio + rate_vol_term * expiration_date;
     let denominator = implied_volatility * expiration_date.sqrt().unwrap();
-
-    Ok(numerator / denominator)
+    
+    match numerator.checked_div(denominator.into()) {
+        Some(result) => Ok(result),
+        None => Err(GreeksError::MathError(MathErrorKind::Overflow)),
+    }
 }
 
 /// Calculates the `d2` parameter used in the Black-Scholes options pricing model.
@@ -660,7 +666,7 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_high_underlying_price() {
         // Case with extremely high underlying price
-        let underlying_price = pos!(f64::MAX); // Very high stock price
+        let underlying_price = Positive::INFINITY; // Very high stock price
         let strike_price = pos!(100.0);
         let risk_free_rate = dec!(0.05);
         let expiration_date = 1.0;
@@ -674,7 +680,7 @@ mod calculate_d1_values {
             expiration_date,
             implied_volatility,
         )
-        .is_err());
+        .is_ok());
     }
 
     #[test]
@@ -832,7 +838,7 @@ mod calculate_d1_values_bis {
 
         assert!(result.is_ok());
         let d1_value = decimal_to_f64_test(result.unwrap());
-        assert_relative_eq!(d1_value, 0.10101608782763269, epsilon = 0.0001);
+        assert_relative_eq!(d1_value, 0.29583282863806715, epsilon = 0.0001);
     }
 
     #[test]
@@ -842,7 +848,7 @@ mod calculate_d1_values_bis {
             pos!(100.0),
             dec!(0.05),
             1.0,
-            pos!(0.05),   // 50% volatility
+            pos!(0.5),   // 50% volatility
         );
 
         assert!(result.is_ok());
@@ -866,7 +872,7 @@ mod calculate_d1_values_bis {
             pos!(100.0),
             dec!(-0.02),   // negative interest rate
             1.0,
-            pos!(0.05),
+            pos!(0.5),
         );
 
         assert!(result.is_ok());
@@ -881,12 +887,12 @@ mod calculate_d1_values_bis {
             pos!(100.0),
             dec!(-0.02),   // negative interest rate
             1.0,
-            pos!(0.05),
+            pos!(0.5),
         );
 
         assert!(result.is_ok());
         let d1_value = decimal_to_f64_test(result.unwrap());
-        assert_relative_eq!(d1_value, 0.0, epsilon = 0.0001);
+        assert_relative_eq!(d1_value, 0.21, epsilon = 0.0001);
     }
 }
 
@@ -967,7 +973,7 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_high_underlying_price() {
         // Case with extremely high underlying price
-        let underlying_price = pos!(f64::MAX);
+        let underlying_price = Positive::INFINITY;
         let strike_price = pos!(100.0);
         let risk_free_rate = dec!(0.05);
         let expiration_date = 1.0;
@@ -981,7 +987,7 @@ mod calculate_d2_values {
             expiration_date,
             implied_volatility,
         )
-        .is_err());
+        .is_ok());
     }
 
     #[test]
@@ -1092,12 +1098,12 @@ mod calculate_d2_values_bis {
             pos!(100.0),
             dec!(0.05),
             0.0833,   // 1 month
-            pos!(0.05),
+            pos!(0.5),
         )
         .unwrap();
         assert_relative_eq!(
             result.to_f64().unwrap(),
-            0.04329260906898544,
+            -0.04329260906898544,
             epsilon = 0.0001
         );
     }
@@ -1813,7 +1819,7 @@ mod tests_calculate_d_values_bis {
             strike_price: pos!(100.0),
             underlying_price: pos!(100.0),
             risk_free_rate: dec!(0.05),
-            implied_volatility: pos!(0.05),
+            implied_volatility: pos!(0.5),
             expiration_date: ExpirationDate::Days(30.0),
             quantity: pos!(1.0),
             option_style: OptionStyle::Call,
@@ -1822,7 +1828,7 @@ mod tests_calculate_d_values_bis {
         };
         let (d1, d2) = calculate_d_values(&option).unwrap();
         assert_decimal_eq!(d1, dec!(0.1003), dec!(0.0001));
-        assert_decimal_eq!(d2, dec!(0.0430), dec!(0.0001));
+        assert_decimal_eq!(d2, dec!(-0.0430), dec!(0.0001));
     }
 }
 

@@ -55,6 +55,7 @@
 //! ### Basic Strategy Analysis
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
@@ -87,6 +88,7 @@
 //! ### Analysis with Volatility Adjustment
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 //! use optionstratlib::Positive;
@@ -122,6 +124,7 @@
 //! ### Analysis with Price Trend
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::Positive;
 //! use optionstratlib::pos;

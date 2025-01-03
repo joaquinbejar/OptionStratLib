@@ -21,10 +21,10 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::chains::chain::{OptionChain, OptionData};
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-//! use optionstratlib::{pos, spos, ExpirationDate};
-//! use optionstratlib::{spos, Positive};
+//! use optionstratlib::{pos, spos, ExpirationDate, Positive};
 //!
 //! let option_chain_params = OptionChainBuildParams::new(
 //!             "SP500".to_string(),
@@ -38,8 +38,8 @@
 //!                 pos!(100.0),
 //!                 ExpirationDate::Days(30.0),
 //!                 spos!(0.17),
-//!                 0.0,
-//!                 0.05,
+//!                 dec!(0.0),
+//!                 pos!(0.05),
 //!             ),
 //!         );
 //!
@@ -126,8 +126,8 @@
 //!     Positive::new(2000.0).unwrap(),
 //!     ExpirationDate::Days(10.0),
 //!     Some(Positive::new(0.01).unwrap()),
-//!     0.01,
-//!     0.0,
+//!     dec!(0.01),
+//!     Positive::ZERO,
 //! );
 //!
 //! let option_chain_params = OptionChainBuildParams::new(

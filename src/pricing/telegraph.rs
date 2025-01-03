@@ -78,7 +78,7 @@
 
 use crate::error::decimal::DecimalError;
 use crate::pricing::utils::simulate_returns;
-use crate::{Options, Positive};
+use crate::Options;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -241,22 +241,21 @@ pub fn telegraph(
 ) -> Result<Decimal, DecimalError> {
     let mut price = option.underlying_price;
     let dt = Decimal::from_f64(option.time_to_expiration() / no_steps as f64).unwrap();
-
-    let implied_volatility: Positive = option.implied_volatility;
+    
     let one_over_252 = Decimal::from_f64(1.0 / 252.0).unwrap();
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
         (None, None) => {
-            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            let returns = simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             estimate_telegraph_parameters(&returns, Decimal::ZERO)?
         }
         (Some(l_up), None) => {
-            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            let returns = simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             let (_, l_down) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
         (None, Some(l_down)) => {
-            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            let returns = simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             let (l_up, _) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
@@ -269,7 +268,7 @@ pub fn telegraph(
     for _ in 0..no_steps {
         let state = telegraph_process.next_state(dt);
         let drift : Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
-        let volatility: Positive = option.implied_volatility * state as f64;
+        let volatility: Decimal = option.implied_volatility.to_dec() * Decimal::from_f64(state as f64).unwrap();
 
         let rh = Decimal::from_f64(dt.sqrt().unwrap().to_f64().unwrap() * random::<f64>()).unwrap();
         let lhs = drift * dt + volatility;

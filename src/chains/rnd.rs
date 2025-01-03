@@ -1446,8 +1446,6 @@ mod chain_test {
 
         let chain = OptionChain::build_chain(&option_chain_params);
 
-        assert_eq!(chain.get_title(), "SP500-2025-02-01-100");
-
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,

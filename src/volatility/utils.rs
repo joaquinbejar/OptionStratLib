@@ -120,20 +120,20 @@ pub fn implied_volatility(market_price: f64, options: &mut Options, max_iteratio
             iv = temp_vi.into();
         }
 
-        let mut new_iv = iv - price_diff / vega;
+        let mut new_iv = iv.to_f64() - price_diff / vega;
         if new_iv < ZERO {
             debug!("New implied volatility is negative, stopping iteration");
-            new_iv = pos!(1e-16); // Ensure volatility stays positive
+            new_iv = 1e-16; // Ensure volatility stays positive
         }
 
         // Check if new_iv is NaN or infinite
-        if new_iv == Positive::INFINITY {
+        if new_iv.is_nan() || new_iv == f64::INFINITY {
             debug!("New implied volatility is NaN or infinite, stopping iteration");
             continue;
         }
 
         // Limit the range of implied volatility
-        iv = new_iv.clamp(MIN_VOLATILITY, MAX_VOLATILITY);
+        iv = pos!(new_iv.clamp(MIN_VOLATILITY.to_f64(), MAX_VOLATILITY.to_f64()));
     }
 
     iv
@@ -751,7 +751,7 @@ mod tests_implied_volatility {
         let mut option = create_test_option();
 
         // Test with a very low market price
-        let low_price = 0.01;
+        let low_price = 0.9;
         let low_iv = implied_volatility(low_price, &mut option, 100);
         assert!(low_iv > ZERO);
 

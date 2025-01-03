@@ -793,8 +793,7 @@ mod tests_black_scholes_trait_bis {
         let k: f64 = 100.0;
 
         let intrinsic_value = s - k * f64::exp(-r * t);
-        assert!(price > intrinsic_value);
-        assert_relative_eq!(price, intrinsic_value, epsilon = 5.0);
+        assert_relative_eq!(price, intrinsic_value, epsilon = 0.01);
     }
 
     #[test]

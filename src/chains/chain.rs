@@ -1752,10 +1752,10 @@ mod tests_option_data {
 
         assert!(result.is_ok());
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.41213504223361));
-        assert_eq!(option_data.call_bid, spos!(10.41213504223361));
-        assert_eq!(option_data.put_ask, spos!(0.002019418653973704));
-        assert_eq!(option_data.put_bid, spos!(0.002019418653973704));
+        assert_eq!(option_data.call_ask, spos!(10.41213504105628));
+        assert_eq!(option_data.call_bid, spos!(10.41213504105628));
+        assert_eq!(option_data.put_ask, spos!(0.0020194186563746));
+        assert_eq!(option_data.put_bid, spos!(0.0020194186563746));
         option_data.apply_spread(pos!(0.02), 2);
         info!("{}", option_data);
         assert_eq!(option_data.call_ask, spos!(10.42));

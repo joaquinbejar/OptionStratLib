@@ -143,7 +143,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
     )?;
 
     let expiration_date: Decimal = f2du!(option.expiration_date.get_years())?;
-    let div_date = (-dividend_yield * expiration_date).exp();
+    let div_date = (-expiration_date * dividend_yield ).exp();
 
     let delta = match option.option_style {
         OptionStyle::Call => sign * big_n(d1)? * div_date,
@@ -254,7 +254,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     let underlying_price: Decimal = option.underlying_price.into();
     let implied_volatility: Positive = option.implied_volatility;
 
-    let gamma: Decimal = (-dividend_yield * expiration_date).exp() * n(d1)?
+    let gamma: Decimal = (-expiration_date * dividend_yield).exp() * n(d1)?
         / (underlying_price * implied_volatility * expiration_date.sqrt().unwrap());
 
     let quantity: Decimal = option.quantity.into();
@@ -384,7 +384,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let implied_volatility: Positive = option.implied_volatility;
 
     let common_term: Decimal =
-        -underlying_price * implied_volatility * (-dividend_yield * expiration_date).exp() * n(d1)?
+        -underlying_price * implied_volatility * (-expiration_date * dividend_yield).exp() * n(d1)?
             / (Decimal::TWO * expiration_date.sqrt().unwrap());
 
     let strike_price: Decimal = option.strike_price.to_dec();
@@ -399,7 +399,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
                     * big_n(d2)?
                 + dividend_yield
                     * underlying_price
-                    * (-dividend_yield * expiration_date).exp()
+                    * (-expiration_date * dividend_yield).exp()
                     * big_n(d1)?
         }
         OptionStyle::Put => {
@@ -410,7 +410,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
                     * big_n(-d2)?
                 - dividend_yield
                     * underlying_price
-                    * (-dividend_yield * expiration_date).exp()
+                    * (-expiration_date * dividend_yield).exp()
                     * big_n(-d1)?
         }
     };
@@ -517,7 +517,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     let underlying_price: Decimal = option.underlying_price.to_dec();
 
     let vega: Decimal = underlying_price
-        * (-dividend_yield * expiration_date).exp()
+        * (-expiration_date * dividend_yield).exp()
         * big_n(d1)?
         * expiration_date.sqrt().unwrap();
 
@@ -771,13 +771,13 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
         OptionStyle::Call => {
             -expiration_date
                 * underlying_price
-                * (-dividend_yield * expiration_date).exp()
+                * (-expiration_date * dividend_yield).exp()
                 * big_n(d1)?
         }
         OptionStyle::Put => {
             expiration_date
                 * underlying_price
-                * (-dividend_yield * expiration_date).exp()
+                * (-expiration_date * dividend_yield).exp()
                 * big_n(-d1)?
         }
     };
