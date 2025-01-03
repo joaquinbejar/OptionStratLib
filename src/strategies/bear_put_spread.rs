@@ -465,8 +465,8 @@ impl ProbabilityAnalysis for BearPutSpread {
         ]);
 
         let mut profit_range = ProfitLossRange::new(
-            Some(self.short_put.option.strike_price), // Price below short strike is max profit
-            Some(break_even_point),                   // Upper bound is break even point
+            Some(self.short_put.option.strike_price),   // Price below short strike is max profit
+            Some(break_even_point),   // Upper bound is break even point
             pos!(self.max_profit()?.to_f64()),
         )?;
 
@@ -493,8 +493,8 @@ impl ProbabilityAnalysis for BearPutSpread {
         ]);
 
         let mut loss_range = ProfitLossRange::new(
-            Some(break_even_point), // Lower bound is break even point
-            None,                   // No upper bound (theoretically)
+            Some(break_even_point),   // Lower bound is break even point
+            None,   // No upper bound (theoretically)
             pos!(self.max_loss()?.to_f64()),
         )?;
 
@@ -581,20 +581,20 @@ mod tests_bear_put_spread_strategy {
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(105.0),                // long_strike
-            pos!(95.0),                 // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_put
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_long_put
-            0.0,                        // close_fee_long_put
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // long_strike
+            pos!(95.0),   // short_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            4.0,   // premium_long_put
+            2.0,   // premium_short_put
+            0.0,   // open_fee_long_put
+            0.0,   // close_fee_long_put
+            0.0,   // open_fee_short_put
+            0.0,   // close_fee_short_put
         )
     }
 
@@ -697,10 +697,10 @@ mod tests_bear_put_spread_strategy {
             pos!(1.0),
             4.0,
             2.0,
-            0.5, // open_fee_long_put
-            0.5, // close_fee_long_put
-            0.5, // open_fee_short_put
-            0.5, // close_fee_short_put
+            0.5,   // open_fee_long_put
+            0.5,   // close_fee_long_put
+            0.5,   // open_fee_short_put
+            0.5,   // close_fee_short_put
         );
 
         assert_eq!(spread.fees().unwrap().to_f64().unwrap(), 2.0); // Total fees = 0.5 * 4
@@ -737,8 +737,8 @@ mod tests_bear_put_spread_strategy {
         let spread = BearPutSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            Positive::ZERO, // long_strike = default
-            Positive::ZERO, // short_strike = default
+            Positive::ZERO,   // long_strike = default
+            Positive::ZERO,   // short_strike = default
             ExpirationDate::Days(30.0),
             pos!(0.2),
             dec!(0.05),
@@ -767,7 +767,7 @@ mod tests_bear_put_spread_strategy {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             4.0,
             2.0,
             0.0,
@@ -927,14 +927,14 @@ mod tests_bear_put_spread_optimization {
         // Add options with increasing strikes around the current price
         chain.add_option(
             pos!(85.0),   // strike
-            None,         // call_bid
-            None,         // call_ask
+            None,   // call_bid
+            None,   // call_ask
             spos!(8.0),   // put_bid
             spos!(8.2),   // put_ask
             spos!(0.2),   // implied_volatility
             Some(dec!(-0.8)),   // delta
-            spos!(100.0), // volume
-            Some(50),     // open_interest
+            spos!(100.0),   // volume
+            Some(50),   // open_interest
         );
 
         chain.add_option(
@@ -1023,8 +1023,8 @@ mod tests_bear_put_spread_optimization {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.7, // premium_long_put
-            4.0, // premium_short_put
+            1.7,   // premium_long_put
+            4.0,   // premium_short_put
             0.0,
             0.0,
             0.0,
@@ -1135,8 +1135,8 @@ mod tests_bear_put_spread_optimization {
             pos!(120.0),
             None,
             None,
-            None, // Invalid: no put_bid
-            None, // Invalid: no put_ask
+            None,   // Invalid: no put_bid
+            None,   // Invalid: no put_ask
             spos!(0.2),
             Some(dec!(-0.1)),
             spos!(50.0),
@@ -1161,7 +1161,7 @@ mod tests_bear_put_spread_optimization {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             1.7,
             4.0,
             0.0,
@@ -1200,8 +1200,8 @@ mod tests_bear_put_spread_optimizable {
             spos!(2.2),   // put_ask
             spos!(0.2),   // implied_vol
             Some(dec!(-0.3)),   // delta
-            spos!(100.0), // volume
-            Some(50),     // open_interest
+            spos!(100.0),   // volume
+            Some(50),   // open_interest
         );
 
         // Strike ATM (100)
@@ -1221,8 +1221,8 @@ mod tests_bear_put_spread_optimizable {
             pos!(105.0),
             spos!(5.8),
             spos!(6.0),
-            spos!(8.8), // put_bid
-            spos!(9.0), // put_ask
+            spos!(8.8),   // put_bid
+            spos!(9.0),   // put_ask
             spos!(0.2),
             Some(dec!(-0.7)),
             spos!(150.0),
@@ -1235,16 +1235,16 @@ mod tests_bear_put_spread_optimizable {
     fn create_test_bear_put_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // long strike (higher)
-            pos!(95.0),  // short strike (lower)
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // long strike (higher)
+            pos!(95.0),   // short strike (lower)
             ExpirationDate::Days(30.0),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0, // premium short put
-            8.8, // premium long put
+            2.0,   // premium short put
+            8.8,   // premium long put
             0.0,
             0.0,
             0.0,
@@ -1317,8 +1317,8 @@ mod tests_bear_put_spread_optimizable {
             pos!(97.0),
             spos!(1.0),
             spos!(1.2),
-            None, // Invalid put_bid
-            None, // Invalid put_ask
+            None,   // Invalid put_bid
+            None,   // Invalid put_ask
             spos!(0.2),
             Some(dec!(-0.4)),
             spos!(50.0),
@@ -1424,20 +1424,20 @@ mod tests_bear_put_spread_profit {
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(105.0),                // long_strike
-            pos!(95.0),                 // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_put
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_long_put
-            0.0,                        // close_fee_long_put
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // long_strike
+            pos!(95.0),   // short_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            4.0,   // premium_long_put
+            2.0,   // premium_short_put
+            0.0,   // open_fee_long_put
+            0.0,   // close_fee_long_put
+            0.0,   // open_fee_short_put
+            0.0,   // close_fee_short_put
         )
     }
 
@@ -1507,7 +1507,7 @@ mod tests_bear_put_spread_profit {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             4.0,
             2.0,
             0.0,
@@ -1541,10 +1541,10 @@ mod tests_bear_put_spread_profit {
             pos!(1.0),
             4.0,
             2.0,
-            0.5, // open_fee_long_put
-            0.5, // close_fee_long_put
-            0.5, // open_fee_short_put
-            0.5, // close_fee_short_put
+            0.5,   // open_fee_long_put
+            0.5,   // close_fee_long_put
+            0.5,   // open_fee_short_put
+            0.5,   // close_fee_short_put
         );
 
         let max_profit_price = pos!(90.0);
@@ -1582,20 +1582,20 @@ mod tests_bear_put_spread_probability {
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(105.0),                // long_strike
-            pos!(95.0),                 // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_put
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_long_put
-            0.0,                        // close_fee_long_put
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // long_strike
+            pos!(95.0),   // short_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            4.0,   // premium_long_put
+            2.0,   // premium_short_put
+            0.0,   // open_fee_long_put
+            0.0,   // close_fee_long_put
+            0.0,   // open_fee_short_put
+            0.0,   // close_fee_short_put
         )
     }
 
@@ -1678,7 +1678,7 @@ mod tests_bear_put_spread_probability {
     fn test_probability_with_trend() {
         let spread = create_test_spread();
         let trend = Some(PriceTrend {
-            drift_rate: -0.1, // Negative drift for bearish trend
+            drift_rate: -0.1,   // Negative drift for bearish trend
             confidence: 0.95,
         });
 
@@ -1728,17 +1728,17 @@ mod tests_bear_put_spread_graph {
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(105.0),                // long_strike
-            pos!(95.0),                 // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_put
-            2.0,                        // premium_short_put
-            0.0,                        // fees
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // long_strike
+            pos!(95.0),   // short_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            4.0,   // premium_long_put
+            2.0,   // premium_short_put
+            0.0,   // fees
             0.0,
             0.0,
             0.0,
@@ -1865,7 +1865,7 @@ mod tests_bear_put_spread_graph {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             4.0,
             2.0,
             0.0,
@@ -1899,20 +1899,20 @@ mod tests_delta {
         let underlying_price = pos!(5810.5);
         BearPutSpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            underlying_price,   // underlying_price
+            long_strike,   // long_strike
+            short_strike,   // short_strike
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // long quantity
-            85.04,     // premium_long
-            29.85,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // open_fee_long
-            0.73,      // close_fee_long
-            0.73,      // close_fee_short
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // long quantity
+            85.04,   // premium_long
+            29.85,   // premium_short
+            0.78,   // open_fee_long
+            0.78,   // open_fee_long
+            0.73,   // close_fee_long
+            0.73,   // close_fee_short
         )
     }
 
@@ -2009,20 +2009,20 @@ mod tests_delta_size {
         let underlying_price = pos!(5781.88);
         BearPutSpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            underlying_price,   // underlying_price
+            long_strike,   // long_strike
+            short_strike,   // short_strike
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(2.0), // long quantity
-            85.04,     // premium_long
-            29.85,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // open_fee_long
-            0.73,      // close_fee_long
-            0.73,      // close_fee_short
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // long quantity
+            85.04,   // premium_long
+            29.85,   // premium_short
+            0.78,   // open_fee_long
+            0.78,   // open_fee_long
+            0.73,   // close_fee_long
+            0.73,   // close_fee_short
         )
     }
 

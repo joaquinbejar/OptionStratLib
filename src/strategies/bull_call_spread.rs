@@ -584,17 +584,17 @@ mod tests_bull_call_spread_strategy {
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // long_strike
-            pos!(100.0),                // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_long_call
-            1.0,                        // premium_short_call
-            0.0,                        // fees
+            pos!(100.0),   // underlying_price
+            pos!(95.0),   // long_strike
+            pos!(100.0),   // short_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_long_call
+            1.0,   // premium_short_call
+            0.0,   // fees
             0.0,
             0.0,
             0.0,
@@ -689,10 +689,10 @@ mod tests_bull_call_spread_strategy {
             pos!(1.0),
             2.0,
             1.0,
-            0.5, // open_fee_long_call
-            0.5, // close_fee_long_call
-            0.5, // open_fee_short_call
-            0.5, // close_fee_short_call
+            0.5,   // open_fee_long_call
+            0.5,   // close_fee_long_call
+            0.5,   // open_fee_short_call
+            0.5,   // close_fee_short_call
         );
 
         assert_eq!(spread.fees().unwrap().to_f64().unwrap(), 2.0);
@@ -727,8 +727,8 @@ mod tests_bull_call_spread_strategy {
         let spread = BullCallSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            Positive::ZERO, // long_strike = default
-            Positive::ZERO, // short_strike = default
+            Positive::ZERO,   // long_strike = default
+            Positive::ZERO,   // short_strike = default
             ExpirationDate::Days(30.0),
             pos!(0.2),
             dec!(0.05),
@@ -945,14 +945,14 @@ mod tests_bull_call_spread_optimization {
 
         chain.add_option(
             pos!(85.0),   // strike
-            spos!(16.0),  // call_bid
-            spos!(16.2),  // call_ask
-            None,         // put_bid
-            None,         // put_ask
+            spos!(16.0),   // call_bid
+            spos!(16.2),   // call_ask
+            None,   // put_bid
+            None,   // put_ask
             spos!(0.2),   // implied_volatility
-            Some(dec!(0.8)),    // delta
-            spos!(100.0), // volume
-            Some(50),     // open_interest
+            Some(dec!(0.8)),   // delta
+            spos!(100.0),   // volume
+            Some(50),   // open_interest
         );
 
         chain.add_option(
@@ -1017,8 +1017,8 @@ mod tests_bull_call_spread_optimization {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            7.2, // premium_long_call
-            3.5, // premium_short_call
+            7.2,   // premium_long_call
+            3.5,   // premium_short_call
             0.0,
             0.0,
             0.0,
@@ -1249,17 +1249,17 @@ mod tests_bull_call_spread_profit {
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // long_strike
-            pos!(100.0),                // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_call
-            2.0,                        // premium_short_call
-            0.0,                        // fees
+            pos!(100.0),   // underlying_price
+            pos!(95.0),   // long_strike
+            pos!(100.0),   // short_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            4.0,   // premium_long_call
+            2.0,   // premium_short_call
+            0.0,   // fees
             0.0,
             0.0,
             0.0,
@@ -1346,10 +1346,10 @@ mod tests_bull_call_spread_profit {
             pos!(1.0),
             4.0,
             2.0,
-            0.5, // open_fee_long_call
-            0.5, // close_fee_long_call
-            0.5, // open_fee_short_call
-            0.5, // close_fee_short_call
+            0.5,   // open_fee_long_call
+            0.5,   // close_fee_long_call
+            0.5,   // open_fee_short_call
+            0.5,   // close_fee_short_call
         );
 
         let price = pos!(105.0);
@@ -1381,17 +1381,17 @@ mod tests_bull_call_spread_graph {
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // long_strike
-            pos!(100.0),                // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_call
-            2.0,                        // premium_short_call
-            0.0,                        // fees
+            pos!(100.0),   // underlying_price
+            pos!(95.0),   // long_strike
+            pos!(100.0),   // short_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            4.0,   // premium_long_call
+            2.0,   // premium_short_call
+            0.0,   // fees
             0.0,
             0.0,
             0.0,
@@ -1531,7 +1531,7 @@ mod tests_bull_call_spread_graph {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             4.0,
             2.0,
             0.0,
@@ -1568,17 +1568,17 @@ mod tests_bull_call_spread_probability {
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // long_strike
-            pos!(100.0),                // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_call
-            2.0,                        // premium_short_call
-            0.0,                        // fees
+            pos!(100.0),   // underlying_price
+            pos!(95.0),   // long_strike
+            pos!(100.0),   // short_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            4.0,   // premium_long_call
+            2.0,   // premium_short_call
+            0.0,   // fees
             0.0,
             0.0,
             0.0,
@@ -1753,7 +1753,7 @@ mod tests_bull_call_spread_probability {
             pos!(95.0),
             pos!(100.0),
             ExpirationDate::Days(30.0),
-            pos!(0.50), // Alta volatilidad
+            pos!(0.50),   // Alta volatilidad
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
@@ -1788,20 +1788,20 @@ mod tests_delta {
         let underlying_price = pos!(5781.88);
         BullCallSpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            underlying_price,   // underlying_price
+            long_strike,   // long_strike
+            short_strike,   // short_strike
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // long quantity
-            85.04,     // premium_long
-            29.85,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // open_fee_long
-            0.73,      // close_fee_long
-            0.73,      // close_fee_short
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // long quantity
+            85.04,   // premium_long
+            29.85,   // premium_short
+            0.78,   // open_fee_long
+            0.78,   // open_fee_long
+            0.73,   // close_fee_long
+            0.73,   // close_fee_short
         )
     }
 
@@ -1897,20 +1897,20 @@ mod tests_delta_size {
         let underlying_price = pos!(5781.88);
         BullCallSpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            underlying_price,   // underlying_price
+            long_strike,   // long_strike
+            short_strike,   // short_strike
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(2.0), // long quantity
-            85.04,     // premium_long
-            29.85,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // open_fee_long
-            0.73,      // close_fee_long
-            0.73,      // close_fee_short
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // long quantity
+            85.04,   // premium_long
+            29.85,   // premium_short
+            0.78,   // open_fee_long
+            0.78,   // open_fee_long
+            0.73,   // close_fee_long
+            0.73,   // close_fee_short
         )
     }
 

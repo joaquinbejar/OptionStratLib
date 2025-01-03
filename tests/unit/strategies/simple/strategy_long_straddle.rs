@@ -9,6 +9,7 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::{assert_positivef64_relative_eq, pos};
 use std::error::Error;
+use rust_decimal_macros::dec;
 
 #[test]
 fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
@@ -19,19 +20,19 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = LongStraddle::new(
         "CL".to_string(),
-        underlying_price, // underlying_price
-        pos!(7140.0),     // put_strike
+        underlying_price,   // underlying_price
+        pos!(7140.0),   // put_strike
         ExpirationDate::Days(45.0),
-        0.3745,    // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        pos!(1.0), // quantity
-        84.2,      // premium_short_call
-        353.2,     // premium_short_put
-        7.0,       // open_fee_short_call
-        7.01,      // close_fee_short_call
-        7.01,      // open_fee_short_put
-        7.01,      // close_fee_short_put
+        pos!(0.3745),   // implied_volatility
+        dec!(0.05),   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(1.0),   // quantity
+        84.2,   // premium_short_call
+        353.2,   // premium_short_put
+        7.0,   // open_fee_short_call
+        7.01,   // close_fee_short_call
+        7.01,   // open_fee_short_put
+        7.01,   // close_fee_short_put
     );
 
     // Assertions to validate strategy properties and computations

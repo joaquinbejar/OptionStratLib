@@ -48,15 +48,15 @@
 //!     OptionType::European,
 //!     Side::Long,
 //!     "STOCK".to_string(),
-//!     pos!(100.0),              // Strike price
+//!     pos!(100.0),   // Strike price
 //!     ExpirationDate::Days(30.0),
-//!     0.2,                      // Initial volatility guess
-//!     Positive::ONE,                 // Quantity
-//!     pos!(100.0),              // Current price
-//!     0.05,                     // Risk-free rate
+//!     0.2,   // Initial volatility guess
+//!     Positive::ONE,   // Quantity
+//!     pos!(100.0),   // Current price
+//!     0.05,   // Risk-free rate
 //!     OptionStyle::Call,
-//!     0.0,                      // Dividend yield
-//!     None,                     // Exotic parameters
+//!     0.0,   // Dividend yield
+//!     None,   // Exotic parameters
 //! );
 //!
 //! let market_price = 3.0;
@@ -89,7 +89,7 @@
 //! use optionstratlib::volatility::interpolate_volatility_surface;
 //!
 //! let vol_surface = vec![
-//!     (100.0, 0.5, 0.2),  // (Strike, Time to Expiry, Volatility)
+//!     (100.0, 0.5, 0.2),   // (Strike, Time to Expiry, Volatility)
 //!     (100.0, 1.0, 0.25),
 //!     (110.0, 0.5, 0.22),
 //!     (110.0, 1.0, 0.27),

@@ -26,10 +26,10 @@
 //!
 //! ```rust
 //! pub struct SPANMargin {
-//!     scanning_range: f64,           // Overall market move range
-//!     short_option_minimum: f64,     // Minimum charge for short options
-//!     price_scan_range: f64,         // Range for price scenarios
-//!     volatility_scan_range: f64,    // Range for volatility scenarios
+//!     scanning_range: f64,   // Overall market move range
+//!     short_option_minimum: f64,   // Minimum charge for short options
+//!     price_scan_range: f64,   // Range for price scenarios
+//!     volatility_scan_range: f64,   // Range for volatility scenarios
 //! }
 //! ```
 //!
@@ -58,15 +58,15 @@
 //!     OptionType::European,
 //!     Side::Short,
 //!     "STOCK".to_string(),
-//!     pos!(150.0),              // Strike price
+//!     pos!(150.0),   // Strike price
 //!     ExpirationDate::Days(30.0),
-//!     0.2,                      // Volatility
-//!     Positive::ONE,                 // Quantity
-//!     pos!(155.0),              // Current price
-//!     0.05,                     // Risk-free rate
+//!     0.2,   // Volatility
+//!     Positive::ONE,   // Quantity
+//!     pos!(155.0),   // Current price
+//!     0.05,   // Risk-free rate
 //!     OptionStyle::Call,
-//!     0.0,                      // Dividend yield
-//!     None,                     // Exotic parameters
+//!     0.0,   // Dividend yield
+//!     None,   // Exotic parameters
 //! );
 //!
 //! let position = Position {
@@ -79,9 +79,9 @@
 //!
 //! // Create SPAN calculator
 //! let span = SPANMargin::new(
-//!     0.15,  // 15% scanning range
-//!     0.10,  // 10% short option minimum
-//!     0.05,  // 5% price scan range
+//!     0.15,   // 15% scanning range
+//!     0.10,   // 10% short option minimum
+//!     0.05,   // 5% price scan range
 //!     0.10   // 10% volatility scan range
 //! );
 //!

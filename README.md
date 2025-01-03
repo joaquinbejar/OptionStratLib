@@ -615,7 +615,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         f2p!(5820.0),     // short_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
-        0.05,      // risk_free_rate
+        dec!(0.05),      // risk_free_rate
         0.0,       // dividend_yield
         f2p!(2.0), // long quantity
         85.04,     // premium_long

@@ -136,10 +136,10 @@ mod tests_span {
         };
 
         let span = SPANMargin::new(
-            0.15, // scanning_range (15%)
-            0.1,  // short_option_minimum (10%)
-            0.05, // price_scan_range (5%)
-            0.1,  // volatility_scan_range (10%)
+            0.15,   // scanning_range (15%)
+            0.1,   // short_option_minimum (10%)
+            0.05,   // price_scan_range (5%)
+            0.1,   // volatility_scan_range (10%)
         );
 
         let margin = span.calculate_margin(&position);

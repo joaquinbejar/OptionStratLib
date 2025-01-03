@@ -112,7 +112,7 @@ pub fn implied_volatility(market_price: f64, options: &mut Options, max_iteratio
         }
 
         let mut temp_vi: Decimal = iv.into();
-        temp_vi = temp_vi - Decimal::from_f64(price_diff / vega).unwrap(); // Newton-Raphson update step
+        temp_vi -= Decimal::from_f64(price_diff / vega).unwrap(); // Newton-Raphson update step
 
         if temp_vi < Decimal::ZERO {
             iv = pos!(1e-16); // Ensure volatility stays positive
@@ -680,7 +680,7 @@ mod tests_implied_volatility {
             "TEST".to_string(),
             pos!(100.0),
             ExpirationDate::Days(30.0),
-            pos!(0.02), // initial implied volatility
+            pos!(0.02),   // initial implied volatility
             Positive::ONE,
             pos!(100.0),
             dec!(0.05),
@@ -1163,15 +1163,15 @@ mod tests_uncertain_volatility_bounds {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0), // strike price
+            pos!(100.0),   // strike price
             ExpirationDate::Days(30.0),
-            pos!(0.2),           // implied volatility
-            Positive::ONE, // quantity
+            pos!(0.2),   // implied volatility
+            Positive::ONE,   // quantity
             pos!(100.0),   // underlying price
-            dec!(0.05),          // risk-free rate
+            dec!(0.05),   // risk-free rate
             OptionStyle::Call,
-            Positive::ZERO, // dividend yield
-            None, // exotic params
+            Positive::ZERO,   // dividend yield
+            None,   // exotic params
         )
     }
 
@@ -1267,15 +1267,15 @@ mod tests_uncertain_volatility_bounds_side {
             OptionType::European,
             side,
             "TEST".to_string(),
-            pos!(100.0), // strike price
+            pos!(100.0),   // strike price
             ExpirationDate::Days(30.0),
-            pos!(0.2),           // implied volatility
-            Positive::ONE, // quantity
+            pos!(0.2),   // implied volatility
+            Positive::ONE,   // quantity
             pos!(100.0),   // underlying price
-            dec!(0.05),          // risk-free rate
+            dec!(0.05),   // risk-free rate
             option_style,
-            Positive::ZERO, // dividend yield
-            None, // exotic params
+            Positive::ZERO,   // dividend yield
+            None,   // exotic params
         )
     }
 

@@ -4,7 +4,6 @@
    Date: 25/10/24
 ******************************************************************************/
 use crate::chains::chain::OptionData;
-use crate::constants::ZERO;
 use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
 use crate::Positive;
@@ -576,6 +575,7 @@ mod tests_option_data_price_params {
     use rust_decimal_macros::dec;
     use super::*;
     use crate::{pos, spos};
+    use crate::constants::ZERO;
 
     #[test]
     fn test_new_price_params() {

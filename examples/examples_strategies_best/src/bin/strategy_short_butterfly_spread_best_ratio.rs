@@ -19,19 +19,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
     let mut strategy = ShortButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
+        underlying_price,   // underlying_price
         Positive::ZERO,   // short_strike_itm
         Positive::ZERO,   // middle_strike
         Positive::ZERO,   // short_strike_otm
         ExpirationDate::Days(5.0),
-        ZERO,      // implied_volatility
-        ZERO,      // risk_free_rate
-        ZERO,      // dividend_yield
-        pos!(1.0), // quantity
-        ZERO,      // premium_short_call
-        ZERO,      // premium_short_put
-        ZERO,      // open_fee_short_call
-        4.0,       // close_fee_short_call
+        ZERO,   // implied_volatility
+        ZERO,   // risk_free_rate
+        ZERO,   // dividend_yield
+        pos!(1.0),   // quantity
+        ZERO,   // premium_short_call
+        ZERO,   // premium_short_put
+        ZERO,   // open_fee_short_call
+        4.0,   // close_fee_short_call
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);

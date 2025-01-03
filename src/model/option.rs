@@ -21,9 +21,9 @@ use tracing::{error, trace};
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
-    pub spot_prices: Option<Vec<Positive>>, // Asian
-    pub spot_min: Option<Decimal>,         // Lookback
-    pub spot_max: Option<Decimal>,         // Lookback
+    pub spot_prices: Option<Vec<Positive>>,   // Asian
+    pub spot_min: Option<Decimal>,   // Lookback
+    pub spot_max: Option<Decimal>,   // Lookback
 }
 
 #[allow(dead_code)]

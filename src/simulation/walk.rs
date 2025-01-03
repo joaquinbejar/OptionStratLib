@@ -366,19 +366,19 @@ mod tests {
 
         let mut walk = RandomWalkGraph::new(
             "Test Walk".to_string(),
-            Some(dec!(0.05)),     // risk_free_rate
-            Some(pos!(0.02)),     // dividend_yield
-            TimeFrame::Day, // time_frame (2 years)
-            4,              // volatility_window
-            spos!(0.2),     // initial_volatility
+            Some(dec!(0.05)),   // risk_free_rate
+            Some(pos!(0.02)),   // dividend_yield
+            TimeFrame::Day,   // time_frame (2 years)
+            4,   // volatility_window
+            spos!(0.2),   // initial_volatility
         );
 
         walk.generate_random_walk(
-            steps,       // n_steps
-            pos!(100.0), // initial_price
-            0.0,         // mean
+            steps,   // n_steps
+            pos!(100.0),   // initial_price
+            0.0,   // mean
             pos!(0.2),   // std_dev
-            pos!(0.01),  // std_dev_change
+            pos!(0.01),   // std_dev_change
         );
 
         for (i, params) in walk.enumerate() {

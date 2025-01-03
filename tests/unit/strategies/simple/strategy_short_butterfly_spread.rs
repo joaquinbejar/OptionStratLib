@@ -7,6 +7,7 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::{assert_positivef64_relative_eq, pos};
 use std::error::Error;
+use rust_decimal_macros::dec;
 
 #[test]
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
@@ -17,19 +18,19 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = ShortButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        pos!(5700.0),     // short_strike_itm
-        pos!(5780.0),     // long_strike
-        pos!(5850.0),     // short_strike_otm
+        underlying_price,   // underlying_price
+        pos!(5700.0),   // short_strike_itm
+        pos!(5780.0),   // long_strike
+        pos!(5850.0),   // short_strike_otm
         ExpirationDate::Days(2.0),
-        0.18,      // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        pos!(3.0), // long quantity
-        119.01,    // premium_long
-        66.0,      // premium_short
-        29.85,     // open_fee_long
-        4.0,       // open_fee_long
+        pos!(0.18),   // implied_volatility
+        dec!(0.05),   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(3.0),   // long quantity
+        119.01,   // premium_long
+        66.0,   // premium_short
+        29.85,   // open_fee_long
+        4.0,   // open_fee_long
     );
 
     // Assertions to validate strategy properties and computations

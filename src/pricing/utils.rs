@@ -688,7 +688,7 @@ mod tests_probability_keep_under_strike {
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
             expiration_date: ExpirationDate::Days(365.0),
-            implied_volatility: pos!(5.0), // Alta volatilidad
+            implied_volatility: pos!(5.0),   // Alta volatilidad
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
             exotic_params: None,

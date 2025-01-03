@@ -951,22 +951,22 @@ mod tests_iron_condor_validable {
     fn create_valid_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.0,       // open_fee
-            0.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.0,   // open_fee
+            0.0,   // closing fee
         )
     }
 
@@ -1038,22 +1038,22 @@ mod tests_iron_condor_strategies {
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.5,       // open_fee
-            0.5,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.5,   // open_fee
+            0.5,   // closing fee
         )
     }
 
@@ -1144,22 +1144,22 @@ mod tests_iron_condor_strategies {
     fn test_max_profit() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            10.0,      // premium_short_call
-            10.0,      // premium_short_put
-            10.0,      // premium_long_call
-            10.0,      // premium_long_put
-            0.0,       // open_fee
-            0.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            10.0,   // premium_short_call
+            10.0,   // premium_short_put
+            10.0,   // premium_long_call
+            10.0,   // premium_long_put
+            0.0,   // open_fee
+            0.0,   // closing fee
         );
         let max_profit = condor.max_profit().unwrap();
         assert_eq!(max_profit, pos!(ZERO));
@@ -1169,22 +1169,22 @@ mod tests_iron_condor_strategies {
     fn test_max_profit_bis() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            20.0,      // premium_short_call
-            20.0,      // premium_short_put
-            10.0,      // premium_long_call
-            10.0,      // premium_long_put
-            0.09,      // open_fee
-            0.09,      // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            20.0,   // premium_short_call
+            20.0,   // premium_short_put
+            10.0,   // premium_long_call
+            10.0,   // premium_long_put
+            0.09,   // open_fee
+            0.09,   // closing fee
         );
         let max_profit = condor.max_profit().unwrap();
         assert_eq!(max_profit, pos!(19.28));
@@ -1194,22 +1194,22 @@ mod tests_iron_condor_strategies {
     fn test_max_loss() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            10.0,      // premium_short_call
-            10.0,      // premium_short_put
-            11.1,      // premium_long_call
-            11.1,      // premium_long_put
-            0.1,       // open_fee
-            0.1,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            10.0,   // premium_short_call
+            10.0,   // premium_short_put
+            11.1,   // premium_long_call
+            11.1,   // premium_long_put
+            0.1,   // open_fee
+            0.1,   // closing fee
         );
         let max_loss = condor.max_loss().unwrap();
         assert_eq!(max_loss, pos!(7.9999999999999964));
@@ -1222,7 +1222,7 @@ mod tests_iron_condor_strategies {
             pos!(100.0),
             pos!(105.0),
             pos!(95.0),
-            pos!(115.0), // Wider call wing
+            pos!(115.0),   // Wider call wing
             pos!(90.0),
             ExpirationDate::Days(30.0),
             pos!(0.2),
@@ -1261,22 +1261,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_i() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            10.0,      // premium_short_call
-            10.0,      // premium_short_put
-            10.0,      // premium_long_call
-            10.0,      // premium_long_put
-            0.0,       // open_fee
-            0.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            10.0,   // premium_short_call
+            10.0,   // premium_short_put
+            10.0,   // premium_long_call
+            10.0,   // premium_long_put
+            0.0,   // open_fee
+            0.0,   // closing fee
         );
         assert_eq!(
             condor.net_premium_received().unwrap().to_f64().unwrap(),
@@ -1288,22 +1288,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_ii() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            10.0,      // premium_short_call
-            10.0,      // premium_short_put
-            10.0,      // premium_long_call
-            10.0,      // premium_long_put
-            1.0,       // open_fee
-            1.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            10.0,   // premium_short_call
+            10.0,   // premium_short_put
+            10.0,   // premium_long_call
+            10.0,   // premium_long_put
+            1.0,   // open_fee
+            1.0,   // closing fee
         );
         assert_eq!(
             condor.net_premium_received().unwrap().to_f64().unwrap(),
@@ -1315,22 +1315,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_iii() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            10.0,      // premium_short_call
-            20.0,      // premium_short_put
-            20.0,      // premium_long_call
-            10.0,      // premium_long_put
-            1.0,       // open_fee
-            1.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            10.0,   // premium_short_call
+            20.0,   // premium_short_put
+            20.0,   // premium_long_call
+            10.0,   // premium_long_put
+            1.0,   // open_fee
+            1.0,   // closing fee
         );
         assert_eq!(
             condor.net_premium_received().unwrap().to_f64().unwrap(),
@@ -1342,22 +1342,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_iv() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            10.0,      // premium_short_call
-            20.0,      // premium_short_put
-            10.0,      // premium_long_call
-            10.0,      // premium_long_put
-            1.0,       // open_fee
-            1.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            10.0,   // premium_short_call
+            20.0,   // premium_short_put
+            10.0,   // premium_long_call
+            10.0,   // premium_long_put
+            1.0,   // open_fee
+            1.0,   // closing fee
         );
         assert_eq!(
             condor.net_premium_received().unwrap().to_f64().unwrap(),
@@ -1369,22 +1369,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_v() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            10.0,      // premium_short_call
-            10.0,      // premium_short_put
-            10.0,      // premium_long_call
-            20.0,      // premium_long_put
-            1.0,       // open_fee
-            1.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            10.0,   // premium_short_call
+            10.0,   // premium_short_put
+            10.0,   // premium_long_call
+            20.0,   // premium_long_put
+            1.0,   // open_fee
+            1.0,   // closing fee
         );
         assert_eq!(
             condor.net_premium_received().unwrap().to_f64().unwrap(),
@@ -1428,7 +1428,7 @@ mod tests_iron_condor_strategies {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             2.0,
             2.0,
             1.0,
@@ -1469,22 +1469,22 @@ mod tests_iron_condor_optimizable {
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.5,       // open_fee
-            0.5,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.5,   // open_fee
+            0.5,   // closing fee
         )
     }
 
@@ -1500,9 +1500,9 @@ mod tests_iron_condor_optimizable {
                 spos!(5.0),   // put_bid
                 spos!(5.2),   // put_ask
                 spos!(0.2),   // implied_volatility
-                None,         // delta
-                spos!(100.0), // volume
-                Some(50),     // open_interest
+                None,   // delta
+                spos!(100.0),   // volume
+                Some(50),   // open_interest
             );
         }
         chain
@@ -1614,10 +1614,10 @@ mod tests_iron_condor_optimizable {
         let options: Vec<&OptionData> = chain.options.iter().collect();
 
         let legs = StrategyLegs::FourLegs {
-            first: options[1],  // 90.0 strike for long put
-            second: options[2], // 95.0 strike for short put
-            third: options[4],  // 105.0 strike for short call
-            fourth: options[5], // 110.0 strike for long call
+            first: options[1],   // 90.0 strike for long put
+            second: options[2],   // 95.0 strike for short put
+            third: options[4],   // 105.0 strike for short call
+            fourth: options[5],   // 110.0 strike for long call
         };
 
         let new_strategy = condor.create_strategy(&chain, &legs);
@@ -1654,22 +1654,22 @@ mod tests_iron_condor_profit {
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.0,       // open_fee
-            0.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.0,   // open_fee
+            0.0,   // closing fee
         )
     }
 
@@ -1764,8 +1764,8 @@ mod tests_iron_condor_profit {
             2.0,
             1.0,
             1.0,
-            0.5, // open_fee
-            0.5, // closing fee
+            0.5,   // open_fee
+            0.5,   // closing fee
         );
 
         let profit = condor.calculate_profit_at(pos!(100.0));
@@ -1786,7 +1786,7 @@ mod tests_iron_condor_profit {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             2.0,
             2.0,
             1.0,
@@ -1825,22 +1825,22 @@ mod tests_iron_condor_graph {
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
+            pos!(100.0),   // underlying_price
+            pos!(105.0),   // short_call_strike
+            pos!(95.0),   // short_put_strike
+            pos!(110.0),   // long_call_strike
+            pos!(90.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(2.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.0,       // open_fee
-            0.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.0,   // open_fee
+            0.0,   // closing fee
         )
     }
 
@@ -1999,22 +1999,22 @@ mod tests_iron_condor_delta {
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
             "GOLD".to_string(),
-            underlying_price, // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2560.0),     // short_put_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
+            underlying_price,   // underlying_price
+            pos!(2725.0),   // short_call_strike
+            pos!(2560.0),   // short_put_strike
+            pos!(2800.0),   // long_call_strike
+            pos!(2500.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.1548),    // implied_volatility
-            Decimal::ZERO,       // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            38.8,      // premium_short_call
-            30.4,      // premium_short_put
-            23.3,      // premium_long_call
-            16.8,      // premium_long_put
-            0.96,      // open_fee
-            0.96,      // close_fee
+            pos!(0.1548),   // implied_volatility
+            Decimal::ZERO,   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            38.8,   // premium_short_call
+            30.4,   // premium_short_put
+            23.3,   // premium_long_call
+            16.8,   // premium_long_put
+            0.96,   // open_fee
+            0.96,   // close_fee
         )
     }
 
@@ -2124,22 +2124,22 @@ mod tests_iron_condor_delta_size {
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
             "GOLD".to_string(),
-            underlying_price, // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2560.0),     // short_put_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
+            underlying_price,   // underlying_price
+            pos!(2725.0),   // short_call_strike
+            pos!(2560.0),   // short_put_strike
+            pos!(2800.0),   // long_call_strike
+            pos!(2500.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.1548),    // implied_volatility
-            Decimal::ZERO,       // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(2.0), // quantity
-            38.8,      // premium_short_call
-            30.4,      // premium_short_put
-            23.3,      // premium_long_call
-            16.8,      // premium_long_put
-            0.96,      // open_fee
-            0.96,      // close_fee
+            pos!(0.1548),   // implied_volatility
+            Decimal::ZERO,   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // quantity
+            38.8,   // premium_short_call
+            30.4,   // premium_short_put
+            23.3,   // premium_long_call
+            16.8,   // premium_long_put
+            0.96,   // open_fee
+            0.96,   // close_fee
         )
     }
 

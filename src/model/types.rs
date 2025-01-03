@@ -622,7 +622,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0), // Not used in floating strike
+            strike: pos!(0.0),   // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,

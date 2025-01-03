@@ -702,21 +702,21 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0), // underlying price
-            pos!(150.0), // short strike (at the money)
-            pos!(160.0), // long call strike
-            pos!(140.0), // long put strike
+            pos!(150.0),   // underlying price
+            pos!(150.0),   // short strike (at the money)
+            pos!(160.0),   // long call strike
+            pos!(140.0),   // long put strike
             ExpirationDate::DateTime(date),
-            pos!(0.2),           // implied volatility
-            dec!(0.01),          // risk free rate
-            pos!(0.02),          // dividend yield
-            Positive::ONE, // quantity
-            1.5,           // premium short call
-            1.5,           // premium short put
-            1.0,           // premium long call
-            1.0,           // premium long put
-            5.0,           // open fee
-            5.0,           // close fee
+            pos!(0.2),   // implied volatility
+            dec!(0.01),   // risk free rate
+            pos!(0.02),   // dividend yield
+            Positive::ONE,   // quantity
+            1.5,   // premium short call
+            1.5,   // premium short put
+            1.0,   // premium long call
+            1.0,   // premium long put
+            5.0,   // open fee
+            5.0,   // close fee
         );
 
         assert_eq!(butterfly.name, "Iron Butterfly");
@@ -737,10 +737,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(100.0), // underlying price
-            pos!(100.0), // short strike (at the money)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            pos!(100.0),   // underlying price
+            pos!(100.0),   // short strike (at the money)
+            pos!(110.0),   // long call strike
+            pos!(90.0),   // long put strike
             ExpirationDate::DateTime(date),
             pos!(0.2),
             dec!(0.01),
@@ -764,10 +764,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(100.0), // underlying price
-            pos!(100.0), // short strike (at the money)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            pos!(100.0),   // underlying price
+            pos!(100.0),   // short strike (at the money)
+            pos!(110.0),   // long call strike
+            pos!(90.0),   // long put strike
             ExpirationDate::DateTime(date),
             pos!(0.2),
             dec!(0.01),
@@ -790,10 +790,10 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos!(100.0), // underlying price
-            pos!(100.0), // short strike (at the money)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            pos!(100.0),   // underlying price
+            pos!(100.0),   // short strike (at the money)
+            pos!(110.0),   // long call strike
+            pos!(90.0),   // long put strike
             ExpirationDate::DateTime(date),
             pos!(0.2),
             dec!(0.01),
@@ -926,21 +926,21 @@ mod tests_iron_butterfly_validable {
     fn create_valid_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            pos!(100.0),   // underlying_price
+            pos!(100.0),   // short strike (both call and put)
+            pos!(110.0),   // long call strike
+            pos!(90.0),   // long put strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.0,       // open_fee
-            0.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.0,   // open_fee
+            0.0,   // closing fee
         )
     }
 
@@ -1034,21 +1034,21 @@ mod tests_iron_butterfly_strategies {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            pos!(100.0),   // underlying_price
+            pos!(100.0),   // short strike (both call and put)
+            pos!(110.0),   // long call strike
+            pos!(90.0),   // long put strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.5,       // open_fee
-            0.5,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.5,   // open_fee
+            0.5,   // closing fee
         )
     }
 
@@ -1208,7 +1208,7 @@ mod tests_iron_butterfly_strategies {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             2.0,
             2.0,
             1.0,
@@ -1236,8 +1236,8 @@ mod tests_iron_butterfly_strategies {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            3.0, // Higher short call premium
-            2.0, // Lower short put premium
+            3.0,   // Higher short call premium
+            2.0,   // Lower short put premium
             1.0,
             1.0,
             0.5,
@@ -1263,21 +1263,21 @@ mod tests_iron_butterfly_optimizable {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            pos!(100.0),   // underlying_price
+            pos!(100.0),   // short strike (both call and put)
+            pos!(110.0),   // long call strike
+            pos!(90.0),   // long put strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.5,       // open_fee
-            0.5,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.5,   // open_fee
+            0.5,   // closing fee
         )
     }
 
@@ -1293,9 +1293,9 @@ mod tests_iron_butterfly_optimizable {
                 spos!(5.0),   // put_bid
                 spos!(5.2),   // put_ask
                 spos!(0.2),   // implied_volatility
-                None,         // delta
-                spos!(100.0), // volume
-                Some(50),     // open_interest
+                None,   // delta
+                spos!(100.0),   // volume
+                Some(50),   // open_interest
             );
         }
         chain
@@ -1383,7 +1383,7 @@ mod tests_iron_butterfly_optimizable {
     fn test_is_valid_short_option() {
         let butterfly = create_test_butterfly();
         let option = OptionData::new(
-            pos!(100.0), // At the money
+            pos!(100.0),   // At the money
             spos!(5.0),
             spos!(5.2),
             spos!(5.0),
@@ -1407,10 +1407,10 @@ mod tests_iron_butterfly_optimizable {
         let options: Vec<&OptionData> = chain.options.iter().collect();
 
         let legs = StrategyLegs::FourLegs {
-            first: options[1],  // 90.0 strike for long put
-            second: options[3], // 100.0 strike for both shorts
-            third: options[3],  // 100.0 strike for both shorts
-            fourth: options[5], // 110.0 strike for long call
+            first: options[1],   // 90.0 strike for long put
+            second: options[3],   // 100.0 strike for both shorts
+            third: options[3],   // 100.0 strike for both shorts
+            fourth: options[5],   // 110.0 strike for long call
         };
 
         let new_strategy = butterfly.create_strategy(&chain, &legs);
@@ -1447,21 +1447,21 @@ mod tests_iron_butterfly_profit {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            pos!(100.0),   // underlying_price
+            pos!(100.0),   // short strike (both call and put)
+            pos!(110.0),   // long call strike
+            pos!(90.0),   // long put strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.0,       // open_fee
-            0.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.0,   // open_fee
+            0.0,   // closing fee
         )
     }
 
@@ -1548,8 +1548,8 @@ mod tests_iron_butterfly_profit {
             2.0,
             1.0,
             1.0,
-            0.5, // open_fee
-            0.5, // closing fee
+            0.5,   // open_fee
+            0.5,   // closing fee
         );
 
         let profit = butterfly.calculate_profit_at(pos!(100.0));
@@ -1569,7 +1569,7 @@ mod tests_iron_butterfly_profit {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             2.0,
             2.0,
             1.0,
@@ -1629,21 +1629,21 @@ mod tests_iron_butterfly_graph {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(100.0), // short strike (both call and put)
-            pos!(110.0), // long call strike
-            pos!(90.0),  // long put strike
+            pos!(100.0),   // underlying_price
+            pos!(100.0),   // short strike (both call and put)
+            pos!(110.0),   // long call strike
+            pos!(90.0),   // long put strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(2.0), // quantity
-            2.0,       // premium_short_call
-            2.0,       // premium_short_put
-            1.0,       // premium_long_call
-            1.0,       // premium_long_put
-            0.0,       // open_fee
-            0.0,       // closing fee
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // quantity
+            2.0,   // premium_short_call
+            2.0,   // premium_short_put
+            1.0,   // premium_long_call
+            1.0,   // premium_long_put
+            0.0,   // open_fee
+            0.0,   // closing fee
         )
     }
 
@@ -1796,21 +1796,21 @@ mod tests_iron_condor_delta {
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
         IronButterfly::new(
             "GOLD".to_string(),
-            underlying_price, // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
+            underlying_price,   // underlying_price
+            pos!(2725.0),   // short_call_strike
+            pos!(2800.0),   // long_call_strike
+            pos!(2500.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.1548),    // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            38.8,      // premium_short_call
-            30.4,      // premium_short_put
-            23.3,      // premium_long_call
-            16.8,      // premium_long_put
-            0.96,      // open_fee
-            0.96,      // close_fee
+            pos!(0.1548),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            38.8,   // premium_short_call
+            30.4,   // premium_short_put
+            23.3,   // premium_long_call
+            16.8,   // premium_long_put
+            0.96,   // open_fee
+            0.96,   // close_fee
         )
     }
 
@@ -1921,21 +1921,21 @@ mod tests_iron_condor_delta_size {
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
         IronButterfly::new(
             "GOLD".to_string(),
-            underlying_price, // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
+            underlying_price,   // underlying_price
+            pos!(2725.0),   // short_call_strike
+            pos!(2800.0),   // long_call_strike
+            pos!(2500.0),   // long_put_strike
             ExpirationDate::Days(30.0),
-            pos!(0.1548),    // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(2.0), // quantity
-            38.8,      // premium_short_call
-            30.4,      // premium_short_put
-            23.3,      // premium_long_call
-            16.8,      // premium_long_put
-            0.96,      // open_fee
-            0.96,      // close_fee
+            pos!(0.1548),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // quantity
+            38.8,   // premium_short_call
+            30.4,   // premium_short_put
+            23.3,   // premium_long_call
+            16.8,   // premium_long_put
+            0.96,   // open_fee
+            0.96,   // close_fee
         )
     }
 

@@ -99,7 +99,7 @@ impl LongButterflySpread {
             middle_strike,
             expiration.clone(),
             implied_volatility,
-            quantity * 2.0, // Double quantity for middle strike
+            quantity * 2.0,   // Double quantity for middle strike
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
@@ -812,7 +812,7 @@ impl ShortButterflySpread {
             middle_strike,
             expiration.clone(),
             implied_volatility,
-            quantity * 2.0, // Double quantity for middle strike
+            quantity * 2.0,   // Double quantity for middle strike
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
@@ -1469,19 +1469,19 @@ mod tests_long_butterfly_spread {
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(90.0),                 // low_strike
-            pos!(100.0),                // middle_strike
-            pos!(110.0),                // high_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                      // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            3.0,                        // premium_low
-            2.0,                        // premium_middle
-            1.0,                        // premium_high
-            0.05,                       // fees
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            3.0,   // premium_low
+            2.0,   // premium_middle
+            1.0,   // premium_high
+            0.05,   // fees
         )
     }
 
@@ -1572,7 +1572,7 @@ mod tests_long_butterfly_spread {
             3.0,
             2.0,
             1.0,
-            3.0, // total fees = 3.0
+            3.0,   // total fees = 3.0
         );
 
         assert_eq!(butterfly.long_call_low.open_fee, 1.0); // fees / 3
@@ -1604,7 +1604,7 @@ mod tests_long_butterfly_spread {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             3.0,
             2.0,
             1.0,
@@ -1674,19 +1674,19 @@ mod tests_short_butterfly_spread {
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(90.0),                 // low_strike
-            pos!(100.0),                // middle_strike
-            pos!(110.0),                // high_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                       // implied_volatility
-            dec!(0.05),                      // risk_free_rate
-            Positive::ZERO,                        // dividend_yield
-            pos!(1.0),                  // quantity
-            10.0,                       // premium_low
-            1.0,                        // premium_middle
-            0.5,                        // premium_high
-            0.05,                       // fees
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
+            ExpirationDate::Days(30.0),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            10.0,   // premium_low
+            1.0,   // premium_middle
+            0.5,   // premium_high
+            0.05,   // fees
         )
     }
 
@@ -1777,7 +1777,7 @@ mod tests_short_butterfly_spread {
             3.0,
             2.0,
             1.0,
-            3.0, // total fees = 3.0
+            3.0,   // total fees = 3.0
         );
 
         assert_eq!(butterfly.short_call_low.open_fee, 1.0); // fees / 3
@@ -2189,38 +2189,38 @@ mod tests_butterfly_strategies {
     fn create_test_long() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            3.0,       // premium_low
-            2.0,       // premium_middle
-            1.0,       // premium_high
-            0.0,       // fees
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            3.0,   // premium_low
+            2.0,   // premium_middle
+            1.0,   // premium_high
+            0.0,   // fees
         )
     }
 
     fn create_test_short() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            3.0,       // premium_low
-            2.0,       // premium_middle
-            1.0,       // premium_high
-            0.0,       // fees
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            3.0,   // premium_low
+            2.0,   // premium_middle
+            1.0,   // premium_high
+            0.0,   // fees
         )
     }
 
@@ -2355,7 +2355,7 @@ mod tests_butterfly_strategies {
             3.0,
             2.0,
             1.0,
-            3.0, // total fees
+            3.0,   // total fees
         );
         assert_eq!(butterfly.fees().unwrap().to_f64().unwrap(), 6.0);
     }
@@ -2376,7 +2376,7 @@ mod tests_butterfly_strategies {
             3.0,
             2.0,
             1.0,
-            3.0, // total fees
+            3.0,   // total fees
         );
 
         assert_eq!(butterfly.fees().unwrap().to_f64().unwrap(), 12.0);
@@ -2426,7 +2426,7 @@ mod tests_butterfly_strategies {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             3.0,
             2.0,
             1.0,
@@ -2460,9 +2460,9 @@ mod tests_butterfly_optimizable {
                 spos!(5.0),   // put_bid
                 spos!(5.2),   // put_ask
                 spos!(0.2),   // implied_volatility
-                Some(dec!(0.5)),    // delta
-                spos!(100.0), // volume
-                Some(50),     // open_interest
+                Some(dec!(0.5)),   // delta
+                spos!(100.0),   // volume
+                Some(50),   // open_interest
             );
         }
         chain
@@ -2611,19 +2611,19 @@ mod tests_long_butterfly_profit {
     fn create_test() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            3.0,       // premium_low
-            2.0,       // premium_middle
-            1.0,       // premium_high
-            0.05,      // fees
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            3.0,   // premium_low
+            2.0,   // premium_middle
+            1.0,   // premium_high
+            0.05,   // fees
         )
     }
 
@@ -2674,19 +2674,19 @@ mod tests_long_butterfly_profit {
     fn test_profit_with_different_quantities() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(2.0), // quantity = 2
-            3.0,       // premium_low
-            2.0,       // premium_middle
-            1.0,       // premium_high
-            0.0,       // fees
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // quantity = 2
+            3.0,   // premium_low
+            2.0,   // premium_middle
+            1.0,   // premium_high
+            0.0,   // fees
         );
 
         let scaled_profit = butterfly.calculate_profit_at(pos!(100.0));
@@ -2707,19 +2707,19 @@ mod tests_short_butterfly_profit {
     fn create_test() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
             ExpirationDate::Days(30.0),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            3.0,       // premium_low
-            2.0,       // premium_middle
-            1.0,       // premium_high
-            0.05,      // fees
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            3.0,   // premium_low
+            2.0,   // premium_middle
+            1.0,   // premium_high
+            0.05,   // fees
         )
     }
 
@@ -2757,7 +2757,7 @@ mod tests_short_butterfly_profit {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos!(2.0),   // quantity = 2
             3.0,
             2.0,
             1.0,
@@ -2792,7 +2792,7 @@ mod tests_short_butterfly_profit {
             3.0,
             2.0,
             1.0,
-            3.0, // fees = 3.0
+            3.0,   // fees = 3.0
         );
 
         let base_butterfly = create_test();
@@ -2813,10 +2813,10 @@ mod tests_long_butterfly_graph {
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
             ExpirationDate::Days(30.0),
             pos!(0.2),
             dec!(0.05),
@@ -2923,10 +2923,10 @@ mod tests_short_butterfly_graph {
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // low_strike
+            pos!(100.0),   // middle_strike
+            pos!(110.0),   // high_strike
             ExpirationDate::Days(30.0),
             pos!(0.2),
             dec!(0.05),
@@ -3248,19 +3248,19 @@ mod tests_long_butterfly_delta {
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
         LongButterflySpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5710.0),     // long_strike_itm
-            pos!(5820.0),     // short_strike
-            pos!(6100.0),     // long_strike_otm
+            underlying_price,   // underlying_price
+            pos!(5710.0),   // long_strike_itm
+            pos!(5820.0),   // short_strike
+            pos!(6100.0),   // long_strike_otm
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // long quantity
-            49.65,     // premium_long
-            42.93,     // premium_short
-            1.0,       // open_fee_long
-            4.0,       // open_fee_long
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // long quantity
+            49.65,   // premium_long
+            42.93,   // premium_short
+            1.0,   // open_fee_long
+            4.0,   // open_fee_long
         )
     }
 
@@ -3366,19 +3366,19 @@ mod tests_long_butterfly_delta_size {
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
         LongButterflySpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5710.0),     // long_strike_itm
-            pos!(5820.0),     // short_strike
-            pos!(6100.0),     // long_strike_otm
+            underlying_price,   // underlying_price
+            pos!(5710.0),   // long_strike_itm
+            pos!(5820.0),   // short_strike
+            pos!(6100.0),   // long_strike_otm
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(3.0), // long quantity
-            49.65,     // premium_long
-            42.93,     // premium_short
-            1.0,       // open_fee_long
-            4.0,       // open_fee_long
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(3.0),   // long quantity
+            49.65,   // premium_long
+            42.93,   // premium_short
+            1.0,   // open_fee_long
+            4.0,   // open_fee_long
         )
     }
 
@@ -3488,19 +3488,19 @@ mod tests_short_butterfly_delta {
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5700.0),     // short_strike_itm
-            pos!(5780.0),     // long_strike
-            pos!(5850.0),     // short_strike_otm
+            underlying_price,   // underlying_price
+            pos!(5700.0),   // short_strike_itm
+            pos!(5780.0),   // long_strike
+            pos!(5850.0),   // short_strike_otm
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            Decimal::ZERO,      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // long quantity
-            119.01,    // premium_long
-            66.0,      // premium_short
-            29.85,     // open_fee_long
-            4.0,       // open_fee_long
+            pos!(0.18),   // implied_volatility
+            Decimal::ZERO,   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // long quantity
+            119.01,   // premium_long
+            66.0,   // premium_short
+            29.85,   // open_fee_long
+            4.0,   // open_fee_long
         )
     }
 
@@ -3608,19 +3608,19 @@ mod tests_short_butterfly_delta_size {
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5700.0),     // short_strike_itm
-            pos!(5780.0),     // long_strike
-            pos!(5850.0),     // short_strike_otm
+            underlying_price,   // underlying_price
+            pos!(5700.0),   // short_strike_itm
+            pos!(5780.0),   // long_strike
+            pos!(5850.0),   // short_strike_otm
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(3.0), // long quantity
-            119.01,    // premium_long
-            66.0,      // premium_short
-            29.85,     // open_fee_long
-            4.0,       // open_fee_long
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(3.0),   // long quantity
+            119.01,   // premium_long
+            66.0,   // premium_short
+            29.85,   // open_fee_long
+            4.0,   // open_fee_long
         )
     }
 

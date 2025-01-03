@@ -1575,14 +1575,14 @@ mod tests_option_data {
     fn create_valid_option_data() -> OptionData {
         OptionData::new(
             pos!(100.0),   // strike_price
-            spos!(9.5),    // call_bid
+            spos!(9.5),   // call_bid
             spos!(10.0),   // call_ask
-            spos!(8.5),    // put_bid
-            spos!(9.0),    // put_ask
-            spos!(0.2),    // implied_volatility
-            Some(dec!(-0.3)),    // delta
-            spos!(1000.0), // volume
-            Some(500),     // open_interest
+            spos!(8.5),   // put_bid
+            spos!(9.0),   // put_ask
+            spos!(0.2),   // implied_volatility
+            Some(dec!(-0.3)),   // delta
+            spos!(1000.0),   // volume
+            Some(500),   // open_interest
         )
     }
 
@@ -1816,9 +1816,9 @@ mod tests_get_random_positions {
             spos!(3.0),   // put_bid
             spos!(3.2),   // put_ask
             spos!(0.2),   // implied_volatility
-            Some(dec!(0.5)),    // delta
-            spos!(100.0), // volume
-            Some(50),     // open_interest
+            Some(dec!(0.5)),   // delta
+            spos!(100.0),   // volume
+            Some(50),   // open_interest
         );
 
         chain.add_option(
@@ -2334,14 +2334,14 @@ mod tests_option_data_get_option {
     fn create_test_option_data() -> OptionData {
         OptionData::new(
             pos!(100.0),   // strike_price
-            spos!(9.5),    // call_bid
+            spos!(9.5),   // call_bid
             spos!(10.0),   // call_ask
-            spos!(8.5),    // put_bid
-            spos!(9.0),    // put_ask
-            spos!(0.2),    // implied_volatility
-            Some(dec!(-0.3)),    // delta
-            spos!(1000.0), // volume
-            Some(500),     // open_interest
+            spos!(8.5),   // put_bid
+            spos!(9.0),   // put_ask
+            spos!(0.2),   // implied_volatility
+            Some(dec!(-0.3)),   // delta
+            spos!(1000.0),   // volume
+            Some(500),   // open_interest
         )
     }
 
@@ -2375,7 +2375,7 @@ mod tests_option_data_get_option {
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
             ExpirationDate::Days(30.0),
-            None, // No IV provided in params
+            None,   // No IV provided in params
             dec!(0.05),
             pos!(0.02),
         );
@@ -2424,14 +2424,14 @@ mod tests_option_data_get_options_in_strike {
     fn create_test_option_data() -> OptionData {
         OptionData::new(
             pos!(100.0),   // strike_price
-            spos!(9.5),    // call_bid
+            spos!(9.5),   // call_bid
             spos!(10.0),   // call_ask
-            spos!(8.5),    // put_bid
-            spos!(9.0),    // put_ask
-            spos!(0.2),    // implied_volatility
-            Some(dec!(-0.3)),    // delta
-            spos!(1000.0), // volume
-            Some(500),     // open_interest
+            spos!(8.5),   // put_bid
+            spos!(9.0),   // put_ask
+            spos!(0.2),   // implied_volatility
+            Some(dec!(-0.3)),   // delta
+            spos!(1000.0),   // volume
+            Some(500),   // open_interest
         )
     }
 
@@ -2604,14 +2604,14 @@ mod tests_filter_options_in_strike {
         for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
             chain.add_option(
                 pos!(*strike),
-                spos!(1.0),    // call_bid
-                spos!(1.2),    // call_ask
-                spos!(1.0),    // put_bid
-                spos!(1.2),    // put_ask
-                spos!(0.2),    // implied_volatility
-                Some(dec!(-0.3)),    // delta
-                spos!(1000.0), // volume
-                Some(500),     // open_interest
+                spos!(1.0),   // call_bid
+                spos!(1.2),   // call_ask
+                spos!(1.0),   // put_bid
+                spos!(1.2),   // put_ask
+                spos!(0.2),   // implied_volatility
+                Some(dec!(-0.3)),   // delta
+                spos!(1000.0),   // volume
+                Some(500),   // open_interest
             );
         }
         chain
@@ -2799,9 +2799,9 @@ mod tests_chain_iterators {
             spos!(1.0),   // put_bid
             spos!(1.5),   // put_ask
             spos!(0.2),   // implied_volatility
-            Some(dec!(0.6)),    // delta
-            spos!(100.0), // volume
-            Some(50),     // open_interest
+            Some(dec!(0.6)),   // delta
+            spos!(100.0),   // volume
+            Some(50),   // open_interest
         );
 
         chain.add_option(
@@ -2949,9 +2949,9 @@ mod tests_chain_iterators_bis {
             spos!(1.0),   // put_bid
             spos!(1.5),   // put_ask
             spos!(0.2),   // implied_volatility
-            Some(dec!(0.6)),    // delta
-            spos!(100.0), // volume
-            Some(50),     // open_interest
+            Some(dec!(0.6)),   // delta
+            spos!(100.0),   // volume
+            Some(50),   // open_interest
         );
 
         chain.add_option(
@@ -3148,7 +3148,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_upper_side_valid() {
         let option_data = OptionData::new(
-            pos!(110.0), // strike price higher than underlying
+            pos!(110.0),   // strike price higher than underlying
             None,
             None,
             None,
@@ -3166,7 +3166,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_upper_side_invalid() {
         let option_data = OptionData::new(
-            pos!(90.0), // strike price lower than underlying
+            pos!(90.0),   // strike price lower than underlying
             None,
             None,
             None,
@@ -3184,7 +3184,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_lower_side_valid() {
         let option_data = OptionData::new(
-            pos!(90.0), // strike price lower than underlying
+            pos!(90.0),   // strike price lower than underlying
             None,
             None,
             None,
@@ -3202,7 +3202,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_lower_side_invalid() {
         let option_data = OptionData::new(
-            pos!(110.0), // strike price higher than underlying
+            pos!(110.0),   // strike price higher than underlying
             None,
             None,
             None,
@@ -3229,7 +3229,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_valid() {
         let option_data = OptionData::new(
-            pos!(100.0), // strike price within range
+            pos!(100.0),   // strike price within range
             None,
             None,
             None,
@@ -3249,7 +3249,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_invalid_below() {
         let option_data = OptionData::new(
-            pos!(80.0), // strike price below range
+            pos!(80.0),   // strike price below range
             None,
             None,
             None,
@@ -3269,7 +3269,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_invalid_above() {
         let option_data = OptionData::new(
-            pos!(120.0), // strike price above range
+            pos!(120.0),   // strike price above range
             None,
             None,
             None,
@@ -3289,7 +3289,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_at_boundaries() {
         let option_data_lower = OptionData::new(
-            pos!(90.0), // strike price at lower boundary
+            pos!(90.0),   // strike price at lower boundary
             None,
             None,
             None,
@@ -3300,7 +3300,7 @@ mod tests_is_valid_optimal_side {
             None,
         );
         let option_data_upper = OptionData::new(
-            pos!(110.0), // strike price at upper boundary
+            pos!(110.0),   // strike price at upper boundary
             None,
             None,
             None,
@@ -3342,7 +3342,7 @@ mod rnd_analysis_tests {
         {
             chain.add_option(
                 pos!(strike),
-                spos!(call_ask - 0.02), // bid slightly lower than ask
+                spos!(call_ask - 0.02),   // bid slightly lower than ask
                 spos!(call_ask),
                 None,
                 None,
@@ -3390,7 +3390,7 @@ mod rnd_analysis_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos!(0.1), // Smaller than strike interval
+                derivative_tolerance: pos!(0.1),   // Smaller than strike interval
             };
 
             let result = chain.calculate_rnd(&params);
@@ -3496,7 +3496,7 @@ mod rnd_analysis_tests {
                 spos!(0.2),
                 None,
                 None,
-                None, // No implied volatility
+                None,   // No implied volatility
                 None,
                 spos!(100.0),
                 Some(50),

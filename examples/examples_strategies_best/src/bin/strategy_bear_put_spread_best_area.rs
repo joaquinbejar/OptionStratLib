@@ -19,20 +19,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
     let mut strategy = BearPutSpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
+        underlying_price,   // underlying_price
         Positive::ZERO,   // short_strike
         Positive::ZERO,   // long_strike
         ExpirationDate::Days(5.0),
-        ZERO,      // implied_volatility
-        ZERO,      // risk_free_rate
-        ZERO,      // dividend_yield
-        pos!(1.0), // quantity
-        ZERO,      // premium_short_put
-        ZERO,      // premium_short_put
-        0.82,      // open_fee_short_put
-        0.82,      // close_fee_short_put
-        0.82,      // open_fee_short_put
-        0.82,      // close_fee_short_put
+        ZERO,   // implied_volatility
+        ZERO,   // risk_free_rate
+        ZERO,   // dividend_yield
+        pos!(1.0),   // quantity
+        ZERO,   // premium_short_put
+        ZERO,   // premium_short_put
+        0.82,   // open_fee_short_put
+        0.82,   // close_fee_short_put
+        0.82,   // open_fee_short_put
+        0.82,   // close_fee_short_put
     );
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);

@@ -996,24 +996,24 @@ mod tests_iron_condor_delta {
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5750.0),     // long_strike_itm
-            pos!(5850.0),     // long_strike_otm
-            pos!(5800.0),     // short_strike
+            underlying_price,   // underlying_price
+            pos!(5750.0),   // long_strike_itm
+            pos!(5850.0),   // long_strike_otm
+            pos!(5800.0),   // short_strike
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // long quantity
-            95.8,      // short_quantity
-            85.04,     // premium_long_itm
-            31.65,     // premium_long_otm
-            53.04,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // close_fee_long
-            0.73,      // close_fee_short
-            0.73,      // close_fee_short
-            0.73,      // close_fee_short
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // long quantity
+            95.8,   // short_quantity
+            85.04,   // premium_long_itm
+            31.65,   // premium_long_otm
+            53.04,   // premium_short
+            0.78,   // open_fee_long
+            0.78,   // close_fee_long
+            0.73,   // close_fee_short
+            0.73,   // close_fee_short
+            0.73,   // close_fee_short
         )
     }
 
@@ -1116,23 +1116,23 @@ mod tests_iron_condor_delta_size {
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5750.0),     // long_strike_itm
-            pos!(5850.0),     // long_strike_otm
-            pos!(5800.0),     // short_strike
+            underlying_price,   // underlying_price
+            pos!(5750.0),   // long_strike_itm
+            pos!(5850.0),   // long_strike_otm
+            pos!(5800.0),   // short_strike
             ExpirationDate::Days(2.0),
-            pos!(0.18),      // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // long quantity
-            97.8,      // short_quantity
-            85.04,     // premium_long_itm
-            31.65,     // premium_long_otm
-            53.04,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // close_fee_long
-            0.73,      // close_fee_short
-            0.73,      // close_fee_short
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // long quantity
+            97.8,   // short_quantity
+            85.04,   // premium_long_itm
+            31.65,   // premium_long_otm
+            53.04,   // premium_short
+            0.78,   // open_fee_long
+            0.78,   // close_fee_long
+            0.73,   // close_fee_short
+            0.73,   // close_fee_short
             0.73,
         )
     }
@@ -1240,9 +1240,9 @@ mod tests_call_butterfly_optimizable {
             spos!(1.0),   // put_bid
             spos!(1.2),   // put_ask
             spos!(0.2),   // iv
-            Some(dec!(0.4)),    // delta
-            spos!(100.0), // volume
-            Some(50),     // open interest
+            Some(dec!(0.4)),   // delta
+            spos!(100.0),   // volume
+            Some(50),   // open interest
         );
 
         chain.add_option(
@@ -1284,9 +1284,9 @@ mod tests_call_butterfly_optimizable {
             dec!(0.01),
             pos!(0.02),
             pos!(1.0),
-            6.2, // long call ask
-            3.0, // short call bid low
-            1.0, // short call bid high
+            6.2,   // long call ask
+            3.0,   // short call bid low
+            1.0,   // short call bid high
             0.1,
             0.1,
             0.1,

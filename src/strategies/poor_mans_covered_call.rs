@@ -1173,8 +1173,8 @@ mod tests_pmcc_best_area {
         let strategy = PoorMansCoveredCall::new(
             "SP500".to_string(),
             underlying_price,
-            pos!(5700.0), // long strike ITM
-            pos!(5900.0), // short strike OTM
+            pos!(5700.0),   // long strike ITM
+            pos!(5900.0),   // short strike OTM
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
             pos!(0.2),
@@ -1322,21 +1322,21 @@ mod tests_short_straddle_delta {
         let underlying_price = pos!(7138.5);
         PoorMansCoveredCall::new(
             "CL".to_string(),
-            underlying_price, // underlying_price
-            long_strike,      // call_strike 7450
-            short_strike,     // put_strike 7050
+            underlying_price,   // underlying_price
+            long_strike,   // call_strike 7450
+            short_strike,   // put_strike 7050
             ExpirationDate::Days(45.0),
             ExpirationDate::Days(15.0),
-            pos!(0.3745),    // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(1.0), // quantity
-            84.2,      // premium_short_call
-            353.2,     // premium_short_put
-            7.01,      // open_fee_short_call
-            7.01,      // close_fee_short_call
-            7.01,      // open_fee_short_put
-            7.01,      // close_fee_short_put
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            84.2,   // premium_short_call
+            353.2,   // premium_short_put
+            7.01,   // open_fee_short_call
+            7.01,   // close_fee_short_call
+            7.01,   // open_fee_short_put
+            7.01,   // close_fee_short_put
         )
     }
 
@@ -1432,21 +1432,21 @@ mod tests_short_straddle_delta_size {
         let underlying_price = pos!(7138.5);
         PoorMansCoveredCall::new(
             "CL".to_string(),
-            underlying_price, // underlying_price
-            long_strike,      // call_strike 7450
-            short_strike,     // put_strike 7050
+            underlying_price,   // underlying_price
+            long_strike,   // call_strike 7450
+            short_strike,   // put_strike 7050
             ExpirationDate::Days(45.0),
             ExpirationDate::Days(15.0),
-            pos!(0.3745),    // implied_volatility
-            dec!(0.05),      // risk_free_rate
-            Positive::ZERO,       // dividend_yield
-            pos!(2.0), // quantity
-            84.2,      // premium_short_call
-            353.2,     // premium_short_put
-            7.01,      // open_fee_short_call
-            7.01,      // close_fee_short_call
-            7.01,      // open_fee_short_put
-            7.01,      // close_fee_short_put
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // quantity
+            84.2,   // premium_short_call
+            353.2,   // premium_short_put
+            7.01,   // open_fee_short_call
+            7.01,   // close_fee_short_call
+            7.01,   // open_fee_short_put
+            7.01,   // close_fee_short_put
         )
     }
 

@@ -50,20 +50,20 @@
 //!
 //! let spread = BullCallSpread::new(
 //!     "SP500".to_string(),
-//!     pos!(5780.0), // underlying_price
-//!     pos!(5750.0), // long_strike_itm  
-//!     pos!(5820.0), // short_strike
+//!     pos!(5780.0),   // underlying_price
+//!     pos!(5750.0),   // long_strike_itm  
+//!     pos!(5820.0),   // short_strike
 //!     ExpirationDate::Days(2.0),
-//!     0.18,         // implied_volatility
-//!     0.05,         // risk_free_rate
-//!     0.0,          // dividend_yield
-//!     pos!(2.0),    // long quantity
-//!     85.04,        // premium_long
-//!     29.85,        // premium_short
-//!     0.78,         // open_fee_long
-//!     0.78,         // open_fee_long
-//!     0.73,         // close_fee_long
-//!     0.73,         // close_fee_short
+//!     0.18,   // implied_volatility
+//!     dec!(0.05),   // risk_free_rate
+//!     Positive::ZERO,   // dividend_yield
+//!     pos!(2.0),   // long quantity
+//!     85.04,   // premium_long
+//!     29.85,   // premium_short
+//!     0.78,   // open_fee_long
+//!     0.78,   // open_fee_long
+//!     0.73,   // close_fee_long
+//!     0.73,   // close_fee_short
 //! );
 //!
 //! let profit = spread.max_profit().unwrap_or(Positive::ZERO);
@@ -156,22 +156,22 @@
 //!
 //! let condor = IronCondor::new(
 //!     "AAPL".to_string(),
-//!     pos!(150.0), // underlying_price
-//!     pos!(155.0), // short_call_strike
-//!     pos!(145.0), // short_put_strike  
-//!     pos!(160.0), // long_call_strike
-//!     pos!(140.0), // long_put_strike
+//!     pos!(150.0),   // underlying_price
+//!     pos!(155.0),   // short_call_strike
+//!     pos!(145.0),   // short_put_strike  
+//!     pos!(160.0),   // long_call_strike
+//!     pos!(140.0),   // long_put_strike
 //!     ExpirationDate::Days(30.0),
-//!     0.2,         // implied_volatility
-//!     0.01,        // risk_free_rate
-//!     0.02,        // dividend_yield
+//!     pos!(0.2),   // implied_volatility
+//!     0.01,   // risk_free_rate
+//!     0.02,   // dividend_yield
 //!     pos!(1.0),   // quantity
-//!     1.5,         // premium_short_call
-//!     1.0,         // premium_short_put
-//!     2.0,         // premium_long_call
-//!     1.8,         // premium_long_put
-//!     5.0,         // open_fee
-//!     5.0,         // close_fee
+//!     1.5,   // premium_short_call
+//!     1.0,   // premium_short_put
+//!     2.0,   // premium_long_call
+//!     1.8,   // premium_long_put
+//!     5.0,   // open_fee
+//!     5.0,   // close_fee
 //! );
 //!
 //! let max_profit = condor.max_profit().unwrap_or(Positive::ZERO);

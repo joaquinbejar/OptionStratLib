@@ -64,19 +64,19 @@
 //! // Create a new random walk graph
 //! let mut walk = RandomWalkGraph::new(
 //!     "Asset Price Simulation".to_string(),
-//!     Some(0.05),     // risk-free rate
-//!     Some(0.02),     // dividend yield
+//!     Some(0.05),   // risk-free rate
+//!     Some(0.02),   // dividend yield
 //!     TimeFrame::Day,
-//!     20,             // volatility window
+//!     20,   // volatility window
 //!     Some(pos!(0.2)) // initial volatility
 //! );
 //!
 //! // Generate the random walk
 //! walk.generate_random_walk(
-//!     252,        // number of steps (1 year of trading days)
-//!     pos!(100.0), // initial price
-//!     0.0,        // mean (drift)
-//!     pos!(0.2),  // standard deviation
+//!     252,   // number of steps (1 year of trading days)
+//!     pos!(100.0),   // initial price
+//!     0.0,   // mean (drift)
+//!     pos!(0.2),   // standard deviation
 //!     pos!(0.01)  // volatility of volatility
 //! );
 //! ```
