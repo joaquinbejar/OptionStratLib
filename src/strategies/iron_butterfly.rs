@@ -191,12 +191,16 @@ impl IronButterfly {
             .expect("Invalid long put");
 
         // Calculate break-even points
-        let net_credit = (strategy.long_put.premium + strategy.long_call.premium)
-            + strategy.fees().unwrap().to_f64().unwrap()
-            - (strategy.short_put.premium + strategy.short_call.premium);
-        strategy.break_even_points.push(short_strike + net_credit);
-        strategy.break_even_points.push(short_strike - net_credit);
+        let net_credit = strategy.net_premium_received().unwrap() / quantity;
+        
+        strategy.break_even_points.push(
+            (short_strike + net_credit).round_to(2)
+        );
+        strategy.break_even_points.push(
+            (short_strike - net_credit).round_to(2)
+        );
 
+        strategy.break_even_points.sort();
         strategy
     }
 }
@@ -304,19 +308,7 @@ impl Strategies for IronButterfly {
             - self.long_put.total_cost();
         Ok(Decimal::from_f64(net_prem).unwrap())
     }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call.open_fee
-            + self.short_call.close_fee
-            + self.short_put.open_fee
-            + self.short_put.close_fee
-            + self.long_call.open_fee
-            + self.long_call.close_fee
-            + self.long_put.open_fee
-            + self.long_put.close_fee;
-        Ok(Decimal::from_f64(result).unwrap())
-    }
-
+    
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let inner_width =
             (self.short_call.option.strike_price - self.short_put.option.strike_price).to_f64();
@@ -519,7 +511,7 @@ impl Graph for IronButterfly {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].to_f64(), 0.0),
             label: format!("Left Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(5.0, 5.0),
+            label_offset: LabelOffsetType::Relative(-55.0, 5.0),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
