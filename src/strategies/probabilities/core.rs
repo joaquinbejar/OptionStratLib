@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use rust_decimal::Decimal;
 use crate::error::probability::ProbabilityError;
 use crate::model::{ExpirationDate, ProfitLossRange};
 use crate::pricing::payoff::Profit;
@@ -221,7 +222,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 volatility_adj,
                 trend,
                 self.get_expiration()?,
-                self.get_risk_free_rate(),
+                self.get_risk_free_rate().into(),
             )?;
             max_loss_prob = range_clone.probability;
         }
@@ -230,7 +231,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     }
 
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError>;
-    fn get_risk_free_rate(&self) -> Option<f64>;
+    fn get_risk_free_rate(&self) -> Option<Decimal>;
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
 }
@@ -249,7 +250,7 @@ mod tests_probability_analysis {
     struct MockStrategy {
         underlying_price: Positive,
         expiration: ExpirationDate,
-        risk_free_rate: f64,
+        risk_free_rate: Decimal,
         break_points: Vec<Positive>,
     }
 
@@ -304,7 +305,7 @@ mod tests_probability_analysis {
             Ok(self.expiration.clone())
         }
 
-        fn get_risk_free_rate(&self) -> Option<f64> {
+        fn get_risk_free_rate(&self) -> Option<Decimal> {
             Some(self.risk_free_rate)
         }
 
@@ -478,7 +479,7 @@ mod tests_expected_value {
     struct TestStrategy {
         underlying_price: Positive,
         expiration: ExpirationDate,
-        risk_free_rate: f64,
+        risk_free_rate: Decimal,
     }
 
     impl Validable for TestStrategy {}
@@ -512,7 +513,7 @@ mod tests_expected_value {
             Ok(self.expiration.clone())
         }
 
-        fn get_risk_free_rate(&self) -> Option<f64> {
+        fn get_risk_free_rate(&self) -> Option<Decimal> {
             Some(self.risk_free_rate)
         }
 
@@ -654,7 +655,7 @@ mod tests_expected_value {
                 self.base.get_expiration()
             }
 
-            fn get_risk_free_rate(&self) -> Option<f64> {
+            fn get_risk_free_rate(&self) -> Option<Decimal> {
                 self.base.get_risk_free_rate()
             }
 
