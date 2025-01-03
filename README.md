@@ -176,7 +176,7 @@
  +implied_volatility: f64
  +quantity: Positive
  +underlying_price: Positive
- +risk_free_rate: f64
+ +risk_free_rate: Decimal
  +option_style: OptionStyle
  +dividend_yield: f64
  +exotic_params: Option~ExoticParams~

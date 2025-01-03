@@ -177,12 +177,12 @@
 //!  +underlying_symbol: String
 //!  +strike_price: Positive
 //!  +expiration_date: ExpirationDate
-//!  +implied_volatility: f64
+//!  +implied_volatility: Positive
 //!  +quantity: Positive
 //!  +underlying_price: Positive
-//!  +risk_free_rate: f64
+//!  +risk_free_rate: Decimal
 //!  +option_style: OptionStyle
-//!  +dividend_yield: f64
+//!  +dividend_yield: Positive
 //!  +exotic_params: Option~ExoticParams~
 //!  +calculate_price_black_scholes()
 //!  +calculate_price_binomial()
@@ -551,25 +551,26 @@
 //! use optionstratlib::Options;
 //! use optionstratlib::Positive;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::utils::setup_logger;
 //! use optionstratlib::visualization::utils::Graph;
 //! use std::error::Error;
 //! use tracing::info;
 //!
 //! fn create_sample_option() -> Options {
-//!     use optionstratlib::f2p;Options::new(
+//!     use rust_decimal_macros::dec;
+//! use optionstratlib::f2p;Options::new(
 //!         OptionType::European,
 //!         Side::Long,
 //!         "AAPL".to_string(),
 //!         f2p!(100.0),
 //!         ExpirationDate::Days(30.0),
-//!         0.2,
-//!         f2p!(1.0),
-//!         f2p!(105.0),
-//!         0.05,
+//!         pos!(0.2),
+//!         pos!(1.0),
+//!         pos!(105.0),
+//!         dec!(0.05),
 //!         OptionStyle::Call,
-//!         0.0,
+//!         Positive::ZERO,
 //!         None,
 //!     )
 //! }
@@ -581,7 +582,7 @@
 //!
 //!     // Define a range of prices for the graph
 //!     let price_range: Vec<Positive> = (50..150)
-//!         .map(|x| f2p!(x as f64))
+//!         .map(|x| pos!(x as f64))
 //!         .collect();
 //!
 //!     // Generate the intrinsic value graph
