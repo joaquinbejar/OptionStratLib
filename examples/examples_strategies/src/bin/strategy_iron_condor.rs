@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.1548),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(2.0),      // quantity
+        pos!(1.0),      // quantity
         38.8,           // premium_short_call
         30.4,           // premium_short_put
         23.3,           // premium_long_call
@@ -39,6 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
+
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
