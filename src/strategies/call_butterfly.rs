@@ -160,14 +160,16 @@ impl CallButterfly {
 
         // Calculate break-even points
         strategy.break_even_points.push(
-            strategy.long_call.option.strike_price
-                - strategy.calculate_profit_at(strategy.long_call.option.strike_price) / quantity,
+            (strategy.long_call.option.strike_price
+                - strategy.calculate_profit_at(strategy.long_call.option.strike_price) / quantity)
+                .round_to(2),
         );
 
         strategy.break_even_points.push(
-            strategy.short_call_high.option.strike_price
+            (strategy.short_call_high.option.strike_price
                 + strategy.calculate_profit_at(strategy.short_call_high.option.strike_price)
-                    / quantity,
+                    / quantity)
+                .round_to(2),
         );
 
         strategy
@@ -263,17 +265,7 @@ impl Strategies for CallButterfly {
         let result = if premium > ZERO { premium } else { ZERO };
         Ok(Decimal::from_f64(result).unwrap())
     }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call_low.open_fee
-            + self.short_call_low.close_fee
-            + self.short_call_high.open_fee
-            + self.short_call_high.close_fee
-            + self.long_call.open_fee * self.long_call.option.quantity
-            + self.long_call.close_fee * self.long_call.option.quantity;
-        Ok(Decimal::from_f64(result).unwrap())
-    }
-
+    
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let break_even = self.get_break_even_points()?;
         if break_even.len() != 2 {
