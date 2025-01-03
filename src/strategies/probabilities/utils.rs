@@ -65,7 +65,7 @@ pub fn calculate_single_point_probability(
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
-    risk_free_rate: Option<f64>,
+    risk_free_rate: Option<Decimal>,
 ) -> Result<(Positive, Positive), ProbabilityError> {
     if target_price == Positive::ZERO {
         return Ok((Positive::ZERO, Positive::ONE));
@@ -80,7 +80,7 @@ pub fn calculate_single_point_probability(
     }
 
     // Get base parameters
-    let risk_free = risk_free_rate.unwrap_or(0.0);
+    let risk_free = risk_free_rate.unwrap_or(Decimal::ZERO);
 
     // Calculate adjusted volatility if provided
     let volatility = match volatility_adj {
@@ -161,7 +161,7 @@ pub fn calculate_price_probability(
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
-    risk_free_rate: Option<f64>,
+    risk_free_rate: Option<Decimal>,
 ) -> Result<(Positive, Positive, Positive), ProbabilityError> {
     if lower_bound > upper_bound {
         return Err(ProbabilityError::PriceError(
@@ -235,7 +235,7 @@ pub fn calculate_bounds_probability(
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
-    risk_free_rate: Option<f64>,
+    risk_free_rate: Option<Decimal>,
 ) -> Result<Vec<Positive>, ProbabilityError> {
     // Check if bounds vector is empty
     if bounds.is_empty() {
@@ -419,6 +419,7 @@ mod tests_single_point_probability {
     use super::*;
     use approx::assert_relative_eq;
     use chrono::{Duration, Utc};
+    use rust_decimal_macros::dec;
 
     // Helper function to create default volatility adjustment
     fn default_volatility_adj() -> VolatilityAdjustment {
@@ -529,7 +530,7 @@ mod tests_single_point_probability {
             None,
             None,
             ExpirationDate::Days(365.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
@@ -551,7 +552,7 @@ mod tests_single_point_probability {
             vol_adj,
             trend,
             ExpirationDate::Days(365.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
