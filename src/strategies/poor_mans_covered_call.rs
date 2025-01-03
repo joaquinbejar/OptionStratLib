@@ -420,7 +420,7 @@ impl Optimizable for PoorMansCoveredCall {
             short.strike_price,
             self.long_call.option.expiration_date.clone(),
             self.short_call.option.expiration_date.clone(),
-            short.implied_volatility.unwrap().to_f64() / 100.0,
+            short.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
@@ -609,6 +609,7 @@ mod tests {
     use super::*;
     use crate::pos;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
         let underlying_symbol = "AAPL".to_string();
@@ -617,9 +618,9 @@ mod tests {
         let short_call_strike = pos!(160.0);
         let long_call_expiration = ExpirationDate::Days(365.0);
         let short_call_expiration = ExpirationDate::Days(30.0);
-        let implied_volatility = 0.20;
-        let risk_free_rate = 0.01;
-        let dividend_yield = 0.005;
+        let implied_volatility = pos!(0.20);
+        let risk_free_rate = dec!(0.01);
+        let dividend_yield = pos!(0.005);
         let quantity = pos!(1.0);
         let premium_long_call = 15.0;
         let premium_short_call = 5.0;
@@ -751,6 +752,7 @@ mod tests {
 
 #[cfg(test)]
 mod tests_pmcc_validation {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
 
@@ -762,9 +764,9 @@ mod tests_pmcc_validation {
             pos!(160.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
             pos!(1.0),
             15.0,
             5.0,
@@ -790,12 +792,12 @@ mod tests_pmcc_validation {
             "AAPL".to_string(),
             pos!(140.0),
             ExpirationDate::Days(365.0),
-            0.2,
+            pos!(0.2),
             pos!(1.0),
             pos!(150.0),
-            0.01,
+            dec!(0.01),
             OptionStyle::Call,
-            0.005,
+            pos!(0.005),
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
@@ -814,12 +816,12 @@ mod tests_pmcc_validation {
             "AAPL".to_string(),
             pos!(160.0),
             ExpirationDate::Days(30.0),
-            0.2,
+            pos!(0.2),
             pos!(1.0),
             pos!(150.0),
-            0.01,
+            dec!(0.01),
             OptionStyle::Call,
-            0.005,
+            pos!(0.005),
             None,
         );
         let position = Position::new(option, 5.0, Utc::now(), 0.5, 0.5);
@@ -838,12 +840,12 @@ mod tests_pmcc_validation {
             "AAPL".to_string(),
             pos!(140.0),
             ExpirationDate::Days(365.0),
-            0.2,
+            pos!(0.2),
             pos!(1.0),
             pos!(150.0),
-            0.01,
+            dec!(0.01),
             OptionStyle::Put,
-            0.005,
+            pos!(0.005),
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
@@ -862,6 +864,7 @@ mod tests_pmcc_validation {
 
 #[cfg(test)]
 mod tests_pmcc_optimization {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::spos;
 
@@ -877,7 +880,7 @@ mod tests_pmcc_optimization {
                 spos!(4.8),
                 spos!(5.0),
                 spos!(0.2),
-                Some(0.5),
+                Some(dec!(0.5)),
                 spos!(100.0),
                 Some(50),
             );
@@ -893,9 +896,9 @@ mod tests_pmcc_optimization {
             pos!(160.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
             pos!(1.0),
             15.0,
             5.0,
@@ -997,6 +1000,7 @@ mod tests_pmcc_optimization {
 mod tests_pmcc_pnl {
     use super::*;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1006,9 +1010,9 @@ mod tests_pmcc_pnl {
             pos!(160.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
             pos!(1.0),
             15.0,
             5.0,
@@ -1073,6 +1077,7 @@ mod tests_pmcc_pnl {
 
 #[cfg(test)]
 mod tests_pmcc_graph {
+    use rust_decimal_macros::dec;
     use super::*;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
@@ -1083,9 +1088,9 @@ mod tests_pmcc_graph {
             pos!(160.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
             pos!(1.0),
             15.0,
             5.0,
@@ -1156,6 +1161,7 @@ mod tests_pmcc_best_area {
     use super::*;
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1171,9 +1177,9 @@ mod tests_pmcc_best_area {
             pos!(5900.0), // short strike OTM
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
             pos!(1.0),
             15.0,
             5.0,
@@ -1230,6 +1236,7 @@ mod tests_pmcc_best_ratio {
     use super::*;
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1245,9 +1252,9 @@ mod tests_pmcc_best_ratio {
             pos!(5900.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
             pos!(1.0),
             15.0,
             5.0,
@@ -1309,6 +1316,7 @@ mod tests_short_straddle_delta {
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
         let underlying_price = pos!(7138.5);
@@ -1319,9 +1327,9 @@ mod tests_short_straddle_delta {
             short_strike,     // put_strike 7050
             ExpirationDate::Days(45.0),
             ExpirationDate::Days(15.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.3745),    // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
@@ -1418,6 +1426,7 @@ mod tests_short_straddle_delta_size {
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
         let underlying_price = pos!(7138.5);
@@ -1428,9 +1437,9 @@ mod tests_short_straddle_delta_size {
             short_strike,     // put_strike 7050
             ExpirationDate::Days(45.0),
             ExpirationDate::Days(15.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.3745),    // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(2.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
