@@ -460,8 +460,8 @@ impl ProbabilityAnalysis for BearPutSpread {
         let break_even_point = self.get_break_even_points()?[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(self.long_put.option.implied_volatility),
-            pos!(self.short_put.option.implied_volatility),
+            self.long_put.option.implied_volatility,
+            self.short_put.option.implied_volatility,
         ]);
 
         let mut profit_range = ProfitLossRange::new(
@@ -488,8 +488,8 @@ impl ProbabilityAnalysis for BearPutSpread {
         let break_even_point = self.get_break_even_points()?[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(self.long_put.option.implied_volatility),
-            pos!(self.short_put.option.implied_volatility),
+            self.long_put.option.implied_volatility,
+            self.short_put.option.implied_volatility,
         ]);
 
         let mut loss_range = ProfitLossRange::new(
@@ -573,6 +573,7 @@ impl DeltaNeutrality for BearPutSpread {
 
 #[cfg(test)]
 mod tests_bear_put_spread_strategy {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -584,9 +585,9 @@ mod tests_bear_put_spread_strategy {
             pos!(105.0),                // long_strike
             pos!(95.0),                 // short_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
+            pos!(0.2),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                        // dividend_yield
             pos!(1.0),                  // quantity
             4.0,                        // premium_long_put
             2.0,                        // premium_short_put
@@ -619,12 +620,12 @@ mod tests_bear_put_spread_strategy {
                 "TEST".to_string(),
                 pos!(110.0),
                 ExpirationDate::Days(30.0),
-                0.20,
+                pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
-                0.05,
+                dec!(0.05),
                 OptionStyle::Put,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             5.0,
@@ -690,9 +691,9 @@ mod tests_bear_put_spread_strategy {
             pos!(105.0),
             pos!(95.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(1.0),
             4.0,
             2.0,
@@ -739,9 +740,9 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO, // long_strike = default
             Positive::ZERO, // short_strike = default
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(1.0),
             4.0,
             2.0,
@@ -763,9 +764,9 @@ mod tests_bear_put_spread_strategy {
             pos!(105.0),
             pos!(95.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(2.0), // quantity = 2
             4.0,
             2.0,
@@ -790,6 +791,7 @@ mod tests_bear_put_spread_validation {
     use super::*;
     use crate::model::types::ExpirationDate;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_valid_position(
         side: Side,
@@ -803,12 +805,12 @@ mod tests_bear_put_spread_validation {
                 "TEST".to_string(),
                 strike_price,
                 expiration,
-                0.20,
+                pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
-                0.05,
+                dec!(0.05),
                 OptionStyle::Put,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             1.0,
@@ -913,6 +915,7 @@ mod tests_bear_put_spread_validation {
 
 #[cfg(test)]
 mod tests_bear_put_spread_optimization {
+    use rust_decimal_macros::dec;
     use super::*;
 
     use crate::model::types::ExpirationDate;
@@ -929,7 +932,7 @@ mod tests_bear_put_spread_optimization {
             spos!(8.0),   // put_bid
             spos!(8.2),   // put_ask
             spos!(0.2),   // implied_volatility
-            Some(-0.8),   // delta
+            Some(dec!(-0.8)),   // delta
             spos!(100.0), // volume
             Some(50),     // open_interest
         );
@@ -941,7 +944,7 @@ mod tests_bear_put_spread_optimization {
             spos!(6.0),
             spos!(6.2),
             spos!(0.2),
-            Some(-0.7),
+            Some(dec!(-0.7)),
             spos!(150.0),
             Some(75),
         );
@@ -953,7 +956,7 @@ mod tests_bear_put_spread_optimization {
             spos!(4.0),
             spos!(4.2),
             spos!(0.2),
-            Some(-0.6),
+            Some(dec!(-0.6)),
             spos!(200.0),
             Some(100),
         );
@@ -965,7 +968,7 @@ mod tests_bear_put_spread_optimization {
             spos!(2.5),
             spos!(2.7),
             spos!(0.2),
-            Some(-0.5),
+            Some(dec!(-0.5)),
             spos!(250.0),
             Some(125),
         );
@@ -977,7 +980,7 @@ mod tests_bear_put_spread_optimization {
             spos!(1.5),
             spos!(1.7),
             spos!(0.2),
-            Some(-0.4),
+            Some(dec!(-0.4)),
             spos!(200.0),
             Some(100),
         );
@@ -989,7 +992,7 @@ mod tests_bear_put_spread_optimization {
             spos!(0.8),
             spos!(1.0),
             spos!(0.2),
-            Some(-0.3),
+            Some(dec!(-0.3)),
             spos!(150.0),
             Some(75),
         );
@@ -1001,7 +1004,7 @@ mod tests_bear_put_spread_optimization {
             spos!(0.4),
             spos!(0.6),
             spos!(0.2),
-            Some(-0.2),
+            Some(dec!(-0.2)),
             spos!(100.0),
             Some(50),
         );
@@ -1016,9 +1019,9 @@ mod tests_bear_put_spread_optimization {
             pos!(105.0),
             pos!(95.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(1.0),
             1.7, // premium_long_put
             4.0, // premium_short_put
@@ -1135,7 +1138,7 @@ mod tests_bear_put_spread_optimization {
             None, // Invalid: no put_bid
             None, // Invalid: no put_ask
             spos!(0.2),
-            Some(-0.1),
+            Some(dec!(-0.1)),
             spos!(50.0),
             Some(25),
         );
@@ -1155,9 +1158,9 @@ mod tests_bear_put_spread_optimization {
             pos!(105.0),
             pos!(95.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(2.0), // quantity = 2
             1.7,
             4.0,
@@ -1179,6 +1182,7 @@ mod tests_bear_put_spread_optimization {
 
 #[cfg(test)]
 mod tests_bear_put_spread_optimizable {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::spos;
@@ -1195,7 +1199,7 @@ mod tests_bear_put_spread_optimizable {
             spos!(2.0),   // put_bid -
             spos!(2.2),   // put_ask
             spos!(0.2),   // implied_vol
-            Some(-0.3),   // delta
+            Some(dec!(-0.3)),   // delta
             spos!(100.0), // volume
             Some(50),     // open_interest
         );
@@ -1208,7 +1212,7 @@ mod tests_bear_put_spread_optimizable {
             spos!(4.8),
             spos!(5.0),
             spos!(0.2),
-            Some(-0.5),
+            Some(dec!(-0.5)),
             spos!(200.0),
             Some(100),
         );
@@ -1220,7 +1224,7 @@ mod tests_bear_put_spread_optimizable {
             spos!(8.8), // put_bid
             spos!(9.0), // put_ask
             spos!(0.2),
-            Some(-0.7),
+            Some(dec!(-0.7)),
             spos!(150.0),
             Some(75),
         );
@@ -1235,9 +1239,9 @@ mod tests_bear_put_spread_optimizable {
             pos!(105.0), // long strike (higher)
             pos!(95.0),  // short strike (lower)
             ExpirationDate::Days(30.0),
-            0.2,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(1.0),
             2.0, // premium short put
             8.8, // premium long put
@@ -1316,7 +1320,7 @@ mod tests_bear_put_spread_optimizable {
             None, // Invalid put_bid
             None, // Invalid put_ask
             spos!(0.2),
-            Some(-0.4),
+            Some(dec!(-0.4)),
             spos!(50.0),
             Some(25),
         );
@@ -1389,7 +1393,7 @@ mod tests_bear_put_spread_optimizable {
             spos!(3.0),
             spos!(3.2),
             spos!(0.2),
-            Some(-0.5),
+            Some(dec!(-0.5)),
             spos!(50.0),
             Some(25),
         );
@@ -1412,6 +1416,7 @@ mod tests_bear_put_spread_optimizable {
 
 #[cfg(test)]
 mod tests_bear_put_spread_profit {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -1423,9 +1428,9 @@ mod tests_bear_put_spread_profit {
             pos!(105.0),                // long_strike
             pos!(95.0),                 // short_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
+            pos!(0.2),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                        // dividend_yield
             pos!(1.0),                  // quantity
             4.0,                        // premium_long_put
             2.0,                        // premium_short_put
@@ -1499,9 +1504,9 @@ mod tests_bear_put_spread_profit {
             pos!(105.0),
             pos!(95.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(2.0), // quantity = 2
             4.0,
             2.0,
@@ -1530,9 +1535,9 @@ mod tests_bear_put_spread_profit {
             pos!(105.0),
             pos!(95.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(1.0),
             4.0,
             2.0,
@@ -1570,6 +1575,7 @@ mod tests_bear_put_spread_profit {
 
 #[cfg(test)]
 mod tests_bear_put_spread_probability {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::strategies::probabilities::utils::PriceTrend;
 
@@ -1580,9 +1586,9 @@ mod tests_bear_put_spread_probability {
             pos!(105.0),                // long_strike
             pos!(95.0),                 // short_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
+            pos!(0.2),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                        // dividend_yield
             pos!(1.0),                  // quantity
             4.0,                        // premium_long_put
             2.0,                        // premium_short_put
@@ -1607,7 +1613,7 @@ mod tests_bear_put_spread_probability {
     #[test]
     fn test_get_risk_free_rate() {
         let spread = create_test_spread();
-        assert_eq!(spread.get_risk_free_rate(), Some(0.05));
+        assert_eq!(spread.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
@@ -1714,6 +1720,7 @@ mod tests_bear_put_spread_probability {
 
 #[cfg(test)]
 mod tests_bear_put_spread_graph {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -1725,9 +1732,9 @@ mod tests_bear_put_spread_graph {
             pos!(105.0),                // long_strike
             pos!(95.0),                 // short_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
+            pos!(0.2),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                        // dividend_yield
             pos!(1.0),                  // quantity
             4.0,                        // premium_long_put
             2.0,                        // premium_short_put
@@ -1855,9 +1862,9 @@ mod tests_bear_put_spread_graph {
             pos!(105.0),
             pos!(95.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(2.0), // quantity = 2
             4.0,
             2.0,
@@ -1886,6 +1893,7 @@ mod tests_delta {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
         let underlying_price = pos!(5810.5);
@@ -1895,9 +1903,9 @@ mod tests_delta {
             long_strike,      // long_strike
             short_strike,     // short_strike
             ExpirationDate::Days(2.0),
-            0.18,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.18),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // long quantity
             85.04,     // premium_long
             29.85,     // premium_short
@@ -1995,6 +2003,7 @@ mod tests_delta_size {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
         let underlying_price = pos!(5781.88);
@@ -2004,9 +2013,9 @@ mod tests_delta_size {
             long_strike,      // long_strike
             short_strike,     // short_strike
             ExpirationDate::Days(2.0),
-            0.18,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.18),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(2.0), // long quantity
             85.04,     // premium_long
             29.85,     // premium_short
