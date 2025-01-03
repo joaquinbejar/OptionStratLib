@@ -155,6 +155,7 @@ impl PoorMansCoveredCall {
         // Calculate break-even point
         let net_debit =
             (strategy.long_call.max_loss() - strategy.short_call.max_profit()) / quantity;
+
         strategy
             .break_even_points
             .push(long_call_strike + net_debit);
@@ -232,14 +233,6 @@ impl Strategies for PoorMansCoveredCall {
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         let restult =
             self.long_call.net_premium_received() + self.short_call.net_premium_received();
-        Ok(Decimal::from_f64(restult).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let restult = (self.long_call.open_fee + self.long_call.close_fee)
-            * self.long_call.option.quantity
-            + (self.short_call.open_fee + self.short_call.close_fee)
-                * self.short_call.option.quantity;
         Ok(Decimal::from_f64(restult).unwrap())
     }
 
