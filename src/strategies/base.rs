@@ -366,10 +366,10 @@ pub trait Positionable {
 #[cfg(test)]
 mod tests_strategies {
     use super::*;
-    use crate::pos;
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
+    use crate::pos;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -513,10 +513,10 @@ mod tests_strategies {
 #[cfg(test)]
 mod tests_strategies_extended {
     use super::*;
-    use crate::pos;
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
+    use crate::pos;
 
     #[test]
     fn test_strategy_enum() {

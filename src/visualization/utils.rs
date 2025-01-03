@@ -82,10 +82,10 @@ macro_rules! draw_line_segments {
 pub trait Graph: Profit {
     fn graph(
         &self,
-        x_axis_data: &[Positive],   // TODO: it should be Optional
+        x_axis_data: &[Positive], // TODO: it should be Optional
         file_path: &str,
-        title_size: u32,   // 15
-        canvas_size: (u32, u32),   // (1200, 800)
+        title_size: u32,         // 15
+        canvas_size: (u32, u32), // (1200, 800)
     ) -> Result<(), Box<dyn Error>> {
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);

@@ -7,8 +7,8 @@ use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::{assert_positivef64_relative_eq, pos};
-use std::error::Error;
 use rust_decimal_macros::dec;
+use std::error::Error;
 
 #[test]
 fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
@@ -16,20 +16,20 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
-        pos!(2505.8),   // underlying_price
-        pos!(2460.0),   // long_strike_itm
-        pos!(2515.0),   // short_strike
+        pos!(2505.8), // underlying_price
+        pos!(2460.0), // long_strike_itm
+        pos!(2515.0), // short_strike
         ExpirationDate::Days(30.0),
-        pos!(0.2),   // implied_volatility
-        dec!(0.05),   // risk_free_rate
-        Positive::ZERO,   // dividend_yield
-        pos!(1.0),   // quantity
-        27.26,   // premium_long
-        5.33,   // premium_short
-        0.58,   // open_fee_long
-        0.58,   // close_fee_long
-        0.55,   // close_fee_short
-        0.54,   // open_fee_short
+        pos!(0.2),      // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // quantity
+        27.26,          // premium_long
+        5.33,           // premium_short
+        0.58,           // open_fee_long
+        0.58,           // close_fee_long
+        0.55,           // close_fee_short
+        0.54,           // open_fee_short
     );
 
     // Validate strategy properties

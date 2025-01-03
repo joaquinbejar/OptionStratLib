@@ -513,9 +513,9 @@ mod tests_generate_binomial_tree {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
             strike: pos!(110.0),
-            expiry: dec!(3.0),   // Assuming each time step is 1 unit of time
+            expiry: dec!(3.0), // Assuming each time step is 1 unit of time
             int_rate: dec!(0.05),
-            volatility: pos!(0.09531018),   // Calculated to match the 10% up/down movement
+            volatility: pos!(0.09531018), // Calculated to match the 10% up/down movement
             no_steps: 3,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,

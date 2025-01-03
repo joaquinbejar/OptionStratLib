@@ -1,5 +1,4 @@
 use chrono::Utc;
-use optionstratlib::{pos, Positive};
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
@@ -7,9 +6,10 @@ use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::Options;
+use optionstratlib::{pos, Positive};
+use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
-
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

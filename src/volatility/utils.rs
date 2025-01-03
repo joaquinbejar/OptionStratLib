@@ -5,12 +5,12 @@
 ******************************************************************************/
 
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
-use crate::{d2fu, pos, Positive};
 use crate::utils::time::TimeFrame;
 use crate::Options;
-use std::f64;
+use crate::{d2fu, pos, Positive};
 use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
+use std::f64;
 use tracing::debug;
 
 /// Calculates the constant volatility from a series of returns.
@@ -93,7 +93,11 @@ pub fn ewma_volatility(returns: &[f64], lambda: f64) -> Vec<f64> {
 ///   the current implied volatility is returned.
 /// - The function ensures that the implied volatility stays positive.
 ///
-pub fn implied_volatility(market_price: f64, options: &mut Options, max_iterations: i64) -> Positive {
+pub fn implied_volatility(
+    market_price: f64,
+    options: &mut Options,
+    max_iterations: i64,
+) -> Positive {
     let mut iv = options.implied_volatility;
     for _ in 0..max_iterations {
         options.implied_volatility = iv; // Update the implied volatility in the Options struct
@@ -116,7 +120,7 @@ pub fn implied_volatility(market_price: f64, options: &mut Options, max_iteratio
 
         if temp_vi < Decimal::ZERO {
             iv = pos!(1e-16); // Ensure volatility stays positive
-        } else { 
+        } else {
             iv = temp_vi.into();
         }
 
@@ -665,8 +669,8 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
-    use crate::pos;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use crate::Positive;
     use approx::assert_relative_eq;
@@ -680,7 +684,7 @@ mod tests_implied_volatility {
             "TEST".to_string(),
             pos!(100.0),
             ExpirationDate::Days(30.0),
-            pos!(0.02),   // initial implied volatility
+            pos!(0.02), // initial implied volatility
             Positive::ONE,
             pos!(100.0),
             dec!(0.05),
@@ -1152,26 +1156,26 @@ mod tests_interpolate_volatility_surface {
 
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds {
-    use rust_decimal_macros::dec;
     use super::*;
-    use crate::pos;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::Positive;
+    use rust_decimal_macros::dec;
 
     fn create_test_option() -> Options {
         Options::new(
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0),   // strike price
+            pos!(100.0), // strike price
             ExpirationDate::Days(30.0),
-            pos!(0.2),   // implied volatility
-            Positive::ONE,   // quantity
+            pos!(0.2),     // implied volatility
+            Positive::ONE, // quantity
             pos!(100.0),   // underlying price
-            dec!(0.05),   // risk-free rate
+            dec!(0.05),    // risk-free rate
             OptionStyle::Call,
-            Positive::ZERO,   // dividend yield
-            None,   // exotic params
+            Positive::ZERO, // dividend yield
+            None,           // exotic params
         )
     }
 
@@ -1267,15 +1271,15 @@ mod tests_uncertain_volatility_bounds_side {
             OptionType::European,
             side,
             "TEST".to_string(),
-            pos!(100.0),   // strike price
+            pos!(100.0), // strike price
             ExpirationDate::Days(30.0),
-            pos!(0.2),   // implied volatility
-            Positive::ONE,   // quantity
+            pos!(0.2),     // implied volatility
+            Positive::ONE, // quantity
             pos!(100.0),   // underlying price
-            dec!(0.05),   // risk-free rate
+            dec!(0.05),    // risk-free rate
             option_style,
-            Positive::ZERO,   // dividend yield
-            None,   // exotic params
+            Positive::ZERO, // dividend yield
+            None,           // exotic params
         )
     }
 

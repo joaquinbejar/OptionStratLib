@@ -26,9 +26,9 @@ pub struct PayoffInfo {
     pub strike: Positive,
     pub style: OptionStyle,
     pub side: Side,
-    pub spot_prices: Option<Vec<f64>>,   // Asian
-    pub spot_min: Option<f64>,   // Lookback
-    pub spot_max: Option<f64>,   // Lookback
+    pub spot_prices: Option<Vec<f64>>, // Asian
+    pub spot_min: Option<f64>,         // Lookback
+    pub spot_max: Option<f64>,         // Lookback
 }
 
 impl Default for PayoffInfo {
@@ -107,8 +107,8 @@ pub trait Profit {
 #[cfg(test)]
 mod tests_standard_payoff {
     use super::*;
-    use crate::pos;
     use crate::model::types::OptionType;
+    use crate::pos;
 
     #[test]
     fn test_call_option_in_the_money() {

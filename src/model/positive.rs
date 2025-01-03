@@ -32,7 +32,6 @@ macro_rules! spos {
     };
 }
 
-
 impl Positive {
     pub const ZERO: Positive = Positive(Decimal::ZERO);
 
@@ -123,7 +122,7 @@ impl Positive {
     pub fn round_to(&self, decimal_places: u32) -> Positive {
         Positive(self.0.round_dp(decimal_places))
     }
-    
+
     pub fn exp(&self) -> Positive {
         Positive(self.0.exp())
     }

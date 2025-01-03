@@ -10,8 +10,8 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::{pos, Positive};
-use std::error::Error;
 use rust_decimal_macros::dec;
+use std::error::Error;
 use tracing::{debug, info};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -22,10 +22,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
 
     let params = RandomPositionsParams::new(
-        None,   // qty_puts_long
-        Some(1),   // qty_puts_short
-        None,   // qty_calls_long
-        Some(1),   // qty_calls_short
+        None,    // qty_puts_long
+        Some(1), // qty_puts_short
+        None,    // qty_calls_long
+        Some(1), // qty_calls_short
         ExpirationDate::Days(30.0),
         pos!(1.0),
         dec!(0.05),

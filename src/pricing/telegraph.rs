@@ -241,21 +241,24 @@ pub fn telegraph(
 ) -> Result<Decimal, DecimalError> {
     let mut price = option.underlying_price;
     let dt = Decimal::from_f64(option.time_to_expiration() / no_steps as f64).unwrap();
-    
+
     let one_over_252 = Decimal::from_f64(1.0 / 252.0).unwrap();
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
         (None, None) => {
-            let returns = simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
+            let returns =
+                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             estimate_telegraph_parameters(&returns, Decimal::ZERO)?
         }
         (Some(l_up), None) => {
-            let returns = simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
+            let returns =
+                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             let (_, l_down) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
         (None, Some(l_down)) => {
-            let returns = simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
+            let returns =
+                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             let (l_up, _) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
@@ -267,8 +270,9 @@ pub fn telegraph(
     let mut telegraph_process = tp.clone();
     for _ in 0..no_steps {
         let state = telegraph_process.next_state(dt);
-        let drift : Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
-        let volatility: Decimal = option.implied_volatility.to_dec() * Decimal::from_f64(state as f64).unwrap();
+        let drift: Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
+        let volatility: Decimal =
+            option.implied_volatility.to_dec() * Decimal::from_f64(state as f64).unwrap();
 
         let rh = Decimal::from_f64(dt.sqrt().unwrap().to_f64().unwrap() * random::<f64>()).unwrap();
         let lhs = drift * dt + volatility;
@@ -278,7 +282,8 @@ pub fn telegraph(
     }
 
     let payoff = option.payoff_at_price(price);
-    let result = payoff * (-option.risk_free_rate.to_f64().unwrap() * option.time_to_expiration()).exp();
+    let result =
+        payoff * (-option.risk_free_rate.to_f64().unwrap() * option.time_to_expiration()).exp();
     Ok(Decimal::from_f64(result).unwrap())
 }
 
@@ -406,8 +411,8 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
-    use crate::pos;
     use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::Positive;
     use rust_decimal_macros::dec;
 

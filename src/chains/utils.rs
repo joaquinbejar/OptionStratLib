@@ -443,10 +443,10 @@ mod tests_default_empty_string {
 
 #[cfg(test)]
 mod tests_random_positions_params {
-    use num_traits::ToPrimitive;
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_params() -> RandomPositionsParams {
         RandomPositionsParams::new(
@@ -571,11 +571,11 @@ mod tests_adjust_volatility {
 
 #[cfg(test)]
 mod tests_option_data_price_params {
+    use super::*;
+    use crate::constants::ZERO;
+    use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use super::*;
-    use crate::{pos, spos};
-    use crate::constants::ZERO;
 
     #[test]
     fn test_new_price_params() {
@@ -620,8 +620,13 @@ mod tests_option_data_price_params {
 
     #[test]
     fn test_display_price_params_no_volatility() {
-        let params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
+        let params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            dec!(0.05),
+            pos!(0.02),
+        );
         let display_string = format!("{}", params);
         assert!(display_string.contains("Implied Volatility: 0.000"));
     }
@@ -629,9 +634,9 @@ mod tests_option_data_price_params {
 
 #[cfg(test)]
 mod tests_option_chain_build_params {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::{pos, spos};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_new_chain_build_params() {
@@ -684,9 +689,9 @@ mod tests_option_chain_build_params {
 
 #[cfg(test)]
 mod tests_random_positions_params_extended {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_partial_positions() {
@@ -758,9 +763,9 @@ mod tests_random_positions_params_extended {
 
 #[cfg(test)]
 mod tests_sample {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::chains::chain::OptionChain;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_chain() {

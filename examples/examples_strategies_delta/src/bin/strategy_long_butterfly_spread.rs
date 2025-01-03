@@ -6,8 +6,8 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use std::error::Error;
 use rust_decimal_macros::dec;
+use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -16,19 +16,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let strategy = LongButterflySpread::new(
         "SP500".to_string(),
-        underlying_price,   // underlying_price
-        pos!(5710.0),   // long_strike_itm
-        pos!(5820.0),   // short_strike
-        pos!(6100.0),   // long_strike_otm
+        underlying_price, // underlying_price
+        pos!(5710.0),     // long_strike_itm
+        pos!(5820.0),     // short_strike
+        pos!(6100.0),     // long_strike_otm
         ExpirationDate::Days(2.0),
-        pos!(0.18),   // implied_volatility
-        dec!(0.05),   // risk_free_rate
-        Positive::ZERO,   // dividend_yield
-        pos!(1.0),   // long quantity
-        49.65,   // premium_long
-        42.93,   // premium_short
-        1.0,   // open_fee_long
-        4.0,   // open_fee_long
+        pos!(0.18),     // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // long quantity
+        49.65,          // premium_long
+        42.93,          // premium_short
+        1.0,            // open_fee_long
+        4.0,            // open_fee_long
     );
 
     info!("Title: {}", strategy.title());

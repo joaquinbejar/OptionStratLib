@@ -11,7 +11,7 @@ use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::Options;
 use crate::Positive;
-use num_traits::{FromPrimitive};
+use num_traits::FromPrimitive;
 use rand::distributions::Distribution;
 use rand::Rng;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -363,8 +363,8 @@ pub fn probability_keep_under_strike(
 #[cfg(test)]
 mod tests_simulate_returns {
     use super::*;
-    use crate::{assert_decimal_eq, pos};
     use crate::model::decimal::DecimalStats;
+    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -394,8 +394,8 @@ mod tests_simulate_returns {
 #[cfg(test)]
 mod tests_simulate_returns_bis {
     use super::*;
-    use crate::{assert_decimal_eq, pos};
     use crate::model::decimal::DecimalStats;
+    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     fn mean(values: &[Decimal]) -> Decimal {
@@ -689,7 +689,7 @@ mod tests_probability_keep_under_strike {
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
             expiration_date: ExpirationDate::Days(365.0),
-            implied_volatility: pos!(5.0),   // Alta volatilidad
+            implied_volatility: pos!(5.0), // Alta volatilidad
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
             exotic_params: None,

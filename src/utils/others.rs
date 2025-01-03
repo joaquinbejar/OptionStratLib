@@ -189,15 +189,15 @@ mod tests_get_random_element {
         let mut set = BTreeSet::new();
         for i in 0..5 {
             let option_data = OptionData::new(
-                pos!(100.0 + i as f64),   // strike_price
-                None,   // call_bid
-                None,   // call_ask
-                None,   // put_bid
-                None,   // put_ask
-                None,   // implied_volatility
-                None,   // delta
-                None,   // volume
-                None,   // open_interest
+                pos!(100.0 + i as f64), // strike_price
+                None,                   // call_bid
+                None,                   // call_ask
+                None,                   // put_bid
+                None,                   // put_ask
+                None,                   // implied_volatility
+                None,                   // delta
+                None,                   // volume
+                None,                   // open_interest
             );
             set.insert(option_data);
         }

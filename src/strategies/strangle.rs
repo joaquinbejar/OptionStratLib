@@ -1499,10 +1499,10 @@ is expected and the underlying asset's price is anticipated to remain stable."
 
 #[cfg(test)]
 mod tests_long_strangle {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::{pos, spos};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_long_strangle_new() {
@@ -1597,8 +1597,8 @@ mod tests_long_strangle {
         LongStrangle::new(
             "AAPL".to_string(),
             pos!(150.0),
-            pos!(140.0),   // Call strike lower than put
-            pos!(160.0),   // Put strike higher than call
+            pos!(140.0), // Call strike lower than put
+            pos!(160.0), // Put strike higher than call
             ExpirationDate::Days(30.0),
             pos!(0.25),
             dec!(0.01),
@@ -1853,31 +1853,31 @@ mod tests_long_strangle {
 
 #[cfg(test)]
 mod tests_short_strangle_probability {
-    use rust_decimal_macros::dec;
     use super::*;
-    use crate::pos;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
+    use rust_decimal_macros::dec;
 
     /// Helper function that creates a basic short strangle for testing purposes
     /// Returns a ShortStrangle instance with predefined test values
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),   // underlying_price
-            pos!(110.0),   // call_strike
-            pos!(90.0),   // put_strike
-            ExpirationDate::Days(30.0),   // expiration
-            pos!(0.2),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            2.0,   // premium_short_call
-            2.0,   // premium_short_put
-            0.0,   // open_fee_short_call
-            0.0,   // close_fee_short_call
-            0.0,   // open_fee_short_put
-            0.0,   // close_fee_short_put
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
+            ExpirationDate::Days(30.0), // expiration
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
+            2.0,                        // premium_short_call
+            2.0,                        // premium_short_put
+            0.0,                        // open_fee_short_call
+            0.0,                        // close_fee_short_call
+            0.0,                        // open_fee_short_put
+            0.0,                        // close_fee_short_put
         )
     }
 
@@ -1994,29 +1994,29 @@ mod tests_short_strangle_probability {
 
 #[cfg(test)]
 mod tests_short_strangle_probability_bis {
-    use rust_decimal_macros::dec;
     use super::*;
-    use crate::pos;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
+    use rust_decimal_macros::dec;
 
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),   // underlying_price
-            pos!(110.0),   // call_strike
-            pos!(90.0),   // put_strike
-            ExpirationDate::Days(30.0),   // expiration
-            pos!(0.2),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            2.0,   // premium_short_call
-            2.0,   // premium_short_put
-            0.0,   // open_fee_short_call
-            0.0,   // close_fee_short_call
-            0.0,   // open_fee_short_put
-            0.0,   // close_fee_short_put
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
+            ExpirationDate::Days(30.0), // expiration
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
+            2.0,                        // premium_short_call
+            2.0,                        // premium_short_put
+            0.0,                        // open_fee_short_call
+            0.0,                        // close_fee_short_call
+            0.0,                        // open_fee_short_put
+            0.0,                        // close_fee_short_put
         )
     }
 
@@ -2137,29 +2137,29 @@ mod tests_short_strangle_probability_bis {
 
 #[cfg(test)]
 mod tests_long_strangle_probability {
-    use rust_decimal_macros::dec;
     use super::*;
-    use crate::pos;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
+    use rust_decimal_macros::dec;
 
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),   // underlying_price
-            pos!(110.0),   // call_strike
-            pos!(90.0),   // put_strike
-            ExpirationDate::Days(30.0),   // expiration
-            pos!(0.2),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            2.0,   // premium_long_call
-            2.0,   // premium_long_put
-            0.0,   // open_fee_long_call
-            0.0,   // close_fee_long_call
-            0.0,   // open_fee_long_put
-            0.0,   // close_fee_long_put
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
+            ExpirationDate::Days(30.0), // expiration
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
+            2.0,                        // premium_long_call
+            2.0,                        // premium_long_put
+            0.0,                        // open_fee_long_call
+            0.0,                        // close_fee_long_call
+            0.0,                        // open_fee_long_put
+            0.0,                        // close_fee_long_put
         )
     }
 
@@ -2296,20 +2296,20 @@ mod tests_short_strangle_delta {
         let underlying_price = pos!(7138.5);
         ShortStrangle::new(
             "CL".to_string(),
-            underlying_price,   // underlying_price
-            call_strike,   // call_strike 7450 (delta -0.415981)
-            put_strike,   // put_strike 7050 (delta 0.417810)
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
             pos!(0.3745),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            84.2,   // premium_short_call
-            353.2,   // premium_short_put
-            7.01,   // open_fee_short_call
-            7.01,   // close_fee_short_call
-            7.01,   // open_fee_short_put
-            7.01,   // close_fee_short_put
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
@@ -2404,20 +2404,20 @@ mod tests_long_strangle_delta {
         let underlying_price = pos!(7138.5);
         LongStrangle::new(
             "CL".to_string(),
-            underlying_price,   // underlying_price
-            call_strike,   // call_strike 7450 (delta -0.415981)
-            put_strike,   // put_strike 7050 (delta 0.417810)
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
             pos!(0.3745),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            84.2,   // premium_short_call
-            353.2,   // premium_short_put
-            7.01,   // open_fee_short_call
-            7.01,   // close_fee_short_call
-            7.01,   // open_fee_short_put
-            7.01,   // close_fee_short_put
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
@@ -2513,20 +2513,20 @@ mod tests_short_strangle_delta_size {
         let underlying_price = pos!(7138.5);
         ShortStrangle::new(
             "CL".to_string(),
-            underlying_price,   // underlying_price
-            call_strike,   // call_strike 7450 (delta -0.415981)
-            put_strike,   // put_strike 7050 (delta 0.417810)
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
             pos!(0.3745),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(2.0),   // quantity
-            84.2,   // premium_short_call
-            353.2,   // premium_short_put
-            7.01,   // open_fee_short_call
-            7.01,   // close_fee_short_call
-            7.01,   // open_fee_short_put
-            7.01,   // close_fee_short_put
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
@@ -2627,20 +2627,20 @@ mod tests_long_strangle_delta_size {
         let underlying_price = pos!(7138.5);
         LongStrangle::new(
             "CL".to_string(),
-            underlying_price,   // underlying_price
-            call_strike,   // call_strike 7450 (delta -0.415981)
-            put_strike,   // put_strike 7050 (delta 0.417810)
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
             pos!(0.3745),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(2.0),   // quantity
-            84.2,   // premium_short_call
-            353.2,   // premium_short_put
-            7.01,   // open_fee_short_call
-            7.01,   // close_fee_short_call
-            7.01,   // open_fee_short_put
-            7.01,   // close_fee_short_put
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 

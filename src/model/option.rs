@@ -21,9 +21,9 @@ use tracing::{error, trace};
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
-    pub spot_prices: Option<Vec<Positive>>,   // Asian
-    pub spot_min: Option<Decimal>,   // Lookback
-    pub spot_max: Option<Decimal>,   // Lookback
+    pub spot_prices: Option<Vec<Positive>>, // Asian
+    pub spot_min: Option<Decimal>,          // Lookback
+    pub spot_max: Option<Decimal>,          // Lookback
 }
 
 #[allow(dead_code)]
@@ -332,8 +332,8 @@ impl Graph for Options {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::pos;
     use crate::model::utils::create_sample_option_simplest;
+    use crate::pos;
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
 
@@ -474,9 +474,9 @@ mod tests_options {
 
 #[cfg(test)]
 mod tests_valid_option {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn create_valid_option() -> Options {
         Options {
@@ -514,7 +514,7 @@ mod tests_valid_option {
         option.strike_price = Positive::ZERO;
         assert!(!option.validate());
     }
-    
+
     #[test]
     fn test_zero_quantity() {
         let mut option = create_valid_option();
@@ -533,8 +533,8 @@ mod tests_valid_option {
 #[cfg(test)]
 mod tests_time_value {
     use super::*;
-    use crate::pos;
     use crate::model::utils::create_sample_option_simplest_strike;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use tracing::debug;
@@ -621,8 +621,8 @@ mod tests_time_value {
 #[cfg(test)]
 mod tests_options_payoffs {
     use super::*;
-    use crate::pos;
     use crate::model::utils::create_sample_option_simplest_strike;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
 
     #[test]
@@ -683,8 +683,8 @@ mod tests_options_payoffs {
 #[cfg(test)]
 mod tests_options_payoff_at_price {
     use super::*;
-    use crate::pos;
     use crate::model::utils::create_sample_option_simplest;
+    use crate::pos;
 
     #[test]
     fn test_payoff_european_call_long() {
@@ -734,8 +734,8 @@ mod tests_options_payoff_at_price {
 #[cfg(test)]
 mod tests_options_payoffs_with_quantity {
     use super::*;
-    use crate::pos;
     use crate::model::utils::create_sample_option;
+    use crate::pos;
 
     #[test]
     fn test_payoff_call_long() {
@@ -915,8 +915,8 @@ mod tests_options_payoffs_with_quantity {
 #[cfg(test)]
 mod tests_in_the_money {
     use super::*;
-    use crate::pos;
     use crate::model::utils::create_sample_option;
+    use crate::pos;
 
     #[test]
     fn test_call_in_the_money() {
@@ -1150,8 +1150,8 @@ mod tests_greek_trait {
 #[cfg(test)]
 mod tests_graph {
     use super::*;
-    use crate::pos;
     use crate::model::utils::create_sample_option_simplest;
+    use crate::pos;
     use crate::visualization::utils::Graph;
     use approx::assert_relative_eq;
 

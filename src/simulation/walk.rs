@@ -207,8 +207,8 @@ impl Iterator for RandomWalkGraph {
             return None;
         }
 
-        let risk_free_rate:Decimal = self.risk_free_rate.unwrap_or(Decimal::ZERO);
-        let dividend_yield:Positive = self.dividend_yield.unwrap_or(Positive::ZERO);
+        let risk_free_rate: Decimal = self.risk_free_rate.unwrap_or(Decimal::ZERO);
+        let dividend_yield: Positive = self.dividend_yield.unwrap_or(Positive::ZERO);
         let price = self.values[self.current_index];
         let remaining_days = self.get_remaining_time();
         let expiration_date = ExpirationDate::Days(remaining_days);
@@ -352,10 +352,10 @@ mod tests_random_walk {
 
 #[cfg(test)]
 mod tests {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::utils::logger::setup_logger_with_level;
     use crate::{pos, spos};
+    use rust_decimal_macros::dec;
     use tracing::debug;
 
     #[test]
@@ -366,19 +366,19 @@ mod tests {
 
         let mut walk = RandomWalkGraph::new(
             "Test Walk".to_string(),
-            Some(dec!(0.05)),   // risk_free_rate
-            Some(pos!(0.02)),   // dividend_yield
+            Some(dec!(0.05)), // risk_free_rate
+            Some(pos!(0.02)), // dividend_yield
             TimeFrame::Day,   // time_frame (2 years)
-            4,   // volatility_window
-            spos!(0.2),   // initial_volatility
+            4,                // volatility_window
+            spos!(0.2),       // initial_volatility
         );
 
         walk.generate_random_walk(
-            steps,   // n_steps
-            pos!(100.0),   // initial_price
-            0.0,   // mean
+            steps,       // n_steps
+            pos!(100.0), // initial_price
+            0.0,         // mean
             pos!(0.2),   // std_dev
-            pos!(0.01),   // std_dev_change
+            pos!(0.01),  // std_dev_change
         );
 
         for (i, params) in walk.enumerate() {

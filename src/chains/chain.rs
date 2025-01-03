@@ -1246,10 +1246,10 @@ impl fmt::Display for OptionChain {
 mod tests_chain_base {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::{pos, spos};
     use crate::utils::logger::setup_logger;
-    use std::fs;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
+    use std::fs;
     use tracing::info;
 
     #[test]
@@ -1563,26 +1563,26 @@ mod tests_chain_base {
 
 #[cfg(test)]
 mod tests_option_data {
-    use num_traits::ToPrimitive;
-    use rust_decimal_macros::dec;
     use super::*;
-    use crate::pos;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::spos;
     use crate::utils::logger::setup_logger;
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
     use tracing::info;
 
     fn create_valid_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),   // strike_price
-            spos!(9.5),   // call_bid
-            spos!(10.0),   // call_ask
-            spos!(8.5),   // put_bid
-            spos!(9.0),   // put_ask
-            spos!(0.2),   // implied_volatility
-            Some(dec!(-0.3)),   // delta
-            spos!(1000.0),   // volume
-            Some(500),   // open_interest
+            pos!(100.0),      // strike_price
+            spos!(9.5),       // call_bid
+            spos!(10.0),      // call_ask
+            spos!(8.5),       // put_bid
+            spos!(9.0),       // put_ask
+            spos!(0.2),       // implied_volatility
+            Some(dec!(-0.3)), // delta
+            spos!(1000.0),    // volume
+            Some(500),        // open_interest
         )
     }
 
@@ -1712,8 +1712,13 @@ mod tests_option_data {
         let mut option_data =
             OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None);
 
-        let price_params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, Decimal::ZERO, Positive::ZERO);
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            Decimal::ZERO,
+            Positive::ZERO,
+        );
         let _ = option_data.calculate_prices(&price_params);
 
         info!("{}", option_data);
@@ -1797,12 +1802,12 @@ mod tests_option_data {
 
 #[cfg(test)]
 mod tests_get_random_positions {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::error::chains::ChainBuildErrorKind;
-    use crate::pos;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
+    use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
         // Create a sample option chain
@@ -1810,15 +1815,15 @@ mod tests_get_random_positions {
 
         // Add some test options with different strikes
         chain.add_option(
-            pos!(95.0),   // strike_price
-            spos!(4.0),   // call_bid
-            spos!(4.2),   // call_ask
-            spos!(3.0),   // put_bid
-            spos!(3.2),   // put_ask
-            spos!(0.2),   // implied_volatility
-            Some(dec!(0.5)),   // delta
-            spos!(100.0),   // volume
-            Some(50),   // open_interest
+            pos!(95.0),      // strike_price
+            spos!(4.0),      // call_bid
+            spos!(4.2),      // call_ask
+            spos!(3.0),      // put_bid
+            spos!(3.2),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.5)), // delta
+            spos!(100.0),    // volume
+            Some(50),        // open_interest
         );
 
         chain.add_option(
@@ -2083,10 +2088,10 @@ mod tests_get_random_positions {
 
 #[cfg(test)]
 mod tests_option_data_get_prices {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::spos;
+    use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
@@ -2148,10 +2153,10 @@ mod tests_option_data_get_prices {
 
 #[cfg(test)]
 mod tests_option_data_display {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::spos;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_display_full_data() {
@@ -2324,24 +2329,24 @@ mod tests_strike_price_range_vec {
 
 #[cfg(test)]
 mod tests_option_data_get_option {
-    use num_traits::ToPrimitive;
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
     use crate::pos;
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),   // strike_price
-            spos!(9.5),   // call_bid
-            spos!(10.0),   // call_ask
-            spos!(8.5),   // put_bid
-            spos!(9.0),   // put_ask
-            spos!(0.2),   // implied_volatility
-            Some(dec!(-0.3)),   // delta
-            spos!(1000.0),   // volume
-            Some(500),   // open_interest
+            pos!(100.0),      // strike_price
+            spos!(9.5),       // call_bid
+            spos!(10.0),      // call_ask
+            spos!(8.5),       // put_bid
+            spos!(9.0),       // put_ask
+            spos!(0.2),       // implied_volatility
+            Some(dec!(-0.3)), // delta
+            spos!(1000.0),    // volume
+            Some(500),        // open_interest
         )
     }
 
@@ -2375,7 +2380,7 @@ mod tests_option_data_get_option {
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
             ExpirationDate::Days(30.0),
-            None,   // No IV provided in params
+            None, // No IV provided in params
             dec!(0.05),
             pos!(0.02),
         );
@@ -2392,8 +2397,13 @@ mod tests_option_data_get_option {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
 
-        let price_params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            dec!(0.05),
+            pos!(0.02),
+        );
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
         assert!(result.is_err());
@@ -2414,24 +2424,24 @@ mod tests_option_data_get_option {
 
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
-    use num_traits::ToPrimitive;
     use super::*;
-    use crate::{assert_decimal_eq, pos};
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
+    use crate::{assert_decimal_eq, pos};
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),   // strike_price
-            spos!(9.5),   // call_bid
-            spos!(10.0),   // call_ask
-            spos!(8.5),   // put_bid
-            spos!(9.0),   // put_ask
-            spos!(0.2),   // implied_volatility
-            Some(dec!(-0.3)),   // delta
-            spos!(1000.0),   // volume
-            Some(500),   // open_interest
+            pos!(100.0),      // strike_price
+            spos!(9.5),       // call_bid
+            spos!(10.0),      // call_ask
+            spos!(8.5),       // put_bid
+            spos!(9.0),       // put_ask
+            spos!(0.2),       // implied_volatility
+            Some(dec!(-0.3)), // delta
+            spos!(1000.0),    // volume
+            Some(500),        // open_interest
         )
     }
 
@@ -2476,8 +2486,13 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_using_data_iv() {
         let option_data = create_test_option_data();
-        let price_params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            dec!(0.05),
+            pos!(0.02),
+        );
 
         let result =
             option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
@@ -2495,8 +2510,13 @@ mod tests_option_data_get_options_in_strike {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
 
-        let price_params =
-            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(30.0),
+            None,
+            dec!(0.05),
+            pos!(0.02),
+        );
 
         let result =
             option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
@@ -2604,14 +2624,14 @@ mod tests_filter_options_in_strike {
         for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
             chain.add_option(
                 pos!(*strike),
-                spos!(1.0),   // call_bid
-                spos!(1.2),   // call_ask
-                spos!(1.0),   // put_bid
-                spos!(1.2),   // put_ask
-                spos!(0.2),   // implied_volatility
-                Some(dec!(-0.3)),   // delta
-                spos!(1000.0),   // volume
-                Some(500),   // open_interest
+                spos!(1.0),       // call_bid
+                spos!(1.2),       // call_ask
+                spos!(1.0),       // put_bid
+                spos!(1.2),       // put_ask
+                spos!(0.2),       // implied_volatility
+                Some(dec!(-0.3)), // delta
+                spos!(1000.0),    // volume
+                Some(500),        // open_interest
             );
         }
         chain
@@ -2784,24 +2804,24 @@ mod tests_filter_options_in_strike {
 
 #[cfg(test)]
 mod tests_chain_iterators {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::spos;
+    use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
 
         // Add three options with different strikes
         chain.add_option(
-            pos!(90.0),   // strike_price
-            spos!(5.0),   // call_bid
-            spos!(5.5),   // call_ask
-            spos!(1.0),   // put_bid
-            spos!(1.5),   // put_ask
-            spos!(0.2),   // implied_volatility
-            Some(dec!(0.6)),   // delta
-            spos!(100.0),   // volume
-            Some(50),   // open_interest
+            pos!(90.0),      // strike_price
+            spos!(5.0),      // call_bid
+            spos!(5.5),      // call_ask
+            spos!(1.0),      // put_bid
+            spos!(1.5),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.6)), // delta
+            spos!(100.0),    // volume
+            Some(50),        // open_interest
         );
 
         chain.add_option(
@@ -2934,24 +2954,24 @@ mod tests_chain_iterators {
 
 #[cfg(test)]
 mod tests_chain_iterators_bis {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::spos;
+    use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
 
         // Add four options with different strikes
         chain.add_option(
-            pos!(90.0),   // strike_price
-            spos!(5.0),   // call_bid
-            spos!(5.5),   // call_ask
-            spos!(1.0),   // put_bid
-            spos!(1.5),   // put_ask
-            spos!(0.2),   // implied_volatility
-            Some(dec!(0.6)),   // delta
-            spos!(100.0),   // volume
-            Some(50),   // open_interest
+            pos!(90.0),      // strike_price
+            spos!(5.0),      // call_bid
+            spos!(5.5),      // call_ask
+            spos!(1.0),      // put_bid
+            spos!(1.5),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.6)), // delta
+            spos!(100.0),    // volume
+            Some(50),        // open_interest
         );
 
         chain.add_option(
@@ -3148,7 +3168,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_upper_side_valid() {
         let option_data = OptionData::new(
-            pos!(110.0),   // strike price higher than underlying
+            pos!(110.0), // strike price higher than underlying
             None,
             None,
             None,
@@ -3166,7 +3186,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_upper_side_invalid() {
         let option_data = OptionData::new(
-            pos!(90.0),   // strike price lower than underlying
+            pos!(90.0), // strike price lower than underlying
             None,
             None,
             None,
@@ -3184,7 +3204,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_lower_side_valid() {
         let option_data = OptionData::new(
-            pos!(90.0),   // strike price lower than underlying
+            pos!(90.0), // strike price lower than underlying
             None,
             None,
             None,
@@ -3202,7 +3222,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_lower_side_invalid() {
         let option_data = OptionData::new(
-            pos!(110.0),   // strike price higher than underlying
+            pos!(110.0), // strike price higher than underlying
             None,
             None,
             None,
@@ -3229,7 +3249,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_valid() {
         let option_data = OptionData::new(
-            pos!(100.0),   // strike price within range
+            pos!(100.0), // strike price within range
             None,
             None,
             None,
@@ -3249,7 +3269,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_invalid_below() {
         let option_data = OptionData::new(
-            pos!(80.0),   // strike price below range
+            pos!(80.0), // strike price below range
             None,
             None,
             None,
@@ -3269,7 +3289,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_invalid_above() {
         let option_data = OptionData::new(
-            pos!(120.0),   // strike price above range
+            pos!(120.0), // strike price above range
             None,
             None,
             None,
@@ -3289,7 +3309,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_at_boundaries() {
         let option_data_lower = OptionData::new(
-            pos!(90.0),   // strike price at lower boundary
+            pos!(90.0), // strike price at lower boundary
             None,
             None,
             None,
@@ -3300,7 +3320,7 @@ mod tests_is_valid_optimal_side {
             None,
         );
         let option_data_upper = OptionData::new(
-            pos!(110.0),   // strike price at upper boundary
+            pos!(110.0), // strike price at upper boundary
             None,
             None,
             None,
@@ -3342,7 +3362,7 @@ mod rnd_analysis_tests {
         {
             chain.add_option(
                 pos!(strike),
-                spos!(call_ask - 0.02),   // bid slightly lower than ask
+                spos!(call_ask - 0.02), // bid slightly lower than ask
                 spos!(call_ask),
                 None,
                 None,
@@ -3390,7 +3410,7 @@ mod rnd_analysis_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos!(0.1),   // Smaller than strike interval
+                derivative_tolerance: pos!(0.1), // Smaller than strike interval
             };
 
             let result = chain.calculate_rnd(&params);
@@ -3496,7 +3516,7 @@ mod rnd_analysis_tests {
                 spos!(0.2),
                 None,
                 None,
-                None,   // No implied volatility
+                None, // No implied volatility
                 None,
                 spos!(100.0),
                 Some(50),

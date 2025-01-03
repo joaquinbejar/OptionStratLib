@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use rust_decimal::Decimal;
 use crate::error::probability::{PriceErrorKind, ProbabilityError};
 use crate::model::types::ExpirationDate;
 use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
 use crate::Positive;
+use rust_decimal::Decimal;
 
 /// Represents a price range where a strategy is profitable
 #[derive(Debug, Clone)]
@@ -179,9 +179,9 @@ mod tests_profit_range {
 
 #[cfg(test)]
 mod tests_calculate_probability {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn create_basic_range() -> ProfitLossRange {
         ProfitLossRange::new(Some(pos!(90.0)), Some(pos!(110.0)), pos!(0.0)).unwrap()
@@ -233,7 +233,7 @@ mod tests_calculate_probability {
     fn test_with_upward_trend() {
         let mut range = create_basic_range();
         let trend = Some(PriceTrend {
-            drift_rate: 0.10,   // 10% tendencia alcista anual
+            drift_rate: 0.10, // 10% tendencia alcista anual
             confidence: 0.95,
         });
 

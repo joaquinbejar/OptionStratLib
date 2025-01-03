@@ -371,8 +371,8 @@ impl Graph for Position {
 mod tests_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::pos;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
     use chrono::Duration;
     use rust_decimal_macros::dec;
 
@@ -826,8 +826,8 @@ mod tests_position {
 mod tests_valid_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::pos;
     use crate::model::types::OptionType;
+    use crate::pos;
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -910,10 +910,10 @@ mod tests_valid_position {
 
 #[cfg(test)]
 mod tests_position_break_even {
-    use rust_decimal_macros::dec;
     use super::*;
-    use crate::pos;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn setup_option(
         side: Side,
@@ -1055,8 +1055,8 @@ mod tests_position_break_even {
 #[cfg(test)]
 mod tests_position_max_loss_profit {
     use super::*;
-    use crate::pos;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
@@ -1207,9 +1207,9 @@ mod tests_position_max_loss_profit {
 
 #[cfg(test)]
 mod tests_update_from_option_data {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::{pos, spos};
+    use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(

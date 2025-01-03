@@ -3,15 +3,15 @@
    Email: jb@taunais.com
    Date: 27/10/24
 ******************************************************************************/
-use rust_decimal_macros::dec;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::OptionChainBuildParams;
-use optionstratlib::{pos, spos};
 use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::Positive;
+use optionstratlib::{pos, spos};
+use rust_decimal_macros::dec;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -4,8 +4,8 @@
    Date: 2/10/24
 ******************************************************************************/
 
-use crate::{pos, Positive};
 use crate::model::position::Position;
+use crate::{pos, Positive};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -108,9 +108,9 @@ impl SPANMargin {
 #[cfg(test)]
 mod tests_span {
     use super::*;
-    use crate::pos;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use chrono::Utc;
     use tracing::info;
@@ -136,10 +136,10 @@ mod tests_span {
         };
 
         let span = SPANMargin::new(
-            0.15,   // scanning_range (15%)
-            0.1,   // short_option_minimum (10%)
-            0.05,   // price_scan_range (5%)
-            0.1,   // volatility_scan_range (10%)
+            0.15, // scanning_range (15%)
+            0.1,  // short_option_minimum (10%)
+            0.05, // price_scan_range (5%)
+            0.1,  // volatility_scan_range (10%)
         );
 
         let margin = span.calculate_margin(&position);

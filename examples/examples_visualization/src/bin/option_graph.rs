@@ -3,16 +3,16 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
-use optionstratlib::pos;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::pos;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::Options;
 use optionstratlib::Positive;
+use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
-use rust_decimal_macros::dec;
 
 fn create_sample_option() -> Options {
     Options::new(

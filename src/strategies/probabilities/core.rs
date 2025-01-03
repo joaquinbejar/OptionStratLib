@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use rust_decimal::Decimal;
 use crate::error::probability::ProbabilityError;
 use crate::model::{ExpirationDate, ProfitLossRange};
 use crate::pricing::payoff::Profit;
@@ -13,6 +12,7 @@ use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
 use crate::{pos, Positive};
+use rust_decimal::Decimal;
 use tracing::warn;
 
 /// Trait for analyzing probabilities and risk metrics of option strategies
@@ -31,8 +31,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
             return Ok(StrategyProbabilityAnalysis {
                 probability_of_profit,
-                probability_of_max_profit: Positive::ZERO,   // Default value when no volatility adjustment
-                probability_of_max_loss: Positive::ZERO,   // Default value when no volatility adjustment
+                probability_of_max_profit: Positive::ZERO, // Default value when no volatility adjustment
+                probability_of_max_loss: Positive::ZERO, // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
                 risk_reward_ratio: self.profit_ratio().unwrap().into(),
@@ -240,8 +240,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 mod tests_probability_analysis {
     use super::*;
     use crate::error::strategies::StrategyError;
-    use crate::pos;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::pricing::payoff::Profit;
     use crate::strategies::base::{Positionable, Strategies, Validable};
     use rust_decimal::Decimal;
@@ -463,10 +463,10 @@ mod tests_probability_analysis {
 
 #[cfg(test)]
 mod tests_expected_value {
-    use rust_decimal_macros::dec;
     use super::*;
     use crate::error::strategies::StrategyError;
     use crate::strategies::base::{Positionable, Validable};
+    use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> TestStrategy {
@@ -684,7 +684,7 @@ mod tests_expected_value {
         let strategy = create_test_strategy();
         // Use a very small but positive volatility value
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.0001),   // Very small but non-zero volatility
+            base_volatility: pos!(0.0001), // Very small but non-zero volatility
             std_dev_adjustment: Positive::ZERO,
         });
 

@@ -1,9 +1,9 @@
 use crate::pricing::utils::wiener_increment;
 use crate::Options;
 use crate::{f2d, Positive};
+use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use std::error::Error;
-use num_traits::ToPrimitive;
 
 /// This function performs Monte Carlo simulation to price an option.
 ///
@@ -34,8 +34,8 @@ use num_traits::ToPrimitive;
 #[allow(dead_code)]
 pub fn monte_carlo_option_pricing(
     option: &Options,
-    steps: usize,   // Number of time steps
-    simulations: usize,   // Number of Monte Carlo simulations
+    steps: usize,       // Number of time steps
+    simulations: usize, // Number of Monte Carlo simulations
 ) -> Result<Decimal, Box<dyn Error>> {
     let dt = f2d!(option.expiration_date.get_years() / steps as f64);
     let mut payoff_sum = 0.0;
@@ -58,11 +58,11 @@ pub fn monte_carlo_option_pricing(
 
 #[cfg(test)]
 mod tests {
-    use rust_decimal::MathematicalOps;
     use super::*;
     use crate::constants::ZERO;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, f2du, pos};
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     fn create_test_option() -> Options {
@@ -71,7 +71,7 @@ mod tests {
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
             strike_price: pos!(100.0),
-            expiration_date: ExpirationDate::Days(365.0),   // 1 year
+            expiration_date: ExpirationDate::Days(365.0), // 1 year
             implied_volatility: pos!(0.2),
             quantity: pos!(1.0),
             underlying_price: pos!(100.0),
@@ -115,8 +115,7 @@ mod tests {
         option.implied_volatility = Positive::ZERO;
         let price = monte_carlo_option_pricing(&option, 25, 100).unwrap();
         let expected_price = f64::max(
-            (option.underlying_price - option.strike_price * (-option.risk_free_rate).exp())
-                .into(),
+            (option.underlying_price - option.strike_price * (-option.risk_free_rate).exp()).into(),
             ZERO,
         );
         assert_decimal_eq!(price, f2du!(expected_price).unwrap(), dec!(0.1));

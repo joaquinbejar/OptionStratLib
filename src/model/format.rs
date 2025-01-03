@@ -11,8 +11,8 @@ use crate::model::types::{
 };
 use crate::strategies::base::Strategy;
 use chrono::{Duration, Utc};
-use std::fmt;
 use rust_decimal_macros::dec;
+use std::fmt;
 
 impl fmt::Display for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -34,7 +34,11 @@ impl fmt::Display for Options {
             self.implied_volatility * 100.0
         )?;
         writeln!(f, "Quantity: {}", self.quantity)?;
-        writeln!(f, "Risk-free Rate: {:.2}%", self.risk_free_rate * dec!(100.0))?;
+        writeln!(
+            f,
+            "Risk-free Rate: {:.2}%",
+            self.risk_free_rate * dec!(100.0)
+        )?;
         write!(f, "Dividend Yield: {:.2}%", self.dividend_yield * 100.0)?;
         if let Some(exotic) = &self.exotic_params {
             write!(f, "\nExotic Parameters: {:?}", exotic)?;
@@ -296,8 +300,8 @@ impl fmt::Debug for Strategy {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::pos;
     use crate::model::types::BarrierType;
+    use crate::pos;
     use chrono::{NaiveDate, TimeZone, Utc};
 
     #[test]
@@ -882,8 +886,8 @@ mod tests_position_type_display_debug {
 #[cfg(test)]
 mod tests_strategy_type_display_debug {
     use super::*;
-    use crate::pos;
     use crate::model::utils::create_sample_option_with_date;
+    use crate::pos;
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
 

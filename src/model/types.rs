@@ -3,7 +3,6 @@ use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use crate::Positive;
 use chrono::{DateTime, Duration, Utc};
 
-
 #[derive(Clone, PartialEq)]
 pub enum ExpirationDate {
     Days(f64),
@@ -622,7 +621,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0),   // Not used in floating strike
+            strike: pos!(0.0), // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -819,8 +818,8 @@ mod tests_option_type {
 
 #[cfg(test)]
 mod tests_vec_collection {
-    use crate::pos;
     use crate::model::positive::Positive;
+    use crate::pos;
 
     #[test]
     fn test_collect_empty_iterator() {
@@ -908,9 +907,9 @@ mod test_expiration_date {
 
 #[cfg(test)]
 mod test_asian_options {
-    use crate::pos;
     use crate::model::types::AsianAveragingType;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -948,9 +947,9 @@ mod test_asian_options {
 
 #[cfg(test)]
 mod test_barrier_options {
-    use crate::pos;
     use crate::model::types::BarrierType;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -990,8 +989,8 @@ mod test_barrier_options {
 
 #[cfg(test)]
 mod test_cliquet_options {
-    use crate::pos;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -1013,8 +1012,8 @@ mod test_cliquet_options {
 
 #[cfg(test)]
 mod test_rainbow_options {
-    use crate::pos;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -1034,8 +1033,8 @@ mod test_rainbow_options {
 
 #[cfg(test)]
 mod test_exchange_options {
-    use crate::pos;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
