@@ -30,11 +30,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.18),     // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(3.0),      // long quantity
+        pos!(1.0),      // long quantity
         119.01,         // premium_long
         66.0,           // premium_short
         29.85,          // open_fee_long
-        4.0,            // open_fee_long
+        0.05,             
+        0.05,             
+        0.05,             
+        0.05,             
+        0.05,             
+        0.05,             
     );
 
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
