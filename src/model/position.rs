@@ -237,14 +237,13 @@ impl Position {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn max_profit(&self) -> f64 {
         match self.option.side {
             Side::Long => f64::INFINITY,
             Side::Short => self.premium * self.option.quantity - self.total_cost(),
         }
     }
-    #[allow(dead_code)]
+    
     pub(crate) fn max_loss(&self) -> f64 {
         match self.option.side {
             Side::Long => self.total_cost().into(),
@@ -252,7 +251,6 @@ impl Position {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn fees(&self) -> f64 {
         (self.open_fee + self.close_fee) * self.option.quantity
     }
