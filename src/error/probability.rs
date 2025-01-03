@@ -83,6 +83,8 @@ pub enum ProbabilityError {
     ExpirationError(ExpirationErrorKind),
     /// Errors related to price parameters
     PriceError(PriceErrorKind),
+
+    StdError(String),
 }
 
 /// Specific errors that can occur during probability calculations
@@ -134,6 +136,7 @@ impl fmt::Display for ProbabilityError {
             ProbabilityError::RangeError(err) => write!(f, "Range error: {}", err),
             ProbabilityError::ExpirationError(err) => write!(f, "Expiration error: {}", err),
             ProbabilityError::PriceError(err) => write!(f, "Price error: {}", err),
+            ProbabilityError::StdError(msg) => write!(f, "Error: {}", msg),
         }
     }
 }
@@ -205,6 +208,12 @@ impl fmt::Display for ProfitLossRangeErrorKind {
 }
 
 impl Error for ProbabilityError {}
+
+impl From<Box<dyn Error>> for ProbabilityError {
+    fn from(error: Box<dyn Error>) -> Self {
+        ProbabilityError::StdError(error.to_string())
+    }
+}
 
 /// Convenient type alias for Results with ProbabilityError
 pub type ProbabilityResult<T> = Result<T, ProbabilityError>;

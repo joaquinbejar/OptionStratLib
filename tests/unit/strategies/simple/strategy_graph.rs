@@ -19,7 +19,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
         pos!(2505.8), // underlying_price
         pos!(2460.0), // long_strike_itm
         pos!(2515.0), // short_strike
-        ExpirationDate::Days(30.0),
+        ExpirationDate::Days(pos!(30.0)),
         pos!(0.2),      // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield

@@ -355,7 +355,7 @@ impl OptionChain {
         let mut option_chain = OptionChain::new(
             &params.symbol,
             params.price_params.underlying_price,
-            params.price_params.expiration_date.get_date_string(),
+            params.price_params.expiration_date.get_date_string().unwrap(),
             None,
             None,
         );
@@ -1280,7 +1280,7 @@ mod tests_chain_base {
             2,
             OptionDataPriceParams::new(
                 pos!(100.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
@@ -1318,7 +1318,7 @@ mod tests_chain_base {
             2,
             OptionDataPriceParams::new(
                 pos!(5878.10),
-                ExpirationDate::Days(60.0),
+                ExpirationDate::Days(pos!(60.0)),
                 spos!(0.03),
                 Decimal::ZERO,
                 pos!(0.05),
@@ -1691,7 +1691,7 @@ mod tests_option_data {
         );
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             Decimal::ZERO,
             Positive::ZERO,
@@ -1714,7 +1714,7 @@ mod tests_option_data {
 
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             None,
             Decimal::ZERO,
             Positive::ZERO,
@@ -1748,7 +1748,7 @@ mod tests_option_data {
 
         let price_params = OptionDataPriceParams::new(
             pos!(110.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.12),
             dec!(0.05),
             pos!(0.01),
@@ -1784,7 +1784,7 @@ mod tests_option_data {
         );
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.01),
@@ -1862,7 +1862,7 @@ mod tests_get_random_positions {
             None,
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -1895,7 +1895,7 @@ mod tests_get_random_positions {
             None,
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -1927,7 +1927,7 @@ mod tests_get_random_positions {
             Some(2),
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -1959,7 +1959,7 @@ mod tests_get_random_positions {
             None,
             Some(2),
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -1991,7 +1991,7 @@ mod tests_get_random_positions {
             None,
             None,
             Some(2),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -2023,7 +2023,7 @@ mod tests_get_random_positions {
             Some(1),
             Some(1),
             Some(1),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -2069,7 +2069,7 @@ mod tests_get_random_positions {
             None,
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -2355,7 +2355,7 @@ mod tests_option_data_get_option {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.25),
             dec!(0.05),
             pos!(0.02),
@@ -2379,7 +2379,7 @@ mod tests_option_data_get_option {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             None, // No IV provided in params
             dec!(0.05),
             pos!(0.02),
@@ -2399,7 +2399,7 @@ mod tests_option_data_get_option {
 
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             None,
             dec!(0.05),
             pos!(0.02),
@@ -2450,7 +2450,7 @@ mod tests_option_data_get_options_in_strike {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.25),
             dec!(0.05),
             pos!(0.02),
@@ -2488,7 +2488,7 @@ mod tests_option_data_get_options_in_strike {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             None,
             dec!(0.05),
             pos!(0.02),
@@ -2512,7 +2512,7 @@ mod tests_option_data_get_options_in_strike {
 
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             None,
             dec!(0.05),
             pos!(0.02),
@@ -2539,7 +2539,7 @@ mod tests_option_data_get_options_in_strike {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
             pos!(110.0),
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             spos!(0.3),
             dec!(0.06),
             pos!(0.03),
@@ -2573,7 +2573,7 @@ mod tests_option_data_get_options_in_strike {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
             pos!(110.0),
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             spos!(0.3),
             dec!(0.06),
             pos!(0.03),
@@ -2642,7 +2642,7 @@ mod tests_filter_options_in_strike {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -2669,7 +2669,7 @@ mod tests_filter_options_in_strike {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -2691,7 +2691,7 @@ mod tests_filter_options_in_strike {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -2709,7 +2709,7 @@ mod tests_filter_options_in_strike {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -2735,7 +2735,7 @@ mod tests_filter_options_in_strike {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -2753,7 +2753,7 @@ mod tests_filter_options_in_strike {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -2774,7 +2774,7 @@ mod tests_filter_options_in_strike {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),

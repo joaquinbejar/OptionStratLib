@@ -543,7 +543,7 @@ mod tests_custom_strategy {
     fn create_test_strategy() -> CustomStrategy {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(60.0);
+        let expiration = ExpirationDate::Days(pos!(60.0));
         let implied_volatility = pos!(0.18);
         let risk_free_rate = dec!(0.05);
         let dividend_yield = Positive::ZERO;
@@ -617,7 +617,7 @@ mod tests_custom_strategy {
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(60.0);
+        let expiration = ExpirationDate::Days(pos!(60.0));
         let implied_volatility = pos!(0.18);
         let risk_free_rate = dec!(0.05);
         let dividend_yield = Positive::ZERO;
@@ -666,7 +666,7 @@ mod tests_custom_strategy {
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(60.0);
+        let expiration = ExpirationDate::Days(pos!(60.0));
         let implied_volatility = pos!(0.18);
         let risk_free_rate = dec!(0.05);
         let dividend_yield = Positive::ZERO;
@@ -774,7 +774,7 @@ mod tests_max_profit {
     fn create_test_strategy() -> CustomStrategy {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(60.0);
+        let expiration = ExpirationDate::Days(pos!(60.0));
         let implied_volatility = pos!(0.18);
         let risk_free_rate = dec!(0.05);
         let dividend_yield = Positive::ZERO;
@@ -833,7 +833,7 @@ mod tests_max_profit {
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(60.0);
+        let expiration = ExpirationDate::Days(pos!(60.0));
         let implied_volatility = pos!(0.18);
         let risk_free_rate = dec!(0.05);
         let dividend_yield = Positive::ZERO;
@@ -912,7 +912,7 @@ mod tests_max_loss {
     fn create_test_strategy() -> CustomStrategy {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(60.0);
+        let expiration = ExpirationDate::Days(pos!(60.0));
         let implied_volatility = pos!(0.18);
         let risk_free_rate = dec!(0.05);
         let dividend_yield = Positive::ZERO;
@@ -971,7 +971,7 @@ mod tests_max_loss {
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(60.0);
+        let expiration = ExpirationDate::Days(pos!(60.0));
         let implied_volatility = pos!(0.18);
         let risk_free_rate = dec!(0.05);
         let dividend_yield = Positive::ZERO;
@@ -1053,7 +1053,7 @@ mod tests_total_cost {
                 side,
                 "TEST".to_string(),
                 pos!(100.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
@@ -1177,7 +1177,7 @@ mod tests_best_range_to_show {
                 side,
                 "SP500".to_string(),
                 strike,
-                ExpirationDate::Days(60.0),
+                ExpirationDate::Days(pos!(60.0)),
                 pos!(0.18),
                 pos!(2.0),
                 pos!(5780.0),
@@ -1323,7 +1323,7 @@ mod tests_greeks {
                 side,
                 "TEST".to_string(),
                 strike,
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 pos!(0.2),   // volatility
                 pos!(1.0),   // quantity
                 pos!(100.0), // underlying_price

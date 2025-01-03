@@ -1192,7 +1192,7 @@ mod tests_short_strangle {
             pos!(150.0),
             pos!(155.0),
             pos!(145.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -1212,7 +1212,7 @@ mod tests_short_strangle {
             pos!(150.0),
             pos!(145.0),
             pos!(155.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -1463,7 +1463,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
             pos!(1150.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -1563,7 +1563,7 @@ mod tests_long_strangle {
             pos!(150.0),
             pos!(160.0),
             pos!(140.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.25),
             dec!(0.01),
             pos!(0.02),
@@ -1584,7 +1584,7 @@ mod tests_long_strangle {
             pos!(150.0),
             pos!(140.0), // Call strike lower than put
             pos!(160.0), // Put strike higher than call
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.25),
             dec!(0.01),
             pos!(0.02),
@@ -1817,7 +1817,7 @@ mod tests_long_strangle {
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
             pos!(150.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.65),
             dec!(0.01),
             pos!(0.02),
@@ -1852,7 +1852,7 @@ mod tests_short_strangle_probability {
             pos!(100.0),                // underlying_price
             pos!(110.0),                // call_strike
             pos!(90.0),                 // put_strike
-            ExpirationDate::Days(30.0), // expiration
+            ExpirationDate::Days(pos!(30.0)), // expiration
             pos!(0.2),                  // implied_volatility
             dec!(0.05),                 // risk_free_rate
             Positive::ZERO,             // dividend_yield
@@ -1991,7 +1991,7 @@ mod tests_short_strangle_probability_bis {
             pos!(100.0),                // underlying_price
             pos!(110.0),                // call_strike
             pos!(90.0),                 // put_strike
-            ExpirationDate::Days(30.0), // expiration
+            ExpirationDate::Days(pos!(30.0)), // expiration
             pos!(0.2),                  // implied_volatility
             dec!(0.05),                 // risk_free_rate
             Positive::ZERO,             // dividend_yield
@@ -2134,7 +2134,7 @@ mod tests_long_strangle_probability {
             pos!(100.0),                // underlying_price
             pos!(110.0),                // call_strike
             pos!(90.0),                 // put_strike
-            ExpirationDate::Days(30.0), // expiration
+            ExpirationDate::Days(pos!(30.0)), // expiration
             pos!(0.2),                  // implied_volatility
             dec!(0.05),                 // risk_free_rate
             Positive::ZERO,             // dividend_yield
@@ -2284,7 +2284,7 @@ mod tests_short_strangle_delta {
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2392,7 +2392,7 @@ mod tests_long_strangle_delta {
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2501,7 +2501,7 @@ mod tests_short_strangle_delta_size {
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2615,7 +2615,7 @@ mod tests_long_strangle_delta_size {
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield

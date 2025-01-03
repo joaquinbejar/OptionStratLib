@@ -130,8 +130,8 @@ impl RandomWalkGraph {
         self.current_index = 0;
     }
 
-    fn get_remaining_time(&self) -> f64 {
-        (self.values.len() - self.current_index) as f64
+    fn get_remaining_time(&self) -> Positive {
+        pos!((self.values.len() - self.current_index) as f64)
     }
 }
 

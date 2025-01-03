@@ -82,7 +82,7 @@ impl Options {
     }
 
     pub fn time_to_expiration(&self) -> f64 {
-        self.expiration_date.get_years()
+        self.expiration_date.get_years().unwrap().to_f64()
     }
 
     pub fn is_long(&self) -> bool {
@@ -254,7 +254,7 @@ impl Default for Options {
             side: Side::Long,
             underlying_symbol: "".to_string(),
             strike_price: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(0.0),
+            expiration_date: ExpirationDate::Days(Positive::ZERO),
             implied_volatility: Positive::ZERO,
             quantity: Positive::ZERO,
             underlying_price: Positive::ZERO,
@@ -380,7 +380,7 @@ mod tests_options {
             Side::Short,
             "AAPL".to_string(),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             Positive::ONE,
             pos!(105.0),
@@ -436,7 +436,7 @@ mod tests_options {
             Side::Long,
             "AAPL".to_string(),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             Positive::ONE,
             pos!(95.0),
@@ -456,7 +456,7 @@ mod tests_options {
             Side::Long,
             "AAPL".to_string(),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             Positive::ONE,
             pos!(105.0),
@@ -484,7 +484,7 @@ mod tests_valid_option {
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
             strike_price: pos!(100.0),
-            expiration_date: ExpirationDate::Days(30.0),
+            expiration_date: ExpirationDate::Days(pos!(30.0)),
             implied_volatility: pos!(0.2),
             quantity: Positive::ONE,
             underlying_price: pos!(105.0),

@@ -19,8 +19,8 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
         underlying_price,            // underlying_price
         pos!(2600.0),                // long_call_strike
         pos!(2800.0),                // short_call_strike OTM
-        ExpirationDate::Days(120.0), // long_call_expiration
-        ExpirationDate::Days(30.0),  // short_call_expiration 30-45 days delta 0.30 or less
+        ExpirationDate::Days(pos!(120.0)), // long_call_expiration
+        ExpirationDate::Days(pos!(30.0)),  // short_call_expiration 30-45 days delta 0.30 or less
         pos!(0.17),                  // implied_volatility
         dec!(0.05),                  // risk_free_rate
         Positive::ZERO,              // dividend_yield

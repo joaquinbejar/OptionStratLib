@@ -475,7 +475,7 @@ impl Graph for IronCondor {
             format!("Long Call: ${}", self.long_call.option.strike_price),
             format!(
                 "Expire: {}",
-                self.short_put.option.expiration_date.get_date_string()
+                self.short_put.option.expiration_date.get_date_string().unwrap()
             ),
         ]
         .iter()
@@ -920,7 +920,7 @@ mod tests_iron_condor_validable {
                 side,
                 "TEST".to_string(),
                 strike_price,
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 pos!(0.2),
                 quantity,
                 pos!(100.0),
@@ -944,7 +944,7 @@ mod tests_iron_condor_validable {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1031,7 +1031,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1056,7 +1056,7 @@ mod tests_iron_condor_strategies {
                 Side::Short,
                 "TEST".to_string(),
                 pos!(106.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
@@ -1082,7 +1082,7 @@ mod tests_iron_condor_strategies {
                 Side::Long,
                 "TEST".to_string(),
                 pos!(89.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
@@ -1137,7 +1137,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1162,7 +1162,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1187,7 +1187,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1212,7 +1212,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),
             pos!(115.0), // Wider call wing
             pos!(90.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1254,7 +1254,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1281,7 +1281,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1308,7 +1308,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1335,7 +1335,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1362,7 +1362,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1412,7 +1412,7 @@ mod tests_iron_condor_strategies {
             pos!(95.0),
             pos!(110.0),
             pos!(90.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1462,7 +1462,7 @@ mod tests_iron_condor_optimizable {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1647,7 +1647,7 @@ mod tests_iron_condor_profit {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1743,7 +1743,7 @@ mod tests_iron_condor_profit {
             pos!(95.0),
             pos!(110.0),
             pos!(90.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1770,7 +1770,7 @@ mod tests_iron_condor_profit {
             pos!(95.0),
             pos!(110.0),
             pos!(90.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1797,7 +1797,7 @@ mod tests_iron_condor_profit {
             pos!(95.0),
             pos!(110.0),
             pos!(90.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1845,7 +1845,7 @@ mod tests_iron_condor_graph {
             pos!(95.0),  // short_put_strike
             pos!(110.0), // long_call_strike
             pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),      // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2019,7 +2019,7 @@ mod tests_iron_condor_delta {
             pos!(2560.0),     // short_put_strike
             pos!(2800.0),     // long_call_strike
             pos!(2500.0),     // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.1548),   // implied_volatility
             Decimal::ZERO,  // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2144,7 +2144,7 @@ mod tests_iron_condor_delta_size {
             pos!(2560.0),     // short_put_strike
             pos!(2800.0),     // long_call_strike
             pos!(2500.0),     // long_put_strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.1548),   // implied_volatility
             Decimal::ZERO,  // risk_free_rate
             Positive::ZERO, // dividend_yield

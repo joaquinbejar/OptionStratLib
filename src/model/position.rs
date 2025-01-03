@@ -165,7 +165,7 @@ impl Position {
 
     pub fn days_to_expiration(&self) -> f64 {
         match self.option.expiration_date {
-            ExpirationDate::Days(days) => days,
+            ExpirationDate::Days(days) => days.to_f64(),
             ExpirationDate::DateTime(datetime) => {
                 datetime.signed_duration_since(Utc::now()).num_days() as f64
             }
@@ -321,7 +321,7 @@ impl PnLCalculator for Position {
             None,
             self.total_cost().into(),
             self.premium_received(),
-            self.option.expiration_date.get_date(),
+            self.option.expiration_date.get_date().unwrap(),
         )
     }
 }
@@ -380,14 +380,14 @@ mod tests_position {
         strike_price: Positive,
         underlying_price: Positive,
         quantity: Positive,
-        expiration_days: i64,
+        expiration_days: Positive,
     ) -> Options {
         Options {
             option_type: OptionType::European,
             side,
             underlying_symbol: "".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(expiration_days as f64),
+            expiration_date: ExpirationDate::Days(expiration_days),
             implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
@@ -406,7 +406,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -424,7 +424,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -442,7 +442,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -460,7 +460,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -478,7 +478,7 @@ mod tests_position {
             pos!(100.0),
             pos!(110.0),
             pos!(1.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -496,7 +496,7 @@ mod tests_position {
             pos!(100.0),
             pos!(110.0),
             pos!(1.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -514,7 +514,7 @@ mod tests_position {
             pos!(100.0),
             pos!(110.0),
             pos!(10.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -532,7 +532,7 @@ mod tests_position {
             pos!(100.0),
             pos!(110.0),
             pos!(1.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -550,7 +550,7 @@ mod tests_position {
             pos!(100.0),
             pos!(110.0),
             pos!(10.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -568,7 +568,7 @@ mod tests_position {
             pos!(100.0),
             pos!(90.0),
             pos!(1.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -586,7 +586,7 @@ mod tests_position {
             pos!(100.0),
             pos!(90.0),
             pos!(10.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -604,7 +604,7 @@ mod tests_position {
             pos!(100.0),
             pos!(90.0),
             pos!(1.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -622,7 +622,7 @@ mod tests_position {
             pos!(100.0),
             pos!(90.0),
             pos!(10.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -640,7 +640,7 @@ mod tests_position {
             pos!(100.0),
             pos!(110.0),
             pos!(1.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -658,7 +658,7 @@ mod tests_position {
             pos!(100.0),
             pos!(110.0),
             pos!(10.0),
-            0,
+            Positive::ZERO,
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -676,7 +676,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -694,7 +694,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -712,7 +712,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -730,7 +730,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -748,7 +748,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let date = Utc::now() - Duration::days(10);
         let position = Position::new(option, 5.0, date, 1.0, 1.0);
@@ -767,7 +767,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(
@@ -785,7 +785,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert!(
@@ -806,7 +806,7 @@ mod tests_position {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert!(
@@ -835,7 +835,7 @@ mod tests_valid_position {
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
             strike_price: pos!(100.0),
-            expiration_date: ExpirationDate::Days(30.0),
+            expiration_date: ExpirationDate::Days(pos!(30.0)),
             implied_volatility: pos!(0.2),
             quantity: pos!(1.0),
             underlying_price: pos!(105.0),
@@ -919,14 +919,14 @@ mod tests_position_break_even {
         strike_price: Positive,
         underlying_price: Positive,
         quantity: Positive,
-        expiration_days: i64,
+        expiration_days: Positive,
     ) -> Options {
         Options {
             option_type: OptionType::European,
             side,
             underlying_symbol: "".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(expiration_days as f64),
+            expiration_date: ExpirationDate::Days(expiration_days),
             implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
@@ -945,7 +945,7 @@ mod tests_position_break_even {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even().unwrap(), 107.0);
@@ -959,7 +959,7 @@ mod tests_position_break_even {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even().unwrap(), 107.0);
@@ -973,7 +973,7 @@ mod tests_position_break_even {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even().unwrap(), 103.0);
@@ -987,7 +987,7 @@ mod tests_position_break_even {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even().unwrap(), 103.0);
@@ -1001,7 +1001,7 @@ mod tests_position_break_even {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even().unwrap(), 93.0);
@@ -1015,7 +1015,7 @@ mod tests_position_break_even {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even().unwrap(), 93.0);
@@ -1029,7 +1029,7 @@ mod tests_position_break_even {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even().unwrap(), 97.0);
@@ -1043,7 +1043,7 @@ mod tests_position_break_even {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_eq!(position.break_even().unwrap(), 97.0);
@@ -1064,14 +1064,14 @@ mod tests_position_max_loss_profit {
         strike_price: Positive,
         underlying_price: Positive,
         quantity: Positive,
-        expiration_days: i64,
+        expiration_days: Positive,
     ) -> Options {
         Options {
             option_type: OptionType::European,
             side,
             underlying_symbol: "".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(expiration_days as f64),
+            expiration_date: ExpirationDate::Days(expiration_days),
             implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
@@ -1090,7 +1090,7 @@ mod tests_position_max_loss_profit {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), 7.0, epsilon = 0.001);
@@ -1105,7 +1105,7 @@ mod tests_position_max_loss_profit {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), 70.0, epsilon = 0.001);
@@ -1120,7 +1120,7 @@ mod tests_position_max_loss_profit {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
@@ -1135,7 +1135,7 @@ mod tests_position_max_loss_profit {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
@@ -1150,7 +1150,7 @@ mod tests_position_max_loss_profit {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), 7.0, epsilon = 0.001);
@@ -1165,7 +1165,7 @@ mod tests_position_max_loss_profit {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), 70.0, epsilon = 0.001);
@@ -1180,7 +1180,7 @@ mod tests_position_max_loss_profit {
             pos!(100.0),
             pos!(105.0),
             pos!(1.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
@@ -1195,7 +1195,7 @@ mod tests_position_max_loss_profit {
             pos!(100.0),
             pos!(105.0),
             pos!(10.0),
-            30,
+            pos!(30.0),
         );
         let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
         assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);

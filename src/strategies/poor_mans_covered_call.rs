@@ -449,7 +449,7 @@ impl Graph for PoorMansCoveredCall {
             ),
             format!(
                 "Short Call Expiry: {}",
-                self.short_call.option.expiration_date.get_date_string()
+                self.short_call.option.expiration_date.get_date_string().unwrap()
             ),
         ]
         .iter()
@@ -603,14 +603,15 @@ mod tests {
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
         let underlying_symbol = "AAPL".to_string();
         let underlying_price = pos!(150.0);
         let long_call_strike = pos!(140.0);
         let short_call_strike = pos!(160.0);
-        let long_call_expiration = ExpirationDate::Days(365.0);
-        let short_call_expiration = ExpirationDate::Days(30.0);
+        let long_call_expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
+        let short_call_expiration = ExpirationDate::Days(pos!(30.0));
         let implied_volatility = pos!(0.20);
         let risk_free_rate = dec!(0.01);
         let dividend_yield = pos!(0.005);
@@ -748,6 +749,7 @@ mod tests_pmcc_validation {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use rust_decimal_macros::dec;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -755,8 +757,8 @@ mod tests_pmcc_validation {
             pos!(150.0),
             pos!(140.0),
             pos!(160.0),
-            ExpirationDate::Days(365.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.005),
@@ -784,7 +786,7 @@ mod tests_pmcc_validation {
             Side::Long,
             "AAPL".to_string(),
             pos!(140.0),
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             pos!(0.2),
             pos!(1.0),
             pos!(150.0),
@@ -808,7 +810,7 @@ mod tests_pmcc_validation {
             Side::Short,
             "AAPL".to_string(),
             pos!(160.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             pos!(1.0),
             pos!(150.0),
@@ -832,7 +834,7 @@ mod tests_pmcc_validation {
             Side::Long,
             "AAPL".to_string(),
             pos!(140.0),
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             pos!(0.2),
             pos!(1.0),
             pos!(150.0),
@@ -860,6 +862,7 @@ mod tests_pmcc_optimization {
     use super::*;
     use crate::spos;
     use rust_decimal_macros::dec;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string(), None, None);
@@ -887,8 +890,8 @@ mod tests_pmcc_optimization {
             pos!(150.0),
             pos!(140.0),
             pos!(160.0),
-            ExpirationDate::Days(365.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.005),
@@ -994,6 +997,7 @@ mod tests_pmcc_pnl {
     use super::*;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1001,8 +1005,8 @@ mod tests_pmcc_pnl {
             pos!(150.0),
             pos!(140.0),
             pos!(160.0),
-            ExpirationDate::Days(365.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.005),
@@ -1072,6 +1076,7 @@ mod tests_pmcc_pnl {
 mod tests_pmcc_graph {
     use super::*;
     use rust_decimal_macros::dec;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1079,8 +1084,8 @@ mod tests_pmcc_graph {
             pos!(150.0),
             pos!(140.0),
             pos!(160.0),
-            ExpirationDate::Days(365.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.005),
@@ -1155,6 +1160,7 @@ mod tests_pmcc_best_area {
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1168,8 +1174,8 @@ mod tests_pmcc_best_area {
             underlying_price,
             pos!(5700.0), // long strike ITM
             pos!(5900.0), // short strike OTM
-            ExpirationDate::Days(365.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.005),
@@ -1230,6 +1236,7 @@ mod tests_pmcc_best_ratio {
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1243,8 +1250,8 @@ mod tests_pmcc_best_ratio {
             underlying_price,
             pos!(5700.0),
             pos!(5900.0),
-            ExpirationDate::Days(365.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.005),
@@ -1318,8 +1325,8 @@ mod tests_short_straddle_delta {
             underlying_price, // underlying_price
             long_strike,      // call_strike 7450
             short_strike,     // put_strike 7050
-            ExpirationDate::Days(45.0),
-            ExpirationDate::Days(15.0),
+            ExpirationDate::Days(pos!(45.0)),
+            ExpirationDate::Days(pos!(15.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1428,8 +1435,8 @@ mod tests_short_straddle_delta_size {
             underlying_price, // underlying_price
             long_strike,      // call_strike 7450
             short_strike,     // put_strike 7050
-            ExpirationDate::Days(45.0),
-            ExpirationDate::Days(15.0),
+            ExpirationDate::Days(pos!(45.0)),
+            ExpirationDate::Days(pos!(15.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield

@@ -683,7 +683,7 @@ mod tests_implied_volatility {
             Side::Long,
             "TEST".to_string(),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.02), // initial implied volatility
             Positive::ONE,
             pos!(100.0),
@@ -1168,7 +1168,7 @@ mod tests_uncertain_volatility_bounds {
             Side::Long,
             "TEST".to_string(),
             pos!(100.0), // strike price
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),     // implied volatility
             Positive::ONE, // quantity
             pos!(100.0),   // underlying price
@@ -1272,7 +1272,7 @@ mod tests_uncertain_volatility_bounds_side {
             side,
             "TEST".to_string(),
             pos!(100.0), // strike price
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),     // implied volatility
             Positive::ONE, // quantity
             pos!(100.0),   // underlying price

@@ -49,7 +49,7 @@
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
 //!             strike_price: pos!(100.0),
-//!             expiration_date: ExpirationDate::Days(30.0),
+//!             expiration_date: ExpirationDate::Days(pos!(30.0)),
 //!             implied_volatility: pos!(0.2),
 //!             quantity: Positive::ONE,
 //!             underlying_price: pos!(105.0),

@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(2560.0),     // short_put_strike
         pos!(2800.0),     // long_call_strike
         pos!(2500.0),     // long_put_strike
-        ExpirationDate::Days(30.0),
+        ExpirationDate::Days(pos!(30.0)),
         pos!(0.1548),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield

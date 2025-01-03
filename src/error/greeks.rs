@@ -36,6 +36,7 @@
 use crate::error::decimal::DecimalError;
 use std::error::Error;
 use std::fmt;
+use crate::Positive;
 
 #[derive(Debug)]
 pub enum GreeksError {
@@ -45,6 +46,8 @@ pub enum GreeksError {
     InputError(InputErrorKind),
     /// Errors related to Greek calculations
     CalculationError(CalculationErrorKind),
+
+    StdError(String),
 }
 
 #[derive(Debug)]
@@ -68,7 +71,7 @@ pub enum InputErrorKind {
     },
     /// Invalid time value
     InvalidTime {
-        value: f64,
+        value: Positive,
         reason: String,
     },
     /// Invalid price value
@@ -120,6 +123,8 @@ impl fmt::Display for GreeksError {
             GreeksError::MathError(err) => write!(f, "Mathematical error: {}", err),
             GreeksError::InputError(err) => write!(f, "Input validation error: {}", err),
             GreeksError::CalculationError(err) => write!(f, "Greek calculation error: {}", err),
+            GreeksError::StdError(msg) => write!(f, "Standard error: {}", msg),
+
         }
     }
 }
@@ -205,7 +210,7 @@ impl GreeksError {
         })
     }
 
-    pub fn invalid_time(value: f64, reason: &str) -> Self {
+    pub fn invalid_time(value: Positive, reason: &str) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidTime {
             value,
             reason: reason.to_string(),
@@ -227,6 +232,12 @@ impl From<DecimalError> for GreeksError {
     }
 }
 
+impl From<Box<dyn Error>> for GreeksError {
+    fn from(error: Box<dyn Error>) -> Self {
+        GreeksError::StdError(error.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -242,18 +253,7 @@ mod tests {
             _ => panic!("Wrong error type"),
         }
     }
-
-    #[test]
-    fn test_invalid_time_error_creation() {
-        let error = GreeksError::invalid_time(-1.0, "Time must be positive");
-        match error {
-            GreeksError::InputError(InputErrorKind::InvalidTime { value, reason }) => {
-                assert_eq!(value, -1.0);
-                assert_eq!(reason, "Time must be positive");
-            }
-            _ => panic!("Wrong error type"),
-        }
-    }
+    
 
     #[test]
     fn test_delta_error_creation() {

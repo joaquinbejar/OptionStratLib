@@ -54,7 +54,7 @@
 //!     pos!(5780.0),   // underlying_price
 //!     pos!(5750.0),   // long_strike_itm  
 //!     pos!(5820.0),   // short_strike
-//!     ExpirationDate::Days(2.0),
+//!     ExpirationDate::Days(pos!(2.0)),
 //!     pos!(0.18),   // implied_volatility
 //!     dec!(0.05),   // risk_free_rate
 //!     Positive::ZERO,   // dividend_yield
@@ -163,7 +163,7 @@
 //!     pos!(145.0),   // short_put_strike  
 //!     pos!(160.0),   // long_call_strike
 //!     pos!(140.0),   // long_put_strike
-//!     ExpirationDate::Days(30.0),
+//!     ExpirationDate::Days(pos!(30.0)),
 //!     pos!(0.2),   // implied_volatility
 //!     dec!(0.01),   // risk_free_rate
 //!     pos!(0.02),   // dividend_yield

@@ -36,7 +36,7 @@
 //!             2,
 //!             OptionDataPriceParams::new(
 //!                 pos!(100.0),
-//!                 ExpirationDate::Days(30.0),
+//!                 ExpirationDate::Days(pos!(30.0)),
 //!                 spos!(0.17),
 //!                 dec!(0.0),
 //!                 pos!(0.05),
@@ -124,7 +124,7 @@
 //! };
 //! let chain = OptionDataPriceParams::new(
 //!     Positive::new(2000.0).unwrap(),
-//!     ExpirationDate::Days(10.0),
+//!     ExpirationDate::Days(pos!(10.0)),
 //!     Some(Positive::new(0.01).unwrap()),
 //!     dec!(0.01),
 //!     Positive::ZERO,

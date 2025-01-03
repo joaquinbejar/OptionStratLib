@@ -209,6 +209,7 @@ mod tests_black_scholes {
     use crate::{pos, Options, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     fn mock_options_call() -> Options {
         Options {
@@ -218,7 +219,7 @@ mod tests_black_scholes {
             strike_price: pos!(2485.0),
             implied_volatility: pos!(0.22),
             risk_free_rate: dec!(0.006),
-            expiration_date: ExpirationDate::Days(3.0),
+            expiration_date: ExpirationDate::Days(pos!(3.0)),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
@@ -235,7 +236,7 @@ mod tests_black_scholes {
             strike_price: pos!(100.0),
             implied_volatility: pos!(0.01),
             risk_free_rate: Decimal::ZERO,
-            expiration_date: ExpirationDate::Days(365.0),
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
@@ -253,7 +254,7 @@ mod tests_black_scholes {
             strike_price: pos!(100.0),
             implied_volatility: pos!(0.2),
             risk_free_rate: dec!(0.05),
-            expiration_date: ExpirationDate::Days(365.0), // 1 year from now
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR), // 1 year from now
             option_style: OptionStyle::Put,
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
@@ -265,12 +266,12 @@ mod tests_black_scholes {
     #[test]
     fn test_black_scholes_simplest_call() {
         let mut option = mock_options_simplest_call();
-        assert_relative_eq!(option.expiration_date.get_years(), 1.0, epsilon = 0.00001);
+        assert_relative_eq!(option.expiration_date.get_years().unwrap().to_f64(), 1.0, epsilon = 0.00001);
         let d1 = d1(
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -279,7 +280,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -324,7 +325,7 @@ mod tests_black_scholes {
             strike_price: pos!(50.0),
             implied_volatility: pos!(0.01),
             risk_free_rate: Decimal::ZERO,
-            expiration_date: ExpirationDate::Days(365.0),
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
@@ -337,7 +338,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -346,7 +347,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -378,7 +379,7 @@ mod tests_black_scholes {
             strike_price: pos!(65.0),
             implied_volatility: pos!(0.3),
             risk_free_rate: dec!(0.08),
-            expiration_date: ExpirationDate::Days(365.0 / 4.0),
+            expiration_date: ExpirationDate::Days(pos!(365.0 / 4.0)),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
@@ -386,12 +387,12 @@ mod tests_black_scholes {
 
             exotic_params: None,
         };
-        assert_relative_eq!(option.expiration_date.get_years(), 0.25, epsilon = 0.00001);
+        assert_relative_eq!(option.expiration_date.get_years().unwrap().to_f64(), 0.25, epsilon = 0.00001);
         let d1 = d1(
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -400,7 +401,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -413,7 +414,7 @@ mod tests_black_scholes {
         let option_value = option.underlying_price * big_n_d1
             - option.strike_price
                 * big_n_d2
-                * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years())
+                * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years().unwrap())
                     .exp();
         assert_relative_eq!(option_value.to_f64(), 2.133368, epsilon = 0.00001);
 

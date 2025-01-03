@@ -587,7 +587,7 @@ mod tests_bear_call_spread_strategies {
             pos!(100.0),                // underlying_price
             pos!(95.0),                 // short_strike
             pos!(105.0),                // long_strike
-            ExpirationDate::Days(30.0), // expiration
+            ExpirationDate::Days(pos!(30.0)), // expiration
             pos!(0.20),                 // implied_volatility
             dec!(0.05),                 // risk_free_rate
             Positive::ZERO,             // dividend_yield
@@ -777,7 +777,7 @@ mod tests_bear_call_spread_strategies {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.20),
             dec!(0.05),
             Positive::ZERO,
@@ -811,7 +811,7 @@ mod tests_bear_call_spread_strategies {
             pos!(100.0),
             pos!(90.0),  // wider spread
             pos!(110.0), // wider spread
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -846,7 +846,7 @@ mod tests_bear_call_spread_positionable {
             side,
             "TEST".to_string(),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             pos!(1.0),
             pos!(100.0),
@@ -875,7 +875,7 @@ mod tests_bear_call_spread_positionable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -902,7 +902,7 @@ mod tests_bear_call_spread_positionable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -929,7 +929,7 @@ mod tests_bear_call_spread_positionable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -958,7 +958,7 @@ mod tests_bear_call_spread_positionable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -988,7 +988,7 @@ mod tests_bear_call_spread_positionable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1017,7 +1017,7 @@ mod tests_bear_call_spread_positionable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1060,7 +1060,7 @@ mod tests_bear_call_spread_validable {
             pos!(100.0),                // underlying_price
             pos!(95.0),                 // short_strike
             pos!(105.0),                // long_strike
-            ExpirationDate::Days(30.0), // expiration
+            ExpirationDate::Days(pos!(30.0)), // expiration
             pos!(0.2),                  // implied_volatility
             dec!(0.05),                 // risk_free_rate
             Positive::ZERO,             // dividend_yield
@@ -1087,7 +1087,7 @@ mod tests_bear_call_spread_validable {
             pos!(100.0),
             pos!(105.0), // short strike higher than long strike
             pos!(95.0),  // long strike lower than short strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1109,7 +1109,7 @@ mod tests_bear_call_spread_validable {
             pos!(100.0),
             pos!(100.0), // both strikes equal
             pos!(100.0), // both strikes equal
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1148,7 +1148,7 @@ mod tests_bear_call_spread_validable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(0.0), // Invalid expiration (0 days)
+            ExpirationDate::Days(Positive::ZERO), // Invalid expiration (0 days)
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1170,7 +1170,7 @@ mod tests_bear_call_spread_validable {
             pos!(0.0), // Invalid underlying price
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1192,7 +1192,7 @@ mod tests_bear_call_spread_validable {
             pos!(100.0),
             pos!(99.999),  // Strikes very close to each other
             pos!(100.001), // but technically different
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1215,7 +1215,7 @@ mod tests_bear_call_spread_validable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1247,7 +1247,7 @@ mod tests_bear_call_spread_profit {
             pos!(100.0),                // underlying_price
             pos!(95.0),                 // short_strike
             pos!(105.0),                // long_strike
-            ExpirationDate::Days(30.0), // expiration
+            ExpirationDate::Days(pos!(30.0)), // expiration
             pos!(0.2),                  // implied_volatility
             dec!(0.05),                 // risk_free_rate
             Positive::ZERO,             // dividend_yield
@@ -1330,7 +1330,7 @@ mod tests_bear_call_spread_profit {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1361,7 +1361,7 @@ mod tests_bear_call_spread_profit {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1442,7 +1442,7 @@ mod tests_bear_call_spread_optimizable {
             pos!(100.0),
             pos!(95.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1641,7 +1641,7 @@ mod tests_bear_call_spread_graph {
             pos!(100.0),                // underlying_price
             pos!(105.0),                // short_strike
             pos!(110.0),                // long_strike
-            ExpirationDate::Days(30.0), // expiration
+            ExpirationDate::Days(pos!(30.0)), // expiration
             pos!(0.2),                  // implied_volatility
             dec!(0.05),                 // risk_free_rate
             Positive::ZERO,             // dividend_yield
@@ -1734,7 +1734,7 @@ mod tests_bear_call_spread_probability {
             pos!(100.0),                // underlying_price
             pos!(105.0),                // short_strike
             pos!(110.0),                // long_strike
-            ExpirationDate::Days(30.0), // expiration
+            ExpirationDate::Days(pos!(30.0)), // expiration
             pos!(0.2),                  // implied_volatility
             dec!(0.05),                 // risk_free_rate
             Positive::ZERO,             // dividend_yield
@@ -1884,7 +1884,7 @@ mod tests_delta {
             underlying_price, // underlying_price
             long_strike,      // long_strike
             short_strike,     // short_strike
-            ExpirationDate::Days(2.0),
+            ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1992,7 +1992,7 @@ mod tests_delta_size {
             underlying_price, // underlying_price
             long_strike,      // long_strike
             short_strike,     // short_strike
-            ExpirationDate::Days(2.0),
+            ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield

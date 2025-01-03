@@ -353,7 +353,7 @@ pub fn probability_keep_under_strike(
             option.underlying_price,
             strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap(),
@@ -610,6 +610,7 @@ mod tests_probability_keep_under_strike {
     use crate::{assert_decimal_eq, pos, Positive};
     use rust_decimal_macros::dec;
     use tracing::info;
+    use crate::constants::DAYS_IN_A_YEAR;
 
     #[test]
     fn test_probability_keep_under_strike_with_given_strike() {
@@ -621,7 +622,7 @@ mod tests_probability_keep_under_strike {
             risk_free_rate: Decimal::ZERO,
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(365.0),
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
             implied_volatility: pos!(0.001),
             underlying_symbol: "".to_string(),
             quantity: Positive::ONE,
@@ -643,7 +644,7 @@ mod tests_probability_keep_under_strike {
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(365.0),
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
             implied_volatility: pos!(0.2),
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
@@ -668,7 +669,7 @@ mod tests_probability_keep_under_strike {
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(365.0),
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
             implied_volatility: Positive::ZERO,
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
@@ -688,7 +689,7 @@ mod tests_probability_keep_under_strike {
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(365.0),
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
             implied_volatility: pos!(5.0), // Alta volatilidad
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
@@ -712,7 +713,7 @@ mod tests_probability_keep_under_strike {
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(1.0),
+            expiration_date: ExpirationDate::Days(pos!(1.0)),
             implied_volatility: pos!(0.2),
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,

@@ -294,7 +294,7 @@ mod tests_probability_analysis {
         fn new() -> Self {
             MockStrategy {
                 underlying_price: pos!(100.0),
-                expiration: ExpirationDate::Days(30.0),
+                expiration: ExpirationDate::Days(pos!(30.0)),
                 risk_free_rate: dec!(0.05),
                 break_points: vec![pos!(95.0), pos!(105.0)],
             }
@@ -472,7 +472,7 @@ mod tests_expected_value {
     fn create_test_strategy() -> TestStrategy {
         TestStrategy {
             underlying_price: pos!(100.0),
-            expiration: ExpirationDate::Days(30.0),
+            expiration: ExpirationDate::Days(pos!(30.0)),
             risk_free_rate: dec!(0.05),
         }
     }
