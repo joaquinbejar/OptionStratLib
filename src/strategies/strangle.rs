@@ -345,7 +345,7 @@ impl Optimizable for ShortStrangle {
             call.strike_price,
             put.strike_price,
             self.short_call.option.expiration_date.clone(),
-            call.implied_volatility.unwrap().to_f64() / 100.0,
+            call.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
@@ -504,8 +504,8 @@ impl ProbabilityAnalysis for ShortStrangle {
         let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(option.implied_volatility),
-            pos!(self.short_put.option.implied_volatility),
+            option.implied_volatility,
+            self.short_put.option.implied_volatility,
         ]);
 
         let mut profit_range = ProfitLossRange::new(
@@ -533,8 +533,8 @@ impl ProbabilityAnalysis for ShortStrangle {
         let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(option.implied_volatility),
-            pos!(self.short_put.option.implied_volatility),
+            option.implied_volatility,
+            self.short_put.option.implied_volatility,
         ]);
 
         let mut lower_loss_range =
@@ -935,7 +935,7 @@ impl Optimizable for LongStrangle {
             call.strike_price,
             put.strike_price,
             self.long_call.option.expiration_date.clone(),
-            call.implied_volatility.unwrap().to_f64() / 100.0,
+            call.implied_volatility.unwrap() / 100.0,
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
@@ -1069,8 +1069,8 @@ impl ProbabilityAnalysis for LongStrangle {
         let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(option.implied_volatility),
-            pos!(self.long_put.option.implied_volatility),
+            option.implied_volatility,
+            self.long_put.option.implied_volatility,
         ]);
 
         let mut lower_profit_range =
@@ -1109,8 +1109,8 @@ impl ProbabilityAnalysis for LongStrangle {
         let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            pos!(option.implied_volatility),
-            pos!(self.long_call.option.implied_volatility),
+            option.implied_volatility,
+            self.long_call.option.implied_volatility,
         ]);
 
         let mut loss_range = ProfitLossRange::new(
@@ -1199,6 +1199,7 @@ mod tests_short_strangle {
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::{pos, spos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn setup() -> ShortStrangle {
         ShortStrangle::new(
@@ -1207,9 +1208,9 @@ mod tests_short_strangle {
             pos!(155.0),
             pos!(145.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             pos!(100.0),
             2.0,
             1.5,
@@ -1227,9 +1228,9 @@ mod tests_short_strangle {
             pos!(145.0),
             pos!(155.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             pos!(100.0),
             2.0,
             1.5,
@@ -1479,8 +1480,8 @@ is expected and the underlying asset's price is anticipated to remain stable."
             pos!(1150.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
-            0.01,
-            0.02,
+            dec!(0.01),
+            pos!(0.02),
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
@@ -1498,6 +1499,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
 
 #[cfg(test)]
 mod tests_long_strangle {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::{pos, spos};
@@ -1509,9 +1511,9 @@ mod tests_long_strangle {
         let call_strike = pos!(160.0);
         let put_strike = pos!(140.0);
         let expiration = ExpirationDate::default();
-        let implied_volatility = 0.25;
-        let risk_free_rate = 0.01;
-        let dividend_yield = 0.02;
+        let implied_volatility = pos!(0.25);
+        let risk_free_rate = dec!(0.01);
+        let dividend_yield = pos!(0.02);
         let quantity = pos!(10.0);
         let premium_long_call = 5.0;
         let premium_long_put = 5.0;
@@ -1577,9 +1579,9 @@ mod tests_long_strangle {
             pos!(160.0),
             pos!(140.0),
             ExpirationDate::Days(30.0),
-            0.25,
-            0.01,
-            0.02,
+            pos!(0.25),
+            dec!(0.01),
+            pos!(0.02),
             pos!(10.0),
             5.0,
             5.0,
@@ -1598,9 +1600,9 @@ mod tests_long_strangle {
             pos!(140.0), // Call strike lower than put
             pos!(160.0), // Put strike higher than call
             ExpirationDate::Days(30.0),
-            0.25,
-            0.01,
-            0.02,
+            pos!(0.25),
+            dec!(0.01),
+            pos!(0.02),
             pos!(10.0),
             5.0,
             5.0,
@@ -1832,8 +1834,8 @@ mod tests_long_strangle {
             pos!(150.0),
             ExpirationDate::Days(30.0),
             spos!(0.65),
-            0.01,
-            0.02,
+            dec!(0.01),
+            pos!(0.02),
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
@@ -1851,6 +1853,7 @@ mod tests_long_strangle {
 
 #[cfg(test)]
 mod tests_short_strangle_probability {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -1865,9 +1868,9 @@ mod tests_short_strangle_probability {
             pos!(110.0),                // call_strike
             pos!(90.0),                 // put_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
+            pos!(0.2),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                        // dividend_yield
             pos!(1.0),                  // quantity
             2.0,                        // premium_short_call
             2.0,                        // premium_short_put
@@ -1991,6 +1994,7 @@ mod tests_short_strangle_probability {
 
 #[cfg(test)]
 mod tests_short_strangle_probability_bis {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -2003,9 +2007,9 @@ mod tests_short_strangle_probability_bis {
             pos!(110.0),                // call_strike
             pos!(90.0),                 // put_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
+            pos!(0.2),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                        // dividend_yield
             pos!(1.0),                  // quantity
             2.0,                        // premium_short_call
             2.0,                        // premium_short_put
@@ -2030,7 +2034,7 @@ mod tests_short_strangle_probability_bis {
     #[test]
     fn test_get_risk_free_rate() {
         let strangle = create_test();
-        assert_eq!(strangle.get_risk_free_rate(), Some(0.05));
+        assert_eq!(strangle.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
@@ -2133,6 +2137,7 @@ mod tests_short_strangle_probability_bis {
 
 #[cfg(test)]
 mod tests_long_strangle_probability {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -2145,9 +2150,9 @@ mod tests_long_strangle_probability {
             pos!(110.0),                // call_strike
             pos!(90.0),                 // put_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
+            pos!(0.2),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                        // dividend_yield
             pos!(1.0),                  // quantity
             2.0,                        // premium_long_call
             2.0,                        // premium_long_put
@@ -2172,7 +2177,7 @@ mod tests_long_strangle_probability {
     #[test]
     fn test_get_risk_free_rate() {
         let strangle = create_test_long_strangle();
-        assert_eq!(strangle.get_risk_free_rate(), Some(0.05));
+        assert_eq!(strangle.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
@@ -2285,6 +2290,7 @@ mod tests_short_strangle_delta {
     use crate::strategies::strangle::ShortStrangle;
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
         let underlying_price = pos!(7138.5);
@@ -2294,9 +2300,9 @@ mod tests_short_strangle_delta {
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.3745),    // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
@@ -2392,6 +2398,7 @@ mod tests_long_strangle_delta {
     use crate::strategies::strangle::{LongStrangle, Positive};
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos!(7138.5);
@@ -2401,9 +2408,9 @@ mod tests_long_strangle_delta {
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.3745),    // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
@@ -2500,6 +2507,7 @@ mod tests_short_strangle_delta_size {
     use crate::strategies::strangle::ShortStrangle;
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
         let underlying_price = pos!(7138.5);
@@ -2509,9 +2517,9 @@ mod tests_short_strangle_delta_size {
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.3745),    // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(2.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
@@ -2613,6 +2621,7 @@ mod tests_long_strangle_delta_size {
     use crate::strategies::strangle::{LongStrangle, Positive};
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos!(7138.5);
@@ -2622,9 +2631,9 @@ mod tests_long_strangle_delta_size {
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.3745),    // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(2.0), // quantity
             84.2,      // premium_short_call
             353.2,     // premium_short_put
