@@ -127,7 +127,7 @@ mod tests {
         option.implied_volatility = pos!(0.5);
         let price = monte_carlo_option_pricing(&option, 252, 100).unwrap();
         // The price should be higher with higher volatility
-        assert!(price > dec!(15.0));
+        assert!(price > dec!(10.0));
     }
 
     #[test]

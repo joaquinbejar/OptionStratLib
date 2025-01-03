@@ -140,13 +140,12 @@ impl ShortStrangle {
             .expect("Invalid position");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
-        
+
         strategy.break_even_points.push(
             (put_strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2),
-            
         );
         strategy.break_even_points.push(
-            (call_strike + strategy.net_premium_received().unwrap()/ net_quantity).round_to(2),
+            (call_strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2),
         );
         strategy.break_even_points.sort();
         strategy

@@ -265,7 +265,7 @@ impl Strategies for CallButterfly {
         let result = if premium > ZERO { premium } else { ZERO };
         Ok(Decimal::from_f64(result).unwrap())
     }
-    
+
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let break_even = self.get_break_even_points()?;
         if break_even.len() != 2 {

@@ -105,15 +105,14 @@ impl CustomStrategy {
             current_price += fine_step;
         }
 
-
         // Analyze consecutive pairs for potential break-even points
         for window in price_profit_pairs.windows(2) {
             if let [(price1, profit1), (price2, profit2)] = window {
                 // Check if profits have different signs
-                if (profit1.signum() != profit2.signum()) ||
-                    profit1.abs() < self.epsilon ||
-                    profit2.abs() < self.epsilon {
-
+                if (profit1.signum() != profit2.signum())
+                    || profit1.abs() < self.epsilon
+                    || profit2.abs() < self.epsilon
+                {
                     // Handle cases where profit is very close to zero
                     if profit1.abs() < self.epsilon {
                         self.add_unique_break_even(*price1);
@@ -137,7 +136,8 @@ impl CustomStrategy {
         }
 
         // Sort break-even points for consistency
-        self.break_even_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        self.break_even_points
+            .sort_by(|a, b| a.partial_cmp(b).unwrap());
     }
 
     /// Refine a break-even point guess using Newton-Raphson method
@@ -179,9 +179,13 @@ impl CustomStrategy {
 
     /// Add a break-even point if it's not already in the list
     fn add_unique_break_even(&mut self, point: Positive) {
-        if !self.break_even_points.iter().any(|p| (p.to_f64() - point.to_f64()).abs() < self.epsilon) {
+        if !self
+            .break_even_points
+            .iter()
+            .any(|p| (p.to_f64() - point.to_f64()).abs() < self.epsilon)
+        {
             self.break_even_points.push(point);
-        } 
+        }
     }
 }
 

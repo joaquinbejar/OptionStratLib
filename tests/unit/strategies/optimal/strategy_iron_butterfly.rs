@@ -41,13 +41,13 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_area(&option_chain, FindOptimalSide::All);
     assert_relative_eq!(
         strategy.profit_area().unwrap().to_f64().unwrap(),
-        23.3347,
+        0.2583,
         epsilon = 0.001
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     assert_relative_eq!(
         strategy.profit_ratio().unwrap().to_f64().unwrap(),
-        387.3294,
+        3.1240,
         epsilon = 0.001
     );
 

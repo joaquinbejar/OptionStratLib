@@ -14,31 +14,32 @@ Key characteristics:
 - Also known as a vertical put debit spread
 */
 
-
-use chrono::Utc;
-use num_traits::FromPrimitive;
-use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
-use rust_decimal::Decimal;
-use tracing::{debug, info};
-use crate::model::{Position, ProfitLossRange};
-use crate::{d2fu, pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
 use crate::chains::chain::OptionChain;
-use crate::chains::StrategyLegs;
 use crate::chains::utils::OptionDataGroup;
+use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::utils::mean_and_std;
+use crate::model::{Position, ProfitLossRange};
 use crate::pricing::Profit;
 use crate::strategies::base::{Optimizable, Positionable, StrategyType, Validable};
-use crate::strategies::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
+use crate::strategies::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD,
+};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::{d2fu, pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use chrono::Utc;
+use num_traits::FromPrimitive;
+use plotters::prelude::full_palette::ORANGE;
+use plotters::prelude::{ShapeStyle, RED};
+use rust_decimal::Decimal;
+use tracing::{debug, info};
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
     "A bear put spread is created by buying a put option with a higher strike price \
@@ -145,9 +146,9 @@ impl BearPutSpread {
         strategy.validate();
 
         // Calculate break-even point
-        strategy.break_even_points.push(
-            long_strike - strategy.net_premium_received().unwrap() / quantity,
-        );
+        strategy
+            .break_even_points
+            .push(long_strike - strategy.net_premium_received().unwrap() / quantity);
 
         strategy
     }
@@ -211,7 +212,6 @@ impl Strategies for BearPutSpread {
         let result = self.long_put.net_cost() - self.short_put.net_premium_received();
         Ok(Decimal::from_f64(result).unwrap())
     }
-    
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
@@ -561,10 +561,10 @@ impl DeltaNeutrality for BearPutSpread {
 
 #[cfg(test)]
 mod tests_bear_put_spread_strategy {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearPutSpread {
@@ -904,8 +904,8 @@ mod tests_bear_put_spread_validation {
 
 #[cfg(test)]
 mod tests_bear_put_spread_optimization {
-    use num_traits::ToPrimitive;
     use super::*;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     use crate::model::types::ExpirationDate;

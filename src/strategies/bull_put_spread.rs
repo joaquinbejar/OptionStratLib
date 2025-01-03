@@ -217,7 +217,7 @@ impl Strategies for BullPutSpread {
         let result = self.short_put.net_premium_received() - self.long_put.net_cost();
         Ok(Decimal::from_f64(result).unwrap())
     }
-    
+
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
         let base = self.short_put.option.strike_price - self.break_even_points[0];

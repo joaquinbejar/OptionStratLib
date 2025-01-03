@@ -12,11 +12,11 @@ use crate::error::strategies::{BreakEvenErrorKind, OperationErrorKind, StrategyE
 use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::Positive;
-use rust_decimal::Decimal;
-use std::f64;
 use itertools::Itertools;
 use num_traits::FromPrimitive;
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::f64;
 use tracing::error;
 
 /// This enum represents different types of trading strategies.
@@ -127,12 +127,16 @@ pub trait Strategies: Validable + Positionable {
         let mut fee = dec!(0.0);
         let positions = match self.get_positions() {
             Ok(positions) => positions,
-            Err(err) => return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
-                operation: "get_positions".to_string(),
-                reason: err.to_string(),
-            })),
+            Err(err) => {
+                return Err(StrategyError::OperationError(
+                    OperationErrorKind::InvalidParameters {
+                        operation: "get_positions".to_string(),
+                        reason: err.to_string(),
+                    },
+                ))
+            }
         };
-        
+
         for position in positions {
             fee += Decimal::from_f64(position.fees()).unwrap();
         }
@@ -174,7 +178,7 @@ pub trait Strategies: Validable + Positionable {
 
         let start_price = *all_points.first().unwrap() * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
         let end_price = *all_points.last().unwrap() * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
-        Ok((start_price , end_price))
+        Ok((start_price, end_price))
     }
 
     fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
@@ -202,7 +206,7 @@ pub trait Strategies: Validable + Positionable {
             .into_iter()
             .sorted()
             .collect();
-        
+
         Ok(strikes)
     }
 

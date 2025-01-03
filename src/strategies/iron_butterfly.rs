@@ -192,13 +192,13 @@ impl IronButterfly {
 
         // Calculate break-even points
         let net_credit = strategy.net_premium_received().unwrap() / quantity;
-        
-        strategy.break_even_points.push(
-            (short_strike + net_credit).round_to(2)
-        );
-        strategy.break_even_points.push(
-            (short_strike - net_credit).round_to(2)
-        );
+
+        strategy
+            .break_even_points
+            .push((short_strike + net_credit).round_to(2));
+        strategy
+            .break_even_points
+            .push((short_strike - net_credit).round_to(2));
 
         strategy.break_even_points.sort();
         strategy
@@ -308,7 +308,7 @@ impl Strategies for IronButterfly {
             - self.long_put.total_cost();
         Ok(Decimal::from_f64(net_prem).unwrap())
     }
-    
+
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let inner_width =
             (self.short_call.option.strike_price - self.short_put.option.strike_price).to_f64();

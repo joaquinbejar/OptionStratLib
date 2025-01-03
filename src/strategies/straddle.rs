@@ -155,12 +155,12 @@ impl ShortStraddle {
             .expect("Invalid short put");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
-        strategy.break_even_points.push(
-            (strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2)
-        );
-        strategy.break_even_points.push(
-            (strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2)
-        );
+        strategy
+            .break_even_points
+            .push((strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
+        strategy
+            .break_even_points
+            .push((strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
 
         strategy.break_even_points.sort();
         strategy
@@ -697,17 +697,11 @@ impl LongStraddle {
 
         strategy
             .break_even_points
-            .push(
-                (strike - strategy.total_cost() / net_quantity)
-                    .round_to(2)
-            );
+            .push((strike - strategy.total_cost() / net_quantity).round_to(2));
 
         strategy
             .break_even_points
-            .push(
-                (strike + strategy.total_cost() / net_quantity)
-                    .round_to(2)
-                );
+            .push((strike + strategy.total_cost() / net_quantity).round_to(2));
 
         strategy.break_even_points.sort();
         strategy

@@ -144,7 +144,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.01),
     );
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    info!("Range: {} {}", price_range.first().unwrap(), price_range.last().unwrap());
+    info!(
+        "Range: {} {}",
+        price_range.first().unwrap(),
+        price_range.last().unwrap()
+    );
 
     info!("Title: {}", strategy.title());
     info!(
