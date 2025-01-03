@@ -439,7 +439,7 @@ impl Optimizable for IronButterfly {
                 long_call.strike_price,
                 long_put.strike_price,
                 self.short_call.option.expiration_date.clone(),
-                short_strike.implied_volatility.unwrap().to_f64() / 100.0,
+                short_strike.implied_volatility.unwrap() / 100.0,
                 self.short_call.option.risk_free_rate,
                 self.short_call.option.dividend_yield,
                 self.short_call.option.quantity,
@@ -695,6 +695,7 @@ mod tests_iron_butterfly {
     use super::*;
     use crate::pos;
     use chrono::{TimeZone, Utc};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_iron_butterfly_creation() {
@@ -706,9 +707,9 @@ mod tests_iron_butterfly {
             pos!(160.0), // long call strike
             pos!(140.0), // long put strike
             ExpirationDate::DateTime(date),
-            0.2,           // implied volatility
-            0.01,          // risk free rate
-            0.02,          // dividend yield
+            pos!(0.2),           // implied volatility
+            dec!(0.01),          // risk free rate
+            pos!(0.02),          // dividend yield
             Positive::ONE, // quantity
             1.5,           // premium short call
             1.5,           // premium short put
@@ -741,9 +742,9 @@ mod tests_iron_butterfly {
             pos!(110.0), // long call strike
             pos!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             Positive::ONE,
             1.5,
             1.5,
@@ -768,9 +769,9 @@ mod tests_iron_butterfly {
             pos!(110.0), // long call strike
             pos!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             Positive::ONE,
             3.5,
             3.5,
@@ -794,9 +795,9 @@ mod tests_iron_butterfly {
             pos!(110.0), // long call strike
             pos!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             Positive::ONE,
             1.5,
             1.5,
@@ -832,9 +833,9 @@ mod tests_iron_butterfly {
             pos!(110.0),
             pos!(90.0),
             ExpirationDate::DateTime(date),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             Positive::ONE,
             1.5,
             1.5,
@@ -865,9 +866,9 @@ mod tests_iron_butterfly {
             pos!(110.0),
             pos!(90.0),
             ExpirationDate::DateTime(date),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             Positive::ONE,
             1.5,
             1.5,
@@ -889,6 +890,7 @@ mod tests_iron_butterfly {
 
 #[cfg(test)]
 mod tests_iron_butterfly_validable {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -906,12 +908,12 @@ mod tests_iron_butterfly_validable {
                 "TEST".to_string(),
                 strike_price,
                 ExpirationDate::Days(30.0),
-                0.20,
+                pos!(0.2),
                 quantity,
                 pos!(100.0),
-                0.05,
+                dec!(0.05),
                 option_style,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             1.0,
@@ -929,9 +931,9 @@ mod tests_iron_butterfly_validable {
             pos!(110.0), // long call strike
             pos!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
-            0.20,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
@@ -1024,6 +1026,7 @@ mod tests_iron_butterfly_validable {
 
 #[cfg(test)]
 mod tests_iron_butterfly_strategies {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -1036,9 +1039,9 @@ mod tests_iron_butterfly_strategies {
             pos!(110.0), // long call strike
             pos!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
-            0.20,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
@@ -1061,12 +1064,12 @@ mod tests_iron_butterfly_strategies {
                 "TEST".to_string(),
                 pos!(100.0),
                 ExpirationDate::Days(30.0),
-                0.20,
+                pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
-                0.05,
+                dec!(0.05),
                 OptionStyle::Call,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             2.5,
@@ -1090,12 +1093,12 @@ mod tests_iron_butterfly_strategies {
                 "TEST".to_string(),
                 pos!(90.0),
                 ExpirationDate::Days(30.0),
-                0.20,
+                pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
-                0.05,
+                dec!(0.05),
                 OptionStyle::Put,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             1.5,
@@ -1202,9 +1205,9 @@ mod tests_iron_butterfly_strategies {
             pos!(110.0),
             pos!(90.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(2.0), // quantity = 2
             2.0,
             2.0,
@@ -1229,9 +1232,9 @@ mod tests_iron_butterfly_strategies {
             pos!(110.0),
             pos!(90.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(1.0),
             3.0, // Higher short call premium
             2.0, // Lower short put premium
@@ -1250,6 +1253,7 @@ mod tests_iron_butterfly_strategies {
 
 #[cfg(test)]
 mod tests_iron_butterfly_optimizable {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::chains::chain::OptionData;
     use crate::pos;
@@ -1264,9 +1268,9 @@ mod tests_iron_butterfly_optimizable {
             pos!(110.0), // long call strike
             pos!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
-            0.20,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
@@ -1435,6 +1439,7 @@ mod tests_iron_butterfly_optimizable {
 
 #[cfg(test)]
 mod tests_iron_butterfly_profit {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -1447,9 +1452,9 @@ mod tests_iron_butterfly_profit {
             pos!(110.0), // long call strike
             pos!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
-            0.20,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
@@ -1535,9 +1540,9 @@ mod tests_iron_butterfly_profit {
             pos!(110.0),
             pos!(90.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(1.0),
             2.0,
             2.0,
@@ -1561,9 +1566,9 @@ mod tests_iron_butterfly_profit {
             pos!(110.0),
             pos!(90.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
             pos!(2.0), // quantity = 2
             2.0,
             2.0,
@@ -1616,6 +1621,7 @@ mod tests_iron_butterfly_profit {
 
 #[cfg(test)]
 mod tests_iron_butterfly_graph {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::pos;
     use crate::model::types::ExpirationDate;
@@ -1628,9 +1634,9 @@ mod tests_iron_butterfly_graph {
             pos!(110.0), // long call strike
             pos!(90.0),  // long put strike
             ExpirationDate::Days(30.0),
-            0.20,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(2.0), // quantity
             2.0,       // premium_short_call
             2.0,       // premium_short_put
@@ -1785,6 +1791,7 @@ mod tests_iron_condor_delta {
     use crate::strategies::iron_butterfly::IronButterfly;
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
         IronButterfly::new(
@@ -1794,9 +1801,9 @@ mod tests_iron_condor_delta {
             pos!(2800.0),     // long_call_strike
             pos!(2500.0),     // long_put_strike
             ExpirationDate::Days(30.0),
-            0.1548,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.1548),    // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // quantity
             38.8,      // premium_short_call
             30.4,      // premium_short_put
@@ -1909,6 +1916,7 @@ mod tests_iron_condor_delta_size {
     use crate::strategies::iron_butterfly::IronButterfly;
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
         IronButterfly::new(
@@ -1918,9 +1926,9 @@ mod tests_iron_condor_delta_size {
             pos!(2800.0),     // long_call_strike
             pos!(2500.0),     // long_put_strike
             ExpirationDate::Days(30.0),
-            0.1548,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.1548),    // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(2.0), // quantity
             38.8,      // premium_short_call
             30.4,      // premium_short_put
