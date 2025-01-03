@@ -1,5 +1,5 @@
 use chrono::Utc;
-use optionstratlib::pos;
+use optionstratlib::{pos, Positive};
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
@@ -16,9 +16,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = pos!(2340.0);
     let underlying_symbol = "GAS".to_string();
     let expiration = ExpirationDate::Days(6.0);
-    let implied_volatility = 0.73;
-    let risk_free_rate = 0.05;
-    let dividend_yield = 0.0;
+    let implied_volatility = pos!(0.73);
+    let risk_free_rate = dec!(0.05);
+    let dividend_yield = Positive::ZERO;
 
     // Short Call 1
     let short_strike_1_strike = pos!(2100.0);

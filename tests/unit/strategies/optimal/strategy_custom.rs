@@ -2,7 +2,7 @@ use approx::assert_relative_eq;
 use chrono::Utc;
 use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::pos;
+use optionstratlib::{pos, Positive};
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::base::{Optimizable, Strategies};
@@ -11,6 +11,7 @@ use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::Options;
 use std::error::Error;
+use rust_decimal_macros::dec;
 use tracing::info;
 
 #[test]
@@ -22,9 +23,9 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     let underlying_price = pos!(2340.0);
     let underlying_symbol = "GAS".to_string();
     let expiration = ExpirationDate::Days(6.0);
-    let implied_volatility = 0.73;
-    let risk_free_rate = 0.05;
-    let dividend_yield = 0.0;
+    let implied_volatility = pos!(0.73);
+    let risk_free_rate = dec!(0.05);
+    let dividend_yield = Positive::ZERO;
 
     // Create positions
     let positions = vec![
