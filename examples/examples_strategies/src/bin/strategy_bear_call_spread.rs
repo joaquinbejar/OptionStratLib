@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.18),     // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(2.0),      // long quantity
+        pos!(1.0),      // long quantity
         85.04,          // premium_long
         29.85,          // premium_short
         0.78,           // open_fee_long
