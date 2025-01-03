@@ -16,19 +16,24 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let strategy = LongButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        pos!(5710.0),     // long_strike_itm
-        pos!(5820.0),     // short_strike
-        pos!(6100.0),     // long_strike_otm
+        underlying_price,
+        pos!(5710.0),
+        pos!(5820.0),
+        pos!(6100.0),
         ExpirationDate::Days(2.0),
-        pos!(0.18),     // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // long quantity
-        49.65,          // premium_long
-        42.93,          // premium_short
-        1.0,            // open_fee_long
-        4.0,            // open_fee_long
+        pos!(0.18),
+        dec!(0.05),
+        Positive::ZERO,
+        pos!(1.0),
+        49.65,
+        42.93,
+        1.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
     );
 
     info!("Title: {}", strategy.title());

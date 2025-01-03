@@ -20,19 +20,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
     let mut strategy = LongButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        Positive::ZERO,   // long_strike_itm
-        Positive::ZERO,   // middle_strike
-        Positive::ZERO,   // long_strike_otm
+        underlying_price,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
         ExpirationDate::Days(5.0),
-        Positive::ZERO, // implied_volatility
-        Decimal::ZERO,  // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
-        ZERO,           // premium_short_call
-        ZERO,           // premium_short_put
-        ZERO,           // open_fee_short_call
-        4.0,            // close_fee_short_call
+        Positive::ZERO,
+        Decimal::ZERO,
+        Positive::ZERO,
+        pos!(1.0),
+        ZERO,
+        ZERO,
+        ZERO,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
     );
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);
