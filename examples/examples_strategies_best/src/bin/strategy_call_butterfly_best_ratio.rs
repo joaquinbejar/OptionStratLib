@@ -15,6 +15,7 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use std::error::Error;
 use tracing::{debug, info};
+use rust_decimal_macros::dec;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -28,9 +29,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,   // long_strike_otm
         Positive::ZERO,   // short_strike
         ExpirationDate::Days(2.0),
-        ZERO,   // implied_volatility
+        Positive::ZERO,   // implied_volatility
         dec!(0.05),   // risk_free_rate
-        ZERO,   // dividend_yield
+        Positive::ZERO,   // dividend_yield
         pos!(2.0),   // long quantity
         ZERO,   // short_quantity
         ZERO,   // premium_long_itm

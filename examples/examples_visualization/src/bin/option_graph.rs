@@ -12,6 +12,7 @@ use optionstratlib::Options;
 use optionstratlib::Positive;
 use std::error::Error;
 use tracing::info;
+use rust_decimal_macros::dec;
 
 fn create_sample_option() -> Options {
     Options::new(
@@ -20,12 +21,12 @@ fn create_sample_option() -> Options {
         "AAPL".to_string(),
         pos!(100.0),
         ExpirationDate::Days(30.0),
-        0.2,
+        pos!(0.2),
         pos!(1.0),
         pos!(105.0),
-        0.05,
+        dec!(0.05),
         OptionStyle::Call,
-        0.0,
+        Positive::ZERO,
         None,
     )
 }

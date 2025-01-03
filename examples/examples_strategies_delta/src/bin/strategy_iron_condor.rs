@@ -7,6 +7,7 @@ use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use std::error::Error;
+use rust_decimal::Decimal;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -21,7 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(2500.0),   // long_put_strike
         ExpirationDate::Days(30.0),
         pos!(0.1548),   // implied_volatility
-        0.0,   // risk_free_rate
+        Decimal::ZERO,   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(2.0),   // quantity
         38.8,   // premium_short_call

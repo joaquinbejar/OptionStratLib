@@ -11,6 +11,7 @@ use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::{pos, Positive};
 use std::error::Error;
+use rust_decimal_macros::dec;
 use tracing::{debug, info};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -27,8 +28,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(1),   // qty_calls_short
         ExpirationDate::Days(30.0),
         pos!(1.0),
-        0.05,
-        0.02,
+        dec!(0.05),
+        pos!(0.02),
         1.0,
         1.0,
         1.0,

@@ -3,10 +3,10 @@
    Email: jb@taunais.com
    Date: 27/10/24
 ******************************************************************************/
-
+use rust_decimal_macros::dec;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::OptionChainBuildParams;
-use optionstratlib::pos;
+use optionstratlib::{pos, spos};
 use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
@@ -22,8 +22,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mean = 0.02;
     let std_dev = pos!(1.0);
     let std_dev_change = pos!(0.1);
-    let risk_free_rate = Some(0.05);
-    let dividend_yield = Some(0.02);
+    let risk_free_rate = Some(dec!(0.05));
+    let dividend_yield = spos!(0.02);
     let volatility_window = 20;
     let initial_volatility = Some(std_dev);
 

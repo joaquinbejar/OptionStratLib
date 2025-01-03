@@ -11,6 +11,7 @@ use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use std::error::Error;
+use rust_decimal_macros::dec;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -21,9 +22,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(2460.0),
         pos!(2515.0),
         ExpirationDate::Days(30.0),
-        0.2,
-        0.05,
-        0.0,
+        pos!(0.2),
+        dec!(0.05),
+        Positive::ZERO,
         pos!(1.0),
         27.26,
         5.33,
