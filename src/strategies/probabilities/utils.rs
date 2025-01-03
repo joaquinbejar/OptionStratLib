@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use num_traits::ToPrimitive;
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
@@ -107,9 +108,9 @@ pub fn calculate_single_point_probability(
                     },
                 ));
             }
-            risk_free + (t.drift_rate * t.confidence)
+            risk_free.to_f64().unwrap() + (t.drift_rate * t.confidence)
         }
-        None => risk_free,
+        None => risk_free.to_f64().unwrap(),
     };
 
     // Calculate parameters for the log-normal distribution
