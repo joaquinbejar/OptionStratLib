@@ -3,7 +3,7 @@ use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use crate::Positive;
 use chrono::{DateTime, Duration, Utc};
 
-#[allow(dead_code)]
+
 #[derive(Clone, PartialEq)]
 pub enum ExpirationDate {
     Days(f64),
