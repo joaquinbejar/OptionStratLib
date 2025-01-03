@@ -243,7 +243,7 @@ impl Position {
             Side::Short => self.premium * self.option.quantity - self.total_cost(),
         }
     }
-    
+
     pub(crate) fn max_loss(&self) -> f64 {
         match self.option.side {
             Side::Long => self.total_cost().into(),
