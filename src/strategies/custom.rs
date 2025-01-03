@@ -511,14 +511,15 @@ mod tests_custom_strategy {
     use crate::Options;
     use approx::assert_relative_eq;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> CustomStrategy {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Short Call
         let short_strike = pos!(5800.0);
@@ -590,9 +591,9 @@ mod tests_custom_strategy {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Long Call ITM
         let long_strike_itm = pos!(5750.0);
@@ -639,9 +640,9 @@ mod tests_custom_strategy {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Long Call ITM
         let long_strike_itm = pos!(5750.0);
@@ -741,14 +742,15 @@ mod tests_max_profit {
     use crate::utils::logger::setup_logger;
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> CustomStrategy {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Short Call
         let short_strike = pos!(5800.0);
@@ -805,9 +807,9 @@ mod tests_max_profit {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Long Call ITM
         let long_strike_itm = pos!(5750.0);
@@ -878,14 +880,15 @@ mod tests_max_loss {
     use crate::utils::logger::setup_logger;
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> CustomStrategy {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Short Call
         let short_strike = pos!(5800.0);
@@ -942,9 +945,9 @@ mod tests_max_loss {
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Long Call ITM
         let long_strike_itm = pos!(5750.0);
@@ -1014,6 +1017,7 @@ mod tests_total_cost {
     use crate::utils::setup_logger;
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_position(side: Side, premium: f64, fees: f64) -> Position {
         Position::new(
@@ -1023,12 +1027,12 @@ mod tests_total_cost {
                 "TEST".to_string(),
                 pos!(100.0),
                 ExpirationDate::Days(30.0),
-                0.2,
+                pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
-                0.01,
+                dec!(0.01),
                 OptionStyle::Call,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             premium,
@@ -1137,6 +1141,7 @@ mod tests_best_range_to_show {
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_position(strike: Positive, side: Side) -> Position {
         Position::new(
@@ -1146,12 +1151,12 @@ mod tests_best_range_to_show {
                 "SP500".to_string(),
                 strike,
                 ExpirationDate::Days(60.0),
-                0.18,
+                pos!(0.18),
                 pos!(2.0),
                 pos!(5780.0),
-                0.05,
+                dec!(0.05),
                 OptionStyle::Call,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             53.04,
@@ -1292,12 +1297,12 @@ mod tests_greeks {
                 "TEST".to_string(),
                 strike,
                 ExpirationDate::Days(30.0),
-                0.2,         // volatility
+                pos!(0.2),         // volatility
                 pos!(1.0),   // quantity
                 pos!(100.0), // underlying_price
-                0.05,        // risk_free_rate
+                dec!(0.05),        // risk_free_rate
                 option_style,
-                0.02, // dividend_yield
+                pos!(0.02), // dividend_yield
                 None,
             ),
             10.0, // premium
