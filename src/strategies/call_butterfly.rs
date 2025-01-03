@@ -183,9 +183,9 @@ impl Default for CallButterfly {
             Positive::ZERO,
             Positive::ZERO,
             ExpirationDate::Days(0.0),
-            ZERO,
-            ZERO,
-            ZERO,
+            Positive::ZERO,
+            Decimal::ZERO,
+            Positive::ZERO,
             pos!(1.0),
             ZERO,
             ZERO,
@@ -435,7 +435,7 @@ impl Optimizable for CallButterfly {
             short_call_low.strike_price,
             short_call_high.strike_price,
             self.long_call.option.expiration_date.clone(),
-            long_call.implied_volatility.unwrap().to_f64(),
+            long_call.implied_volatility.unwrap(),
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
@@ -644,6 +644,7 @@ mod tests_call_butterfly {
     use crate::constants::ZERO;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn setup() -> CallButterfly {
         CallButterfly::new(
@@ -653,9 +654,9 @@ mod tests_call_butterfly {
             pos!(160.0),
             pos!(157.5),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             pos!(1.0),
             45.0,
             30.0,
@@ -746,6 +747,7 @@ mod tests_call_butterfly {
 
 #[cfg(test)]
 mod tests_call_butterfly_validation {
+    use rust_decimal_macros::dec;
     use super::*;
 
     fn setup_basic_strategy() -> CallButterfly {
@@ -756,9 +758,9 @@ mod tests_call_butterfly_validation {
             pos!(150.0),
             pos!(155.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             pos!(1.0),
             7.0,
             5.0,
@@ -797,6 +799,7 @@ mod tests_call_butterfly_validation {
 mod tests_call_butterfly_pnl {
     use super::*;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -806,9 +809,9 @@ mod tests_call_butterfly_pnl {
             pos!(150.0),
             pos!(155.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             pos!(1.0),
             7.0,
             5.0,
@@ -849,6 +852,7 @@ mod tests_call_butterfly_graph {
     use super::*;
     use crate::model::types::ExpirationDate;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -858,9 +862,9 @@ mod tests_call_butterfly_graph {
             pos!(155.0),
             pos!(150.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             pos!(1.0),
             7.0,
             5.0,
@@ -987,6 +991,7 @@ mod tests_iron_condor_delta {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
@@ -996,9 +1001,9 @@ mod tests_iron_condor_delta {
             pos!(5850.0),     // long_strike_otm
             pos!(5800.0),     // short_strike
             ExpirationDate::Days(2.0),
-            0.18,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.18),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // long quantity
             95.8,      // short_quantity
             85.04,     // premium_long_itm
@@ -1106,6 +1111,7 @@ mod tests_iron_condor_delta_size {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
@@ -1115,9 +1121,9 @@ mod tests_iron_condor_delta_size {
             pos!(5850.0),     // long_strike_otm
             pos!(5800.0),     // short_strike
             ExpirationDate::Days(2.0),
-            0.18,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
+            pos!(0.18),      // implied_volatility
+            dec!(0.05),      // risk_free_rate
+            Positive::ZERO,       // dividend_yield
             pos!(1.0), // long quantity
             97.8,      // short_quantity
             85.04,     // premium_long_itm
@@ -1221,6 +1227,7 @@ mod tests_iron_condor_delta_size {
 mod tests_call_butterfly_optimizable {
     use super::*;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
@@ -1233,7 +1240,7 @@ mod tests_call_butterfly_optimizable {
             spos!(1.0),   // put_bid
             spos!(1.2),   // put_ask
             spos!(0.2),   // iv
-            Some(0.4),    // delta
+            Some(dec!(0.4)),    // delta
             spos!(100.0), // volume
             Some(50),     // open interest
         );
@@ -1245,7 +1252,7 @@ mod tests_call_butterfly_optimizable {
             spos!(3.0),
             spos!(3.2),
             spos!(0.2),
-            Some(0.5),
+            Some(dec!(0.5)),
             spos!(200.0),
             Some(100),
         );
@@ -1257,7 +1264,7 @@ mod tests_call_butterfly_optimizable {
             spos!(6.0),
             spos!(6.2),
             spos!(0.2),
-            Some(0.6),
+            Some(dec!(0.6)),
             spos!(100.0),
             Some(50),
         );
@@ -1273,9 +1280,9 @@ mod tests_call_butterfly_optimizable {
             pos!(100.0),
             pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
             pos!(1.0),
             6.2, // long call ask
             3.0, // short call bid low
