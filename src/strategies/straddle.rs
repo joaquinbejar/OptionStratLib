@@ -156,10 +156,10 @@ impl ShortStraddle {
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
         strategy.break_even_points.push(
-            strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+            (strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2)
         );
         strategy.break_even_points.push(
-            strike + strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+            (strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2)
         );
 
         strategy.break_even_points.sort();
@@ -214,14 +214,6 @@ impl Strategies for ShortStraddle {
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         let result = self.short_call.net_premium_received() + self.short_put.net_premium_received();
-        Ok(Decimal::from_f64(result).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call.open_fee
-            + self.short_call.close_fee
-            + self.short_put.open_fee
-            + self.short_put.close_fee;
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -705,11 +697,17 @@ impl LongStraddle {
 
         strategy
             .break_even_points
-            .push(strike - strategy.total_cost() / net_quantity);
+            .push(
+                (strike - strategy.total_cost() / net_quantity)
+                    .round_to(2)
+            );
 
         strategy
             .break_even_points
-            .push(strike + strategy.total_cost() / net_quantity);
+            .push(
+                (strike + strategy.total_cost() / net_quantity)
+                    .round_to(2)
+                );
 
         strategy.break_even_points.sort();
         strategy
@@ -754,15 +752,6 @@ impl Strategies for LongStraddle {
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         Ok(Decimal::ZERO) // Long Straddle doesn't receive premium
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.long_call.open_fee
-            + self.long_call.close_fee
-            + self.long_put.open_fee
-            + self.long_put.close_fee;
-
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -1275,7 +1264,7 @@ mod tests_short_straddle {
     #[test]
     fn test_fees() {
         let strategy = setup();
-        let expected_fees = 0.4;
+        let expected_fees = 40.0;
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
@@ -1580,7 +1569,7 @@ mod tests_long_straddle {
     #[test]
     fn test_fees() {
         let strategy = setup_long_straddle();
-        let expected_fees = 2.0; // 0.5 * 4 fees
+        let expected_fees = 20.0; // 0.5 * 4 fees * 10 qty
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
