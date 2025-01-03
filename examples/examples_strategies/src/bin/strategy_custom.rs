@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Short Call 1
     let short_strike_1_strike = pos!(2100.0);
-    let short_strike_1_quantity = pos!(2.0);
+    let short_strike_1_quantity = pos!(3.0);
     let short_strike_1_premium = 192.0;
     let short_strike_1_open_fee = 7.51;
     let short_strike_1_close_fee = 7.51;
@@ -104,7 +104,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         short_put_close_fee,
     );
 
-    let extra_strike = pos!(2150.0);
+    let extra_strike = pos!(2160.0);
     let extra_quantity = pos!(2.5);
     let extra_premium = 21.0;
     let extra_open_fee = 4.91;
@@ -140,10 +140,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         underlying_price,
         positions,
         pos!(0.01),
-        100,
-        pos!(0.1),
+        200,
+        pos!(0.01),
     );
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    info!("Range: {} {}", price_range.first().unwrap(), price_range.last().unwrap());
 
     info!("Title: {}", strategy.title());
     info!(

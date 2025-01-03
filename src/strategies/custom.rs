@@ -83,73 +83,105 @@ impl CustomStrategy {
         self.calculate_break_even_points();
     }
 
+    /// Find break-even points by analyzing profit curve inflection points
+    /// Uses a combination of numerical methods to find zeros in the profit function
     fn calculate_break_even_points(&mut self) {
         self.break_even_points = Vec::new();
-        let step = self.step_by;
 
-        let mut current_price = Positive::ZERO;
-        let (_, max_search_price) = self.range_to_show().unwrap();
-        let mut last_profit = self.calculate_profit_at(current_price);
+        // Get the visible range for our search
+        let (min_price, max_price) = self.range_to_show().unwrap();
 
-        while current_price < max_search_price {
-            let current_profit = self.calculate_profit_at(current_price);
-            if last_profit.signum() != current_profit.signum() {
-                let mut low = current_price - step;
-                let mut high = current_price;
-                let mut iterations = 0;
+        // Create a finer grid for initial sampling
+        let num_samples = 1000; // Increased for better precision
+        let fine_step = (max_price - min_price) / num_samples as f64;
 
-                'inner: while (high - low).to_f64().abs() > self.epsilon
-                    && iterations < self.max_iterations
-                {
-                    let mid = (low + high) / 2.0;
-                    let mid_profit = self.calculate_profit_at(mid);
+        // Sample profits at regular intervals to create a profit curve
+        let mut price_profit_pairs: Vec<(Positive, f64)> = Vec::new();
+        let mut current_price = min_price;
 
-                    if mid_profit.abs() < self.epsilon {
-                        debug!(
-                            "Break-even point found at price: {} value {}",
-                            mid, mid_profit
-                        );
-                        if !self.break_even_points.contains(&mid) {
-                            self.break_even_points.push(mid);
-                        }
-                        break 'inner;
-                    } else if mid_profit.signum() == last_profit.signum() {
-                        low = mid;
-                    } else {
-                        high = mid;
+        while current_price <= max_price {
+            let profit = self.calculate_profit_at(current_price);
+            price_profit_pairs.push((current_price, profit));
+            current_price += fine_step;
+        }
+
+
+        // Analyze consecutive pairs for potential break-even points
+        for window in price_profit_pairs.windows(2) {
+            if let [(price1, profit1), (price2, profit2)] = window {
+                // Check if profits have different signs
+                if (profit1.signum() != profit2.signum()) ||
+                    profit1.abs() < self.epsilon ||
+                    profit2.abs() < self.epsilon {
+
+                    // Handle cases where profit is very close to zero
+                    if profit1.abs() < self.epsilon {
+                        self.add_unique_break_even(*price1);
+                        continue;
+                    }
+                    if profit2.abs() < self.epsilon {
+                        self.add_unique_break_even(*price2);
+                        continue;
                     }
 
-                    iterations += 1;
-                }
+                    // Linear interpolation for better initial guess
+                    let t = -profit1 / (profit2 - profit1);
+                    let initial_guess = *price1 + (*price2 - *price1) * t;
 
-                if iterations == self.max_iterations {
-                    debug!(
-                        "Max iterations reached at price: {} value {}",
-                        current_price, current_profit
-                    );
-                    let mid_point = (low + high) / 2.0;
-                    if !self.break_even_points.contains(&mid_point) {
-                        self.break_even_points.push(mid_point);
+                    // Refine using Newton-Raphson method
+                    if let Some(refined_point) = self.refine_break_even_point(initial_guess) {
+                        self.add_unique_break_even(refined_point);
                     }
                 }
             }
-
-            last_profit = current_profit;
-            current_price += step;
         }
 
-        if self.break_even_points.is_empty() {
-            debug!("No break-even points found");
-        } else {
-            debug!(
-                "Break Even Points found: {}",
-                self.break_even_points
-                    .iter()
-                    .map(|p| format!("{:.2}", p))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            );
+        // Sort break-even points for consistency
+        self.break_even_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    }
+
+    /// Refine a break-even point guess using Newton-Raphson method
+    fn refine_break_even_point(&self, initial_guess: Positive) -> Option<Positive> {
+        let mut x = initial_guess;
+        let mut iterations = 0;
+
+        while iterations < self.max_iterations {
+            let f_x = self.calculate_profit_at(x);
+
+            // Check if we're close enough to zero
+            if f_x.abs() < self.epsilon {
+                return Some(x);
+            }
+
+            // Calculate derivative numerically with smaller step
+            let h = self.epsilon.sqrt();
+            let derivative = (self.calculate_profit_at(x + h) - f_x) / h;
+
+            // Avoid division by very small numbers
+            if derivative.abs() < self.epsilon {
+                break;
+            }
+
+            // Newton-Raphson step
+            let next_x = x - f_x / derivative;
+
+            // Check for convergence with absolute difference
+            if (next_x.to_f64() - x.to_f64()).abs() < self.epsilon {
+                return Some(next_x);
+            }
+
+            x = next_x;
+            iterations += 1;
         }
+
+        None
+    }
+
+    /// Add a break-even point if it's not already in the list
+    fn add_unique_break_even(&mut self, point: Positive) {
+        if !self.break_even_points.iter().any(|p| (p.to_f64() - point.to_f64()).abs() < self.epsilon) {
+            self.break_even_points.push(point);
+        } 
     }
 }
 
@@ -245,15 +277,6 @@ impl Strategies for CustomStrategy {
             .positions
             .iter()
             .map(|position| position.net_premium_received())
-            .sum::<f64>();
-        Ok(Decimal::from_f64(restult).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let restult = self
-            .positions
-            .iter()
-            .map(|position| position.open_fee + position.close_fee)
             .sum::<f64>();
         Ok(Decimal::from_f64(restult).unwrap())
     }
