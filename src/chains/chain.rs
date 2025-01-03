@@ -19,6 +19,7 @@ use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
+#[cfg(not(target_arch = "wasm32"))]
 use csv::WriterBuilder;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -500,6 +501,7 @@ impl OptionChain {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_csv(&self, file_path: &str) -> Result<(), Box<dyn Error>> {
         let full_path = format!("{}/{}.csv", file_path, self.get_title());
         let mut wtr = WriterBuilder::new().from_path(full_path)?;
@@ -532,6 +534,7 @@ impl OptionChain {
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_json(&self, file_path: &str) -> Result<(), Box<dyn Error>> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
         let file = File::create(full_path)?;
@@ -539,6 +542,7 @@ impl OptionChain {
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_from_csv(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let mut rdr = csv::Reader::from_path(file_path)?;
         let mut options = BTreeSet::new();
@@ -572,6 +576,7 @@ impl OptionChain {
         Ok(option_chain)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_from_json(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
@@ -1498,7 +1503,6 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_save_to_csv() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -1526,7 +1530,6 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_save_to_json() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -1555,7 +1558,6 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_load_from_csv() {
         setup_logger();
         let mut chain = OptionChain::new(
@@ -1592,7 +1594,6 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_load_from_json() {
         let mut chain =
             OptionChain::new("SP500", pos!(5781.9), "18-oct-2024".to_string(), None, None);

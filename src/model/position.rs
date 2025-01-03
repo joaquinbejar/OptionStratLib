@@ -932,56 +932,7 @@ mod tests_valid_position {
     }
 
     #[test]
-<<<<<<< HEAD
-||||||| parent of 52f60a6 (update tests to run in wasm)
-    fn test_negative_premium() {
-        let mut position = create_valid_position();
-        position.premium = -1.0;
-        assert!(!position.validate());
-    }
-
-    #[test]
-    fn test_negative_open_fee() {
-        let mut position = create_valid_position();
-        position.open_fee = -0.1;
-        assert!(!position.validate());
-    }
-
-    #[test]
-    fn test_negative_close_fee() {
-        let mut position = create_valid_position();
-        position.close_fee = -0.1;
-        assert!(!position.validate());
-    }
-
-    #[test]
-=======
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
-    fn test_negative_premium() {
-        let mut position = create_valid_position();
-        position.premium = -1.0;
-        assert!(!position.validate());
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
-    fn test_negative_open_fee() {
-        let mut position = create_valid_position();
-        position.open_fee = -0.1;
-        assert!(!position.validate());
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
-    fn test_negative_close_fee() {
-        let mut position = create_valid_position();
-        position.close_fee = -0.1;
-        assert!(!position.validate());
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
->>>>>>> 52f60a6 (update tests to run in wasm)
     fn test_invalid_option() {
         let mut position = create_valid_position();
         position.option.strike_price = Positive::ZERO; // This makes the option invalid
@@ -1342,14 +1293,8 @@ mod tests_position_max_loss_profit {
 #[cfg(test)]
 mod tests_update_from_option_data {
     use super::*;
-<<<<<<< HEAD
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
-||||||| parent of 52f60a6 (update tests to run in wasm)
-    use crate::{f2p, spos};
-=======
-    use crate::spos;
->>>>>>> 52f60a6 (update tests to run in wasm)
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
@@ -1423,12 +1368,7 @@ mod tests_update_from_option_data {
 #[cfg(test)]
 mod tests_premium {
     use super::*;
-<<<<<<< HEAD
     use crate::pos;
-||||||| parent of 52f60a6 (update tests to run in wasm)
-    use crate::f2p;
-=======
->>>>>>> 52f60a6 (update tests to run in wasm)
 
     fn setup_basic_position(side: Side) -> Position {
         let option = Options {

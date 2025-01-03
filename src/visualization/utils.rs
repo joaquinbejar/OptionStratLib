@@ -6,10 +6,22 @@
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+<<<<<<< HEAD
 use crate::{create_drawing_area, Positive};
 use num_traits::ToPrimitive;
 #[cfg(not(feature = "wasm"))]
+||||||| parent of c916997 (remove wasm feature and use target_arch)
+use crate::{f2p, Positive};
+#[cfg(not(feature = "wasm"))]
+=======
+use crate::{f2p, Positive};
+
+#[cfg(not(target_arch = "wasm32"))]
+>>>>>>> c916997 (remove wasm feature and use target_arch)
 use plotters::backend::BitMapBackend;
+#[cfg(target_arch = "wasm32")]
+use plotters_canvas::CanvasBackend;
+
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
 use plotters::prelude::BLACK;
@@ -17,12 +29,11 @@ use plotters::prelude::{
     Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
     Ranged, WHITE,
 };
-#[cfg(feature = "wasm")]
-use plotters_canvas::CanvasBackend;
+
 use std::error::Error;
 use std::ops::Add;
 
-#[cfg(not(feature = "wasm"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub enum GraphBackend<'a> {
     Bitmap {
         file_path: &'a str,
@@ -30,7 +41,7 @@ pub enum GraphBackend<'a> {
     },
 }
 
-#[cfg(feature = "wasm")]
+#[cfg(target_arch = "wasm32")]
 pub enum GraphBackend {
     Canvas {
         canvas: web_sys::HtmlCanvasElement,
@@ -120,13 +131,13 @@ pub trait Graph: Profit {
 
         // Setup the drawing area
         let root = match backend {
-            #[cfg(not(feature = "wasm"))]
+            #[cfg(not(target_arch = "wasm32"))]
             GraphBackend::Bitmap { file_path, size } => {
                 let root = BitMapBackend::new(file_path, size).into_drawing_area();
                 root.fill(&WHITE)?;
                 root
             }
-            #[cfg(feature = "wasm")]
+            #[cfg(target_arch = "wasm32")]
             GraphBackend::Canvas { canvas } => {
                 let root = CanvasBackend::with_canvas_object(canvas)
                     .unwrap()
@@ -376,9 +387,17 @@ mod tests_calculate_axis_range {
 #[cfg(test)]
 mod tests {
     use super::*;
+<<<<<<< HEAD
     use crate::pos;
     #[cfg(feature = "wasm")]
     use wasm_bindgen_test::*;
+||||||| parent of c916997 (remove wasm feature and use target_arch)
+    use crate::f2p;
+    #[cfg(feature = "wasm")]
+    use wasm_bindgen_test::*;
+=======
+    use crate::f2p;
+>>>>>>> c916997 (remove wasm feature and use target_arch)
     use crate::visualization::model::LabelOffsetType;
     use crate::Positive;
     use plotters::style::RGBColor;
@@ -432,7 +451,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
-    #[cfg(not(feature = "wasm"))]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
@@ -448,8 +467,8 @@ mod tests {
         Ok(())
     }
 
-    #[cfg_attr(not(feature = "wasm"), test)]
-    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_get_values() {
         let mock_graph = MockGraph;
         let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
@@ -457,8 +476,8 @@ mod tests {
         assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }
 
-    #[cfg_attr(not(feature = "wasm"), test)]
-    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -475,8 +494,8 @@ mod tests {
         graph.get_vertical_lines();
     }
 
-    #[cfg_attr(not(feature = "wasm"), test)]
-    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -493,20 +512,20 @@ mod tests {
         graph.get_points();
     }
 
-    #[cfg_attr(not(feature = "wasm"), test)]
-    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_draw_points_on_chart() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
-    #[cfg_attr(not(feature = "wasm"), test)]
-    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_draw_vertical_lines_on_chart() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
-    #[cfg_attr(not(feature = "wasm"), test)]
-    #[cfg_attr(feature = "wasm", wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_calculate_axis_range_empty() {
         let x_data: Vec<Positive> = vec![];
         let y_data: Vec<f64> = vec![];
