@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use rust_decimal::Decimal;
 use crate::error::probability::{PriceErrorKind, ProbabilityError};
 use crate::model::types::ExpirationDate;
 use crate::strategies::probabilities::utils::{
@@ -63,7 +64,7 @@ impl ProfitLossRange {
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
         expiration_date: ExpirationDate,
-        risk_free_rate: Option<f64>,
+        risk_free_rate: Option<Decimal>,
     ) -> Result<(), ProbabilityError> {
         if self.lower_bound.unwrap_or(Positive::ZERO)
             > self.upper_bound.unwrap_or(Positive::INFINITY)
@@ -178,6 +179,7 @@ mod tests_profit_range {
 
 #[cfg(test)]
 mod tests_calculate_probability {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::f2p;
 
@@ -193,7 +195,7 @@ mod tests_calculate_probability {
             None,
             None,
             ExpirationDate::Days(30.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
@@ -220,7 +222,7 @@ mod tests_calculate_probability {
             vol_adj,
             None,
             ExpirationDate::Days(30.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
@@ -240,7 +242,7 @@ mod tests_calculate_probability {
             None,
             trend,
             ExpirationDate::Days(30.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
@@ -260,7 +262,7 @@ mod tests_calculate_probability {
             None,
             trend,
             ExpirationDate::Days(30.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
@@ -276,7 +278,7 @@ mod tests_calculate_probability {
             None,
             None,
             ExpirationDate::Days(30.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
@@ -292,7 +294,7 @@ mod tests_calculate_probability {
             None,
             None,
             ExpirationDate::Days(30.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
@@ -316,7 +318,7 @@ mod tests_calculate_probability {
             vol_adj,
             trend,
             ExpirationDate::Days(30.0),
-            Some(0.05),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
@@ -336,7 +338,7 @@ mod tests_calculate_probability {
 
         for expiration in expirations {
             let result =
-                range.calculate_probability(f2p!(100.0), None, None, expiration, Some(0.05));
+                range.calculate_probability(f2p!(100.0), None, None, expiration, Some(dec!(0.05)));
 
             assert!(result.is_ok());
             assert!(range.probability > Positive::ZERO);
@@ -356,7 +358,7 @@ mod tests_calculate_probability {
                 None,
                 None,
                 ExpirationDate::Days(30.0),
-                Some(0.05),
+                Some(dec!(0.05)),
             );
 
             assert!(result.is_ok());
