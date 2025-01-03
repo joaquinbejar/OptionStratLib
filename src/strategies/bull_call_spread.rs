@@ -218,14 +218,6 @@ impl Strategies for BullCallSpread {
         Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.long_call.open_fee
-            + self.long_call.close_fee
-            + self.short_call.open_fee
-            + self.short_call.close_fee;
-        Ok(Decimal::from_f64(result).unwrap())
-    }
-
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
         let base = self.short_call.option.strike_price - self.break_even_points[0];
