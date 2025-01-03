@@ -287,7 +287,7 @@ pub fn telegraph(
 mod tests_telegraph_process_basis {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{f2p, pos, Positive};
+    use crate::{pos, Positive};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -338,8 +338,8 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -361,8 +361,8 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -384,8 +384,8 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -407,7 +407,7 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
-    use crate::{f2p, pos};
+    use crate::pos;
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::Positive;
     use rust_decimal_macros::dec;
@@ -417,8 +417,8 @@ mod tests_telegraph_process_extended {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,

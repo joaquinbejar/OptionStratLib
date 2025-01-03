@@ -1,7 +1,7 @@
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::strategies::LongStrangle;
@@ -14,18 +14,18 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the LongStrangle strategy
-    let underlying_price = f2p!(7138.5);
+    let underlying_price = pos!(7138.5);
 
     let mut strategy = LongStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        f2p!(7450.0),     // call_strike
-        f2p!(7050.0),     // put_strike
+        pos!(7450.0),     // call_strike
+        pos!(7050.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // quantity
+        pos!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.0,       // open_fee_short_call

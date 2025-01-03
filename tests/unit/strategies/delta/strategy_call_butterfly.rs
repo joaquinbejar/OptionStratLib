@@ -5,7 +5,7 @@ use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, f2p};
+use optionstratlib::{assert_decimal_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -14,19 +14,19 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the CallButterfly strategy
-    let underlying_price = f2p!(5781.88);
+    let underlying_price = pos!(5781.88);
 
     let strategy = CallButterfly::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        f2p!(5750.0),     // long_call_strike
-        f2p!(5800.0),     // short_call_low_strike
-        f2p!(5850.0),     // short_call_high_strike
+        pos!(5750.0),     // long_call_strike
+        pos!(5800.0),     // short_call_low_strike
+        pos!(5850.0),     // short_call_high_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // long quantity
+        pos!(1.0), // long quantity
         85.04,     // premium_long_itm
         53.04,     // premium_long_otm
         28.85,     // premium_short
@@ -69,8 +69,8 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: f2p!(0.13381901826077533),
-            strike: f2p!(5800.0),
+            quantity: pos!(0.13381901826077533),
+            strike: pos!(5800.0),
             option_type: OptionStyle::Call
         }
     );

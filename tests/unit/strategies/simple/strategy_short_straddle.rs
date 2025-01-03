@@ -5,7 +5,7 @@ use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, f2p};
+use optionstratlib::{assert_positivef64_relative_eq, pos};
 use std::error::Error;
 
 #[test]
@@ -13,17 +13,17 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the ShortStraddle strategy
-    let underlying_price = f2p!(7138.5);
+    let underlying_price = pos!(7138.5);
 
     let strategy = ShortStraddle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        f2p!(7140.0),     // put_strike
+        pos!(7140.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // quantity
+        pos!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.01,      // open_fee_short_call
@@ -41,11 +41,11 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(409.36), f2p!(0.0001));
+    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(409.36), pos!(0.0001));
     assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 28.04);
 
     // Test range calculations
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     assert!(!price_range.is_empty());
     let break_even_points = strategy.get_break_even_points().unwrap();
     let range = break_even_points[1] - break_even_points[0];

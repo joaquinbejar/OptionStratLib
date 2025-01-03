@@ -1,4 +1,4 @@
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::Strategies;
@@ -11,19 +11,19 @@ use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    let underlying_price = f2p!(5781.88);
+    let underlying_price = pos!(5781.88);
 
     let strategy = CallButterfly::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        f2p!(5750.0),     // long_strike_itm
-        f2p!(5850.0),     // long_strike_otm
-        f2p!(5800.0),     // short_strike
+        pos!(5750.0),     // long_strike_itm
+        pos!(5850.0),     // long_strike_otm
+        pos!(5800.0),     // short_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // long quantity
+        pos!(1.0), // long quantity
         97.8,      // short_quantity
         85.04,     // premium_long_itm
         31.65,     // premium_long_otm

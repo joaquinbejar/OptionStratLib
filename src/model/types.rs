@@ -359,14 +359,14 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
 #[cfg(test)]
 mod tests_payoff {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     #[test]
     fn test_european_call() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -378,8 +378,8 @@ mod tests_payoff {
     fn test_european_put() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -393,8 +393,8 @@ mod tests_payoff {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -410,8 +410,8 @@ mod tests_payoff {
             barrier_level: 120.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(130.0),
-            strike: f2p!(100.0),
+            spot: pos!(130.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -425,8 +425,8 @@ mod tests_payoff {
             binary_type: BinaryType::CashOrNothing,
         };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -440,8 +440,8 @@ mod tests_payoff {
             lookback_type: LookbackType::FixedStrike,
         };
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -453,8 +453,8 @@ mod tests_payoff {
     fn test_quanto_call() {
         let option = OptionType::Quanto { exchange_rate: 1.5 };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -466,8 +466,8 @@ mod tests_payoff {
     fn test_power_call() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
-            spot: f2p!(10.0),
-            strike: f2p!(90.0),
+            spot: pos!(10.0),
+            strike: pos!(90.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -616,13 +616,13 @@ mod tests_expiration_date {
 #[cfg(test)]
 mod tests_calculate_floating_strike_payoff {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     #[test]
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0), // Not used in floating strike
+            spot: pos!(100.0),
+            strike: pos!(0.0), // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -635,8 +635,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -649,8 +649,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -663,8 +663,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -677,8 +677,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -691,8 +691,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: pos!(0.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -706,7 +706,7 @@ mod tests_calculate_floating_strike_payoff {
 #[cfg(test)]
 mod tests_option_type {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     #[test]
     fn test_asian_geometric_call() {
@@ -714,8 +714,8 @@ mod tests_option_type {
             averaging_type: AsianAveragingType::Geometric,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -731,8 +731,8 @@ mod tests_option_type {
             averaging_type: AsianAveragingType::Geometric,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(95.0),
+            spot: pos!(100.0),
+            strike: pos!(95.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -750,8 +750,8 @@ mod tests_option_type {
             barrier_level: 90.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(95.0),
-            strike: f2p!(100.0),
+            spot: pos!(95.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -765,8 +765,8 @@ mod tests_option_type {
             binary_type: BinaryType::AssetOrNothing,
         };
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -781,8 +781,8 @@ mod tests_option_type {
             underlying_option: Box::new(inner_option),
         };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -794,8 +794,8 @@ mod tests_option_type {
     fn test_chooser_option() {
         let option = OptionType::Chooser { choice_date: 30.0 };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -807,8 +807,8 @@ mod tests_option_type {
     fn test_power_put() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
-            spot: f2p!(8.0),
-            strike: f2p!(100.0),
+            spot: pos!(8.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -819,7 +819,7 @@ mod tests_option_type {
 
 #[cfg(test)]
 mod tests_vec_collection {
-    use crate::f2p;
+    use crate::pos;
     use crate::model::positive::Positive;
 
     #[test]
@@ -831,51 +831,51 @@ mod tests_vec_collection {
 
     #[test]
     fn test_collect_single_value() {
-        let values = vec![f2p!(1.0)];
+        let values = vec![pos!(1.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
         assert_eq!(collected.len(), 1);
-        assert_eq!(collected[0], f2p!(1.0));
+        assert_eq!(collected[0], pos!(1.0));
     }
 
     #[test]
     fn test_collect_multiple_values() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
         assert_eq!(collected.len(), 3);
-        assert_eq!(collected[0], f2p!(1.0));
-        assert_eq!(collected[1], f2p!(2.0));
-        assert_eq!(collected[2], f2p!(3.0));
+        assert_eq!(collected[0], pos!(1.0));
+        assert_eq!(collected[1], pos!(2.0));
+        assert_eq!(collected[2], pos!(3.0));
     }
 
     #[test]
     fn test_collect_from_filter() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0), f2p!(4.0)];
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0)];
         let collected: Vec<Positive> = values.into_iter().filter(|x| x.to_f64() > 2.0).collect();
         assert_eq!(collected.len(), 2);
-        assert_eq!(collected[0], f2p!(3.0));
-        assert_eq!(collected[1], f2p!(4.0));
+        assert_eq!(collected[0], pos!(3.0));
+        assert_eq!(collected[1], pos!(4.0));
     }
 
     #[test]
     fn test_collect_from_map() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
-        let collected: Vec<Positive> = values.into_iter().map(|x| f2p!(x.to_f64() * 2.0)).collect();
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let collected: Vec<Positive> = values.into_iter().map(|x| pos!(x.to_f64() * 2.0)).collect();
         assert_eq!(collected.len(), 3);
-        assert_eq!(collected[0], f2p!(2.0));
-        assert_eq!(collected[1], f2p!(4.0));
-        assert_eq!(collected[2], f2p!(6.0));
+        assert_eq!(collected[0], pos!(2.0));
+        assert_eq!(collected[1], pos!(4.0));
+        assert_eq!(collected[2], pos!(6.0));
     }
 
     #[test]
     fn test_collect_from_chain() {
-        let values1 = vec![f2p!(1.0), f2p!(2.0)];
-        let values2 = vec![f2p!(3.0), f2p!(4.0)];
+        let values1 = vec![pos!(1.0), pos!(2.0)];
+        let values2 = vec![pos!(3.0), pos!(4.0)];
         let collected: Vec<Positive> = values1.into_iter().chain(values2).collect();
         assert_eq!(collected.len(), 4);
-        assert_eq!(collected[0], f2p!(1.0));
-        assert_eq!(collected[1], f2p!(2.0));
-        assert_eq!(collected[2], f2p!(3.0));
-        assert_eq!(collected[3], f2p!(4.0));
+        assert_eq!(collected[0], pos!(1.0));
+        assert_eq!(collected[1], pos!(2.0));
+        assert_eq!(collected[2], pos!(3.0));
+        assert_eq!(collected[3], pos!(4.0));
     }
 }
 
@@ -908,7 +908,7 @@ mod test_expiration_date {
 
 #[cfg(test)]
 mod test_asian_options {
-    use crate::f2p;
+    use crate::pos;
     use crate::model::types::AsianAveragingType;
     use crate::model::{OptionStyle, OptionType, Side};
     use crate::pricing::{Payoff, PayoffInfo};
@@ -919,8 +919,8 @@ mod test_asian_options {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: Some(vec![85.0, 90.0, 95.0]),
@@ -935,8 +935,8 @@ mod test_asian_options {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -948,7 +948,7 @@ mod test_asian_options {
 
 #[cfg(test)]
 mod test_barrier_options {
-    use crate::f2p;
+    use crate::pos;
     use crate::model::types::BarrierType;
     use crate::model::{OptionStyle, OptionType, Side};
     use crate::pricing::{Payoff, PayoffInfo};
@@ -960,8 +960,8 @@ mod test_barrier_options {
             barrier_level: 90.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -977,8 +977,8 @@ mod test_barrier_options {
             barrier_level: 110.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(120.0),
-            strike: f2p!(100.0),
+            spot: pos!(120.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -990,7 +990,7 @@ mod test_barrier_options {
 
 #[cfg(test)]
 mod test_cliquet_options {
-    use crate::f2p;
+    use crate::pos;
     use crate::model::{OptionStyle, OptionType, Side};
     use crate::pricing::{Payoff, PayoffInfo};
 
@@ -1000,8 +1000,8 @@ mod test_cliquet_options {
             reset_dates: vec![30.0, 60.0, 90.0],
         };
         let info = PayoffInfo {
-            spot: f2p!(120.0),
-            strike: f2p!(100.0),
+            spot: pos!(120.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1013,7 +1013,7 @@ mod test_cliquet_options {
 
 #[cfg(test)]
 mod test_rainbow_options {
-    use crate::f2p;
+    use crate::pos;
     use crate::model::{OptionStyle, OptionType, Side};
     use crate::pricing::{Payoff, PayoffInfo};
 
@@ -1021,8 +1021,8 @@ mod test_rainbow_options {
     fn test_rainbow_option_multiple_assets() {
         let option = OptionType::Rainbow { num_assets: 3 };
         let info = PayoffInfo {
-            spot: f2p!(120.0),
-            strike: f2p!(100.0),
+            spot: pos!(120.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1034,7 +1034,7 @@ mod test_rainbow_options {
 
 #[cfg(test)]
 mod test_exchange_options {
-    use crate::f2p;
+    use crate::pos;
     use crate::model::{OptionStyle, OptionType, Side};
     use crate::pricing::{Payoff, PayoffInfo};
 
@@ -1042,8 +1042,8 @@ mod test_exchange_options {
     fn test_exchange_option_positive_diff() {
         let option = OptionType::Exchange { second_asset: 90.0 };
         let info = PayoffInfo {
-            spot: f2p!(120.0),
-            strike: f2p!(100.0),
+            spot: pos!(120.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1058,8 +1058,8 @@ mod test_exchange_options {
             second_asset: 110.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,

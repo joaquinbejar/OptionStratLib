@@ -4,8 +4,7 @@
    Date: 21/8/24
 ******************************************************************************/
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use crate::{pos, Options};
-use crate::{f2p, Positive};
+use crate::{pos, Options, Positive};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use rust_decimal_macros::dec;
 
@@ -70,11 +69,11 @@ pub(crate) fn create_sample_option_simplest(option_style: OptionStyle, side: Sid
         OptionType::European,
         side,
         "AAPL".to_string(),
-        f2p!(100.0),
+        pos!(100.0),
         ExpirationDate::Days(30.0),
         pos!(0.2),
-        f2p!(1.0),
-        f2p!(100.0),
+        pos!(1.0),
+        pos!(100.0),
         dec!(0.05),
         option_style,
         pos!(0.01),
@@ -95,8 +94,8 @@ pub(crate) fn create_sample_option_simplest_strike(
         strike,
         ExpirationDate::Days(30.0),
         pos!(0.2),
-        f2p!(1.0),
-        f2p!(100.0),
+        pos!(1.0),
+        pos!(100.0),
         dec!(0.05),
         option_style,
         pos!(0.01),
@@ -142,11 +141,11 @@ pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
     let mean = vec.iter().sum::<Positive>() / vec.len() as f64;
     let variance = vec
         .iter()
-        .map(|x| f2p!((x.to_f64() - mean.to_f64()).powi(2)))
+        .map(|x| pos!((x.to_f64() - mean.to_f64()).powi(2)))
         .sum::<Positive>()
         / vec.len() as f64;
     let std = variance.to_f64().sqrt();
-    (mean, f2p!(std))
+    (mean, pos!(std))
 }
 
 #[cfg(test)]
@@ -185,20 +184,20 @@ mod tests_positive_f64_to_f64 {
 #[cfg(test)]
 mod tests_mean_and_std {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use approx::assert_relative_eq;
 
     #[test]
     fn test_basic_mean_and_std() {
         let values = vec![
-            f2p!(2.0),
-            f2p!(4.0),
-            f2p!(4.0),
-            f2p!(4.0),
-            f2p!(5.0),
-            f2p!(5.0),
-            f2p!(7.0),
-            f2p!(9.0),
+            pos!(2.0),
+            pos!(4.0),
+            pos!(4.0),
+            pos!(4.0),
+            pos!(5.0),
+            pos!(5.0),
+            pos!(7.0),
+            pos!(9.0),
         ];
         let (mean, std) = mean_and_std(values);
 
@@ -208,7 +207,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_identical_values() {
-        let values = vec![f2p!(5.0), f2p!(5.0), f2p!(5.0), f2p!(5.0)];
+        let values = vec![pos!(5.0), pos!(5.0), pos!(5.0), pos!(5.0)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 5.0, epsilon = 0.0001);
@@ -217,7 +216,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_single_value() {
-        let values = vec![f2p!(3.0)];
+        let values = vec![pos!(3.0)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 3.0, epsilon = 0.0001);
@@ -226,7 +225,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_small_numbers() {
-        let values = vec![f2p!(0.1), f2p!(0.2), f2p!(0.3)];
+        let values = vec![pos!(0.1), pos!(0.2), pos!(0.3)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 0.2, epsilon = 0.0001);
@@ -235,7 +234,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_large_numbers() {
-        let values = vec![f2p!(1000.0), f2p!(2000.0), f2p!(3000.0)];
+        let values = vec![pos!(1000.0), pos!(2000.0), pos!(3000.0)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 2000.0, epsilon = 0.0001);
@@ -244,7 +243,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_mixed_range() {
-        let values = vec![f2p!(0.5), f2p!(5.0), f2p!(50.0), f2p!(500.0)];
+        let values = vec![pos!(0.5), pos!(5.0), pos!(50.0), pos!(500.0)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 138.875, epsilon = 0.001);
@@ -260,7 +259,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_symmetric_distribution() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0), f2p!(4.0), f2p!(5.0)];
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 3.0, epsilon = 0.0001);
@@ -269,7 +268,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_result_is_positive() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let (mean, std) = mean_and_std(values);
 
         assert!(mean > Positive::ZERO);
@@ -278,7 +277,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_precision() {
-        let values = vec![f2p!(1.23456789), f2p!(2.34567890), f2p!(3.45678901)];
+        let values = vec![pos!(1.23456789), pos!(2.34567890), pos!(3.45678901)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 2.34567860, epsilon = 0.00000001);
@@ -287,7 +286,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_precision_bis() {
-        let values = vec![f2p!(0.123456789), f2p!(0.134567890), f2p!(0.145678901)];
+        let values = vec![pos!(0.123456789), pos!(0.134567890), pos!(0.145678901)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 0.13456786, epsilon = 0.00000001);

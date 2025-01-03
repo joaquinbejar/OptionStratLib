@@ -1,6 +1,6 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         ZERO,      // implied_volatility
         ZERO,      // risk_free_rate
         ZERO,      // dividend_yield
-        f2p!(2.0), // quantity
+        pos!(2.0), // quantity
         ZERO,      // premium_short_call
         ZERO,      // premium_short_put
         0.82,      // open_fee_short_call
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
 
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

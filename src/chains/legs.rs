@@ -87,7 +87,7 @@ impl Display for StrategyLegs<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -118,8 +118,8 @@ mod tests {
 
         match strategy {
             StrategyLegs::TwoLegs { first, second } => {
-                assert_eq!(first.strike_price, f2p!(100.0));
-                assert_eq!(second.strike_price, f2p!(110.0));
+                assert_eq!(first.strike_price, pos!(100.0));
+                assert_eq!(second.strike_price, pos!(110.0));
             }
             _ => panic!("Expected TwoLegs variant"),
         }
@@ -146,10 +146,10 @@ mod tests {
                 third,
                 fourth,
             } => {
-                assert_eq!(first.strike_price, f2p!(100.0));
-                assert_eq!(second.strike_price, f2p!(110.0));
-                assert_eq!(third.strike_price, f2p!(120.0));
-                assert_eq!(fourth.strike_price, f2p!(130.0));
+                assert_eq!(first.strike_price, pos!(100.0));
+                assert_eq!(second.strike_price, pos!(110.0));
+                assert_eq!(third.strike_price, pos!(120.0));
+                assert_eq!(fourth.strike_price, pos!(130.0));
             }
             _ => panic!("Expected FourLegs variant"),
         }
@@ -182,12 +182,12 @@ mod tests {
                 fifth,
                 sixth,
             } => {
-                assert_eq!(first.strike_price, f2p!(100.0));
-                assert_eq!(second.strike_price, f2p!(110.0));
-                assert_eq!(third.strike_price, f2p!(120.0));
-                assert_eq!(fourth.strike_price, f2p!(130.0));
-                assert_eq!(fifth.strike_price, f2p!(140.0));
-                assert_eq!(sixth.strike_price, f2p!(150.0));
+                assert_eq!(first.strike_price, pos!(100.0));
+                assert_eq!(second.strike_price, pos!(110.0));
+                assert_eq!(third.strike_price, pos!(120.0));
+                assert_eq!(fourth.strike_price, pos!(130.0));
+                assert_eq!(fifth.strike_price, pos!(140.0));
+                assert_eq!(sixth.strike_price, pos!(150.0));
             }
             _ => panic!("Expected SixLegs variant"),
         }
@@ -273,8 +273,8 @@ mod tests {
 
         match cloned_strategy {
             StrategyLegs::TwoLegs { first, second } => {
-                assert_eq!(first.strike_price, f2p!(100.0));
-                assert_eq!(second.strike_price, f2p!(110.0));
+                assert_eq!(first.strike_price, pos!(100.0));
+                assert_eq!(second.strike_price, pos!(110.0));
             }
             _ => panic!("Expected TwoLegs variant after cloning"),
         }

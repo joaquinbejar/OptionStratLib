@@ -665,7 +665,7 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::utils::logger::setup_logger;
     use crate::Positive;
@@ -678,11 +678,11 @@ mod tests_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            f2p!(100.0),
+            pos!(100.0),
             ExpirationDate::Days(30.0),
             pos!(0.02), // initial implied volatility
             Positive::ONE,
-            f2p!(100.0),
+            pos!(100.0),
             dec!(0.05),
             OptionStyle::Call,
             Positive::ZERO,
@@ -1154,7 +1154,7 @@ mod tests_interpolate_volatility_surface {
 mod tests_uncertain_volatility_bounds {
     use rust_decimal_macros::dec;
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::Positive;
 
@@ -1163,11 +1163,11 @@ mod tests_uncertain_volatility_bounds {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            f2p!(100.0), // strike price
+            pos!(100.0), // strike price
             ExpirationDate::Days(30.0),
             pos!(0.2),           // implied volatility
             Positive::ONE, // quantity
-            f2p!(100.0),   // underlying price
+            pos!(100.0),   // underlying price
             dec!(0.05),          // risk-free rate
             OptionStyle::Call,
             Positive::ZERO, // dividend yield
@@ -1198,10 +1198,10 @@ mod tests_uncertain_volatility_bounds {
     #[test]
     fn test_uncertain_volatility_bounds_different_strikes() {
         let mut itm_option = create_test_option();
-        itm_option.strike_price = f2p!(90.0); // In-the-money
+        itm_option.strike_price = pos!(90.0); // In-the-money
 
         let mut otm_option = create_test_option();
-        otm_option.strike_price = f2p!(110.0); // Out-of-the-money
+        otm_option.strike_price = pos!(110.0); // Out-of-the-money
 
         let (itm_lower, itm_upper) = uncertain_volatility_bounds(&itm_option, pos!(0.1), pos!(0.3));
         let (otm_lower, otm_upper) = uncertain_volatility_bounds(&otm_option, pos!(0.1), pos!(0.3));
@@ -1257,7 +1257,7 @@ mod tests_uncertain_volatility_bounds {
 mod tests_uncertain_volatility_bounds_side {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{f2p, Positive};
+    use crate::{pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
     use tracing::info;
@@ -1267,11 +1267,11 @@ mod tests_uncertain_volatility_bounds_side {
             OptionType::European,
             side,
             "TEST".to_string(),
-            f2p!(100.0), // strike price
+            pos!(100.0), // strike price
             ExpirationDate::Days(30.0),
             pos!(0.2),           // implied volatility
             Positive::ONE, // quantity
-            f2p!(100.0),   // underlying price
+            pos!(100.0),   // underlying price
             dec!(0.05),          // risk-free rate
             option_style,
             Positive::ZERO, // dividend yield
@@ -1338,10 +1338,10 @@ mod tests_uncertain_volatility_bounds_side {
     #[test]
     fn test_uncertain_volatility_bounds_different_strikes() {
         let mut itm_option = create_test_option(OptionStyle::Call, Side::Long);
-        itm_option.strike_price = f2p!(90.0); // In-the-money
+        itm_option.strike_price = pos!(90.0); // In-the-money
 
         let mut otm_option = create_test_option(OptionStyle::Call, Side::Long);
-        otm_option.strike_price = f2p!(110.0); // Out-of-the-money
+        otm_option.strike_price = pos!(110.0); // Out-of-the-money
 
         let (itm_lower, itm_upper) = uncertain_volatility_bounds(&itm_option, pos!(0.1), pos!(0.3));
         let (otm_lower, otm_upper) = uncertain_volatility_bounds(&otm_option, pos!(0.1), pos!(0.3));

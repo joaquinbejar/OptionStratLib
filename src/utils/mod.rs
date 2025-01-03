@@ -40,11 +40,11 @@
 //!
 //! ```rust
 //! use optionstratlib::Positive;
-//! use optionstratlib::{assert_positivef64_relative_eq, f2p};
+//! use optionstratlib::{assert_positivef64_relative_eq, pos};
 //!
-//! let a = f2p!(1.0);
-//! let b = f2p!(1.0001);
-//! let epsilon = f2p!(0.001);
+//! let a = pos!(1.0);
+//! let b = pos!(1.0001);
+//! let epsilon = pos!(0.001);
 //! assert_positivef64_relative_eq!(a, b, epsilon);
 //! ```
 //!
@@ -145,14 +145,14 @@
 //!
 //! ```rust
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::assert_positivef64_relative_eq;
 //!
 //!
 //! fn test_values() {
-//!     let a = f2p!(1.0);
-//!     let b = f2p!(1.0001);
-//!     let epsilon = f2p!(0.001);
+//!     let a = pos!(1.0);
+//!     let b = pos!(1.0001);
+//!     let epsilon = pos!(0.001);
 //!     assert_positivef64_relative_eq!(a, b, epsilon);
 //! }
 //! ```

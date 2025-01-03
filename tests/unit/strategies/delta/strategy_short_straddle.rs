@@ -5,7 +5,7 @@ use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::straddle::ShortStraddle;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, f2p};
+use optionstratlib::{assert_decimal_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -14,17 +14,17 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the ShortStraddle strategy
-    let underlying_price = f2p!(7138.5);
+    let underlying_price = pos!(7138.5);
 
     let strategy = ShortStraddle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        f2p!(7140.0),     // put_strike
+        pos!(7140.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // quantity
+        pos!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.01,      // open_fee_short_call
@@ -64,8 +64,8 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: f2p!(0.19396073893948335),
-            strike: f2p!(7140.0),
+            quantity: pos!(0.19396073893948335),
+            strike: pos!(7140.0),
             option_type: OptionStyle::Put
         }
     );

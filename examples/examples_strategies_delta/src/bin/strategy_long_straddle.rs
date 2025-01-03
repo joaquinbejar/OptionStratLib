@@ -1,4 +1,4 @@
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::straddle::LongStraddle;
 use optionstratlib::strategies::LongStrangle;
@@ -12,16 +12,16 @@ use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    let underlying_price = f2p!(7140.0);
+    let underlying_price = pos!(7140.0);
     let strategy = LongStraddle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        f2p!(7202.0),     // call_strike 7450
+        pos!(7202.0),     // call_strike 7450
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.00,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // quantity
+        pos!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.01,      // open_fee_short_call

@@ -5,7 +5,7 @@ use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, f2p, Positive};
+use optionstratlib::{assert_decimal_eq, pos, Positive};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -15,18 +15,18 @@ use std::str::FromStr;
 fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
     // Define inputs for the BearCallSpread strategy
-    let underlying_price = f2p!(5781.88);
+    let underlying_price = pos!(5781.88);
 
     let strategy = BearCallSpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        f2p!(5750.0),     // long_strike_itm
-        f2p!(5820.0),     // short_strike
+        pos!(5750.0),     // long_strike_itm
+        pos!(5820.0),     // short_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(2.0), // long quantity
+        pos!(2.0), // long quantity
         85.04,     // premium_long
         29.85,     // premium_short
         0.78,      // open_fee_long
@@ -68,7 +68,7 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
         BuyOptions {
             quantity: Positive::new_decimal(Decimal::from_str("2.184538786861798").unwrap())
                 .unwrap(),
-            strike: f2p!(5820.0),
+            strike: pos!(5820.0),
             option_type: OptionStyle::Call
         }
     );

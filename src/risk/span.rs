@@ -4,7 +4,7 @@
    Date: 2/10/24
 ******************************************************************************/
 
-use crate::{f2p, Positive};
+use crate::{pos, Positive};
 use crate::model::position::Position;
 
 #[allow(dead_code)]
@@ -86,7 +86,7 @@ impl SPANMargin {
         let current_price = option.calculate_price_black_scholes();
 
         let mut scenario_option = option.clone();
-        scenario_option.underlying_price = f2p!(scenario_price);
+        scenario_option.underlying_price = pos!(scenario_price);
         scenario_option.implied_volatility = scenario_volatility;
         let scenario_price = scenario_option.calculate_price_black_scholes();
 
@@ -108,7 +108,7 @@ impl SPANMargin {
 #[cfg(test)]
 mod tests_span {
     use super::*;
-    use crate::{f2p, pos};
+    use crate::pos;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::utils::logger::setup_logger;
@@ -121,9 +121,9 @@ mod tests_span {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            f2p!(155.0),
-            f2p!(1.0),
-            f2p!(150.0),
+            pos!(155.0),
+            pos!(1.0),
+            pos!(150.0),
             pos!(0.2),
         );
 

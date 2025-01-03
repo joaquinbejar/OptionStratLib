@@ -42,17 +42,17 @@
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::volatility::implied_volatility;
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //!
 //! let mut option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     "STOCK".to_string(),
-//!     f2p!(100.0),              // Strike price
+//!     pos!(100.0),              // Strike price
 //!     ExpirationDate::Days(30.0),
 //!     0.2,                      // Initial volatility guess
 //!     Positive::ONE,                 // Quantity
-//!     f2p!(100.0),              // Current price
+//!     pos!(100.0),              // Current price
 //!     0.05,                     // Risk-free rate
 //!     OptionStyle::Call,
 //!     0.0,                      // Dividend yield

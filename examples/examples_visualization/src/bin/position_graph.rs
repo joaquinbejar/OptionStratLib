@@ -4,7 +4,7 @@
    Date: 20/8/24
 ******************************************************************************/
 use chrono::Utc;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::visualization::utils::Graph;
@@ -17,11 +17,11 @@ fn create_sample_option() -> Options {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        f2p!(100.0),
+        pos!(100.0),
         ExpirationDate::Days(30.0),
         0.2,
-        f2p!(10.0),
-        f2p!(105.0),
+        pos!(10.0),
+        pos!(105.0),
         0.05,
         OptionStyle::Call,
         0.0,

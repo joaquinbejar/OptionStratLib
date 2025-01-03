@@ -37,7 +37,7 @@
 //! use tracing::info;
 //! use optionstratlib::chains::{RNDParameters, RNDAnalysis};
 //! use optionstratlib::chains::chain::OptionChain;
-//! use optionstratlib::{f2p, pos, sf2p, ExpirationDate, Positive};
+//! use optionstratlib::{pos, spos, ExpirationDate, Positive};
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 //!
 //! // Create parameters for RND calculation
@@ -57,7 +57,7 @@
 //!             OptionDataPriceParams::new(
 //!                 pos!(100.0),
 //!                 ExpirationDate::Days(30.0),
-//!                 sf2p!(0.17),
+//!                 spos!(0.17),
 //!                 Decimal::ZERO,
 //!                 pos!(0.05),
 //!             ),
@@ -1401,7 +1401,7 @@ mod chain_test {
     use crate::chains::chain::OptionChain;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::chains::{RNDAnalysis, RNDParameters};
-    use crate::{assert_decimal_eq, f2p, pos, sf2p, ExpirationDate};
+    use crate::{assert_decimal_eq, pos, spos, ExpirationDate};
     use rust_decimal_macros::dec;
     use tracing::debug;
 
@@ -1410,14 +1410,14 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            f2p!(1.0),
+            pos!(1.0),
             0.00001,
-            f2p!(0.02),
+            pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                f2p!(100.0),
+                pos!(100.0),
                 ExpirationDate::Days(30.0),
-                sf2p!(0.17),
+                spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
             ),
@@ -1431,14 +1431,14 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            f2p!(1.0),
+            pos!(1.0),
             0.00001,
-            f2p!(0.02),
+            pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                f2p!(100.0),
+                pos!(100.0),
                 ExpirationDate::Days(30.0),
-                sf2p!(0.17),
+                spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
             ),
@@ -1477,14 +1477,14 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            f2p!(1.0),
+            pos!(1.0),
             0.00001,
-            f2p!(0.02),
+            pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                f2p!(100.0),
+                pos!(100.0),
                 ExpirationDate::Days(30.0),
-                sf2p!(0.17),
+                spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
             ),

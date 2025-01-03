@@ -59,19 +59,19 @@
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //!
 //! let strategy = BearCallSpread::new(
 //!         "SP500".to_string(),
-//!         f2p!(5781.88), // underlying_price
-//!         f2p!(5750.0),     // long_strike_itm
-//!         f2p!(5820.0),     // short_strike
+//!         pos!(5781.88), // underlying_price
+//!         pos!(5750.0),     // long_strike_itm
+//!         pos!(5820.0),     // short_strike
 //!         ExpirationDate::Days(2.0),
 //!         0.18,      // implied_volatility
 //!         0.05,      // risk_free_rate
 //!         0.0,       // dividend_yield
-//!         f2p!(2.0), // long quantity
+//!         pos!(2.0), // long quantity
 //!         85.04,     // premium_long
 //!         29.85,     // premium_short
 //!         0.78,      // open_fee_long
@@ -90,19 +90,19 @@
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //!
 //! let strategy = BearCallSpread::new(
 //!         "SP500".to_string(),
-//!         f2p!(5781.88), // underlying_price
-//!         f2p!(5750.0),     // long_strike_itm
-//!         f2p!(5820.0),     // short_strike
+//!         pos!(5781.88), // underlying_price
+//!         pos!(5750.0),     // long_strike_itm
+//!         pos!(5820.0),     // short_strike
 //!         ExpirationDate::Days(2.0),
 //!         0.18,      // implied_volatility
 //!         0.05,      // risk_free_rate
 //!         0.0,       // dividend_yield
-//!         f2p!(2.0), // long quantity
+//!         pos!(2.0), // long quantity
 //!         85.04,     // premium_long
 //!         29.85,     // premium_short
 //!         0.78,      // open_fee_long
@@ -112,8 +112,8 @@
 //!     );
 //!
 //! let vol_adj = Some(VolatilityAdjustment {
-//!     base_volatility: f2p!(0.20),         // 20% base volatility
-//!     std_dev_adjustment: f2p!(0.10),     // 10% adjustment
+//!     base_volatility: pos!(0.20),         // 20% base volatility
+//!     std_dev_adjustment: pos!(0.10),     // 10% adjustment
 //! });
 //!
 //! let analysis = strategy.analyze_probabilities(vol_adj, None);
@@ -124,19 +124,19 @@
 //! ```rust
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //! use optionstratlib::strategies::probabilities::{PriceTrend, ProbabilityAnalysis};
 //! let strategy = BearCallSpread::new(
 //!         "SP500".to_string(),
-//!         f2p!(5781.88), // underlying_price
-//!         f2p!(5750.0),     // long_strike_itm
-//!         f2p!(5820.0),     // short_strike
+//!         pos!(5781.88), // underlying_price
+//!         pos!(5750.0),     // long_strike_itm
+//!         pos!(5820.0),     // short_strike
 //!         ExpirationDate::Days(2.0),
 //!         0.18,      // implied_volatility
 //!         0.05,      // risk_free_rate
 //!         0.0,       // dividend_yield
-//!         f2p!(2.0), // long quantity
+//!         pos!(2.0), // long quantity
 //!         85.04,     // premium_long
 //!         29.85,     // premium_short
 //!         0.78,      // open_fee_long
@@ -159,12 +159,12 @@
 //! use optionstratlib::strategies::probabilities::calculate_price_probability;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //!
 //! let (prob_below, prob_in_range, prob_above) = calculate_price_probability(
-//!     f2p!(100.0),         // current price
-//!     f2p!(95.0),          // lower bound
-//!     f2p!(105.0),         // upper bound
+//!     pos!(100.0),         // current price
+//!     pos!(95.0),          // lower bound
+//!     pos!(105.0),         // upper bound
 //!     None,                // volatility adjustment
 //!     None,                // trend
 //!     ExpirationDate::Days(30.0),

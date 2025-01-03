@@ -6,7 +6,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, f2p};
+use optionstratlib::{assert_positivef64_relative_eq, pos};
 use std::error::Error;
 
 #[test]
@@ -15,14 +15,14 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
-        f2p!(2505.8), // underlying_price
-        f2p!(2460.0), // long_strike_itm
-        f2p!(2515.0), // short_strike
+        pos!(2505.8), // underlying_price
+        pos!(2460.0), // long_strike_itm
+        pos!(2515.0), // short_strike
         ExpirationDate::Days(30.0),
         0.2,       // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // quantity
+        pos!(1.0), // quantity
         27.26,     // premium_long
         5.33,      // premium_short
         0.58,      // open_fee_long
@@ -43,9 +43,9 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(30.82), f2p!(0.0001));
-    assert_positivef64_relative_eq!(strategy.max_loss()?, f2p!(24.18), f2p!(0.0001));
-    assert_positivef64_relative_eq!(strategy.total_cost(), f2p!(32.66), f2p!(0.0001));
+    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(30.82), pos!(0.0001));
+    assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(24.18), pos!(0.0001));
+    assert_positivef64_relative_eq!(strategy.total_cost(), pos!(32.66), pos!(0.0001));
     assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 2.25);
 
     // Test price range calculations
@@ -57,14 +57,14 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
 
     // Validate strike prices relationship
     assert!(
-        f2p!(2460.0) < f2p!(2515.0),
+        pos!(2460.0) < pos!(2515.0),
         "Long strike should be less than short strike in a bull call spread"
     );
 
     // Validate break-even point
     let break_even = strategy.get_break_even_points().unwrap();
     assert!(
-        break_even[0] > f2p!(2460.0),
+        break_even[0] > pos!(2460.0),
         "Break-even should be between strikes"
     );
 

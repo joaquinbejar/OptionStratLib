@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
@@ -16,19 +16,19 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = f2p!(5781.88);
+    let underlying_price = pos!(5781.88);
 
     let strategy = CallButterfly::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        f2p!(5750.0),     // long_call_strike
-        f2p!(5800.0),     // short_call_low_strike
-        f2p!(5850.0),     // short_call_high_strike
+        pos!(5750.0),     // long_call_strike
+        pos!(5800.0),     // short_call_low_strike
+        pos!(5850.0),     // short_call_high_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // long quantity
+        pos!(1.0), // long quantity
         85.04,     // premium_long_itm
         53.04,     // premium_long_otm
         28.85,     // premium_short
@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.73,      // close_fee_short
         0.72,      // open_fee_short
     );
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
 
     info!("Title: {}", strategy.title());

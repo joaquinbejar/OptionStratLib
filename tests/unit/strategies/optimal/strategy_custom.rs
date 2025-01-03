@@ -2,7 +2,7 @@ use approx::assert_relative_eq;
 use chrono::Utc;
 use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::base::{Optimizable, Strategies};
@@ -19,7 +19,7 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define common parameters
-    let underlying_price = f2p!(2340.0);
+    let underlying_price = pos!(2340.0);
     let underlying_symbol = "GAS".to_string();
     let expiration = ExpirationDate::Days(6.0);
     let implied_volatility = 0.73;
@@ -33,10 +33,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Long,
                 underlying_symbol.clone(),
-                f2p!(2100.0),
+                pos!(2100.0),
                 expiration.clone(),
                 implied_volatility,
-                f2p!(2.0),
+                pos!(2.0),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Call,
@@ -53,10 +53,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                f2p!(2250.0),
+                pos!(2250.0),
                 expiration.clone(),
                 implied_volatility,
-                f2p!(2.0),
+                pos!(2.0),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Put,
@@ -76,9 +76,9 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        f2p!(0.01),
+        pos!(0.01),
         5,
-        f2p!(0.1),
+        pos!(0.1),
     );
 
     let option_chain =

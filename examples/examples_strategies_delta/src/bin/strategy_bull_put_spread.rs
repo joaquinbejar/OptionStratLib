@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::bull_put_spread::BullPutSpread;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::Strategies;
@@ -17,18 +17,18 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = f2p!(5801.88);
+    let underlying_price = pos!(5801.88);
 
     let strategy = BullPutSpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        f2p!(5750.0),     // long_strike
-        f2p!(5920.0),     // short_strike
+        pos!(5750.0),     // long_strike
+        pos!(5920.0),     // short_strike
         ExpirationDate::Days(2.0),
         0.18,      // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // long quantity
+        pos!(1.0), // long quantity
         15.04,     // premium_long
         89.85,     // premium_short
         0.78,      // open_fee_long

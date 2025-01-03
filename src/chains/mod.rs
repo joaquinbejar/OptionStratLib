@@ -23,21 +23,21 @@
 //! ```rust
 //! use optionstratlib::chains::chain::{OptionChain, OptionData};
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-//! use optionstratlib::{f2p, sf2p, ExpirationDate};
+//! use optionstratlib::{pos, spos, ExpirationDate};
 //! use optionstratlib::{spos, Positive};
 //!
 //! let option_chain_params = OptionChainBuildParams::new(
 //!             "SP500".to_string(),
 //!             None,
 //!             10,
-//!             f2p!(1.0),
+//!             pos!(1.0),
 //!             0.0,
-//!             f2p!(0.02),
+//!             pos!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 f2p!(100.0),
+//!                 pos!(100.0),
 //!                 ExpirationDate::Days(30.0),
-//!                 sf2p!(0.17),
+//!                 spos!(0.17),
 //!                 0.0,
 //!                 0.05,
 //!             ),

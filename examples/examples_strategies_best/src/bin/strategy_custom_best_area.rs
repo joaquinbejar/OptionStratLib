@@ -1,7 +1,7 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::constants::ZERO;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::model::position::Position;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(1), // qty_calls_long
         Some(1), // qty_calls_short
         ExpirationDate::Days(30.0),
-        f2p!(1.0),
+        pos!(1.0),
         0.05,
         0.02,
         1.0,
@@ -42,13 +42,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        f2p!(0.01),
+        pos!(0.01),
         100,
-        f2p!(0.1),
+        pos!(0.1),
     );
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     info!(
         "Price Range from: {} to: {}",
         price_range.first().unwrap(),

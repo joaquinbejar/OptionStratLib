@@ -1,4 +1,4 @@
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::strategies::ShortStrangle;
 use optionstratlib::strategies::Strategies;
@@ -12,18 +12,18 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = f2p!(7138.5);
+    let underlying_price = pos!(7138.5);
 
     let strategy = ShortStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        f2p!(7450.0),     // call_strike
-        f2p!(7050.0),     // put_strike
+        pos!(7450.0),     // call_strike
+        pos!(7050.0),     // put_strike
         ExpirationDate::Days(45.0),
         0.3745,    // implied_volatility
         0.05,      // risk_free_rate
         0.0,       // dividend_yield
-        f2p!(1.0), // quantity
+        pos!(1.0), // quantity
         84.2,      // premium_short_call
         353.2,     // premium_short_put
         7.01,      // open_fee_short_call
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         7.01,      // open_fee_short_put
         7.01,      // close_fee_short_put
     );
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());

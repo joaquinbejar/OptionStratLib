@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
@@ -17,14 +17,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
-        f2p!(2505.8),
-        f2p!(2460.0),
-        f2p!(2515.0),
+        pos!(2505.8),
+        pos!(2460.0),
+        pos!(2515.0),
         ExpirationDate::Days(30.0),
         0.2,
         0.05,
         0.0,
-        f2p!(1.0),
+        pos!(1.0),
         27.26,
         5.33,
         0.58,

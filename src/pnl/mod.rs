@@ -37,7 +37,7 @@
 //! use optionstratlib::pnl::utils::{PnL, PnLCalculator};
 //! use chrono::{DateTime, Utc};
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //!
 //! // Create a new PnL instance
 //! let pnl = PnL::new(

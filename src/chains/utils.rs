@@ -289,24 +289,24 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
 #[cfg(test)]
 mod tests_rounder {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     #[test]
     fn test_rounder() {
-        assert_eq!(rounder(f2p!(151.0), f2p!(5.0)), f2p!(150.0));
-        assert_eq!(rounder(f2p!(154.0), f2p!(5.0)), f2p!(155.0));
-        assert_eq!(rounder(f2p!(152.5), f2p!(5.0)), f2p!(155.0));
-        assert_eq!(rounder(f2p!(152.4), f2p!(5.0)), f2p!(150.0));
+        assert_eq!(rounder(pos!(151.0), pos!(5.0)), pos!(150.0));
+        assert_eq!(rounder(pos!(154.0), pos!(5.0)), pos!(155.0));
+        assert_eq!(rounder(pos!(152.5), pos!(5.0)), pos!(155.0));
+        assert_eq!(rounder(pos!(152.4), pos!(5.0)), pos!(150.0));
 
-        assert_eq!(rounder(f2p!(151.0), f2p!(10.0)), f2p!(150.0));
-        assert_eq!(rounder(f2p!(156.0), f2p!(10.0)), f2p!(160.0));
-        assert_eq!(rounder(f2p!(155.0), f2p!(10.0)), f2p!(160.0));
-        assert_eq!(rounder(f2p!(154.9), f2p!(10.0)), f2p!(150.0));
+        assert_eq!(rounder(pos!(151.0), pos!(10.0)), pos!(150.0));
+        assert_eq!(rounder(pos!(156.0), pos!(10.0)), pos!(160.0));
+        assert_eq!(rounder(pos!(155.0), pos!(10.0)), pos!(160.0));
+        assert_eq!(rounder(pos!(154.9), pos!(10.0)), pos!(150.0));
 
-        assert_eq!(rounder(f2p!(17.0), f2p!(15.0)), f2p!(15.0));
-        assert_eq!(rounder(f2p!(43.0), f2p!(15.0)), f2p!(45.0));
-        assert_eq!(rounder(f2p!(37.5), f2p!(15.0)), f2p!(45.0));
-        assert_eq!(rounder(f2p!(37.4), f2p!(15.0)), f2p!(30.0));
+        assert_eq!(rounder(pos!(17.0), pos!(15.0)), pos!(15.0));
+        assert_eq!(rounder(pos!(43.0), pos!(15.0)), pos!(45.0));
+        assert_eq!(rounder(pos!(37.5), pos!(15.0)), pos!(45.0));
+        assert_eq!(rounder(pos!(37.4), pos!(15.0)), pos!(30.0));
     }
 }
 
@@ -447,7 +447,7 @@ mod tests_random_positions_params {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
     use super::*;
-    use crate::{f2p, pos};
+    use crate::pos;
 
     fn create_test_params() -> RandomPositionsParams {
         RandomPositionsParams::new(
@@ -456,7 +456,7 @@ mod tests_random_positions_params {
             Some(1),
             Some(1),
             ExpirationDate::Days(30.0),
-            f2p!(1.0),
+            pos!(1.0),
             dec!(0.05),
             pos!(0.02),
             1.0,
@@ -493,7 +493,7 @@ mod tests_random_positions_params {
             Some(3),
             None,
             ExpirationDate::Days(30.0),
-            f2p!(1.0),
+            pos!(1.0),
             dec!(0.05),
             pos!(0.02),
             1.0,
@@ -509,7 +509,7 @@ mod tests_random_positions_params {
             None,
             None,
             ExpirationDate::Days(30.0),
-            f2p!(1.0),
+            pos!(1.0),
             dec!(0.05),
             pos!(0.02),
             1.0,
@@ -575,19 +575,19 @@ mod tests_option_data_price_params {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
     use super::*;
-    use crate::{f2p, pos, spos};
+    use crate::{pos, spos};
 
     #[test]
     fn test_new_price_params() {
         let params = OptionDataPriceParams::new(
-            f2p!(100.0),
+            pos!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
         );
 
-        assert_eq!(params.underlying_price, f2p!(100.0));
+        assert_eq!(params.underlying_price, pos!(100.0));
         assert_eq!(params.risk_free_rate.to_f64().unwrap(), 0.05);
         assert_eq!(params.dividend_yield.to_f64(), 0.02);
         assert_eq!(params.implied_volatility, spos!(0.2));
@@ -605,7 +605,7 @@ mod tests_option_data_price_params {
     #[test]
     fn test_display_price_params() {
         let params = OptionDataPriceParams::new(
-            f2p!(100.0),
+            pos!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
             dec!(0.05),
@@ -621,7 +621,7 @@ mod tests_option_data_price_params {
     #[test]
     fn test_display_price_params_no_volatility() {
         let params =
-            OptionDataPriceParams::new(f2p!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
+            OptionDataPriceParams::new(pos!(100.0), ExpirationDate::Days(30.0), None, dec!(0.05), pos!(0.02));
         let display_string = format!("{}", params);
         assert!(display_string.contains("Implied Volatility: 0.000"));
     }
@@ -631,12 +631,12 @@ mod tests_option_data_price_params {
 mod tests_option_chain_build_params {
     use rust_decimal_macros::dec;
     use super::*;
-    use crate::{f2p, pos, spos};
+    use crate::{pos, spos};
 
     #[test]
     fn test_new_chain_build_params() {
         let price_params = OptionDataPriceParams::new(
-            f2p!(100.0),
+            pos!(100.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
             dec!(0.05),
@@ -647,9 +647,9 @@ mod tests_option_chain_build_params {
             "TEST".to_string(),
             spos!(1000.0),
             10,
-            f2p!(5.0),
+            pos!(5.0),
             0.1,
-            f2p!(0.02),
+            pos!(0.02),
             2,
             price_params,
         );
@@ -657,9 +657,9 @@ mod tests_option_chain_build_params {
         assert_eq!(params.symbol, "TEST");
         assert_eq!(params.volume, spos!(1000.0));
         assert_eq!(params.chain_size, 10);
-        assert_eq!(params.strike_interval, f2p!(5.0));
+        assert_eq!(params.strike_interval, pos!(5.0));
         assert_eq!(params.skew_factor, 0.1);
-        assert_eq!(params.spread, f2p!(0.02));
+        assert_eq!(params.spread, pos!(0.02));
         assert_eq!(params.decimal_places, 2);
     }
 
@@ -671,9 +671,9 @@ mod tests_option_chain_build_params {
             "TEST".to_string(),
             None,
             10,
-            f2p!(5.0),
+            pos!(5.0),
             0.1,
-            f2p!(0.02),
+            pos!(0.02),
             2,
             price_params,
         );
@@ -686,7 +686,7 @@ mod tests_option_chain_build_params {
 mod tests_random_positions_params_extended {
     use rust_decimal_macros::dec;
     use super::*;
-    use crate::{f2p, pos};
+    use crate::pos;
 
     #[test]
     fn test_partial_positions() {
@@ -696,7 +696,7 @@ mod tests_random_positions_params_extended {
             Some(1),
             None,
             ExpirationDate::Days(30.0),
-            f2p!(1.0),
+            pos!(1.0),
             dec!(0.05),
             pos!(0.02),
             1.0,
@@ -720,7 +720,7 @@ mod tests_random_positions_params_extended {
             None,
             None,
             ExpirationDate::Days(30.0),
-            f2p!(1.0),
+            pos!(1.0),
             dec!(0.05),
             pos!(0.02),
             1.0,
@@ -740,7 +740,7 @@ mod tests_random_positions_params_extended {
             None,
             None,
             ExpirationDate::Days(30.0),
-            f2p!(1.0),
+            pos!(1.0),
             dec!(0.05),
             pos!(0.02),
             1.0,

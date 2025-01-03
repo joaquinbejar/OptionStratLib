@@ -48,7 +48,7 @@ pub(crate) fn calculate_price_range(
 #[cfg(test)]
 mod tests_strategies_utils {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use approx::assert_relative_eq;
 
     #[test]
@@ -56,7 +56,7 @@ mod tests_strategies_utils {
         let upper = FindOptimalSide::Upper;
         let lower = FindOptimalSide::Lower;
         let all = FindOptimalSide::All;
-        let range = FindOptimalSide::Range(f2p!(100.0), f2p!(200.0));
+        let range = FindOptimalSide::Range(pos!(100.0), pos!(200.0));
 
         assert!(matches!(upper, FindOptimalSide::Upper));
         assert!(matches!(lower, FindOptimalSide::Lower));
@@ -75,51 +75,51 @@ mod tests_strategies_utils {
 
     #[test]
     fn test_calculate_price_range_basic() {
-        let start = f2p!(100.0);
-        let end = f2p!(110.0);
-        let step = f2p!(2.0);
+        let start = pos!(100.0);
+        let end = pos!(110.0);
+        let step = pos!(2.0);
 
         let range = calculate_price_range(start, end, step);
 
         assert_eq!(range.len(), 7);
-        assert_eq!(range[0], f2p!(100.0));
-        assert_eq!(range[1], f2p!(102.0));
-        assert_eq!(range[2], f2p!(104.0));
-        assert_eq!(range[3], f2p!(106.0));
-        assert_eq!(range[4], f2p!(108.0));
-        assert_eq!(range[5], f2p!(110.0));
-        assert_eq!(range[6], f2p!(112.0));
+        assert_eq!(range[0], pos!(100.0));
+        assert_eq!(range[1], pos!(102.0));
+        assert_eq!(range[2], pos!(104.0));
+        assert_eq!(range[3], pos!(106.0));
+        assert_eq!(range[4], pos!(108.0));
+        assert_eq!(range[5], pos!(110.0));
+        assert_eq!(range[6], pos!(112.0));
     }
 
     #[test]
     fn test_calculate_price_range_single_step() {
-        let start = f2p!(100.0);
-        let end = f2p!(100.0);
-        let step = f2p!(1.0);
+        let start = pos!(100.0);
+        let end = pos!(100.0);
+        let step = pos!(1.0);
 
         let range = calculate_price_range(start, end, step);
 
         assert_eq!(range.len(), 2);
-        assert_eq!(range[0], f2p!(100.0));
+        assert_eq!(range[0], pos!(100.0));
     }
 
     #[test]
     fn test_calculate_price_range_large_step() {
-        let start = f2p!(100.0);
-        let end = f2p!(110.0);
-        let step = f2p!(20.0);
+        let start = pos!(100.0);
+        let end = pos!(110.0);
+        let step = pos!(20.0);
 
         let range = calculate_price_range(start, end, step);
 
         assert_eq!(range.len(), 2);
-        assert_eq!(range[0], f2p!(100.0));
+        assert_eq!(range[0], pos!(100.0));
     }
 
     #[test]
     fn test_calculate_price_range_fractional_step() {
-        let start = f2p!(1.0);
-        let end = f2p!(2.0);
-        let step = f2p!(0.3);
+        let start = pos!(1.0);
+        let end = pos!(2.0);
+        let step = pos!(0.3);
 
         let range = calculate_price_range(start, end, step);
 
@@ -132,9 +132,9 @@ mod tests_strategies_utils {
 
     #[test]
     fn test_calculate_price_range_empty() {
-        let start = f2p!(100.0);
-        let end = f2p!(90.0);
-        let step = f2p!(1.0);
+        let start = pos!(100.0);
+        let end = pos!(90.0);
+        let step = pos!(1.0);
 
         let range = calculate_price_range(start, end, step);
 

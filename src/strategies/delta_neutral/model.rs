@@ -7,7 +7,7 @@
 //! # Delta Neutral Strategies Module
 use crate::greeks::equations::Greeks;
 use crate::model::types::OptionStyle;
-use crate::{f2p, Positive};
+use crate::{pos, Positive};
 use std::fmt;
 
 pub const DELTA_THRESHOLD: f64 = 0.005;
@@ -162,14 +162,14 @@ pub trait DeltaNeutrality: Greeks {
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         vec![
-            DeltaAdjustment::SellUnderlying(f2p!(net_delta.abs())),
+            DeltaAdjustment::SellUnderlying(pos!(net_delta.abs())),
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
+                quantity: pos!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Put,
             },
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
+                quantity: pos!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
@@ -190,14 +190,14 @@ pub trait DeltaNeutrality: Greeks {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         vec![
-            DeltaAdjustment::BuyUnderlying(f2p!(net_delta.abs())),
+            DeltaAdjustment::BuyUnderlying(pos!(net_delta.abs())),
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
+                quantity: pos!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(net_delta.abs() * 2.0).round_to(12),
+                quantity: pos!(net_delta.abs() * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Put,
             },
@@ -247,7 +247,7 @@ mod tests {
         }
 
         fn get_atm_strike(&self) -> Positive {
-            f2p!(100.0)
+            pos!(100.0)
         }
     }
 
@@ -255,7 +255,7 @@ mod tests {
     fn create_mock_strategy(delta: Decimal, price: f64) -> MockStrategy {
         MockStrategy {
             delta,
-            underlying_price: f2p!(price),
+            underlying_price: pos!(price),
             individual_deltas: vec![delta.to_f64().unwrap()],
         }
     }
@@ -268,7 +268,7 @@ mod tests {
         assert_eq!(info.net_delta, 0.5);
         assert_eq!(info.individual_deltas, vec![0.5]);
         assert!(!info.is_neutral);
-        assert_eq!(info.underlying_price, f2p!(100.0));
+        assert_eq!(info.underlying_price, pos!(100.0));
     }
 
     #[test]
@@ -296,15 +296,15 @@ mod tests {
         assert_eq!(
             adjustments,
             vec![
-                DeltaAdjustment::SellUnderlying(f2p!(0.5)),
+                DeltaAdjustment::SellUnderlying(pos!(0.5)),
                 DeltaAdjustment::BuyOptions {
-                    quantity: f2p!(1.0),
-                    strike: f2p!(100.0),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
                     option_type: OptionStyle::Put,
                 },
                 DeltaAdjustment::SellOptions {
-                    quantity: f2p!(1.0),
-                    strike: f2p!(100.0),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
                     option_type: OptionStyle::Call,
                 }
             ]
@@ -319,15 +319,15 @@ mod tests {
         assert_eq!(
             adjustments,
             vec![
-                DeltaAdjustment::BuyUnderlying(f2p!(0.5)),
+                DeltaAdjustment::BuyUnderlying(pos!(0.5)),
                 DeltaAdjustment::BuyOptions {
-                    quantity: f2p!(1.0),
-                    strike: f2p!(100.0),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
                     option_type: OptionStyle::Call,
                 },
                 DeltaAdjustment::SellOptions {
-                    quantity: f2p!(1.0),
-                    strike: f2p!(100.0),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
                     option_type: OptionStyle::Put,
                 }
             ]
@@ -354,15 +354,15 @@ mod tests {
         assert_eq!(
             adjustments,
             vec![
-                DeltaAdjustment::SellUnderlying(f2p!(0.5)),
+                DeltaAdjustment::SellUnderlying(pos!(0.5)),
                 DeltaAdjustment::BuyOptions {
-                    quantity: f2p!(1.0),
-                    strike: f2p!(100.0),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
                     option_type: OptionStyle::Put,
                 },
                 DeltaAdjustment::SellOptions {
-                    quantity: f2p!(1.0),
-                    strike: f2p!(100.0),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
                     option_type: OptionStyle::Call,
                 }
             ]
@@ -377,15 +377,15 @@ mod tests {
         assert_eq!(
             adjustments,
             vec![
-                DeltaAdjustment::BuyUnderlying(f2p!(0.5)),
+                DeltaAdjustment::BuyUnderlying(pos!(0.5)),
                 DeltaAdjustment::BuyOptions {
-                    quantity: f2p!(1.0),
-                    strike: f2p!(100.0),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
                     option_type: OptionStyle::Call,
                 },
                 DeltaAdjustment::SellOptions {
-                    quantity: f2p!(1.0),
-                    strike: f2p!(100.0),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
                     option_type: OptionStyle::Put,
                 }
             ]
