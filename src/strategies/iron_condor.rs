@@ -190,16 +190,16 @@ impl IronCondor {
             .expect("Invalid long put");
 
         // Calculate break-even points
-        let net_credit = (strategy.long_put.premium + strategy.long_call.premium)
-            + strategy.fees().unwrap().to_f64().unwrap()
-            - (strategy.short_put.premium + strategy.short_call.premium);
-        strategy
-            .break_even_points
-            .push(short_put_strike + net_credit);
-        strategy
-            .break_even_points
-            .push(short_call_strike - net_credit);
+        let net_credit = (strategy.net_premium_received().unwrap() / quantity).round_dp(2);
 
+        strategy
+            .break_even_points
+            .push(short_call_strike + net_credit);
+        strategy
+            .break_even_points
+            .push(short_put_strike - net_credit);
+
+        strategy.break_even_points.sort();
         strategy
     }
 }
@@ -305,18 +305,6 @@ impl Strategies for IronCondor {
             - self.long_call.total_cost()
             - self.long_put.total_cost();
         Ok(Decimal::from_f64(result).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let restul = self.short_call.open_fee
-            + self.short_call.close_fee
-            + self.short_put.open_fee
-            + self.short_put.close_fee
-            + self.long_call.open_fee
-            + self.long_call.close_fee
-            + self.long_put.open_fee
-            + self.long_put.close_fee;
-        Ok(Decimal::from_f64(restul).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -1771,6 +1759,33 @@ mod tests_iron_condor_profit {
         let profit = condor.calculate_profit_at(pos!(100.0));
         // Net premium = 2.0 - fees = 2.0 - 4.0 = -2.0
         assert_eq!(profit, -2.0);
+    }
+
+    #[test]
+    fn test_profit_with_fees_qty() {
+        let condor = IronCondor::new(
+            "TEST".to_string(),
+            pos!(100.0),
+            pos!(105.0),
+            pos!(95.0),
+            pos!(110.0),
+            pos!(90.0),
+            ExpirationDate::Days(30.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(3.0),
+            2.0,
+            2.0,
+            1.0,
+            1.0,
+            0.5, // open_fee
+            0.5, // closing fee
+        );
+
+        let profit = condor.calculate_profit_at(pos!(100.0));
+        // Net premium = 6.0 - fees = 6.0 - 12.0 = -6.0
+        assert_eq!(profit, -6.0);
     }
 
     #[test]
