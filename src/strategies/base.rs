@@ -14,6 +14,8 @@ use crate::strategies::utils::{calculate_price_range, FindOptimalSide, Optimizat
 use crate::Positive;
 use rust_decimal::Decimal;
 use std::f64;
+use num_traits::FromPrimitive;
+use rust_decimal_macros::dec;
 use tracing::error;
 
 /// This enum represents different types of trading strategies.
@@ -121,10 +123,19 @@ pub trait Strategies: Validable + Positionable {
     }
 
     fn fees(&self) -> Result<Decimal, StrategyError> {
-        Err(StrategyError::operation_not_supported(
-            "fees",
-            std::any::type_name::<Self>(),
-        ))
+        let mut fee = dec!(0.0);
+        let positions = match self.get_positions() {
+            Ok(positions) => positions,
+            Err(err) => return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "get_positions".to_string(),
+                reason: err.to_string(),
+            })),
+        };
+        
+        for position in positions {
+            fee += Decimal::from_f64(position.fees()).unwrap();
+        }
+        Ok(fee)
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
