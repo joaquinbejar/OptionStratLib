@@ -245,6 +245,7 @@ mod tests_probability_analysis {
     use crate::pricing::payoff::Profit;
     use crate::strategies::base::{Positionable, Strategies, Validable};
     use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
 
     // Mock struct para testing
     struct MockStrategy {
@@ -294,7 +295,7 @@ mod tests_probability_analysis {
             MockStrategy {
                 underlying_price: f2p!(100.0),
                 expiration: ExpirationDate::Days(30.0),
-                risk_free_rate: 0.05,
+                risk_free_rate: dec!(0.05),
                 break_points: vec![f2p!(95.0), f2p!(105.0)],
             }
         }
@@ -462,6 +463,7 @@ mod tests_probability_analysis {
 
 #[cfg(test)]
 mod tests_expected_value {
+    use rust_decimal_macros::dec;
     use super::*;
     use crate::error::strategies::StrategyError;
     use crate::strategies::base::{Positionable, Validable};
@@ -471,7 +473,7 @@ mod tests_expected_value {
         TestStrategy {
             underlying_price: f2p!(100.0),
             expiration: ExpirationDate::Days(30.0),
-            risk_free_rate: 0.05,
+            risk_free_rate: dec!(0.05),
         }
     }
 
