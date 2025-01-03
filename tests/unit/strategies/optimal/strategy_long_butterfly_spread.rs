@@ -19,19 +19,24 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
 
     let mut strategy = LongButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        pos!(5710.0),     // long_strike_itm
-        pos!(5780.0),     // short_strike
-        pos!(5850.0),     // long_strike_otm
+        underlying_price,
+        pos!(5710.0),
+        pos!(5780.0),
+        pos!(5850.0),
         ExpirationDate::Days(2.0),
-        pos!(0.18),     // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // long quantity
-        113.30,         // premium_long_low
-        64.20,          // premium_short
-        31.65,          // premium_long_high
-        0.07,           // fees
+        pos!(0.18),
+        dec!(0.05),
+        Positive::ZERO,
+        pos!(1.0),
+        113.30,
+        64.20,
+        31.65,
+        0.07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
     );
 
     let option_chain =

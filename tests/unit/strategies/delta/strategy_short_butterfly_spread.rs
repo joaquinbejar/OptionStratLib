@@ -20,19 +20,24 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = ShortButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        pos!(5700.0),     // short_strike_itm
-        pos!(5780.0),     // long_strike
-        pos!(5850.0),     // short_strike_otm
+        underlying_price,
+        pos!(5700.0),
+        pos!(5780.0),
+        pos!(5850.0),
         ExpirationDate::Days(2.0),
-        pos!(0.18),     // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(3.0),      // long quantity
-        119.01,         // premium_long
-        66.0,           // premium_short
-        29.85,          // open_fee_long
-        4.0,            // open_fee_long
+        pos!(0.18),
+        dec!(0.05),
+        Positive::ZERO,
+        pos!(3.0),
+        119.01,
+        66.0,
+        29.85,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
     );
 
     let greeks = strategy.greeks();
