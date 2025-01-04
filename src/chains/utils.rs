@@ -765,8 +765,8 @@ mod tests_random_positions_params_extended {
 mod tests_sample {
     use super::*;
     use crate::chains::chain::OptionChain;
-    use rust_decimal_macros::dec;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_chain() {

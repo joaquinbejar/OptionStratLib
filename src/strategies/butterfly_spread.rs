@@ -482,7 +482,11 @@ impl Graph for LongButterflySpread {
             ),
             format!(
                 "Expire: {}",
-                self.long_call_low.option.expiration_date.get_date_string().unwrap()
+                self.long_call_low
+                    .option
+                    .expiration_date
+                    .get_date_string()
+                    .unwrap()
             ),
         ];
 
@@ -1472,24 +1476,24 @@ mod tests_long_butterfly_spread {
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(90.0),                 // low_strike
-            pos!(100.0),                // middle_strike
-            pos!(110.0),                // high_strike
+            pos!(100.0),                      // underlying_price
+            pos!(90.0),                       // low_strike
+            pos!(100.0),                      // middle_strike
+            pos!(110.0),                      // high_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            3.0,                        // premium_low
-            2.0,                        // premium_middle
-            1.0,                        // premium_high
-            0.05,                       // open_fee_short_call
-            0.05,                       // close_fee_short_call
-            0.05,                       // open_fee_long_call_low
-            0.05,                       // close_fee_long_call_low
-            0.05,                       // open_fee_long_call_high
-            0.05,                       // close_fee_long_call_high
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            3.0,                              // premium_low
+            2.0,                              // premium_middle
+            1.0,                              // premium_high
+            0.05,                             // open_fee_short_call
+            0.05,                             // close_fee_short_call
+            0.05,                             // open_fee_long_call_low
+            0.05,                             // close_fee_long_call_low
+            0.05,                             // open_fee_long_call_high
+            0.05,                             // close_fee_long_call_high
         )
     }
 
@@ -1697,24 +1701,24 @@ mod tests_short_butterfly_spread {
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(90.0),                 // low_strike
-            pos!(100.0),                // middle_strike
-            pos!(110.0),                // high_strike
+            pos!(100.0),                      // underlying_price
+            pos!(90.0),                       // low_strike
+            pos!(100.0),                      // middle_strike
+            pos!(110.0),                      // high_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            10.0,                       // premium_low
-            1.0,                        // premium_middle
-            0.5,                        // premium_high
-            0.05,                       // open_fee_short_call
-            0.05,                       // close_fee_short_call
-            0.05,                       // open_fee_long_call_low
-            0.05,                       // close_fee_long_call_low
-            0.05,                       // open_fee_long_call_high
-            0.05,                       // close_fee_long_call_high
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            10.0,                             // premium_low
+            1.0,                              // premium_middle
+            0.5,                              // premium_high
+            0.05,                             // open_fee_short_call
+            0.05,                             // close_fee_short_call
+            0.05,                             // open_fee_long_call_low
+            0.05,                             // close_fee_long_call_low
+            0.05,                             // open_fee_long_call_high
+            0.05,                             // close_fee_long_call_high
         )
     }
 

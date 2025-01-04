@@ -85,7 +85,7 @@ pub fn d1(
     implied_volatility: Positive,
 ) -> Result<Decimal, GreeksError> {
     let underlying_price: Decimal = underlying_price.to_dec();
-    
+
     if underlying_price == Decimal::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidStrike {
             value: underlying_price.to_string(),
@@ -198,7 +198,6 @@ pub fn d2(
     expiration_date: Positive,
     implied_volatility: Positive,
 ) -> Result<Decimal, GreeksError> {
-
     if implied_volatility == Decimal::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
             value: implied_volatility.to_f64(),
@@ -765,7 +764,13 @@ mod calculate_d1_values_bis {
 
     #[test]
     fn test_d1_basic_calculation() {
-        let result = d1(pos!(100.0), pos!(90.0), dec!(0.05), Positive::ONE, pos!(0.2));
+        let result = d1(
+            pos!(100.0),
+            pos!(90.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        );
 
         assert!(result.is_ok());
         let d1_value = decimal_to_f64_test(result.unwrap());
@@ -774,7 +779,13 @@ mod calculate_d1_values_bis {
 
     #[test]
     fn test_d1_in_the_money() {
-        let result = d1(pos!(110.0), pos!(90.0), dec!(0.05), Positive::ONE, pos!(0.2));
+        let result = d1(
+            pos!(110.0),
+            pos!(90.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        );
 
         assert!(result.is_ok());
         let d1_value = decimal_to_f64_test(result.unwrap());
@@ -783,7 +794,13 @@ mod calculate_d1_values_bis {
 
     #[test]
     fn test_d1_out_of_the_money() {
-        let result = d1(pos!(90.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.2));
+        let result = d1(
+            pos!(90.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        );
 
         assert!(result.is_ok());
         let d1_value = decimal_to_f64_test(result.unwrap());
@@ -804,7 +821,13 @@ mod calculate_d1_values_bis {
 
     #[test]
     fn test_d1_zero_volatility_error() {
-        let result = d1(pos!(100.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.0));
+        let result = d1(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.0),
+        );
 
         assert!(matches!(
             result,
@@ -816,7 +839,13 @@ mod calculate_d1_values_bis {
 
     #[test]
     fn test_d1_zero_time_error() {
-        let result = d1(pos!(100.0), pos!(100.0), dec!(0.05), Positive::ZERO, pos!(0.2));
+        let result = d1(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(0.2),
+        );
 
         assert!(matches!(
             result,
@@ -856,7 +885,13 @@ mod calculate_d1_values_bis {
 
     #[test]
     fn test_d1_zero_interest_rate() {
-        let result = d1(pos!(100.0), pos!(100.0), dec!(0.0), Positive::ONE, pos!(0.5));
+        let result = d1(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.0),
+            Positive::ONE,
+            pos!(0.5),
+        );
 
         assert!(result.is_ok());
         let d1_value = decimal_to_f64_test(result.unwrap());
@@ -974,7 +1009,7 @@ mod calculate_d2_values {
         let underlying_price = Positive::INFINITY;
         let strike_price = pos!(100.0);
         let risk_free_rate = dec!(0.05);
-        let expiration_date =Positive::ONE;
+        let expiration_date = Positive::ONE;
         let implied_volatility = pos!(0.2);
 
         // Very high underlying price should result in a large d2 value
@@ -1068,19 +1103,40 @@ mod calculate_d2_values_bis {
     // Normal test cases
     #[test]
     fn test_d2_atm_option() {
-        let result = d2(pos!(100.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_relative_eq!(result.to_f64().unwrap(), 0.15, epsilon = 0.0001);
     }
 
     #[test]
     fn test_d2_itm_call() {
-        let result = d2(pos!(110.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(110.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_decimal_eq!(result, dec!(0.6265508990216243), EPSILON);
     }
 
     #[test]
     fn test_d2_otm_call() {
-        let result = d2(pos!(90.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(90.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_relative_eq!(
             result.to_f64().unwrap(),
             -0.3768025782891315,
@@ -1108,7 +1164,14 @@ mod calculate_d2_values_bis {
 
     #[test]
     fn test_d2_long_expiry() {
-        let result = d2(pos!(100.0), pos!(100.0), dec!(0.05), Positive::TWO, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::TWO,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_relative_eq!(
             result.to_f64().unwrap(),
             0.21213203435596426,
@@ -1119,33 +1182,68 @@ mod calculate_d2_values_bis {
     // Volatility variations
     #[test]
     fn test_d2_low_volatility() {
-        let result = d2(pos!(100.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.1)).unwrap();
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.1),
+        )
+        .unwrap();
         assert_relative_eq!(result.to_f64().unwrap(), 0.45, epsilon = 0.0001);
     }
 
     #[test]
     fn test_d2_high_volatility() {
-        let result = d2(pos!(100.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.5)).unwrap();
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.5),
+        )
+        .unwrap();
         assert_relative_eq!(result.to_f64().unwrap(), -0.15, epsilon = 0.0001);
     }
 
     // Interest rate variations
     #[test]
     fn test_d2_zero_interest() {
-        let result = d2(pos!(100.0), pos!(100.0), Decimal::ZERO, Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            Decimal::ZERO,
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_relative_eq!(result.to_f64().unwrap(), -0.1, epsilon = 0.0001);
     }
 
     #[test]
     fn test_d2_high_interest() {
-        let result = d2(pos!(100.0), pos!(100.0), dec!(0.10), Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.10),
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_relative_eq!(result.to_f64().unwrap(), 0.4, epsilon = 0.0001);
     }
 
     // Extreme price differences
     #[test]
     fn test_d2_deep_itm() {
-        let result = d2(pos!(200.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(200.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_relative_eq!(
             result.to_f64().unwrap(),
             3.6157359027997265,
@@ -1155,7 +1253,14 @@ mod calculate_d2_values_bis {
 
     #[test]
     fn test_d2_deep_otm() {
-        let result = d2(pos!(50.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(50.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_relative_eq!(
             result.to_f64().unwrap(),
             -3.3157359027997266,
@@ -1182,7 +1287,14 @@ mod calculate_d2_values_bis {
 
     #[test]
     fn test_d2_small_volatility() {
-        let result = d2(pos!(200.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.01)).unwrap();
+        let result = d2(
+            pos!(200.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.01),
+        )
+        .unwrap();
         assert_relative_eq!(
             result.to_f64().unwrap(),
             74.30971805599454,
@@ -1193,7 +1305,13 @@ mod calculate_d2_values_bis {
     // Error cases
     #[test]
     fn test_d2_zero_volatility() {
-        let result = d2(pos!(100.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.0));
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.0),
+        );
         assert!(matches!(
             result,
             Err(GreeksError::InputError(
@@ -1204,7 +1322,13 @@ mod calculate_d2_values_bis {
 
     #[test]
     fn test_d2_zero_time() {
-        let result = d2(pos!(100.0), pos!(100.0), dec!(0.05), Positive::ZERO, pos!(0.2));
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(0.2),
+        );
         assert!(matches!(
             result,
             Err(GreeksError::InputError(InputErrorKind::InvalidTime { .. }))
@@ -1214,7 +1338,14 @@ mod calculate_d2_values_bis {
     // Negative interest rate
     #[test]
     fn test_d2_negative_interest() {
-        let result = d2(pos!(100.0), pos!(100.0), -dec!(0.05), Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            -dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_decimal_eq!(result, dec!(-0.35), EPSILON);
     }
 
@@ -1242,7 +1373,14 @@ mod calculate_d2_values_bis {
     // Edge cases with very large numbers
     #[test]
     fn test_d2_large_price_ratio() {
-        let result = d2(pos!(1_000_000.0), pos!(1.0), dec!(0.05), Positive::ONE, pos!(0.2)).unwrap();
+        let result = d2(
+            pos!(1_000_000.0),
+            pos!(1.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        )
+        .unwrap();
         assert_relative_eq!(
             result.to_f64().unwrap(),
             69.22755278982137,
@@ -1271,14 +1409,28 @@ mod calculate_d2_values_bis {
     // Near-zero but valid cases
     #[test]
     fn test_d2_near_zero_valid_values() {
-        let result = d2(pos!(100.0), pos!(100.0), dec!(0.0001), pos!(0.01), pos!(0.001)).unwrap();
+        let result = d2(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.0001),
+            pos!(0.01),
+            pos!(0.001),
+        )
+        .unwrap();
         assert!(result.to_f64().unwrap().abs() < 1.0);
     }
 
     // Test with maximum realistic market values
     #[test]
     fn test_d2_max_realistic_values() {
-        let result = d2(pos!(10000.0), pos!(5000.0), dec!(0.20), pos!(3.0), pos!(1.5)).unwrap();
+        let result = d2(
+            pos!(10000.0),
+            pos!(5000.0),
+            dec!(0.20),
+            pos!(3.0),
+            pos!(1.5),
+        )
+        .unwrap();
         assert_relative_eq!(
             result.to_f64().unwrap(),
             -0.8013055238112647,
@@ -1719,7 +1871,13 @@ mod tests_d1_d2_edge_cases {
 
     #[test]
     fn test_d1_zero_underlying_price() {
-        let result = d1(Positive::ZERO, pos!(100.0), dec!(0.05), Positive::ONE, pos!(0.2));
+        let result = d1(
+            Positive::ZERO,
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        );
         assert!(result.is_err());
     }
 
@@ -1738,8 +1896,22 @@ mod tests_d1_d2_edge_cases {
 
     #[test]
     fn test_d1_d2_combination_extreme_values() {
-        let result_d1 = d1(pos!(1000.0), pos!(10.0), dec!(0.15), Positive::TEN, pos!(0.9)).unwrap();
-        let result_d2 = d2(pos!(1000.0), pos!(10.0), dec!(0.15), Positive::TEN, pos!(0.9)).unwrap();
+        let result_d1 = d1(
+            pos!(1000.0),
+            pos!(10.0),
+            dec!(0.15),
+            Positive::TEN,
+            pos!(0.9),
+        )
+        .unwrap();
+        let result_d2 = d2(
+            pos!(1000.0),
+            pos!(10.0),
+            dec!(0.15),
+            Positive::TEN,
+            pos!(0.9),
+        )
+        .unwrap();
         assert_decimal_eq!(result_d1, dec!(3.5681), dec!(0.0001));
         assert_decimal_eq!(result_d2, dec!(0.7221), dec!(0.0001));
     }
@@ -1838,7 +2010,13 @@ mod tests_edge_cases_and_errors {
 
     #[test]
     fn test_extreme_volatility_values() {
-        let result = d1(pos!(100.0), pos!(100.0), dec!(0.05), Positive::ONE, pos!(1000.0));
+        let result = d1(
+            pos!(100.0),
+            pos!(100.0),
+            dec!(0.05),
+            Positive::ONE,
+            pos!(1000.0),
+        );
         assert!(result.is_ok());
     }
 

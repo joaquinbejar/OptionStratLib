@@ -295,8 +295,8 @@ pub fn calculate_bounds_probability(
 #[cfg(test)]
 mod tests_calculate_bounds_probability {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::constants::DAYS_IN_A_YEAR;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_bounds_probability_basic() {
@@ -420,10 +420,10 @@ mod tests_calculate_bounds_probability {
 #[cfg(test)]
 mod tests_single_point_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     // Helper function to create default volatility adjustment
     fn default_volatility_adj() -> VolatilityAdjustment {
@@ -771,8 +771,8 @@ mod tests_single_point_probability {
 #[cfg(test)]
 mod tests_calculate_price_probability {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::constants::DAYS_IN_A_YEAR;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_price_probability_basic() {

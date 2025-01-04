@@ -606,11 +606,11 @@ mod tests_utils {
 #[cfg(test)]
 mod tests_probability_keep_under_strike {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
     use crate::{assert_decimal_eq, pos, Positive};
     use rust_decimal_macros::dec;
     use tracing::info;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     #[test]
     fn test_probability_keep_under_strike_with_given_strike() {

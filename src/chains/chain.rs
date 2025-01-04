@@ -355,7 +355,11 @@ impl OptionChain {
         let mut option_chain = OptionChain::new(
             &params.symbol,
             params.price_params.underlying_price,
-            params.price_params.expiration_date.get_date_string().unwrap(),
+            params
+                .price_params
+                .expiration_date
+                .get_date_string()
+                .unwrap(),
             None,
             None,
         );

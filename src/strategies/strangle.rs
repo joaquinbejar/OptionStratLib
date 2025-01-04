@@ -1849,20 +1849,20 @@ mod tests_short_strangle_probability {
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // call_strike
-            pos!(90.0),                 // put_strike
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // call_strike
+            pos!(90.0),                       // put_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_short_call
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_short_call
-            0.0,                        // close_fee_short_call
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_short_call
+            2.0,                              // premium_short_put
+            0.0,                              // open_fee_short_call
+            0.0,                              // close_fee_short_call
+            0.0,                              // open_fee_short_put
+            0.0,                              // close_fee_short_put
         )
     }
 
@@ -1988,20 +1988,20 @@ mod tests_short_strangle_probability_bis {
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // call_strike
-            pos!(90.0),                 // put_strike
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // call_strike
+            pos!(90.0),                       // put_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_short_call
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_short_call
-            0.0,                        // close_fee_short_call
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_short_call
+            2.0,                              // premium_short_put
+            0.0,                              // open_fee_short_call
+            0.0,                              // close_fee_short_call
+            0.0,                              // open_fee_short_put
+            0.0,                              // close_fee_short_put
         )
     }
 
@@ -2131,20 +2131,20 @@ mod tests_long_strangle_probability {
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // call_strike
-            pos!(90.0),                 // put_strike
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // call_strike
+            pos!(90.0),                       // put_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_long_call
-            2.0,                        // premium_long_put
-            0.0,                        // open_fee_long_call
-            0.0,                        // close_fee_long_call
-            0.0,                        // open_fee_long_put
-            0.0,                        // close_fee_long_put
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_long_call
+            2.0,                              // premium_long_put
+            0.0,                              // open_fee_long_call
+            0.0,                              // close_fee_long_call
+            0.0,                              // open_fee_long_put
+            0.0,                              // close_fee_long_put
         )
     }
 
@@ -2346,7 +2346,7 @@ mod tests_short_strangle_delta {
             suggestion[0],
             DeltaAdjustment::SellOptions {
                 quantity: delta,
-                strike: strike,
+                strike,
                 option_type: OptionStyle::Put
             }
         );
@@ -2426,7 +2426,7 @@ mod tests_long_strangle_delta {
             suggestion[0],
             DeltaAdjustment::BuyOptions {
                 quantity: delta,
-                strike: strike,
+                strike,
                 option_type: OptionStyle::Call
             }
         );
@@ -2539,7 +2539,7 @@ mod tests_short_strangle_delta_size {
             suggestion[0],
             DeltaAdjustment::SellOptions {
                 quantity: delta,
-                strike: strike,
+                strike,
                 option_type: OptionStyle::Call
             }
         );
@@ -2655,7 +2655,7 @@ mod tests_long_strangle_delta_size {
             suggestion[0],
             DeltaAdjustment::BuyOptions {
                 quantity: delta,
-                strike: strike,
+                strike,
                 option_type: OptionStyle::Call
             }
         );

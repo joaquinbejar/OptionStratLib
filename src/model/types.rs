@@ -1,8 +1,8 @@
-use std::error::Error;
 use crate::constants::{DAYS_IN_A_YEAR, ZERO};
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use crate::{pos, Positive};
 use chrono::{DateTime, Duration, Utc};
+use std::error::Error;
 
 #[derive(Clone, PartialEq)]
 pub enum ExpirationDate {
@@ -10,13 +10,10 @@ pub enum ExpirationDate {
     DateTime(DateTime<Utc>),
 }
 
-
 impl ExpirationDate {
     pub(crate) fn get_years(&self) -> Result<Positive, Box<dyn Error>> {
         match self {
-            ExpirationDate::Days(days) => {
-                Ok(*days / DAYS_IN_A_YEAR)
-            }
+            ExpirationDate::Days(days) => Ok(*days / DAYS_IN_A_YEAR),
             ExpirationDate::DateTime(datetime) => {
                 let now = Utc::now();
                 let duration = datetime.signed_duration_since(now);
@@ -36,12 +33,12 @@ impl ExpirationDate {
         }
     }
 
-    pub(crate) fn get_date_string(&self) ->  Result<String, Box<dyn Error>>{
+    pub(crate) fn get_date_string(&self) -> Result<String, Box<dyn Error>> {
         let date = self.get_date()?;
         Ok(date.format("%Y-%m-%d").to_string())
     }
 
-    pub fn from_string(s: &String) -> Result<Self, Box<dyn Error>> {
+    pub fn from_string(s: &str) -> Result<Self, Box<dyn Error>> {
         if let Ok(days) = s.parse::<Positive>() {
             Ok(ExpirationDate::Days(days))
         } else if let Ok(datetime) = DateTime::parse_from_rfc3339(s) {
@@ -477,8 +474,8 @@ mod tests_payoff {
 #[cfg(test)]
 mod tests_expiration_date {
     use super::*;
-    use chrono::{Duration, TimeZone};
     use crate::constants::DAYS_IN_A_YEAR;
+    use chrono::{Duration, TimeZone};
 
     #[test]
     fn test_expiration_date_days() {
@@ -565,14 +562,13 @@ mod tests_expiration_date {
 
         assert!((result - expected_date).num_seconds().abs() <= 1);
     }
-    
 
     #[test]
     #[should_panic(expected = "DateTime results in negative duration")]
     fn test_negative_datetime_panic() {
         let past_date = Utc::now() - Duration::days(10);
         let expiration = ExpirationDate::DateTime(past_date);
-        let _= expiration.get_years().unwrap();
+        let _ = expiration.get_years().unwrap();
     }
 
     #[test]
@@ -877,7 +873,7 @@ mod test_expiration_date {
 
     #[test]
     fn test_from_string_valid_days() {
-        let result = ExpirationDate::from_string(&"30.0".to_string());
+        let result = ExpirationDate::from_string("30.0");
         assert!(result.is_ok());
         match result.unwrap() {
             ExpirationDate::Days(days) => assert_eq!(days, 30.0),
@@ -887,13 +883,13 @@ mod test_expiration_date {
 
     #[test]
     fn test_from_string_valid_datetime() {
-        let result = ExpirationDate::from_string(&"2024-12-31T00:00:00Z".to_string());
+        let result = ExpirationDate::from_string("2024-12-31T00:00:00Z");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_from_string_invalid_format() {
-        let result = ExpirationDate::from_string(&"invalid date".to_string());
+        let result = ExpirationDate::from_string("invalid date");
         assert!(result.is_err());
     }
 }
@@ -1060,8 +1056,5 @@ mod test_exchange_options {
         assert_eq!(option.payoff(&info), 10.0);
     }
 }
-
-
-
 
 // find . -type f -name "*.rs" -not -path "./target/*" -exec sed -i '' 's|ExpirationDate::Days(pos!(1.0))|ExpirationDate::Days(pos!(1.0))|g' {} +

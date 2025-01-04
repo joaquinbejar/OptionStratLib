@@ -382,9 +382,11 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let underlying_price: Decimal = option.underlying_price.to_dec();
     let implied_volatility: Positive = option.implied_volatility;
 
-    let common_term: Decimal =
-        -underlying_price * implied_volatility * (-expiration_date.to_dec() * dividend_yield).exp() * n(d1)?
-            / (Decimal::TWO * expiration_date.sqrt());
+    let common_term: Decimal = -underlying_price
+        * implied_volatility
+        * (-expiration_date.to_dec() * dividend_yield).exp()
+        * n(d1)?
+        / (Decimal::TWO * expiration_date.sqrt());
 
     let strike_price: Decimal = option.strike_price.to_dec();
     let risk_free_rate: Decimal = option.risk_free_rate;
@@ -1128,11 +1130,11 @@ mod tests_gamma_equations {
 #[cfg(test)]
 mod tests_vega_equation {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, OptionType, Side};
     use crate::{pos, Positive};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_test_option(
         underlying_price: Positive,
@@ -1159,7 +1161,13 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_atm() {
-        let option = create_test_option(pos!(100.0), pos!(100.0), pos!(0.2), Positive::ZERO, DAYS_IN_A_YEAR);
+        let option = create_test_option(
+            pos!(100.0),
+            pos!(100.0),
+            pos!(0.2),
+            Positive::ZERO,
+            DAYS_IN_A_YEAR,
+        );
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 63.68306511756191;
         assert!(
@@ -1172,7 +1180,13 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_otm() {
-        let option = create_test_option(pos!(90.0), pos!(100.0), pos!(0.2), Positive::ZERO, DAYS_IN_A_YEAR);
+        let option = create_test_option(
+            pos!(90.0),
+            pos!(100.0),
+            pos!(0.2),
+            Positive::ZERO,
+            DAYS_IN_A_YEAR,
+        );
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 38.68485587005888;
         assert!(
@@ -1185,7 +1199,13 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_short_expiration() {
-        let option = create_test_option(pos!(100.0), pos!(100.0), pos!(0.2), Positive::ZERO, Positive::ONE);
+        let option = create_test_option(
+            pos!(100.0),
+            pos!(100.0),
+            pos!(0.2),
+            Positive::ZERO,
+            Positive::ONE,
+        );
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 2.6553722124554757;
         assert!(
@@ -1198,7 +1218,13 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_with_dividends() {
-        let option = create_test_option(pos!(100.0), pos!(100.0), pos!(0.2), pos!(0.03), Positive::ONE);
+        let option = create_test_option(
+            pos!(100.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(0.03),
+            Positive::ONE,
+        );
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 2.6551539716535117;
         assert!(
@@ -1211,7 +1237,13 @@ mod tests_vega_equation {
 
     #[test]
     fn test_vega_itm() {
-        let option = create_test_option(pos!(110.0), pos!(100.0), pos!(0.2), Positive::ZERO, Positive::ONE);
+        let option = create_test_option(
+            pos!(110.0),
+            pos!(100.0),
+            pos!(0.2),
+            Positive::ZERO,
+            Positive::ONE,
+        );
         let vega = vega(&option).unwrap().to_f64().unwrap();
         let expected_vega = 5.757663148492351;
         assert!(

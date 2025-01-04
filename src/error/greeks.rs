@@ -34,9 +34,9 @@
 //! * Invalid rate values
 
 use crate::error::decimal::DecimalError;
+use crate::Positive;
 use std::error::Error;
 use std::fmt;
-use crate::Positive;
 
 #[derive(Debug)]
 pub enum GreeksError {
@@ -124,7 +124,6 @@ impl fmt::Display for GreeksError {
             GreeksError::InputError(err) => write!(f, "Input validation error: {}", err),
             GreeksError::CalculationError(err) => write!(f, "Greek calculation error: {}", err),
             GreeksError::StdError(msg) => write!(f, "Standard error: {}", msg),
-
         }
     }
 }
@@ -253,7 +252,6 @@ mod tests {
             _ => panic!("Wrong error type"),
         }
     }
-    
 
     #[test]
     fn test_delta_error_creation() {

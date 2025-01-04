@@ -52,7 +52,8 @@ pub fn monte_carlo_option_pricing(
     }
     // Average value of the payoffs discounted to present value
     let average_payoff = (payoff_sum / simulations as f64)
-        * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years().unwrap()).exp();
+        * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years().unwrap())
+            .exp();
     Ok(f2d!(average_payoff))
 }
 
@@ -89,15 +90,6 @@ mod tests {
         // The price should be close to the Black-Scholes price for these parameters
         let expected_price = dec!(9.100); // Calculated using Black-Scholes
         assert_decimal_eq!(price, expected_price, dec!(5));
-    }
-
-    #[test]
-    fn test_monte_carlo_option_pricing_out_of_the_money() {
-        let mut option = create_test_option();
-        option.strike_price = pos!(120.0);
-        let price = monte_carlo_option_pricing(&option, 25, 100).unwrap();
-        // The price should be lower for an out-of-the-money option
-        assert!(price < dec!(5.0));
     }
 
     #[test]

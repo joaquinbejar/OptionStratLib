@@ -331,10 +331,10 @@ impl Graph for Options {
 
 #[cfg(test)]
 mod tests_options {
-    use approx::assert_relative_eq;
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
     use crate::pos;
+    use approx::assert_relative_eq;
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
 

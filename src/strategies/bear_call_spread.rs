@@ -584,20 +584,20 @@ mod tests_bear_call_spread_strategies {
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // short_strike
-            pos!(105.0),                // long_strike
+            pos!(100.0),                      // underlying_price
+            pos!(95.0),                       // short_strike
+            pos!(105.0),                      // long_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.20),                 // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            10.0,                       // premium_short_call
-            5.0,                        // premium_long_call
-            0.5,                        // open_fee_short_call
-            0.5,                        // close_fee_short_call
-            0.5,                        // open_fee_long_call
-            0.5,                        // close_fee_long_call
+            pos!(0.20),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            10.0,                             // premium_short_call
+            5.0,                              // premium_long_call
+            0.5,                              // open_fee_short_call
+            0.5,                              // close_fee_short_call
+            0.5,                              // open_fee_long_call
+            0.5,                              // close_fee_long_call
         )
     }
 
@@ -1057,17 +1057,17 @@ mod tests_bear_call_spread_validable {
     fn create_valid_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // short_strike
-            pos!(105.0),                // long_strike
+            pos!(100.0),                      // underlying_price
+            pos!(95.0),                       // short_strike
+            pos!(105.0),                      // long_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_short_call
-            1.0,                        // premium_long_call
-            0.0,                        // fees
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_short_call
+            1.0,                              // premium_long_call
+            0.0,                              // fees
             0.0,
             0.0,
             0.0,
@@ -1244,20 +1244,20 @@ mod tests_bear_call_spread_profit {
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // short_strike
-            pos!(105.0),                // long_strike
+            pos!(100.0),                      // underlying_price
+            pos!(95.0),                       // short_strike
+            pos!(105.0),                      // long_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_short_call
-            1.0,                        // premium_long_call
-            0.0,                        // open_fee_short_call
-            0.0,                        // close_fee_short_call
-            0.0,                        // open_fee_long_call
-            0.0,                        // close_fee_long_call
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_short_call
+            1.0,                              // premium_long_call
+            0.0,                              // open_fee_short_call
+            0.0,                              // close_fee_short_call
+            0.0,                              // open_fee_long_call
+            0.0,                              // close_fee_long_call
         )
     }
 
@@ -1638,17 +1638,17 @@ mod tests_bear_call_spread_graph {
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(105.0),                // short_strike
-            pos!(110.0),                // long_strike
+            pos!(100.0),                      // underlying_price
+            pos!(105.0),                      // short_strike
+            pos!(110.0),                      // long_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_short_call
-            1.0,                        // premium_long_call
-            0.0,                        // fees
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_short_call
+            1.0,                              // premium_long_call
+            0.0,                              // fees
             0.0,
             0.0,
             0.0,
@@ -1731,20 +1731,20 @@ mod tests_bear_call_spread_probability {
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(105.0),                // short_strike
-            pos!(110.0),                // long_strike
+            pos!(100.0),                      // underlying_price
+            pos!(105.0),                      // short_strike
+            pos!(110.0),                      // long_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_short_call
-            1.0,                        // premium_long_call
-            0.0,                        // open_fee_short_call
-            0.0,                        // close_fee_short_call
-            0.0,                        // open_fee_long_call
-            0.0,                        // close_fee_long_call
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_short_call
+            1.0,                              // premium_long_call
+            0.0,                              // open_fee_short_call
+            0.0,                              // close_fee_short_call
+            0.0,                              // open_fee_long_call
+            0.0,                              // close_fee_long_call
         )
     }
 
@@ -1901,7 +1901,7 @@ mod tests_delta {
     #[test]
     fn create_test_reducing_adjustments() {
         let strike = pos!(5870.0);
-        let strategy = get_strategy( strike, pos!(5860.0));
+        let strategy = get_strategy(strike, pos!(5860.0));
         let size = 0.0296;
         let delta = pos!(0.2210336595644664);
         assert_relative_eq!(
@@ -1915,7 +1915,7 @@ mod tests_delta {
             suggestion[0],
             DeltaAdjustment::SellOptions {
                 quantity: delta,
-                strike: strike,
+                strike,
                 option_type: OptionStyle::Call
             }
         );
@@ -1934,7 +1934,7 @@ mod tests_delta {
     #[test]
     fn create_test_increasing_adjustments() {
         let strike = pos!(5820.0);
-        let strategy = get_strategy( pos!(5800.0), strike);
+        let strategy = get_strategy(pos!(5800.0), strike);
         let size = -0.0971;
         let delta = pos!(0.3029931694406447);
         assert_relative_eq!(
@@ -1948,7 +1948,7 @@ mod tests_delta {
             suggestion[0],
             DeltaAdjustment::BuyOptions {
                 quantity: delta,
-                strike: strike,
+                strike,
                 option_type: OptionStyle::Call
             }
         );
@@ -2013,10 +2013,10 @@ mod tests_delta_size {
     #[test]
     fn create_test_reducing_adjustments() {
         let strike = pos!(5840.4);
-        let strategy = get_strategy(  strike, pos!(5820.5));
+        let strategy = get_strategy(strike, pos!(5820.5));
         let size = 0.2555;
         let delta = pos!(1.09617639141894);
-        
+
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
             size,
@@ -2028,7 +2028,7 @@ mod tests_delta_size {
             suggestion[0],
             DeltaAdjustment::SellOptions {
                 quantity: delta,
-                strike: strike,
+                strike,
                 option_type: OptionStyle::Call
             }
         );
@@ -2047,7 +2047,7 @@ mod tests_delta_size {
     #[test]
     fn create_test_increasing_adjustments() {
         let strike = pos!(5820.414);
-        let strategy = get_strategy( pos!(5800.0), strike);
+        let strategy = get_strategy(pos!(5800.0), strike);
         let size = -0.2971;
         let delta = pos!(0.932384393100519);
         assert_relative_eq!(
@@ -2061,7 +2061,7 @@ mod tests_delta_size {
             suggestion[0],
             DeltaAdjustment::BuyOptions {
                 quantity: delta,
-                strike: strike,
+                strike,
                 option_type: OptionStyle::Call
             }
         );

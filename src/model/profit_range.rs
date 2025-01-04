@@ -180,9 +180,9 @@ mod tests_profit_range {
 #[cfg(test)]
 mod tests_calculate_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::pos;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_basic_range() -> ProfitLossRange {
         ProfitLossRange::new(Some(pos!(90.0)), Some(pos!(110.0)), pos!(0.0)).unwrap()

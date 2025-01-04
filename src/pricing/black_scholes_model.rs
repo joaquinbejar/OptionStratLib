@@ -204,12 +204,12 @@ pub trait BlackScholes {
 #[cfg(test)]
 mod tests_black_scholes {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::greeks::utils::{d1, d2};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{pos, Options, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn mock_options_call() -> Options {
         Options {
@@ -266,7 +266,11 @@ mod tests_black_scholes {
     #[test]
     fn test_black_scholes_simplest_call() {
         let mut option = mock_options_simplest_call();
-        assert_relative_eq!(option.expiration_date.get_years().unwrap().to_f64(), 1.0, epsilon = 0.00001);
+        assert_relative_eq!(
+            option.expiration_date.get_years().unwrap().to_f64(),
+            1.0,
+            epsilon = 0.00001
+        );
         let d1 = d1(
             option.underlying_price,
             option.strike_price,
@@ -387,7 +391,11 @@ mod tests_black_scholes {
 
             exotic_params: None,
         };
-        assert_relative_eq!(option.expiration_date.get_years().unwrap().to_f64(), 0.25, epsilon = 0.00001);
+        assert_relative_eq!(
+            option.expiration_date.get_years().unwrap().to_f64(),
+            0.25,
+            epsilon = 0.00001
+        );
         let d1 = d1(
             option.underlying_price,
             option.strike_price,
@@ -414,8 +422,9 @@ mod tests_black_scholes {
         let option_value = option.underlying_price * big_n_d1
             - option.strike_price
                 * big_n_d2
-                * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years().unwrap())
-                    .exp();
+                * (-option.risk_free_rate.to_f64().unwrap()
+                    * option.expiration_date.get_years().unwrap())
+                .exp();
         assert_relative_eq!(option_value.to_f64(), 2.133368, epsilon = 0.00001);
 
         let price = black_scholes(&option.clone());

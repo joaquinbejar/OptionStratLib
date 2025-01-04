@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-use crate::{Positive};
+use crate::Positive;
 use plotters::style::RGBColor;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

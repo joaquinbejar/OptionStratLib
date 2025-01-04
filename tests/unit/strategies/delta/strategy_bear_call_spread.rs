@@ -66,7 +66,7 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: Positive::new_decimal(Decimal::from_str("2.184538786861798").unwrap())
+            quantity: Positive::new_decimal(Decimal::from_str("2.184538786861796").unwrap())
                 .unwrap(),
             strike: pos!(5820.0),
             option_type: OptionStyle::Call

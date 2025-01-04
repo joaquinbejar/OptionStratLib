@@ -430,9 +430,9 @@ mod tests_options {
 #[cfg(test)]
 mod tests_expiration_date {
     use super::*;
+    use crate::pos;
     use chrono::{Duration, NaiveDate, TimeZone};
     use tracing::info;
-    use crate::pos;
 
     #[test]
     fn test_display_days() {

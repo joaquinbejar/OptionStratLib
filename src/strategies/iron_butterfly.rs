@@ -470,7 +470,11 @@ impl Graph for IronButterfly {
             format!("Long Call: ${}", self.long_call.option.strike_price),
             format!(
                 "Expire: {}",
-                self.short_put.option.expiration_date.get_date_string().unwrap()
+                self.short_put
+                    .option
+                    .expiration_date
+                    .get_date_string()
+                    .unwrap()
             ),
         ]
         .iter()

@@ -449,7 +449,11 @@ impl Graph for PoorMansCoveredCall {
             ),
             format!(
                 "Short Call Expiry: {}",
-                self.short_call.option.expiration_date.get_date_string().unwrap()
+                self.short_call
+                    .option
+                    .expiration_date
+                    .get_date_string()
+                    .unwrap()
             ),
         ]
         .iter()
@@ -600,10 +604,10 @@ impl DeltaNeutrality for PoorMansCoveredCall {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
         let underlying_symbol = "AAPL".to_string();
@@ -747,9 +751,9 @@ mod tests {
 #[cfg(test)]
 mod tests_pmcc_validation {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::error::position::PositionValidationErrorKind;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -860,9 +864,9 @@ mod tests_pmcc_validation {
 #[cfg(test)]
 mod tests_pmcc_optimization {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::spos;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string(), None, None);
@@ -995,9 +999,9 @@ mod tests_pmcc_optimization {
 #[cfg(test)]
 mod tests_pmcc_pnl {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1075,8 +1079,8 @@ mod tests_pmcc_pnl {
 #[cfg(test)]
 mod tests_pmcc_graph {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::constants::DAYS_IN_A_YEAR;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1157,10 +1161,10 @@ mod tests_pmcc_graph {
 #[cfg(test)]
 mod tests_pmcc_best_area {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1233,10 +1237,10 @@ mod tests_pmcc_best_area {
 #[cfg(test)]
 mod tests_pmcc_best_ratio {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::constants::DAYS_IN_A_YEAR;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
