@@ -770,13 +770,13 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
         OptionStyle::Call => {
             -expiration_date.to_dec()
                 * underlying_price
-                * (-expiration_date * dividend_yield).exp()
+                * (-expiration_date.to_dec() * dividend_yield).exp()
                 * big_n(d1)?
         }
         OptionStyle::Put => {
             expiration_date.to_dec()
                 * underlying_price
-                * (-expiration_date * dividend_yield).exp()
+                * (-expiration_date.to_dec() * dividend_yield).exp()
                 * big_n(-d1)?
         }
     };
