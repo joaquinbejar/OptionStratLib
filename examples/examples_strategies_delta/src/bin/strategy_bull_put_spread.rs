@@ -30,12 +30,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         dec!(0.05),   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(1.0),   // long quantity
-        15.04,   // premium_long
-        89.85,   // premium_short
-        0.78,   // open_fee_long
-        0.78,   // open_fee_long
-        0.73,   // close_fee_long
-        0.73,   // close_fee_short
+        pos!(15.04),   // premium_long
+        pos!(89.85),   // premium_short
+        pos!(0.78),   // open_fee_long
+        pos!(0.78),   // open_fee_long
+        pos!(0.73),   // close_fee_long
+        pos!(0.73),   // close_fee_short
     );
 
     info!("Title: {}", strategy.title());

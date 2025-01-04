@@ -39,7 +39,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.title(), "Long Straddle Strategy: \n\tUnderlying: CL @ $7140 Long Call European Option\n\tUnderlying: CL @ $7140 Long Put European Option");
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         ZERO,
         epsilon = 0.001
     );
@@ -47,7 +47,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(465.429), pos!(0.0001));
     assert_positivef64_relative_eq!(strategy.total_cost(), pos!(465.4299), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 28.03);
+    assert_eq!(strategy.fees().unwrap().to_f64(), 28.03);
 
     // Test range calculations
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();

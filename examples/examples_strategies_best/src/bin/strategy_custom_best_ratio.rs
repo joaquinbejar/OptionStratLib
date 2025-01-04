@@ -30,10 +30,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(1.0),
         dec!(0.05),
         pos!(0.02),
-        1.0,
-        1.0,
-        1.0,
-        1.0,
+        Positive::ONE,
+        Positive::ONE,
+        Positive::ONE,
+        Positive::ONE,
     );
     let positions: Vec<Position> = option_chain.get_random_positions(params)?;
 

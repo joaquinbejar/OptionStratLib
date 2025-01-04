@@ -35,12 +35,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         113.30,   // premium_long
         64.20,   // premium_short
         31.65,   // open_fee_long
-        0.05,   // open_fee_short_call
-        0.05,   // close_fee_short_call
-        0.05,   // open_fee_long_call_low
-        0.05,   // close_fee_long_call_low
-        0.05,   // open_fee_long_call_high
-        0.05,   // close_fee_long_call_high
+        pos!(0.05),   // open_fee_short_call
+        pos!(0.05),   // close_fee_short_call
+        pos!(0.05),   // open_fee_long_call_low
+        pos!(0.05),   // close_fee_long_call_low
+        pos!(0.05),   // open_fee_long_call_high
+        pos!(0.05),   // close_fee_long_call_high
     );
 
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();

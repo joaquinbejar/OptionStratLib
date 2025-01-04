@@ -73,12 +73,12 @@
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
 //!         pos!(2.0),   // long quantity
-//!         85.04,   // premium_long
-//!         29.85,   // premium_short
-//!         0.78,   // open_fee_long
-//!         0.78,   // open_fee_long
-//!         0.73,   // close_fee_long
-//!         0.73,   // close_fee_short
+//!         pos!(85.04),   // premium_long
+//!         pos!(29.85),   // premium_short
+//!         pos!(0.78),   // open_fee_long
+//!         pos!(0.78),   // open_fee_long
+//!         pos!(0.73),   // close_fee_long
+//!         pos!(0.73),   // close_fee_short
 //!     );
 //! let analysis = strategy.analyze_probabilities(None, None);
 //!
@@ -105,12 +105,12 @@
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
 //!         pos!(2.0),   // long quantity
-//!         85.04,   // premium_long
-//!         29.85,   // premium_short
-//!         0.78,   // open_fee_long
-//!         0.78,   // open_fee_long
-//!         0.73,   // close_fee_long
-//!         0.73,   // close_fee_short
+//!         pos!(85.04),   // premium_long
+//!         pos!(29.85),   // premium_short
+//!         pos!(0.78),   // open_fee_long
+//!         pos!(0.78),   // open_fee_long
+//!         pos!(0.73),   // close_fee_long
+//!         pos!(0.73),   // close_fee_short
 //!     );
 //!
 //! let vol_adj = Some(VolatilityAdjustment {
@@ -140,12 +140,12 @@
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
 //!         pos!(2.0),   // long quantity
-//!         85.04,   // premium_long
-//!         29.85,   // premium_short
-//!         0.78,   // open_fee_long
-//!         0.78,   // open_fee_long
-//!         0.73,   // close_fee_long
-//!         0.73,   // close_fee_short
+//!         pos!(85.04),   // premium_long
+//!         pos!(29.85),   // premium_short
+//!         pos!(0.78),   // open_fee_long
+//!         pos!(0.78),   // open_fee_long
+//!         pos!(0.73),   // close_fee_long
+//!         pos!(0.73),   // close_fee_short
 //!     );
 //! let trend = Some(PriceTrend {
 //!     drift_rate: 0.05,   // 5% annual drift

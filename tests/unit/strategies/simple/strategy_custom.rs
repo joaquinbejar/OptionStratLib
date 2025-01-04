@@ -121,12 +121,12 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
 
     // Test strategy properties and calculations
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         572.83,
         epsilon = 0.001
     );
     assert_relative_eq!(
-        strategy.fees().unwrap().to_f64().unwrap(),
+        strategy.fees().unwrap().to_f64(),
         51.56,
         epsilon = 0.001
     );

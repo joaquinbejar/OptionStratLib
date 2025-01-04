@@ -24,19 +24,19 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(2.0),   // long quantity
-        85.04,   // premium_long
-        29.85,   // premium_short
-        0.78,   // open_fee_long
-        0.78,   // open_fee_long
-        0.73,   // close_fee_long
-        0.73,   // close_fee_short
+        pos!(85.04),   // premium_long
+        pos!(29.85),   // premium_short
+        pos!(0.78),   // open_fee_long
+        pos!(0.78),   // open_fee_long
+        pos!(0.73),   // close_fee_long
+        pos!(0.73),   // close_fee_short
     );
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.title(), "Bear Call Spread Strategy:\n\tUnderlying: SP500 @ $5750 Short Call European Option\n\tUnderlying: SP500 @ $5820 Long Call European Option");
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         104.34
     );
     assert!(strategy.max_profit().is_ok());
@@ -44,7 +44,7 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.max_profit()?, pos!(104.34));
     assert_eq!(strategy.max_loss()?, pos!(35.66));
     assert_eq!(strategy.total_cost(), pos!(229.58));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 6.04);
+    assert_eq!(strategy.fees().unwrap().to_f64(), 6.04);
     assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 

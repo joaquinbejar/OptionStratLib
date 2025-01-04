@@ -27,13 +27,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(1.0),
         49.65,
         42.93,
-        1.0,
+        Positive::ONE,
         4.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     info!("Title: {}", strategy.title());

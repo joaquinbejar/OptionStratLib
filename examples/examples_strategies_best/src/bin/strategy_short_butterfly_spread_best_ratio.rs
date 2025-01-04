@@ -29,15 +29,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         Decimal::ZERO,
         Positive::ZERO,
         pos!(1.0),
-        ZERO,
-        ZERO,
-        ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
         4.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);

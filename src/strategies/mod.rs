@@ -59,12 +59,12 @@
 //!     dec!(0.05),   // risk_free_rate
 //!     Positive::ZERO,   // dividend_yield
 //!     pos!(2.0),   // long quantity
-//!     85.04,   // premium_long
-//!     29.85,   // premium_short
-//!     0.78,   // open_fee_long
-//!     0.78,   // open_fee_long
-//!     0.73,   // close_fee_long
-//!     0.73,   // close_fee_short
+//!     pos!(85.04),   // premium_long
+//!     pos!(29.85),   // premium_short
+//!     pos!(0.78),   // open_fee_long
+//!     pos!(0.78),   // open_fee_long
+//!     pos!(0.73),   // close_fee_long
+//!     pos!(0.73),   // close_fee_short
 //! );
 //!
 //! let profit = spread.max_profit().unwrap_or(Positive::ZERO);
@@ -168,9 +168,9 @@
 //!     dec!(0.01),   // risk_free_rate
 //!     pos!(0.02),   // dividend_yield
 //!     pos!(1.0),   // quantity
-//!     1.5,   // premium_short_call
-//!     1.0,   // premium_short_put
-//!     2.0,   // premium_long_call
+//!     pos!(1.5),   // premium_short_call
+//!     Positive::ONE,   // premium_short_put
+//!     Positive::TWO,   // premium_long_call
 //!     1.8,   // premium_long_put
 //!     5.0,   // open_fee
 //!     5.0,   // close_fee

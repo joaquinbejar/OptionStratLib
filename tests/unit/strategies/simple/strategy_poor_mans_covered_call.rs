@@ -39,7 +39,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(141.8399), pos!(0.0001));
     assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(258.16), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 10.36);
+    assert_eq!(strategy.fees().unwrap().to_f64(), 10.36);
     assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 

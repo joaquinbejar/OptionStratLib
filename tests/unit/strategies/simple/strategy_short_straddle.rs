@@ -36,14 +36,14 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         409.36,
         epsilon = 0.001
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(409.36), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 28.04);
+    assert_eq!(strategy.fees().unwrap().to_f64(), 28.04);
 
     // Test range calculations
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
@@ -72,7 +72,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     // Validate that max profit equals net premium received (characteristic of Short Straddle)
     assert_relative_eq!(
         strategy.max_profit()?.to_f64(),
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         epsilon = 0.001
     );
 

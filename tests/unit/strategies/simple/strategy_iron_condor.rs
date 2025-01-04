@@ -42,7 +42,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         42.839,
         epsilon = 0.001
     );
@@ -50,7 +50,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(42.839), pos!(0.0001));
     assert_positivef64_relative_eq!(strategy.total_cost(), pos!(218.5999), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 15.36);
+    assert_eq!(strategy.fees().unwrap().to_f64(), 15.36);
 
     // Test range calculations
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();

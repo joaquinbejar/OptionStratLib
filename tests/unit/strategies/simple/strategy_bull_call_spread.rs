@@ -27,19 +27,19 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(2.0),   // long quantity
-        85.04,   // premium_long
-        29.85,   // premium_short
-        0.78,   // open_fee_long
-        0.78,   // open_fee_long
-        0.73,   // close_fee_long
-        0.73,   // close_fee_short
+        pos!(85.04),   // premium_long
+        pos!(29.85),   // premium_short
+        pos!(0.78),   // open_fee_long
+        pos!(0.78),   // open_fee_long
+        pos!(0.73),   // close_fee_long
+        pos!(0.73),   // close_fee_short
     );
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.title(), "Bull Call Spread Strategy:\n\tUnderlying: SP500 @ $5750 Long Call European Option\n\tUnderlying: SP500 @ $5820 Short Call European Option");
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         -116.42,
         epsilon = 0.001
     );
@@ -47,7 +47,7 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.max_loss().is_ok());
     assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(116.42), pos!(0.0001));
     assert_positivef64_relative_eq!(strategy.total_cost(), pos!(229.98), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 6.04);
+    assert_eq!(strategy.fees().unwrap().to_f64(), 6.04);
     assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 

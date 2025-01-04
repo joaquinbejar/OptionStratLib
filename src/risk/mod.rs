@@ -72,10 +72,10 @@
 //!
 //! let position = Position {
 //!     option,
-//!     premium: 5.0,
+//!     premium: pos!(5.0),
 //!     date: Utc::now(),
-//!     open_fee: 0.5,
-//!     close_fee: 0.5,
+//!     open_fee: pos!(0.5),
+//!     close_fee: pos!(0.5),
 //! };
 //!
 //! // Create SPAN calculator
@@ -120,17 +120,17 @@
 //! let positions = vec![
 //!     Position {
 //!         option: option.clone(),
-//!         premium: 5.0,
+//!         premium: pos!(5.0),
 //!         date: Utc::now(),
-//!         open_fee: 0.5,
-//!         close_fee: 0.5,
+//!         open_fee: pos!(0.5),
+//!         close_fee: pos!(0.5),
 //!     },
 //!     Position {
 //!         option,
-//!         premium: 3.0,
+//!         premium: pos!(3.0),
 //!         date: Utc::now(),
-//!         open_fee: 0.5,
-//!         close_fee: 0.5,
+//!         open_fee: pos!(0.5),
+//!         close_fee: pos!(0.5),
 //!     },
 //! ];
 //!

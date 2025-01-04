@@ -41,7 +41,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         26.58,
         epsilon = 0.001
     );
@@ -50,7 +50,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(26.58), pos!(0.0001));
     assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(213.42), pos!(0.0001));
     assert_relative_eq!(
-        strategy.fees().unwrap().to_f64().unwrap(),
+        strategy.fees().unwrap().to_f64(),
         23.9999,
         epsilon = 0.001
     );

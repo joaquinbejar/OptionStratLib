@@ -38,7 +38,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
 
     // Validate financial calculations
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         -24.18,
         epsilon = 0.001
     );
@@ -47,7 +47,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
     assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(30.82), pos!(0.0001));
     assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(24.18), pos!(0.0001));
     assert_positivef64_relative_eq!(strategy.total_cost(), pos!(32.66), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 2.25);
+    assert_eq!(strategy.fees().unwrap().to_f64(), 2.25);
 
     // Test price range calculations
     let test_price_range: Vec<Positive> = (2400..2600)

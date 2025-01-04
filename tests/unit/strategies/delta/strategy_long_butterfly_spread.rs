@@ -30,11 +30,11 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         113.30,   // premium_long_low
         64.20,   // premium_short
         31.65,   // premium_long_high
-        0.07,   // fees
-        0.05,   // fees
+        pos!(0.07),   // fees
+        pos!(0.05),   // fees
         0.03,   // fees
-        0.07,   // fees
-        0.05,   // fees
+        pos!(0.07),   // fees
+        pos!(0.05),   // fees
         0.03,   // fees
     );
 
