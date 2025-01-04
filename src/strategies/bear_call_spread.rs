@@ -52,10 +52,10 @@ use crate::visualization::utils::Graph;
 use crate::Options;
 use crate::{d2fu, f2du, pos, Positive};
 use chrono::Utc;
-use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::debug;
 
 const BEAR_CALL_SPREAD_DESCRIPTION: &str =
@@ -87,12 +87,12 @@ impl BearCallSpread {
         risk_free_rate: Decimal,
         dividend_yield: Positive,
         quantity: Positive,
-        premium_short_call: f64,
-        premium_long_call: f64,
-        open_fee_short_call: f64,
-        close_fee_short_call: f64,
-        open_fee_long_call: f64,
-        close_fee_long_call: f64,
+        premium_short_call: Positive,
+        premium_long_call: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
     ) -> Self {
         if short_strike == Positive::ZERO {
             short_strike = underlying_price;
@@ -221,17 +221,7 @@ impl Strategies for BearCallSpread {
             Ok(mas_loss)
         }
     }
-
-    fn total_cost(&self) -> Positive {
-        pos!(self.short_call.net_cost() + self.long_call.net_cost())
-    }
-
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        Ok(
-            Decimal::from_f64(self.short_call.net_premium_received() - self.long_call.net_cost())
-                .unwrap(),
-        )
-    }
+    
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
@@ -359,8 +349,8 @@ impl Optimizable for BearCallSpread {
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            short.call_bid.unwrap().to_f64(),
-            long.call_ask.unwrap().to_f64(),
+            short.call_bid.unwrap(),
+            long.call_ask.unwrap(),
             self.short_call.open_fee,
             self.short_call.close_fee,
             self.long_call.open_fee,
@@ -370,9 +360,9 @@ impl Optimizable for BearCallSpread {
 }
 
 impl Profit for BearCallSpread {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        self.short_call.pnl_at_expiration(&price) + self.long_call.pnl_at_expiration(&price)
+        Ok(self.short_call.pnl_at_expiration(&price)? + self.long_call.pnl_at_expiration(&price)?)
     }
 }
 
@@ -576,7 +566,7 @@ impl DeltaNeutrality for BearCallSpread {
 mod tests_bear_call_spread_strategies {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
+    use crate::{assert_positivef64_relative_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -592,12 +582,12 @@ mod tests_bear_call_spread_strategies {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            10.0,                             // premium_short_call
-            5.0,                              // premium_long_call
-            0.5,                              // open_fee_short_call
-            0.5,                              // close_fee_short_call
-            0.5,                              // open_fee_long_call
-            0.5,                              // close_fee_long_call
+            pos!(10.0),                       // premium_short_call
+            pos!(5.0),                        // premium_long_call
+            pos!(0.5),                        // open_fee_short_call
+            pos!(0.5),                        // close_fee_short_call
+            pos!(0.5),                        // open_fee_long_call
+            pos!(0.5),                        // close_fee_long_call
         )
     }
 
@@ -614,7 +604,7 @@ mod tests_bear_call_spread_strategies {
         assert!(result.is_ok());
         assert_relative_eq!(
             result.unwrap().to_f64(),
-            spread.net_premium_received().unwrap().to_f64().unwrap(),
+            spread.net_premium_received().unwrap().to_f64(),
             epsilon = 0.0001
         );
     }
@@ -623,8 +613,8 @@ mod tests_bear_call_spread_strategies {
     fn test_max_profit_negative() {
         let mut spread = create_test_spread();
         // Modify premiums to create negative net premium
-        spread.short_call.premium = 1.0;
-        spread.long_call.premium = 2.0;
+        spread.short_call.premium = pos!(1.0);
+        spread.long_call.premium = pos!(2.0);
 
         let result = spread.max_profit();
         assert!(result.is_err());
@@ -644,7 +634,7 @@ mod tests_bear_call_spread_strategies {
         let width =
             (spread.long_call.option.strike_price - spread.short_call.option.strike_price).to_f64();
         let expected_loss = width * spread.short_call.option.quantity.to_f64()
-            - spread.net_premium_received().unwrap().to_f64().unwrap();
+            - spread.net_premium_received().unwrap().to_f64();
         assert_relative_eq!(result.unwrap().to_f64(), expected_loss, epsilon = 0.0001);
     }
 
@@ -666,9 +656,10 @@ mod tests_bear_call_spread_strategies {
     #[test]
     fn test_total_cost() {
         let spread = create_test_spread();
-        let expected_cost = spread.short_call.net_cost() + spread.long_call.net_cost();
+        let expected_cost = (spread.short_call.net_cost().unwrap() + spread.long_call.net_cost().unwrap())
+            .to_f64().unwrap();
         assert_relative_eq!(
-            spread.total_cost().to_f64(),
+            spread.total_cost().unwrap().to_f64(),
             expected_cost,
             epsilon = 0.0001
         );
@@ -678,23 +669,23 @@ mod tests_bear_call_spread_strategies {
     fn test_net_premium_received() {
         let spread = create_test_spread();
         let expected_premium =
-            spread.short_call.net_premium_received() - spread.long_call.net_cost();
-        assert_relative_eq!(
-            spread.net_premium_received().unwrap().to_f64().unwrap(),
+            spread.short_call.net_premium_received().unwrap() - spread.long_call.net_cost().unwrap();
+        assert_positivef64_relative_eq!(
+            spread.net_premium_received().unwrap(),
             expected_premium,
-            epsilon = 0.0001
+            pos!(0.0001)
         );
     }
 
     #[test]
     fn test_fees() {
         let spread = create_test_spread();
-        let expected_fees = spread.short_call.open_fee
+        let expected_fees = (spread.short_call.open_fee
             + spread.short_call.close_fee
             + spread.long_call.open_fee
-            + spread.long_call.close_fee;
+            + spread.long_call.close_fee).to_f64();
         assert_relative_eq!(
-            spread.fees().unwrap().to_f64().unwrap(),
+            spread.fees().unwrap().to_f64(),
             expected_fees,
             epsilon = 0.0001
         );
@@ -730,8 +721,8 @@ mod tests_bear_call_spread_strategies {
     fn test_profit_ratio_zero_profit() {
         let mut spread = create_test_spread();
         // Modify premiums to create zero max profit
-        spread.short_call.premium = 1.0;
-        spread.long_call.premium = 1.0;
+        spread.short_call.premium =Positive::ONE;
+        spread.long_call.premium = Positive::ONE;
 
         assert_relative_eq!(
             spread.profit_ratio().unwrap().to_f64().unwrap(),
@@ -759,7 +750,7 @@ mod tests_bear_call_spread_strategies {
         // Break even should be short strike plus net premium received per contract
         let expected_break_even = spread.short_call.option.strike_price
             + pos!(
-                spread.net_premium_received().unwrap().to_f64().unwrap()
+                spread.net_premium_received().unwrap().to_f64()
                     / spread.short_call.option.quantity.to_f64()
             );
         assert_relative_eq!(
@@ -782,12 +773,12 @@ mod tests_bear_call_spread_strategies {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0), // quantity = 2
-            2.0,
-            1.0,
-            0.5,
-            0.5,
-            0.5,
-            0.5,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.5),
+            pos!(0.5),
+            pos!(0.5),
+            pos!(0.5),
         );
 
         // Check that all calculations scale properly with quantity
@@ -816,12 +807,12 @@ mod tests_bear_call_spread_strategies {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.5,
-            0.5,
-            0.5,
-            0.5,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.5),
+            pos!(0.5),
+            pos!(0.5),
+            pos!(0.5),
         );
 
         // Check that strike width affects max loss calculation
@@ -861,10 +852,10 @@ mod tests_bear_call_spread_positionable {
     fn create_test_position(side: Side) -> Position {
         Position::new(
             create_test_option(side),
-            1.0,        // premium
+            pos!(1.0),        // premium
             Utc::now(), // timestamp
-            0.0,        // open_fee
-            0.0,        // close_fee
+            pos!(0.0),        // open_fee
+            pos!(0.0),        // close_fee
         )
     }
 
@@ -880,12 +871,12 @@ mod tests_bear_call_spread_positionable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let short_position = create_test_position(Side::Short);
@@ -907,12 +898,12 @@ mod tests_bear_call_spread_positionable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let long_position = create_test_position(Side::Long);
@@ -934,12 +925,12 @@ mod tests_bear_call_spread_positionable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let result = spread.get_positions();
@@ -963,12 +954,12 @@ mod tests_bear_call_spread_positionable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let short_position = create_test_position(Side::Short);
@@ -993,12 +984,12 @@ mod tests_bear_call_spread_positionable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         // Create new positions
@@ -1022,12 +1013,12 @@ mod tests_bear_call_spread_positionable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let short_position = create_test_position(Side::Short);
@@ -1065,12 +1056,12 @@ mod tests_bear_call_spread_validable {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            2.0,                              // premium_short_call
-            1.0,                              // premium_long_call
-            0.0,                              // fees
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),                              // premium_short_call
+            pos!(1.0),                              // premium_long_call
+            pos!(0.0),                              // fees
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         )
     }
 
@@ -1092,12 +1083,12 @@ mod tests_bear_call_spread_validable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
         assert!(!spread.validate());
     }
@@ -1114,12 +1105,12 @@ mod tests_bear_call_spread_validable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
         assert!(!spread.validate());
     }
@@ -1153,12 +1144,12 @@ mod tests_bear_call_spread_validable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
         assert!(!spread.validate());
     }
@@ -1175,12 +1166,12 @@ mod tests_bear_call_spread_validable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
         assert!(!spread.validate());
     }
@@ -1197,12 +1188,12 @@ mod tests_bear_call_spread_validable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
         // Should still be valid as long as strikes are different
         assert!(spread.validate());
@@ -1220,12 +1211,12 @@ mod tests_bear_call_spread_validable {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0), // Different quantity
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
         // Should be valid as quantity > 0
         assert!(spread.validate());
@@ -1252,31 +1243,32 @@ mod tests_bear_call_spread_profit {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            2.0,                              // premium_short_call
-            1.0,                              // premium_long_call
-            0.0,                              // open_fee_short_call
-            0.0,                              // close_fee_short_call
-            0.0,                              // open_fee_long_call
-            0.0,                              // close_fee_long_call
+            pos!(2.0),                              // premium_short_call
+            pos!(1.0),                              // premium_long_call
+            pos!(0.0),                              // open_fee_short_call
+            pos!(0.0),                              // close_fee_short_call
+            pos!(0.0),                              // open_fee_long_call
+            pos!(0.0),                              // close_fee_long_call
         )
     }
 
     #[test]
     fn test_profit_below_short_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(pos!(90.0));
+        let profit = spread.calculate_profit_at(pos!(90.0))
+            .unwrap().to_f64().unwrap();
         // When price is below short strike, both options expire worthless
         // Profit should be the net premium received
-        let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap();
+        let expected_profit = spread.net_premium_received().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
     #[test]
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(pos!(95.0));
+        let profit = spread.calculate_profit_at(pos!(95.0)).unwrap().to_f64().unwrap();
         // At short strike, short call is at-the-money
-        let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap();
+        let expected_profit = spread.net_premium_received().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
@@ -1284,22 +1276,22 @@ mod tests_bear_call_spread_profit {
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
         let test_price = pos!(100.0);
-        let profit = spread.calculate_profit_at(test_price);
+        let profit = spread.calculate_profit_at(test_price).unwrap().to_f64().unwrap();
         // Between strikes, only short call is in-the-money
         let intrinsic_value = test_price - spread.short_call.option.strike_price;
         let expected_profit =
-            spread.net_premium_received().unwrap().to_f64().unwrap() - intrinsic_value.to_f64();
+            spread.net_premium_received().unwrap().to_f64() - intrinsic_value.to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
     }
 
     #[test]
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(pos!(105.0));
+        let profit = spread.calculate_profit_at(pos!(105.0)).unwrap().to_f64().unwrap();
         // At long strike, both options are in-the-money
         let short_intrinsic = pos!(105.0) - spread.short_call.option.strike_price;
         let long_intrinsic = pos!(105.0) - spread.long_call.option.strike_price;
-        let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap()
+        let expected_profit = spread.net_premium_received().unwrap().to_f64()
             - short_intrinsic.to_f64()
             + long_intrinsic.to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
@@ -1308,7 +1300,7 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_above_long_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(pos!(110.0));
+        let profit = spread.calculate_profit_at(pos!(110.0)).unwrap().to_f64().unwrap();
         // Maximum loss occurs when price is above long strike
         let expected_profit = -spread.max_loss().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
@@ -1318,7 +1310,8 @@ mod tests_bear_call_spread_profit {
     fn test_profit_at_get_break_even_points() {
         let spread = create_test_spread();
         let break_even = spread.get_break_even_points().unwrap()[0];
-        let profit = spread.calculate_profit_at(break_even);
+        let profit = spread.calculate_profit_at(break_even)
+            .unwrap().to_f64().unwrap();
         // At break-even point, profit should be zero
         assert_relative_eq!(profit, 0.0, epsilon = 0.0001);
     }
@@ -1335,21 +1328,22 @@ mod tests_bear_call_spread_profit {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0), // quantity = 2
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),                              // premium_short_call
+            pos!(1.0),                              // premium_long_call
+            pos!(0.0),                              // open_fee_short_call
+            pos!(0.0),                              // close_fee_short_call
+            pos!(0.0),                              // open_fee_long_call
+            pos!(0.0),                              // close_fee_long_call
         );
 
-        let profit = spread.calculate_profit_at(pos!(90.0));
+        let profit = spread.calculate_profit_at(pos!(90.0))
+            .unwrap().to_f64().unwrap();
         // With quantity = 2, profit should be double
-        let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap();
+        let expected_profit = spread.net_premium_received().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
         assert_relative_eq!(
             profit,
-            2.0 * create_test_spread().calculate_profit_at(pos!(90.0)),
+            2.0 * create_test_spread().calculate_profit_at(pos!(90.0)).unwrap().to_f64().unwrap(),
             epsilon = 0.0001
         );
     }
@@ -1366,19 +1360,20 @@ mod tests_bear_call_spread_profit {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.5, // open_fee_short_call
-            0.5, // close_fee_short_call
-            0.5, // open_fee_long_call
-            0.5, // close_fee_long_call
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.5), // open_fee_short_call
+            pos!(0.5), // close_fee_short_call
+            pos!(0.5), // open_fee_long_call
+            pos!(0.5), // close_fee_long_call
         );
 
-        let profit = spread.calculate_profit_at(pos!(90.0));
+        let profit = spread.calculate_profit_at(pos!(90.0))
+            .unwrap().to_f64().unwrap();
         // Net premium should be reduced by total fees
-        let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap();
+        let expected_profit = spread.net_premium_received().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
-        assert!(profit < create_test_spread().calculate_profit_at(pos!(90.0)));
+        assert!(profit < create_test_spread().calculate_profit_at(pos!(90.0)).unwrap().to_f64().unwrap());
     }
 }
 
@@ -1447,12 +1442,12 @@ mod tests_bear_call_spread_optimizable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            3.0,
-            1.2,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(3.0),
+            pos!(1.2),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         )
     }
 
@@ -1633,6 +1628,7 @@ mod tests_bear_call_spread_optimizable {
 mod tests_bear_call_spread_graph {
     use super::*;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
@@ -1646,12 +1642,12 @@ mod tests_bear_call_spread_graph {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            2.0,                              // premium_short_call
-            1.0,                              // premium_long_call
-            0.0,                              // fees
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0), // open_fee_short_call
+            pos!(0.0), // close_fee_short_call
+            pos!(0.0), // open_fee_long_call
+            pos!(0.0), // close_fee_long_call
         )
     }
 
@@ -1704,11 +1700,46 @@ mod tests_bear_call_spread_graph {
 
         let values = spread.get_values(&test_prices);
         assert_eq!(values.len(), 5);
-        assert_eq!(values[0], spread.calculate_profit_at(pos!(95.0)));
-        assert_eq!(values[1], spread.calculate_profit_at(pos!(100.0)));
-        assert_eq!(values[2], spread.calculate_profit_at(pos!(105.0)));
-        assert_eq!(values[3], spread.calculate_profit_at(pos!(110.0)));
-        assert_eq!(values[4], spread.calculate_profit_at(pos!(115.0)));
+        assert_eq!(
+            values[0],
+            spread
+                .calculate_profit_at(pos!(95.0))
+                .unwrap()
+                .to_f64()
+                .unwrap()
+        );
+        assert_eq!(
+            values[1],
+            spread
+                .calculate_profit_at(pos!(100.0))
+                .unwrap()
+                .to_f64()
+                .unwrap()
+        );
+        assert_eq!(
+            values[2],
+            spread
+                .calculate_profit_at(pos!(105.0))
+                .unwrap()
+                .to_f64()
+                .unwrap()
+        );
+        assert_eq!(
+            values[3],
+            spread
+                .calculate_profit_at(pos!(110.0))
+                .unwrap()
+                .to_f64()
+                .unwrap()
+        );
+        assert_eq!(
+            values[4],
+            spread
+                .calculate_profit_at(pos!(115.0))
+                .unwrap()
+                .to_f64()
+                .unwrap()
+        );
         assert_eq!(
             values[0],
             spread.max_profit().unwrap_or(Positive::ZERO).to_f64()
@@ -1739,12 +1770,12 @@ mod tests_bear_call_spread_probability {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            2.0,                              // premium_short_call
-            1.0,                              // premium_long_call
-            0.0,                              // open_fee_short_call
-            0.0,                              // close_fee_short_call
-            0.0,                              // open_fee_long_call
-            0.0,                              // close_fee_long_call
+            pos!(2.0),                              // premium_short_call
+            pos!(1.0),                              // premium_long_call
+            Positive::ZERO,                   // open_fee_short_call
+            Positive::ZERO,                   // close_fee_short_call
+            Positive::ZERO,                   // open_fee_long_call
+            Positive::ZERO,                   // close_fee_long_call
         )
     }
 
@@ -1889,12 +1920,12 @@ mod tests_delta {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // long quantity
-            85.04,          // premium_long
-            29.85,          // premium_short
-            0.78,           // open_fee_long
-            0.78,           // open_fee_long
-            0.73,           // close_fee_long
-            0.73,           // close_fee_short
+            pos!(85.04),          // premium_long
+            pos!(29.85),          // premium_short
+            pos!(0.78),           // open_fee_long
+            pos!(0.78),           // open_fee_long
+            pos!(0.73),           // close_fee_long
+            pos!(0.73),           // close_fee_short
         )
     }
 
@@ -2001,12 +2032,12 @@ mod tests_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(3.0),      // long quantity
-            85.04,          // premium_long
-            29.85,          // premium_short
-            0.78,           // open_fee_long
-            0.78,           // open_fee_long
-            0.73,           // close_fee_long
-            0.73,           // close_fee_short
+            pos!(85.04),          // premium_long
+            pos!(29.85),          // premium_short
+            pos!(0.78),           // open_fee_long
+            pos!(0.78),           // open_fee_long
+            pos!(0.73),           // close_fee_long
+            pos!(0.73),           // close_fee_short
         )
     }
 
