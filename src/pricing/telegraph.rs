@@ -83,6 +83,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use std::error::Error;
 
 #[derive(Clone)]
 pub struct TelegraphProcess {
@@ -238,9 +239,9 @@ pub fn telegraph(
     no_steps: usize,
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
-) -> Result<Decimal, DecimalError> {
+) -> Result<Decimal, Box<dyn Error>> {
     let mut price = option.underlying_price;
-    let dt = Decimal::from_f64(option.time_to_expiration() / no_steps as f64).unwrap();
+    let dt = option.time_to_expiration()?.to_dec() / Decimal::from_f64(no_steps as f64).unwrap();
 
     let one_over_252 = Decimal::from_f64(1.0 / 252.0).unwrap();
 
@@ -281,10 +282,9 @@ pub fn telegraph(
         price *= update;
     }
 
-    let payoff = option.payoff_at_price(price);
-    let result =
-        payoff * (-option.risk_free_rate.to_f64().unwrap() * option.time_to_expiration()).exp();
-    Ok(Decimal::from_f64(result).unwrap())
+    let payoff = option.payoff_at_price(price)?;
+    let result = payoff * (-option.risk_free_rate * option.time_to_expiration()?).exp();
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -561,8 +561,8 @@ mod tests_telegraph_process_extended {
         let option = create_mock_option();
         let price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5))).unwrap();
         assert_eq!(
-            price.to_f64().unwrap(),
-            option.payoff_at_price(option.underlying_price)
+            price,
+            option.payoff_at_price(option.underlying_price).unwrap()
         );
     }
 }
