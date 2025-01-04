@@ -142,7 +142,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
     )?;
 
     let expiration_date = option.expiration_date.get_years()?;
-    let div_date = (-expiration_date * dividend_yield).exp();
+    let div_date = (-expiration_date.to_dec() * dividend_yield).exp();
 
     let delta = match option.option_style {
         OptionStyle::Call => sign * big_n(d1)? * div_date,
