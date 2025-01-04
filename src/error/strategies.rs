@@ -67,8 +67,6 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
-
-use crate::error::probability::ProbabilityError;
 use std::error::Error;
 use std::fmt;
 use crate::error::PositionError;
