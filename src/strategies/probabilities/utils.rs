@@ -619,7 +619,6 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[should_panic]
     fn test_past_datetime() {
         let past_date = Utc::now() - Duration::days(1);
 
