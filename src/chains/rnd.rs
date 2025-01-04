@@ -56,7 +56,7 @@
 //!             2,
 //!             OptionDataPriceParams::new(
 //!                 pos!(100.0),
-//!                 ExpirationDate::Days(30.0),
+//!                 ExpirationDate::Days(pos!(30.0)),
 //!                 spos!(0.17),
 //!                 Decimal::ZERO,
 //!                 pos!(0.05),
@@ -1416,7 +1416,7 @@ mod chain_test {
             2,
             OptionDataPriceParams::new(
                 pos!(100.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
@@ -1437,7 +1437,7 @@ mod chain_test {
             2,
             OptionDataPriceParams::new(
                 pos!(100.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
@@ -1481,7 +1481,7 @@ mod chain_test {
             2,
             OptionDataPriceParams::new(
                 pos!(100.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),

@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
@@ -71,7 +72,7 @@ pub fn calculate_single_point_probability(
     if target_price == Positive::ZERO {
         return Ok((Positive::ZERO, Positive::ONE));
     }
-    let time_to_expiry = expiration_date.get_years();
+    let time_to_expiry = expiration_date.get_years()?;
     if time_to_expiry <= 0.0 {
         return Err(ProbabilityError::ExpirationError(
             ExpirationErrorKind::InvalidExpiration {
@@ -294,6 +295,7 @@ pub fn calculate_bounds_probability(
 #[cfg(test)]
 mod tests_calculate_bounds_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
 
     #[test]
@@ -304,7 +306,7 @@ mod tests_calculate_bounds_probability {
             bounds,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -330,7 +332,7 @@ mod tests_calculate_bounds_probability {
             bounds,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -354,7 +356,7 @@ mod tests_calculate_bounds_probability {
             bounds,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -377,7 +379,7 @@ mod tests_calculate_bounds_probability {
             bounds,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -400,7 +402,7 @@ mod tests_calculate_bounds_probability {
             bounds,
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -418,6 +420,7 @@ mod tests_calculate_bounds_probability {
 #[cfg(test)]
 mod tests_single_point_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
@@ -447,7 +450,7 @@ mod tests_single_point_probability {
             target_price,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -489,7 +492,7 @@ mod tests_single_point_probability {
             target_price,
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -510,7 +513,7 @@ mod tests_single_point_probability {
             target_price,
             None,
             trend,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -530,7 +533,7 @@ mod tests_single_point_probability {
             target_price,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             Some(dec!(0.05)),
         );
 
@@ -552,7 +555,7 @@ mod tests_single_point_probability {
             target_price,
             vol_adj,
             trend,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             Some(dec!(0.05)),
         );
 
@@ -581,7 +584,7 @@ mod tests_single_point_probability {
                     confidence: 1.0,
                 }
             }),
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -599,7 +602,7 @@ mod tests_single_point_probability {
             pos!(105.0),
             None,
             None,
-            ExpirationDate::Days(0.0),
+            ExpirationDate::Days(Positive::ZERO),
             None,
         );
 
@@ -616,7 +619,6 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[should_panic]
     fn test_past_datetime() {
         let past_date = Utc::now() - Duration::days(1);
 
@@ -644,7 +646,7 @@ mod tests_single_point_probability {
             pos!(105.0),
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -672,7 +674,7 @@ mod tests_single_point_probability {
             pos!(105.0),
             None,
             trend,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -696,7 +698,7 @@ mod tests_single_point_probability {
             pos!(1000000.0),
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -710,7 +712,7 @@ mod tests_single_point_probability {
             pos!(0.1),
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -733,7 +735,7 @@ mod tests_single_point_probability {
             pos!(105.0),
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -755,7 +757,7 @@ mod tests_single_point_probability {
             pos!(105.0),
             None,
             trend,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -769,6 +771,7 @@ mod tests_single_point_probability {
 #[cfg(test)]
 mod tests_calculate_price_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
 
     #[test]
@@ -779,7 +782,7 @@ mod tests_calculate_price_probability {
             pos!(105.0),
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -803,7 +806,7 @@ mod tests_calculate_price_probability {
             pos!(95.0),
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -831,7 +834,7 @@ mod tests_calculate_price_probability {
             pos!(110.0),
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 

@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(1), // qty_puts_short
         None,    // qty_calls_long
         Some(1), // qty_calls_short
-        ExpirationDate::Days(30.0),
+        ExpirationDate::Days(pos!(30.0)),
         pos!(1.0),
         dec!(0.05),
         pos!(0.02),

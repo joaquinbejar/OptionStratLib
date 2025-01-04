@@ -1112,7 +1112,7 @@ mod tests_short_straddle {
             "AAPL".to_string(),
             pos!(150.0),
             pos!(150.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -1133,7 +1133,7 @@ mod tests_short_straddle {
             "AAPL".to_string(),
             underlying_price,
             Positive::ZERO,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -1187,7 +1187,7 @@ mod tests_short_straddle {
             "AAPL".to_string(),
             pos!(150.0),
             pos!(145.0), // Diferente strike
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -1416,7 +1416,7 @@ mod tests_short_straddle {
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
             pos!(1150.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -1448,7 +1448,7 @@ mod tests_long_straddle {
             "AAPL".to_string(),
             pos!(150.0),
             pos!(150.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.25),
             dec!(0.01),
             pos!(0.02),
@@ -1731,7 +1731,7 @@ mod tests_long_straddle {
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
             pos!(150.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.65),
             dec!(0.01),
             pos!(0.02),
@@ -1763,19 +1763,19 @@ mod tests_short_straddle_probability {
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_short_call
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_short_call
-            0.0,                        // close_fee_short_call
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_short_call
+            2.0,                              // premium_short_put
+            0.0,                              // open_fee_short_call
+            0.0,                              // close_fee_short_call
+            0.0,                              // open_fee_short_put
+            0.0,                              // close_fee_short_put
         )
     }
 
@@ -1901,19 +1901,19 @@ mod tests_short_straddle_probability_bis {
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_short_call
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_short_call
-            0.0,                        // close_fee_short_call
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_short_call
+            2.0,                              // premium_short_put
+            0.0,                              // open_fee_short_call
+            0.0,                              // close_fee_short_call
+            0.0,                              // open_fee_short_put
+            0.0,                              // close_fee_short_put
         )
     }
 
@@ -2041,19 +2041,19 @@ mod tests_long_straddle_probability {
     fn create_test_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(110.0),                // strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_long_call
-            2.0,                        // premium_long_put
-            0.0,                        // open_fee_long_call
-            0.0,                        // close_fee_long_call
-            0.0,                        // open_fee_long_put
-            0.0,                        // close_fee_long_put
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_long_call
+            2.0,                              // premium_long_put
+            0.0,                              // open_fee_long_call
+            0.0,                              // close_fee_long_call
+            0.0,                              // open_fee_long_put
+            0.0,                              // close_fee_long_put
         )
     }
 
@@ -2192,7 +2192,7 @@ mod tests_short_straddle_delta {
             "CL".to_string(),
             underlying_price, // underlying_price
             strike,           // call_strike 7450
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2299,7 +2299,7 @@ mod tests_long_straddle_delta {
             "CL".to_string(),
             underlying_price, // underlying_price
             strike,           // call_strike 7450
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2315,11 +2315,14 @@ mod tests_long_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7450.0));
+        let strike = pos!(7450.0);
+        let strategy = get_strategy(strike);
+        let size = -0.168;
+        let delta = pos!(0.4039537995372765);
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -0.1680,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -2327,16 +2330,16 @@ mod tests_long_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.4039537995372771),
-                strike: pos!(7450.0),
+                quantity: delta,
+                strike,
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.4039537995372771);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, 0.168037255, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -2409,7 +2412,7 @@ mod tests_short_straddle_delta_size {
             "CL".to_string(),
             underlying_price, // underlying_price
             strike,           // call_strike 7450
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2524,7 +2527,7 @@ mod tests_long_straddle_delta_size {
             "CL".to_string(),
             underlying_price, // underlying_price
             strike,           // call_strike 7450
-            ExpirationDate::Days(45.0),
+            ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -2540,10 +2543,10 @@ mod tests_long_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7450.0));
+        let strike = pos!(7450.0);
+        let strategy = get_strategy(strike);
         let size = -0.3360;
-        let delta =
-            Positive::new_decimal(Decimal::from_str("0.8079075990745542").unwrap()).unwrap();
+        let delta = pos!(0.807_907_599_074_553);
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2556,7 +2559,7 @@ mod tests_long_straddle_delta_size {
             suggestion[0],
             DeltaAdjustment::BuyOptions {
                 quantity: delta,
-                strike: pos!(7450.0),
+                strike,
                 option_type: OptionStyle::Call
             }
         );

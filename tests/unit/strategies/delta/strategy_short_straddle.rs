@@ -20,7 +20,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
         "CL".to_string(),
         underlying_price, // underlying_price
         pos!(7140.0),     // put_strike
-        ExpirationDate::Days(45.0),
+        ExpirationDate::Days(pos!(45.0)),
         pos!(0.3745),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield

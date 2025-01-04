@@ -576,17 +576,17 @@ mod tests_bull_call_spread_strategy {
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // long_strike
-            pos!(100.0),                // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_long_call
-            1.0,                        // premium_short_call
-            0.0,                        // fees
+            pos!(100.0),                      // underlying_price
+            pos!(95.0),                       // long_strike
+            pos!(100.0),                      // short_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_long_call
+            1.0,                              // premium_short_call
+            0.0,                              // fees
             0.0,
             0.0,
             0.0,
@@ -614,7 +614,7 @@ mod tests_bull_call_spread_strategy {
                 Side::Long,
                 "TEST".to_string(),
                 pos!(90.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
@@ -674,7 +674,7 @@ mod tests_bull_call_spread_strategy {
             pos!(100.0),
             pos!(95.0),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -721,7 +721,7 @@ mod tests_bull_call_spread_strategy {
             pos!(100.0),
             Positive::ZERO, // long_strike = default
             Positive::ZERO, // short_strike = default
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -745,7 +745,7 @@ mod tests_bull_call_spread_strategy {
             pos!(100.0),
             pos!(100.0),
             pos!(95.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -803,8 +803,16 @@ mod tests_bull_call_spread_validation {
             kind: StrategyType::BullCallSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_call: create_valid_position(Side::Long, pos!(95.0), ExpirationDate::Days(30.0)),
-            short_call: create_valid_position(Side::Short, pos!(100.0), ExpirationDate::Days(30.0)),
+            long_call: create_valid_position(
+                Side::Long,
+                pos!(95.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            short_call: create_valid_position(
+                Side::Short,
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
 
         assert!(spread.validate(), "Valid spread should pass validation");
@@ -813,7 +821,7 @@ mod tests_bull_call_spread_validation {
     #[test]
     fn test_invalid_long_call() {
         let mut invalid_long =
-            create_valid_position(Side::Long, pos!(95.0), ExpirationDate::Days(30.0));
+            create_valid_position(Side::Long, pos!(95.0), ExpirationDate::Days(pos!(30.0)));
         invalid_long.option.quantity = Positive::ZERO;
 
         let spread = BullCallSpread {
@@ -822,7 +830,11 @@ mod tests_bull_call_spread_validation {
             description: "Test".to_string(),
             break_even_points: Vec::new(),
             long_call: invalid_long,
-            short_call: create_valid_position(Side::Short, pos!(100.0), ExpirationDate::Days(30.0)),
+            short_call: create_valid_position(
+                Side::Short,
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
 
         assert!(
@@ -834,7 +846,7 @@ mod tests_bull_call_spread_validation {
     #[test]
     fn test_invalid_short_call() {
         let mut invalid_short =
-            create_valid_position(Side::Short, pos!(100.0), ExpirationDate::Days(30.0));
+            create_valid_position(Side::Short, pos!(100.0), ExpirationDate::Days(pos!(30.0)));
         invalid_short.option.quantity = Positive::ZERO;
 
         let spread = BullCallSpread {
@@ -842,7 +854,11 @@ mod tests_bull_call_spread_validation {
             kind: StrategyType::BullCallSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_call: create_valid_position(Side::Long, pos!(95.0), ExpirationDate::Days(30.0)),
+            long_call: create_valid_position(
+                Side::Long,
+                pos!(95.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
             short_call: invalid_short,
         };
 
@@ -859,8 +875,16 @@ mod tests_bull_call_spread_validation {
             kind: StrategyType::BullCallSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_call: create_valid_position(Side::Long, pos!(100.0), ExpirationDate::Days(30.0)),
-            short_call: create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(30.0)),
+            long_call: create_valid_position(
+                Side::Long,
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            short_call: create_valid_position(
+                Side::Short,
+                pos!(95.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
 
         assert!(
@@ -876,8 +900,16 @@ mod tests_bull_call_spread_validation {
             kind: StrategyType::BullCallSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_call: create_valid_position(Side::Long, pos!(100.0), ExpirationDate::Days(30.0)),
-            short_call: create_valid_position(Side::Short, pos!(100.0), ExpirationDate::Days(30.0)),
+            long_call: create_valid_position(
+                Side::Long,
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            short_call: create_valid_position(
+                Side::Short,
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
 
         assert!(
@@ -889,7 +921,7 @@ mod tests_bull_call_spread_validation {
     #[test]
     fn test_different_expiration_dates_same_day() {
         let date1 = ExpirationDate::DateTime(Utc::now() + chrono::Duration::days(30));
-        let date2 = ExpirationDate::Days(30.0);
+        let date2 = ExpirationDate::Days(pos!(30.0));
 
         let spread = BullCallSpread {
             name: "Test Bull Call Spread".to_string(),
@@ -913,8 +945,16 @@ mod tests_bull_call_spread_validation {
             kind: StrategyType::BullCallSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_call: create_valid_position(Side::Long, pos!(94.99), ExpirationDate::Days(30.0)),
-            short_call: create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(30.0)),
+            long_call: create_valid_position(
+                Side::Long,
+                pos!(94.99),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            short_call: create_valid_position(
+                Side::Short,
+                pos!(95.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
 
         assert!(
@@ -1004,7 +1044,7 @@ mod tests_bull_call_spread_optimization {
             pos!(100.0),
             pos!(95.0),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1241,17 +1281,17 @@ mod tests_bull_call_spread_profit {
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // long_strike
-            pos!(100.0),                // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_call
-            2.0,                        // premium_short_call
-            0.0,                        // fees
+            pos!(100.0),                      // underlying_price
+            pos!(95.0),                       // long_strike
+            pos!(100.0),                      // short_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            4.0,                              // premium_long_call
+            2.0,                              // premium_short_call
+            0.0,                              // fees
             0.0,
             0.0,
             0.0,
@@ -1307,7 +1347,7 @@ mod tests_bull_call_spread_profit {
             pos!(100.0),
             pos!(95.0),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1331,7 +1371,7 @@ mod tests_bull_call_spread_profit {
             pos!(100.0),
             pos!(95.0),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1373,17 +1413,17 @@ mod tests_bull_call_spread_graph {
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // long_strike
-            pos!(100.0),                // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_call
-            2.0,                        // premium_short_call
-            0.0,                        // fees
+            pos!(100.0),                      // underlying_price
+            pos!(95.0),                       // long_strike
+            pos!(100.0),                      // short_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            4.0,                              // premium_long_call
+            2.0,                              // premium_short_call
+            0.0,                              // fees
             0.0,
             0.0,
             0.0,
@@ -1519,7 +1559,7 @@ mod tests_bull_call_spread_graph {
             pos!(100.0),
             pos!(95.0),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1560,17 +1600,17 @@ mod tests_bull_call_spread_probability {
     fn create_test_spread() -> BullCallSpread {
         BullCallSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(95.0),                 // long_strike
-            pos!(100.0),                // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            4.0,                        // premium_long_call
-            2.0,                        // premium_short_call
-            0.0,                        // fees
+            pos!(100.0),                      // underlying_price
+            pos!(95.0),                       // long_strike
+            pos!(100.0),                      // short_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            4.0,                              // premium_long_call
+            2.0,                              // premium_short_call
+            0.0,                              // fees
             0.0,
             0.0,
             0.0,
@@ -1717,7 +1757,7 @@ mod tests_bull_call_spread_probability {
             pos!(100.0),
             pos!(95.0),
             pos!(100.0),
-            ExpirationDate::Days(1.0),
+            ExpirationDate::Days(pos!(1.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1744,7 +1784,7 @@ mod tests_bull_call_spread_probability {
             pos!(100.0),
             pos!(95.0),
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.50), // Alta volatilidad
             dec!(0.05),
             Positive::ZERO,
@@ -1783,7 +1823,7 @@ mod tests_delta {
             underlying_price, // underlying_price
             long_strike,      // long_strike
             short_strike,     // short_strike
-            ExpirationDate::Days(2.0),
+            ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1799,11 +1839,13 @@ mod tests_delta {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5750.0), pos!(5820.0));
-
+        let strike = pos!(5820.0);
+        let strategy = get_strategy(pos!(5750.0), strike);
+        let size = 0.3502;
+        let delta = pos!(1.092269393430898);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.3502030,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -1811,17 +1853,17 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(1.0922693934308985),
-                strike: pos!(5820.0),
+                quantity: delta,
+                strike,
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(1.0922693934308985);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
 
-        assert_relative_eq!(delta, -0.35020, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -1892,7 +1934,7 @@ mod tests_delta_size {
             underlying_price, // underlying_price
             long_strike,      // long_strike
             short_strike,     // short_strike
-            ExpirationDate::Days(2.0),
+            ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield

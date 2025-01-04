@@ -111,7 +111,7 @@ impl Default for OptionDataPriceParams {
     fn default() -> Self {
         Self {
             underlying_price: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(0.0),
+            expiration_date: ExpirationDate::Days(Positive::ZERO),
             implied_volatility: None,
             risk_free_rate: Decimal::ZERO,
             dividend_yield: Positive::ZERO,
@@ -125,7 +125,7 @@ impl Display for OptionDataPriceParams {
             f,
             "Underlying Price: {:.3}, Expiration: {:.4} Years, Implied Volatility: {:.3}, Risk-Free Rate: {:.2}, Dividend Yield: {:.2}",
             self.underlying_price,
-            self.expiration_date.get_years(),
+            self.expiration_date.get_years().unwrap(),
             self.implied_volatility.unwrap_or(Positive::ZERO).value(),
             self.risk_free_rate,
             self.dividend_yield
@@ -454,7 +454,7 @@ mod tests_random_positions_params {
             Some(1),
             Some(1),
             Some(1),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -491,7 +491,7 @@ mod tests_random_positions_params {
             None,
             Some(3),
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -507,7 +507,7 @@ mod tests_random_positions_params {
             None,
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -581,7 +581,7 @@ mod tests_option_data_price_params {
     fn test_new_price_params() {
         let params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -606,7 +606,7 @@ mod tests_option_data_price_params {
     fn test_display_price_params() {
         let params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -622,7 +622,7 @@ mod tests_option_data_price_params {
     fn test_display_price_params_no_volatility() {
         let params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             None,
             dec!(0.05),
             pos!(0.02),
@@ -642,7 +642,7 @@ mod tests_option_chain_build_params {
     fn test_new_chain_build_params() {
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
@@ -700,7 +700,7 @@ mod tests_random_positions_params_extended {
             None,
             Some(1),
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -724,7 +724,7 @@ mod tests_random_positions_params_extended {
             None,
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -744,7 +744,7 @@ mod tests_random_positions_params_extended {
             None,
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
@@ -765,13 +765,14 @@ mod tests_random_positions_params_extended {
 mod tests_sample {
     use super::*;
     use crate::chains::chain::OptionChain;
+    use crate::pos;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_chain() {
         let chain = OptionDataPriceParams::new(
             Positive::new(2000.0).unwrap(),
-            ExpirationDate::Days(10.0),
+            ExpirationDate::Days(pos!(10.0)),
             Some(Positive::new(0.01).unwrap()),
             dec!(0.01),
             Positive::ZERO,

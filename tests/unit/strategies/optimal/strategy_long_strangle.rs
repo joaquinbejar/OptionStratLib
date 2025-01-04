@@ -22,7 +22,7 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
         underlying_price, // underlying_price
         pos!(7450.0),     // call_strike
         pos!(7050.0),     // put_strike
-        ExpirationDate::Days(45.0),
+        ExpirationDate::Days(pos!(45.0)),
         pos!(0.3745),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield

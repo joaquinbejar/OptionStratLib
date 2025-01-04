@@ -60,7 +60,7 @@
 //!     Side::Short,
 //!     "STOCK".to_string(),
 //!     pos!(150.0),   // Strike price
-//!     ExpirationDate::Days(30.0),
+//!     ExpirationDate::Days(pos!(30.0)),
 //!     pos!(0.2),   // Volatility
 //!     Positive::ONE,   // Quantity
 //!     pos!(155.0),   // Current price
@@ -107,7 +107,7 @@
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
 //!             strike_price: pos!(100.0),
-//!             expiration_date: ExpirationDate::Days(30.0),
+//!             expiration_date: ExpirationDate::Days(pos!(30.0)),
 //!             implied_volatility: pos!(0.2),
 //!             quantity: Positive::ONE,
 //!             underlying_price: pos!(105.0),

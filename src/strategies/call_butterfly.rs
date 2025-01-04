@@ -184,7 +184,7 @@ impl Default for CallButterfly {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-            ExpirationDate::Days(0.0),
+            ExpirationDate::Days(Positive::ZERO),
             Positive::ZERO,
             Decimal::ZERO,
             Positive::ZERO,
@@ -645,7 +645,7 @@ mod tests_call_butterfly {
             pos!(155.0),
             pos!(160.0),
             pos!(157.5),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -749,7 +749,7 @@ mod tests_call_butterfly_validation {
             pos!(145.0),
             pos!(150.0),
             pos!(155.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -800,7 +800,7 @@ mod tests_call_butterfly_pnl {
             pos!(145.0),
             pos!(150.0),
             pos!(155.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -853,7 +853,7 @@ mod tests_call_butterfly_graph {
             pos!(145.0),
             pos!(155.0),
             pos!(150.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),
@@ -992,7 +992,7 @@ mod tests_iron_condor_delta {
             pos!(5750.0),     // long_strike_itm
             pos!(5850.0),     // long_strike_otm
             pos!(5800.0),     // short_strike
-            ExpirationDate::Days(2.0),
+            ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1112,7 +1112,7 @@ mod tests_iron_condor_delta_size {
             pos!(5750.0),     // long_strike_itm
             pos!(5850.0),     // long_strike_otm
             pos!(5800.0),     // short_strike
-            ExpirationDate::Days(2.0),
+            ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1271,7 +1271,7 @@ mod tests_call_butterfly_optimizable {
             pos!(95.0),
             pos!(100.0),
             pos!(105.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.01),
             pos!(0.02),

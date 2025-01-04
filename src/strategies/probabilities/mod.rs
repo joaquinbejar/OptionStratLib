@@ -68,7 +68,7 @@
 //!         pos!(5781.88),   // underlying_price
 //!         pos!(5750.0),   // long_strike_itm
 //!         pos!(5820.0),   // short_strike
-//!         ExpirationDate::Days(2.0),
+//!         ExpirationDate::Days(pos!(2.0)),
 //!         pos!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
@@ -100,7 +100,7 @@
 //!         pos!(5781.88),   // underlying_price
 //!         pos!(5750.0),   // long_strike_itm
 //!         pos!(5820.0),   // short_strike
-//!         ExpirationDate::Days(2.0),
+//!         ExpirationDate::Days(pos!(2.0)),
 //!         pos!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
@@ -135,7 +135,7 @@
 //!         pos!(5781.88),   // underlying_price
 //!         pos!(5750.0),   // long_strike_itm
 //!         pos!(5820.0),   // short_strike
-//!         ExpirationDate::Days(2.0),
+//!         ExpirationDate::Days(pos!(2.0)),
 //!         pos!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
@@ -170,7 +170,7 @@
 //!     pos!(105.0),   // upper bound
 //!     None,   // volatility adjustment
 //!     None,   // trend
-//!     ExpirationDate::Days(30.0),
+//!     ExpirationDate::Days(pos!(30.0)),
 //!     None                 // risk-free rate
 //! ).unwrap();
 //! info!("Probabilities: {}, {}, {}", prob_below, prob_in_range, prob_above);

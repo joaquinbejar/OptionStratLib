@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let underlying_price = pos!(2340.0);
     let underlying_symbol = "GAS".to_string();
-    let expiration = ExpirationDate::Days(6.0);
+    let expiration = ExpirationDate::Days(pos!(6.0));
     let implied_volatility = pos!(0.73);
     let risk_free_rate = dec!(0.05);
     let dividend_yield = Positive::ZERO;

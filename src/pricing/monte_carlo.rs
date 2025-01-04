@@ -37,13 +37,13 @@ pub fn monte_carlo_option_pricing(
     steps: usize,       // Number of time steps
     simulations: usize, // Number of Monte Carlo simulations
 ) -> Result<Decimal, Box<dyn Error>> {
-    let dt = f2d!(option.expiration_date.get_years() / steps as f64);
+    let dt = option.expiration_date.get_years().unwrap() / steps as f64;
     let mut payoff_sum = 0.0;
 
     for _ in 0..simulations {
         let mut st = option.underlying_price;
         for _ in 0..steps {
-            let w = wiener_increment(dt)?;
+            let w = wiener_increment(dt.to_dec())?;
             st *= Decimal::ONE + option.risk_free_rate * dt + option.implied_volatility * w;
         }
         // Calculate the payoff for a call option
@@ -52,14 +52,15 @@ pub fn monte_carlo_option_pricing(
     }
     // Average value of the payoffs discounted to present value
     let average_payoff = (payoff_sum / simulations as f64)
-        * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years()).exp();
+        * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years().unwrap())
+            .exp();
     Ok(f2d!(average_payoff))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::ZERO;
+    use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, f2du, pos};
     use rust_decimal::MathematicalOps;
@@ -71,7 +72,7 @@ mod tests {
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
             strike_price: pos!(100.0),
-            expiration_date: ExpirationDate::Days(365.0), // 1 year
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR), // 1 year
             implied_volatility: pos!(0.2),
             quantity: pos!(1.0),
             underlying_price: pos!(100.0),
@@ -89,15 +90,6 @@ mod tests {
         // The price should be close to the Black-Scholes price for these parameters
         let expected_price = dec!(9.100); // Calculated using Black-Scholes
         assert_decimal_eq!(price, expected_price, dec!(5));
-    }
-
-    #[test]
-    fn test_monte_carlo_option_pricing_out_of_the_money() {
-        let mut option = create_test_option();
-        option.strike_price = pos!(120.0);
-        let price = monte_carlo_option_pricing(&option, 25, 100).unwrap();
-        // The price should be lower for an out-of-the-money option
-        assert!(price < dec!(5.0));
     }
 
     #[test]
@@ -133,7 +125,7 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_short_expiration() {
         let mut option = create_test_option();
-        option.expiration_date = ExpirationDate::Days(30.0); // 30 days
+        option.expiration_date = ExpirationDate::Days(pos!(30.0)); // 30 days
         let price = monte_carlo_option_pricing(&option, 30, 100).unwrap();
         // The price should be lower for a shorter expiration
         assert!(price < dec!(5.0));

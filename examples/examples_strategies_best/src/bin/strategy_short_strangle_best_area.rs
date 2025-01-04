@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         underlying_price, // underlying_price
         Positive::ZERO,   // call_strike
         Positive::ZERO,   // put_strike
-        ExpirationDate::Days(5.0),
+        ExpirationDate::Days(pos!(5.0)),
         Positive::ZERO, // implied_volatility
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield

@@ -50,7 +50,7 @@
 //!     Side::Long,
 //!     "STOCK".to_string(),
 //!     pos!(100.0),   // Strike price
-//!     ExpirationDate::Days(30.0),
+//!     ExpirationDate::Days(pos!(30.0)),
 //!     pos!(0.2),   // Initial volatility guess
 //!     Positive::ONE,   // Quantity
 //!     pos!(100.0),   // Current price

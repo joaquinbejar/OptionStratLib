@@ -90,7 +90,7 @@ impl fmt::Display for ExpirationDate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ExpirationDate::Days(days) => {
-                let duration = Duration::days(*days as i64);
+                let duration = Duration::days((*days).to_i64());
                 let expiration = Utc::now() + duration;
                 write!(f, "{}", expiration.format("%Y-%m-%d %H:%M:%S UTC"))
             }
@@ -430,12 +430,13 @@ mod tests_options {
 #[cfg(test)]
 mod tests_expiration_date {
     use super::*;
+    use crate::pos;
     use chrono::{Duration, NaiveDate, TimeZone};
     use tracing::info;
 
     #[test]
     fn test_display_days() {
-        let expiration = ExpirationDate::Days(30.5);
+        let expiration = ExpirationDate::Days(pos!(30.5));
         let display_string = format!("{}", expiration);
         assert!(display_string.contains("UTC"));
     }
@@ -451,7 +452,7 @@ mod tests_expiration_date {
 
     #[test]
     fn test_debug_days() {
-        let expiration = ExpirationDate::Days(45.75);
+        let expiration = ExpirationDate::Days(pos!(45.75));
         let debug_string = format!("{:?}", expiration);
         assert_eq!(debug_string, "ExpirationDate::Days(45.75)");
     }

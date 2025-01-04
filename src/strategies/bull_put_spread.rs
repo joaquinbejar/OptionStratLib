@@ -320,7 +320,7 @@ impl Optimizable for BullPutSpread {
     ///         underlying_price,   // underlying_price
     ///         pos!(5750.0),   // long_strike
     ///         pos!(5920.0),   // short_strike
-    ///         ExpirationDate::Days(2.0),
+    ///         ExpirationDate::Days(pos!(2.0)),
     ///         pos!(0.18),   // implied_volatility
     ///         dec!(0.05),   // risk_free_rate
     ///         Positive::ZERO,   // dividend_yield
@@ -668,20 +668,20 @@ mod tests_bull_put_spread_strategy {
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(90.0),                 // long_strike
-            pos!(95.0),                 // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            1.0,                        // premium_long_put
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_long_put
-            0.0,                        // close_fee_long_put
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(100.0),                      // underlying_price
+            pos!(90.0),                       // long_strike
+            pos!(95.0),                       // short_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            1.0,                              // premium_long_put
+            2.0,                              // premium_short_put
+            0.0,                              // open_fee_long_put
+            0.0,                              // close_fee_long_put
+            0.0,                              // open_fee_short_put
+            0.0,                              // close_fee_short_put
         )
     }
 
@@ -706,7 +706,7 @@ mod tests_bull_put_spread_strategy {
                 Side::Long,
                 "TEST".to_string(),
                 pos!(85.0),
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 pos!(0.2),
                 pos!(1.0),
                 pos!(100.0),
@@ -773,7 +773,7 @@ mod tests_bull_put_spread_strategy {
             pos!(100.0),
             pos!(90.0),
             pos!(95.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -822,7 +822,7 @@ mod tests_bull_put_spread_strategy {
             pos!(100.0),
             Positive::ZERO, // long_strike = default
             Positive::ZERO, // short_strike = default
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -846,7 +846,7 @@ mod tests_bull_put_spread_strategy {
             pos!(100.0),
             pos!(95.0),
             pos!(90.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -900,7 +900,7 @@ mod tests_bull_put_spread_validation {
     #[test]
     fn test_invalid_long_put() {
         let mut invalid_long =
-            create_valid_position(Side::Long, pos!(90.0), ExpirationDate::Days(30.0));
+            create_valid_position(Side::Long, pos!(90.0), ExpirationDate::Days(pos!(30.0)));
         invalid_long.option.quantity = Positive::ZERO;
 
         let spread = BullPutSpread {
@@ -909,7 +909,11 @@ mod tests_bull_put_spread_validation {
             description: "Test".to_string(),
             break_even_points: Vec::new(),
             long_put: invalid_long,
-            short_put: create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(30.0)),
+            short_put: create_valid_position(
+                Side::Short,
+                pos!(95.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
 
         assert!(
@@ -921,7 +925,7 @@ mod tests_bull_put_spread_validation {
     #[test]
     fn test_invalid_short_put() {
         let mut invalid_short =
-            create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(30.0));
+            create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(pos!(30.0)));
         invalid_short.option.quantity = Positive::ZERO;
 
         let spread = BullPutSpread {
@@ -929,7 +933,11 @@ mod tests_bull_put_spread_validation {
             kind: StrategyType::BullPutSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_put: create_valid_position(Side::Long, pos!(90.0), ExpirationDate::Days(30.0)),
+            long_put: create_valid_position(
+                Side::Long,
+                pos!(90.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
             short_put: invalid_short,
         };
 
@@ -946,8 +954,16 @@ mod tests_bull_put_spread_validation {
             kind: StrategyType::BullPutSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_put: create_valid_position(Side::Long, pos!(95.0), ExpirationDate::Days(30.0)),
-            short_put: create_valid_position(Side::Short, pos!(90.0), ExpirationDate::Days(30.0)),
+            long_put: create_valid_position(
+                Side::Long,
+                pos!(95.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            short_put: create_valid_position(
+                Side::Short,
+                pos!(90.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
 
         assert!(
@@ -963,8 +979,16 @@ mod tests_bull_put_spread_validation {
             kind: StrategyType::BullPutSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_put: create_valid_position(Side::Long, pos!(90.0), ExpirationDate::Days(30.0)),
-            short_put: create_valid_position(Side::Short, pos!(90.0), ExpirationDate::Days(30.0)),
+            long_put: create_valid_position(
+                Side::Long,
+                pos!(90.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            short_put: create_valid_position(
+                Side::Short,
+                pos!(90.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
 
         assert!(
@@ -980,8 +1004,16 @@ mod tests_bull_put_spread_validation {
             kind: StrategyType::BullPutSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_put: create_valid_position(Side::Long, pos!(90.0), ExpirationDate::Days(30.0)),
-            short_put: create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(60.0)),
+            long_put: create_valid_position(
+                Side::Long,
+                pos!(90.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            short_put: create_valid_position(
+                Side::Short,
+                pos!(95.0),
+                ExpirationDate::Days(pos!(60.0)),
+            ),
         };
 
         assert!(
@@ -997,8 +1029,16 @@ mod tests_bull_put_spread_validation {
             kind: StrategyType::BullPutSpread,
             description: "Test".to_string(),
             break_even_points: Vec::new(),
-            long_put: create_valid_position(Side::Long, pos!(89.99), ExpirationDate::Days(30.0)),
-            short_put: create_valid_position(Side::Short, pos!(90.0), ExpirationDate::Days(30.0)),
+            long_put: create_valid_position(
+                Side::Long,
+                pos!(89.99),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            short_put: create_valid_position(
+                Side::Short,
+                pos!(90.0),
+                ExpirationDate::Days(pos!(30.0)),
+            ),
         };
         assert!(spread.validate());
     }
@@ -1084,7 +1124,7 @@ mod tests_bull_put_spread_optimization {
             pos!(100.0),
             pos!(90.0),
             pos!(95.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1277,20 +1317,20 @@ mod tests_bull_put_spread_profit {
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(90.0),                 // long_strike
-            pos!(95.0),                 // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_long_put
-            4.0,                        // premium_short_put
-            0.0,                        // open_fee_long_put
-            0.0,                        // close_fee_long_put
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(100.0),                      // underlying_price
+            pos!(90.0),                       // long_strike
+            pos!(95.0),                       // short_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_long_put
+            4.0,                              // premium_short_put
+            0.0,                              // open_fee_long_put
+            0.0,                              // close_fee_long_put
+            0.0,                              // open_fee_short_put
+            0.0,                              // close_fee_short_put
         )
     }
 
@@ -1344,7 +1384,7 @@ mod tests_bull_put_spread_profit {
             pos!(100.0),
             pos!(90.0),
             pos!(95.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1368,7 +1408,7 @@ mod tests_bull_put_spread_profit {
             pos!(100.0),
             pos!(90.0),
             pos!(95.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1396,17 +1436,17 @@ mod tests_bull_put_spread_graph {
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(90.0),                 // long_strike
-            pos!(95.0),                 // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            2.0,                        // premium_long_put
-            4.0,                        // premium_short_put
-            0.0,                        // fees
+            pos!(100.0),                      // underlying_price
+            pos!(90.0),                       // long_strike
+            pos!(95.0),                       // short_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            2.0,                              // premium_long_put
+            4.0,                              // premium_short_put
+            0.0,                              // fees
             0.0,
             0.0,
             0.0,
@@ -1541,7 +1581,7 @@ mod tests_bull_put_spread_graph {
             pos!(100.0),
             pos!(90.0),
             pos!(95.0),
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
@@ -1572,20 +1612,20 @@ mod tests_bull_put_spread_probability {
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                // underlying_price
-            pos!(90.0),                 // long_strike
-            pos!(95.0),                 // short_strike
-            ExpirationDate::Days(30.0), // expiration
-            pos!(0.2),                  // implied_volatility
-            dec!(0.05),                 // risk_free_rate
-            Positive::ZERO,             // dividend_yield
-            pos!(1.0),                  // quantity
-            1.0,                        // premium_long_put
-            2.0,                        // premium_short_put
-            0.0,                        // open_fee_long_put
-            0.0,                        // close_fee_long_put
-            0.0,                        // open_fee_short_put
-            0.0,                        // close_fee_short_put
+            pos!(100.0),                      // underlying_price
+            pos!(90.0),                       // long_strike
+            pos!(95.0),                       // short_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            1.0,                              // premium_long_put
+            2.0,                              // premium_short_put
+            0.0,                              // open_fee_long_put
+            0.0,                              // close_fee_long_put
+            0.0,                              // open_fee_short_put
+            0.0,                              // close_fee_short_put
         )
     }
 
@@ -1725,7 +1765,7 @@ mod tests_delta {
             underlying_price, // underlying_price
             long_strike,      // long_strike
             short_strike,     // short_strike
-            ExpirationDate::Days(2.0),
+            ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
@@ -1834,7 +1874,7 @@ mod tests_delta_size {
             underlying_price, // underlying_price
             long_strike,      // long_strike
             short_strike,     // short_strike
-            ExpirationDate::Days(2.0),
+            ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield

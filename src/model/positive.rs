@@ -79,6 +79,10 @@ impl Positive {
         self.0.to_f64().unwrap()
     }
 
+    pub fn to_i64(&self) -> i64 {
+        self.0.to_i64().unwrap()
+    }
+
     pub fn max(self, other: Positive) -> Positive {
         if self.0 > other.0 {
             self
@@ -248,6 +252,14 @@ impl Div<f64> for Positive {
     }
 }
 
+impl Div<f64> for &Positive {
+    type Output = Positive;
+
+    fn div(self, rhs: f64) -> Positive {
+        (self.to_f64() / rhs).into()
+    }
+}
+
 impl Sub<f64> for Positive {
     type Output = Positive;
 
@@ -354,7 +366,7 @@ impl Sub for Positive {
 impl Div for Positive {
     type Output = Positive;
 
-    fn div(self, other: Positive) -> Positive {
+    fn div(self, other: Positive) -> Self::Output {
         Positive(self.0 / other.0)
     }
 }

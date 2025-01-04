@@ -180,6 +180,7 @@ mod tests_profit_range {
 #[cfg(test)]
 mod tests_calculate_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -194,7 +195,7 @@ mod tests_calculate_probability {
             pos!(100.0),
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             Some(dec!(0.05)),
         );
 
@@ -221,7 +222,7 @@ mod tests_calculate_probability {
             pos!(100.0),
             vol_adj,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             Some(dec!(0.05)),
         );
 
@@ -241,7 +242,7 @@ mod tests_calculate_probability {
             pos!(100.0),
             None,
             trend,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             Some(dec!(0.05)),
         );
 
@@ -261,7 +262,7 @@ mod tests_calculate_probability {
             pos!(100.0),
             None,
             trend,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             Some(dec!(0.05)),
         );
 
@@ -277,7 +278,7 @@ mod tests_calculate_probability {
             pos!(100.0),
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             Some(dec!(0.05)),
         );
 
@@ -293,7 +294,7 @@ mod tests_calculate_probability {
             pos!(100.0),
             None,
             None,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             Some(dec!(0.05)),
         );
 
@@ -317,7 +318,7 @@ mod tests_calculate_probability {
             pos!(100.0),
             vol_adj,
             trend,
-            ExpirationDate::Days(30.0),
+            ExpirationDate::Days(pos!(30.0)),
             Some(dec!(0.05)),
         );
 
@@ -330,10 +331,10 @@ mod tests_calculate_probability {
         let mut range = create_basic_range();
 
         let expirations = vec![
-            ExpirationDate::Days(1.0),
-            ExpirationDate::Days(30.0),
-            ExpirationDate::Days(90.0),
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(pos!(1.0)),
+            ExpirationDate::Days(pos!(30.0)),
+            ExpirationDate::Days(pos!(90.0)),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
         ];
 
         for expiration in expirations {
@@ -357,7 +358,7 @@ mod tests_calculate_probability {
                 price,
                 None,
                 None,
-                ExpirationDate::Days(30.0),
+                ExpirationDate::Days(pos!(30.0)),
                 Some(dec!(0.05)),
             );
 

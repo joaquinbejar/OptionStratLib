@@ -23,7 +23,7 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
         underlying_price, // underlying_price
         pos!(5750.0),     // long_strike_itm
         pos!(5820.0),     // short_strike
-        ExpirationDate::Days(2.0),
+        ExpirationDate::Days(pos!(2.0)),
         pos!(0.18),     // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
@@ -66,7 +66,7 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         SellOptions {
-            quantity: Positive::new_decimal(Decimal::from_str("2.184538786861798").unwrap())
+            quantity: Positive::new_decimal(Decimal::from_str("2.184538786861796").unwrap())
                 .unwrap(),
             strike: pos!(5820.0),
             option_type: OptionStyle::Call

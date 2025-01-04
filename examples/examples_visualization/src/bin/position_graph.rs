@@ -19,7 +19,7 @@ fn create_sample_option() -> Options {
         Side::Long,
         "AAPL".to_string(),
         pos!(100.0),
-        ExpirationDate::Days(30.0),
+        ExpirationDate::Days(pos!(30.0)),
         pos!(0.2),
         pos!(1.0),
         pos!(105.0),

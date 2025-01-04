@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(2505.8),
         pos!(2460.0),
         pos!(2515.0),
-        ExpirationDate::Days(30.0),
+        ExpirationDate::Days(pos!(30.0)),
         pos!(0.2),
         dec!(0.05),
         Positive::ZERO,
