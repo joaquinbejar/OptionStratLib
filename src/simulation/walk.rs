@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 22/10/24
 ******************************************************************************/
+use std::error::Error;
 use crate::chains::utils::OptionDataPriceParams;
 use crate::constants::ZERO;
 use crate::model::types::ExpirationDate;
@@ -142,8 +143,8 @@ impl Walkable for RandomWalkGraph {
 }
 
 impl Profit for RandomWalkGraph {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
-        price.into()
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+        Ok(price.to_dec())
     }
 }
 

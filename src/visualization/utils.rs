@@ -17,6 +17,7 @@ use plotters::prelude::{
 };
 use std::error::Error;
 use std::ops::Add;
+use num_traits::ToPrimitive;
 
 #[macro_export]
 macro_rules! create_drawing_area {
@@ -127,7 +128,7 @@ pub trait Graph: Profit {
 
     fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
-            .map(|&price| self.calculate_profit_at(price))
+            .map(|&price| self.calculate_profit_at(price).unwrap().to_f64().unwrap())
             .collect()
     }
 
@@ -334,12 +335,13 @@ mod tests {
     use crate::Positive;
     use plotters::style::RGBColor;
     use std::error::Error;
+    use rust_decimal::Decimal;
 
     struct MockGraph;
 
     impl Profit for MockGraph {
-        fn calculate_profit_at(&self, price: Positive) -> f64 {
-            (price * 2.0).into()
+        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok((price * 2.0).to_dec())
         }
     }
 
@@ -395,8 +397,8 @@ mod tests {
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: Positive) -> f64 {
-                0.0
+            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(Decimal::ZERO)
             }
         }
         impl Graph for DefaultGraph {
@@ -412,8 +414,8 @@ mod tests {
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: Positive) -> f64 {
-                0.0
+            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(Decimal::ZERO)
             }
         }
         impl Graph for DefaultGraph {
