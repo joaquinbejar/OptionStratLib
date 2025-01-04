@@ -1900,11 +1900,13 @@ mod tests_delta {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5840.0), pos!(5820.0));
-
+        let strike = pos!(5870.0);
+        let strategy = get_strategy( strike, pos!(5860.0));
+        let size = 0.0296;
+        let delta = pos!(0.2210336595644664);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.08591,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -1912,16 +1914,16 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(0.3660429216960173),
-                strike: pos!(5840.0),
+                quantity: delta,
+                strike: strike,
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(0.3660429216960173);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, -0.0859127, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -1931,11 +1933,13 @@ mod tests_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(5800.0), pos!(5820.0));
-
+        let strike = pos!(5820.0);
+        let strategy = get_strategy( pos!(5800.0), strike);
+        let size = -0.0971;
+        let delta = pos!(0.3029931694406447);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -0.097145,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -1943,16 +1947,16 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.302993169440645),
-                strike: pos!(5820.0),
+                quantity: delta,
+                strike: strike,
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.302993169440645);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, 0.09714, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -2008,11 +2012,11 @@ mod tests_delta_size {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5840.6), pos!(5820.5));
-
-        let size = 0.2579;
-        let delta = pos!(1.110025440233733);
-
+        let strike = pos!(5840.4);
+        let strategy = get_strategy(  strike, pos!(5820.5));
+        let size = 0.2555;
+        let delta = pos!(1.09617639141894);
+        
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
             size,
@@ -2024,7 +2028,7 @@ mod tests_delta_size {
             suggestion[0],
             DeltaAdjustment::SellOptions {
                 quantity: delta,
-                strike: pos!(5840.6),
+                strike: strike,
                 option_type: OptionStyle::Call
             }
         );
@@ -2042,11 +2046,13 @@ mod tests_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(5800.0), pos!(5820.0));
-
+        let strike = pos!(5820.414);
+        let strategy = get_strategy( pos!(5800.0), strike);
+        let size = -0.2971;
+        let delta = pos!(0.932384393100519);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -0.291436,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -2054,16 +2060,16 @@ mod tests_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.9089795083219351),
-                strike: pos!(5820.0),
+                quantity: delta,
+                strike: strike,
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.9089795083219351);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, 0.29143, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,

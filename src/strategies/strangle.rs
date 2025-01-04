@@ -2444,11 +2444,13 @@ mod tests_long_strangle_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
-
+        let strike = pos!(7050.0);
+        let strategy = get_strategy(pos!(7150.0), strike);
+        let size = 0.1221;
+        let delta = pos!(0.29240526858778937);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.122170071,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -2456,16 +2458,16 @@ mod tests_long_strangle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.29240526858778937),
+                quantity: delta,
                 strike: pos!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = pos!(0.29240526858778937);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, -0.1221700719, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,

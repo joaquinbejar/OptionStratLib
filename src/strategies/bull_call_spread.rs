@@ -1799,11 +1799,13 @@ mod tests_delta {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5750.0), pos!(5820.0));
-
+        let strike = pos!(5820.0);
+        let strategy = get_strategy( pos!(5750.0), strike);
+        let size = 0.3502;
+        let delta = pos!(1.092269393430898);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            0.3502030,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -1811,17 +1813,17 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: pos!(1.0922693934308985),
-                strike: pos!(5820.0),
+                quantity: delta,
+                strike: strike,
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = pos!(1.0922693934308985);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
 
-        assert_relative_eq!(delta, -0.35020, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,

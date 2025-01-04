@@ -2315,11 +2315,14 @@ mod tests_long_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7450.0));
+        let strike = pos!(7450.0);
+        let strategy = get_strategy( strike);
+        let size = -0.168;
+        let delta = pos!(0.4039537995372765);
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
-            -0.1680,
+            size,
             epsilon = 0.0001
         );
         assert!(!strategy.is_delta_neutral());
@@ -2327,16 +2330,16 @@ mod tests_long_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(0.4039537995372771),
-                strike: pos!(7450.0),
+                quantity: delta,
+                strike: strike,
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = pos!(0.4039537995372771);
+        option.quantity = delta;
         let delta = d2fu!(option.delta().unwrap()).unwrap();
-        assert_relative_eq!(delta, 0.168037255, epsilon = 0.0001);
+        assert_relative_eq!(delta, -size, epsilon = 0.0001);
         assert_relative_eq!(
             delta + strategy.calculate_net_delta().net_delta,
             0.0,
@@ -2540,10 +2543,10 @@ mod tests_long_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7450.0));
+        let strike = pos!(7450.0);
+        let strategy = get_strategy( strike);
         let size = -0.3360;
-        let delta =
-            Positive::new_decimal(Decimal::from_str("0.8079075990745542").unwrap()).unwrap();
+        let delta = pos!(0.8079075990745530);
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2556,7 +2559,7 @@ mod tests_long_straddle_delta_size {
             suggestion[0],
             DeltaAdjustment::BuyOptions {
                 quantity: delta,
-                strike: pos!(7450.0),
+                strike: strike,
                 option_type: OptionStyle::Call
             }
         );
