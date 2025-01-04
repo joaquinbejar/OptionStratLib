@@ -3,7 +3,8 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-
+use num_traits::ToPrimitive;
+use rust_decimal::Decimal;
 use crate::model::position::Position;
 use crate::{pos, Positive};
 
@@ -83,16 +84,17 @@ impl SPANMargin {
         scenario_volatility: Positive,
     ) -> f64 {
         let option = &position.option;
-        let current_price = option.calculate_price_black_scholes();
+        let current_price = option.calculate_price_black_scholes().unwrap();
 
         let mut scenario_option = option.clone();
         scenario_option.underlying_price = pos!(scenario_price);
         scenario_option.implied_volatility = scenario_volatility;
-        let scenario_price = scenario_option.calculate_price_black_scholes();
+        let scenario_price = scenario_option.calculate_price_black_scholes().unwrap();
 
-        (scenario_price - current_price)
+        ((scenario_price - current_price)
             * option.quantity
-            * if option.is_short() { -1.0 } else { 1.0 }
+            * if option.is_short() 
+        { Decimal::NEGATIVE_ONE } else { Decimal::ONE }).to_f64().unwrap()
     }
 
     fn calculate_short_option_minimum(&self, position: &Position) -> f64 {
@@ -129,17 +131,17 @@ mod tests_span {
 
         let position = Position {
             option,
-            premium: 5.0,
+            premium: pos!(5.0),
             date: Utc::now(),
-            open_fee: 0.5,
-            close_fee: 0.5,
+            open_fee: pos!(0.5),
+            close_fee: pos!(0.5),
         };
 
         let span = SPANMargin::new(
-            0.15, // scanning_range (15%)
-            0.1,  // short_option_minimum (10%)
-            0.05, // price_scan_range (5%)
-            0.1,  // volatility_scan_range (10%)
+            0.15,   // scanning_range (15%)
+            0.1,   // short_option_minimum (10%)
+            0.05,   // price_scan_range (5%)
+            0.1,   // volatility_scan_range (10%)
         );
 
         let margin = span.calculate_margin(&position);

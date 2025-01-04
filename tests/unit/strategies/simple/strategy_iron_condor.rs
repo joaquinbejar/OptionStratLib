@@ -18,22 +18,22 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = IronCondor::new(
         "GOLD".to_string(),
-        underlying_price, // underlying_price
-        pos!(2725.0),     // short_call_strike
-        pos!(2560.0),     // short_put_strike
-        pos!(2800.0),     // long_call_strike
-        pos!(2500.0),     // long_put_strike
+        underlying_price,   // underlying_price
+        pos!(2725.0),   // short_call_strike
+        pos!(2560.0),   // short_put_strike
+        pos!(2800.0),   // long_call_strike
+        pos!(2500.0),   // long_put_strike
         ExpirationDate::Days(pos!(30.0)),
         pos!(0.1548),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(2.0),      // quantity
-        38.8,           // premium_short_call
-        30.4,           // premium_short_put
-        23.3,           // premium_long_call
-        16.8,           // premium_long_put
-        0.96,           // open_fee
-        0.96,           // close_fee
+        dec!(0.05),   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(2.0),   // quantity
+        38.8,   // premium_short_call
+        30.4,   // premium_short_put
+        23.3,   // premium_long_call
+        16.8,   // premium_long_put
+        0.96,   // open_fee
+        0.96,   // close_fee
     );
 
     // Validate strategy

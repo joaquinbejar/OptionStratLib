@@ -70,6 +70,7 @@ use crate::model::types::{OptionStyle, Side};
 use std::error::Error;
 use std::fmt;
 
+
 /// Represents errors that can occur when managing positions in strategies
 #[derive(Debug)]
 pub enum PositionError {
@@ -121,6 +122,9 @@ pub enum PositionValidationErrorKind {
         reason: String,
     },
     InvalidPosition {
+        reason: String,
+    },
+    StdError {
         reason: String,
     },
 }
@@ -208,6 +212,9 @@ impl fmt::Display for PositionValidationErrorKind {
                     style, reason
                 )
             }
+            PositionValidationErrorKind::StdError { reason } => {
+                write!(f, "Error: {}", reason)
+            }
         }
     }
 }
@@ -278,6 +285,30 @@ impl PositionError {
     pub fn invalid_position(reason: &str) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
             reason: reason.to_string(),
+        })
+    }
+}
+
+impl From<Box<dyn Error>> for PositionError {
+    fn from(err: Box<dyn Error>) -> Self {
+        PositionError::ValidationError(PositionValidationErrorKind::StdError {
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<&str> for PositionError {
+    fn from(err: &str) -> Self {
+        PositionError::ValidationError(PositionValidationErrorKind::StdError {
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<String> for PositionError {
+    fn from(err: String) -> Self {
+        PositionError::ValidationError(PositionValidationErrorKind::StdError {
+            reason: err.to_string(),
         })
     }
 }

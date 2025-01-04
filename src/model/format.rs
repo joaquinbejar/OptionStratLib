@@ -824,10 +824,10 @@ mod tests_position_type_display_debug {
         let (option, naive_date) = get_option();
         let position = Position {
             option,
-            premium: 5.75,
+            premium: pos!(5.75),
             date: naive_date,
-            open_fee: 0.50,
-            close_fee: 0.45,
+            open_fee: pos!(0.50),
+            close_fee: pos!(0.45),
         };
 
         let expected_display = "Position Details:\n\
@@ -853,10 +853,10 @@ mod tests_position_type_display_debug {
 
         let position = Position {
             option,
-            premium: 5.75,
+            premium: pos!(5.75),
             date: naive_date,
-            open_fee: 0.50,
-            close_fee: 0.45,
+            open_fee: pos!(0.50),
+            close_fee: pos!(0.45),
         };
 
         let expected_debug = "Position { \
@@ -913,10 +913,10 @@ mod tests_strategy_type_display_debug {
                         pos!(0.02),
                         naive_date,
                     ),
-                    5.0,
+                    pos!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    0.5,
-                    0.45,
+                    pos!(0.50),
+                    pos!(0.45),
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -928,10 +928,10 @@ mod tests_strategy_type_display_debug {
                         pos!(0.02),
                         naive_date,
                     ),
-                    5.0,
+                    pos!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    0.5,
-                    0.45,
+                    pos!(0.50),
+                    pos!(0.45),
                 ),
             ],
             max_profit: Some(10.0),
@@ -966,10 +966,10 @@ mod tests_strategy_type_display_debug {
                         pos!(0.02),
                         naive_date,
                     ),
-                    5.0,
+                    pos!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    0.5,
-                    0.45,
+                    pos!(0.50),
+                    pos!(0.45),
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -981,10 +981,10 @@ mod tests_strategy_type_display_debug {
                         pos!(0.02),
                         naive_date,
                     ),
-                    5.0,
+                    pos!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    0.5,
-                    0.45,
+                    pos!(0.50),
+                    pos!(0.45),
                 ),
             ],
             max_profit: Some(8.0),

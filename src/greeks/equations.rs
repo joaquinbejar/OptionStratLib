@@ -1150,12 +1150,12 @@ mod tests_vega_equation {
             strike_price,
             ExpirationDate::Days(expiration_in_days),
             implied_volatility,
-            pos!(1.0), // Quantity
+            pos!(1.0),   // Quantity
             underlying_price,
-            dec!(0.05), // Risk-free rate
+            dec!(0.05),   // Risk-free rate
             OptionStyle::Call,
             dividend_yield,
-            None, // No exotic params for this test
+            None,   // No exotic params for this test
         )
     }
 
@@ -1353,10 +1353,10 @@ mod tests_theta_long_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // underlying price
+            pos!(150.0),   // underlying price
             pos!(1.0),   // quantity
-            pos!(155.0), // strike price
-            pos!(0.20),  // implied volatility
+            pos!(155.0),   // strike price
+            pos!(0.20),   // implied volatility
         );
 
         // Expected theta value for a call option (precomputed or from known source)
@@ -1375,10 +1375,10 @@ mod tests_theta_long_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(150.0), // underlying price
+            pos!(150.0),   // underlying price
             pos!(1.0),   // quantity
-            pos!(145.0), // strike price
-            pos!(0.25),  // implied volatility
+            pos!(145.0),   // strike price
+            pos!(0.25),   // implied volatility
         );
 
         // Expected theta value for a put option (precomputed or from known source)
@@ -1397,10 +1397,10 @@ mod tests_theta_long_equations {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // underlying price
+            pos!(150.0),   // underlying price
             pos!(1.0),   // quantity
-            pos!(150.0), // strike price
-            pos!(0.15),  // implied volatility
+            pos!(150.0),   // strike price
+            pos!(0.15),   // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(pos!(1.0)); // Option close to expiry
 
@@ -1420,10 +1420,10 @@ mod tests_theta_long_equations {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(140.0), // underlying price
+            pos!(140.0),   // underlying price
             pos!(1.0),   // quantity
-            pos!(130.0), // strike price
-            pos!(0.30),  // implied volatility
+            pos!(130.0),   // strike price
+            pos!(0.30),   // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
@@ -1454,10 +1454,10 @@ mod tests_theta_short_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(150.0), // underlying price
+            pos!(150.0),   // underlying price
             pos!(1.0),   // quantity
-            pos!(155.0), // strike price
-            pos!(0.20),  // implied volatility
+            pos!(155.0),   // strike price
+            pos!(0.20),   // implied volatility
         );
 
         // Expected theta value for a short call option (precomputed or from known source)
@@ -1476,10 +1476,10 @@ mod tests_theta_short_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(150.0), // underlying price
+            pos!(150.0),   // underlying price
             pos!(1.0),   // quantity
-            pos!(145.0), // strike price
-            pos!(0.25),  // implied volatility
+            pos!(145.0),   // strike price
+            pos!(0.25),   // implied volatility
         );
 
         // Expected theta value for a short put option (precomputed or from known source)
@@ -1498,10 +1498,10 @@ mod tests_theta_short_equations {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(150.0), // underlying price
+            pos!(150.0),   // underlying price
             pos!(1.0),   // quantity
-            pos!(150.0), // strike price
-            pos!(0.15),  // implied volatility
+            pos!(150.0),   // strike price
+            pos!(0.15),   // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(pos!(1.0)); // Option close to expiry
 
@@ -1521,10 +1521,10 @@ mod tests_theta_short_equations {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(140.0), // underlying price
+            pos!(140.0),   // underlying price
             pos!(1.0),   // quantity
-            pos!(130.0), // strike price
-            pos!(0.30),  // implied volatility
+            pos!(130.0),   // strike price
+            pos!(0.30),   // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 

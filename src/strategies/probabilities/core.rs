@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use num_traits::ToPrimitive;
 use crate::error::probability::ProbabilityError;
 use crate::model::{ExpirationDate, ProfitLossRange};
 use crate::pricing::payoff::Profit;
@@ -31,8 +32,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
             return Ok(StrategyProbabilityAnalysis {
                 probability_of_profit,
-                probability_of_max_profit: Positive::ZERO, // Default value when no volatility adjustment
-                probability_of_max_loss: Positive::ZERO, // Default value when no volatility adjustment
+                probability_of_max_profit: Positive::ZERO,   // Default value when no volatility adjustment
+                probability_of_max_loss: Positive::ZERO,   // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
                 risk_reward_ratio: self.profit_ratio().unwrap().into(),
@@ -91,11 +92,11 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             if vol_adj.base_volatility == Positive::ZERO
                 && vol_adj.std_dev_adjustment == Positive::ZERO
             {
-                let current_profit = self.calculate_profit_at(self.get_underlying_price());
-                return if current_profit <= 0.0 {
+                let current_profit = self.calculate_profit_at(self.get_underlying_price())?;
+                return if current_profit <= Decimal::ZERO {
                     Ok(Positive::ZERO)
                 } else {
-                    Ok(pos!(current_profit))
+                    Ok(current_profit.into())
                 };
             }
         }
@@ -126,7 +127,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             .iter()
             .zip(probabilities.iter())
             .fold(0.0, |acc, (price, prob)| {
-                acc + self.calculate_profit_at(*price) * *prob
+                let ev = acc + self.calculate_profit_at(*price).unwrap().to_f64().unwrap() * *prob;
+                ev
             });
 
         let total_prob: f64 = probabilities.iter().map(|p| p.to_f64()).sum();
@@ -238,6 +240,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
 #[cfg(test)]
 mod tests_probability_analysis {
+    use std::error::Error;
     use super::*;
     use crate::error::strategies::StrategyError;
     use crate::model::types::ExpirationDate;
@@ -285,8 +288,8 @@ mod tests_probability_analysis {
     }
 
     impl Profit for MockStrategy {
-        fn calculate_profit_at(&self, price: Positive) -> f64 {
-            price.to_f64() - self.underlying_price
+        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok(price.to_dec() - self.underlying_price)
         }
     }
 
@@ -463,6 +466,7 @@ mod tests_probability_analysis {
 
 #[cfg(test)]
 mod tests_expected_value {
+    use std::error::Error;
     use super::*;
     use crate::error::strategies::StrategyError;
     use crate::strategies::base::{Positionable, Validable};
@@ -505,8 +509,8 @@ mod tests_expected_value {
     }
 
     impl Profit for TestStrategy {
-        fn calculate_profit_at(&self, price: Positive) -> f64 {
-            price.to_f64() - self.underlying_price
+        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok(price.to_dec() - self.underlying_price)
         }
     }
 
@@ -647,7 +651,7 @@ mod tests_expected_value {
         }
 
         impl Profit for ExtremeStrategy {
-            fn calculate_profit_at(&self, price: Positive) -> f64 {
+            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
                 self.base.calculate_profit_at(price)
             }
         }
@@ -684,7 +688,7 @@ mod tests_expected_value {
         let strategy = create_test_strategy();
         // Use a very small but positive volatility value
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.0001), // Very small but non-zero volatility
+            base_volatility: pos!(0.0001),   // Very small but non-zero volatility
             std_dev_adjustment: Positive::ZERO,
         });
 

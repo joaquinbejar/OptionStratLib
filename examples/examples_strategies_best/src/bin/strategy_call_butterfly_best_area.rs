@@ -24,24 +24,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
     let mut strategy = CallButterfly::new(
         "".to_string(),
-        underlying_price, // underlying_price
+        underlying_price,   // underlying_price
         Positive::ZERO,   // long_strike_itm
         Positive::ZERO,   // long_strike_otm
         Positive::ZERO,   // short_strike
         ExpirationDate::Days(pos!(2.0)),
-        Positive::ZERO, // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(2.0),      // long quantity
-        ZERO,           // short_quantity
-        ZERO,           // premium_long_itm
-        ZERO,           // premium_long_otm
-        ZERO,           // premium_short
-        0.78,           // open_fee_long
-        0.78,           // close_fee_long
-        0.73,           // close_fee_short
-        0.73,           // close_fee_short
-        0.73,           // close_fee_short
+        Positive::ZERO,   // implied_volatility
+        dec!(0.05),   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(2.0),   // long quantity
+        ZERO,   // short_quantity
+        ZERO,   // premium_long_itm
+        ZERO,   // premium_long_otm
+        ZERO,   // premium_short
+        0.78,   // open_fee_long
+        0.78,   // close_fee_long
+        0.73,   // close_fee_short
+        0.73,   // close_fee_short
+        0.73,   // close_fee_short
     );
 
     strategy.best_area(

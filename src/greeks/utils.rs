@@ -859,7 +859,7 @@ mod calculate_d1_values_bis {
             pos!(100.0),
             pos!(100.0),
             dec!(0.05),
-            pos!(0.0833), // approximately one month
+            pos!(0.0833),   // approximately one month
             pos!(0.05),
         );
 
@@ -875,7 +875,7 @@ mod calculate_d1_values_bis {
             pos!(100.0),
             dec!(0.05),
             Positive::ONE,
-            pos!(0.5), // 50% volatility
+            pos!(0.5),   // 50% volatility
         );
 
         assert!(result.is_ok());
@@ -903,7 +903,7 @@ mod calculate_d1_values_bis {
         let result = d1(
             pos!(100.0),
             pos!(100.0),
-            dec!(-0.02), // negative interest rate
+            dec!(-0.02),   // negative interest rate
             Positive::ONE,
             pos!(0.5),
         );
@@ -918,7 +918,7 @@ mod calculate_d1_values_bis {
         let result = d1(
             pos!(100.0),
             pos!(100.0),
-            dec!(-0.02), // negative interest rate
+            dec!(-0.02),   // negative interest rate
             Positive::ONE,
             pos!(0.5),
         );
@@ -1151,7 +1151,7 @@ mod calculate_d2_values_bis {
             pos!(100.0),
             pos!(100.0),
             dec!(0.05),
-            pos!(0.0833), // 1 month
+            pos!(0.0833),   // 1 month
             pos!(0.5),
         )
         .unwrap();
@@ -1395,7 +1395,7 @@ mod calculate_d2_values_bis {
             pos!(100.0),
             pos!(100.0),
             dec!(0.05),
-            pos!(2.5), // 2.5 years
+            pos!(2.5),   // 2.5 years
             pos!(0.15),
         )
         .unwrap();
@@ -1886,9 +1886,9 @@ mod tests_d1_d2_edge_cases {
         let result = d2(
             pos!(100.0),
             pos!(100.0),
-            -dec!(0.05), // tasa negativa
+            -dec!(0.05),   // tasa negativa
             Positive::ONE,
-            pos!(0.8), // alta volatilidad
+            pos!(0.8),   // alta volatilidad
         )
         .unwrap();
         assert_decimal_eq!(result, dec!(-0.4625), dec!(0.000001));

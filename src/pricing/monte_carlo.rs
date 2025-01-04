@@ -34,8 +34,8 @@ use std::error::Error;
 #[allow(dead_code)]
 pub fn monte_carlo_option_pricing(
     option: &Options,
-    steps: usize,       // Number of time steps
-    simulations: usize, // Number of Monte Carlo simulations
+    steps: usize,   // Number of time steps
+    simulations: usize,   // Number of Monte Carlo simulations
 ) -> Result<Decimal, Box<dyn Error>> {
     let dt = option.expiration_date.get_years().unwrap() / steps as f64;
     let mut payoff_sum = 0.0;
@@ -72,7 +72,7 @@ mod tests {
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
             strike_price: pos!(100.0),
-            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR), // 1 year
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),   // 1 year
             implied_volatility: pos!(0.2),
             quantity: pos!(1.0),
             underlying_price: pos!(100.0),

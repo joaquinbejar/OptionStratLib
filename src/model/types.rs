@@ -610,7 +610,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0), // Not used in floating strike
+            strike: pos!(0.0),   // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1057,4 +1057,3 @@ mod test_exchange_options {
     }
 }
 
-// find . -type f -name "*.rs" -not -path "./target/*" -exec sed -i '' 's|ExpirationDate::Days(pos!(1.0))|ExpirationDate::Days(pos!(1.0))|g' {} +

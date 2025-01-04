@@ -74,3 +74,12 @@ pub mod greeks;
 pub mod position;
 pub mod probability;
 pub mod strategies;
+mod options;
+
+pub use options::{OptionsError, OptionsResult};
+pub use decimal::{DecimalError, DecimalResult};
+pub use chains::ChainError;
+pub use position::PositionError;
+pub use probability::ProbabilityError;
+pub use strategies::StrategyError;
+pub use greeks::GreeksError;

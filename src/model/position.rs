@@ -131,11 +131,22 @@ impl Position {
     pub fn net_premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
-            Side::Short => self.net_cost(),
+            Side::Short => { // max profit is premium received - fees (cost)
+                let premium = self.premium * self.option.quantity;
+                let cost = -self.total_cost()?.to_dec();
+                match premium > cost {
+                    true => Ok(premium + cost),
+                    false => Err(PositionError::ValidationError(
+                        PositionValidationErrorKind::InvalidPosition {
+                            reason: "Max profit is negative.".to_string(),
+                        },
+                    )),
+                }
+            },
         }
     }
 
-    pub fn pnl_at_expiration(
+    pub fn pnl_at_expiration( // payoff
         &self,
         underlying_price: &Option<Positive>,
     ) -> Result<Decimal, Box<dyn Error>> {
@@ -201,17 +212,17 @@ impl Position {
     ///
     /// # Returns
     ///
-    /// A `f64` representing the net cost of the position.
+    /// A `Decimal` representing the net cost of the position.
     /// The value should be positive but if the fee is higher than the premium it will be negative
     /// in short positions
-    pub(crate) fn net_cost(&self) -> Result<Positive, PositionError> {
+    pub(crate) fn net_cost(&self) -> Result<Decimal, PositionError> {
         match self.option.side {
-            Side::Long => self.total_cost().into(),
+            Side::Long => Ok(self.total_cost()?.to_dec()),
             Side::Short => {
-                let fees = self.fees()? ;
-                 let premium = self.premium_received()?;
+                let fees = self.fees()?.to_dec() ;
+                 let premium = self.premium_received()?.to_dec();
                 match fees > premium { 
-                    true => Ok(fees - premium),
+                    true => Ok( fees - premium ),
                     false => Err(PositionError::ValidationError(
                         PositionValidationErrorKind::InvalidPosition {
                             reason: "Net cost is negative in Short position.".to_string(),
@@ -246,18 +257,7 @@ impl Position {
     pub(crate) fn max_profit(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::INFINITY),
-            Side::Short => {
-                let premium = self.premium * self.option.quantity;
-                let cost = -self.total_cost()?.to_dec();
-                match premium > cost {
-                    true => Ok(premium + cost),
-                    false => Err(PositionError::ValidationError(
-                        PositionValidationErrorKind::InvalidPosition {
-                            reason: "Max profit is negative.".to_string(),
-                        },
-                    )),
-                }
-            }
+            Side::Short => self.net_premium_received(),
         }
     }
 

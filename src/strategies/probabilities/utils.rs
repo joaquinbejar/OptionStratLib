@@ -96,7 +96,7 @@ pub fn calculate_single_point_probability(
             }
             adj.base_volatility * (1.0 + adj.std_dev_adjustment)
         }
-        None => pos!(0.2), // Default volatility if not provided
+        None => pos!(0.2),   // Default volatility if not provided
     };
 
     // Adjust drift rate based on trend if provided
@@ -666,7 +666,7 @@ mod tests_single_point_probability {
     fn test_invalid_trend_confidence() {
         let trend = Some(PriceTrend {
             drift_rate: 0.05,
-            confidence: 1.5, // Invalid
+            confidence: 1.5,   // Invalid
         });
 
         let result = calculate_single_point_probability(
@@ -748,7 +748,7 @@ mod tests_single_point_probability {
     #[test]
     fn test_extreme_trend() {
         let trend = Some(PriceTrend {
-            drift_rate: 2.0, // 200% annual drift
+            drift_rate: 2.0,   // 200% annual drift
             confidence: 0.99,
         });
 
@@ -802,7 +802,7 @@ mod tests_calculate_price_probability {
     fn test_price_probability_invalid_bounds() {
         let result = calculate_price_probability(
             pos!(100.0),
-            pos!(105.0), // Lower bound higher than upper bound
+            pos!(105.0),   // Lower bound higher than upper bound
             pos!(95.0),
             None,
             None,

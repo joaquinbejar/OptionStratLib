@@ -21,19 +21,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
     let mut strategy = ShortStraddle::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
+        underlying_price,   // underlying_price
         Positive::ZERO,   // strike
         ExpirationDate::Days(pos!(5.0)),
-        Positive::ZERO, // implied_volatility
-        Decimal::ZERO,  // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
-        ZERO,           // premium_short_call
-        ZERO,           // premium_short_put
-        0.82,           // open_fee_short_call
-        0.82,           // close_fee_short_call
-        0.82,           // open_fee_short_put
-        0.82,           // close_fee_short_put
+        Positive::ZERO,   // implied_volatility
+        Decimal::ZERO,   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(1.0),   // quantity
+        ZERO,   // premium_short_call
+        ZERO,   // premium_short_put
+        0.82,   // open_fee_short_call
+        0.82,   // close_fee_short_call
+        0.82,   // open_fee_short_put
+        0.82,   // close_fee_short_put
     );
     // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(5700.0), pos!(6100.0)));
     strategy.best_area(&option_chain, FindOptimalSide::Upper);

@@ -157,13 +157,13 @@ pub struct RandomPositionsParams {
     /// Dividend yield of the underlying
     pub dividend_yield: Positive,
     /// Fee for opening put positions
-    pub open_put_fee: f64,
+    pub open_put_fee: Positive,
     /// Fee for opening call positions
-    pub open_call_fee: f64,
+    pub open_call_fee: Positive,
     /// Fee for closing put positions
-    pub close_put_fee: f64,
+    pub close_put_fee: Positive,
     /// Fee for closing call positions
-    pub close_call_fee: f64,
+    pub close_call_fee: Positive,
 }
 
 impl RandomPositionsParams {
@@ -177,10 +177,10 @@ impl RandomPositionsParams {
         option_qty: Positive,
         risk_free_rate: Decimal,
         dividend_yield: Positive,
-        open_put_fee: f64,
-        open_call_fee: f64,
-        close_put_fee: f64,
-        close_call_fee: f64,
+        open_put_fee: Positive,
+        open_call_fee: Positive,
+        close_put_fee: Positive,
+        close_call_fee: Positive,
     ) -> Self {
         Self {
             qty_puts_long,
@@ -458,10 +458,10 @@ mod tests_random_positions_params {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         )
     }
 
@@ -495,10 +495,10 @@ mod tests_random_positions_params {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         assert_eq!(params.total_positions(), 5);
 
@@ -511,10 +511,10 @@ mod tests_random_positions_params {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         assert_eq!(params.total_positions(), 0);
     }
@@ -704,10 +704,10 @@ mod tests_random_positions_params_extended {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
 
         assert_eq!(params.qty_puts_long, Some(2));
@@ -728,10 +728,10 @@ mod tests_random_positions_params_extended {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
 
         assert_eq!(params.total_positions(), 0);
@@ -748,10 +748,10 @@ mod tests_random_positions_params_extended {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
 
         match params.expiration_date {

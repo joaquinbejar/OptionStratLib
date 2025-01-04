@@ -234,7 +234,7 @@ mod tests_calculate_probability {
     fn test_with_upward_trend() {
         let mut range = create_basic_range();
         let trend = Some(PriceTrend {
-            drift_rate: 0.10, // 10% tendencia alcista anual
+            drift_rate: 0.10,   // 10% tendencia alcista anual
             confidence: 0.95,
         });
 

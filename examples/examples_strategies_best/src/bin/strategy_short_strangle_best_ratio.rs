@@ -21,20 +21,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
     let mut strategy = ShortStrangle::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
+        underlying_price,   // underlying_price
         Positive::ZERO,   // call_strike
         Positive::ZERO,   // put_strike
         ExpirationDate::Days(pos!(5.0)),
-        Positive::ZERO, // implied_volatility
-        Decimal::ZERO,  // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
-        ZERO,           // premium_short_call
-        ZERO,           // premium_short_put
-        0.82,           // open_fee_short_call
-        0.82,           // close_fee_short_call
-        0.82,           // open_fee_short_put
-        0.82,           // close_fee_short_put
+        Positive::ZERO,   // implied_volatility
+        Decimal::ZERO,   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(1.0),   // quantity
+        ZERO,   // premium_short_call
+        ZERO,   // premium_short_put
+        0.82,   // open_fee_short_call
+        0.82,   // close_fee_short_call
+        0.82,   // open_fee_short_put
+        0.82,   // close_fee_short_put
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     debug!("Option Chain: {}", option_chain);

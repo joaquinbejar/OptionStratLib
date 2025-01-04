@@ -17,20 +17,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let strategy = ShortStrangle::new(
         "CL".to_string(),
-        underlying_price, // underlying_price
-        pos!(7450.0),     // call_strike 7450 (delta -0.415981)
-        pos!(7250.0),     // put_strike 7050 (delta 0.417810)
+        underlying_price,   // underlying_price
+        pos!(7450.0),   // call_strike 7450 (delta -0.415981)
+        pos!(7250.0),   // put_strike 7050 (delta 0.417810)
         ExpirationDate::Days(pos!(45.0)),
         pos!(0.3745),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
-        84.2,           // premium_short_call
-        353.2,          // premium_short_put
-        7.01,           // open_fee_short_call
-        7.01,           // close_fee_short_call
-        7.01,           // open_fee_short_put
-        7.01,           // close_fee_short_put
+        dec!(0.05),   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(1.0),   // quantity
+        84.2,   // premium_short_call
+        353.2,   // premium_short_put
+        7.01,   // open_fee_short_call
+        7.01,   // close_fee_short_call
+        7.01,   // open_fee_short_put
+        7.01,   // close_fee_short_put
     );
     // let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];

@@ -19,24 +19,24 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
 
     let mut strategy = CallButterfly::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        pos!(5750.0),     // long_call_strike
-        pos!(5800.0),     // short_call_low_strike
-        pos!(5850.0),     // short_call_high_strike
+        underlying_price,   // underlying_price
+        pos!(5750.0),   // long_call_strike
+        pos!(5800.0),   // short_call_low_strike
+        pos!(5850.0),   // short_call_high_strike
         ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),     // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // long quantity
-        85.04,          // premium_long_itm
-        53.04,          // premium_long_otm
-        28.85,          // premium_short
-        0.78,           // premium_short
-        0.78,           // open_fee_long
-        0.78,           // close_fee_long
-        0.73,           // close_fee_short
-        0.73,           // close_fee_short
-        0.73,           // open_fee_short
+        pos!(0.18),   // implied_volatility
+        dec!(0.05),   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(1.0),   // long quantity
+        85.04,   // premium_long_itm
+        53.04,   // premium_long_otm
+        28.85,   // premium_short
+        0.78,   // premium_short
+        0.78,   // open_fee_long
+        0.78,   // close_fee_long
+        0.73,   // close_fee_short
+        0.73,   // close_fee_short
+        0.73,   // open_fee_short
     );
 
     let option_chain =

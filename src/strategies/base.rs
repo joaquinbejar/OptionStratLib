@@ -13,9 +13,7 @@ use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::Positive;
 use itertools::Itertools;
-use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use std::f64;
 use tracing::error;
 
@@ -112,19 +110,19 @@ pub trait Strategies: Validable + Positionable {
     /// # Returns
     /// `f64` - The total cost will be zero if the strategy is not applicable.
     ///
-    fn total_cost(&self) -> Positive {
-        Positive::ZERO
+    fn total_cost(&self) -> Result<Decimal, StrategyError> {
+        Ok(Decimal::ZERO)
     }
 
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+    fn net_premium_received(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "net_premium_received",
             std::any::type_name::<Self>(),
         ))
     }
 
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let mut fee = dec!(0.0);
+    fn fees(&self) -> Result<Positive, StrategyError> {
+        let mut fee = Positive::ZERO;
         let positions = match self.get_positions() {
             Ok(positions) => positions,
             Err(err) => {
@@ -136,9 +134,9 @@ pub trait Strategies: Validable + Positionable {
                 ))
             }
         };
-
+        
         for position in positions {
-            fee += Decimal::from_f64(position.fees()).unwrap();
+            fee += position.fees()?;
         }
         Ok(fee)
     }
@@ -387,6 +385,7 @@ pub trait Positionable {
 
 #[cfg(test)]
 mod tests_strategies {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};
@@ -442,16 +441,16 @@ mod tests_strategies {
             Ok(pos!(500.0))
         }
 
-        fn total_cost(&self) -> Positive {
-            pos!(200.0)
+        fn total_cost(&self) -> Result<Decimal, StrategyError> {
+            Ok(dec!(200.0))
         }
 
-        fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-            Ok(dec!(300.0))
+        fn net_premium_received(&self) -> Result<Positive, StrategyError> {
+            Ok(pos!(300.0))
         }
 
-        fn fees(&self) -> Result<Decimal, StrategyError> {
-            Ok(dec!(50.0))
+        fn fees(&self) -> Result<Positive, StrategyError> {
+            Ok(pos!(50.0))
         }
 
         fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -472,7 +471,7 @@ mod tests_strategies {
 
         // Test add_leg and get_legs
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
+        let position = Position::new(option, Positive::ONE, Default::default(), Positive::ZERO, Positive::ZERO);
         mock_strategy
             .add_position(&position.clone())
             .expect("Error adding position");
@@ -484,7 +483,7 @@ mod tests_strategies {
         );
         assert_eq!(mock_strategy.max_profit().unwrap_or(Positive::ZERO), 1000.0);
         assert_eq!(mock_strategy.max_loss().unwrap_or(Positive::ZERO), 500.0);
-        assert_eq!(mock_strategy.total_cost(), 200.0);
+        assert_eq!(mock_strategy.total_cost().unwrap().to_f64().unwrap(), 200.0);
         assert_eq!(mock_strategy.net_premium_received().unwrap(), dec!(300.0));
         assert_eq!(mock_strategy.fees().unwrap(), dec!(50.0));
         assert_eq!(mock_strategy.profit_area().unwrap(), dec!(5000.0));
@@ -512,7 +511,7 @@ mod tests_strategies {
             strategy.max_loss().unwrap_or(Positive::ZERO),
             Positive::ZERO
         );
-        assert_eq!(strategy.total_cost(), Positive::ZERO);
+        assert_eq!(strategy.total_cost().unwrap(), Positive::ZERO);
         assert!(strategy.profit_area().is_err());
         assert!(strategy.profit_ratio().is_err());
         assert!(strategy.validate());
@@ -527,7 +526,8 @@ mod tests_strategies {
 
         let mut strategy = PanicStrategy;
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
+        let position = Position::new(option, Positive::ONE, Default::default(), Positive::ZERO, Positive::ZERO);
+
         assert!(strategy.add_position(&position).is_err());
     }
 }
@@ -554,7 +554,8 @@ mod tests_strategies_extended {
             "Test Description".to_string(),
         );
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let position = Position::new(option, 1.0, Default::default(), 0.0, 0.0);
+        let position = Position::new(option, Positive::ONE, Default::default(), Positive::ZERO, Positive::ZERO);
+
         strategy.legs.push(position);
 
         assert_eq!(strategy.legs.len(), 1);
@@ -712,7 +713,7 @@ mod tests_strategy_type {
 #[cfg(test)]
 mod tests_max_min_strikes {
     use super::*;
-    use crate::pos;
+    use crate::{pos, Side};
 
     struct TestStrategy {
         strikes: Vec<Positive>,
@@ -755,14 +756,34 @@ mod tests_max_min_strikes {
         fn max_loss(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::ZERO)
         }
-        fn total_cost(&self) -> Positive {
-            Positive::ZERO
-        }
-        fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
+        fn total_cost(&self) -> Result<Decimal, StrategyError> {
             Ok(Decimal::ZERO)
         }
-        fn fees(&self) -> Result<Decimal, StrategyError> {
-            Ok(Decimal::ZERO)
+        fn net_premium_received(&self) -> Result<Positive, StrategyError> {
+            let positions = self.get_positions()?;
+            let costs = positions
+                .iter()
+                .filter(|p| p.option.side == Side::Long)
+                .map(|p| p.net_cost().unwrap()).sum::<Decimal>();
+
+            let premiums = positions
+                .iter()
+                .filter(|p| p.option.side == Side::Short)
+                .map(|p| p.net_premium_received().unwrap()).sum::<Positive>();
+
+
+            match premiums > costs {
+                true => Ok(premiums - costs),
+                false => Err(StrategyError::OperationError(
+                    OperationErrorKind::InvalidParameters {
+                        operation: "Net premium received".to_string(),
+                        reason: "Net premium received is negative".to_string(),
+                    },
+                )),
+            }
+        }
+        fn fees(&self) -> Result<Positive, StrategyError> {
+            Ok(Positive::ZERO)
         }
         fn profit_area(&self) -> Result<Decimal, StrategyError> {
             Ok(Decimal::ZERO)
