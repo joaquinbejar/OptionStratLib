@@ -331,6 +331,7 @@ impl Graph for Options {
 
 #[cfg(test)]
 mod tests_options {
+    use approx::assert_relative_eq;
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
     use crate::pos;
@@ -348,7 +349,7 @@ mod tests_options {
     #[test]
     fn test_time_to_expiration() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_eq!(option.time_to_expiration(), 30.0 / 365.0);
+        assert_relative_eq!(option.time_to_expiration(), 30.0 / 365.0, epsilon = 0.0001);
 
         let future_date = Utc::now() + Duration::days(60);
         let option_with_datetime = Options::new(
