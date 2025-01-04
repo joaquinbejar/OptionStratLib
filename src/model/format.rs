@@ -11,6 +11,7 @@ use crate::model::types::{
 };
 use crate::strategies::base::Strategy;
 use chrono::{Duration, Utc};
+use rust_decimal_macros::dec;
 use std::fmt;
 
 impl fmt::Display for Options {
@@ -33,7 +34,11 @@ impl fmt::Display for Options {
             self.implied_volatility * 100.0
         )?;
         writeln!(f, "Quantity: {}", self.quantity)?;
-        writeln!(f, "Risk-free Rate: {:.2}%", self.risk_free_rate * 100.0)?;
+        writeln!(
+            f,
+            "Risk-free Rate: {:.2}%",
+            self.risk_free_rate * dec!(100.0)
+        )?;
         write!(f, "Dividend Yield: {:.2}%", self.dividend_yield * 100.0)?;
         if let Some(exotic) = &self.exotic_params {
             write!(f, "\nExotic Parameters: {:?}", exotic)?;
@@ -295,8 +300,8 @@ impl fmt::Debug for Strategy {
 #[cfg(test)]
 mod tests_options {
     use super::*;
-    use crate::f2p;
     use crate::model::types::BarrierType;
+    use crate::pos;
     use chrono::{NaiveDate, TimeZone, Utc};
 
     #[test]
@@ -310,14 +315,14 @@ mod tests_options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
-            strike_price: f2p!(150.0),
+            strike_price: pos!(150.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: 0.25,
-            quantity: f2p!(10.0),
-            underlying_price: f2p!(155.0),
-            risk_free_rate: 0.01,
+            implied_volatility: pos!(0.25),
+            quantity: pos!(10.0),
+            underlying_price: pos!(155.0),
+            risk_free_rate: dec!(0.01),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.02,
+            dividend_yield: pos!(0.02),
             exotic_params: None,
         };
 
@@ -351,14 +356,14 @@ mod tests_options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
-            strike_price: f2p!(150.0),
+            strike_price: pos!(150.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: 0.25,
-            quantity: f2p!(10.0),
-            underlying_price: f2p!(155.0),
-            risk_free_rate: 0.01,
+            implied_volatility: pos!(0.25),
+            quantity: pos!(10.0),
+            underlying_price: pos!(155.0),
+            risk_free_rate: dec!(0.01),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.02,
+            dividend_yield: pos!(0.02),
             exotic_params: None,
         };
 
@@ -395,14 +400,14 @@ mod tests_options {
             },
             side: Side::Short,
             underlying_symbol: "GOOGL".to_string(),
-            strike_price: f2p!(2000.0),
+            strike_price: pos!(2000.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: 0.30,
-            quantity: f2p!(5.0),
-            underlying_price: f2p!(1900.0),
-            risk_free_rate: 0.015,
+            implied_volatility: pos!(0.30),
+            quantity: pos!(5.0),
+            underlying_price: pos!(1900.0),
+            risk_free_rate: dec!(0.015),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.01,
+            dividend_yield: pos!(0.01),
             exotic_params: Some(exotic_params),
         };
 
@@ -785,7 +790,7 @@ mod tests_option_type_display_debug {
 #[cfg(test)]
 mod tests_position_type_display_debug {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use chrono::{DateTime, NaiveDate, TimeZone};
 
     fn get_option() -> (Options, DateTime<Utc>) {
@@ -799,14 +804,14 @@ mod tests_position_type_display_debug {
                 option_type: OptionType::European,
                 side: Side::Long,
                 underlying_symbol: "AAPL".to_string(),
-                strike_price: f2p!(150.0),
+                strike_price: pos!(150.0),
                 expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-                implied_volatility: 0.25,
-                quantity: f2p!(10.0),
-                underlying_price: f2p!(155.0),
-                risk_free_rate: 0.01,
+                implied_volatility: pos!(0.25),
+                quantity: pos!(10.0),
+                underlying_price: pos!(155.0),
+                risk_free_rate: dec!(0.01),
                 option_style: OptionStyle::Call,
-                dividend_yield: 0.02,
+                dividend_yield: pos!(0.02),
                 exotic_params: None,
             },
             Utc.from_utc_datetime(&naive_date),
@@ -881,8 +886,8 @@ mod tests_position_type_display_debug {
 #[cfg(test)]
 mod tests_strategy_type_display_debug {
     use super::*;
-    use crate::f2p;
     use crate::model::utils::create_sample_option_with_date;
+    use crate::pos;
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
 
@@ -901,10 +906,10 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        f2p!(100.0),
-                        f2p!(1.0),
-                        f2p!(100.0),
-                        0.02,
+                        pos!(100.0),
+                        pos!(1.0),
+                        pos!(100.0),
+                        pos!(0.02),
                         naive_date,
                     ),
                     5.0,
@@ -916,10 +921,10 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        f2p!(100.0),
-                        f2p!(1.0),
-                        f2p!(100.0),
-                        0.02,
+                        pos!(100.0),
+                        pos!(1.0),
+                        pos!(100.0),
+                        pos!(0.02),
                         naive_date,
                     ),
                     5.0,
@@ -930,7 +935,7 @@ mod tests_strategy_type_display_debug {
             ],
             max_profit: Some(10.0),
             max_loss: Some(5.0),
-            break_even_points: vec![f2p!(102.0), f2p!(108.0)],
+            break_even_points: vec![pos!(102.0), pos!(108.0)],
         };
 
         let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.00\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.00\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102.00\n  $108.00\n";
@@ -954,10 +959,10 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        f2p!(100.0),
-                        f2p!(1.0),
-                        f2p!(110.0),
-                        0.02,
+                        pos!(100.0),
+                        pos!(1.0),
+                        pos!(110.0),
+                        pos!(0.02),
                         naive_date,
                     ),
                     5.0,
@@ -969,10 +974,10 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        f2p!(100.0),
-                        f2p!(1.0),
-                        f2p!(110.0),
-                        0.02,
+                        pos!(100.0),
+                        pos!(1.0),
+                        pos!(110.0),
+                        pos!(0.02),
                         naive_date,
                     ),
                     5.0,
@@ -983,7 +988,7 @@ mod tests_strategy_type_display_debug {
             ],
             max_profit: Some(8.0),
             max_loss: Some(2.0),
-            break_even_points: vec![f2p!(82.0), f2p!(88.0)],
+            break_even_points: vec![pos!(82.0), pos!(88.0)],
         };
 
         let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";

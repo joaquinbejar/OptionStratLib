@@ -157,7 +157,7 @@ mod tests_approx_equal {
 mod tests_get_random_element {
     use super::*;
     use crate::chains::chain::OptionData;
-    use crate::f2p;
+    use crate::pos;
     use std::collections::BTreeSet;
 
     #[test]
@@ -189,7 +189,7 @@ mod tests_get_random_element {
         let mut set = BTreeSet::new();
         for i in 0..5 {
             let option_data = OptionData::new(
-                f2p!(100.0 + i as f64), // strike_price
+                pos!(100.0 + i as f64), // strike_price
                 None,                   // call_bid
                 None,                   // call_ask
                 None,                   // put_bid
@@ -206,7 +206,7 @@ mod tests_get_random_element {
         assert!(random_option.is_some());
 
         let strike = random_option.unwrap().strike_price;
-        assert!(strike >= f2p!(100.0) && strike <= f2p!(104.0));
+        assert!(strike >= pos!(100.0) && strike <= pos!(104.0));
     }
 
     #[test]

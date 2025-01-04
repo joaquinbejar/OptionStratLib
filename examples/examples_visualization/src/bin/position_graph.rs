@@ -4,12 +4,13 @@
    Date: 20/8/24
 ******************************************************************************/
 use chrono::Utc;
-use optionstratlib::f2p;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::pos;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::Options;
 use optionstratlib::Positive;
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 fn create_sample_option() -> Options {
@@ -17,14 +18,14 @@ fn create_sample_option() -> Options {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        f2p!(100.0),
+        pos!(100.0),
         ExpirationDate::Days(30.0),
-        0.2,
-        f2p!(10.0),
-        f2p!(105.0),
-        0.05,
+        pos!(0.2),
+        pos!(1.0),
+        pos!(105.0),
+        dec!(0.05),
         OptionStyle::Call,
-        0.0,
+        Positive::ZERO,
         None,
     )
 }

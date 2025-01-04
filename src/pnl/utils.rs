@@ -48,7 +48,7 @@ pub trait PnLCalculator {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use chrono::Utc;
     use num_traits::ToPrimitive;
 
@@ -94,14 +94,14 @@ mod tests_pnl_calculator {
         let dummy = DummyOption;
         let now = Utc::now();
 
-        let pnl = dummy.calculate_pnl(now, f2p!(100.0));
+        let pnl = dummy.calculate_pnl(now, pos!(100.0));
         assert_eq!(pnl.realized, Some(100.0));
         assert_eq!(pnl.unrealized, None);
         assert_eq!(pnl.initial_costs, 10.0);
         assert_eq!(pnl.initial_income, 20.0);
         assert_eq!(pnl.date_time, now);
 
-        let pnl_at_expiration = dummy.calculate_pnl_at_expiration(Some(f2p!(150.0)));
+        let pnl_at_expiration = dummy.calculate_pnl_at_expiration(Some(pos!(150.0)));
         assert_eq!(pnl_at_expiration.realized, Some(150.0));
         assert_eq!(pnl_at_expiration.unrealized, None);
         assert_eq!(pnl_at_expiration.initial_costs, 10.0);

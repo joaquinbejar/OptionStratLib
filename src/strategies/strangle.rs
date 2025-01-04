@@ -32,7 +32,7 @@ use crate::strategies::utils::{calculate_price_range, FindOptimalSide, Optimizat
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
-use crate::{d2fu, f2p, Positive};
+use crate::{d2fu, pos, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
@@ -63,9 +63,9 @@ impl ShortStrangle {
         mut call_strike: Positive,
         mut put_strike: Positive,
         expiration: ExpirationDate,
-        implied_volatility: f64,
-        risk_free_rate: f64,
-        dividend_yield: f64,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
         quantity: Positive,
         premium_short_call: f64,
         premium_short_put: f64,
@@ -140,11 +140,12 @@ impl ShortStrangle {
             .expect("Invalid position");
 
         let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
+
         strategy.break_even_points.push(
-            put_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+            (put_strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2),
         );
         strategy.break_even_points.push(
-            call_strike + strategy.net_premium_received().unwrap().to_f64().unwrap() / net_quantity,
+            (call_strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2),
         );
         strategy.break_even_points.sort();
         strategy
@@ -197,19 +198,11 @@ impl Strategies for ShortStrangle {
     }
 
     fn total_cost(&self) -> Positive {
-        f2p!(self.short_call.net_cost() + self.short_put.net_cost())
+        pos!(self.short_call.net_cost() + self.short_put.net_cost())
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         let result = self.short_call.net_premium_received() + self.short_put.net_premium_received();
-        Ok(Decimal::from_f64(result).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call.open_fee
-            + self.short_call.close_fee
-            + self.short_put.open_fee
-            + self.short_put.close_fee;
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -345,7 +338,7 @@ impl Optimizable for ShortStrangle {
             call.strike_price,
             put.strike_price,
             self.short_call.option.expiration_date.clone(),
-            call.implied_volatility.unwrap().to_f64() / 100.0,
+            call.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
@@ -495,7 +488,7 @@ impl ProbabilityAnalysis for ShortStrangle {
         Ok(option.expiration_date.clone())
     }
 
-    fn get_risk_free_rate(&self) -> Option<f64> {
+    fn get_risk_free_rate(&self) -> Option<Decimal> {
         Some(self.short_call.option.risk_free_rate)
     }
 
@@ -504,8 +497,8 @@ impl ProbabilityAnalysis for ShortStrangle {
         let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            f2p!(option.implied_volatility),
-            f2p!(self.short_put.option.implied_volatility),
+            option.implied_volatility,
+            self.short_put.option.implied_volatility,
         ]);
 
         let mut profit_range = ProfitLossRange::new(
@@ -533,8 +526,8 @@ impl ProbabilityAnalysis for ShortStrangle {
         let break_even_points = self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            f2p!(option.implied_volatility),
-            f2p!(self.short_put.option.implied_volatility),
+            option.implied_volatility,
+            self.short_put.option.implied_volatility,
         ]);
 
         let mut lower_loss_range =
@@ -610,7 +603,7 @@ impl DeltaNeutrality for ShortStrangle {
         let delta = d2fu!(self.short_call.option.delta().unwrap()).unwrap();
 
         vec![DeltaAdjustment::SellOptions {
-            quantity: f2p!((net_delta.abs() / delta).abs()) * self.short_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -621,7 +614,7 @@ impl DeltaNeutrality for ShortStrangle {
         let delta = d2fu!(self.short_put.option.delta().unwrap()).unwrap();
 
         vec![DeltaAdjustment::SellOptions {
-            quantity: f2p!((net_delta.abs() / delta).abs()) * self.short_put.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.short_put.option.quantity,
             strike: self.short_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
@@ -652,9 +645,9 @@ impl LongStrangle {
         mut call_strike: Positive,
         mut put_strike: Positive,
         expiration: ExpirationDate,
-        implied_volatility: f64,
-        risk_free_rate: f64,
-        dividend_yield: f64,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
         quantity: Positive,
         premium_long_call: f64,
         premium_long_put: f64,
@@ -728,15 +721,15 @@ impl LongStrangle {
             .add_position(&long_put.clone())
             .expect("Invalid position");
 
-        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / f2p!(2.0);
+        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
 
         strategy
             .break_even_points
-            .push(put_strike - strategy.total_cost() / net_quantity);
+            .push((put_strike - strategy.total_cost() / net_quantity).round_to(2));
 
         strategy
             .break_even_points
-            .push(call_strike + strategy.total_cost() / net_quantity);
+            .push((call_strike + strategy.total_cost() / net_quantity).round_to(2));
 
         strategy.break_even_points.sort();
 
@@ -781,19 +774,11 @@ impl Strategies for LongStrangle {
     }
 
     fn total_cost(&self) -> Positive {
-        f2p!(self.long_call.net_cost() + self.long_put.net_cost())
+        pos!(self.long_call.net_cost() + self.long_put.net_cost())
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         Ok(Decimal::ZERO)
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.long_call.open_fee
-            + self.long_call.close_fee
-            + self.long_put.open_fee
-            + self.long_put.close_fee;
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -935,7 +920,7 @@ impl Optimizable for LongStrangle {
             call.strike_price,
             put.strike_price,
             self.long_call.option.expiration_date.clone(),
-            call.implied_volatility.unwrap().to_f64() / 100.0,
+            call.implied_volatility.unwrap() / 100.0,
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
@@ -1060,7 +1045,7 @@ impl ProbabilityAnalysis for LongStrangle {
         Ok(option.expiration_date.clone())
     }
 
-    fn get_risk_free_rate(&self) -> Option<f64> {
+    fn get_risk_free_rate(&self) -> Option<Decimal> {
         Some(self.long_call.option.risk_free_rate)
     }
 
@@ -1069,8 +1054,8 @@ impl ProbabilityAnalysis for LongStrangle {
         let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            f2p!(option.implied_volatility),
-            f2p!(self.long_put.option.implied_volatility),
+            option.implied_volatility,
+            self.long_put.option.implied_volatility,
         ]);
 
         let mut lower_profit_range =
@@ -1109,8 +1094,8 @@ impl ProbabilityAnalysis for LongStrangle {
         let break_even_points = &self.get_break_even_points()?;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            f2p!(option.implied_volatility),
-            f2p!(self.long_call.option.implied_volatility),
+            option.implied_volatility,
+            self.long_call.option.implied_volatility,
         ]);
 
         let mut loss_range = ProfitLossRange::new(
@@ -1175,7 +1160,7 @@ impl DeltaNeutrality for LongStrangle {
         let delta = d2fu!(self.long_put.option.delta().unwrap()).unwrap();
 
         vec![DeltaAdjustment::BuyOptions {
-            quantity: f2p!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
             strike: self.long_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
@@ -1186,7 +1171,7 @@ impl DeltaNeutrality for LongStrangle {
         let delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
 
         vec![DeltaAdjustment::BuyOptions {
-            quantity: f2p!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -1197,20 +1182,21 @@ impl DeltaNeutrality for LongStrangle {
 mod tests_short_strangle {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::{f2p, spos};
+    use crate::{pos, spos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn setup() -> ShortStrangle {
         ShortStrangle::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(155.0),
-            f2p!(145.0),
+            pos!(150.0),
+            pos!(155.0),
+            pos!(145.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
-            f2p!(100.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(100.0),
             2.0,
             1.5,
             0.1,
@@ -1223,14 +1209,14 @@ mod tests_short_strangle {
     fn wrong_setup() -> ShortStrangle {
         ShortStrangle::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(145.0),
-            f2p!(155.0),
+            pos!(150.0),
+            pos!(145.0),
+            pos!(155.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
-            f2p!(100.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(100.0),
             2.0,
             1.5,
             0.1,
@@ -1271,7 +1257,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 150.0;
-        assert_eq!(strategy.calculate_profit_at(f2p!(price)), 310.0);
+        assert_eq!(strategy.calculate_profit_at(pos!(price)), 310.0);
     }
 
     #[test]
@@ -1313,7 +1299,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_fees() {
         let strategy = setup();
-        let expected_fees = 0.4;
+        let expected_fees = 40.0;
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
@@ -1335,11 +1321,11 @@ is expected and the underlying asset's price is anticipated to remain stable."
         assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
         let data = vec![
-            f2p!(140.0),
-            f2p!(145.0),
-            f2p!(150.0),
-            f2p!(155.0),
-            f2p!(160.0),
+            pos!(140.0),
+            pos!(145.0),
+            pos!(150.0),
+            pos!(155.0),
+            pos!(160.0),
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
@@ -1405,7 +1391,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_best_range_to_show() {
         let strategy = setup();
-        let step = f2p!(1.0);
+        let step = pos!(1.0);
 
         let range = strategy.best_range_to_show(step).unwrap();
         assert!(!range.is_empty());
@@ -1476,19 +1462,19 @@ is expected and the underlying asset's price is anticipated to remain stable."
 
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
-            f2p!(1150.0),
+            pos!(1150.0),
             ExpirationDate::Days(30.0),
             spos!(0.2),
-            0.01,
-            0.02,
+            dec!(0.01),
+            pos!(0.02),
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
             spos!(1.0),
             10,
-            f2p!(10.0),
+            pos!(10.0),
             0.00001,
-            f2p!(0.01),
+            pos!(0.01),
             2,
             option_data_price_params,
         );
@@ -1500,19 +1486,20 @@ is expected and the underlying asset's price is anticipated to remain stable."
 mod tests_long_strangle {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::{f2p, spos};
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_long_strangle_new() {
         let underlying_symbol = "AAPL".to_string();
-        let underlying_price = f2p!(150.0);
-        let call_strike = f2p!(160.0);
-        let put_strike = f2p!(140.0);
+        let underlying_price = pos!(150.0);
+        let call_strike = pos!(160.0);
+        let put_strike = pos!(140.0);
         let expiration = ExpirationDate::default();
-        let implied_volatility = 0.25;
-        let risk_free_rate = 0.01;
-        let dividend_yield = 0.02;
-        let quantity = f2p!(10.0);
+        let implied_volatility = pos!(0.25);
+        let risk_free_rate = dec!(0.01);
+        let dividend_yield = pos!(0.02);
+        let quantity = pos!(10.0);
         let premium_long_call = 5.0;
         let premium_long_put = 5.0;
         let open_fee_long_call = 0.5;
@@ -1564,7 +1551,7 @@ mod tests_long_strangle {
     #[test]
     fn test_calculate_profit_at() {
         let long_strangle = setup_long_strangle();
-        let price = f2p!(150.0);
+        let price = pos!(150.0);
         let expected_profit = long_strangle.long_call.pnl_at_expiration(&Some(price))
             + long_strangle.long_put.pnl_at_expiration(&Some(price));
         assert_eq!(long_strangle.calculate_profit_at(price), expected_profit);
@@ -1573,14 +1560,14 @@ mod tests_long_strangle {
     fn setup_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(160.0),
-            f2p!(140.0),
+            pos!(150.0),
+            pos!(160.0),
+            pos!(140.0),
             ExpirationDate::Days(30.0),
-            0.25,
-            0.01,
-            0.02,
-            f2p!(10.0),
+            pos!(0.25),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(10.0),
             5.0,
             5.0,
             0.5,
@@ -1594,14 +1581,14 @@ mod tests_long_strangle {
         // Setup with put strike higher than call strike
         LongStrangle::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(140.0), // Call strike lower than put
-            f2p!(160.0), // Put strike higher than call
+            pos!(150.0),
+            pos!(140.0), // Call strike lower than put
+            pos!(160.0), // Put strike higher than call
             ExpirationDate::Days(30.0),
-            0.25,
-            0.01,
-            0.02,
-            f2p!(10.0),
+            pos!(0.25),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(10.0),
             5.0,
             5.0,
             0.5,
@@ -1648,7 +1635,7 @@ mod tests_long_strangle {
     #[test]
     fn test_fees() {
         let strategy = setup_long_strangle();
-        let expected_fees = 2.0; // 0.5 * 4 fees
+        let expected_fees = 20.0; // 0.5 * 4 fees * 10 qty
         assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), expected_fees);
     }
 
@@ -1706,11 +1693,11 @@ mod tests_long_strangle {
 
         // Test values calculation
         let data = vec![
-            f2p!(130.0),
-            f2p!(140.0),
-            f2p!(150.0),
-            f2p!(160.0),
-            f2p!(170.0),
+            pos!(130.0),
+            pos!(140.0),
+            pos!(150.0),
+            pos!(160.0),
+            pos!(170.0),
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
@@ -1745,7 +1732,7 @@ mod tests_long_strangle {
     #[test]
     fn test_best_range_to_show() {
         let strategy = setup_long_strangle();
-        let step = f2p!(1.0);
+        let step = pos!(1.0);
 
         let range = strategy.best_range_to_show(step).unwrap();
         assert!(!range.is_empty());
@@ -1782,7 +1769,7 @@ mod tests_long_strangle {
         assert!(strategy.are_valid_prices(&legs));
 
         let mut invalid_call = call_option.clone();
-        invalid_call.call_ask = Some(f2p!(0.0));
+        invalid_call.call_ask = Some(pos!(0.0));
 
         let legs = StrategyLegs::TwoLegs {
             first: &invalid_call,
@@ -1829,19 +1816,19 @@ mod tests_long_strangle {
 
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
-            f2p!(150.0),
+            pos!(150.0),
             ExpirationDate::Days(30.0),
             spos!(0.65),
-            0.01,
-            0.02,
+            dec!(0.01),
+            pos!(0.02),
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
             spos!(1.0),
             10,
-            f2p!(5.0),
+            pos!(5.0),
             0.00001,
-            f2p!(0.01),
+            pos!(0.01),
             2,
             option_data_price_params,
         );
@@ -1852,23 +1839,24 @@ mod tests_long_strangle {
 #[cfg(test)]
 mod tests_short_strangle_probability {
     use super::*;
-    use crate::f2p;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
+    use rust_decimal_macros::dec;
 
     /// Helper function that creates a basic short strangle for testing purposes
     /// Returns a ShortStrangle instance with predefined test values
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            f2p!(100.0),                // underlying_price
-            f2p!(110.0),                // call_strike
-            f2p!(90.0),                 // put_strike
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
-            f2p!(1.0),                  // quantity
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
             2.0,                        // premium_short_call
             2.0,                        // premium_short_put
             0.0,                        // open_fee_short_call
@@ -1886,15 +1874,15 @@ mod tests_short_strangle_probability {
         assert!(result.is_ok(), "Probability calculation should succeed");
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
-        assert!(prob <= f2p!(1.0), "Probability should not exceed 1.0");
+        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
     }
 
     #[test]
     fn test_probability_of_profit_with_volatility_adjustment() {
         let strangle = create_test();
         let vol_adj = VolatilityAdjustment {
-            base_volatility: f2p!(0.25),
-            std_dev_adjustment: f2p!(0.05),
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.05),
         };
 
         let result = strangle.probability_of_profit(Some(vol_adj), None);
@@ -1905,7 +1893,7 @@ mod tests_short_strangle_probability {
         );
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
-        assert!(prob <= f2p!(1.0), "Probability should not exceed 1.0");
+        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1924,7 +1912,7 @@ mod tests_short_strangle_probability {
         );
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
-        assert!(prob <= f2p!(1.0), "Probability should not exceed 1.0");
+        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1943,7 +1931,7 @@ mod tests_short_strangle_probability {
         );
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
-        assert!(prob <= f2p!(1.0), "Probability should not exceed 1.0");
+        assert!(prob <= pos!(1.0), "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1953,7 +1941,7 @@ mod tests_short_strangle_probability {
 
         assert_eq!(
             result,
-            f2p!(100.0),
+            pos!(100.0),
             "Reference price should match underlying price"
         );
     }
@@ -1992,21 +1980,22 @@ mod tests_short_strangle_probability {
 #[cfg(test)]
 mod tests_short_strangle_probability_bis {
     use super::*;
-    use crate::f2p;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
+    use rust_decimal_macros::dec;
 
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            f2p!(100.0),                // underlying_price
-            f2p!(110.0),                // call_strike
-            f2p!(90.0),                 // put_strike
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
-            f2p!(1.0),                  // quantity
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
             2.0,                        // premium_short_call
             2.0,                        // premium_short_put
             0.0,                        // open_fee_short_call
@@ -2030,7 +2019,7 @@ mod tests_short_strangle_probability_bis {
     #[test]
     fn test_get_risk_free_rate() {
         let strangle = create_test();
-        assert_eq!(strangle.get_risk_free_rate(), Some(0.05));
+        assert_eq!(strangle.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
@@ -2069,22 +2058,22 @@ mod tests_short_strangle_probability_bis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
     fn test_probability_with_volatility_adjustment() {
         let strangle = create_test();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.25),
-            std_dev_adjustment: f2p!(0.1),
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.1),
         });
 
         let result = strangle.probability_of_profit(vol_adj, None);
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
@@ -2099,7 +2088,7 @@ mod tests_short_strangle_probability_bis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
@@ -2127,28 +2116,29 @@ mod tests_short_strangle_probability_bis {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= f2p!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
     }
 }
 
 #[cfg(test)]
 mod tests_long_strangle_probability {
     use super::*;
-    use crate::f2p;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
+    use rust_decimal_macros::dec;
 
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            f2p!(100.0),                // underlying_price
-            f2p!(110.0),                // call_strike
-            f2p!(90.0),                 // put_strike
+            pos!(100.0),                // underlying_price
+            pos!(110.0),                // call_strike
+            pos!(90.0),                 // put_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
-            f2p!(1.0),                  // quantity
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
             2.0,                        // premium_long_call
             2.0,                        // premium_long_put
             0.0,                        // open_fee_long_call
@@ -2172,7 +2162,7 @@ mod tests_long_strangle_probability {
     #[test]
     fn test_get_risk_free_rate() {
         let strangle = create_test_long_strangle();
-        assert_eq!(strangle.get_risk_free_rate(), Some(0.05));
+        assert_eq!(strangle.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
@@ -2209,22 +2199,22 @@ mod tests_long_strangle_probability {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
     fn test_probability_with_volatility_adjustment() {
         let strangle = create_test_long_strangle();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.25),
-            std_dev_adjustment: f2p!(0.1),
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.1),
         });
 
         let result = strangle.probability_of_profit(vol_adj, None);
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
@@ -2239,7 +2229,7 @@ mod tests_long_strangle_probability {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
@@ -2255,8 +2245,8 @@ mod tests_long_strangle_probability {
         );
 
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.25),
-            std_dev_adjustment: f2p!(0.1),
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.1),
         });
         let result_with_vol = strangle.expected_value(vol_adj, None);
         assert!(result_with_vol.is_ok());
@@ -2272,7 +2262,7 @@ mod tests_long_strangle_probability {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= f2p!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
     }
 }
 
@@ -2283,33 +2273,34 @@ mod tests_short_strangle_delta {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
     use crate::strategies::strangle::ShortStrangle;
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
-        let underlying_price = f2p!(7138.5);
+        let underlying_price = pos!(7138.5);
         ShortStrangle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(1.0), // quantity
-            84.2,      // premium_short_call
-            353.2,     // premium_short_put
-            7.01,      // open_fee_short_call
-            7.01,      // close_fee_short_call
-            7.01,      // open_fee_short_put
-            7.01,      // close_fee_short_put
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7250.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2321,14 +2312,14 @@ mod tests_short_strangle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.20700088420361074),
-                strike: f2p!(7450.0),
+                quantity: pos!(0.20700088420361074),
+                strike: pos!(7450.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = f2p!(0.20700088420361074);
+        option.quantity = pos!(0.20700088420361074);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.086108511, epsilon = 0.0001);
         assert_relative_eq!(
@@ -2340,7 +2331,7 @@ mod tests_short_strangle_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(7150.0), f2p!(7050.0));
+        let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2352,14 +2343,14 @@ mod tests_short_strangle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.29240526858778937),
-                strike: f2p!(7050.0),
+                quantity: pos!(0.29240526858778937),
+                strike: pos!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.short_put.option.clone();
-        option.quantity = f2p!(0.29240526858778937);
+        option.quantity = pos!(0.29240526858778937);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.1221700719, epsilon = 0.0001);
         assert_relative_eq!(
@@ -2371,7 +2362,7 @@ mod tests_short_strangle_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7050.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2390,33 +2381,34 @@ mod tests_long_strangle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
-        let underlying_price = f2p!(7138.5);
+        let underlying_price = pos!(7138.5);
         LongStrangle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(1.0), // quantity
-            84.2,      // premium_short_call
-            353.2,     // premium_short_put
-            7.01,      // open_fee_short_call
-            7.01,      // close_fee_short_call
-            7.01,      // open_fee_short_put
-            7.01,      // close_fee_short_put
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7250.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2428,14 +2420,14 @@ mod tests_long_strangle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.20700088420361074),
-                strike: f2p!(7450.0),
+                quantity: pos!(0.20700088420361074),
+                strike: pos!(7450.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = f2p!(0.20700088420361074);
+        option.quantity = pos!(0.20700088420361074);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.086108511, epsilon = 0.0001);
         assert_relative_eq!(
@@ -2447,7 +2439,7 @@ mod tests_long_strangle_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(7150.0), f2p!(7050.0));
+        let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2459,14 +2451,14 @@ mod tests_long_strangle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.29240526858778937),
-                strike: f2p!(7050.0),
+                quantity: pos!(0.29240526858778937),
+                strike: pos!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = f2p!(0.29240526858778937);
+        option.quantity = pos!(0.29240526858778937);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.1221700719, epsilon = 0.0001);
         assert_relative_eq!(
@@ -2478,7 +2470,7 @@ mod tests_long_strangle_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7050.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2498,33 +2490,34 @@ mod tests_short_strangle_delta_size {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
     use crate::strategies::strangle::ShortStrangle;
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
-        let underlying_price = f2p!(7138.5);
+        let underlying_price = pos!(7138.5);
         ShortStrangle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(2.0), // quantity
-            84.2,      // premium_short_call
-            353.2,     // premium_short_put
-            7.01,      // open_fee_short_call
-            7.01,      // close_fee_short_call
-            7.01,      // open_fee_short_put
-            7.01,      // close_fee_short_put
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7250.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2536,14 +2529,14 @@ mod tests_short_strangle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.4140017684072214),
-                strike: f2p!(7450.0),
+                quantity: pos!(0.4140017684072214),
+                strike: pos!(7450.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = f2p!(0.4140017684072214);
+        option.quantity = pos!(0.4140017684072214);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.17221, epsilon = 0.0001);
         assert_relative_eq!(
@@ -2556,7 +2549,7 @@ mod tests_short_strangle_delta_size {
     #[test]
     #[ignore = "This test is failing because of the precision limit"]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(7150.0), f2p!(7050.0));
+        let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2569,12 +2562,12 @@ mod tests_short_strangle_delta_size {
         // let int = (0.5848105371755788 * 1e16) as i64;
         // let decimal = Decimal::new(int, 16);
         // let quantity =  Positive::new_decimal(decimal).unwrap();
-        let quantity = f2p!(0.5848105371755788);
+        let quantity = pos!(0.5848105371755788);
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
                 quantity,
-                strike: f2p!(7050.0),
+                strike: pos!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
@@ -2592,7 +2585,7 @@ mod tests_short_strangle_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7045.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7045.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2611,33 +2604,34 @@ mod tests_long_strangle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
-        let underlying_price = f2p!(7138.5);
+        let underlying_price = pos!(7138.5);
         LongStrangle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(45.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(2.0), // quantity
-            84.2,      // premium_short_call
-            353.2,     // premium_short_put
-            7.01,      // open_fee_short_call
-            7.01,      // close_fee_short_call
-            7.01,      // open_fee_short_put
-            7.01,      // close_fee_short_put
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7250.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2649,14 +2643,14 @@ mod tests_long_strangle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.4140017684072214),
-                strike: f2p!(7450.0),
+                quantity: pos!(0.4140017684072214),
+                strike: pos!(7450.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = f2p!(0.4140017684072214);
+        option.quantity = pos!(0.4140017684072214);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.172217, epsilon = 0.0001);
         assert_relative_eq!(
@@ -2669,7 +2663,7 @@ mod tests_long_strangle_delta_size {
     #[test]
     #[ignore = "This test is failing because of the precision limit"]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(7150.0), f2p!(7050.0));
+        let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2681,14 +2675,14 @@ mod tests_long_strangle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.5848105371755789),
-                strike: f2p!(7050.0),
+                quantity: pos!(0.5848105371755789),
+                strike: pos!(7050.0),
                 option_type: OptionStyle::Put
             }
         );
 
         let mut option = strategy.long_put.option.clone();
-        option.quantity = f2p!(0.5848105371755788);
+        option.quantity = pos!(0.5848105371755788);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.24434, epsilon = 0.0001);
         assert_relative_eq!(
@@ -2700,7 +2694,7 @@ mod tests_long_strangle_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7050.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7050.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,

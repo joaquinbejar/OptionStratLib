@@ -9,9 +9,10 @@ use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::Graph;
-use crate::{f2p, Positive};
+use crate::{pos, Positive};
 use rand::distributions::Distribution;
 use rand::thread_rng;
+use rust_decimal::Decimal;
 use statrs::distribution::Normal;
 use tracing::{info, trace};
 
@@ -50,7 +51,7 @@ pub trait Walkable {
             }
             let normal = Normal::new(mean, current_std_dev.to_f64()).unwrap();
             let step = normal.sample(&mut rng);
-            current_value = f2p!((current_value.to_f64() + step).max(ZERO));
+            current_value = pos!((current_value.to_f64() + step).max(ZERO));
             values.push(current_value);
             trace!("Current value: {}", current_value);
         }
@@ -61,8 +62,8 @@ pub struct RandomWalkGraph {
     values: Vec<Positive>,
     title_text: String,
     current_index: usize,
-    risk_free_rate: Option<f64>,
-    dividend_yield: Option<f64>,
+    risk_free_rate: Option<Decimal>,
+    dividend_yield: Option<Positive>,
     time_frame: TimeFrame,
     volatility_window: usize,
     initial_volatility: Option<Positive>,
@@ -71,8 +72,8 @@ pub struct RandomWalkGraph {
 impl RandomWalkGraph {
     pub fn new(
         title: String,
-        risk_free_rate: Option<f64>,
-        dividend_yield: Option<f64>,
+        risk_free_rate: Option<Decimal>,
+        dividend_yield: Option<Positive>,
         time_frame: TimeFrame,
         volatility_window: usize,
         initial_volatility: Option<Positive>,
@@ -206,8 +207,8 @@ impl Iterator for RandomWalkGraph {
             return None;
         }
 
-        let risk_free_rate = self.risk_free_rate.unwrap_or(ZERO);
-        let dividend_yield = self.dividend_yield.unwrap_or(ZERO);
+        let risk_free_rate: Decimal = self.risk_free_rate.unwrap_or(Decimal::ZERO);
+        let dividend_yield: Positive = self.dividend_yield.unwrap_or(Positive::ZERO);
         let price = self.values[self.current_index];
         let remaining_days = self.get_remaining_time();
         let expiration_date = ExpirationDate::Days(remaining_days);
@@ -227,7 +228,7 @@ impl Iterator for RandomWalkGraph {
 #[cfg(test)]
 mod tests_random_walk {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use statrs::statistics::Statistics;
 
     struct TestWalk {
@@ -249,9 +250,9 @@ mod tests_random_walk {
     #[test]
     fn test_walk_initialization() {
         let mut walk = TestWalk::new();
-        let initial_price = f2p!(100.0);
+        let initial_price = pos!(100.0);
 
-        walk.generate_random_walk(10, initial_price, 0.0, f2p!(1.0), f2p!(0.01));
+        walk.generate_random_walk(10, initial_price, 0.0, pos!(1.0), pos!(0.01));
 
         assert_eq!(walk.values.len(), 10);
         assert_eq!(walk.values[0], initial_price);
@@ -261,10 +262,10 @@ mod tests_random_walk {
     fn test_random_walk_length() {
         let mut walk = TestWalk::new();
         let n_steps = 100;
-        let initial_price = f2p!(100.0);
+        let initial_price = pos!(100.0);
         let mean = 0.0;
-        let std_dev = f2p!(1.0);
-        let std_dev_change = f2p!(0.01);
+        let std_dev = pos!(1.0);
+        let std_dev_change = pos!(0.01);
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
         assert_eq!(walk.values.len(), n_steps);
     }
@@ -273,8 +274,8 @@ mod tests_random_walk {
     fn test_random_walk_starts_at_initial_price() {
         let mut walk = TestWalk::new();
 
-        let initial_price = f2p!(100.0);
-        walk.generate_random_walk(10, initial_price, 0.0, f2p!(1.0), f2p!(0.01));
+        let initial_price = pos!(100.0);
+        walk.generate_random_walk(10, initial_price, 0.0, pos!(1.0), pos!(0.01));
         assert_eq!(walk.values[0], initial_price);
     }
 
@@ -282,10 +283,10 @@ mod tests_random_walk {
     fn test_all_values_are_positive() {
         let mut walk = TestWalk::new();
         let n_steps = 1000;
-        let initial_price = f2p!(100.0);
+        let initial_price = pos!(100.0);
         let mean = 0.0;
-        let std_dev = f2p!(1.0);
-        let std_dev_change = f2p!(0.01);
+        let std_dev = pos!(1.0);
+        let std_dev_change = pos!(0.01);
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
         assert!(walk.values.iter().all(|x| x > 0.0));
     }
@@ -295,10 +296,10 @@ mod tests_random_walk {
         let mut walk = TestWalk::new();
 
         let n_steps = 10000;
-        let initial_price = f2p!(100.0);
+        let initial_price = pos!(100.0);
         let mean = 0.1;
-        let std_dev = f2p!(1.0);
-        let std_dev_change = f2p!(0.01);
+        let std_dev = pos!(1.0);
+        let std_dev_change = pos!(0.01);
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
         let changes: Vec<f64> = walk
             .values
@@ -315,9 +316,9 @@ mod tests_random_walk {
         let mut walk = TestWalk::new();
 
         let n_steps = 100;
-        let initial_price = f2p!(100.0);
+        let initial_price = pos!(100.0);
         let mean = 0.0;
-        let std_dev = f2p!(1.0);
+        let std_dev = pos!(1.0);
         let std_dev_change = Positive::ZERO;
 
         walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
@@ -329,14 +330,14 @@ mod tests_random_walk {
     fn test_edge_cases() {
         let mut walk = TestWalk::new();
 
-        walk.generate_random_walk(1, f2p!(100.0), 0.0, f2p!(1.0), f2p!(0.01));
+        walk.generate_random_walk(1, pos!(100.0), 0.0, pos!(1.0), pos!(0.01));
         assert_eq!(walk.values.len(), 1);
         assert_eq!(walk.values[0], 100.0);
 
-        walk.generate_random_walk(100, f2p!(0.1), 0.0, f2p!(0.01), f2p!(0.001));
+        walk.generate_random_walk(100, pos!(0.1), 0.0, pos!(0.01), pos!(0.001));
         assert!(walk.values.iter().all(|x| x >= 0.0));
 
-        walk.generate_random_walk(100, f2p!(1e6), 0.0, f2p!(100.0), f2p!(1.0));
+        walk.generate_random_walk(100, pos!(1e6), 0.0, pos!(100.0), pos!(1.0));
         assert!(walk.values.iter().all(|x| x >= 0.0));
     }
 
@@ -345,7 +346,7 @@ mod tests_random_walk {
     fn test_zero_steps_should_panic() {
         let mut walk = TestWalk::new();
 
-        walk.generate_random_walk(0, f2p!(100.0), 0.0, f2p!(1.0), f2p!(0.01));
+        walk.generate_random_walk(0, pos!(100.0), 0.0, pos!(1.0), pos!(0.01));
     }
 }
 
@@ -353,7 +354,8 @@ mod tests_random_walk {
 mod tests {
     use super::*;
     use crate::utils::logger::setup_logger_with_level;
-    use crate::{f2p, spos};
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
     use tracing::debug;
 
     #[test]
@@ -364,19 +366,19 @@ mod tests {
 
         let mut walk = RandomWalkGraph::new(
             "Test Walk".to_string(),
-            Some(0.05),     // risk_free_rate
-            Some(0.02),     // dividend_yield
-            TimeFrame::Day, // time_frame (2 years)
-            4,              // volatility_window
-            spos!(0.2),     // initial_volatility
+            Some(dec!(0.05)), // risk_free_rate
+            Some(pos!(0.02)), // dividend_yield
+            TimeFrame::Day,   // time_frame (2 years)
+            4,                // volatility_window
+            spos!(0.2),       // initial_volatility
         );
 
         walk.generate_random_walk(
             steps,       // n_steps
-            f2p!(100.0), // initial_price
+            pos!(100.0), // initial_price
             0.0,         // mean
-            f2p!(0.2),   // std_dev
-            f2p!(0.01),  // std_dev_change
+            pos!(0.2),   // std_dev
+            pos!(0.01),  // std_dev_change
         );
 
         for (i, params) in walk.enumerate() {
@@ -390,11 +392,11 @@ mod tests {
                 "Price should be positive"
             );
             assert!(
-                params.risk_free_rate >= ZERO,
+                params.risk_free_rate >= Decimal::ZERO,
                 "Risk-free rate should be non-negative"
             );
             assert!(
-                params.dividend_yield >= ZERO,
+                params.dividend_yield >= Positive::ZERO,
                 "Dividend yield should be non-negative"
             );
 

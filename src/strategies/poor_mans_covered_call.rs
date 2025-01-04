@@ -47,7 +47,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
-use crate::{d2fu, f2p, Positive};
+use crate::{d2fu, pos, Positive};
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
@@ -80,9 +80,9 @@ impl PoorMansCoveredCall {
         short_call_strike: Positive,
         long_call_expiration: ExpirationDate,
         short_call_expiration: ExpirationDate,
-        implied_volatility: f64,
-        risk_free_rate: f64,
-        dividend_yield: f64,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
         quantity: Positive,
         premium_long_call: f64,
         premium_short_call: f64,
@@ -155,6 +155,7 @@ impl PoorMansCoveredCall {
         // Calculate break-even point
         let net_debit =
             (strategy.long_call.max_loss() - strategy.short_call.max_profit()) / quantity;
+
         strategy
             .break_even_points
             .push(long_call_strike + net_debit);
@@ -226,20 +227,12 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn total_cost(&self) -> Positive {
-        f2p!(self.long_call.net_cost() + self.short_call.net_cost())
+        pos!(self.long_call.net_cost() + self.short_call.net_cost())
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
         let restult =
             self.long_call.net_premium_received() + self.short_call.net_premium_received();
-        Ok(Decimal::from_f64(restult).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let restult = (self.long_call.open_fee + self.long_call.close_fee)
-            * self.long_call.option.quantity
-            + (self.short_call.open_fee + self.short_call.close_fee)
-                * self.short_call.option.quantity;
         Ok(Decimal::from_f64(restult).unwrap())
     }
 
@@ -420,7 +413,7 @@ impl Optimizable for PoorMansCoveredCall {
             short.strike_price,
             self.long_call.option.expiration_date.clone(),
             self.short_call.option.expiration_date.clone(),
-            short.implied_volatility.unwrap().to_f64() / 100.0,
+            short.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
@@ -587,7 +580,7 @@ impl DeltaNeutrality for PoorMansCoveredCall {
         let net_delta = self.calculate_net_delta().net_delta;
         let l_c_delta = d2fu!(self.short_call.option.delta().unwrap()).unwrap();
         vec![DeltaAdjustment::SellOptions {
-            quantity: f2p!((net_delta.abs() / l_c_delta).abs()) * self.short_call.option.quantity,
+            quantity: pos!((net_delta.abs() / l_c_delta).abs()) * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -597,7 +590,7 @@ impl DeltaNeutrality for PoorMansCoveredCall {
         let net_delta = self.calculate_net_delta().net_delta;
         let l_c_delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
         vec![DeltaAdjustment::BuyOptions {
-            quantity: f2p!((net_delta.abs() / l_c_delta).abs()) * self.long_call.option.quantity,
+            quantity: pos!((net_delta.abs() / l_c_delta).abs()) * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -607,20 +600,21 @@ impl DeltaNeutrality for PoorMansCoveredCall {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
         let underlying_symbol = "AAPL".to_string();
-        let underlying_price = f2p!(150.0);
-        let long_call_strike = f2p!(140.0);
-        let short_call_strike = f2p!(160.0);
+        let underlying_price = pos!(150.0);
+        let long_call_strike = pos!(140.0);
+        let short_call_strike = pos!(160.0);
         let long_call_expiration = ExpirationDate::Days(365.0);
         let short_call_expiration = ExpirationDate::Days(30.0);
-        let implied_volatility = 0.20;
-        let risk_free_rate = 0.01;
-        let dividend_yield = 0.005;
-        let quantity = f2p!(1.0);
+        let implied_volatility = pos!(0.20);
+        let risk_free_rate = dec!(0.01);
+        let dividend_yield = pos!(0.005);
+        let quantity = pos!(1.0);
         let premium_long_call = 15.0;
         let premium_short_call = 5.0;
         let open_fee_long_call = 1.0;
@@ -652,8 +646,8 @@ mod tests {
     fn test_create_pmcc_strategy() {
         let pmcc = create_pmcc_strategy();
         assert_eq!(pmcc.name, "Poor Man's Covered Call");
-        assert_eq!(pmcc.long_call.option.strike_price, f2p!(140.0));
-        assert_eq!(pmcc.short_call.option.strike_price, f2p!(160.0));
+        assert_eq!(pmcc.long_call.option.strike_price, pos!(140.0));
+        assert_eq!(pmcc.short_call.option.strike_price, pos!(160.0));
     }
 
     #[test]
@@ -709,7 +703,7 @@ mod tests {
     #[test]
     fn test_best_range_to_show() {
         let pmcc = create_pmcc_strategy();
-        let step = f2p!(1.0);
+        let step = pos!(1.0);
         let range = pmcc.best_range_to_show(step);
         assert!(range.is_ok());
         let range_values = range.unwrap();
@@ -719,7 +713,7 @@ mod tests {
     #[test]
     fn test_calculate_profit_at() {
         let pmcc = create_pmcc_strategy();
-        let profit = pmcc.calculate_profit_at(f2p!(150.0));
+        let profit = pmcc.calculate_profit_at(pos!(150.0));
         assert!(
             profit >= -pmcc.max_loss().unwrap_or(Positive::ZERO).to_f64()
                 && profit <= pmcc.max_profit().unwrap_or(Positive::ZERO).to_f64()
@@ -753,19 +747,20 @@ mod tests {
 mod tests_pmcc_validation {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
+    use rust_decimal_macros::dec;
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(140.0),
-            f2p!(160.0),
+            pos!(150.0),
+            pos!(140.0),
+            pos!(160.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
+            pos!(1.0),
             15.0,
             5.0,
             1.0,
@@ -788,14 +783,14 @@ mod tests_pmcc_validation {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            f2p!(140.0),
+            pos!(140.0),
             ExpirationDate::Days(365.0),
-            0.2,
-            f2p!(1.0),
-            f2p!(150.0),
-            0.01,
+            pos!(0.2),
+            pos!(1.0),
+            pos!(150.0),
+            dec!(0.01),
             OptionStyle::Call,
-            0.005,
+            pos!(0.005),
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
@@ -812,14 +807,14 @@ mod tests_pmcc_validation {
             OptionType::European,
             Side::Short,
             "AAPL".to_string(),
-            f2p!(160.0),
+            pos!(160.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            f2p!(1.0),
-            f2p!(150.0),
-            0.01,
+            pos!(0.2),
+            pos!(1.0),
+            pos!(150.0),
+            dec!(0.01),
             OptionStyle::Call,
-            0.005,
+            pos!(0.005),
             None,
         );
         let position = Position::new(option, 5.0, Utc::now(), 0.5, 0.5);
@@ -836,14 +831,14 @@ mod tests_pmcc_validation {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            f2p!(140.0),
+            pos!(140.0),
             ExpirationDate::Days(365.0),
-            0.2,
-            f2p!(1.0),
-            f2p!(150.0),
-            0.01,
+            pos!(0.2),
+            pos!(1.0),
+            pos!(150.0),
+            dec!(0.01),
             OptionStyle::Put,
-            0.005,
+            pos!(0.005),
             None,
         );
         let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
@@ -864,20 +859,21 @@ mod tests_pmcc_validation {
 mod tests_pmcc_optimization {
     use super::*;
     use crate::spos;
+    use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("AAPL", f2p!(150.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string(), None, None);
 
         // Add options at various strikes
         for strike in [140.0, 145.0, 150.0, 155.0, 160.0].iter() {
             chain.add_option(
-                f2p!(*strike),
+                pos!(*strike),
                 spos!(5.0),
                 spos!(5.2),
                 spos!(4.8),
                 spos!(5.0),
                 spos!(0.2),
-                Some(0.5),
+                Some(dec!(0.5)),
                 spos!(100.0),
                 Some(50),
             );
@@ -888,15 +884,15 @@ mod tests_pmcc_optimization {
     fn create_base_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(140.0),
-            f2p!(160.0),
+            pos!(150.0),
+            pos!(140.0),
+            pos!(160.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
+            pos!(1.0),
             15.0,
             5.0,
             1.0,
@@ -910,7 +906,7 @@ mod tests_pmcc_optimization {
     fn test_is_valid_short_option() {
         let strategy = create_base_strategy();
         let option = OptionData::new(
-            f2p!(160.0),
+            pos!(160.0),
             spos!(5.0),
             spos!(5.2),
             spos!(4.8),
@@ -927,7 +923,7 @@ mod tests_pmcc_optimization {
     fn test_is_valid_long_option() {
         let strategy = create_base_strategy();
         let option = OptionData::new(
-            f2p!(140.0),
+            pos!(140.0),
             spos!(5.0),
             spos!(5.2),
             spos!(4.8),
@@ -961,7 +957,7 @@ mod tests_pmcc_optimization {
         let mut strategy = create_base_strategy();
         strategy.short_call.option.underlying_price = Positive::ZERO;
         let option = OptionData::new(
-            f2p!(160.0),
+            pos!(160.0),
             spos!(5.0),
             spos!(5.2),
             spos!(4.8),
@@ -979,7 +975,7 @@ mod tests_pmcc_optimization {
         let mut strategy = create_base_strategy();
         strategy.long_call.option.underlying_price = Positive::ZERO;
         let option = OptionData::new(
-            f2p!(140.0),
+            pos!(140.0),
             spos!(5.0),
             spos!(5.2),
             spos!(4.8),
@@ -997,19 +993,20 @@ mod tests_pmcc_optimization {
 mod tests_pmcc_pnl {
     use super::*;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(140.0),
-            f2p!(160.0),
+            pos!(150.0),
+            pos!(140.0),
+            pos!(160.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
+            pos!(1.0),
             15.0,
             5.0,
             1.0,
@@ -1024,11 +1021,11 @@ mod tests_pmcc_pnl {
         let strategy = create_test_strategy();
 
         // Below long strike
-        let profit_below = strategy.calculate_profit_at(f2p!(130.0));
+        let profit_below = strategy.calculate_profit_at(pos!(130.0));
         assert!(profit_below < 0.0);
 
         // Between strikes
-        let profit_middle = strategy.calculate_profit_at(f2p!(150.0));
+        let profit_middle = strategy.calculate_profit_at(pos!(150.0));
         assert!(profit_middle > profit_below);
 
         // At short strike
@@ -1039,7 +1036,7 @@ mod tests_pmcc_pnl {
         );
 
         // Above short strike
-        let profit_above = strategy.calculate_profit_at(f2p!(170.0));
+        let profit_above = strategy.calculate_profit_at(pos!(170.0));
         assert_eq!(profit_above, profit_above);
     }
 
@@ -1074,19 +1071,20 @@ mod tests_pmcc_pnl {
 #[cfg(test)]
 mod tests_pmcc_graph {
     use super::*;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(140.0),
-            f2p!(160.0),
+            pos!(150.0),
+            pos!(140.0),
+            pos!(160.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
+            pos!(1.0),
             15.0,
             5.0,
             1.0,
@@ -1156,6 +1154,7 @@ mod tests_pmcc_best_area {
     use super::*;
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1167,14 +1166,14 @@ mod tests_pmcc_best_area {
         let strategy = PoorMansCoveredCall::new(
             "SP500".to_string(),
             underlying_price,
-            f2p!(5700.0), // long strike ITM
-            f2p!(5900.0), // short strike OTM
+            pos!(5700.0), // long strike ITM
+            pos!(5900.0), // short strike OTM
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
+            pos!(1.0),
             15.0,
             5.0,
             1.0,
@@ -1230,6 +1229,7 @@ mod tests_pmcc_best_ratio {
     use super::*;
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1241,14 +1241,14 @@ mod tests_pmcc_best_ratio {
         let strategy = PoorMansCoveredCall::new(
             "SP500".to_string(),
             underlying_price,
-            f2p!(5700.0),
-            f2p!(5900.0),
+            pos!(5700.0),
+            pos!(5900.0),
             ExpirationDate::Days(365.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.01,
-            0.005,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.005),
+            pos!(1.0),
             15.0,
             5.0,
             1.0,
@@ -1289,11 +1289,11 @@ mod tests_pmcc_best_ratio {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_ratio(
             &option_chain,
-            FindOptimalSide::Range(f2p!(5750.0), f2p!(5850.0)),
+            FindOptimalSide::Range(pos!(5750.0), pos!(5850.0)),
         );
 
-        assert!(strategy.long_call.option.strike_price >= f2p!(5750.0));
-        assert!(strategy.short_call.option.strike_price <= f2p!(5850.0));
+        assert!(strategy.long_call.option.strike_price >= pos!(5750.0));
+        assert!(strategy.short_call.option.strike_price <= pos!(5850.0));
 
         assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
         assert!(strategy.validate());
@@ -1307,11 +1307,12 @@ mod tests_short_straddle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
-        let underlying_price = f2p!(7138.5);
+        let underlying_price = pos!(7138.5);
         PoorMansCoveredCall::new(
             "CL".to_string(),
             underlying_price, // underlying_price
@@ -1319,22 +1320,22 @@ mod tests_short_straddle_delta {
             short_strike,     // put_strike 7050
             ExpirationDate::Days(45.0),
             ExpirationDate::Days(15.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(1.0), // quantity
-            84.2,      // premium_short_call
-            353.2,     // premium_short_put
-            7.01,      // open_fee_short_call
-            7.01,      // close_fee_short_call
-            7.01,      // open_fee_short_put
-            7.01,      // close_fee_short_put
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(7250.0), f2p!(7300.0));
+        let strategy = get_strategy(pos!(7250.0), pos!(7300.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1346,14 +1347,14 @@ mod tests_short_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.21684621688317646),
-                strike: f2p!(7300.0),
+                quantity: pos!(0.21684621688317646),
+                strike: pos!(7300.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = f2p!(0.21684621688317646);
+        option.quantity = pos!(0.21684621688317646);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.08872, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1365,7 +1366,7 @@ mod tests_short_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7250.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1377,14 +1378,14 @@ mod tests_short_straddle_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.0689809869957862),
-                strike: f2p!(7450.0),
+                quantity: pos!(0.0689809869957862),
+                strike: pos!(7450.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = f2p!(0.0689809869957862);
+        option.quantity = pos!(0.0689809869957862);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.028694, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1396,7 +1397,7 @@ mod tests_short_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_no_adjustments() {
-        let strategy = get_strategy(f2p!(7390.0), f2p!(7250.0));
+        let strategy = get_strategy(pos!(7390.0), pos!(7250.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1416,11 +1417,12 @@ mod tests_short_straddle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
-        let underlying_price = f2p!(7138.5);
+        let underlying_price = pos!(7138.5);
         PoorMansCoveredCall::new(
             "CL".to_string(),
             underlying_price, // underlying_price
@@ -1428,24 +1430,24 @@ mod tests_short_straddle_delta_size {
             short_strike,     // put_strike 7050
             ExpirationDate::Days(45.0),
             ExpirationDate::Days(15.0),
-            0.3745,    // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(2.0), // quantity
-            84.2,      // premium_short_call
-            353.2,     // premium_short_put
-            7.01,      // open_fee_short_call
-            7.01,      // close_fee_short_call
-            7.01,      // open_fee_short_put
-            7.01,      // close_fee_short_put
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            84.2,           // premium_short_call
+            353.2,          // premium_short_put
+            7.01,           // open_fee_short_call
+            7.01,           // close_fee_short_call
+            7.01,           // open_fee_short_put
+            7.01,           // close_fee_short_put
         )
     }
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(7250.1), f2p!(7300.0));
+        let strategy = get_strategy(pos!(7250.1), pos!(7300.0));
         let size = 0.1773;
-        let delta = f2p!(0.4334878994986714);
+        let delta = pos!(0.4334878994986714);
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
             size,
@@ -1457,7 +1459,7 @@ mod tests_short_straddle_delta_size {
             suggestion[0],
             DeltaAdjustment::SellOptions {
                 quantity: delta,
-                strike: f2p!(7300.0),
+                strike: pos!(7300.0),
                 option_type: OptionStyle::Call
             }
         );
@@ -1475,7 +1477,7 @@ mod tests_short_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(7450.0), f2p!(7250.0));
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1487,14 +1489,14 @@ mod tests_short_straddle_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.1379619739915724),
-                strike: f2p!(7450.0),
+                quantity: pos!(0.1379619739915724),
+                strike: pos!(7450.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = f2p!(0.1379619739915724);
+        option.quantity = pos!(0.1379619739915724);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.05738, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1506,7 +1508,7 @@ mod tests_short_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_no_adjustments() {
-        let strategy = get_strategy(f2p!(7390.0), f2p!(7255.0));
+        let strategy = get_strategy(pos!(7390.0), pos!(7255.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,

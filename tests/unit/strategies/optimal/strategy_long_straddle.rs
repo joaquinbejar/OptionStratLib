@@ -1,12 +1,13 @@
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::f2p;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::straddle::LongStraddle;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::ExpirationDate;
+use optionstratlib::{pos, Positive};
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
@@ -14,23 +15,23 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the LongStraddle strategy
-    let underlying_price = f2p!(7008.5);
+    let underlying_price = pos!(7008.5);
 
     let mut strategy = LongStraddle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        f2p!(7140.0),     // put_strike
+        pos!(7140.0),     // put_strike
         ExpirationDate::Days(45.0),
-        0.3745,    // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(1.0), // quantity
-        84.2,      // premium_short_call
-        353.2,     // premium_short_put
-        7.0,       // open_fee_short_call
-        7.01,      // close_fee_short_call
-        7.01,      // open_fee_short_put
-        7.01,      // close_fee_short_put
+        pos!(0.3745),   // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // quantity
+        84.2,           // premium_short_call
+        353.2,          // premium_short_put
+        7.0,            // open_fee_short_call
+        7.01,           // close_fee_short_call
+        7.01,           // open_fee_short_put
+        7.01,           // close_fee_short_put
     );
 
     let option_chain =

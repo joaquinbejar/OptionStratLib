@@ -1,6 +1,6 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -8,6 +8,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -25,10 +26,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,              // short_call_strike OTM
         ExpirationDate::Days(120.0), // long_call_expiration
         ExpirationDate::Days(30.0),  // short_call_expiration 30-45 days delta 0.30 or less
-        ZERO,                        // implied_volatility
-        ZERO,                        // risk_free_rate
-        ZERO,                        // dividend_yield
-        f2p!(2.0),                   // quantity
+        Positive::ZERO,              // implied_volatility
+        Decimal::ZERO,               // risk_free_rate
+        Positive::ZERO,              // dividend_yield
+        pos!(2.0),                   // quantity
         ZERO,                        // premium_short_call
         ZERO,                        // premium_short_put
         1.74,                        // open_fee_short_call
@@ -40,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

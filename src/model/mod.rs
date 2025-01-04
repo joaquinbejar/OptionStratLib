@@ -69,24 +69,25 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::Positive;
 //!
 //! let option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     "AAPL".to_string(),
-//!     f2p!(100.0),
+//!     pos!(100.0),
 //!     ExpirationDate::Days(30.0),
-//!     0.2,
-//!     f2p!(1.0),
-//!     f2p!(105.0),
-//!     0.05,
+//!     pos!(0.2),
+//!     pos!(1.0),
+//!     pos!(105.0),
+//!     dec!(0.05),
 //!     OptionStyle::Call,
-//!     0.01,
+//!     pos!(0.01),
 //!     None,
 //! );
 //!

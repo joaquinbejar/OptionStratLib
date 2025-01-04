@@ -26,10 +26,10 @@
 //!
 //! ```rust
 //! pub struct SPANMargin {
-//!     scanning_range: f64,           // Overall market move range
-//!     short_option_minimum: f64,     // Minimum charge for short options
-//!     price_scan_range: f64,         // Range for price scenarios
-//!     volatility_scan_range: f64,    // Range for volatility scenarios
+//!     scanning_range: f64,   // Overall market move range
+//!     short_option_minimum: f64,   // Minimum charge for short options
+//!     price_scan_range: f64,   // Range for price scenarios
+//!     volatility_scan_range: f64,   // Range for volatility scenarios
 //! }
 //! ```
 //!
@@ -49,8 +49,9 @@
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::Positive;
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use chrono::Utc;
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::risk::SPANMargin;
 //!
 //! // Create an option position
@@ -58,15 +59,15 @@
 //!     OptionType::European,
 //!     Side::Short,
 //!     "STOCK".to_string(),
-//!     f2p!(150.0),              // Strike price
+//!     pos!(150.0),   // Strike price
 //!     ExpirationDate::Days(30.0),
-//!     0.2,                      // Volatility
-//!     Positive::ONE,                 // Quantity
-//!     f2p!(155.0),              // Current price
-//!     0.05,                     // Risk-free rate
+//!     pos!(0.2),   // Volatility
+//!     Positive::ONE,   // Quantity
+//!     pos!(155.0),   // Current price
+//!     dec!(0.05),   // Risk-free rate
 //!     OptionStyle::Call,
-//!     0.0,                      // Dividend yield
-//!     None,                     // Exotic parameters
+//!     Positive::ZERO,   // Dividend yield
+//!     None,   // Exotic parameters
 //! );
 //!
 //! let position = Position {
@@ -79,9 +80,9 @@
 //!
 //! // Create SPAN calculator
 //! let span = SPANMargin::new(
-//!     0.15,  // 15% scanning range
-//!     0.10,  // 10% short option minimum
-//!     0.05,  // 5% price scan range
+//!     0.15,   // 15% scanning range
+//!     0.10,   // 10% short option minimum
+//!     0.05,   // 5% price scan range
 //!     0.10   // 10% volatility scan range
 //! );
 //!
@@ -93,25 +94,26 @@
 //!
 //! ```rust
 //! use chrono::Utc;
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::risk::SPANMargin;
 //!
 //! let option = Options {
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: f2p!(100.0),
+//!             strike_price: pos!(100.0),
 //!             expiration_date: ExpirationDate::Days(30.0),
-//!             implied_volatility: 0.2,
+//!             implied_volatility: pos!(0.2),
 //!             quantity: Positive::ONE,
-//!             underlying_price: f2p!(105.0),
-//!             risk_free_rate: 0.05,
+//!             underlying_price: pos!(105.0),
+//!             risk_free_rate: dec!(0.05),
 //!             option_style: OptionStyle::Call,
-//!             dividend_yield: 0.01,
+//!             dividend_yield: pos!(0.01),
 //!             exotic_params: None,
 //!         };
 //! // Create multiple positions

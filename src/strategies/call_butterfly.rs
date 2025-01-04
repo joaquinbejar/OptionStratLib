@@ -22,7 +22,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
-use crate::{d2fu, f2p, spos, Positive};
+use crate::{d2fu, pos, spos, Positive};
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::{ShapeStyle, RED};
@@ -56,9 +56,9 @@ impl CallButterfly {
         short_call_low_strike: Positive,
         short_call_high_strike: Positive,
         expiration: ExpirationDate,
-        implied_volatility: f64,
-        risk_free_rate: f64,
-        dividend_yield: f64,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
         quantity: Positive,
         premium_long_call: f64,
         premium_short_call_low: f64,
@@ -160,14 +160,16 @@ impl CallButterfly {
 
         // Calculate break-even points
         strategy.break_even_points.push(
-            strategy.long_call.option.strike_price
-                - strategy.calculate_profit_at(strategy.long_call.option.strike_price) / quantity,
+            (strategy.long_call.option.strike_price
+                - strategy.calculate_profit_at(strategy.long_call.option.strike_price) / quantity)
+                .round_to(2),
         );
 
         strategy.break_even_points.push(
-            strategy.short_call_high.option.strike_price
+            (strategy.short_call_high.option.strike_price
                 + strategy.calculate_profit_at(strategy.short_call_high.option.strike_price)
-                    / quantity,
+                    / quantity)
+                .round_to(2),
         );
 
         strategy
@@ -183,10 +185,10 @@ impl Default for CallButterfly {
             Positive::ZERO,
             Positive::ZERO,
             ExpirationDate::Days(0.0),
-            ZERO,
-            ZERO,
-            ZERO,
-            f2p!(1.0),
+            Positive::ZERO,
+            Decimal::ZERO,
+            Positive::ZERO,
+            pos!(1.0),
             ZERO,
             ZERO,
             ZERO,
@@ -261,16 +263,6 @@ impl Strategies for CallButterfly {
             + self.short_call_high.net_premium_received()
             - self.long_call.net_cost();
         let result = if premium > ZERO { premium } else { ZERO };
-        Ok(Decimal::from_f64(result).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call_low.open_fee
-            + self.short_call_low.close_fee
-            + self.short_call_high.open_fee
-            + self.short_call_high.close_fee
-            + self.long_call.open_fee * self.long_call.option.quantity
-            + self.long_call.close_fee * self.long_call.option.quantity;
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -435,7 +427,7 @@ impl Optimizable for CallButterfly {
             short_call_low.strike_price,
             short_call_high.strike_price,
             self.long_call.option.expiration_date.clone(),
-            long_call.implied_volatility.unwrap().to_f64(),
+            long_call.implied_volatility.unwrap(),
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
@@ -612,13 +604,13 @@ impl DeltaNeutrality for CallButterfly {
 
         vec![
             DeltaAdjustment::SellOptions {
-                quantity: f2p!((net_delta.abs() / delta_low).abs())
+                quantity: pos!((net_delta.abs() / delta_low).abs())
                     * self.short_call_low.option.quantity,
                 strike: self.short_call_low.option.strike_price,
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: f2p!((net_delta.abs() / delta_high).abs())
+                quantity: pos!((net_delta.abs() / delta_high).abs())
                     * self.short_call_high.option.quantity,
                 strike: self.short_call_high.option.strike_price,
                 option_type: OptionStyle::Call,
@@ -631,7 +623,7 @@ impl DeltaNeutrality for CallButterfly {
         let delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
 
         vec![DeltaAdjustment::BuyOptions {
-            quantity: f2p!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -644,19 +636,20 @@ mod tests_call_butterfly {
     use crate::constants::ZERO;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn setup() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(155.0),
-            f2p!(160.0),
-            f2p!(157.5),
+            pos!(150.0),
+            pos!(155.0),
+            pos!(160.0),
+            pos!(157.5),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(1.0),
             45.0,
             30.0,
             20.5,
@@ -689,7 +682,7 @@ mod tests_call_butterfly {
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 172.0;
-        assert!(strategy.calculate_profit_at(f2p!(price)) < ZERO);
+        assert!(strategy.calculate_profit_at(pos!(price)) < ZERO);
     }
 
     #[test]
@@ -727,11 +720,11 @@ mod tests_call_butterfly {
         assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
 
         let data = vec![
-            f2p!(150.0),
-            f2p!(155.0),
-            f2p!(160.0),
-            f2p!(165.0),
-            f2p!(170.0),
+            pos!(150.0),
+            pos!(155.0),
+            pos!(160.0),
+            pos!(165.0),
+            pos!(170.0),
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
@@ -747,19 +740,20 @@ mod tests_call_butterfly {
 #[cfg(test)]
 mod tests_call_butterfly_validation {
     use super::*;
+    use rust_decimal_macros::dec;
 
     fn setup_basic_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(145.0),
-            f2p!(150.0),
-            f2p!(155.0),
+            pos!(150.0),
+            pos!(145.0),
+            pos!(150.0),
+            pos!(155.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(1.0),
             7.0,
             5.0,
             3.0,
@@ -797,19 +791,20 @@ mod tests_call_butterfly_validation {
 mod tests_call_butterfly_pnl {
     use super::*;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(145.0),
-            f2p!(150.0),
-            f2p!(155.0),
+            pos!(150.0),
+            pos!(145.0),
+            pos!(150.0),
+            pos!(155.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(1.0),
             7.0,
             5.0,
             3.0,
@@ -825,14 +820,14 @@ mod tests_call_butterfly_pnl {
     #[test]
     fn test_profit_below_lower_strike() {
         let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(f2p!(140.0));
+        let profit = strategy.calculate_profit_at(pos!(140.0));
         assert!(profit <= 0.0);
     }
 
     #[test]
     fn test_profit_above_upper_strike() {
         let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(f2p!(160.0));
+        let profit = strategy.calculate_profit_at(pos!(160.0));
         assert!(profit <= 0.0);
     }
 
@@ -849,19 +844,20 @@ mod tests_call_butterfly_graph {
     use super::*;
     use crate::model::types::ExpirationDate;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            f2p!(150.0),
-            f2p!(145.0),
-            f2p!(155.0),
-            f2p!(150.0),
+            pos!(150.0),
+            pos!(145.0),
+            pos!(155.0),
+            pos!(150.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(1.0),
             7.0,
             5.0,
             3.0,
@@ -985,36 +981,37 @@ mod tests_iron_condor_delta {
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            f2p!(5750.0),     // long_strike_itm
-            f2p!(5850.0),     // long_strike_otm
-            f2p!(5800.0),     // short_strike
+            pos!(5750.0),     // long_strike_itm
+            pos!(5850.0),     // long_strike_otm
+            pos!(5800.0),     // short_strike
             ExpirationDate::Days(2.0),
-            0.18,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(1.0), // long quantity
-            95.8,      // short_quantity
-            85.04,     // premium_long_itm
-            31.65,     // premium_long_otm
-            53.04,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // close_fee_long
-            0.73,      // close_fee_short
-            0.73,      // close_fee_short
-            0.73,      // close_fee_short
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // long quantity
+            95.8,           // short_quantity
+            85.04,          // premium_long_itm
+            31.65,          // premium_long_otm
+            53.04,          // premium_short
+            0.78,           // open_fee_long
+            0.78,           // close_fee_long
+            0.73,           // close_fee_short
+            0.73,           // close_fee_short
+            0.73,           // close_fee_short
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(5901.88));
+        let strategy = get_strategy(pos!(5901.88));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1026,14 +1023,14 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.7040502965074396),
-                strike: f2p!(5750.0),
+                quantity: pos!(0.7040502965074396),
+                strike: pos!(5750.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = f2p!(0.7040502965074396);
+        option.quantity = pos!(0.7040502965074396);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.687410, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1045,7 +1042,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(5781.88));
+        let strategy = get_strategy(pos!(5781.88));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1057,22 +1054,22 @@ mod tests_iron_condor_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.28356181440213835),
-                strike: f2p!(5850.0),
+                quantity: pos!(0.28356181440213835),
+                strike: pos!(5850.0),
                 option_type: OptionStyle::Call
             }
         );
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.13381901826077533),
-                strike: f2p!(5800.0),
+                quantity: pos!(0.13381901826077533),
+                strike: pos!(5800.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call_low.option.clone();
-        option.quantity = f2p!(0.28356181440213835);
+        option.quantity = pos!(0.28356181440213835);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.055904, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1084,7 +1081,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(f2p!(5795.0));
+        let strategy = get_strategy(pos!(5795.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1104,36 +1101,37 @@ mod tests_iron_condor_delta_size {
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            f2p!(5750.0),     // long_strike_itm
-            f2p!(5850.0),     // long_strike_otm
-            f2p!(5800.0),     // short_strike
+            pos!(5750.0),     // long_strike_itm
+            pos!(5850.0),     // long_strike_otm
+            pos!(5800.0),     // short_strike
             ExpirationDate::Days(2.0),
-            0.18,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(1.0), // long quantity
-            97.8,      // short_quantity
-            85.04,     // premium_long_itm
-            31.65,     // premium_long_otm
-            53.04,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // close_fee_long
-            0.73,      // close_fee_short
-            0.73,      // close_fee_short
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // long quantity
+            97.8,           // short_quantity
+            85.04,          // premium_long_itm
+            31.65,          // premium_long_otm
+            53.04,          // premium_short
+            0.78,           // open_fee_long
+            0.78,           // close_fee_long
+            0.73,           // close_fee_short
+            0.73,           // close_fee_short
             0.73,
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(5881.88));
+        let strategy = get_strategy(pos!(5881.88));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1145,14 +1143,14 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.5948524360242063),
-                strike: f2p!(5750.0),
+                quantity: pos!(0.5948524360242063),
+                strike: pos!(5750.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = f2p!(0.5948524360242063);
+        option.quantity = pos!(0.5948524360242063);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.56993, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1164,7 +1162,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(5781.88));
+        let strategy = get_strategy(pos!(5781.88));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1177,22 +1175,22 @@ mod tests_iron_condor_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.28356181440213835),
-                strike: f2p!(5850.0),
+                quantity: pos!(0.28356181440213835),
+                strike: pos!(5850.0),
                 option_type: OptionStyle::Call
             }
         );
         assert_eq!(
             suggestion[1],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.13381901826077533),
-                strike: f2p!(5800.0),
+                quantity: pos!(0.13381901826077533),
+                strike: pos!(5800.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call_low.option.clone();
-        option.quantity = f2p!(0.28356181440213835);
+        option.quantity = pos!(0.28356181440213835);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.05590, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1204,7 +1202,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(f2p!(5795.0));
+        let strategy = get_strategy(pos!(5795.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1221,43 +1219,44 @@ mod tests_iron_condor_delta_size {
 mod tests_call_butterfly_optimizable {
     use super::*;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-12-19".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
 
         // Add options with different strikes
         chain.add_option(
-            f2p!(95.0),   // strike
-            spos!(6.0),   // call_bid
-            spos!(6.2),   // call_ask
-            spos!(1.0),   // put_bid
-            spos!(1.2),   // put_ask
-            spos!(0.2),   // iv
-            Some(0.4),    // delta
-            spos!(100.0), // volume
-            Some(50),     // open interest
+            pos!(95.0),      // strike
+            spos!(6.0),      // call_bid
+            spos!(6.2),      // call_ask
+            spos!(1.0),      // put_bid
+            spos!(1.2),      // put_ask
+            spos!(0.2),      // iv
+            Some(dec!(0.4)), // delta
+            spos!(100.0),    // volume
+            Some(50),        // open interest
         );
 
         chain.add_option(
-            f2p!(100.0),
+            pos!(100.0),
             spos!(3.0),
             spos!(3.2),
             spos!(3.0),
             spos!(3.2),
             spos!(0.2),
-            Some(0.5),
+            Some(dec!(0.5)),
             spos!(200.0),
             Some(100),
         );
 
         chain.add_option(
-            f2p!(105.0),
+            pos!(105.0),
             spos!(1.0),
             spos!(1.2),
             spos!(6.0),
             spos!(6.2),
             spos!(0.2),
-            Some(0.6),
+            Some(dec!(0.6)),
             spos!(100.0),
             Some(50),
         );
@@ -1268,15 +1267,15 @@ mod tests_call_butterfly_optimizable {
     fn setup_test_butterfly() -> CallButterfly {
         CallButterfly::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(100.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(100.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.01,
-            0.02,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(1.0),
             6.2, // long call ask
             3.0, // short call bid low
             1.0, // short call bid high
@@ -1373,7 +1372,7 @@ mod tests_call_butterfly_optimizable {
     fn test_filter_combinations_empty_chain() {
         let butterfly = setup_test_butterfly();
         let empty_chain =
-            OptionChain::new("TEST", f2p!(100.0), "2024-12-19".to_string(), None, None);
+            OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
 
         let combinations: Vec<_> = butterfly
             .filter_combinations(&empty_chain, FindOptimalSide::All)

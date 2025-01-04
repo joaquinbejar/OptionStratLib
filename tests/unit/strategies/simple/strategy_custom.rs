@@ -1,13 +1,14 @@
 use approx::assert_relative_eq;
 use chrono::Utc;
 use num_traits::ToPrimitive;
-use optionstratlib::f2p;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::Options;
+use optionstratlib::{pos, Positive};
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
@@ -16,12 +17,12 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define common parameters
-    let underlying_price = f2p!(2340.0);
+    let underlying_price = pos!(2340.0);
     let underlying_symbol = "GAS".to_string();
     let expiration = ExpirationDate::Days(6.0);
-    let implied_volatility = 0.73;
-    let risk_free_rate = 0.05;
-    let dividend_yield = 0.0;
+    let implied_volatility = pos!(0.73);
+    let risk_free_rate = dec!(0.05);
+    let dividend_yield = Positive::ZERO;
 
     // Create positions
     let positions = vec![
@@ -30,10 +31,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                f2p!(2100.0),
+                pos!(2100.0),
                 expiration.clone(),
                 implied_volatility,
-                f2p!(2.0),
+                pos!(2.0),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Call,
@@ -50,10 +51,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                f2p!(2250.0),
+                pos!(2250.0),
                 expiration.clone(),
                 implied_volatility,
-                f2p!(2.0),
+                pos!(2.0),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Call,
@@ -70,10 +71,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                f2p!(2500.0),
+                pos!(2500.0),
                 expiration.clone(),
                 implied_volatility,
-                f2p!(1.0),
+                pos!(1.0),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Put,
@@ -90,10 +91,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 OptionType::European,
                 Side::Short,
                 underlying_symbol.clone(),
-                f2p!(2150.0),
+                pos!(2150.0),
                 expiration.clone(),
                 implied_volatility,
-                f2p!(2.5),
+                pos!(2.5),
                 underlying_price,
                 risk_free_rate,
                 OptionStyle::Put,
@@ -113,9 +114,9 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        f2p!(0.01),
+        pos!(0.01),
         10,
-        f2p!(0.1),
+        pos!(0.1),
     );
 
     // Test strategy properties and calculations
@@ -131,7 +132,7 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Test range and break-even points
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     assert!(!price_range.is_empty());
 
     // Test profit metrics

@@ -4,8 +4,8 @@ use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeed
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::ShortStrangle;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::ExpirationDate;
-use optionstratlib::{assert_decimal_eq, f2p};
+use optionstratlib::{assert_decimal_eq, pos};
+use optionstratlib::{ExpirationDate, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -14,24 +14,24 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the ShortStrangle strategy
-    let underlying_price = f2p!(7138.5);
+    let underlying_price = pos!(7138.5);
 
     let strategy = ShortStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        f2p!(7450.0),     // call_strike
-        f2p!(7050.0),     // put_strike
+        pos!(7450.0),     // call_strike
+        pos!(7050.0),     // put_strike
         ExpirationDate::Days(45.0),
-        0.3745,    // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(1.0), // quantity
-        84.2,      // premium_short_call
-        353.2,     // premium_short_put
-        7.01,      // open_fee_short_call
-        7.01,      // close_fee_short_call
-        7.01,      // open_fee_short_put
-        7.01,      // close_fee_short_put
+        pos!(0.3745),   // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // quantity
+        84.2,           // premium_short_call
+        353.2,          // premium_short_put
+        7.01,           // open_fee_short_call
+        7.01,           // close_fee_short_call
+        7.01,           // open_fee_short_put
+        7.01,           // close_fee_short_put
     );
 
     let greeks = strategy.greeks();

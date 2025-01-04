@@ -242,21 +242,23 @@ pub fn telegraph(
     let mut price = option.underlying_price;
     let dt = Decimal::from_f64(option.time_to_expiration() / no_steps as f64).unwrap();
 
-    let implied_volatility: Decimal = Decimal::from_f64(option.implied_volatility).unwrap();
     let one_over_252 = Decimal::from_f64(1.0 / 252.0).unwrap();
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
         (None, None) => {
-            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            let returns =
+                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             estimate_telegraph_parameters(&returns, Decimal::ZERO)?
         }
         (Some(l_up), None) => {
-            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            let returns =
+                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             let (_, l_down) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
         (None, Some(l_down)) => {
-            let returns = simulate_returns(Decimal::ZERO, implied_volatility, 100, one_over_252)?;
+            let returns =
+                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
             let (l_up, _) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
@@ -268,11 +270,9 @@ pub fn telegraph(
     let mut telegraph_process = tp.clone();
     for _ in 0..no_steps {
         let state = telegraph_process.next_state(dt);
-        let drift =
-            Decimal::from_f64(option.risk_free_rate - 0.5 * option.implied_volatility.powi(2))
-                .unwrap();
+        let drift: Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
         let volatility: Decimal =
-            Decimal::from_f64(option.implied_volatility * state as f64).unwrap();
+            option.implied_volatility.to_dec() * Decimal::from_f64(state as f64).unwrap();
 
         let rh = Decimal::from_f64(dt.sqrt().unwrap().to_f64().unwrap() * random::<f64>()).unwrap();
         let lhs = drift * dt + volatility;
@@ -282,7 +282,8 @@ pub fn telegraph(
     }
 
     let payoff = option.payoff_at_price(price);
-    let result = payoff * (-option.risk_free_rate * option.time_to_expiration()).exp();
+    let result =
+        payoff * (-option.risk_free_rate.to_f64().unwrap() * option.time_to_expiration()).exp();
     Ok(Decimal::from_f64(result).unwrap())
 }
 
@@ -290,7 +291,7 @@ pub fn telegraph(
 mod tests_telegraph_process_basis {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{f2p, Positive};
+    use crate::{pos, Positive};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -341,12 +342,12 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
-            risk_free_rate: 0.05,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
+            risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.0,
-            implied_volatility: 0.2,
+            dividend_yield: Positive::ZERO,
+            implied_volatility: pos!(0.2),
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ONE,
@@ -364,12 +365,12 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
-            risk_free_rate: 0.05,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
+            risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.0,
-            implied_volatility: 0.2,
+            dividend_yield: Positive::ZERO,
+            implied_volatility: pos!(0.2),
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ZERO,
@@ -387,12 +388,12 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
-            risk_free_rate: 0.05,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
+            risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.0,
-            implied_volatility: 0.2,
+            dividend_yield: Positive::ZERO,
+            implied_volatility: pos!(0.2),
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ZERO,
@@ -410,8 +411,8 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
-    use crate::f2p;
     use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::Positive;
     use rust_decimal_macros::dec;
 
@@ -420,12 +421,12 @@ mod tests_telegraph_process_extended {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
-            risk_free_rate: 0.05,
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
+            risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.0,
-            implied_volatility: 0.2,
+            dividend_yield: Positive::ZERO,
+            implied_volatility: pos!(0.2),
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ZERO,
@@ -542,7 +543,7 @@ mod tests_telegraph_process_extended {
     #[test]
     fn test_telegraph_zero_volatility() {
         let mut option = create_mock_option();
-        option.implied_volatility = 0.0;
+        option.implied_volatility = Positive::ZERO;
         let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
         // assert_relative_eq!(price, 0.0, epsilon = 1e-6);
     }
@@ -550,7 +551,7 @@ mod tests_telegraph_process_extended {
     #[test]
     fn test_telegraph_zero_risk_free_rate() {
         let mut option = create_mock_option();
-        option.risk_free_rate = 0.0;
+        option.risk_free_rate = Decimal::ZERO;
         let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
         // assert!(price > 0.0);
     }

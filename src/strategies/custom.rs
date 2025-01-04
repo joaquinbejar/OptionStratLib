@@ -15,7 +15,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{f2p, Positive};
+use crate::{pos, Positive};
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -83,72 +83,108 @@ impl CustomStrategy {
         self.calculate_break_even_points();
     }
 
+    /// Find break-even points by analyzing profit curve inflection points
+    /// Uses a combination of numerical methods to find zeros in the profit function
     fn calculate_break_even_points(&mut self) {
         self.break_even_points = Vec::new();
-        let step = self.step_by;
 
-        let mut current_price = Positive::ZERO;
-        let (_, max_search_price) = self.range_to_show().unwrap();
-        let mut last_profit = self.calculate_profit_at(current_price);
+        // Get the visible range for our search
+        let (min_price, max_price) = self.range_to_show().unwrap();
 
-        while current_price < max_search_price {
-            let current_profit = self.calculate_profit_at(current_price);
-            if last_profit.signum() != current_profit.signum() {
-                let mut low = current_price - step;
-                let mut high = current_price;
-                let mut iterations = 0;
+        // Create a finer grid for initial sampling
+        let num_samples = 1000; // Increased for better precision
+        let fine_step = (max_price - min_price) / num_samples as f64;
 
-                'inner: while (high - low).to_f64().abs() > self.epsilon
-                    && iterations < self.max_iterations
+        // Sample profits at regular intervals to create a profit curve
+        let mut price_profit_pairs: Vec<(Positive, f64)> = Vec::new();
+        let mut current_price = min_price;
+
+        while current_price <= max_price {
+            let profit = self.calculate_profit_at(current_price);
+            price_profit_pairs.push((current_price, profit));
+            current_price += fine_step;
+        }
+
+        // Analyze consecutive pairs for potential break-even points
+        for window in price_profit_pairs.windows(2) {
+            if let [(price1, profit1), (price2, profit2)] = window {
+                // Check if profits have different signs
+                if (profit1.signum() != profit2.signum())
+                    || profit1.abs() < self.epsilon
+                    || profit2.abs() < self.epsilon
                 {
-                    let mid = (low + high) / 2.0;
-                    let mid_profit = self.calculate_profit_at(mid);
-
-                    if mid_profit.abs() < self.epsilon {
-                        debug!(
-                            "Break-even point found at price: {} value {}",
-                            mid, mid_profit
-                        );
-                        if !self.break_even_points.contains(&mid) {
-                            self.break_even_points.push(mid);
-                        }
-                        break 'inner;
-                    } else if mid_profit.signum() == last_profit.signum() {
-                        low = mid;
-                    } else {
-                        high = mid;
+                    // Handle cases where profit is very close to zero
+                    if profit1.abs() < self.epsilon {
+                        self.add_unique_break_even(*price1);
+                        continue;
+                    }
+                    if profit2.abs() < self.epsilon {
+                        self.add_unique_break_even(*price2);
+                        continue;
                     }
 
-                    iterations += 1;
-                }
+                    // Linear interpolation for better initial guess
+                    let t = -profit1 / (profit2 - profit1);
+                    let initial_guess = *price1 + (*price2 - *price1) * t;
 
-                if iterations == self.max_iterations {
-                    debug!(
-                        "Max iterations reached at price: {} value {}",
-                        current_price, current_profit
-                    );
-                    let mid_point = (low + high) / 2.0;
-                    if !self.break_even_points.contains(&mid_point) {
-                        self.break_even_points.push(mid_point);
+                    // Refine using Newton-Raphson method
+                    if let Some(refined_point) = self.refine_break_even_point(initial_guess) {
+                        self.add_unique_break_even(refined_point);
                     }
                 }
             }
-
-            last_profit = current_profit;
-            current_price += step;
         }
 
-        if self.break_even_points.is_empty() {
-            debug!("No break-even points found");
-        } else {
-            debug!(
-                "Break Even Points found: {}",
-                self.break_even_points
-                    .iter()
-                    .map(|p| format!("{:.2}", p))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            );
+        // Sort break-even points for consistency
+        self.break_even_points
+            .sort_by(|a, b| a.partial_cmp(b).unwrap());
+    }
+
+    /// Refine a break-even point guess using Newton-Raphson method
+    fn refine_break_even_point(&self, initial_guess: Positive) -> Option<Positive> {
+        let mut x = initial_guess;
+        let mut iterations = 0;
+
+        while iterations < self.max_iterations {
+            let f_x = self.calculate_profit_at(x);
+
+            // Check if we're close enough to zero
+            if f_x.abs() < self.epsilon {
+                return Some(x);
+            }
+
+            // Calculate derivative numerically with smaller step
+            let h = self.epsilon.sqrt();
+            let derivative = (self.calculate_profit_at(x + h) - f_x) / h;
+
+            // Avoid division by very small numbers
+            if derivative.abs() < self.epsilon {
+                break;
+            }
+
+            // Newton-Raphson step
+            let next_x = x - f_x / derivative;
+
+            // Check for convergence with absolute difference
+            if (next_x.to_f64() - x.to_f64()).abs() < self.epsilon {
+                return Some(next_x);
+            }
+
+            x = next_x;
+            iterations += 1;
+        }
+
+        None
+    }
+
+    /// Add a break-even point if it's not already in the list
+    fn add_unique_break_even(&mut self, point: Positive) {
+        if !self
+            .break_even_points
+            .iter()
+            .any(|p| (p.to_f64() - point.to_f64()).abs() < self.epsilon)
+        {
+            self.break_even_points.push(point);
         }
     }
 }
@@ -197,7 +233,7 @@ impl Strategies for CustomStrategy {
                 continue;
             }
             if current_profit > max_profit {
-                max_profit = f2p!(current_profit);
+                max_profit = pos!(current_profit);
                 self.max_profit_point = Some((current_price, current_profit));
             }
             current_price += step;
@@ -224,7 +260,7 @@ impl Strategies for CustomStrategy {
                 continue;
             }
             if current_profit.abs() > max_loss {
-                max_loss = f2p!(current_profit.abs());
+                max_loss = pos!(current_profit.abs());
                 self.max_loss_point = Some((current_price, current_profit));
             }
             current_price += step;
@@ -245,15 +281,6 @@ impl Strategies for CustomStrategy {
             .positions
             .iter()
             .map(|position| position.net_premium_received())
-            .sum::<f64>();
-        Ok(Decimal::from_f64(restult).unwrap())
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let restult = self
-            .positions
-            .iter()
-            .map(|position| position.open_fee + position.close_fee)
             .sum::<f64>();
         Ok(Decimal::from_f64(restult).unwrap())
     }
@@ -503,26 +530,27 @@ impl Greeks for CustomStrategy {
 #[cfg(test)]
 mod tests_custom_strategy {
     use super::*;
-    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use crate::Options;
     use approx::assert_relative_eq;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> CustomStrategy {
-        let underlying_price = f2p!(5780.0);
+        let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Short Call
-        let short_strike = f2p!(5800.0);
-        let short_quantity = f2p!(2.0);
+        let short_strike = pos!(5800.0);
+        let short_quantity = pos!(2.0);
         let premium_short = 53.04;
         let open_fee_short = 0.78;
         let close_fee_short = 0.78;
@@ -552,11 +580,11 @@ mod tests_custom_strategy {
             "Test Strategy".to_string(),
             "AAPL".to_string(),
             "Test Description".to_string(),
-            f2p!(100.0), // underlying_price
+            pos!(100.0), // underlying_price
             vec![short_call],
-            f2p!(1e-2), // epsilon
+            pos!(1e-2), // epsilon
             2,          // max_iterations
-            f2p!(0.1),  // step_by
+            pos!(0.1),  // step_by
         )
     }
 
@@ -587,16 +615,16 @@ mod tests_custom_strategy {
     #[test]
     fn test_calculate_break_even_points_single_put() {
         let mut strategy = create_test_strategy();
-        let underlying_price = f2p!(5780.0);
+        let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Long Call ITM
-        let long_strike_itm = f2p!(5750.0);
-        let long_quantity = f2p!(1.0);
+        let long_strike_itm = pos!(5750.0);
+        let long_quantity = pos!(1.0);
         let premium_long_itm = 85.04;
         let open_fee_long = 0.78;
         let close_fee_long = 0.78;
@@ -636,22 +664,22 @@ mod tests_custom_strategy {
         setup_logger();
 
         let mut strategy = create_test_strategy();
-        let underlying_price = f2p!(5780.0);
+        let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Long Call ITM
-        let long_strike_itm = f2p!(5750.0);
-        let long_quantity = f2p!(1.0);
+        let long_strike_itm = pos!(5750.0);
+        let long_quantity = pos!(1.0);
         let premium_long_itm = 85.04;
         let open_fee_long = 0.78;
         let close_fee_long = 0.78;
 
         // Long Call OTM
-        let long_strike_otm = f2p!(5850.0);
+        let long_strike_otm = pos!(5850.0);
         let premium_long_otm = 31.65;
         let position = Position::new(
             Options::new(
@@ -718,10 +746,10 @@ mod tests_custom_strategy {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            f2p!(100.0), // underlying_price
-            f2p!(1.0),   // quantity
-            f2p!(100.0), // strike_price
-            0.2,         // volatility
+            pos!(100.0), // underlying_price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike_price
+            pos!(0.2),   // volatility
         );
         strategy
             .positions
@@ -735,24 +763,25 @@ mod tests_custom_strategy {
 #[cfg(test)]
 mod tests_max_profit {
     use super::*;
-    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> CustomStrategy {
-        let underlying_price = f2p!(5780.0);
+        let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Short Call
-        let short_strike = f2p!(5800.0);
-        let short_quantity = f2p!(2.0);
+        let short_strike = pos!(5800.0);
+        let short_quantity = pos!(2.0);
         let premium_short = 53.04;
         let open_fee_short = 0.78;
         let close_fee_short = 0.78;
@@ -782,11 +811,11 @@ mod tests_max_profit {
             "Test Strategy".to_string(),
             "AAPL".to_string(),
             "Test Description".to_string(),
-            f2p!(100.0), // underlying_price
+            pos!(100.0), // underlying_price
             vec![short_call],
-            f2p!(1e-2), // epsilon
+            pos!(1e-2), // epsilon
             10,         // max_iterations
-            f2p!(0.1),  // step_by
+            pos!(0.1),  // step_by
         )
     }
 
@@ -802,22 +831,22 @@ mod tests_max_profit {
         setup_logger();
 
         let mut strategy = create_test_strategy();
-        let underlying_price = f2p!(5780.0);
+        let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Long Call ITM
-        let long_strike_itm = f2p!(5750.0);
-        let long_quantity = f2p!(1.0);
+        let long_strike_itm = pos!(5750.0);
+        let long_quantity = pos!(1.0);
         let premium_long_itm = 85.04;
         let open_fee_long = 0.78;
         let close_fee_long = 0.78;
 
         // Long Call OTM
-        let long_strike_otm = f2p!(5850.0);
+        let long_strike_otm = pos!(5850.0);
         let premium_long_otm = 31.65;
         let position = Position::new(
             Options::new(
@@ -872,24 +901,25 @@ mod tests_max_profit {
 #[cfg(test)]
 mod tests_max_loss {
     use super::*;
-    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> CustomStrategy {
-        let underlying_price = f2p!(5780.0);
+        let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Short Call
-        let short_strike = f2p!(5800.0);
-        let short_quantity = f2p!(2.0);
+        let short_strike = pos!(5800.0);
+        let short_quantity = pos!(2.0);
         let premium_short = 53.04;
         let open_fee_short = 0.78;
         let close_fee_short = 0.78;
@@ -919,11 +949,11 @@ mod tests_max_loss {
             "Test Strategy".to_string(),
             "AAPL".to_string(),
             "Test Description".to_string(),
-            f2p!(100.0), // underlying_price
+            pos!(100.0), // underlying_price
             vec![short_call],
-            f2p!(1e-16), // epsilon
+            pos!(1e-16), // epsilon
             1000,        // max_iterations
-            f2p!(0.1),   // step_by
+            pos!(0.1),   // step_by
         )
     }
 
@@ -939,22 +969,22 @@ mod tests_max_loss {
         setup_logger();
 
         let mut strategy = create_test_strategy();
-        let underlying_price = f2p!(5780.0);
+        let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
         let expiration = ExpirationDate::Days(60.0);
-        let implied_volatility = 0.18;
-        let risk_free_rate = 0.05;
-        let dividend_yield = 0.0;
+        let implied_volatility = pos!(0.18);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
 
         // Long Call ITM
-        let long_strike_itm = f2p!(5750.0);
-        let long_quantity = f2p!(1.0);
+        let long_strike_itm = pos!(5750.0);
+        let long_quantity = pos!(1.0);
         let premium_long_itm = 85.04;
         let open_fee_long = 0.78;
         let close_fee_long = 0.78;
 
         // Long Call OTM
-        let long_strike_otm = f2p!(5850.0);
+        let long_strike_otm = pos!(5850.0);
         let premium_long_otm = 31.65;
         let position = Position::new(
             Options::new(
@@ -1009,11 +1039,12 @@ mod tests_max_loss {
 #[cfg(test)]
 mod tests_total_cost {
     use super::*;
-    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::utils::setup_logger;
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_position(side: Side, premium: f64, fees: f64) -> Position {
         Position::new(
@@ -1021,14 +1052,14 @@ mod tests_total_cost {
                 OptionType::European,
                 side,
                 "TEST".to_string(),
-                f2p!(100.0),
+                pos!(100.0),
                 ExpirationDate::Days(30.0),
-                0.2,
-                f2p!(1.0),
-                f2p!(100.0),
-                0.01,
+                pos!(0.2),
+                pos!(1.0),
+                pos!(100.0),
+                dec!(0.01),
                 OptionStyle::Call,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             premium,
@@ -1049,11 +1080,11 @@ mod tests_total_cost {
             "Test".to_string(),
             "TEST".to_string(),
             "Test description".to_string(),
-            f2p!(100.0),
+            pos!(100.0),
             positions,
-            f2p!(0.001),
+            pos!(0.001),
             100,
-            f2p!(1.0),
+            pos!(1.0),
         );
 
         assert_eq!(strategy.total_cost(), 10.0); // 6.0 + 4.0
@@ -1074,11 +1105,11 @@ mod tests_total_cost {
             "Test".to_string(),
             "TEST".to_string(),
             "Test description".to_string(),
-            f2p!(120.0),
+            pos!(120.0),
             positions,
-            f2p!(0.001),
+            pos!(0.001),
             10,
-            f2p!(1.0),
+            pos!(1.0),
         );
 
         assert_eq!(strategy.total_cost(), 2.0);
@@ -1097,11 +1128,11 @@ mod tests_total_cost {
             "Test".to_string(),
             "TEST".to_string(),
             "Test description".to_string(),
-            f2p!(100.0),
+            pos!(100.0),
             positions,
-            f2p!(0.001),
+            pos!(0.001),
             100,
-            f2p!(1.0),
+            pos!(1.0),
         );
 
         assert_eq!(strategy.total_cost(), 13.5); // 6.0 + 1.0 + 5.0 + 1.5
@@ -1120,11 +1151,11 @@ mod tests_total_cost {
             "Test".to_string(),
             "TEST".to_string(),
             "Test description".to_string(),
-            f2p!(100.0),
+            pos!(100.0),
             positions,
-            f2p!(0.001),
+            pos!(0.001),
             100,
-            f2p!(1.0),
+            pos!(1.0),
         );
         assert_eq!(strategy.total_cost(), 22.0); // 12.0 + 1.0 + 8.5 + 0.5
     }
@@ -1137,6 +1168,7 @@ mod tests_best_range_to_show {
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_test_position(strike: Positive, side: Side) -> Position {
         Position::new(
@@ -1146,12 +1178,12 @@ mod tests_best_range_to_show {
                 "SP500".to_string(),
                 strike,
                 ExpirationDate::Days(60.0),
-                0.18,
-                f2p!(2.0),
-                f2p!(5780.0),
-                0.05,
+                pos!(0.18),
+                pos!(2.0),
+                pos!(5780.0),
+                dec!(0.05),
                 OptionStyle::Call,
-                0.0,
+                Positive::ZERO,
                 None,
             ),
             53.04,
@@ -1171,18 +1203,18 @@ mod tests_best_range_to_show {
             "Test Strategy".to_string(),
             "SP500".to_string(),
             "Test Description".to_string(),
-            f2p!(5780.0),
+            pos!(5780.0),
             positions,
-            f2p!(1e-16),
+            pos!(1e-16),
             1000,
-            f2p!(0.1),
+            pos!(0.1),
         )
     }
 
     #[test]
     fn test_best_range_single_strike() {
-        let strategy = create_test_strategy_with_strikes(vec![f2p!(5800.0)]);
-        let step = f2p!(10.0);
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0)]);
+        let step = pos!(10.0);
         let range = strategy.best_range_to_show(step).unwrap();
 
         assert_eq!(range.first().unwrap().to_f64(), 5644.8);
@@ -1197,8 +1229,8 @@ mod tests_best_range_to_show {
     #[test]
     fn test_best_range_multiple_strikes() {
         let strategy =
-            create_test_strategy_with_strikes(vec![f2p!(5700.0), f2p!(5800.0), f2p!(5900.0)]);
-        let step = f2p!(50.0);
+            create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5800.0), pos!(5900.0)]);
+        let step = pos!(50.0);
         let range = strategy.best_range_to_show(step).unwrap();
 
         assert_eq!(range.first().unwrap().to_f64(), 5546.8);
@@ -1212,8 +1244,8 @@ mod tests_best_range_to_show {
 
     #[test]
     fn test_best_range_with_small_step() {
-        let strategy = create_test_strategy_with_strikes(vec![f2p!(5800.0), f2p!(5850.0)]);
-        let step = f2p!(5.0);
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0), pos!(5850.0)]);
+        let step = pos!(5.0);
         let range = strategy.best_range_to_show(step).unwrap();
 
         // Verify granular steps
@@ -1224,18 +1256,18 @@ mod tests_best_range_to_show {
 
     #[test]
     fn test_best_range_with_underlying() {
-        let strategy = create_test_strategy_with_strikes(vec![f2p!(5700.0), f2p!(5900.0)]);
-        let range = strategy.best_range_to_show(f2p!(10.0)).unwrap();
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5900.0)]);
+        let range = strategy.best_range_to_show(pos!(10.0)).unwrap();
 
         // Verify range includes underlying price (5780.0)
-        assert!(range.iter().any(|&price| price <= f2p!(5780.0)));
-        assert!(range.iter().any(|&price| price >= f2p!(5780.0)));
+        assert!(range.iter().any(|&price| price <= pos!(5780.0)));
+        assert!(range.iter().any(|&price| price >= pos!(5780.0)));
     }
 
     #[test]
     fn test_best_range_with_large_step() {
-        let strategy = create_test_strategy_with_strikes(vec![f2p!(5600.0), f2p!(6000.0)]);
-        let step = f2p!(100.0);
+        let strategy = create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(6000.0)]);
+        let step = pos!(100.0);
         let range = strategy.best_range_to_show(step).unwrap();
 
         // Verify minimum points
@@ -1249,10 +1281,10 @@ mod tests_best_range_to_show {
 
     #[test]
     fn test_best_range_strike_bounds() {
-        let min_strike = f2p!(5600.0);
-        let max_strike = f2p!(6000.0);
+        let min_strike = pos!(5600.0);
+        let max_strike = pos!(6000.0);
         let strategy = create_test_strategy_with_strikes(vec![min_strike, max_strike]);
-        let range = strategy.best_range_to_show(f2p!(50.0)).unwrap();
+        let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
 
         let expected_min = (min_strike * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).to_f64();
 
@@ -1263,8 +1295,8 @@ mod tests_best_range_to_show {
     #[test]
     fn test_best_range_unordered_strikes() {
         let strategy =
-            create_test_strategy_with_strikes(vec![f2p!(5600.0), f2p!(5700.0), f2p!(5100.0)]);
-        let range = strategy.best_range_to_show(f2p!(50.0)).unwrap();
+            create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(5700.0), pos!(5100.0)]);
+        let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
 
         assert_eq!(range.first().unwrap().to_f64(), 4998.0);
         assert_eq!(range.last().unwrap().to_f64(), 6598.0);
@@ -1292,12 +1324,12 @@ mod tests_greeks {
                 "TEST".to_string(),
                 strike,
                 ExpirationDate::Days(30.0),
-                0.2,         // volatility
-                f2p!(1.0),   // quantity
-                f2p!(100.0), // underlying_price
-                0.05,        // risk_free_rate
+                pos!(0.2),   // volatility
+                pos!(1.0),   // quantity
+                pos!(100.0), // underlying_price
+                dec!(0.05),  // risk_free_rate
                 option_style,
-                0.02, // dividend_yield
+                pos!(0.02), // dividend_yield
                 None,
             ),
             10.0, // premium
@@ -1309,14 +1341,14 @@ mod tests_greeks {
 
     #[test]
     fn test_greeks_single_long_call() {
-        let position = create_test_position(f2p!(100.0), Side::Long, OptionStyle::Call);
+        let position = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
         let strategy = CustomStrategy::new(
             "Long Call".to_string(),
             "TEST".to_string(),
             "Test Description".to_string(),
-            f2p!(100.0),
+            pos!(100.0),
             vec![position.clone()],
-            f2p!(0.001),
+            pos!(0.001),
             100,
             Positive::ONE,
         );
@@ -1335,14 +1367,14 @@ mod tests_greeks {
     #[test]
     fn test_greeks_single_short_put() {
         setup_logger();
-        let position = create_test_position(f2p!(100.0), Side::Short, OptionStyle::Put);
+        let position = create_test_position(pos!(100.0), Side::Short, OptionStyle::Put);
         let strategy = CustomStrategy::new(
             "Short Put".to_string(),
             "TEST".to_string(),
             "Test Description".to_string(),
-            f2p!(90.0),
+            pos!(90.0),
             vec![position.clone()],
-            f2p!(0.001),
+            pos!(0.001),
             100,
             Positive::ONE,
         );
@@ -1360,17 +1392,17 @@ mod tests_greeks {
 
     #[test]
     fn test_greeks_multiple_positions() {
-        let long_call = create_test_position(f2p!(100.0), Side::Long, OptionStyle::Call);
-        let short_put = create_test_position(f2p!(95.0), Side::Short, OptionStyle::Put);
-        let long_put = create_test_position(f2p!(105.0), Side::Long, OptionStyle::Put);
+        let long_call = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
+        let short_put = create_test_position(pos!(95.0), Side::Short, OptionStyle::Put);
+        let long_put = create_test_position(pos!(105.0), Side::Long, OptionStyle::Put);
 
         let strategy = CustomStrategy::new(
             "Multiple".to_string(),
             "TEST".to_string(),
             "Test Description".to_string(),
-            f2p!(100.0),
+            pos!(100.0),
             vec![long_call.clone(), short_put.clone(), long_put.clone()],
-            f2p!(0.001),
+            pos!(0.001),
             100,
             Positive::ONE,
         );
@@ -1414,16 +1446,16 @@ mod tests_greeks {
 
     #[test]
     fn test_greeks_straddle() {
-        let long_call = create_test_position(f2p!(100.0), Side::Long, OptionStyle::Call);
-        let long_put = create_test_position(f2p!(100.0), Side::Long, OptionStyle::Put);
+        let long_call = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
+        let long_put = create_test_position(pos!(100.0), Side::Long, OptionStyle::Put);
 
         let strategy = CustomStrategy::new(
             "Straddle".to_string(),
             "TEST".to_string(),
             "Test Description".to_string(),
-            f2p!(100.0),
+            pos!(100.0),
             vec![long_call.clone(), long_put.clone()],
-            f2p!(0.001),
+            pos!(0.001),
             100,
             Positive::ONE,
         );

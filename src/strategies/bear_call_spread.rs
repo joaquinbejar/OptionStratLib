@@ -50,7 +50,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
-use crate::{d2fu, f2du, f2p, Positive};
+use crate::{d2fu, f2du, pos, Positive};
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
@@ -83,9 +83,9 @@ impl BearCallSpread {
         mut short_strike: Positive,
         mut long_strike: Positive,
         expiration: ExpirationDate,
-        implied_volatility: f64,
-        risk_free_rate: f64,
-        dividend_yield: f64,
+        implied_volatility: Positive,
+        risk_free_rate: Decimal,
+        dividend_yield: Positive,
         quantity: Positive,
         premium_short_call: f64,
         premium_long_call: f64,
@@ -223,7 +223,7 @@ impl Strategies for BearCallSpread {
     }
 
     fn total_cost(&self) -> Positive {
-        f2p!(self.short_call.net_cost() + self.long_call.net_cost())
+        pos!(self.short_call.net_cost() + self.long_call.net_cost())
     }
 
     fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
@@ -231,14 +231,6 @@ impl Strategies for BearCallSpread {
             Decimal::from_f64(self.short_call.net_premium_received() - self.long_call.net_cost())
                 .unwrap(),
         )
-    }
-
-    fn fees(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call.open_fee
-            + self.short_call.close_fee
-            + self.long_call.open_fee
-            + self.long_call.close_fee;
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -363,7 +355,7 @@ impl Optimizable for BearCallSpread {
             short.strike_price,
             long.strike_price,
             self.short_call.option.expiration_date.clone(),
-            short.implied_volatility.unwrap().to_f64() / 100.0,
+            short.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
@@ -461,7 +453,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         Ok(self.short_call.option.expiration_date.clone())
     }
 
-    fn get_risk_free_rate(&self) -> Option<f64> {
+    fn get_risk_free_rate(&self) -> Option<Decimal> {
         Some(self.short_call.option.risk_free_rate)
     }
 
@@ -469,14 +461,14 @@ impl ProbabilityAnalysis for BearCallSpread {
         let break_even_point = self.get_break_even_points()?[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            f2p!(self.short_call.option.implied_volatility),
-            f2p!(self.long_call.option.implied_volatility),
+            self.short_call.option.implied_volatility,
+            self.long_call.option.implied_volatility,
         ]);
 
         let mut profit_range = ProfitLossRange::new(
             None,
             Some(break_even_point),
-            f2p!(self.max_profit()?.to_f64()),
+            pos!(self.max_profit()?.to_f64()),
         )?;
 
         profit_range.calculate_probability(
@@ -497,14 +489,14 @@ impl ProbabilityAnalysis for BearCallSpread {
         let break_even_point = self.get_break_even_points()?[0];
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
-            f2p!(self.short_call.option.implied_volatility),
-            f2p!(self.long_call.option.implied_volatility),
+            self.short_call.option.implied_volatility,
+            self.long_call.option.implied_volatility,
         ]);
 
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_point),
             Some(self.long_call.option.strike_price),
-            f2p!(self.max_loss()?.to_f64()),
+            pos!(self.max_loss()?.to_f64()),
         )?;
 
         loss_range.calculate_probability(
@@ -563,7 +555,7 @@ impl DeltaNeutrality for BearCallSpread {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = d2fu!(self.short_call.option.delta().unwrap()).unwrap();
         vec![DeltaAdjustment::SellOptions {
-            quantity: f2p!((net_delta.abs() / delta).abs()) * self.short_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -573,7 +565,7 @@ impl DeltaNeutrality for BearCallSpread {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = d2fu!(self.long_call.option.delta().unwrap()).unwrap();
         vec![DeltaAdjustment::BuyOptions {
-            quantity: f2p!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
+            quantity: pos!((net_delta.abs() / delta).abs()) * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -584,20 +576,22 @@ impl DeltaNeutrality for BearCallSpread {
 mod tests_bear_call_spread_strategies {
     use super::*;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),                // underlying_price
-            f2p!(95.0),                 // short_strike
-            f2p!(105.0),                // long_strike
+            pos!(100.0),                // underlying_price
+            pos!(95.0),                 // short_strike
+            pos!(105.0),                // long_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
-            f2p!(1.0),                  // quantity
+            pos!(0.20),                 // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
             10.0,                       // premium_short_call
             5.0,                        // premium_long_call
             0.5,                        // open_fee_short_call
@@ -610,7 +604,7 @@ mod tests_bear_call_spread_strategies {
     #[test]
     fn test_get_underlying_price() {
         let spread = create_test_spread();
-        assert_eq!(spread.get_underlying_price(), f2p!(100.0));
+        assert_eq!(spread.get_underlying_price(), pos!(100.0));
     }
 
     #[test]
@@ -658,8 +652,8 @@ mod tests_bear_call_spread_strategies {
     fn test_max_loss_negative() {
         let mut spread = create_test_spread();
         // Modify strikes to create invalid width
-        spread.short_call.option.strike_price = f2p!(105.0);
-        spread.long_call.option.strike_price = f2p!(95.0);
+        spread.short_call.option.strike_price = pos!(105.0);
+        spread.long_call.option.strike_price = pos!(95.0);
 
         let result = spread.max_loss();
         assert!(result.is_err());
@@ -764,7 +758,7 @@ mod tests_bear_call_spread_strategies {
 
         // Break even should be short strike plus net premium received per contract
         let expected_break_even = spread.short_call.option.strike_price
-            + f2p!(
+            + pos!(
                 spread.net_premium_received().unwrap().to_f64().unwrap()
                     / spread.short_call.option.quantity.to_f64()
             );
@@ -780,14 +774,14 @@ mod tests_bear_call_spread_strategies {
     fn test_with_different_quantities() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(2.0), // quantity = 2
+            pos!(0.20),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(2.0), // quantity = 2
             2.0,
             1.0,
             0.5,
@@ -814,14 +808,14 @@ mod tests_bear_call_spread_strategies {
     fn test_with_different_strikes() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(90.0),  // wider spread
-            f2p!(110.0), // wider spread
+            pos!(100.0),
+            pos!(90.0),  // wider spread
+            pos!(110.0), // wider spread
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.5,
@@ -843,6 +837,7 @@ mod tests_bear_call_spread_positionable {
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::Options;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     // Helper function to create a test option
     fn create_test_option(side: Side) -> Options {
@@ -850,14 +845,14 @@ mod tests_bear_call_spread_positionable {
             OptionType::European,
             side,
             "TEST".to_string(),
-            f2p!(100.0),
+            pos!(100.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            f2p!(1.0),
-            f2p!(100.0),
-            0.05,
+            pos!(0.2),
+            pos!(1.0),
+            pos!(100.0),
+            dec!(0.05),
             OptionStyle::Call,
-            0.0,
+            Positive::ZERO,
             None,
         )
     }
@@ -877,14 +872,14 @@ mod tests_bear_call_spread_positionable {
     fn test_add_short_position() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -904,14 +899,14 @@ mod tests_bear_call_spread_positionable {
     fn test_add_long_position() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -931,14 +926,14 @@ mod tests_bear_call_spread_positionable {
     fn test_get_positions() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -960,14 +955,14 @@ mod tests_bear_call_spread_positionable {
     fn test_add_multiple_positions() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -990,14 +985,14 @@ mod tests_bear_call_spread_positionable {
     fn test_replace_positions() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -1019,14 +1014,14 @@ mod tests_bear_call_spread_positionable {
     fn test_positions_integrity() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -1055,20 +1050,21 @@ mod tests_bear_call_spread_positionable {
 #[cfg(test)]
 mod tests_bear_call_spread_validable {
     use super::*;
-    use crate::f2p;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn create_valid_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),                // underlying_price
-            f2p!(95.0),                 // short_strike
-            f2p!(105.0),                // long_strike
+            pos!(100.0),                // underlying_price
+            pos!(95.0),                 // short_strike
+            pos!(105.0),                // long_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
-            f2p!(1.0),                  // quantity
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
             2.0,                        // premium_short_call
             1.0,                        // premium_long_call
             0.0,                        // fees
@@ -1088,14 +1084,14 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_strike_order() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(105.0), // short strike higher than long strike
-            f2p!(95.0),  // long strike lower than short strike
+            pos!(100.0),
+            pos!(105.0), // short strike higher than long strike
+            pos!(95.0),  // long strike lower than short strike
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -1110,14 +1106,14 @@ mod tests_bear_call_spread_validable {
     fn test_equal_strikes() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(100.0), // both strikes equal
-            f2p!(100.0), // both strikes equal
+            pos!(100.0),
+            pos!(100.0), // both strikes equal
+            pos!(100.0), // both strikes equal
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -1132,7 +1128,7 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_short_call() {
         let mut spread = create_valid_spread();
         // Invalidate short call by setting an invalid quantity
-        spread.short_call.option.quantity = f2p!(0.0);
+        spread.short_call.option.quantity = pos!(0.0);
         assert!(!spread.validate());
     }
 
@@ -1140,7 +1136,7 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_long_call() {
         let mut spread = create_valid_spread();
         // Invalidate long call by setting an invalid quantity
-        spread.long_call.option.quantity = f2p!(0.0);
+        spread.long_call.option.quantity = pos!(0.0);
         assert!(!spread.validate());
     }
 
@@ -1149,36 +1145,14 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_expiration_dates() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(0.0), // Invalid expiration (0 days)
-            0.20,
-            0.05,
-            0.0,
-            f2p!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-        );
-        assert!(!spread.validate());
-    }
-
-    #[test]
-    fn test_invalid_volatility() {
-        let spread = BearCallSpread::new(
-            "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
-            ExpirationDate::Days(30.0),
-            -0.20, // Invalid negative volatility
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -1193,14 +1167,14 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_underlying_price() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(0.0), // Invalid underlying price
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(0.0), // Invalid underlying price
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -1215,14 +1189,14 @@ mod tests_bear_call_spread_validable {
     fn test_strikes_too_close() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(99.999),  // Strikes very close to each other
-            f2p!(100.001), // but technically different
+            pos!(100.0),
+            pos!(99.999),  // Strikes very close to each other
+            pos!(100.001), // but technically different
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.0,
@@ -1238,14 +1212,14 @@ mod tests_bear_call_spread_validable {
     fn test_validation_with_different_quantities() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(2.0), // Different quantity
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(2.0), // Different quantity
             2.0,
             1.0,
             0.0,
@@ -1261,21 +1235,23 @@ mod tests_bear_call_spread_validable {
 mod tests_bear_call_spread_profit {
     use super::*;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::pricing::payoff::Profit;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),                // underlying_price
-            f2p!(95.0),                 // short_strike
-            f2p!(105.0),                // long_strike
+            pos!(100.0),                // underlying_price
+            pos!(95.0),                 // short_strike
+            pos!(105.0),                // long_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
-            f2p!(1.0),                  // quantity
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
             2.0,                        // premium_short_call
             1.0,                        // premium_long_call
             0.0,                        // open_fee_short_call
@@ -1288,7 +1264,7 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_below_short_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(f2p!(90.0));
+        let profit = spread.calculate_profit_at(pos!(90.0));
         // When price is below short strike, both options expire worthless
         // Profit should be the net premium received
         let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap();
@@ -1298,7 +1274,7 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(f2p!(95.0));
+        let profit = spread.calculate_profit_at(pos!(95.0));
         // At short strike, short call is at-the-money
         let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
@@ -1307,7 +1283,7 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
-        let test_price = f2p!(100.0);
+        let test_price = pos!(100.0);
         let profit = spread.calculate_profit_at(test_price);
         // Between strikes, only short call is in-the-money
         let intrinsic_value = test_price - spread.short_call.option.strike_price;
@@ -1319,10 +1295,10 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(f2p!(105.0));
+        let profit = spread.calculate_profit_at(pos!(105.0));
         // At long strike, both options are in-the-money
-        let short_intrinsic = f2p!(105.0) - spread.short_call.option.strike_price;
-        let long_intrinsic = f2p!(105.0) - spread.long_call.option.strike_price;
+        let short_intrinsic = pos!(105.0) - spread.short_call.option.strike_price;
+        let long_intrinsic = pos!(105.0) - spread.long_call.option.strike_price;
         let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap()
             - short_intrinsic.to_f64()
             + long_intrinsic.to_f64();
@@ -1332,7 +1308,7 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_above_long_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(f2p!(110.0));
+        let profit = spread.calculate_profit_at(pos!(110.0));
         // Maximum loss occurs when price is above long strike
         let expected_profit = -spread.max_loss().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
@@ -1351,14 +1327,14 @@ mod tests_bear_call_spread_profit {
     fn test_profit_with_different_quantities() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(2.0), // quantity = 2
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(2.0), // quantity = 2
             2.0,
             1.0,
             0.0,
@@ -1367,13 +1343,13 @@ mod tests_bear_call_spread_profit {
             0.0,
         );
 
-        let profit = spread.calculate_profit_at(f2p!(90.0));
+        let profit = spread.calculate_profit_at(pos!(90.0));
         // With quantity = 2, profit should be double
         let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
         assert_relative_eq!(
             profit,
-            2.0 * create_test_spread().calculate_profit_at(f2p!(90.0)),
+            2.0 * create_test_spread().calculate_profit_at(pos!(90.0)),
             epsilon = 0.0001
         );
     }
@@ -1382,14 +1358,14 @@ mod tests_bear_call_spread_profit {
     fn test_profit_with_fees() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.20,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             2.0,
             1.0,
             0.5, // open_fee_short_call
@@ -1398,11 +1374,11 @@ mod tests_bear_call_spread_profit {
             0.5, // close_fee_long_call
         );
 
-        let profit = spread.calculate_profit_at(f2p!(90.0));
+        let profit = spread.calculate_profit_at(pos!(90.0));
         // Net premium should be reduced by total fees
         let expected_profit = spread.net_premium_received().unwrap().to_f64().unwrap();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
-        assert!(profit < create_test_spread().calculate_profit_at(f2p!(90.0)));
+        assert!(profit < create_test_spread().calculate_profit_at(pos!(90.0)));
     }
 }
 
@@ -1413,44 +1389,45 @@ mod tests_bear_call_spread_optimizable {
     use crate::spos;
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     // Helper function to create a mock OptionChain for testing
     fn create_mock_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", f2p!(100.0), "2024-03-15".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
 
         // Add options with different strikes and prices
         chain.add_option(
-            f2p!(95.0),   // strike
-            spos!(6.0),   // call_bid
-            spos!(6.2),   // call_ask
-            spos!(1.0),   // put_bid
-            spos!(1.2),   // put_ask
-            spos!(0.2),   // implied_vol
-            Some(0.7),    // delta
-            spos!(100.0), // volume
-            Some(50),     // open_interest
+            pos!(95.0),      // strike
+            spos!(6.0),      // call_bid
+            spos!(6.2),      // call_ask
+            spos!(1.0),      // put_bid
+            spos!(1.2),      // put_ask
+            spos!(0.2),      // implied_vol
+            Some(dec!(0.7)), // delta
+            spos!(100.0),    // volume
+            Some(50),        // open_interest
         );
 
         chain.add_option(
-            f2p!(100.0),
+            pos!(100.0),
             spos!(3.0),
             spos!(3.2),
             spos!(3.0),
             spos!(3.2),
             spos!(0.2),
-            Some(0.5),
+            Some(dec!(0.5)),
             spos!(200.0),
             Some(100),
         );
 
         chain.add_option(
-            f2p!(105.0),
+            pos!(105.0),
             spos!(1.0),
             spos!(1.2),
             spos!(6.0),
             spos!(6.2),
             spos!(0.2),
-            Some(0.3),
+            Some(dec!(0.3)),
             spos!(150.0),
             Some(75),
         );
@@ -1462,14 +1439,14 @@ mod tests_bear_call_spread_optimizable {
     fn create_test_strategy() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             ExpirationDate::Days(30.0),
-            0.2,
-            0.05,
-            0.0,
-            f2p!(1.0),
+            pos!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos!(1.0),
             3.0,
             1.2,
             0.0,
@@ -1571,7 +1548,7 @@ mod tests_bear_call_spread_optimizable {
     fn test_filter_combinations_empty_chain() {
         let strategy = create_test_strategy();
         let empty_chain =
-            OptionChain::new("TEST", f2p!(100.0), "2024-03-15".to_string(), None, None);
+            OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
         let combinations: Vec<_> = strategy
             .filter_combinations(&empty_chain, FindOptimalSide::All)
             .collect();
@@ -1584,13 +1561,13 @@ mod tests_bear_call_spread_optimizable {
         let mut chain = create_mock_option_chain();
         // Add an option with invalid prices
         chain.add_option(
-            f2p!(110.0),
+            pos!(110.0),
             None, // Invalid call_bid
             None, // Invalid call_ask
             spos!(1.0),
             spos!(1.2),
             spos!(0.2),
-            Some(0.1),
+            Some(dec!(0.1)),
             spos!(50.0),
             Some(25),
         );
@@ -1616,9 +1593,9 @@ mod tests_bear_call_spread_optimizable {
     fn test_find_optimal_no_valid_combinations() {
         let mut strategy = create_test_strategy();
         let mut empty_chain =
-            OptionChain::new("TEST", f2p!(100.0), "2024-03-15".to_string(), None, None);
+            OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
         // Add invalid options
-        empty_chain.add_option(f2p!(95.0), None, None, None, None, None, None, None, None);
+        empty_chain.add_option(pos!(95.0), None, None, None, None, None, None, None, None);
 
         // Should not panic when no valid combinations exist
         strategy.find_optimal(
@@ -1655,19 +1632,20 @@ mod tests_bear_call_spread_optimizable {
 #[cfg(test)]
 mod tests_bear_call_spread_graph {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),                // underlying_price
-            f2p!(105.0),                // short_strike
-            f2p!(110.0),                // long_strike
+            pos!(100.0),                // underlying_price
+            pos!(105.0),                // short_strike
+            pos!(110.0),                // long_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
-            f2p!(1.0),                  // quantity
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
             2.0,                        // premium_short_call
             1.0,                        // premium_long_call
             0.0,                        // fees
@@ -1717,20 +1695,20 @@ mod tests_bear_call_spread_graph {
     fn test_get_values() {
         let spread = create_test_spread();
         let test_prices = vec![
-            f2p!(95.0),
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(110.0),
-            f2p!(115.0),
+            pos!(95.0),
+            pos!(100.0),
+            pos!(105.0),
+            pos!(110.0),
+            pos!(115.0),
         ];
 
         let values = spread.get_values(&test_prices);
         assert_eq!(values.len(), 5);
-        assert_eq!(values[0], spread.calculate_profit_at(f2p!(95.0)));
-        assert_eq!(values[1], spread.calculate_profit_at(f2p!(100.0)));
-        assert_eq!(values[2], spread.calculate_profit_at(f2p!(105.0)));
-        assert_eq!(values[3], spread.calculate_profit_at(f2p!(110.0)));
-        assert_eq!(values[4], spread.calculate_profit_at(f2p!(115.0)));
+        assert_eq!(values[0], spread.calculate_profit_at(pos!(95.0)));
+        assert_eq!(values[1], spread.calculate_profit_at(pos!(100.0)));
+        assert_eq!(values[2], spread.calculate_profit_at(pos!(105.0)));
+        assert_eq!(values[3], spread.calculate_profit_at(pos!(110.0)));
+        assert_eq!(values[4], spread.calculate_profit_at(pos!(115.0)));
         assert_eq!(
             values[0],
             spread.max_profit().unwrap_or(Positive::ZERO).to_f64()
@@ -1745,19 +1723,22 @@ mod tests_bear_call_spread_graph {
 #[cfg(test)]
 mod tests_bear_call_spread_probability {
     use super::*;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            f2p!(100.0),                // underlying_price
-            f2p!(105.0),                // short_strike
-            f2p!(110.0),                // long_strike
+            pos!(100.0),                // underlying_price
+            pos!(105.0),                // short_strike
+            pos!(110.0),                // long_strike
             ExpirationDate::Days(30.0), // expiration
-            0.20,                       // implied_volatility
-            0.05,                       // risk_free_rate
-            0.0,                        // dividend_yield
-            f2p!(1.0),                  // quantity
+            pos!(0.2),                  // implied_volatility
+            dec!(0.05),                 // risk_free_rate
+            Positive::ZERO,             // dividend_yield
+            pos!(1.0),                  // quantity
             2.0,                        // premium_short_call
             1.0,                        // premium_long_call
             0.0,                        // open_fee_short_call
@@ -1781,7 +1762,7 @@ mod tests_bear_call_spread_probability {
     #[test]
     fn test_get_risk_free_rate() {
         let spread = create_test_spread();
-        assert_eq!(spread.get_risk_free_rate(), Some(0.05));
+        assert_eq!(spread.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
     }
 
     #[test]
@@ -1822,15 +1803,15 @@ mod tests_bear_call_spread_probability {
 
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
     fn test_probability_with_volatility_adjustment() {
         let spread = create_test_spread();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.25),
-            std_dev_adjustment: f2p!(0.05),
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.05),
         });
 
         let result = spread.probability_of_profit(vol_adj, None);
@@ -1838,7 +1819,7 @@ mod tests_bear_call_spread_probability {
 
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
@@ -1854,7 +1835,7 @@ mod tests_bear_call_spread_probability {
 
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
@@ -1881,7 +1862,7 @@ mod tests_bear_call_spread_probability {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= f2p!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
     }
 }
 
@@ -1892,33 +1873,34 @@ mod tests_delta {
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{d2fu, f2p};
+    use crate::{d2fu, pos};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
-        let underlying_price = f2p!(5781.88);
+        let underlying_price = pos!(5781.88);
         BearCallSpread::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
             long_strike,      // long_strike
             short_strike,     // short_strike
             ExpirationDate::Days(2.0),
-            0.18,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(1.0), // long quantity
-            85.04,     // premium_long
-            29.85,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // open_fee_long
-            0.73,      // close_fee_long
-            0.73,      // close_fee_short
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // long quantity
+            85.04,          // premium_long
+            29.85,          // premium_short
+            0.78,           // open_fee_long
+            0.78,           // open_fee_long
+            0.73,           // close_fee_long
+            0.73,           // close_fee_short
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(5840.0), f2p!(5820.0));
+        let strategy = get_strategy(pos!(5840.0), pos!(5820.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1930,14 +1912,14 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::SellOptions {
-                quantity: f2p!(0.3660429216960173),
-                strike: f2p!(5840.0),
+                quantity: pos!(0.3660429216960173),
+                strike: pos!(5840.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.short_call.option.clone();
-        option.quantity = f2p!(0.3660429216960173);
+        option.quantity = pos!(0.3660429216960173);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, -0.0859127, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1949,7 +1931,7 @@ mod tests_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(5800.0), f2p!(5820.0));
+        let strategy = get_strategy(pos!(5800.0), pos!(5820.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1961,14 +1943,14 @@ mod tests_delta {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.302993169440645),
-                strike: f2p!(5820.0),
+                quantity: pos!(0.302993169440645),
+                strike: pos!(5820.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = f2p!(0.302993169440645);
+        option.quantity = pos!(0.302993169440645);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.09714, epsilon = 0.0001);
         assert_relative_eq!(
@@ -1980,7 +1962,7 @@ mod tests_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(f2p!(5820.0), f2p!(5820.0));
+        let strategy = get_strategy(pos!(5820.0), pos!(5820.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -1999,36 +1981,37 @@ mod tests_delta_size {
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{d2fu, f2p, Positive};
+    use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
-        let underlying_price = f2p!(5781.88);
+        let underlying_price = pos!(5781.88);
         BearCallSpread::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
             long_strike,      // long_strike
             short_strike,     // short_strike
             ExpirationDate::Days(2.0),
-            0.18,      // implied_volatility
-            0.05,      // risk_free_rate
-            0.0,       // dividend_yield
-            f2p!(3.0), // long quantity
-            85.04,     // premium_long
-            29.85,     // premium_short
-            0.78,      // open_fee_long
-            0.78,      // open_fee_long
-            0.73,      // close_fee_long
-            0.73,      // close_fee_short
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(3.0),      // long quantity
+            85.04,          // premium_long
+            29.85,          // premium_short
+            0.78,           // open_fee_long
+            0.78,           // open_fee_long
+            0.73,           // close_fee_long
+            0.73,           // close_fee_short
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(f2p!(5840.6), f2p!(5820.5));
+        let strategy = get_strategy(pos!(5840.6), pos!(5820.5));
 
         let size = 0.2579;
-        let delta = f2p!(1.110025440233733);
+        let delta = pos!(1.110025440233733);
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2041,7 +2024,7 @@ mod tests_delta_size {
             suggestion[0],
             DeltaAdjustment::SellOptions {
                 quantity: delta,
-                strike: f2p!(5840.6),
+                strike: pos!(5840.6),
                 option_type: OptionStyle::Call
             }
         );
@@ -2059,7 +2042,7 @@ mod tests_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(f2p!(5800.0), f2p!(5820.0));
+        let strategy = get_strategy(pos!(5800.0), pos!(5820.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,
@@ -2071,14 +2054,14 @@ mod tests_delta_size {
         assert_eq!(
             suggestion[0],
             DeltaAdjustment::BuyOptions {
-                quantity: f2p!(0.9089795083219351),
-                strike: f2p!(5820.0),
+                quantity: pos!(0.9089795083219351),
+                strike: pos!(5820.0),
                 option_type: OptionStyle::Call
             }
         );
 
         let mut option = strategy.long_call.option.clone();
-        option.quantity = f2p!(0.9089795083219351);
+        option.quantity = pos!(0.9089795083219351);
         let delta = d2fu!(option.delta().unwrap()).unwrap();
         assert_relative_eq!(delta, 0.29143, epsilon = 0.0001);
         assert_relative_eq!(
@@ -2090,7 +2073,7 @@ mod tests_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(f2p!(5820.0), f2p!(5820.0));
+        let strategy = get_strategy(pos!(5820.0), pos!(5820.0));
 
         assert_relative_eq!(
             strategy.calculate_net_delta().net_delta,

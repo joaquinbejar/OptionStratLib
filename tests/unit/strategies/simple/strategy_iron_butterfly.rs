@@ -5,7 +5,8 @@ use optionstratlib::strategies::iron_butterfly::IronButterfly;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, f2p};
+use optionstratlib::{assert_positivef64_relative_eq, pos};
+use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
@@ -13,25 +14,25 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the IronButterfly strategy
-    let underlying_price = f2p!(2646.9);
+    let underlying_price = pos!(2646.9);
 
     let strategy = IronButterfly::new(
         "GOLD".to_string(),
         underlying_price, // underlying_price
-        f2p!(2725.0),     // short_call_strike
-        f2p!(2800.0),     // long_call_strike
-        f2p!(2500.0),     // long_put_strike
+        pos!(2725.0),     // short_call_strike
+        pos!(2800.0),     // long_call_strike
+        pos!(2500.0),     // long_put_strike
         ExpirationDate::Days(30.0),
-        0.1548,    // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(2.0), // quantity
-        38.8,      // premium_short_call
-        30.4,      // premium_short_put
-        23.3,      // premium_long_call
-        16.8,      // premium_long_put
-        0.96,      // open_fee
-        0.96,      // close_fee
+        pos!(0.1548),   // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(2.0),      // quantity
+        38.8,           // premium_short_call
+        30.4,           // premium_short_put
+        23.3,           // premium_long_call
+        16.8,           // premium_long_put
+        0.96,           // open_fee
+        0.96,           // close_fee
     );
 
     // Validate strategy
@@ -46,12 +47,12 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, f2p!(42.839), f2p!(0.0001));
-    assert_positivef64_relative_eq!(strategy.total_cost(), f2p!(218.599), f2p!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 7.68);
+    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(42.839), pos!(0.0001));
+    assert_positivef64_relative_eq!(strategy.total_cost(), pos!(218.599), pos!(0.0001));
+    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 15.36);
 
     // Test range calculations
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     assert!(!price_range.is_empty());
     let break_even_points = strategy.get_break_even_points().unwrap();
     let range = break_even_points[1] - break_even_points[0];

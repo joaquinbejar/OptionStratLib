@@ -1,7 +1,7 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::f2p;
 use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -9,6 +9,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -27,23 +28,23 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,   // long_call_strike
         Positive::ZERO,   // long_put_strike
         ExpirationDate::Days(5.0),
-        ZERO,      // implied_volatility
-        ZERO,      // risk_free_rate
-        ZERO,      // dividend_yield
-        f2p!(1.0), // quantity
-        ZERO,      // premium_short_call
-        ZERO,      // premium_short_put
-        ZERO,      // premium_long_call
-        ZERO,      // premium_long_put
-        1.0,       // open_fee
-        1.0,       // close_fee
+        Positive::ZERO, // implied_volatility
+        Decimal::ZERO,  // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // quantity
+        ZERO,           // premium_short_call
+        ZERO,           // premium_short_put
+        ZERO,           // premium_long_call
+        ZERO,           // premium_long_put
+        1.0,            // open_fee
+        1.0,            // close_fee
     );
 
     strategy.best_ratio(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
 
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

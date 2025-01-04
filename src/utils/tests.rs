@@ -36,22 +36,22 @@ macro_rules! assert_positivef64_relative_eq {
 
 #[cfg(test)]
 mod tests_assert_positivef64_relative_eq {
-    use crate::f2p;
+    use crate::pos;
     use crate::Positive;
 
     #[test]
     fn test_exact_equality() {
-        let a = f2p!(1.0);
-        let b = f2p!(1.0);
-        let epsilon = f2p!(0.0001);
+        let a = pos!(1.0);
+        let b = pos!(1.0);
+        let epsilon = pos!(0.0001);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_close_values() {
-        let a = f2p!(1.0);
-        let b = f2p!(1.0001);
-        let epsilon = f2p!(0.001);
+        let a = pos!(1.0);
+        let b = pos!(1.0001);
+        let epsilon = pos!(0.001);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
@@ -59,57 +59,57 @@ mod tests_assert_positivef64_relative_eq {
     fn test_zero_values() {
         let a = Positive::ZERO;
         let b = Positive::ZERO;
-        let epsilon = f2p!(0.0001);
+        let epsilon = pos!(0.0001);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_zero_and_small_value() {
         let a = Positive::ZERO;
-        let b = f2p!(0.00001);
-        let epsilon = f2p!(0.00001);
+        let b = pos!(0.00001);
+        let epsilon = pos!(0.00001);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn test_values_exceeding_epsilon() {
-        let a = f2p!(1.0);
-        let b = f2p!(1.002);
-        let epsilon = f2p!(0.001);
+        let a = pos!(1.0);
+        let b = pos!(1.002);
+        let epsilon = pos!(0.001);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_large_values() {
-        let a = f2p!(1000000.0);
-        let b = f2p!(1000001.0);
-        let epsilon = f2p!(0.000002);
+        let a = pos!(1000000.0);
+        let b = pos!(1000001.0);
+        let epsilon = pos!(0.000002);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_very_small_values() {
-        let a = f2p!(0.0000001);
-        let b = f2p!(0.0000001000001);
-        let epsilon = f2p!(0.000002);
+        let a = pos!(0.0000001);
+        let b = pos!(0.0000001000001);
+        let epsilon = pos!(0.000002);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn test_significantly_different_values() {
-        let a = f2p!(1.0);
-        let b = f2p!(2.0);
-        let epsilon = f2p!(0.1);
+        let a = pos!(1.0);
+        let b = pos!(2.0);
+        let epsilon = pos!(0.1);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_equal_within_epsilon() {
-        let a = f2p!(100.0);
-        let b = f2p!(100.1);
-        let epsilon = f2p!(0.002);
+        let a = pos!(100.0);
+        let b = pos!(100.1);
+        let epsilon = pos!(0.002);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 
@@ -117,8 +117,8 @@ mod tests_assert_positivef64_relative_eq {
     #[should_panic(expected = "assertion failed")]
     fn test_zero_and_large_value() {
         let a = Positive::ZERO;
-        let b = f2p!(1.0);
-        let epsilon = f2p!(0.0001);
+        let b = pos!(1.0);
+        let epsilon = pos!(0.0001);
         assert_positivef64_relative_eq!(a, b, epsilon);
     }
 }

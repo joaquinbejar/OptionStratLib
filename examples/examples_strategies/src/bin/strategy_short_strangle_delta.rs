@@ -1,37 +1,38 @@
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::ShortStrangle;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = f2p!(7250.6);
+    let underlying_price = pos!(7250.6);
 
     let strategy = ShortStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        f2p!(7450.0),     // call_strike
-        f2p!(7050.0),     // put_strike
+        pos!(7450.0),     // call_strike
+        pos!(7050.0),     // put_strike
         ExpirationDate::Days(45.0),
-        0.3745,    // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(2.0), // quantity
-        84.2,      // premium_short_call
-        353.2,     // premium_short_put
-        7.01,      // open_fee_short_call
-        7.01,      // close_fee_short_call
-        7.01,      // open_fee_short_put
-        7.01,      // close_fee_short_put
+        pos!(0.3745),   // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(2.0),      // quantity
+        84.2,           // premium_short_call
+        353.2,          // premium_short_put
+        7.01,           // open_fee_short_call
+        7.01,           // close_fee_short_call
+        7.01,           // open_fee_short_put
+        7.01,           // close_fee_short_put
     );
 
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

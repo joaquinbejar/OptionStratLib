@@ -56,56 +56,58 @@
 //! ### Basic Random Walk Generation
 //!
 //! ```rust
-//! use optionstratlib::Positive;
+//! use rust_decimal_macros::dec;
+//! use optionstratlib::{spos, Positive};
 //! use optionstratlib::utils::time::TimeFrame;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::simulation::{RandomWalkGraph, Walkable};
 //!
 //! // Create a new random walk graph
 //! let mut walk = RandomWalkGraph::new(
 //!     "Asset Price Simulation".to_string(),
-//!     Some(0.05),     // risk-free rate
-//!     Some(0.02),     // dividend yield
+//!     Some(dec!(0.05)),   // risk-free rate
+//!     spos!(0.02),   // dividend yield
 //!     TimeFrame::Day,
-//!     20,             // volatility window
-//!     Some(f2p!(0.2)) // initial volatility
+//!     20,   // volatility window
+//!     Some(pos!(0.2)) // initial volatility
 //! );
 //!
 //! // Generate the random walk
 //! walk.generate_random_walk(
-//!     252,        // number of steps (1 year of trading days)
-//!     f2p!(100.0), // initial price
-//!     0.0,        // mean (drift)
-//!     f2p!(0.2),  // standard deviation
-//!     f2p!(0.01)  // volatility of volatility
+//!     252,   // number of steps (1 year of trading days)
+//!     pos!(100.0),   // initial price
+//!     0.0,   // mean (drift)
+//!     pos!(0.2),   // standard deviation
+//!     pos!(0.01)  // volatility of volatility
 //! );
 //! ```
 //!
 //! ### Using the Iterator Interface
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::Positive;
 //! use optionstratlib::utils::time::TimeFrame;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::simulation::{RandomWalkGraph, Walkable};
 //!
 //! let mut walk = RandomWalkGraph::new(
 //!     "Price Path".to_string(),
-//!     Some(0.05),
-//!     Some(0.02),
+//!     Some(dec!(0.05)),
+//!     Some(pos!(0.02)),
 //!     TimeFrame::Day,
 //!     20,
-//!     Some(f2p!(0.2))
+//!     Some(pos!(0.2))
 //! );
 //!
 //! // Generate path
 //! walk.generate_random_walk(
 //!     252,
-//!     f2p!(100.0),
+//!     pos!(100.0),
 //!     0.0,
-//!     f2p!(0.2),
-//!     f2p!(0.01)
+//!     pos!(0.2),
+//!     pos!(0.01)
 //! );
 //!
 //! // Iterate through the price path
@@ -121,19 +123,20 @@
 //! ### Visualization Integration
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::visualization::utils::Graph;
-//! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::{spos, Positive};
+//! use optionstratlib::pos;
 //! use optionstratlib::simulation::RandomWalkGraph;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let mut walk = RandomWalkGraph::new(
 //!     "Price Path".to_string(),
-//!     Some(0.05),
-//!     Some(0.02),
+//!     Some(dec!(0.05)),
+//!     spos!(0.02),
 //!     TimeFrame::Day,
 //!     20,
-//!     Some(f2p!(0.2))
+//!     Some(pos!(0.2))
 //! );
 //!
 //! // Get values for plotting

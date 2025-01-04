@@ -11,7 +11,8 @@ use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
 use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
-use crate::{f2p, Positive};
+use crate::{pos, Positive};
+use rust_decimal::Decimal;
 use tracing::warn;
 
 /// Trait for analyzing probabilities and risk metrics of option strategies
@@ -94,7 +95,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 return if current_profit <= 0.0 {
                     Ok(Positive::ZERO)
                 } else {
-                    Ok(f2p!(current_profit))
+                    Ok(pos!(current_profit))
                 };
             }
         }
@@ -140,7 +141,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             Ok(Positive::ZERO)
         } else {
             let trend_adjustment = trend.map_or(1.0, |t| 1.0 / (1.0 + t.drift_rate.abs()));
-            Ok(f2p!(expected_value * trend_adjustment))
+            Ok(pos!(expected_value * trend_adjustment))
         }
     }
 
@@ -230,7 +231,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     }
 
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError>;
-    fn get_risk_free_rate(&self) -> Option<f64>;
+    fn get_risk_free_rate(&self) -> Option<Decimal>;
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
 }
@@ -239,17 +240,18 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 mod tests_probability_analysis {
     use super::*;
     use crate::error::strategies::StrategyError;
-    use crate::f2p;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use crate::pricing::payoff::Profit;
     use crate::strategies::base::{Positionable, Strategies, Validable};
     use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
 
     // Mock struct para testing
     struct MockStrategy {
         underlying_price: Positive,
         expiration: ExpirationDate,
-        risk_free_rate: f64,
+        risk_free_rate: Decimal,
         break_points: Vec<Positive>,
     }
 
@@ -268,16 +270,16 @@ mod tests_probability_analysis {
 
         fn best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
             Ok(vec![
-                f2p!(90.0),
-                f2p!(95.0),
-                f2p!(100.0),
-                f2p!(105.0),
-                f2p!(110.0),
+                pos!(90.0),
+                pos!(95.0),
+                pos!(100.0),
+                pos!(105.0),
+                pos!(110.0),
             ])
         }
 
         fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            // Ok(&vec![f2p!(95.0), f2p!(105.0)])
+            // Ok(&vec![pos!(95.0), pos!(105.0)])
             Ok(&self.break_points)
         }
     }
@@ -291,10 +293,10 @@ mod tests_probability_analysis {
     impl MockStrategy {
         fn new() -> Self {
             MockStrategy {
-                underlying_price: f2p!(100.0),
+                underlying_price: pos!(100.0),
                 expiration: ExpirationDate::Days(30.0),
-                risk_free_rate: 0.05,
-                break_points: vec![f2p!(95.0), f2p!(105.0)],
+                risk_free_rate: dec!(0.05),
+                break_points: vec![pos!(95.0), pos!(105.0)],
             }
         }
     }
@@ -304,22 +306,22 @@ mod tests_probability_analysis {
             Ok(self.expiration.clone())
         }
 
-        fn get_risk_free_rate(&self) -> Option<f64> {
+        fn get_risk_free_rate(&self) -> Option<Decimal> {
             Some(self.risk_free_rate)
         }
 
         fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![ProfitLossRange::new(
-                Some(f2p!(95.0)),
-                Some(f2p!(105.0)),
-                f2p!(0.0),
+                Some(pos!(95.0)),
+                Some(pos!(105.0)),
+                pos!(0.0),
             )?])
         }
 
         fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![
-                ProfitLossRange::new(None, Some(f2p!(95.0)), f2p!(0.0))?,
-                ProfitLossRange::new(Some(f2p!(105.0)), None, f2p!(0.0))?,
+                ProfitLossRange::new(None, Some(pos!(95.0)), pos!(0.0))?,
+                ProfitLossRange::new(Some(pos!(105.0)), None, pos!(0.0))?,
             ])
         }
     }
@@ -341,8 +343,8 @@ mod tests_probability_analysis {
     fn test_analyze_probabilities_with_adjustments() {
         let strategy = MockStrategy::new();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.2),
-            std_dev_adjustment: f2p!(0.05),
+            base_volatility: pos!(0.2),
+            std_dev_adjustment: pos!(0.05),
         });
         let trend = Some(PriceTrend {
             drift_rate: 0.1,
@@ -389,7 +391,7 @@ mod tests_probability_analysis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
@@ -400,7 +402,7 @@ mod tests_probability_analysis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= f2p!(1.0));
+        assert!(prob <= pos!(1.0));
     }
 
     #[test]
@@ -412,15 +414,15 @@ mod tests_probability_analysis {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= f2p!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
     }
 
     #[test]
     fn test_extreme_probabilities_with_adjustments() {
         let strategy = MockStrategy::new();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.2),
-            std_dev_adjustment: f2p!(0.05),
+            base_volatility: pos!(0.2),
+            std_dev_adjustment: pos!(0.05),
         });
         let trend = Some(PriceTrend {
             drift_rate: 0.1,
@@ -433,7 +435,7 @@ mod tests_probability_analysis {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= f2p!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
     }
 
     #[test]
@@ -450,8 +452,8 @@ mod tests_probability_analysis {
     fn test_expected_value_with_volatility() {
         let strategy = MockStrategy::new();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.3),
-            std_dev_adjustment: f2p!(0.05),
+            base_volatility: pos!(0.3),
+            std_dev_adjustment: pos!(0.05),
         });
 
         let result = strategy.expected_value(vol_adj, None);
@@ -464,13 +466,14 @@ mod tests_expected_value {
     use super::*;
     use crate::error::strategies::StrategyError;
     use crate::strategies::base::{Positionable, Validable};
+    use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> TestStrategy {
         TestStrategy {
-            underlying_price: f2p!(100.0),
+            underlying_price: pos!(100.0),
             expiration: ExpirationDate::Days(30.0),
-            risk_free_rate: 0.05,
+            risk_free_rate: dec!(0.05),
         }
     }
 
@@ -478,7 +481,7 @@ mod tests_expected_value {
     struct TestStrategy {
         underlying_price: Positive,
         expiration: ExpirationDate,
-        risk_free_rate: f64,
+        risk_free_rate: Decimal,
     }
 
     impl Validable for TestStrategy {}
@@ -492,11 +495,11 @@ mod tests_expected_value {
 
         fn best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
             Ok(vec![
-                f2p!(90.0),
-                f2p!(95.0),
-                f2p!(100.0),
-                f2p!(105.0),
-                f2p!(110.0),
+                pos!(90.0),
+                pos!(95.0),
+                pos!(100.0),
+                pos!(105.0),
+                pos!(110.0),
             ])
         }
     }
@@ -512,14 +515,14 @@ mod tests_expected_value {
             Ok(self.expiration.clone())
         }
 
-        fn get_risk_free_rate(&self) -> Option<f64> {
+        fn get_risk_free_rate(&self) -> Option<Decimal> {
             Some(self.risk_free_rate)
         }
 
         fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![ProfitLossRange::new(
-                Some(f2p!(95.0)),
-                Some(f2p!(105.0)),
+                Some(pos!(95.0)),
+                Some(pos!(105.0)),
                 Positive::ZERO,
             )?])
         }
@@ -527,7 +530,7 @@ mod tests_expected_value {
         fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![ProfitLossRange::new(
                 None,
-                Some(f2p!(95.0)),
+                Some(pos!(95.0)),
                 Positive::ZERO,
             )?])
         }
@@ -550,8 +553,8 @@ mod tests_expected_value {
     fn test_expected_value_with_volatility() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.25),
-            std_dev_adjustment: f2p!(0.1),
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.1),
         });
 
         let result = strategy.expected_value(vol_adj, None);
@@ -576,8 +579,8 @@ mod tests_expected_value {
     fn test_expected_value_with_both_adjustments() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.25),
-            std_dev_adjustment: f2p!(0.1),
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.1),
         });
         let trend = Some(PriceTrend {
             drift_rate: 0.1,
@@ -593,8 +596,8 @@ mod tests_expected_value {
     fn test_expected_value_with_high_volatility() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(1.0),
-            std_dev_adjustment: f2p!(0.5),
+            base_volatility: pos!(1.0),
+            std_dev_adjustment: pos!(0.5),
         });
 
         let result = strategy.expected_value(vol_adj, None);
@@ -639,7 +642,7 @@ mod tests_expected_value {
             }
 
             fn best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
-                Ok(vec![f2p!(1.0), f2p!(1000.0), f2p!(10000.0)])
+                Ok(vec![pos!(1.0), pos!(1000.0), pos!(10000.0)])
             }
         }
 
@@ -654,7 +657,7 @@ mod tests_expected_value {
                 self.base.get_expiration()
             }
 
-            fn get_risk_free_rate(&self) -> Option<f64> {
+            fn get_risk_free_rate(&self) -> Option<Decimal> {
                 self.base.get_risk_free_rate()
             }
 
@@ -681,7 +684,7 @@ mod tests_expected_value {
         let strategy = create_test_strategy();
         // Use a very small but positive volatility value
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.0001), // Very small but non-zero volatility
+            base_volatility: pos!(0.0001), // Very small but non-zero volatility
             std_dev_adjustment: Positive::ZERO,
         });
 

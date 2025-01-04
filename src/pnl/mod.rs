@@ -37,14 +37,14 @@
 //! use optionstratlib::pnl::utils::{PnL, PnLCalculator};
 //! use chrono::{DateTime, Utc};
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //!
 //! // Create a new PnL instance
 //! let pnl = PnL::new(
-//!     Some(100.0),  // Realized PnL
+//!     Some(100.0),   // Realized PnL
 //!     Some(50.0),   // Unrealized PnL
-//!     25.0,         // Initial costs
-//!     75.0,         // Initial income
+//!     25.0,   // Initial costs
+//!     75.0,   // Initial income
 //!     Utc::now(),   // Calculation timestamp
 //! );
 //!

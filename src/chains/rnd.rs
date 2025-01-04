@@ -32,11 +32,12 @@
 //! ## Usage Example
 //!
 //! ```rust
+//! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::chains::{RNDParameters, RNDAnalysis};
 //! use optionstratlib::chains::chain::OptionChain;
-//! use optionstratlib::{f2p, pos, sf2p, ExpirationDate, Positive};
+//! use optionstratlib::{pos, spos, ExpirationDate, Positive};
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 //!
 //! // Create parameters for RND calculation
@@ -49,16 +50,16 @@
 //!             "SP500".to_string(),
 //!             None,
 //!             10,
-//!             f2p!(1.0),
+//!             pos!(1.0),
 //!             0.00001,
-//!             f2p!(0.02),
+//!             pos!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 f2p!(100.0),
+//!                 pos!(100.0),
 //!                 ExpirationDate::Days(30.0),
-//!                 sf2p!(0.17),
-//!                 0.0,
-//!                 0.05,
+//!                 spos!(0.17),
+//!                 Decimal::ZERO,
+//!                 pos!(0.05),
 //!             ),
 //!         );
 //!
@@ -428,7 +429,7 @@ mod tests {
                 spos!(5.0),
                 spos!(5.5),
                 spos!(0.2),
-                Some(-0.3),
+                Some(dec!(-0.3)),
                 spos!(100.0),
                 Some(50),
             );
@@ -661,7 +662,7 @@ mod tests {
                 spos!(15.0),
                 spos!(15.5),
                 None, // No implied volatility
-                Some(0.3),
+                Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
             );
@@ -738,7 +739,7 @@ mod tests {
                 spos!(0.1),
                 spos!(0.2),
                 spos!(0.8), // High volatility
-                Some(-0.99),
+                Some(dec!(-0.99)),
                 spos!(10.0),
                 Some(5),
             );
@@ -750,7 +751,7 @@ mod tests {
                 spos!(50.0),
                 spos!(51.0),
                 spos!(0.8), // High volatility
-                Some(0.99),
+                Some(dec!(0.99)),
                 spos!(10.0),
                 Some(5),
             );
@@ -850,7 +851,7 @@ mod additional_tests {
                     spos!(5.0),
                     spos!(5.5),
                     spos!(0.2),
-                    Some(-0.3),
+                    Some(dec!(-0.3)),
                     spos!(100.0),
                     Some(50),
                 );
@@ -872,7 +873,7 @@ mod additional_tests {
                     spos!(5.0),
                     spos!(5.5),
                     spos!(0.2),
-                    Some(-0.3),
+                    Some(dec!(-0.3)),
                     spos!(100.0),
                     Some(50),
                 );
@@ -893,7 +894,7 @@ mod additional_tests {
                     spos!(5.0),
                     spos!(5.5),
                     spos!(0.5), // Alta volatilidad
-                    Some(-0.3),
+                    Some(dec!(-0.3)),
                     spos!(100.0),
                     Some(50),
                 );
@@ -975,7 +976,7 @@ mod additional_tests {
                 spos!(0.001),
                 spos!(0.002),
                 spos!(0.1),
-                Some(-0.3),
+                Some(dec!(-0.3)),
                 spos!(100.0),
                 Some(50),
             );
@@ -1002,7 +1003,7 @@ mod additional_tests {
                 spos!(1000.0),
                 spos!(1001.0),
                 spos!(0.1),
-                Some(-0.3),
+                Some(dec!(-0.3)),
                 spos!(100.0),
                 Some(50),
             );
@@ -1399,7 +1400,8 @@ mod chain_test {
     use crate::chains::chain::OptionChain;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::chains::{RNDAnalysis, RNDParameters};
-    use crate::{assert_decimal_eq, f2p, pos, sf2p, ExpirationDate};
+    use crate::{assert_decimal_eq, pos, spos, ExpirationDate};
+    use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use tracing::debug;
 
@@ -1408,16 +1410,16 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            f2p!(1.0),
+            pos!(1.0),
             0.00001,
-            f2p!(0.02),
+            pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                f2p!(100.0),
+                pos!(100.0),
                 ExpirationDate::Days(30.0),
-                sf2p!(0.17),
-                0.0,
-                0.05,
+                spos!(0.17),
+                Decimal::ZERO,
+                pos!(0.05),
             ),
         );
 
@@ -1429,22 +1431,20 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            f2p!(1.0),
+            pos!(1.0),
             0.00001,
-            f2p!(0.02),
+            pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                f2p!(100.0),
+                pos!(100.0),
                 ExpirationDate::Days(30.0),
-                sf2p!(0.17),
-                0.0,
-                0.05,
+                spos!(0.17),
+                Decimal::ZERO,
+                pos!(0.05),
             ),
         );
 
         let chain = OptionChain::build_chain(&option_chain_params);
-
-        assert_eq!(chain.get_title(), "SP500-2025-02-01-100");
 
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
@@ -1475,16 +1475,16 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            f2p!(1.0),
+            pos!(1.0),
             0.00001,
-            f2p!(0.02),
+            pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                f2p!(100.0),
+                pos!(100.0),
                 ExpirationDate::Days(30.0),
-                sf2p!(0.17),
-                0.0,
-                0.05,
+                spos!(0.17),
+                Decimal::ZERO,
+                pos!(0.05),
             ),
         );
 

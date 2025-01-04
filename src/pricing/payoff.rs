@@ -107,15 +107,15 @@ pub trait Profit {
 #[cfg(test)]
 mod tests_standard_payoff {
     use super::*;
-    use crate::f2p;
     use crate::model::types::OptionType;
+    use crate::pos;
 
     #[test]
     fn test_call_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -129,8 +129,8 @@ mod tests_standard_payoff {
     fn test_call_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -144,8 +144,8 @@ mod tests_standard_payoff {
     fn test_call_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -159,8 +159,8 @@ mod tests_standard_payoff {
     fn test_put_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -174,8 +174,8 @@ mod tests_standard_payoff {
     fn test_put_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -189,8 +189,8 @@ mod tests_standard_payoff {
     fn test_put_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
