@@ -276,6 +276,7 @@ impl From<StrategyError> for ProbabilityError {
                     ))
                 }
             },
+            StrategyError::StdError(msg) => ProbabilityError::StdError(msg),
         }
     }
 }
