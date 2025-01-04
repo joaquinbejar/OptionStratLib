@@ -8,7 +8,7 @@ use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
 use crate::utils::time::TimeFrame;
 use crate::Options;
 use crate::{d2fu, pos, Positive};
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 use std::f64;
 use tracing::debug;
@@ -102,7 +102,8 @@ pub fn implied_volatility(
     for _ in 0..max_iterations {
         options.implied_volatility = iv; // Update the implied volatility in the Options struct
 
-        let price = options.calculate_price_black_scholes().abs();
+        let price = options.calculate_price_black_scholes()
+            .unwrap().to_f64().unwrap().abs();
         let vega = d2fu!(options.vega().unwrap()).unwrap();
         let price_diff = price - market_price;
 
@@ -318,10 +319,10 @@ pub fn uncertain_volatility_bounds(
     upper_bound_option.implied_volatility = max_volatility;
 
     // Calculate the option price with minimum volatility
-    let lower_bound = lower_bound_option.calculate_price_black_scholes();
+    let lower_bound = lower_bound_option.calculate_price_black_scholes().unwrap().to_f64().unwrap();
 
     // Calculate the option price with maximum volatility
-    let upper_bound = upper_bound_option.calculate_price_black_scholes();
+    let upper_bound = upper_bound_option.calculate_price_black_scholes().unwrap().to_f64().unwrap();
 
     (lower_bound, upper_bound)
 }
@@ -706,8 +707,10 @@ mod tests_implied_volatility {
         // Check if the calculated price with the new IV is close to the market price
         option_long.implied_volatility = iv_long;
         option_short.implied_volatility = iv_short;
-        let calculated_price_long = option_long.calculate_price_black_scholes().abs();
-        let calculated_price_short = option_short.calculate_price_black_scholes().abs();
+        let calculated_price_long = option_long.calculate_price_black_scholes()
+            .unwrap().to_f64().unwrap().abs();
+        let calculated_price_short = option_short.calculate_price_black_scholes()
+            .unwrap().to_f64().unwrap().abs();
         info!(
             "Price Long {} short {}",
             calculated_price_long, calculated_price_short
@@ -725,7 +728,8 @@ mod tests_implied_volatility {
 
         // Check if the calculated price with the new IV is close to the market price
         option.implied_volatility = iv;
-        let calculated_price = option.calculate_price_black_scholes();
+        let calculated_price = option.calculate_price_black_scholes()
+            .unwrap().to_f64().unwrap();
         info!("{}", (calculated_price - market_price).abs());
         assert_relative_eq!(calculated_price, market_price, epsilon = 0.002);
     }
