@@ -128,7 +128,6 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 .iter()
                 .zip(probabilities.iter())
                 .fold(0.0, |acc, (price, prob)| {
-                    
                     acc + self.calculate_profit_at(*price).unwrap().to_f64().unwrap() * *prob
                 });
 

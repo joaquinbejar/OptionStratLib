@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let short_strike_1_quantity = pos!(3.0);
     let short_strike_1_premium = pos!(192.0);
     let short_strike_1_open_fee = pos!(7.51);
-    let short_strike_1_close_fee =pos!( 7.51);
+    let short_strike_1_close_fee = pos!(7.51);
 
     // Short Call 2
     let short_strike_2_strike = pos!(2250.0);
