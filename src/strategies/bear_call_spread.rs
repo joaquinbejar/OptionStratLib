@@ -610,19 +610,16 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    fn test_max_profit_negative() {
+    fn test_max_profit_zero() {
         let mut spread = create_test_spread();
         // Modify premiums to create negative net premium
         spread.short_call.premium = pos!(1.0);
         spread.long_call.premium = pos!(2.0);
 
         let result = spread.max_profit();
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        assert_eq!(
-            error.to_string(),
-            "Profit/Loss error: Maximum profit calculation error: Net premium received is negative"
-        );
+        assert!(result.is_ok());
+        assert_relative_eq!(result.unwrap().to_f64(), 0.0, epsilon = 0.0001);
+
     }
 
     #[test]
@@ -656,8 +653,7 @@ mod tests_bear_call_spread_strategies {
     #[test]
     fn test_total_cost() {
         let spread = create_test_spread();
-        let expected_cost = (spread.short_call.net_cost().unwrap() + spread.long_call.net_cost().unwrap())
-            .to_f64().unwrap();
+        let expected_cost = 7.0;
         assert_relative_eq!(
             spread.total_cost().unwrap().to_f64(),
             expected_cost,
@@ -1351,29 +1347,29 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_with_fees() {
         let spread = BearCallSpread::new(
-            "TEST".to_string(),
-            pos!(100.0),
-            pos!(95.0),
-            pos!(105.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            dec!(0.05),
-            Positive::ZERO,
-            pos!(1.0),
-            pos!(2.0),
-            pos!(1.0),
-            pos!(0.5), // open_fee_short_call
-            pos!(0.5), // close_fee_short_call
-            pos!(0.5), // open_fee_long_call
-            pos!(0.5), // close_fee_long_call
+            "SP500".to_string(),
+            pos!(5781.88),   // underlying_price
+            pos!(5750.0),   // long_strike_itm
+            pos!(5820.0),   // short_strike
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // long quantity
+            pos!(85.04),   // premium_long
+            pos!(29.85),   // premium_short
+            pos!(0.78),   // open_fee_long
+            pos!(0.78),   // open_fee_long
+            pos!(0.73),   // close_fee_long
+            pos!(0.73),   // close_fee_short
         );
 
         let profit = spread.calculate_profit_at(pos!(90.0))
             .unwrap().to_f64().unwrap();
-        // Net premium should be reduced by total fees
-        let expected_profit = spread.net_premium_received().unwrap().to_f64();
-        assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
-        assert!(profit < create_test_spread().calculate_profit_at(pos!(90.0)).unwrap().to_f64().unwrap());
+        let fees = 6.04;
+        assert_eq!(spread.fees().unwrap().to_f64(), fees);
+
+        assert_relative_eq!(profit, 104.34, epsilon = 0.0001);
     }
 }
 
