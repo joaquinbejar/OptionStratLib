@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.78),     // close_fee_long
         pos!(0.73),     // close_fee_short
         pos!(0.73),     // close_fee_short
-        0.73,
+        pos!(0.73),
     );
 
     strategy.best_ratio(

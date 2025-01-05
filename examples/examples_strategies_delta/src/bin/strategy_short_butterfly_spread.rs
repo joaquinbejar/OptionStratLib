@@ -28,12 +28,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(119.01), // premium_long
         pos!(66.0),   // premium_short
         pos!(29.85),  // open_fee_long
-        4.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
+        pos!(4.0),
+        pos!(0.0),
+        pos!(0.0),
+        pos!(0.0),
+        pos!(0.0),
+        pos!(0.0),
     );
 
     info!("Title: {}", strategy.title());

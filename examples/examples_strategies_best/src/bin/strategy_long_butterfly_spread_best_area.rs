@@ -32,12 +32,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
-        4.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
+        pos!(4.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);

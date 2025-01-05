@@ -32,10 +32,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(2.0),                         // quantity
         Positive::ZERO,                    // premium_short_call
         Positive::ZERO,                    // premium_short_put
-        1.74,                              // open_fee_short_call
-        1.74,                              // close_fee_short_call
-        0.85,                              // open_fee_short_put
-        0.85,                              // close_fee_short_put
+        pos!(1.74),                        // open_fee_short_call
+        pos!(1.74),                        // close_fee_short_call
+        pos!(0.85),                        // open_fee_short_put
+        pos!(0.85),                        // close_fee_short_put
     );
 
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);

@@ -23,23 +23,23 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Short Call 1
     let short_strike_1_strike = pos!(2100.0);
     let short_strike_1_quantity = pos!(3.0);
-    let short_strike_1_premium = 192.0;
-    let short_strike_1_open_fee = 7.51;
-    let short_strike_1_close_fee = 7.51;
+    let short_strike_1_premium = pos!(192.0);
+    let short_strike_1_open_fee = pos!(7.51);
+    let short_strike_1_close_fee =pos!( 7.51);
 
     // Short Call 2
     let short_strike_2_strike = pos!(2250.0);
     let short_strike_2_quantity = pos!(2.0);
-    let short_strike_2_premium = 88.0;
-    let short_strike_2_open_fee = 6.68;
-    let short_strike_2_close_fee = 6.68;
+    let short_strike_2_premium = pos!(88.0);
+    let short_strike_2_open_fee = pos!(6.68);
+    let short_strike_2_close_fee = pos!(6.68);
 
     // Short Put
     let short_put_strike = pos!(2500.0);
-    let short_put_premium = 55.0;
+    let short_put_premium = pos!(55.0);
     let short_put_quantity = pos!(1.0);
-    let short_put_open_fee = 6.68;
-    let short_put_close_fee = 6.68;
+    let short_put_open_fee = pos!(6.68);
+    let short_put_close_fee = pos!(6.68);
 
     let short_strike_1 = Position::new(
         Options::new(
@@ -106,9 +106,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let extra_strike = pos!(2160.0);
     let extra_quantity = pos!(2.5);
-    let extra_premium = 21.0;
-    let extra_open_fee = 4.91;
-    let extra_close_fee = 4.91;
+    let extra_premium = pos!(21.0);
+    let extra_open_fee = pos!(4.91);
+    let extra_close_fee = pos!(4.91);
 
     let extra = Position::new(
         Options::new(

@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Max Loss: {}",
         strategy.max_loss().unwrap_or(Positive::ZERO)
     );
-    info!("Total Cost: {}", strategy.total_cost());
+    info!("Total Cost: {}", strategy.total_cost()?);
 
     // Generate the intrinsic value graph
     strategy.graph(

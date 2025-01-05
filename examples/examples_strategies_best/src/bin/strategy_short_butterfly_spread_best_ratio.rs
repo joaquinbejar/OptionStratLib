@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
-        4.0,
+        pos!(4.0),
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
