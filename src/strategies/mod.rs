@@ -171,9 +171,9 @@
 //!     pos!(1.5),   // premium_short_call
 //!     Positive::ONE,   // premium_short_put
 //!     Positive::TWO,   // premium_long_call
-//!     1.8,   // premium_long_put
-//!     5.0,   // open_fee
-//!     5.0,   // close_fee
+//!     pos!(1.8),   // premium_long_put
+//!     pos!(5.0),   // open_fee
+//!     pos!(5.0),   // close_fee
 //! );
 //!
 //! let max_profit = condor.max_profit().unwrap_or(Positive::ZERO);
