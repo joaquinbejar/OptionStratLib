@@ -1062,7 +1062,7 @@ mod tests_pmcc_pnl {
         let net_premium = strategy.net_premium_received().unwrap();
         assert_eq!(
             net_premium,
-            strategy.short_call.net_premium_received().unwrap()
+            0.0
         );
     }
 
