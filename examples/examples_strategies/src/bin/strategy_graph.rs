@@ -26,12 +26,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         dec!(0.05),
         Positive::ZERO,
         pos!(1.0),
-        27.26,
-        5.33,
-        0.58,
-        0.58,
-        0.55,
-        0.54,
+        pos!(27.26),
+        pos!(5.33),
+        pos!(0.58),
+        pos!(0.58),
+        pos!(0.55),
+        pos!(0.54),
     );
     let price_range: Vec<Positive> = (2400..2600)
         .map(|x| Positive::new(x as f64).unwrap())
@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Max Loss: {}",
         strategy.max_loss().unwrap_or(Positive::ZERO)
     );
-    info!("Total Cost: {}", strategy.total_cost());
+    info!("Total Cost: {}", strategy.total_cost()?);
 
     // Generate the intrinsic value graph
     strategy.graph(

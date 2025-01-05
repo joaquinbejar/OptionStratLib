@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! assert_positivef64_relative_eq {
+macro_rules! assert_pos_relative_eq {
     ($left:expr, $right:expr, $epsilon:expr) => {{
         let left: Positive = $left;
         let right: Positive = $right;
@@ -44,7 +44,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = pos!(1.0);
         let b = pos!(1.0);
         let epsilon = pos!(0.0001);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -52,7 +52,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = pos!(1.0);
         let b = pos!(1.0001);
         let epsilon = pos!(0.001);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -60,7 +60,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = Positive::ZERO;
         let b = Positive::ZERO;
         let epsilon = pos!(0.0001);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -68,7 +68,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = Positive::ZERO;
         let b = pos!(0.00001);
         let epsilon = pos!(0.00001);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -77,7 +77,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = pos!(1.0);
         let b = pos!(1.002);
         let epsilon = pos!(0.001);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -85,7 +85,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = pos!(1000000.0);
         let b = pos!(1000001.0);
         let epsilon = pos!(0.000002);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -93,7 +93,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = pos!(0.0000001);
         let b = pos!(0.0000001000001);
         let epsilon = pos!(0.000002);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -102,7 +102,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = pos!(1.0);
         let b = pos!(2.0);
         let epsilon = pos!(0.1);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -110,7 +110,7 @@ mod tests_assert_positivef64_relative_eq {
         let a = pos!(100.0);
         let b = pos!(100.1);
         let epsilon = pos!(0.002);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
@@ -119,6 +119,6 @@ mod tests_assert_positivef64_relative_eq {
         let a = Positive::ZERO;
         let b = pos!(1.0);
         let epsilon = pos!(0.0001);
-        assert_positivef64_relative_eq!(a, b, epsilon);
+        assert_pos_relative_eq!(a, b, epsilon);
     }
 }

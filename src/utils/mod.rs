@@ -40,12 +40,12 @@
 //!
 //! ```rust
 //! use optionstratlib::Positive;
-//! use optionstratlib::{assert_positivef64_relative_eq, pos};
+//! use optionstratlib::{assert_pos_relative_eq, pos};
 //!
 //! let a = pos!(1.0);
 //! let b = pos!(1.0001);
 //! let epsilon = pos!(0.001);
-//! assert_positivef64_relative_eq!(a, b, epsilon);
+//! assert_pos_relative_eq!(a, b, epsilon);
 //! ```
 //!
 //! ### Other Utilities (`others.rs`)
@@ -146,14 +146,14 @@
 //! ```rust
 //! use optionstratlib::Positive;
 //! use optionstratlib::pos;
-//! use optionstratlib::assert_positivef64_relative_eq;
+//! use optionstratlib::assert_pos_relative_eq;
 //!
 //!
 //! fn test_values() {
 //!     let a = pos!(1.0);
 //!     let b = pos!(1.0001);
 //!     let epsilon = pos!(0.001);
-//!     assert_positivef64_relative_eq!(a, b, epsilon);
+//!     assert_pos_relative_eq!(a, b, epsilon);
 //! }
 //! ```
 //!

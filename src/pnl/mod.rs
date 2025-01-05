@@ -52,14 +52,14 @@
 //! struct MyOption;
 //!
 //! impl PnLCalculator for MyOption {
-//!     fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: Positive) -> PnL {
+//!     fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: Positive) -> Result<PnL, Box<(dyn std::error::Error)>> {
 //!         // Implement PnL calculation logic
-//!         PnL::new(None, Some(market_price.to_f64()), 10.0, 0.0, date_time)
+//!         Ok(PnL::new(None, Some(market_price.to_f64()), 10.0, 0.0, date_time))
 //!     }
 //!
-//!     fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> PnL {
+//!     fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> Result<PnL, Box<(dyn std::error::Error)>> {
 //!         // Implement expiration PnL logic
-//!         PnL::new(Some(100.0), None, 10.0, 0.0, Utc::now())
+//!         Ok(PnL::new(Some(100.0), None, 10.0, 0.0, Utc::now()))
 //!     }
 //! }
 //! ```

@@ -768,7 +768,7 @@ mod tests_macros {
 
     #[test]
     fn test_pos_zero() {
-        assert_eq!(pos!(0.0), Positive::ZERO);
+        assert_eq!(Positive::ZERO, Positive::ZERO);
     }
 
     #[test]

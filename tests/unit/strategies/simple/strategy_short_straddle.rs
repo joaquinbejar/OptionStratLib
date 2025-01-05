@@ -5,7 +5,7 @@ use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, pos};
+use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -25,25 +25,25 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(1.0),      // quantity
-        84.2,           // premium_short_call
-        353.2,          // premium_short_put
-        7.01,           // open_fee_short_call
-        7.01,           // close_fee_short_call
-        7.01,           // open_fee_short_put
-        7.01,           // close_fee_short_put
+        pos!(84.2),     // premium_short_call
+        pos!(353.2),    // premium_short_put
+        pos!(7.01),     // open_fee_short_call
+        pos!(7.01),     // close_fee_short_call
+        pos!(7.01),     // open_fee_short_put
+        pos!(7.01),     // close_fee_short_put
     );
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         409.36,
         epsilon = 0.001
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(409.36), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 28.04);
+    assert_pos_relative_eq!(strategy.max_profit()?, pos!(409.36), pos!(0.0001));
+    assert_eq!(strategy.fees().unwrap().to_f64(), 28.04);
 
     // Test range calculations
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
@@ -72,7 +72,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     // Validate that max profit equals net premium received (characteristic of Short Straddle)
     assert_relative_eq!(
         strategy.max_profit()?.to_f64(),
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         epsilon = 0.001
     );
 

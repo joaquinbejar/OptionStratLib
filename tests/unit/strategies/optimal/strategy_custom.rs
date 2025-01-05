@@ -44,10 +44,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 dividend_yield,
                 None,
             ),
-            192.0,
+            pos!(192.0),
             Utc::now(),
-            7.51,
-            7.51,
+            pos!(7.51),
+            pos!(7.51),
         ),
         Position::new(
             Options::new(
@@ -64,10 +64,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 dividend_yield,
                 None,
             ),
-            88.0,
+            pos!(88.0),
             Utc::now(),
-            6.68,
-            6.68,
+            pos!(6.68),
+            pos!(6.68),
         ),
     ];
 

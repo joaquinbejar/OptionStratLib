@@ -7,8 +7,7 @@ use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
-use crate::constants::DARK_BLUE;
-use crate::constants::{DARK_GREEN, ZERO};
+use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
@@ -24,10 +23,11 @@ use crate::visualization::utils::Graph;
 use crate::Options;
 use crate::{d2fu, pos, spos, Positive};
 use chrono::Utc;
-use num_traits::FromPrimitive;
+use num_traits::ToPrimitive;
 use plotters::prelude::{ShapeStyle, RED};
 use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{error, info};
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
@@ -60,15 +60,15 @@ impl CallButterfly {
         risk_free_rate: Decimal,
         dividend_yield: Positive,
         quantity: Positive,
-        premium_long_call: f64,
-        premium_short_call_low: f64,
-        premium_short_call_high: f64,
-        open_fee_long: f64,
-        close_fee_long: f64,
-        open_fee_short_low: f64,
-        close_fee_short_low: f64,
-        open_fee_short_high: f64,
-        close_fee_short_high: f64,
+        premium_long_call: Positive,
+        premium_short_call_low: Positive,
+        premium_short_call_high: Positive,
+        open_fee_long: Positive,
+        close_fee_long: Positive,
+        open_fee_short_low: Positive,
+        close_fee_short_low: Positive,
+        open_fee_short_high: Positive,
+        close_fee_short_high: Positive,
     ) -> Self {
         let mut strategy = CallButterfly {
             name: underlying_symbol.to_string(),
@@ -161,13 +161,18 @@ impl CallButterfly {
         // Calculate break-even points
         strategy.break_even_points.push(
             (strategy.long_call.option.strike_price
-                - strategy.calculate_profit_at(strategy.long_call.option.strike_price) / quantity)
+                - strategy
+                    .calculate_profit_at(strategy.long_call.option.strike_price)
+                    .unwrap()
+                    / quantity)
                 .round_to(2),
         );
 
         strategy.break_even_points.push(
             (strategy.short_call_high.option.strike_price
-                + strategy.calculate_profit_at(strategy.short_call_high.option.strike_price)
+                + strategy
+                    .calculate_profit_at(strategy.short_call_high.option.strike_price)
+                    .unwrap()
                     / quantity)
                 .round_to(2),
         );
@@ -188,16 +193,16 @@ impl Default for CallButterfly {
             Positive::ZERO,
             Decimal::ZERO,
             Positive::ZERO,
-            pos!(1.0),
-            ZERO,
-            ZERO,
-            ZERO,
-            ZERO,
-            ZERO,
-            ZERO,
-            ZERO,
-            ZERO,
-            ZERO,
+            Positive::ONE,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 }
@@ -236,8 +241,8 @@ impl Strategies for CallButterfly {
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let max_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
-        if max_profit > ZERO {
+        let max_profit = self.calculate_profit_at(self.short_call_high.option.strike_price)?;
+        if max_profit > Decimal::ZERO {
             Ok(max_profit.into())
         } else {
             Err(StrategyError::ProfitLossError(
@@ -250,20 +255,6 @@ impl Strategies for CallButterfly {
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
         Ok(Positive::INFINITY)
-    }
-
-    fn total_cost(&self) -> Positive {
-        self.short_call_low.total_cost()
-            + self.short_call_high.total_cost()
-            + self.long_call.total_cost()
-    }
-
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let premium = self.short_call_low.net_premium_received()
-            + self.short_call_high.net_premium_received()
-            - self.long_call.net_cost();
-        let result = if premium > ZERO { premium } else { ZERO };
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -431,9 +422,9 @@ impl Optimizable for CallButterfly {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long_call.call_ask.unwrap().to_f64(),
-            short_call_low.call_bid.unwrap().to_f64(),
-            short_call_high.call_bid.unwrap().to_f64(),
+            long_call.call_ask.unwrap(),
+            short_call_low.call_bid.unwrap(),
+            short_call_high.call_bid.unwrap(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call_low.open_fee,
@@ -445,12 +436,12 @@ impl Optimizable for CallButterfly {
 }
 
 impl Profit for CallButterfly {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        let long_call_itm_profit = self.long_call.pnl_at_expiration(&price);
-        let long_call_otm_profit = self.short_call_low.pnl_at_expiration(&price);
-        let short_call_profit = self.short_call_high.pnl_at_expiration(&price);
-        long_call_itm_profit + long_call_otm_profit + short_call_profit
+        let long_call_itm_profit = self.long_call.pnl_at_expiration(&price)?;
+        let long_call_otm_profit = self.short_call_low.pnl_at_expiration(&price)?;
+        let short_call_profit = self.short_call_high.pnl_at_expiration(&price)?;
+        Ok(long_call_itm_profit + long_call_otm_profit + short_call_profit)
     }
 }
 
@@ -511,11 +502,15 @@ impl Graph for CallButterfly {
         points.push(ChartPoint {
             coordinates: (
                 self.long_call.option.strike_price.to_f64(),
-                self.calculate_profit_at(self.long_call.option.strike_price),
+                self.calculate_profit_at(self.long_call.option.strike_price)
+                    .unwrap()
+                    .to_f64()
+                    .unwrap(),
             ),
             label: format!(
                 "Left Loss\n\n{:.2}",
                 self.calculate_profit_at(self.long_call.option.strike_price)
+                    .unwrap()
             ),
             label_offset: LabelOffsetType::Relative(3.0, 3.0),
             point_color: RED,
@@ -524,8 +519,16 @@ impl Graph for CallButterfly {
             font_size: 18,
         });
 
-        let lower_loss = self.calculate_profit_at(self.short_call_low.option.strike_price);
-        let upper_loss = self.calculate_profit_at(self.short_call_high.option.strike_price);
+        let lower_loss = self
+            .calculate_profit_at(self.short_call_low.option.strike_price)
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        let upper_loss = self
+            .calculate_profit_at(self.short_call_high.option.strike_price)
+            .unwrap()
+            .to_f64()
+            .unwrap();
 
         points.push(ChartPoint {
             coordinates: (self.short_call_low.option.strike_price.to_f64(), lower_loss),
@@ -633,9 +636,7 @@ impl DeltaNeutrality for CallButterfly {
 #[cfg(test)]
 mod tests_call_butterfly {
     use super::*;
-    use crate::constants::ZERO;
     use approx::assert_relative_eq;
-    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn setup() -> CallButterfly {
@@ -650,15 +651,15 @@ mod tests_call_butterfly {
             dec!(0.01),
             pos!(0.02),
             pos!(1.0),
-            45.0,
-            30.0,
-            20.5,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
+            pos!(45.0),
+            pos!(30.0),
+            pos!(20.5),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
         )
     }
 
@@ -682,7 +683,7 @@ mod tests_call_butterfly {
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 172.0;
-        assert!(strategy.calculate_profit_at(pos!(price)) < ZERO);
+        assert!(strategy.calculate_profit_at(pos!(price)).unwrap() < Decimal::ZERO);
     }
 
     #[test]
@@ -695,7 +696,7 @@ mod tests_call_butterfly {
     fn test_net_premium_received() {
         let strategy = setup();
         assert_relative_eq!(
-            strategy.net_premium_received().unwrap().to_f64().unwrap(),
+            strategy.net_premium_received().unwrap().to_f64(),
             4.9,
             epsilon = 0.0001
         );
@@ -705,7 +706,7 @@ mod tests_call_butterfly {
     fn test_fees() {
         let strategy = setup();
         assert_relative_eq!(
-            strategy.fees().unwrap().to_f64().unwrap(),
+            strategy.fees().unwrap().to_f64(),
             0.6,
             epsilon = f64::EPSILON
         );
@@ -728,7 +729,14 @@ mod tests_call_butterfly {
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(price));
+            assert_eq!(
+                values[i],
+                strategy
+                    .calculate_profit_at(price)
+                    .unwrap()
+                    .to_f64()
+                    .unwrap()
+            );
         }
 
         let title = strategy.title();
@@ -754,15 +762,15 @@ mod tests_call_butterfly_validation {
             dec!(0.01),
             pos!(0.02),
             pos!(1.0),
-            7.0,
-            5.0,
-            3.0,
-            4.0,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
+            pos!(7.0),
+            pos!(5.0),
+            pos!(3.0),
+            pos!(4.0),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
         )
     }
 
@@ -790,7 +798,6 @@ mod tests_call_butterfly_validation {
 #[cfg(test)]
 mod tests_call_butterfly_pnl {
     use super::*;
-    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {
@@ -805,37 +812,37 @@ mod tests_call_butterfly_pnl {
             dec!(0.01),
             pos!(0.02),
             pos!(1.0),
-            7.0,
-            5.0,
-            3.0,
-            4.0,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
+            pos!(7.0),
+            pos!(5.0),
+            pos!(3.0),
+            pos!(4.0),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
         )
     }
 
     #[test]
     fn test_profit_below_lower_strike() {
         let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(pos!(140.0));
-        assert!(profit <= 0.0);
+        let profit = strategy.calculate_profit_at(pos!(140.0)).unwrap();
+        assert!(profit <= Decimal::ZERO);
     }
 
     #[test]
     fn test_profit_above_upper_strike() {
         let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(pos!(160.0));
-        assert!(profit <= 0.0);
+        let profit = strategy.calculate_profit_at(pos!(160.0)).unwrap();
+        assert!(profit <= Decimal::ZERO);
     }
 
     #[test]
     fn test_profit_ratio() {
         let strategy = setup_test_strategy();
-        let ratio = strategy.profit_ratio().unwrap().to_f64().unwrap();
-        assert!(ratio > ZERO);
+        let ratio = strategy.profit_ratio().unwrap();
+        assert!(ratio > Decimal::ZERO);
     }
 }
 
@@ -858,15 +865,15 @@ mod tests_call_butterfly_graph {
             dec!(0.01),
             pos!(0.02),
             pos!(1.0),
-            7.0,
-            5.0,
-            3.0,
-            4.0,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
+            pos!(7.0),
+            pos!(5.0),
+            pos!(3.0),
+            pos!(4.0),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
         )
     }
 
@@ -997,15 +1004,15 @@ mod tests_iron_condor_delta {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // long quantity
-            95.8,           // short_quantity
-            85.04,          // premium_long_itm
-            31.65,          // premium_long_otm
-            53.04,          // premium_short
-            0.78,           // open_fee_long
-            0.78,           // close_fee_long
-            0.73,           // close_fee_short
-            0.73,           // close_fee_short
-            0.73,           // close_fee_short
+            pos!(95.8),     // short_quantity
+            pos!(85.04),    // premium_long_itm
+            pos!(31.65),    // premium_long_otm
+            pos!(53.04),    // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // close_fee_long
+            pos!(0.73),     // close_fee_short
+            pos!(0.73),     // close_fee_short
+            pos!(0.73),     // close_fee_short
         )
     }
 
@@ -1117,15 +1124,15 @@ mod tests_iron_condor_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // long quantity
-            97.8,           // short_quantity
-            85.04,          // premium_long_itm
-            31.65,          // premium_long_otm
-            53.04,          // premium_short
-            0.78,           // open_fee_long
-            0.78,           // close_fee_long
-            0.73,           // close_fee_short
-            0.73,           // close_fee_short
-            0.73,
+            pos!(97.8),     // short_quantity
+            pos!(85.04),    // premium_long_itm
+            pos!(31.65),    // premium_long_otm
+            pos!(53.04),    // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // close_fee_long
+            pos!(0.73),     // close_fee_short
+            pos!(0.73),     // close_fee_short
+            pos!(0.73),
         )
     }
 
@@ -1276,15 +1283,15 @@ mod tests_call_butterfly_optimizable {
             dec!(0.01),
             pos!(0.02),
             pos!(1.0),
-            6.2, // long call ask
-            3.0, // short call bid low
-            1.0, // short call bid high
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
+            pos!(6.2), // long call ask
+            pos!(3.0), // short call bid low
+            pos!(1.0), // short call bid high
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
         )
     }
 

@@ -809,7 +809,13 @@ mod calculate_d1_values_bis {
 
     #[test]
     fn test_d1_zero_strike_error() {
-        let result = d1(pos!(100.0), pos!(0.0), dec!(0.05), Positive::ONE, pos!(0.2));
+        let result = d1(
+            pos!(100.0),
+            Positive::ZERO,
+            dec!(0.05),
+            Positive::ONE,
+            pos!(0.2),
+        );
 
         assert!(matches!(
             result,
@@ -826,7 +832,7 @@ mod calculate_d1_values_bis {
             pos!(100.0),
             dec!(0.05),
             Positive::ONE,
-            pos!(0.0),
+            Positive::ZERO,
         );
 
         assert!(matches!(
@@ -1310,7 +1316,7 @@ mod calculate_d2_values_bis {
             pos!(100.0),
             dec!(0.05),
             Positive::ONE,
-            pos!(0.0),
+            Positive::ZERO,
         );
         assert!(matches!(
             result,

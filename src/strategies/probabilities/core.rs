@@ -12,6 +12,7 @@ use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
 use crate::{pos, Positive};
+use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;
 
@@ -91,11 +92,11 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             if vol_adj.base_volatility == Positive::ZERO
                 && vol_adj.std_dev_adjustment == Positive::ZERO
             {
-                let current_profit = self.calculate_profit_at(self.get_underlying_price());
-                return if current_profit <= 0.0 {
+                let current_profit = self.calculate_profit_at(self.get_underlying_price())?;
+                return if current_profit <= Decimal::ZERO {
                     Ok(Positive::ZERO)
                 } else {
-                    Ok(pos!(current_profit))
+                    Ok(current_profit.into())
                 };
             }
         }
@@ -122,12 +123,13 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             last_prob = prob.0.into();
         }
 
-        let expected_value = range
-            .iter()
-            .zip(probabilities.iter())
-            .fold(0.0, |acc, (price, prob)| {
-                acc + self.calculate_profit_at(*price) * *prob
-            });
+        let expected_value =
+            range
+                .iter()
+                .zip(probabilities.iter())
+                .fold(0.0, |acc, (price, prob)| {
+                    acc + self.calculate_profit_at(*price).unwrap().to_f64().unwrap() * *prob
+                });
 
         let total_prob: f64 = probabilities.iter().map(|p| p.to_f64()).sum();
         if (total_prob - 1.0).abs() > 0.05 {
@@ -246,6 +248,7 @@ mod tests_probability_analysis {
     use crate::strategies::base::{Positionable, Strategies, Validable};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
+    use std::error::Error;
 
     // Mock struct para testing
     struct MockStrategy {
@@ -285,8 +288,8 @@ mod tests_probability_analysis {
     }
 
     impl Profit for MockStrategy {
-        fn calculate_profit_at(&self, price: Positive) -> f64 {
-            price.to_f64() - self.underlying_price
+        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok(price.to_dec() - self.underlying_price)
         }
     }
 
@@ -314,14 +317,14 @@ mod tests_probability_analysis {
             Ok(vec![ProfitLossRange::new(
                 Some(pos!(95.0)),
                 Some(pos!(105.0)),
-                pos!(0.0),
+                Positive::ZERO,
             )?])
         }
 
         fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![
-                ProfitLossRange::new(None, Some(pos!(95.0)), pos!(0.0))?,
-                ProfitLossRange::new(Some(pos!(105.0)), None, pos!(0.0))?,
+                ProfitLossRange::new(None, Some(pos!(95.0)), Positive::ZERO)?,
+                ProfitLossRange::new(Some(pos!(105.0)), None, Positive::ZERO)?,
             ])
         }
     }
@@ -467,6 +470,7 @@ mod tests_expected_value {
     use crate::error::strategies::StrategyError;
     use crate::strategies::base::{Positionable, Validable};
     use rust_decimal_macros::dec;
+    use std::error::Error;
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> TestStrategy {
@@ -505,8 +509,8 @@ mod tests_expected_value {
     }
 
     impl Profit for TestStrategy {
-        fn calculate_profit_at(&self, price: Positive) -> f64 {
-            price.to_f64() - self.underlying_price
+        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok(price.to_dec() - self.underlying_price)
         }
     }
 
@@ -647,7 +651,7 @@ mod tests_expected_value {
         }
 
         impl Profit for ExtremeStrategy {
-            fn calculate_profit_at(&self, price: Positive) -> f64 {
+            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
                 self.base.calculate_profit_at(price)
             }
         }

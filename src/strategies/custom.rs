@@ -8,18 +8,19 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::{OperationErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
-use crate::model::position::Position;
+use crate::model::Position;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, Positive};
-use num_traits::FromPrimitive;
+use crate::Positive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{debug, error};
 
 #[derive(Clone, Debug)]
@@ -100,7 +101,11 @@ impl CustomStrategy {
         let mut current_price = min_price;
 
         while current_price <= max_price {
-            let profit = self.calculate_profit_at(current_price);
+            let profit = self
+                .calculate_profit_at(current_price)
+                .unwrap()
+                .to_f64()
+                .unwrap();
             price_profit_pairs.push((current_price, profit));
             current_price += fine_step;
         }
@@ -146,7 +151,7 @@ impl CustomStrategy {
         let mut iterations = 0;
 
         while iterations < self.max_iterations {
-            let f_x = self.calculate_profit_at(x);
+            let f_x = self.calculate_profit_at(x).unwrap().to_f64().unwrap();
 
             // Check if we're close enough to zero
             if f_x.abs() < self.epsilon {
@@ -155,7 +160,7 @@ impl CustomStrategy {
 
             // Calculate derivative numerically with smaller step
             let h = self.epsilon.sqrt();
-            let derivative = (self.calculate_profit_at(x + h) - f_x) / h;
+            let derivative = (self.calculate_profit_at(x + h).unwrap().to_f64().unwrap() - f_x) / h;
 
             // Avoid division by very small numbers
             if derivative.abs() < self.epsilon {
@@ -227,14 +232,14 @@ impl Strategies for CustomStrategy {
         let (mut current_price, max_search_price) = self.range_to_show()?;
 
         while current_price < max_search_price {
-            let current_profit = self.calculate_profit_at(current_price);
-            if current_profit < ZERO {
+            let current_profit = self.calculate_profit_at(current_price)?;
+            if current_profit < Decimal::ZERO {
                 current_price += step;
                 continue;
             }
-            if current_profit > max_profit {
-                max_profit = pos!(current_profit);
-                self.max_profit_point = Some((current_price, current_profit));
+            if current_profit > max_profit.to_dec() {
+                max_profit = current_profit.into();
+                self.max_profit_point = Some((current_price, current_profit.to_f64().unwrap()));
             }
             current_price += step;
         }
@@ -254,35 +259,19 @@ impl Strategies for CustomStrategy {
         let mut max_loss: Positive = Positive::ZERO;
         let (mut current_price, max_search_price) = self.range_to_show()?;
         while current_price < max_search_price {
-            let current_profit = self.calculate_profit_at(current_price);
-            if current_profit > ZERO {
+            let current_profit = self.calculate_profit_at(current_price)?;
+            if current_profit > Decimal::ZERO {
                 current_price += step;
                 continue;
             }
-            if current_profit.abs() > max_loss {
-                max_loss = pos!(current_profit.abs());
-                self.max_loss_point = Some((current_price, current_profit));
+            if current_profit.abs() > max_loss.to_dec() {
+                max_loss = current_profit.abs().into();
+                self.max_loss_point = Some((current_price, current_profit.to_f64().unwrap()));
             }
             current_price += step;
         }
         debug!("Max Loss: {:.2}", max_loss);
         Ok(max_loss)
-    }
-
-    fn total_cost(&self) -> Positive {
-        if self.positions.is_empty() {
-            return Positive::ZERO;
-        }
-        self.positions.iter().map(Position::total_cost).sum()
-    }
-
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let restult = self
-            .positions
-            .iter()
-            .map(|position| position.net_premium_received())
-            .sum::<f64>();
-        Ok(Decimal::from_f64(restult).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -295,17 +284,17 @@ impl Strategies for CustomStrategy {
             ));
         }
 
-        let mut total_profit: f64 = ZERO;
+        let mut total_profit: Decimal = Decimal::ZERO;
         let (mut current_price, max_search_price) = self.range_to_show()?;
         while current_price < max_search_price {
-            let current_profit = self.calculate_profit_at(current_price);
-            if current_profit > ZERO {
+            let current_profit = self.calculate_profit_at(current_price)?;
+            if current_profit > Decimal::ZERO {
                 total_profit += current_profit;
             }
             current_price += self.step_by;
         }
-        let restult = total_profit / self.underlying_price.to_f64();
-        Ok(Decimal::from_f64(restult).unwrap())
+        let restult = total_profit / self.underlying_price.to_dec();
+        Ok(restult)
     }
 
     fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -418,7 +407,7 @@ impl Optimizable for CustomStrategy {
 }
 
 impl Profit for CustomStrategy {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
         self.positions
             .iter()
@@ -551,9 +540,9 @@ mod tests_custom_strategy {
         // Short Call
         let short_strike = pos!(5800.0);
         let short_quantity = pos!(2.0);
-        let premium_short = 53.04;
-        let open_fee_short = 0.78;
-        let close_fee_short = 0.78;
+        let premium_short = pos!(53.04);
+        let open_fee_short = pos!(0.78);
+        let close_fee_short = pos!(0.78);
 
         let short_call = Position::new(
             Options::new(
@@ -625,9 +614,9 @@ mod tests_custom_strategy {
         // Long Call ITM
         let long_strike_itm = pos!(5750.0);
         let long_quantity = pos!(1.0);
-        let premium_long_itm = 85.04;
-        let open_fee_long = 0.78;
-        let close_fee_long = 0.78;
+        let premium_long_itm = pos!(85.04);
+        let open_fee_long = pos!(0.78);
+        let close_fee_long = pos!(0.78);
 
         let position = Position::new(
             Options::new(
@@ -674,13 +663,13 @@ mod tests_custom_strategy {
         // Long Call ITM
         let long_strike_itm = pos!(5750.0);
         let long_quantity = pos!(1.0);
-        let premium_long_itm = 85.04;
-        let open_fee_long = 0.78;
-        let close_fee_long = 0.78;
+        let premium_long_itm = pos!(85.04);
+        let open_fee_long = pos!(0.78);
+        let close_fee_long = pos!(0.78);
 
         // Long Call OTM
         let long_strike_otm = pos!(5850.0);
-        let premium_long_otm = 31.65;
+        let premium_long_otm = pos!(31.65);
         let position = Position::new(
             Options::new(
                 OptionType::European,
@@ -751,9 +740,13 @@ mod tests_custom_strategy {
             pos!(100.0), // strike_price
             pos!(0.2),   // volatility
         );
-        strategy
-            .positions
-            .push(Position::new(option, 5.0, Default::default(), 0.0, 0.0));
+        strategy.positions.push(Position::new(
+            option,
+            pos!(5.0),
+            Default::default(),
+            Positive::ZERO,
+            Positive::ZERO,
+        ));
         strategy.calculate_break_even_points();
 
         assert_eq!(strategy.break_even_points.len(), 1);
@@ -782,9 +775,9 @@ mod tests_max_profit {
         // Short Call
         let short_strike = pos!(5800.0);
         let short_quantity = pos!(2.0);
-        let premium_short = 53.04;
-        let open_fee_short = 0.78;
-        let close_fee_short = 0.78;
+        let premium_short = pos!(53.04);
+        let open_fee_short = pos!(0.78);
+        let close_fee_short = pos!(0.78);
 
         let short_call = Position::new(
             Options::new(
@@ -841,13 +834,13 @@ mod tests_max_profit {
         // Long Call ITM
         let long_strike_itm = pos!(5750.0);
         let long_quantity = pos!(1.0);
-        let premium_long_itm = 85.04;
-        let open_fee_long = 0.78;
-        let close_fee_long = 0.78;
+        let premium_long_itm = pos!(85.04);
+        let open_fee_long = pos!(0.78);
+        let close_fee_long = pos!(0.78);
 
         // Long Call OTM
         let long_strike_otm = pos!(5850.0);
-        let premium_long_otm = 31.65;
+        let premium_long_otm = pos!(31.65);
         let position = Position::new(
             Options::new(
                 OptionType::European,
@@ -920,9 +913,9 @@ mod tests_max_loss {
         // Short Call
         let short_strike = pos!(5800.0);
         let short_quantity = pos!(2.0);
-        let premium_short = 53.04;
-        let open_fee_short = 0.78;
-        let close_fee_short = 0.78;
+        let premium_short = pos!(53.04);
+        let open_fee_short = pos!(0.78);
+        let close_fee_short = pos!(0.78);
 
         let short_call = Position::new(
             Options::new(
@@ -979,13 +972,13 @@ mod tests_max_loss {
         // Long Call ITM
         let long_strike_itm = pos!(5750.0);
         let long_quantity = pos!(1.0);
-        let premium_long_itm = 85.04;
-        let open_fee_long = 0.78;
-        let close_fee_long = 0.78;
+        let premium_long_itm = pos!(85.04);
+        let open_fee_long = pos!(0.78);
+        let close_fee_long = pos!(0.78);
 
         // Long Call OTM
         let long_strike_otm = pos!(5850.0);
-        let premium_long_otm = 31.65;
+        let premium_long_otm = pos!(31.65);
         let position = Position::new(
             Options::new(
                 OptionType::European,
@@ -1046,7 +1039,7 @@ mod tests_total_cost {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
-    fn create_test_position(side: Side, premium: f64, fees: f64) -> Position {
+    fn create_test_position(side: Side, premium: Positive, fees: Positive) -> Position {
         Position::new(
             Options::new(
                 OptionType::European,
@@ -1072,8 +1065,8 @@ mod tests_total_cost {
     #[test]
     fn test_total_cost_only_long_positions() {
         let positions = vec![
-            create_test_position(Side::Long, 5.0, 0.5), // net cost = 6.0 (premium + fees)
-            create_test_position(Side::Long, 3.0, 0.5), // net cost = 4.0 (premium + fees)
+            create_test_position(Side::Long, pos!(5.0), pos!(0.5)), // net cost = 6.0 (premium + fees)
+            create_test_position(Side::Long, pos!(3.0), pos!(0.5)), // net cost = 4.0 (premium + fees)
         ];
 
         let strategy = CustomStrategy::new(
@@ -1087,17 +1080,17 @@ mod tests_total_cost {
             pos!(1.0),
         );
 
-        assert_eq!(strategy.total_cost(), 10.0); // 6.0 + 4.0
+        assert_eq!(strategy.total_cost().unwrap(), 10.0); // 6.0 + 4.0
     }
 
     #[test]
     fn test_total_cost_only_short_positions() {
         setup_logger();
-        let position_1 = create_test_position(Side::Short, 5.0, 0.5);
-        let position_2 = create_test_position(Side::Short, 3.0, 0.5);
+        let position_1 = create_test_position(Side::Short, pos!(5.0), pos!(0.5));
+        let position_2 = create_test_position(Side::Short, pos!(3.0), pos!(0.5));
 
-        assert_eq!(position_1.total_cost(), 1.0);
-        assert_eq!(position_2.total_cost(), 1.0);
+        assert_eq!(position_1.total_cost().unwrap(), 1.0);
+        assert_eq!(position_2.total_cost().unwrap(), 1.0);
 
         let positions = vec![position_1, position_2];
 
@@ -1112,16 +1105,16 @@ mod tests_total_cost {
             pos!(1.0),
         );
 
-        assert_eq!(strategy.total_cost(), 2.0);
+        assert_eq!(strategy.total_cost().unwrap(), 2.0);
     }
 
     #[test]
     fn test_total_cost_mixed_positions() {
         let positions = vec![
-            create_test_position(Side::Long, 5.0, 0.5), // net cost = 6.0
-            create_test_position(Side::Short, 3.0, 0.5), // net cost = 1.0
-            create_test_position(Side::Long, 4.0, 0.5), // net cost = 5.0
-            create_test_position(Side::Short, 2.0, 0.75), // net cost = 1.5
+            create_test_position(Side::Long, pos!(5.0), pos!(0.5)), // net cost = 6.0
+            create_test_position(Side::Short, pos!(3.0), pos!(0.5)), // net cost = 1.0
+            create_test_position(Side::Long, pos!(4.0), pos!(0.5)), // net cost = 5.0
+            create_test_position(Side::Short, pos!(2.0), pos!(0.75)), // net cost = 1.5
         ];
 
         let strategy = CustomStrategy::new(
@@ -1135,16 +1128,16 @@ mod tests_total_cost {
             pos!(1.0),
         );
 
-        assert_eq!(strategy.total_cost(), 13.5); // 6.0 + 1.0 + 5.0 + 1.5
+        assert_eq!(strategy.total_cost().unwrap(), 13.5); // 6.0 + 1.0 + 5.0 + 1.5
     }
 
     #[test]
     fn test_total_cost_with_different_premiums_and_fees() {
         let positions = vec![
-            create_test_position(Side::Long, 10.0, 1.0),
-            create_test_position(Side::Short, 5.0, 0.5),
-            create_test_position(Side::Short, 3.0, 0.25),
-            create_test_position(Side::Long, 7.0, 0.75),
+            create_test_position(Side::Long, pos!(10.0), pos!(1.0)),
+            create_test_position(Side::Short, pos!(5.0), pos!(0.5)),
+            create_test_position(Side::Short, pos!(3.0), pos!(0.25)),
+            create_test_position(Side::Long, pos!(7.0), pos!(0.75)),
         ];
 
         let strategy = CustomStrategy::new(
@@ -1157,7 +1150,7 @@ mod tests_total_cost {
             100,
             pos!(1.0),
         );
-        assert_eq!(strategy.total_cost(), 22.0); // 12.0 + 1.0 + 8.5 + 0.5
+        assert_eq!(strategy.total_cost().unwrap(), 22.0); // 12.0 + 1.0 + 8.5 + 0.5
     }
 }
 
@@ -1166,7 +1159,7 @@ mod tests_best_range_to_show {
     use super::*;
     use crate::constants::STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::Options;
+    use crate::{pos, Options};
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1186,10 +1179,10 @@ mod tests_best_range_to_show {
                 Positive::ZERO,
                 None,
             ),
-            53.04,
+            pos!(53.04),
             Utc::now(),
-            0.78,
-            0.78,
+            pos!(0.78),
+            pos!(0.78),
         )
     }
 
@@ -1306,10 +1299,10 @@ mod tests_best_range_to_show {
 #[cfg(test)]
 mod tests_greeks {
     use super::*;
-    use crate::assert_decimal_eq;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::utils::setup_logger;
     use crate::Options;
+    use crate::{assert_decimal_eq, pos};
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1332,10 +1325,10 @@ mod tests_greeks {
                 pos!(0.02), // dividend_yield
                 None,
             ),
-            10.0, // premium
+            pos!(10.0), // premium
             Utc::now(),
-            1.0, // open_fee
-            1.0, // close_fee
+            Positive::ONE, // open_fee
+            Positive::ONE, // close_fee
         )
     }
 

@@ -32,12 +32,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(1.0),      // quantity
-        ZERO,           // premium_short_call
-        ZERO,           // premium_short_put
-        ZERO,           // premium_long_call
-        ZERO,           // premium_long_put
-        1.0,            // open_fee
-        1.0,            // close_fee
+        Positive::ZERO, // premium_short_call
+        Positive::ZERO, // premium_short_put
+        Positive::ZERO, // premium_long_call
+        Positive::ZERO, // premium_long_put
+        Positive::ONE,  // open_fee
+        Positive::ONE,  // close_fee
     );
 
     strategy.best_ratio(&option_chain, FindOptimalSide::All);

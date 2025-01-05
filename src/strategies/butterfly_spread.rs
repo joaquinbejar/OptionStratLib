@@ -39,10 +39,11 @@ use crate::visualization::utils::Graph;
 use crate::Options;
 use crate::{d2fu, pos, Positive};
 use chrono::Utc;
-use num_traits::FromPrimitive;
+use num_traits::ToPrimitive;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{debug, info};
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =
@@ -75,15 +76,15 @@ impl LongButterflySpread {
         risk_free_rate: Decimal,
         dividend_yield: Positive,
         quantity: Positive,
-        premium_low: f64,
-        premium_middle: f64,
-        premium_high: f64,
-        open_fee_short_call: f64,
-        close_fee_short_call: f64,
-        open_fee_long_call_low: f64,
-        close_fee_long_call_low: f64,
-        open_fee_long_call_high: f64,
-        close_fee_long_call_high: f64,
+        premium_low: Positive,
+        premium_middle: Positive,
+        premium_high: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
+        open_fee_long_call_low: Positive,
+        close_fee_long_call_low: Positive,
+        open_fee_long_call_high: Positive,
+        close_fee_long_call_high: Positive,
     ) -> Self {
         let mut strategy = LongButterflySpread {
             name: "Long Butterfly".to_string(),
@@ -166,18 +167,22 @@ impl LongButterflySpread {
 
         strategy.validate();
 
-        let left_net_value =
-            strategy.calculate_profit_at(strategy.long_call_low.option.strike_price) / quantity;
-        let right_net_value =
-            strategy.calculate_profit_at(strategy.long_call_high.option.strike_price) / quantity;
+        let left_net_value = strategy
+            .calculate_profit_at(strategy.long_call_low.option.strike_price)
+            .unwrap()
+            / quantity;
+        let right_net_value = strategy
+            .calculate_profit_at(strategy.long_call_high.option.strike_price)
+            .unwrap()
+            / quantity;
 
-        if left_net_value <= ZERO {
+        if left_net_value <= Decimal::ZERO {
             strategy
                 .break_even_points
                 .push((strategy.long_call_low.option.strike_price - left_net_value).round_to(2));
         }
 
-        if right_net_value <= ZERO {
+        if right_net_value <= Decimal::ZERO {
             strategy
                 .break_even_points
                 .push((strategy.long_call_high.option.strike_price + right_net_value).round_to(2));
@@ -259,9 +264,9 @@ impl Strategies for LongButterflySpread {
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(self.short_calls.option.strike_price);
-        if profit > ZERO {
-            Ok(pos!(profit))
+        let profit = self.calculate_profit_at(self.short_calls.option.strike_price)?;
+        if profit > Decimal::ZERO {
+            Ok(profit.into())
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -272,34 +277,18 @@ impl Strategies for LongButterflySpread {
     }
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let left_loss = self.calculate_profit_at(self.long_call_low.option.strike_price);
-        let right_loss = self.calculate_profit_at(self.long_call_high.option.strike_price);
+        let left_loss = self.calculate_profit_at(self.long_call_low.option.strike_price)?;
+        let right_loss = self.calculate_profit_at(self.long_call_high.option.strike_price)?;
         let max_loss = left_loss.min(right_loss);
-        if max_loss > ZERO {
+        if max_loss > Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
                     reason: "Max loss is negative".to_string(),
                 },
             ))
         } else {
-            Ok(pos!(max_loss.abs()))
+            Ok(max_loss.abs().into())
         }
-    }
-
-    fn total_cost(&self) -> Positive {
-        pos!(
-            self.long_call_low.net_cost()
-                + self.short_calls.net_cost()
-                + self.long_call_high.net_cost()
-        )
-    }
-
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_calls.net_premium_received()
-            - self.long_call_low.net_cost()
-            - self.long_call_high.net_cost();
-
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -312,9 +301,11 @@ impl Strategies for LongButterflySpread {
             let break_even_point = break_even_points[0];
 
             if break_even_point < self.short_calls.option.strike_price {
-                pos!(self.calculate_profit_at(self.long_call_high.option.strike_price))
+                self.calculate_profit_at(self.long_call_high.option.strike_price)?
+                    .into()
             } else {
-                pos!(self.calculate_profit_at(self.long_call_low.option.strike_price))
+                self.calculate_profit_at(self.long_call_low.option.strike_price)?
+                    .into()
             }
         };
         Ok((high * base / 200.0).into())
@@ -434,9 +425,9 @@ impl Optimizable for LongButterflySpread {
                 self.long_call_low.option.risk_free_rate,
                 self.long_call_low.option.dividend_yield,
                 self.long_call_low.option.quantity,
-                low_strike.call_ask.unwrap().to_f64(),
-                middle_strike.call_bid.unwrap().to_f64(),
-                high_strike.call_ask.unwrap().to_f64(),
+                low_strike.call_ask.unwrap(),
+                middle_strike.call_bid.unwrap(),
+                high_strike.call_ask.unwrap(),
                 self.short_calls.open_fee,
                 self.short_calls.close_fee,
                 self.long_call_low.open_fee,
@@ -450,11 +441,11 @@ impl Optimizable for LongButterflySpread {
 }
 
 impl Profit for LongButterflySpread {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        self.long_call_low.pnl_at_expiration(&price)
-            + self.short_calls.pnl_at_expiration(&price)
-            + self.long_call_high.pnl_at_expiration(&price)
+        Ok(self.long_call_low.pnl_at_expiration(&price)?
+            + self.short_calls.pnl_at_expiration(&price)?
+            + self.long_call_high.pnl_at_expiration(&price)?)
     }
 }
 
@@ -513,8 +504,16 @@ impl Graph for LongButterflySpread {
         let mut points = Vec::new();
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
 
-        let left_loss = self.calculate_profit_at(self.long_call_low.option.strike_price);
-        let right_loss = self.calculate_profit_at(self.long_call_high.option.strike_price);
+        let left_loss = self
+            .calculate_profit_at(self.long_call_low.option.strike_price)
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        let right_loss = self
+            .calculate_profit_at(self.long_call_high.option.strike_price)
+            .unwrap()
+            .to_f64()
+            .unwrap();
 
         let font_size = 24;
         // Break-even points
@@ -794,15 +793,15 @@ impl ShortButterflySpread {
         risk_free_rate: Decimal,
         dividend_yield: Positive,
         quantity: Positive,
-        premium_low: f64,
-        premium_middle: f64,
-        premium_high: f64,
-        open_fee_long_call: f64,
-        close_fee_long_call: f64,
-        open_fee_short_call_low: f64,
-        close_fee_short_call_low: f64,
-        open_fee_short_call_high: f64,
-        close_fee_short_call_high: f64,
+        premium_low: Positive,
+        premium_middle: Positive,
+        premium_high: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
+        open_fee_short_call_low: Positive,
+        close_fee_short_call_low: Positive,
+        open_fee_short_call_high: Positive,
+        close_fee_short_call_high: Positive,
     ) -> Self {
         let mut strategy = ShortButterflySpread {
             name: "Short Butterfly".to_string(),
@@ -885,18 +884,22 @@ impl ShortButterflySpread {
 
         strategy.validate();
 
-        let left_net_value =
-            strategy.calculate_profit_at(strategy.short_call_low.option.strike_price) / quantity;
-        let right_net_value =
-            strategy.calculate_profit_at(strategy.short_call_high.option.strike_price) / quantity;
+        let left_net_value = strategy
+            .calculate_profit_at(strategy.short_call_low.option.strike_price)
+            .unwrap()
+            / quantity;
+        let right_net_value = strategy
+            .calculate_profit_at(strategy.short_call_high.option.strike_price)
+            .unwrap()
+            / quantity;
 
-        if left_net_value >= ZERO {
+        if left_net_value >= Decimal::ZERO {
             strategy
                 .break_even_points
                 .push((strategy.short_call_low.option.strike_price + left_net_value).round_to(2));
         }
 
-        if right_net_value >= ZERO {
+        if right_net_value >= Decimal::ZERO {
             strategy
                 .break_even_points
                 .push((strategy.short_call_high.option.strike_price - right_net_value).round_to(2));
@@ -978,11 +981,11 @@ impl Strategies for ShortButterflySpread {
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price);
-        let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
+        let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price)?;
+        let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price)?;
         let max_profit = left_profit.max(right_profit);
-        if max_profit > ZERO {
-            Ok(pos!(max_profit))
+        if max_profit > Decimal::ZERO {
+            Ok(max_profit.into())
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -993,44 +996,29 @@ impl Strategies for ShortButterflySpread {
     }
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(self.long_calls.option.strike_price);
-        if loss > ZERO {
+        let loss = self.calculate_profit_at(self.long_calls.option.strike_price)?;
+        if loss > Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
                     reason: "Max loss is negative".to_string(),
                 },
             ))
         } else {
-            Ok(pos!(loss.abs()))
+            Ok(loss.abs().into())
         }
-    }
-
-    fn total_cost(&self) -> Positive {
-        pos!(
-            self.short_call_low.net_cost()
-                + self.long_calls.net_cost()
-                + self.short_call_high.net_cost()
-        )
-    }
-
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call_low.net_premium_received()
-            + self.short_call_high.net_premium_received()
-            - self.long_calls.net_cost();
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let break_even_points = self.get_break_even_points()?;
-        let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price);
-        let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
+        let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price)?;
+        let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price)?;
 
         let result = if break_even_points.len() == 2 {
             left_profit + right_profit
         } else {
             left_profit.max(right_profit)
         };
-        Ok(Decimal::from_f64(result).unwrap())
+        Ok(result)
     }
 
     fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -1147,9 +1135,9 @@ impl Optimizable for ShortButterflySpread {
                 self.short_call_low.option.risk_free_rate,
                 self.short_call_low.option.dividend_yield,
                 self.short_call_low.option.quantity,
-                low_strike.call_bid.unwrap().to_f64(),
-                middle_strike.call_ask.unwrap().to_f64(),
-                high_strike.call_bid.unwrap().to_f64(),
+                low_strike.call_bid.unwrap(),
+                middle_strike.call_ask.unwrap(),
+                high_strike.call_bid.unwrap(),
                 self.long_calls.open_fee,
                 self.long_calls.close_fee,
                 self.short_call_low.open_fee,
@@ -1163,11 +1151,11 @@ impl Optimizable for ShortButterflySpread {
 }
 
 impl Profit for ShortButterflySpread {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        self.short_call_low.pnl_at_expiration(&price)
-            + self.long_calls.pnl_at_expiration(&price)
-            + self.short_call_high.pnl_at_expiration(&price)
+        Ok(self.short_call_low.pnl_at_expiration(&price)?
+            + self.long_calls.pnl_at_expiration(&price)?
+            + self.short_call_high.pnl_at_expiration(&price)?)
     }
 }
 
@@ -1219,8 +1207,16 @@ impl Graph for ShortButterflySpread {
         let mut points = Vec::new();
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
 
-        let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price);
-        let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price);
+        let left_profit = self
+            .calculate_profit_at(self.short_call_low.option.strike_price)
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        let right_profit = self
+            .calculate_profit_at(self.short_call_high.option.strike_price)
+            .unwrap()
+            .to_f64()
+            .unwrap();
 
         // Break-even points
         points.extend(
@@ -1485,15 +1481,15 @@ mod tests_long_butterfly_spread {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            3.0,                              // premium_low
-            2.0,                              // premium_middle
-            1.0,                              // premium_high
-            0.05,                             // open_fee_short_call
-            0.05,                             // close_fee_short_call
-            0.05,                             // open_fee_long_call_low
-            0.05,                             // close_fee_long_call_low
-            0.05,                             // open_fee_long_call_high
-            0.05,                             // close_fee_long_call_high
+            pos!(3.0),                        // premium_low
+            Positive::TWO,                    // premium_middle
+            Positive::ONE,                    // premium_high
+            pos!(0.05),                       // open_fee_short_call
+            pos!(0.05),                       // close_fee_short_call
+            pos!(0.05),                       // open_fee_long_call_low
+            pos!(0.05),                       // close_fee_long_call_low
+            pos!(0.05),                       // open_fee_long_call_high
+            pos!(0.05),                       // close_fee_long_call_high
         )
     }
 
@@ -1581,15 +1577,15 @@ mod tests_long_butterfly_spread {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            3.0,
-            2.0,
-            1.0,
-            1.0,  // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            1.0,  // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            Positive::ONE, // open_fee_short_call
+            pos!(0.05),    // close_fee_short_call
+            pos!(0.05),    // open_fee_long_call_low
+            pos!(0.05),    // close_fee_long_call_low
+            Positive::ONE, // open_fee_long_call_high
+            pos!(0.05),    // close_fee_long_call_high
         );
 
         assert_eq!(butterfly.long_call_low.open_fee, 0.05); // fees / 3
@@ -1622,15 +1618,15 @@ mod tests_long_butterfly_spread {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0), // quantity = 2
-            3.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
 
         assert_eq!(butterfly.long_call_low.option.quantity, pos!(2.0));
@@ -1677,15 +1673,15 @@ mod tests_long_butterfly_spread {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            1.0,
-            1.0,
-            1.05,  // open_fee_short_call
-            10.05, // close_fee_short_call
-            1.05,  // open_fee_long_call_low
-            0.05,  // close_fee_long_call_low
-            1.05,  // open_fee_long_call_high
-            0.05,  // close_fee_long_call_high
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            pos!(1.05),  // open_fee_short_call
+            pos!(10.05), // close_fee_short_call
+            pos!(1.05),  // open_fee_long_call_low
+            pos!(0.05),  // close_fee_long_call_low
+            pos!(1.05),  // open_fee_long_call_high
+            pos!(0.05),  // close_fee_long_call_high
         );
         assert!(check_profit.max_profit().is_err());
     }
@@ -1710,15 +1706,15 @@ mod tests_short_butterfly_spread {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            10.0,                             // premium_low
-            1.0,                              // premium_middle
-            0.5,                              // premium_high
-            0.05,                             // open_fee_short_call
-            0.05,                             // close_fee_short_call
-            0.05,                             // open_fee_long_call_low
-            0.05,                             // close_fee_long_call_low
-            0.05,                             // open_fee_long_call_high
-            0.05,                             // close_fee_long_call_high
+            pos!(10.0),                       // premium_low
+            Positive::ONE,                    // premium_middle
+            pos!(0.5),                        // premium_high
+            pos!(0.05),                       // open_fee_short_call
+            pos!(0.05),                       // close_fee_short_call
+            pos!(0.05),                       // open_fee_long_call_low
+            pos!(0.05),                       // close_fee_long_call_low
+            pos!(0.05),                       // open_fee_long_call_high
+            pos!(0.05),                       // close_fee_long_call_high
         )
     }
 
@@ -1806,15 +1802,15 @@ mod tests_short_butterfly_spread {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            3.0,
-            2.0,
-            1.0,
-            1.0,  // open_fee_short_call
-            0.05, // close_fee_short_call
-            1.0,  // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            1.0,  // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            Positive::ONE, // open_fee_short_call
+            pos!(0.05),    // close_fee_short_call
+            Positive::ONE, // open_fee_long_call_low
+            pos!(0.05),    // close_fee_long_call_low
+            Positive::ONE, // open_fee_long_call_high
+            pos!(0.05),    // close_fee_long_call_high
         );
 
         assert_eq!(butterfly.short_call_low.open_fee, 1.0); // fees / 3
@@ -1847,15 +1843,15 @@ mod tests_short_butterfly_spread {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0),
-            3.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
 
         assert_eq!(butterfly.short_call_low.option.quantity, pos!(2.0));
@@ -1922,15 +1918,15 @@ mod tests_short_butterfly_spread {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            10.0,
-            1.0,
-            10.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(10.0),
+            Positive::ONE,
+            pos!(10.0),
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         assert!(max_loss.max_loss().is_err());
     }
@@ -1973,10 +1969,10 @@ mod tests_long_butterfly_validation {
                 Positive::ZERO,
                 None,
             ),
-            1.0,
+            Positive::ONE,
             Utc::now(),
-            0.0,
-            0.0,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1993,15 +1989,15 @@ mod tests_long_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         assert!(butterfly.validate());
     }
@@ -2019,15 +2015,15 @@ mod tests_long_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         butterfly.long_call_low = create_valid_position(Side::Long, pos!(90.0), Positive::ZERO);
         assert!(!butterfly.validate());
@@ -2046,15 +2042,15 @@ mod tests_long_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         assert!(!butterfly.validate());
     }
@@ -2072,15 +2068,15 @@ mod tests_long_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         butterfly.short_calls = create_valid_position(Side::Short, pos!(100.0), pos!(1.0));
         assert!(!butterfly.validate());
@@ -2099,15 +2095,15 @@ mod tests_long_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         butterfly.long_call_high = create_valid_position(Side::Long, pos!(110.0), pos!(2.0));
         assert!(!butterfly.validate());
@@ -2135,10 +2131,10 @@ mod tests_short_butterfly_validation {
                 Positive::ZERO,
                 None,
             ),
-            1.0,
+            Positive::ONE,
             Utc::now(),
-            0.0,
-            0.0,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -2155,15 +2151,15 @@ mod tests_short_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         assert!(butterfly.validate());
     }
@@ -2181,15 +2177,15 @@ mod tests_short_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         butterfly.short_call_low = create_valid_position(Side::Short, pos!(90.0), Positive::ZERO);
         assert!(!butterfly.validate());
@@ -2208,15 +2204,15 @@ mod tests_short_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         assert!(!butterfly.validate());
     }
@@ -2234,15 +2230,15 @@ mod tests_short_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         butterfly.long_calls = create_valid_position(Side::Long, pos!(100.0), pos!(1.0));
         assert!(!butterfly.validate());
@@ -2261,15 +2257,15 @@ mod tests_short_butterfly_validation {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
         butterfly.short_call_high = create_valid_position(Side::Short, pos!(110.0), pos!(2.0));
         assert!(!butterfly.validate());
@@ -2296,15 +2292,15 @@ mod tests_butterfly_strategies {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
-            3.0,            // premium_low
-            2.0,            // premium_middle
-            1.0,            // premium_high
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(3.0),      // premium_low
+            Positive::TWO,  // premium_middle
+            Positive::ONE,  // premium_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         )
     }
 
@@ -2320,15 +2316,15 @@ mod tests_butterfly_strategies {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
-            10.0,           // premium_low
-            5.0,            // premium_middle
-            1.0,            // premium_high
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(10.0),     // premium_low
+            pos!(5.0),      // premium_middle
+            Positive::ONE,  // premium_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         )
     }
 
@@ -2359,10 +2355,10 @@ mod tests_butterfly_strategies {
                 Positive::ZERO,
                 None,
             ),
-            1.0,
+            Positive::ONE,
             Utc::now(),
-            0.0,
-            0.0,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         butterfly
@@ -2389,10 +2385,10 @@ mod tests_butterfly_strategies {
                 Positive::ZERO,
                 None,
             ),
-            1.0,
+            Positive::ONE,
             Utc::now(),
-            0.0,
-            0.0,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         butterfly
@@ -2413,20 +2409,20 @@ mod tests_butterfly_strategies {
     #[test]
     fn test_max_profit_long_butterfly() {
         let butterfly = create_test_long();
-        let max_profit = butterfly.max_profit().unwrap();
+        let max_profit = butterfly.max_profit().unwrap().to_dec();
         // Max profit at middle strike
-        let expected_profit = butterfly.calculate_profit_at(pos!(100.0));
-        assert_eq!(max_profit.to_f64(), expected_profit);
+        let expected_profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
+        assert_eq!(max_profit, expected_profit);
     }
 
     #[test]
     fn test_max_loss_long_butterfly() {
         let butterfly = create_test_long();
-        let max_loss = butterfly.max_loss().unwrap();
+        let max_loss = butterfly.max_loss().unwrap().to_dec();
         // Max loss at wings
-        let left_loss = butterfly.calculate_profit_at(pos!(90.0));
-        let right_loss = butterfly.calculate_profit_at(pos!(110.0));
-        assert_eq!(max_loss.to_f64(), left_loss.min(right_loss).abs());
+        let left_loss = butterfly.calculate_profit_at(pos!(90.0)).unwrap();
+        let right_loss = butterfly.calculate_profit_at(pos!(110.0)).unwrap();
+        assert_eq!(max_loss, left_loss.min(right_loss).abs());
     }
 
     #[test]
@@ -2443,8 +2439,8 @@ mod tests_butterfly_strategies {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
 
-        assert!(long_butterfly.total_cost() > Positive::ZERO);
-        assert!(short_butterfly.total_cost() > Positive::ZERO);
+        assert!(long_butterfly.total_cost().unwrap() > Positive::ZERO);
+        assert!(short_butterfly.total_cost().unwrap() > Positive::ZERO);
     }
 
     #[test]
@@ -2460,17 +2456,17 @@ mod tests_butterfly_strategies {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            3.0,
-            2.0,
-            1.0,
-            1.0, // open_fee_short_call
-            1.0, // close_fee_short_call
-            1.0, // open_fee_long_call_low
-            1.0, // close_fee_long_call_low
-            1.0, // open_fee_long_call_high
-            1.0, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            Positive::ONE, // open_fee_short_call
+            Positive::ONE, // close_fee_short_call
+            Positive::ONE, // open_fee_long_call_low
+            Positive::ONE, // close_fee_long_call_low
+            Positive::ONE, // open_fee_long_call_high
+            Positive::ONE, // close_fee_long_call_high
         );
-        assert_eq!(butterfly.fees().unwrap().to_f64().unwrap(), 8.0);
+        assert_eq!(butterfly.fees().unwrap().to_f64(), 8.0);
     }
 
     #[test]
@@ -2486,18 +2482,18 @@ mod tests_butterfly_strategies {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0),
-            3.0,
-            2.0,
-            1.0,
-            1.0, // open_fee_short_call
-            1.0, // close_fee_short_call
-            1.0, // open_fee_long_call_low
-            1.0, // close_fee_long_call_low
-            1.0, // open_fee_long_call_high
-            1.0, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            Positive::ONE, // open_fee_short_call
+            Positive::ONE, // close_fee_short_call
+            Positive::ONE, // open_fee_long_call_low
+            Positive::ONE, // close_fee_long_call_low
+            Positive::ONE, // open_fee_long_call_high
+            Positive::ONE, // close_fee_long_call_high
         );
 
-        assert_eq!(butterfly.fees().unwrap().to_f64().unwrap(), 16.0);
+        assert_eq!(butterfly.fees().unwrap(), pos!(16.0));
     }
 
     #[test]
@@ -2545,15 +2541,15 @@ mod tests_butterfly_strategies {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0), // quantity = 2
-            3.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
 
         let base_butterfly = create_test_long();
@@ -2603,15 +2599,15 @@ mod tests_butterfly_optimizable {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            3.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         )
     }
 
@@ -2626,16 +2622,16 @@ mod tests_butterfly_optimizable {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
-            3.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         )
     }
 
@@ -2753,23 +2749,23 @@ mod tests_long_butterfly_profit {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
-            3.0,            // premium_low
-            2.0,            // premium_middle
-            1.0,            // premium_high
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(3.0),      // premium_low
+            Positive::TWO,  // premium_middle
+            Positive::ONE,  // premium_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         )
     }
 
     #[test]
     fn test_profit_at_middle_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(pos!(100.0));
-        assert!(profit > 0.0);
+        let profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
+        assert!(profit > Decimal::ZERO);
         let expected = Positive::new_decimal(Decimal::from_str("9.6").unwrap()).unwrap();
         assert_eq!(profit, expected);
     }
@@ -2777,19 +2773,23 @@ mod tests_long_butterfly_profit {
     #[test]
     fn test_profit_below_lowest_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(pos!(85.0));
-        assert!(profit < 0.0);
-        let expected = Positive::new_decimal(Decimal::from_str("0.4").unwrap()).unwrap();
-        assert_relative_eq!(-profit, expected.to_f64(), epsilon = 0.0001);
+        let profit = butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        assert!(profit < ZERO);
+        let expected = 0.4;
+        assert_relative_eq!(-profit, expected, epsilon = 0.0001);
     }
 
     #[test]
     fn test_profit_above_highest_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(pos!(115.0));
-        assert!(profit < 0.0);
+        let profit = butterfly.calculate_profit_at(pos!(115.0)).unwrap();
+        assert!(profit < Decimal::ZERO);
         assert_relative_eq!(
-            profit,
+            profit.to_f64().unwrap(),
             -butterfly.max_loss().unwrap().to_f64(),
             epsilon = 0.0001
         );
@@ -2801,7 +2801,11 @@ mod tests_long_butterfly_profit {
         let break_even_points = butterfly.get_break_even_points().unwrap();
 
         for &point in break_even_points {
-            let profit = butterfly.calculate_profit_at(point);
+            let profit = butterfly
+                .calculate_profit_at(point)
+                .unwrap()
+                .to_f64()
+                .unwrap();
             assert_relative_eq!(profit, 0.0, epsilon = 0.01);
         }
     }
@@ -2819,18 +2823,22 @@ mod tests_long_butterfly_profit {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(2.0),      // quantity = 2
-            3.0,            // premium_low
-            2.0,            // premium_middle
-            1.0,            // premium_high
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(3.0),      // premium_low
+            Positive::TWO,  // premium_middle
+            Positive::ONE,  // premium_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         );
 
-        let scaled_profit = butterfly.calculate_profit_at(pos!(100.0));
+        let scaled_profit = butterfly
+            .calculate_profit_at(pos!(100.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         assert_relative_eq!(scaled_profit, 19.2, epsilon = 0.0001);
     }
 }
@@ -2857,23 +2865,23 @@ mod tests_short_butterfly_profit {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
-            3.0,            // premium_low
-            2.0,            // premium_middle
-            1.0,            // premium_high
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(3.0),      // premium_low
+            Positive::TWO,  // premium_middle
+            Positive::ONE,  // premium_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         )
     }
 
     #[test]
     fn test_profit_at_middle_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(pos!(100.0));
-        assert!(profit < 0.0);
+        let profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
+        assert!(profit < Decimal::ZERO);
         let expected = Positive::new_decimal(Decimal::from_str("10.4").unwrap()).unwrap();
 
         assert_eq!(-profit, expected);
@@ -2885,7 +2893,11 @@ mod tests_short_butterfly_profit {
         let break_even_points = butterfly.get_break_even_points().unwrap();
 
         for &point in break_even_points {
-            let profit = butterfly.calculate_profit_at(point);
+            let profit = butterfly
+                .calculate_profit_at(point)
+                .unwrap()
+                .to_f64()
+                .unwrap();
             assert_relative_eq!(profit, 0.0, epsilon = 0.01);
         }
     }
@@ -2903,25 +2915,37 @@ mod tests_short_butterfly_profit {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0), // quantity = 2
-            3.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         );
-        let scaled_profit = butterfly.calculate_profit_at(pos!(85.0));
+        let scaled_profit = butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         assert_relative_eq!(scaled_profit, -0.8, epsilon = 0.0001);
     }
 
     #[test]
     fn test_profit_symmetry() {
         let butterfly = create_test();
-        let low_extreme_profit = butterfly.calculate_profit_at(pos!(85.0));
-        let high_extreme_profit = butterfly.calculate_profit_at(pos!(115.0));
+        let low_extreme_profit = butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        let high_extreme_profit = butterfly
+            .calculate_profit_at(pos!(115.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
 
         assert_relative_eq!(low_extreme_profit, high_extreme_profit, epsilon = 0.01);
     }
@@ -2939,20 +2963,28 @@ mod tests_short_butterfly_profit {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            3.0,
-            2.0,
-            1.0,
-            0.0, // open_fee_short_call
-            0.0, // close_fee_short_call
-            0.0, // open_fee_long_call_low
-            0.0, // close_fee_long_call_low
-            0.0, // open_fee_long_call_high
-            0.0, // close_fee_long_call_high
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            Positive::ZERO, // open_fee_short_call
+            Positive::ZERO, // close_fee_short_call
+            Positive::ZERO, // open_fee_long_call_low
+            Positive::ZERO, // close_fee_long_call_low
+            Positive::ZERO, // open_fee_long_call_high
+            Positive::ZERO, // close_fee_long_call_high
         );
 
         let base_butterfly = create_test();
-        let profit_without_fees = butterfly.calculate_profit_at(pos!(85.0));
-        let profit_with_fees = base_butterfly.calculate_profit_at(pos!(85.0));
+        let profit_without_fees = butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        let profit_with_fees = base_butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         assert!(profit_with_fees < profit_without_fees);
     }
 }
@@ -2975,16 +3007,16 @@ mod tests_long_butterfly_graph {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
-            3.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            Positive::ONE,
+            pos!(3.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         )
     }
 
@@ -3093,15 +3125,15 @@ mod tests_short_butterfly_graph {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // long quantity
-            119.01,         // premium_long
-            66.0,           // premium_short
-            29.85,          // open_fee_long
-            0.05,
-            0.05,
-            0.05,
-            0.05,
-            0.05,
-            0.05,
+            pos!(119.01),   // premium_long
+            pos!(66.0),     // premium_short
+            pos!(29.85),    // open_fee_long
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
         )
     }
 
@@ -3198,15 +3230,15 @@ mod tests_butterfly_probability {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            10.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(10.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         )
     }
 
@@ -3222,15 +3254,15 @@ mod tests_butterfly_probability {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            10.0,
-            2.0,
-            1.0,
-            0.05, // open_fee_short_call
-            0.05, // close_fee_short_call
-            0.05, // open_fee_long_call_low
-            0.05, // close_fee_long_call_low
-            0.05, // open_fee_long_call_high
-            0.05, // close_fee_long_call_high
+            pos!(10.0),
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.05), // open_fee_short_call
+            pos!(0.05), // close_fee_short_call
+            pos!(0.05), // open_fee_long_call_low
+            pos!(0.05), // close_fee_long_call_low
+            pos!(0.05), // open_fee_long_call_high
+            pos!(0.05), // close_fee_long_call_high
         )
     }
 
@@ -3430,15 +3462,15 @@ mod tests_long_butterfly_delta {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // long quantity
-            49.65,          // premium_long
-            42.93,          // premium_short
-            1.0,            // open_fee_long
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(49.65),    // premium_long
+            pos!(42.93),    // premium_short
+            Positive::ONE,  // open_fee_long
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         )
     }
 
@@ -3553,15 +3585,15 @@ mod tests_long_butterfly_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(3.0),      // long quantity
-            49.65,          // premium_long
-            42.93,          // premium_short
-            1.0,            // open_fee_long
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(49.65),    // premium_long
+            pos!(42.93),    // premium_short
+            Positive::ONE,  // open_fee_long
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         )
     }
 
@@ -3680,15 +3712,15 @@ mod tests_short_butterfly_delta {
             Decimal::ZERO,  // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // long quantity
-            119.01,         // premium_long
-            66.0,           // premium_short
-            29.85,          // open_fee_long
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(119.01),   // premium_long
+            pos!(66.0),     // premium_short
+            pos!(29.85),    // open_fee_long
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         )
     }
 
@@ -3805,15 +3837,15 @@ mod tests_short_butterfly_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(3.0),      // long quantity
-            119.01,         // premium_long
-            66.0,           // premium_short
-            29.85,          // open_fee_long
-            0.05,           // open_fee_short_call
-            0.05,           // close_fee_short_call
-            0.05,           // open_fee_long_call_low
-            0.05,           // close_fee_long_call_low
-            0.05,           // open_fee_long_call_high
-            0.05,           // close_fee_long_call_high
+            pos!(119.01),   // premium_long
+            pos!(66.0),     // premium_short
+            pos!(29.85),    // open_fee_long
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
         )
     }
 

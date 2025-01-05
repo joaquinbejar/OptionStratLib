@@ -67,8 +67,7 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
-
-use crate::error::probability::ProbabilityError;
+use crate::error::PositionError;
 use std::error::Error;
 use std::fmt;
 
@@ -87,6 +86,10 @@ pub enum StrategyError {
     ProfitLossError(ProfitLossErrorKind),
     /// Errors related to strategy operations
     OperationError(OperationErrorKind),
+
+    StdError {
+        reason: String,
+    },
 }
 
 #[derive(Debug)]
@@ -137,6 +140,7 @@ impl fmt::Display for StrategyError {
             StrategyError::BreakEvenError(err) => write!(f, "Break-even error: {}", err),
             StrategyError::ProfitLossError(err) => write!(f, "Profit/Loss error: {}", err),
             StrategyError::OperationError(err) => write!(f, "Operation error: {}", err),
+            StrategyError::StdError { reason } => write!(f, "Error: {}", reason),
         }
     }
 }
@@ -227,45 +231,19 @@ impl StrategyError {
     }
 }
 
-impl From<StrategyError> for ProbabilityError {
-    fn from(error: StrategyError) -> Self {
-        match error {
-            StrategyError::ProfitLossError(kind) => match kind {
-                ProfitLossErrorKind::MaxProfitError { reason }
-                | ProfitLossErrorKind::MaxLossError { reason }
-                | ProfitLossErrorKind::ProfitRangeError { reason } => {
-                    ProbabilityError::from(reason)
-                }
-            },
-            StrategyError::PriceError(kind) => match kind {
-                PriceErrorKind::InvalidUnderlyingPrice { reason }
-                | PriceErrorKind::InvalidPriceRange {
-                    start: _,
-                    end: _,
-                    reason,
-                } => ProbabilityError::from(reason),
-            },
-            StrategyError::BreakEvenError(kind) => match kind {
-                BreakEvenErrorKind::CalculationError { reason } => ProbabilityError::from(reason),
-                BreakEvenErrorKind::NoBreakEvenPoints => {
-                    ProbabilityError::from("No break-even points found".to_string())
-                }
-            },
-            StrategyError::OperationError(kind) => match kind {
-                OperationErrorKind::NotSupported {
-                    operation,
-                    strategy_type,
-                } => ProbabilityError::from(format!(
-                    "Operation '{}' not supported for strategy '{}'",
-                    operation, strategy_type
-                )),
-                OperationErrorKind::InvalidParameters { operation, reason } => {
-                    ProbabilityError::from(format!(
-                        "Invalid parameters for operation '{}': {}",
-                        operation, reason
-                    ))
-                }
-            },
+impl From<PositionError> for StrategyError {
+    fn from(err: PositionError) -> Self {
+        StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Position".to_string(),
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<Box<dyn Error>> for StrategyError {
+    fn from(err: Box<dyn Error>) -> Self {
+        StrategyError::StdError {
+            reason: err.to_string(),
         }
     }
 }
@@ -273,6 +251,7 @@ impl From<StrategyError> for ProbabilityError {
 #[cfg(test)]
 mod tests_from_str {
     use super::*;
+    use crate::error::ProbabilityError;
 
     #[test]
     fn test_strategy_to_probability_error_conversion() {

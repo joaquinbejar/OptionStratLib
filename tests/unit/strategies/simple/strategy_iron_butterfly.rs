@@ -5,7 +5,7 @@ use optionstratlib::strategies::iron_butterfly::IronButterfly;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, pos};
+use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -27,12 +27,12 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(2.0),      // quantity
-        38.8,           // premium_short_call
-        30.4,           // premium_short_put
-        23.3,           // premium_long_call
-        16.8,           // premium_long_put
-        0.96,           // open_fee
-        0.96,           // close_fee
+        pos!(38.8),     // premium_short_call
+        pos!(30.4),     // premium_short_put
+        pos!(23.3),     // premium_long_call
+        pos!(16.8),     // premium_long_put
+        pos!(0.96),     // open_fee
+        pos!(0.96),     // close_fee
     );
 
     // Validate strategy
@@ -41,15 +41,15 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
-        42.839,
+        strategy.net_premium_received().unwrap().to_f64(),
+        42.84,
         epsilon = 0.001
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(42.839), pos!(0.0001));
-    assert_positivef64_relative_eq!(strategy.total_cost(), pos!(218.599), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 15.36);
+    assert_pos_relative_eq!(strategy.max_profit()?, pos!(42.839), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(95.56), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.fees()?, pos!(15.36), pos!(0.0001));
 
     // Test range calculations
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();

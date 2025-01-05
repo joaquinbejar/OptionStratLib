@@ -824,10 +824,10 @@ mod tests_position_type_display_debug {
         let (option, naive_date) = get_option();
         let position = Position {
             option,
-            premium: 5.75,
+            premium: pos!(5.75),
             date: naive_date,
-            open_fee: 0.50,
-            close_fee: 0.45,
+            open_fee: pos!(0.50),
+            close_fee: pos!(0.45),
         };
 
         let expected_display = "Position Details:\n\
@@ -853,10 +853,10 @@ mod tests_position_type_display_debug {
 
         let position = Position {
             option,
-            premium: 5.75,
+            premium: pos!(5.75),
             date: naive_date,
-            open_fee: 0.50,
-            close_fee: 0.45,
+            open_fee: pos!(0.50),
+            close_fee: pos!(0.45),
         };
 
         let expected_debug = "Position { \
@@ -913,10 +913,10 @@ mod tests_strategy_type_display_debug {
                         pos!(0.02),
                         naive_date,
                     ),
-                    5.0,
+                    pos!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    0.5,
-                    0.45,
+                    pos!(0.50),
+                    pos!(0.45),
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -928,10 +928,10 @@ mod tests_strategy_type_display_debug {
                         pos!(0.02),
                         naive_date,
                     ),
-                    5.0,
+                    pos!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    0.5,
-                    0.45,
+                    pos!(0.50),
+                    pos!(0.45),
                 ),
             ],
             max_profit: Some(10.0),
@@ -939,7 +939,7 @@ mod tests_strategy_type_display_debug {
             break_even_points: vec![pos!(102.0), pos!(108.0)],
         };
 
-        let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.00\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.00\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102.00\n  $108.00\n";
+        let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102.00\n  $108.00\n";
 
         assert_eq!(format!("{}", strategy), expected_output);
     }
@@ -966,10 +966,10 @@ mod tests_strategy_type_display_debug {
                         pos!(0.02),
                         naive_date,
                     ),
-                    5.0,
+                    pos!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    0.5,
-                    0.45,
+                    pos!(0.50),
+                    pos!(0.45),
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -981,10 +981,10 @@ mod tests_strategy_type_display_debug {
                         pos!(0.02),
                         naive_date,
                     ),
-                    5.0,
+                    pos!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    0.5,
-                    0.45,
+                    pos!(0.50),
+                    pos!(0.45),
                 ),
             ],
             max_profit: Some(8.0),
@@ -992,7 +992,7 @@ mod tests_strategy_type_display_debug {
             break_even_points: vec![pos!(82.0), pos!(88.0)],
         };
 
-        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.0, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";
+        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";
 
         assert_eq!(format!("{:?}", strategy), expected_output);
     }

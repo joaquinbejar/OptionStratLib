@@ -1,7 +1,7 @@
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
-use crate::{d2f, f2d, Positive};
+use crate::{d2f, f2d, pos, Positive};
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 
@@ -13,7 +13,7 @@ pub struct BinomialPricingParams<'a> {
     pub volatility: Positive,
     pub int_rate: Decimal,
     pub strike: Positive,
-    pub expiry: Decimal,
+    pub expiry: Positive,
     pub no_steps: usize,
     pub option_type: &'a OptionType,
     pub option_style: &'a OptionStyle,
@@ -73,7 +73,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn 
         return Ok(calculate_discounted_payoff(params)?);
     }
 
-    let dt = params.expiry / f2d!(params.no_steps as f64);
+    let dt = (params.expiry / pos!(params.no_steps as f64)).to_dec();
     let u = calculate_up_factor(params.volatility, dt)?;
     let d = calculate_down_factor(params.volatility, dt)?;
     let p = calculate_probability(params.int_rate, dt, d, u)?;
@@ -148,7 +148,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn 
 ///             volatility: pos!(0.2),
 ///             int_rate: dec!(0.05),
 ///             strike: pos!(100.0),
-///             expiry: Decimal::ONE,
+///             expiry: Positive::ONE,
 ///             no_steps: 1000,
 ///             option_type: &OptionType::European,
 ///             option_style: &OptionStyle::Call,
@@ -167,7 +167,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
         spot_max: None,
     };
 
-    let dt = params.expiry / f2d!(params.no_steps as f64);
+    let dt = (params.expiry / f2d!(params.no_steps as f64)).to_dec();
     let up_factor = calculate_up_factor(params.volatility, dt)?;
     let down_factor = calculate_down_factor(params.volatility, dt)?;
     let probability = calculate_probability(params.int_rate, dt, down_factor, up_factor)?;
@@ -237,7 +237,7 @@ mod tests_price_binomial {
             strike: pos!(100.0),
             int_rate: dec!(0.05),
             volatility: pos!(0.2),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             no_steps: 3,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -255,7 +255,7 @@ mod tests_price_binomial {
             volatility: pos!(0.2),
             int_rate: dec!(0.05),
             strike: pos!(100.0),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -273,7 +273,7 @@ mod tests_price_binomial {
             volatility: pos!(0.2),
             int_rate: dec!(0.05),
             strike: pos!(52.0),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             no_steps: 1,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -291,7 +291,7 @@ mod tests_price_binomial {
             volatility: pos!(0.2),
             int_rate: dec!(0.05),
             strike: pos!(100.0),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -312,7 +312,7 @@ mod tests_price_binomial {
         let asset = pos!(100.0);
         let strike = pos!(100.0);
         let int_rate = dec!(0.05);
-        let expiry = Decimal::ONE;
+        let expiry = Positive::ONE;
 
         let params = BinomialPricingParams {
             asset,
@@ -341,7 +341,7 @@ mod tests_price_binomial {
             volatility: pos!(0.2),
             int_rate: dec!(0.05),
             strike: pos!(100.0),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -359,7 +359,7 @@ mod tests_price_binomial {
             volatility: pos!(0.2),
             int_rate: dec!(0.05),
             strike: pos!(100.0),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -377,7 +377,7 @@ mod tests_price_binomial {
             volatility: pos!(0.2),
             int_rate: dec!(0.05),
             strike: pos!(100.0),
-            expiry: Decimal::ZERO,
+            expiry: Positive::ZERO,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -405,7 +405,7 @@ mod tests_generate_binomial_tree {
             strike: pos!(100.0),
             int_rate: dec!(0.05),
             volatility: pos!(0.2),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             no_steps: 3,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -437,7 +437,7 @@ mod tests_generate_binomial_tree {
             strike: pos!(100.0),
             int_rate: dec!(0.05),
             volatility: pos!(0.2),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             no_steps: 3,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -457,7 +457,7 @@ mod tests_generate_binomial_tree {
         let params = BinomialPricingParams {
             asset: pos!(30.0),
             strike: pos!(30.0),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             int_rate: dec!(0.05),
             volatility: pos!(0.17),
             no_steps: 1,
@@ -480,7 +480,7 @@ mod tests_generate_binomial_tree {
         let params = BinomialPricingParams {
             asset: pos!(30.0),
             strike: pos!(30.0),
-            expiry: Decimal::ONE,
+            expiry: Positive::ONE,
             int_rate: dec!(0.05),
             volatility: pos!(0.17),
             no_steps: 2,
@@ -513,7 +513,7 @@ mod tests_generate_binomial_tree {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
             strike: pos!(110.0),
-            expiry: dec!(3.0), // Assuming each time step is 1 unit of time
+            expiry: pos!(3.0), // Assuming each time step is 1 unit of time
             int_rate: dec!(0.05),
             volatility: pos!(0.09531018), // Calculated to match the 10% up/down movement
             no_steps: 3,
@@ -556,7 +556,7 @@ mod tests_generate_binomial_tree {
             volatility: pos!(0.2),
             int_rate: dec!(0.05),
             strike: pos!(52.0),
-            expiry: dec!(2.0),
+            expiry: pos!(2.0),
             no_steps: 2,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -587,7 +587,7 @@ mod tests_generate_binomial_tree {
             volatility: pos!(0.2),
             int_rate: dec!(0.05),
             strike: pos!(52.0),
-            expiry: dec!(2.0),
+            expiry: pos!(2.0),
             no_steps: 2,
             option_type: &OptionType::American,
             option_style: &OptionStyle::Put,

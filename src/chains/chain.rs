@@ -639,7 +639,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.put_ask.unwrap_or(Positive::ZERO).to_f64(),
+                        option.put_ask.unwrap_or(Positive::ZERO),
                         Utc::now(),
                         params.open_put_fee,
                         params.close_put_fee,
@@ -668,7 +668,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.put_bid.unwrap_or(Positive::ZERO).to_f64(),
+                        option.put_bid.unwrap_or(Positive::ZERO),
                         Utc::now(),
                         params.open_put_fee,
                         params.close_put_fee,
@@ -697,7 +697,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.call_ask.unwrap_or(Positive::ZERO).to_f64(),
+                        option.call_ask.unwrap_or(Positive::ZERO),
                         Utc::now(),
                         params.open_call_fee,
                         params.close_call_fee,
@@ -726,7 +726,7 @@ impl OptionChain {
                             params.dividend_yield,
                             None,
                         ),
-                        option.call_bid.unwrap_or(Positive::ZERO).to_f64(),
+                        option.call_bid.unwrap_or(Positive::ZERO),
                         Utc::now(),
                         params.open_call_fee,
                         params.close_call_fee,
@@ -1870,10 +1870,10 @@ mod tests_get_random_positions {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         let result = chain.get_random_positions(params);
         assert!(result.is_err());
@@ -1903,10 +1903,10 @@ mod tests_get_random_positions {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         let result = chain.get_random_positions(params);
 
@@ -1935,10 +1935,10 @@ mod tests_get_random_positions {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         let result = chain.get_random_positions(params);
 
@@ -1967,10 +1967,10 @@ mod tests_get_random_positions {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         let result = chain.get_random_positions(params);
 
@@ -1999,10 +1999,10 @@ mod tests_get_random_positions {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         let result = chain.get_random_positions(params);
 
@@ -2031,10 +2031,10 @@ mod tests_get_random_positions {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         let result = chain.get_random_positions(params);
 
@@ -2077,10 +2077,10 @@ mod tests_get_random_positions {
             pos!(1.0),
             dec!(0.05),
             pos!(0.02),
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
         );
         let result = chain.get_random_positions(params);
 

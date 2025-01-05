@@ -41,10 +41,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 dividend_yield,
                 None,
             ),
-            192.0,
+            pos!(192.0),
             Utc::now(),
-            7.51,
-            7.51,
+            pos!(7.51),
+            pos!(7.51),
         ),
         Position::new(
             Options::new(
@@ -61,10 +61,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 dividend_yield,
                 None,
             ),
-            88.0,
+            pos!(88.0),
             Utc::now(),
-            6.68,
-            6.68,
+            pos!(6.68),
+            pos!(6.68),
         ),
         Position::new(
             Options::new(
@@ -81,10 +81,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 dividend_yield,
                 None,
             ),
-            55.0,
+            pos!(55.0),
             Utc::now(),
-            6.68,
-            6.68,
+            pos!(6.68),
+            pos!(6.68),
         ),
         Position::new(
             Options::new(
@@ -101,10 +101,10 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
                 dividend_yield,
                 None,
             ),
-            21.0,
+            pos!(21.0),
             Utc::now(),
-            4.91,
-            4.91,
+            pos!(4.91),
+            pos!(4.91),
         ),
     ];
 
@@ -121,15 +121,11 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
 
     // Test strategy properties and calculations
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
+        strategy.net_premium_received().unwrap().to_f64(),
         572.83,
         epsilon = 0.001
     );
-    assert_relative_eq!(
-        strategy.fees().unwrap().to_f64().unwrap(),
-        51.56,
-        epsilon = 0.001
-    );
+    assert_relative_eq!(strategy.fees().unwrap().to_f64(), 51.56, epsilon = 0.001);
 
     // Test range and break-even points
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();

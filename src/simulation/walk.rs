@@ -14,6 +14,7 @@ use rand::distributions::Distribution;
 use rand::thread_rng;
 use rust_decimal::Decimal;
 use statrs::distribution::Normal;
+use std::error::Error;
 use tracing::{info, trace};
 
 pub trait Walkable {
@@ -142,8 +143,8 @@ impl Walkable for RandomWalkGraph {
 }
 
 impl Profit for RandomWalkGraph {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
-        price.into()
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+        Ok(price.to_dec())
     }
 }
 

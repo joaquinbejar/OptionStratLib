@@ -7,7 +7,7 @@ use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, calculate_d_values};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::Options;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::ToPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
 
 /// Computes the price of an option using the Black-Scholes model.
@@ -126,8 +126,7 @@ fn calculate_long_position(
 /// - `time_to_expiry`: The calculated or given time to expiry in years.
 ///
 fn calculate_d1_d2_and_time(option: &Options) -> (Decimal, Decimal, Decimal) {
-    let calculated_time_to_expiry: Decimal =
-        Decimal::from_f64(option.time_to_expiration()).unwrap();
+    let calculated_time_to_expiry: Decimal = option.time_to_expiration().unwrap().to_dec();
     let (d1, d2) = calculate_d_values(option).unwrap();
     (d1, d2, calculated_time_to_expiry)
 }
@@ -432,7 +431,11 @@ mod tests_black_scholes {
         assert_relative_eq!(price, 2.133368, epsilon = 0.001);
         assert_relative_eq!(price, option_value.to_f64(), epsilon = 0.001);
         assert_relative_eq!(
-            option.calculate_price_black_scholes(),
+            option
+                .calculate_price_black_scholes()
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             option_value.to_f64(),
             epsilon = 0.0001
         );

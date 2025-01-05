@@ -27,15 +27,15 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(1.0),      // long quantity
-        113.30,         // premium_long_low
-        64.20,          // premium_short
-        31.65,          // premium_long_high
-        0.07,           // fees
-        0.05,           // fees
-        0.03,           // fees
-        0.07,           // fees
-        0.05,           // fees
-        0.03,           // fees
+        pos!(113.3),    // premium_long_low
+        pos!(64.20),    // premium_short
+        pos!(31.65),    // premium_long_high
+        pos!(0.07),     // fees
+        pos!(0.05),     // fees
+        pos!(0.03),     // fees
+        pos!(0.07),     // fees
+        pos!(0.05),     // fees
+        pos!(0.03),     // fees
     );
 
     let greeks = strategy.greeks();

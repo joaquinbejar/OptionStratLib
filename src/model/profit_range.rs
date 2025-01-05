@@ -185,7 +185,7 @@ mod tests_calculate_probability {
     use rust_decimal_macros::dec;
 
     fn create_basic_range() -> ProfitLossRange {
-        ProfitLossRange::new(Some(pos!(90.0)), Some(pos!(110.0)), pos!(0.0)).unwrap()
+        ProfitLossRange::new(Some(pos!(90.0)), Some(pos!(110.0)), Positive::ZERO).unwrap()
     }
 
     #[test]
@@ -207,7 +207,7 @@ mod tests_calculate_probability {
     #[test]
     #[should_panic(expected = "Lower bound must be less than upper bound")]
     fn test_invalid_bounds() {
-        let _ = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(90.0)), pos!(0.0)).unwrap();
+        let _ = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(90.0)), Positive::ZERO).unwrap();
     }
 
     #[test]
@@ -272,7 +272,7 @@ mod tests_calculate_probability {
 
     #[test]
     fn test_infinite_lower_bound() {
-        let mut range = ProfitLossRange::new(None, Some(pos!(110.0)), pos!(0.0)).unwrap();
+        let mut range = ProfitLossRange::new(None, Some(pos!(110.0)), Positive::ZERO).unwrap();
 
         let result = range.calculate_probability(
             pos!(100.0),
@@ -288,7 +288,7 @@ mod tests_calculate_probability {
 
     #[test]
     fn test_infinite_upper_bound() {
-        let mut range = ProfitLossRange::new(Some(pos!(90.0)), None, pos!(0.0)).unwrap();
+        let mut range = ProfitLossRange::new(Some(pos!(90.0)), None, Positive::ZERO).unwrap();
 
         let result = range.calculate_probability(
             pos!(100.0),

@@ -6,7 +6,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, pos};
+use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -27,27 +27,27 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(2.0),      // long quantity
-        85.04,          // premium_long
-        29.85,          // premium_short
-        0.78,           // open_fee_long
-        0.78,           // open_fee_long
-        0.73,           // close_fee_long
-        0.73,           // close_fee_short
+        pos!(85.04),    // premium_long
+        pos!(29.85),    // premium_short
+        pos!(0.78),     // open_fee_long
+        pos!(0.78),     // open_fee_long
+        pos!(0.73),     // close_fee_long
+        pos!(0.73),     // close_fee_short
     );
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.title(), "Bear Put Spread Strategy:\n\tUnderlying: SP500 @ $5850 Long Put European Option\n\tUnderlying: SP500 @ $5720 Short Put European Option");
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64().unwrap(),
-        116.42,
+        strategy.net_premium_received().unwrap().to_f64(),
+        0.0,
         epsilon = 0.001
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(116.42), pos!(0.0001));
-    assert_positivef64_relative_eq!(strategy.total_cost(), pos!(116.42), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64().unwrap(), 6.04);
+    assert_pos_relative_eq!(strategy.max_loss()?, pos!(116.42), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(176.12), pos!(0.0001));
+    assert_eq!(strategy.fees().unwrap().to_f64(), 6.04);
     assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 

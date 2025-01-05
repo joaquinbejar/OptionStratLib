@@ -30,7 +30,13 @@ fn create_sample_option() -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    let position = Position::new(create_sample_option(), 5.71, Utc::now(), 1.0, 1.0);
+    let position = Position::new(
+        create_sample_option(),
+        pos!(5.71),
+        Utc::now(),
+        Positive::ONE,
+        Positive::ONE,
+    );
     let price_range: Vec<Positive> = (50..150)
         .map(|x| Positive::new(x as f64).unwrap())
         .collect();

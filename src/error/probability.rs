@@ -69,6 +69,8 @@
 //! A type alias `ProbabilityResult<T>` is provided for convenience when working
 //! with Results that may contain probability errors.
 
+use crate::error::strategies::{BreakEvenErrorKind, OperationErrorKind, ProfitLossErrorKind};
+use crate::error::StrategyError;
 use std::error::Error;
 use std::fmt;
 
@@ -232,6 +234,50 @@ impl From<&str> for ProbabilityError {
         ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
             reason: msg.to_string(),
         })
+    }
+}
+
+impl From<StrategyError> for ProbabilityError {
+    fn from(error: StrategyError) -> Self {
+        match error {
+            StrategyError::ProfitLossError(kind) => match kind {
+                ProfitLossErrorKind::MaxProfitError { reason }
+                | ProfitLossErrorKind::MaxLossError { reason }
+                | ProfitLossErrorKind::ProfitRangeError { reason } => {
+                    ProbabilityError::from(reason)
+                }
+            },
+            StrategyError::PriceError(kind) => match kind {
+                crate::error::strategies::PriceErrorKind::InvalidUnderlyingPrice { reason }
+                | crate::error::strategies::PriceErrorKind::InvalidPriceRange {
+                    start: _,
+                    end: _,
+                    reason,
+                } => ProbabilityError::from(reason),
+            },
+            StrategyError::BreakEvenError(kind) => match kind {
+                BreakEvenErrorKind::CalculationError { reason } => ProbabilityError::from(reason),
+                BreakEvenErrorKind::NoBreakEvenPoints => {
+                    ProbabilityError::from("No break-even points found".to_string())
+                }
+            },
+            StrategyError::OperationError(kind) => match kind {
+                OperationErrorKind::NotSupported {
+                    operation,
+                    strategy_type,
+                } => ProbabilityError::from(format!(
+                    "Operation '{}' not supported for strategy '{}'",
+                    operation, strategy_type
+                )),
+                OperationErrorKind::InvalidParameters { operation, reason } => {
+                    ProbabilityError::from(format!(
+                        "Invalid parameters for operation '{}': {}",
+                        operation, reason
+                    ))
+                }
+            },
+            StrategyError::StdError { reason: msg } => ProbabilityError::StdError(msg),
+        }
     }
 }
 

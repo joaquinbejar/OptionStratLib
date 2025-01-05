@@ -2,7 +2,10 @@ use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::types::{OptionStyle, Side};
 use crate::visualization::model::{ChartPoint, LabelOffsetType};
 use crate::Positive;
+use num_traits::ToPrimitive;
 use plotters::prelude::RED;
+use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::trace;
 
 pub trait Payoff {
@@ -83,10 +86,10 @@ pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
 }
 
 pub trait Profit {
-    fn calculate_profit_at(&self, price: Positive) -> f64;
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>>;
 
     fn get_point_at_price(&self, price: Positive) -> ChartPoint<(f64, f64)> {
-        let value_at_current_price = self.calculate_profit_at(price);
+        let value_at_current_price = self.calculate_profit_at(price).unwrap().to_f64().unwrap();
         let color = if value_at_current_price >= ZERO {
             DARK_GREEN
         } else {

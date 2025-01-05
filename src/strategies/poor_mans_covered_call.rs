@@ -30,6 +30,7 @@
 //! This strategy is often used by investors who are moderately bullish on an asset but wish to reduce the cost
 //! and risk associated with traditional covered call strategies.
 //!
+
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
@@ -53,6 +54,7 @@ use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{debug, error};
 
 const PMCC_DESCRIPTION: &str =
@@ -84,12 +86,12 @@ impl PoorMansCoveredCall {
         risk_free_rate: Decimal,
         dividend_yield: Positive,
         quantity: Positive,
-        premium_long_call: f64,
-        premium_short_call: f64,
-        open_fee_long_call: f64,
-        close_fee_long_call: f64,
-        open_fee_short_call: f64,
-        close_fee_short_call: f64,
+        premium_long_call: Positive,
+        premium_short_call: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
     ) -> Self {
         let mut strategy = PoorMansCoveredCall {
             name: "Poor Man's Covered Call".to_string(),
@@ -153,8 +155,9 @@ impl PoorMansCoveredCall {
             .expect("Invalid short call option");
 
         // Calculate break-even point
-        let net_debit =
-            (strategy.long_call.max_loss() - strategy.short_call.max_profit()) / quantity;
+        let net_debit = (strategy.long_call.max_loss().unwrap()
+            - strategy.short_call.max_profit().unwrap())
+            / quantity;
 
         strategy
             .break_even_points
@@ -201,8 +204,8 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(self.short_call.option.strike_price);
-        if profit <= ZERO {
+        let profit = self.calculate_profit_at(self.short_call.option.strike_price)?;
+        if profit <= Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
                     reason: "Max profit is negative".to_string(),
@@ -214,8 +217,8 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(self.long_call.option.strike_price);
-        if loss >= ZERO {
+        let loss = self.calculate_profit_at(self.long_call.option.strike_price)?;
+        if loss >= Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
                     reason: "Max loss must be negative".to_string(),
@@ -224,16 +227,6 @@ impl Strategies for PoorMansCoveredCall {
         } else {
             Ok(loss.abs().into())
         }
-    }
-
-    fn total_cost(&self) -> Positive {
-        pos!(self.long_call.net_cost() + self.short_call.net_cost())
-    }
-
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let restult =
-            self.long_call.net_premium_received() + self.short_call.net_premium_received();
-        Ok(Decimal::from_f64(restult).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -417,8 +410,8 @@ impl Optimizable for PoorMansCoveredCall {
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            long.call_ask.unwrap().to_f64(),
-            short.call_bid.unwrap().to_f64(),
+            long.call_ask.unwrap(),
+            short.call_bid.unwrap(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
@@ -428,9 +421,12 @@ impl Optimizable for PoorMansCoveredCall {
 }
 
 impl Profit for PoorMansCoveredCall {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        self.long_call.pnl_at_expiration(&price) + self.short_call.pnl_at_expiration(&price)
+        Ok(
+            self.long_call.pnl_at_expiration(&price)?
+                + self.short_call.pnl_at_expiration(&price)?,
+        )
     }
 }
 
@@ -620,12 +616,12 @@ mod tests {
         let risk_free_rate = dec!(0.01);
         let dividend_yield = pos!(0.005);
         let quantity = pos!(1.0);
-        let premium_long_call = 15.0;
-        let premium_short_call = 5.0;
-        let open_fee_long_call = 1.0;
-        let close_fee_long_call = 1.0;
-        let open_fee_short_call = 0.5;
-        let close_fee_short_call = 0.5;
+        let premium_long_call = pos!(15.0);
+        let premium_short_call = pos!(5.0);
+        let open_fee_long_call = pos!(1.0);
+        let close_fee_long_call = pos!(1.0);
+        let open_fee_short_call = pos!(0.5);
+        let close_fee_short_call = pos!(0.5);
 
         PoorMansCoveredCall::new(
             underlying_symbol,
@@ -680,15 +676,15 @@ mod tests {
     #[test]
     fn test_total_cost() {
         let pmcc = create_pmcc_strategy();
-        let total_cost = pmcc.total_cost();
+        let total_cost = pmcc.total_cost().unwrap();
         assert!(total_cost > Positive::ZERO);
     }
 
     #[test]
     fn test_fees() {
         let pmcc = create_pmcc_strategy();
-        let fees = pmcc.fees().unwrap().to_f64().unwrap();
-        assert!(fees > 0.0);
+        let fees = pmcc.fees().unwrap();
+        assert!(fees > Positive::ZERO);
     }
 
     #[test]
@@ -718,10 +714,10 @@ mod tests {
     #[test]
     fn test_calculate_profit_at() {
         let pmcc = create_pmcc_strategy();
-        let profit = pmcc.calculate_profit_at(pos!(150.0));
+        let profit = pmcc.calculate_profit_at(pos!(150.0)).unwrap();
         assert!(
-            profit >= -pmcc.max_loss().unwrap_or(Positive::ZERO).to_f64()
-                && profit <= pmcc.max_profit().unwrap_or(Positive::ZERO).to_f64()
+            profit >= -pmcc.max_loss().unwrap_or(Positive::ZERO).to_dec()
+                && profit <= pmcc.max_profit().unwrap_or(Positive::ZERO).to_dec()
         );
     }
 
@@ -767,12 +763,12 @@ mod tests_pmcc_validation {
             dec!(0.01),
             pos!(0.005),
             pos!(1.0),
-            15.0,
-            5.0,
-            1.0,
-            1.0,
-            0.5,
-            0.5,
+            pos!(15.0),
+            pos!(5.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos!(0.5),
+            pos!(0.5),
         )
     }
 
@@ -799,7 +795,7 @@ mod tests_pmcc_validation {
             pos!(0.005),
             None,
         );
-        let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(15.0), Utc::now(), Positive::ONE, Positive::ONE);
         strategy
             .add_position(&position.clone())
             .expect("Invalid long call option");
@@ -823,7 +819,7 @@ mod tests_pmcc_validation {
             pos!(0.005),
             None,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 0.5, 0.5);
+        let position = Position::new(option, pos!(5.0), Utc::now(), pos!(0.5), pos!(0.5));
         strategy
             .add_position(&position.clone())
             .expect("Invalid short call option");
@@ -847,7 +843,7 @@ mod tests_pmcc_validation {
             pos!(0.005),
             None,
         );
-        let position = Position::new(option, 15.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(15.0), Utc::now(), Positive::ONE, Positive::ONE);
         let err = strategy.add_position(&position).unwrap_err();
         assert!(matches!(
             err,
@@ -900,12 +896,12 @@ mod tests_pmcc_optimization {
             dec!(0.01),
             pos!(0.005),
             pos!(1.0),
-            15.0,
-            5.0,
-            1.0,
-            1.0,
-            0.5,
-            0.5,
+            pos!(15.0),
+            pos!(5.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos!(0.5),
+            pos!(0.5),
         )
     }
 
@@ -1015,12 +1011,12 @@ mod tests_pmcc_pnl {
             dec!(0.01),
             pos!(0.005),
             pos!(1.0),
-            15.0,
-            5.0,
-            1.0,
-            1.0,
-            0.5,
-            0.5,
+            pos!(15.0),
+            pos!(5.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos!(0.5),
+            pos!(0.5),
         )
     }
 
@@ -1029,22 +1025,24 @@ mod tests_pmcc_pnl {
         let strategy = create_test_strategy();
 
         // Below long strike
-        let profit_below = strategy.calculate_profit_at(pos!(130.0));
-        assert!(profit_below < 0.0);
+        let profit_below = strategy.calculate_profit_at(pos!(130.0)).unwrap();
+        assert!(profit_below < Decimal::ZERO);
 
         // Between strikes
-        let profit_middle = strategy.calculate_profit_at(pos!(150.0));
+        let profit_middle = strategy.calculate_profit_at(pos!(150.0)).unwrap();
         assert!(profit_middle > profit_below);
 
         // At short strike
-        let profit_short = strategy.calculate_profit_at(strategy.short_call.option.strike_price);
+        let profit_short = strategy
+            .calculate_profit_at(strategy.short_call.option.strike_price)
+            .unwrap();
         assert_eq!(
             profit_short,
-            strategy.max_profit().unwrap_or(Positive::ZERO).to_f64()
+            strategy.max_profit().unwrap_or(Positive::ZERO).to_dec()
         );
 
         // Above short strike
-        let profit_above = strategy.calculate_profit_at(pos!(170.0));
+        let profit_above = strategy.calculate_profit_at(pos!(170.0)).unwrap();
         assert_eq!(profit_above, profit_above);
     }
 
@@ -1053,15 +1051,19 @@ mod tests_pmcc_pnl {
         let strategy = create_test_strategy();
         assert_eq!(strategy.break_even_points.len(), 1);
         let break_even = strategy.break_even_points[0];
-        let profit_at_be = strategy.calculate_profit_at(break_even);
+        let profit_at_be = strategy
+            .calculate_profit_at(break_even)
+            .unwrap()
+            .to_f64()
+            .unwrap();
         assert!(profit_at_be.abs() < 0.01);
     }
 
     #[test]
     fn test_net_premium() {
         let strategy = create_test_strategy();
-        let net_premium = strategy.net_premium_received().unwrap().to_f64().unwrap();
-        assert_eq!(net_premium, strategy.short_call.net_premium_received());
+        let net_premium = strategy.net_premium_received().unwrap();
+        assert_eq!(net_premium, 0.0);
     }
 
     #[test]
@@ -1094,12 +1096,12 @@ mod tests_pmcc_graph {
             dec!(0.01),
             pos!(0.005),
             pos!(1.0),
-            15.0,
-            5.0,
-            1.0,
-            1.0,
-            0.5,
-            0.5,
+            pos!(15.0),
+            pos!(5.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos!(0.5),
+            pos!(0.5),
         )
     }
 
@@ -1184,12 +1186,12 @@ mod tests_pmcc_best_area {
             dec!(0.01),
             pos!(0.005),
             pos!(1.0),
-            15.0,
-            5.0,
-            1.0,
-            1.0,
-            0.5,
-            0.5,
+            pos!(15.0),
+            pos!(5.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos!(0.5),
+            pos!(0.5),
         );
 
         Ok((strategy, option_chain))
@@ -1203,8 +1205,8 @@ mod tests_pmcc_best_area {
         assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
         assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
         assert_eq!(strategy.break_even_points.len(), 1);
-        assert!(strategy.total_cost() > Positive::ZERO);
-        assert!(strategy.fees().unwrap().to_f64().unwrap() > 0.0);
+        assert!(strategy.total_cost().unwrap() > Positive::ZERO);
+        assert!(strategy.fees().unwrap().to_f64() > 0.0);
 
         assert!(strategy.long_call.option.strike_price < strategy.short_call.option.strike_price);
     }
@@ -1260,12 +1262,12 @@ mod tests_pmcc_best_ratio {
             dec!(0.01),
             pos!(0.005),
             pos!(1.0),
-            15.0,
-            5.0,
-            1.0,
-            1.0,
-            0.5,
-            0.5,
+            pos!(15.0),
+            pos!(5.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos!(0.5),
+            pos!(0.5),
         );
 
         Ok((strategy, option_chain))
@@ -1280,7 +1282,7 @@ mod tests_pmcc_best_ratio {
         assert_eq!(strategy.break_even_points.len(), 1);
         assert!(strategy.max_profit().unwrap_or(Positive::ZERO) > Positive::ZERO);
         assert!(strategy.max_loss().unwrap_or(Positive::ZERO) > Positive::ZERO);
-        assert!(strategy.fees().unwrap().to_f64().unwrap() > 0.0);
+        assert!(strategy.fees().unwrap().to_f64() > 0.0);
     }
 
     #[test]
@@ -1335,12 +1337,12 @@ mod tests_short_straddle_delta {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
-            84.2,           // premium_short_call
-            353.2,          // premium_short_put
-            7.01,           // open_fee_short_call
-            7.01,           // close_fee_short_call
-            7.01,           // open_fee_short_put
-            7.01,           // close_fee_short_put
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
         )
     }
 
@@ -1445,12 +1447,12 @@ mod tests_short_straddle_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(2.0),      // quantity
-            84.2,           // premium_short_call
-            353.2,          // premium_short_put
-            7.01,           // open_fee_short_call
-            7.01,           // close_fee_short_call
-            7.01,           // open_fee_short_put
-            7.01,           // close_fee_short_put
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
         )
     }
 

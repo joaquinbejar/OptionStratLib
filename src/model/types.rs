@@ -610,7 +610,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0), // Not used in floating strike
+            strike: Positive::ZERO, // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -624,7 +624,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -638,7 +638,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -652,7 +652,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -666,7 +666,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -680,7 +680,7 @@ mod tests_calculate_floating_strike_payoff {
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
-            strike: pos!(0.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -1056,5 +1056,3 @@ mod test_exchange_options {
         assert_eq!(option.payoff(&info), 10.0);
     }
 }
-
-// find . -type f -name "*.rs" -not -path "./target/*" -exec sed -i '' 's|ExpirationDate::Days(pos!(1.0))|ExpirationDate::Days(pos!(1.0))|g' {} +
