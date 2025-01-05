@@ -221,14 +221,7 @@ impl Position {
             Side::Short => {
                 let fees = self.fees()?.to_dec() ;
                  let premium = self.premium_received()?.to_dec();
-                match fees > premium { 
-                    true => Ok( fees - premium ),
-                    false => Err(PositionError::ValidationError(
-                        PositionValidationErrorKind::InvalidPosition {
-                            reason: "Net cost is negative in Short position.".to_string(),
-                        },
-                    )),
-                }
+                Ok( fees - premium )
             }
         }
     }

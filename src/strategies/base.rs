@@ -114,10 +114,20 @@ pub trait Strategies: Validable + Positionable {
         let positions = self.get_positions()?;
         let costs = positions
             .iter()
-            .filter(|p| p.option.side == Side::Long)
-            .map(|p| p.total_cost().unwrap()).sum::<Positive>();
-        
-        Ok(costs)
+            .map(|p| p.total_cost().unwrap())
+            .sum::<Positive>();
+
+        Ok(costs.into())
+    }
+
+    fn net_cost(&self) -> Result<Decimal, PositionError> {
+        let positions = self.get_positions()?;
+        let costs = positions
+            .iter()
+            .map(|p| p.net_cost().unwrap())
+            .sum::<Decimal>();
+
+        Ok(costs.into())
     }
 
     fn net_premium_received(&self) -> Result<Positive, StrategyError> {
@@ -125,13 +135,14 @@ pub trait Strategies: Validable + Positionable {
         let costs = positions
             .iter()
             .filter(|p| p.option.side == Side::Long)
-            .map(|p| p.net_cost().unwrap()).sum::<Decimal>();
+            .map(|p| p.net_cost().unwrap())
+            .sum::<Decimal>();
 
         let premiums = positions
             .iter()
             .filter(|p| p.option.side == Side::Short)
-            .map(|p| p.net_premium_received().unwrap()).sum::<Positive>();
-
+            .map(|p| p.net_premium_received().unwrap())
+            .sum::<Positive>();
 
         match premiums > costs {
             true => Ok(premiums - costs),
@@ -152,7 +163,7 @@ pub trait Strategies: Validable + Positionable {
                 ))
             }
         };
-        
+
         for position in positions {
             fee += position.fees()?;
         }
@@ -488,7 +499,13 @@ mod tests_strategies {
 
         // Test add_leg and get_legs
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let position = Position::new(option, Positive::ONE, Default::default(), Positive::ZERO, Positive::ZERO);
+        let position = Position::new(
+            option,
+            Positive::ONE,
+            Default::default(),
+            Positive::ZERO,
+            Positive::ZERO,
+        );
         mock_strategy
             .add_position(&position.clone())
             .expect("Error adding position");
@@ -543,7 +560,13 @@ mod tests_strategies {
 
         let mut strategy = PanicStrategy;
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let position = Position::new(option, Positive::ONE, Default::default(), Positive::ZERO, Positive::ZERO);
+        let position = Position::new(
+            option,
+            Positive::ONE,
+            Default::default(),
+            Positive::ZERO,
+            Positive::ZERO,
+        );
 
         assert!(strategy.add_position(&position).is_err());
     }
@@ -571,7 +594,13 @@ mod tests_strategies_extended {
             "Test Description".to_string(),
         );
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let position = Position::new(option, Positive::ONE, Default::default(), Positive::ZERO, Positive::ZERO);
+        let position = Position::new(
+            option,
+            Positive::ONE,
+            Default::default(),
+            Positive::ZERO,
+            Positive::ZERO,
+        );
 
         strategy.legs.push(position);
 
@@ -781,13 +810,14 @@ mod tests_max_min_strikes {
             let costs = positions
                 .iter()
                 .filter(|p| p.option.side == Side::Long)
-                .map(|p| p.net_cost().unwrap()).sum::<Decimal>();
+                .map(|p| p.net_cost().unwrap())
+                .sum::<Decimal>();
 
             let premiums = positions
                 .iter()
                 .filter(|p| p.option.side == Side::Short)
-                .map(|p| p.net_premium_received().unwrap()).sum::<Positive>();
-
+                .map(|p| p.net_premium_received().unwrap())
+                .sum::<Positive>();
 
             match premiums > costs {
                 true => Ok(premiums - costs),
@@ -1169,5 +1199,304 @@ mod tests_range_of_profit {
     fn test_unordered_break_even_points() {
         let strategy = TestStrategy::new(vec![pos!(120.0), pos!(80.0), pos!(100.0)]);
         assert_eq!(strategy.range_of_profit().unwrap(), pos!(40.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_strategy_methods {
+    use super::*;
+
+    #[test]
+    fn test_get_underlying_price_panic() {
+        struct TestStrategy;
+        impl Validable for TestStrategy {}
+        impl Positionable for TestStrategy {}
+        impl Strategies for TestStrategy {}
+
+        let strategy = TestStrategy;
+        let result = std::panic::catch_unwind(|| strategy.get_underlying_price());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_strategy_type_debug_all_variants() {
+        let variants = vec![
+            StrategyType::BullCallSpread,
+            StrategyType::BearCallSpread,
+            StrategyType::BullPutSpread,
+            StrategyType::BearPutSpread,
+            StrategyType::LongButterflySpread,
+            StrategyType::ShortButterflySpread,
+            StrategyType::IronCondor,
+            StrategyType::IronButterfly,
+            StrategyType::Straddle,
+            StrategyType::Strangle,
+            StrategyType::CoveredCall,
+            StrategyType::ProtectivePut,
+            StrategyType::Collar,
+            StrategyType::LongCall,
+            StrategyType::LongPut,
+            StrategyType::ShortCall,
+            StrategyType::ShortPut,
+            StrategyType::PoorMansCoveredCall,
+            StrategyType::CallButterfly,
+            StrategyType::Custom,
+        ];
+
+        for variant in variants {
+            let debug_string = format!("{:?}", variant);
+            assert!(!debug_string.is_empty());
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_optimizable {
+    use super::*;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    struct TestOptimizableStrategy;
+
+    impl Validable for TestOptimizableStrategy {
+        fn validate(&self) -> bool {
+            true
+        }
+    }
+
+    impl Positionable for TestOptimizableStrategy {}
+
+    impl Strategies for TestOptimizableStrategy {}
+
+    impl Optimizable for TestOptimizableStrategy {
+        type Strategy = Self;
+    }
+
+    #[test]
+    fn test_is_valid_long_option() {
+        let strategy = TestOptimizableStrategy;
+        let option_data = OptionData::new(
+            pos!(100.0),     // strike_price
+            spos!(5.0),      // call_bid
+            spos!(5.5),      // call_ask
+            spos!(4.0),      // put_bid
+            spos!(4.5),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.5)), // delta
+            spos!(1000.0),   // volume
+            Some(100),       // open_interest
+        );
+        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::All));
+        assert!(strategy.is_valid_long_option(
+            &option_data,
+            &FindOptimalSide::Range(pos!(90.0), pos!(110.0))
+        ));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_is_valid_long_option_upper_panic() {
+        let strategy = TestOptimizableStrategy;
+        let option_data = OptionData::new(
+            pos!(100.0),     // strike_price
+            spos!(5.0),      // call_bid
+            spos!(5.5),      // call_ask
+            spos!(4.0),      // put_bid
+            spos!(4.5),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.5)), // delta
+            spos!(1000.0),   // volume
+            Some(100),       // open_interest
+        );
+        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Upper));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_is_valid_long_option_lower_panic() {
+        let strategy = TestOptimizableStrategy;
+        let option_data = OptionData::new(
+            pos!(100.0),     // strike_price
+            spos!(5.0),      // call_bid
+            spos!(5.5),      // call_ask
+            spos!(4.0),      // put_bid
+            spos!(4.5),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.5)), // delta
+            spos!(1000.0),   // volume
+            Some(100),       // open_interest
+        );
+        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Lower));
+    }
+
+    #[test]
+    fn test_is_valid_short_option() {
+        let strategy = TestOptimizableStrategy;
+        let option_data = OptionData::new(
+            pos!(100.0),     // strike_price
+            spos!(5.0),      // call_bid
+            spos!(5.5),      // call_ask
+            spos!(4.0),      // put_bid
+            spos!(4.5),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.5)), // delta
+            spos!(1000.0),   // volume
+            Some(100),       // open_interest
+        );
+        assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::All));
+        assert!(strategy.is_valid_short_option(
+            &option_data,
+            &FindOptimalSide::Range(pos!(90.0), pos!(110.0))
+        ));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_is_valid_short_option_upper_panic() {
+        let strategy = TestOptimizableStrategy;
+        let option_data = OptionData::new(
+            pos!(100.0),     // strike_price
+            spos!(5.0),      // call_bid
+            spos!(5.5),      // call_ask
+            spos!(4.0),      // put_bid
+            spos!(4.5),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.5)), // delta
+            spos!(1000.0),   // volume
+            Some(100),       // open_interest
+        );
+        assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Upper));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_is_valid_short_option_lower_panic() {
+        let strategy = TestOptimizableStrategy;
+        let option_data = OptionData::new(
+            pos!(100.0),     // strike_price
+            spos!(5.0),      // call_bid
+            spos!(5.5),      // call_ask
+            spos!(4.0),      // put_bid
+            spos!(4.5),      // put_ask
+            spos!(0.2),      // implied_volatility
+            Some(dec!(0.5)), // delta
+            spos!(1000.0),   // volume
+            Some(100),       // open_interest
+        );
+        assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Lower));
+    }
+}
+
+
+#[cfg(test)]
+mod tests_strategy_net_operations {
+    use super::*;
+    use crate::model::position::Position;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::model::utils::create_sample_option_simplest;
+    use crate::pos;
+    use chrono::{TimeZone, Utc};
+
+    struct TestStrategy {
+        positions: Vec<Position>,
+    }
+
+    impl TestStrategy {
+        fn new() -> Self {
+            Self {
+                positions: Vec::new(),
+            }
+        }
+    }
+
+    impl Validable for TestStrategy {}
+
+    impl Positionable for TestStrategy {
+        fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+            self.positions.push(position.clone());
+            Ok(())
+        }
+
+        fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
+            Ok(self.positions.iter().collect())
+        }
+    }
+
+    impl Strategies for TestStrategy {}
+
+    #[test]
+    fn test_net_cost_calculation() {
+        let mut strategy = TestStrategy::new();
+        let option_long = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let option_short = create_sample_option_simplest(OptionStyle::Call, Side::Short);
+
+        let position_long = Position::new(
+            option_long,
+            Positive::ONE,
+            Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
+            pos!(1.0),
+            pos!(0.5),
+        );
+        let position_short = Position::new(
+            option_short,
+            Positive::ONE,
+            Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
+            pos!(1.0),
+            pos!(0.5),
+        );
+
+        strategy.add_position(&position_long).unwrap();
+        strategy.add_position(&position_short).unwrap();
+
+        let result = strategy.net_cost().unwrap();
+        assert!(result > Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_net_premium_received_calculation() {
+        let mut strategy = TestStrategy::new();
+        let option_long = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let option_short = create_sample_option_simplest(OptionStyle::Call, Side::Short);
+
+        let fixed_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+        let position_long = Position::new(
+            option_long,
+            Positive::ONE,
+            fixed_date,
+            pos!(1.0),
+            pos!(0.5),
+        );
+        let position_short = Position::new(
+            option_short,
+            Positive::ONE,
+            fixed_date,
+            pos!(1.0),
+            pos!(0.5),
+        );
+
+        strategy.add_position(&position_long).unwrap();
+        strategy.add_position(&position_short).unwrap();
+
+        let result = strategy.net_premium_received().unwrap();
+        assert!(result == Positive::ZERO);
+    }
+
+    #[test]
+    fn test_fees_calculation() {
+        let mut strategy = TestStrategy::new();
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let fixed_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+        let position = Position::new(
+            option,
+            Positive::ONE,
+            fixed_date,
+            pos!(1.0),
+            pos!(0.5),
+        );
+
+        strategy.add_position(&position).unwrap();
+
+        let result = strategy.fees().unwrap();
+        assert!(result > Positive::ZERO);
     }
 }

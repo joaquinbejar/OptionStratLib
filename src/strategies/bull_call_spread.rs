@@ -45,6 +45,7 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info};
 
+
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \
     and simultaneously selling a call option with a higher strike price, both with the same \
@@ -148,10 +149,10 @@ impl BullCallSpread {
             .expect("Failed to add short call");
 
         strategy.validate();
-
+        
         // Calculate break-even point
         strategy.break_even_points.push(
-            long_strike - strategy.net_premium_received().unwrap().to_f64() / quantity,
+            long_strike + strategy.net_cost().unwrap() / quantity,
         );
 
         strategy
@@ -557,48 +558,53 @@ impl DeltaNeutrality for BullCallSpread {
 }
 
 #[cfg(test)]
+fn bull_call_spread_test() -> BullCallSpread {
+    use rust_decimal_macros::dec;
+    let underlying_price = pos!(5781.88);
+    BullCallSpread::new(
+        "SP500".to_string(),
+        underlying_price,   // underlying_price
+        pos!(5750.0),   // long_strike_itm
+        pos!(5820.0),   // short_strike
+        ExpirationDate::Days(pos!(2.0)),
+        pos!(0.18),   // implied_volatility
+        dec!(0.05),   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(3.0),   // long quantity
+        pos!(85.04),   // premium_long
+        pos!(29.85),   // premium_short
+        pos!(0.78),   // open_fee_long
+        pos!(0.78),   // open_fee_long
+        pos!(0.73),   // close_fee_long
+        pos!(0.73),   // close_fee_short
+    )
+}
+
+#[cfg(test)]
 mod tests_bull_call_spread_strategy {
+    use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
-
-    fn create_test_spread() -> BullCallSpread {
-        BullCallSpread::new(
-            "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(95.0),                       // long_strike
-            pos!(100.0),                      // short_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            pos!(2.0),                              // premium_long_call
-            pos!(1.0),                              // premium_short_call
-            Positive::ZERO,                              // fees
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-        )
-    }
+    
 
     #[test]
     fn test_new_bull_call_spread() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
 
         assert_eq!(spread.name, "Bull Call Spread");
         assert_eq!(spread.kind, StrategyType::BullCallSpread);
         assert!(!spread.description.is_empty());
-        assert_eq!(spread.get_underlying_price(), pos!(100.0));
-        assert_eq!(spread.long_call.option.strike_price, pos!(95.0));
-        assert_eq!(spread.short_call.option.strike_price, pos!(100.0));
+        assert_eq!(spread.get_underlying_price(), pos!(5781.88));
+        assert_eq!(spread.long_call.option.strike_price, pos!(5750.0));
+        assert_eq!(spread.short_call.option.strike_price, pos!(5820.0));
     }
 
     #[test]
     fn test_add_leg() {
-        let mut spread = create_test_spread();
+        let mut spread = bull_call_spread_test();
         let new_long_call = Position::new(
             Options::new(
                 OptionType::European,
@@ -628,7 +634,7 @@ mod tests_bull_call_spread_strategy {
 
     #[test]
     fn test_get_legs() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let legs = spread.get_positions().expect("Failed to get positions");
 
         assert_eq!(legs.len(), 2);
@@ -640,22 +646,22 @@ mod tests_bull_call_spread_strategy {
 
     #[test]
     fn test_max_profit() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let max_profit = spread.max_profit().unwrap();
-        assert_eq!(max_profit, pos!(4.0));
+        assert_eq!(max_profit, pos!(35.37));
     }
 
     #[test]
     fn test_max_loss() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let max_loss = spread.max_loss().unwrap();
-        assert_eq!(max_loss, pos!(1.0));
+        assert_eq!(max_loss, pos!(174.63));
     }
 
     #[test]
     fn test_total_cost() {
-        let spread = create_test_spread();
-        assert_eq!(spread.total_cost().unwrap(), pos!(3.0));
+        let spread = bull_call_spread_test();
+        assert_eq!(spread.total_cost().unwrap(), pos!(264.18));
     }
 
     #[test]
@@ -683,26 +689,25 @@ mod tests_bull_call_spread_strategy {
 
     #[test]
     fn test_break_even_points() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let break_even_points = spread.get_break_even_points().unwrap();
 
         assert_eq!(break_even_points.len(), 1);
-        // Break-even = long strike + net debit = 95 + 1 = 96
-        assert_eq!(break_even_points[0], pos!(96.0));
+        assert_eq!(break_even_points[0], pos!(5808.21));
     }
 
     #[test]
     fn test_profit_area() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let area = spread.profit_area().unwrap().to_f64().unwrap();
-        assert_eq!(area, 0.08);
+        assert_eq!(area, 2.0850615);
     }
 
     #[test]
     fn test_profit_ratio() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let ratio = spread.profit_ratio().unwrap().to_f64().unwrap();
-        assert_eq!(ratio, 400.0);
+        assert_relative_eq!(ratio, 20.25425, epsilon = 0.0001);
     }
 
     #[test]
@@ -1271,66 +1276,46 @@ mod tests_bull_call_spread_profit {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    fn create_test_spread() -> BullCallSpread {
-        BullCallSpread::new(
-            "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(95.0),                       // long_strike
-            pos!(100.0),                      // short_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            pos!(4.0),                              // premium_long_call
-            Positive::TWO,                             // premium_short_call
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-        )
-    }
-
     #[test]
     fn test_profit_below_long_strike() {
-        let spread = create_test_spread();
-        let price = pos!(90.0);
-        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -2.0);
+        let spread = bull_call_spread_test();
+        let price = pos!(5800.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -24.63);
     }
 
     #[test]
     fn test_profit_at_long_strike() {
-        let spread = create_test_spread();
-        let price = pos!(95.0);
-        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -2.0);
+        let spread = bull_call_spread_test();
+        let price = pos!(5807.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -3.63);
     }
 
     #[test]
     fn test_profit_between_strikes() {
-        let spread = create_test_spread();
-        let price = pos!(97.5);
-        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 0.5);
+        let spread = bull_call_spread_test();
+        let price = pos!(5810.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 5.37);
     }
 
     #[test]
     fn test_profit_at_get_break_even_points() {
-        let spread = create_test_spread();
-        let price = pos!(97.0);
+        let spread = bull_call_spread_test();
+        let price = pos!(5808.21);
         assert!(spread.calculate_profit_at(price).unwrap().abs() < dec!(0.001));
     }
 
     #[test]
     fn test_profit_at_short_strike() {
-        let spread = create_test_spread();
-        let price = pos!(100.0);
-        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 3.0);
+        let spread = bull_call_spread_test();
+        let price = pos!(5818.21);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 30.0);
     }
 
     #[test]
     fn test_profit_above_short_strike() {
-        let spread = create_test_spread();
-        let price = pos!(105.0);
-        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 3.0);
+        let spread = bull_call_spread_test();
+        let price = pos!(5908.21);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 35.37);
     }
 
     #[test]
@@ -1383,16 +1368,16 @@ mod tests_bull_call_spread_profit {
 
     #[test]
     fn test_maximum_profit() {
-        let spread = create_test_spread();
-        let price = pos!(150.0);
-        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 3.0);
+        let spread = bull_call_spread_test();
+        let price = pos!(5858.21);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 35.37);
     }
 
     #[test]
     fn test_maximum_loss() {
-        let spread = create_test_spread();
-        let price = pos!(50.0);
-        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -2.0);
+        let spread = bull_call_spread_test();
+        let price = pos!(5708.21);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -174.63);
     }
 }
 
@@ -1404,51 +1389,32 @@ mod tests_bull_call_spread_graph {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    fn create_test_spread() -> BullCallSpread {
-        BullCallSpread::new(
-            "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(95.0),                       // long_strike
-            pos!(100.0),                      // short_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            pos!(4.0),                              // premium_long_call
-            Positive::TWO,                              // premium_short_call
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-        )
-    }
-
     #[test]
     fn test_title_format() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let title = spread.title();
+
 
         assert!(title.contains("Bull Call Spread Strategy"));
         assert!(title.contains("Long"));
         assert!(title.contains("Short"));
-        assert!(title.contains("TEST")); // symbol
-        assert!(title.contains("95")); // long strike
-        assert!(title.contains("100")); // short strike
+        assert!(title.contains("SP500")); // symbol
+        assert!(title.contains("$5750")); // long strike
+        assert!(title.contains("$5820")); // short strike
     }
 
     #[test]
     fn test_get_vertical_lines() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let lines = spread.get_vertical_lines();
 
         assert_eq!(lines.len(), 1);
 
         let line = &lines[0];
-        assert_eq!(line.x_coordinate, 100.0);
+        assert_eq!(line.x_coordinate, 5781.88);
         assert_eq!(line.y_range, (f64::NEG_INFINITY, f64::INFINITY));
         assert!(line.label.contains("Current Price"));
-        assert!(line.label.contains("100.00"));
+        assert!(line.label.contains("5781.88"));
         assert_eq!(line.label_offset, (4.0, 0.0));
         assert_eq!(line.line_color, ORANGE);
         assert_eq!(line.label_color, ORANGE);
@@ -1457,14 +1423,14 @@ mod tests_bull_call_spread_graph {
 
     #[test]
     fn test_get_points() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let points = spread.get_points();
 
         assert_eq!(points.len(), 4);
 
         let break_even = &points[0];
         assert_eq!(break_even.coordinates.1, 0.0);
-        assert_eq!(break_even.coordinates.0, 97.0);
+        assert_eq!(break_even.coordinates.0, 5808.21);
         assert!(break_even.label.contains("Break Even"));
         assert_eq!(break_even.point_color, DARK_BLUE);
         assert_eq!(break_even.label_color, DARK_BLUE);
@@ -1472,15 +1438,15 @@ mod tests_bull_call_spread_graph {
         assert_eq!(break_even.font_size, 18);
 
         let max_profit = &points[1];
-        assert_eq!(max_profit.coordinates.0, 100.0);
-        assert_eq!(max_profit.coordinates.1, 3.0);
+        assert_eq!(max_profit.coordinates.0, 5820.0);
+        assert_eq!(max_profit.coordinates.1, 35.37);
         assert!(max_profit.label.contains("Max Profit"));
         assert_eq!(max_profit.point_color, DARK_GREEN);
         assert_eq!(max_profit.label_color, DARK_GREEN);
 
         let max_loss = &points[2];
-        assert_eq!(max_loss.coordinates.0, 95.0);
-        assert_eq!(max_loss.coordinates.1, -2.0);
+        assert_eq!(max_loss.coordinates.0, 5750.0);
+        assert_eq!(max_loss.coordinates.1, -174.63);
         assert!(max_loss.label.contains("Max Loss"));
         assert_eq!(max_loss.point_color, RED);
         assert_eq!(max_loss.label_color, RED);
@@ -1488,42 +1454,41 @@ mod tests_bull_call_spread_graph {
 
     #[test]
     fn test_points_coordinates() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let points = spread.get_points();
 
         // Break-even point
-        assert_eq!(points[0].coordinates.0, 97.0);
+        assert_eq!(points[0].coordinates.0, 5808.21);
         assert_eq!(points[0].coordinates.1, 0.0);
 
         // Maximum profit point
-        assert_eq!(points[1].coordinates.0, 100.0);
-        assert_eq!(points[1].coordinates.1, 3.0);
+        assert_eq!(points[1].coordinates.0, 5820.0);
+        assert_eq!(points[1].coordinates.1, 35.37);
 
         // Maximum loss point
-        assert_eq!(points[2].coordinates.0, 95.0);
-        assert_eq!(points[2].coordinates.1, -2.0);
+        assert_eq!(points[2].coordinates.0, 5750.0);
+        assert_eq!(points[2].coordinates.1, -174.63);
 
         // Current price point
-        assert_eq!(points[3].coordinates.0, 100.0);
-        let current_profit = spread.calculate_profit_at(pos!(100.0))
+        assert_eq!(points[3].coordinates.0, 5781.88);
+        let current_profit = spread.calculate_profit_at(pos!(5781.88))
             .unwrap().to_f64().unwrap();
         assert_eq!(points[3].coordinates.1, current_profit);
     }
 
     #[test]
     fn test_point_labels() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let points = spread.get_points();
-
-        assert!(points[0].label.contains("97.00")); // Break-even
-        assert!(points[1].label.contains("3.00")); // Max profit
-        assert!(points[2].label.contains("2.00")); // Max loss
-        assert!(points[3].label.contains("3.00")); // Current price
+        assert!(points[0].label.contains("5808.21")); // Break-even
+        assert!(points[1].label.contains("35.37")); // Max profit
+        assert!(points[2].label.contains("-174.63")); // Max loss
+        assert!(points[3].label.contains("-78.99")); // Current price
     }
 
     #[test]
     fn test_points_style() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let points = spread.get_points();
 
         for point in points.iter() {
@@ -1536,15 +1501,15 @@ mod tests_bull_call_spread_graph {
 
     #[test]
     fn test_graph_with_zero_profits() {
-        let mut spread = create_test_spread();
+        let mut spread = bull_call_spread_test();
         spread.short_call.premium = pos!(1.0);
         spread.long_call.premium = pos!(6.0);
 
         let points = spread.get_points();
         let max_profit_point = &points[1];
 
-        assert_eq!(max_profit_point.coordinates.1, 0.0);
-        assert!(max_profit_point.label.contains("0.00"));
+        assert_eq!(max_profit_point.coordinates.1, 185.94);
+        assert!(max_profit_point.label.contains("185.94"));
     }
 
     #[test]
@@ -1577,12 +1542,12 @@ mod tests_bull_call_spread_graph {
 
     #[test]
     fn test_graph_at_extremes() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let profit_at_zero = spread.calculate_profit_at(Positive::ZERO).unwrap();
         let profit_at_high = spread.calculate_profit_at(pos!(1000.0)).unwrap();
 
-        assert_eq!(profit_at_zero, dec!(-2.0));
-        assert_eq!(profit_at_high, dec!(3.0));
+        assert_eq!(profit_at_zero, dec!(-174.63));
+        assert_eq!(profit_at_high, dec!(-174.63));
     }
 }
 
@@ -1591,47 +1556,28 @@ mod tests_bull_call_spread_probability {
     use super::*;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
-
-    fn create_test_spread() -> BullCallSpread {
-        BullCallSpread::new(
-            "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(95.0),                       // long_strike
-            pos!(100.0),                      // short_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            pos!(4.0),                              // premium_long_call
-            Positive::TWO,                            // premium_short_call
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-        )
-    }
+    use crate::assert_pos_relative_eq;
 
     #[test]
     fn test_get_expiration() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let result = spread.get_expiration();
         assert!(result.is_ok());
         match result.unwrap() {
-            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            ExpirationDate::Days(days) => assert_eq!(days, 2.0),
             _ => panic!("Expected ExpirationDate::Days"),
         }
     }
 
     #[test]
     fn test_get_risk_free_rate() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         assert_eq!(spread.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
     fn test_get_profit_ranges() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let result = spread.get_profit_ranges();
         assert!(result.is_ok());
 
@@ -1639,14 +1585,14 @@ mod tests_bull_call_spread_probability {
         assert_eq!(ranges.len(), 1);
 
         let range = &ranges[0];
-        assert_eq!(range.lower_bound.unwrap(), pos!(97.0)); // Break-even
-        assert_eq!(range.upper_bound.unwrap(), pos!(100.0)); // Short strike
+        assert_eq!(range.lower_bound.unwrap(), pos!(5808.21)); // Break-even
+        assert_eq!(range.upper_bound.unwrap(), pos!(5820.0)); // Short strike
         assert!(range.probability > Positive::ZERO);
     }
 
     #[test]
     fn test_get_loss_ranges() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let result = spread.get_loss_ranges();
         assert!(result.is_ok());
 
@@ -1654,14 +1600,14 @@ mod tests_bull_call_spread_probability {
         assert_eq!(ranges.len(), 1);
 
         let range = &ranges[0];
-        assert_eq!(range.lower_bound.unwrap(), pos!(95.0)); // Long strike
-        assert_eq!(range.upper_bound.unwrap(), pos!(97.0)); // Break-even
+        assert_eq!(range.lower_bound.unwrap(), pos!(5750.0)); // Long strike
+        assert_eq!(range.upper_bound.unwrap(), pos!(5808.21)); // Break-even
         assert!(range.probability > Positive::ZERO);
     }
 
     #[test]
     fn test_probability_of_profit() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let result = spread.probability_of_profit(None, None);
         assert!(result.is_ok());
 
@@ -1672,7 +1618,7 @@ mod tests_bull_call_spread_probability {
 
     #[test]
     fn test_probability_with_volatility_adjustment() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos!(0.25),
             std_dev_adjustment: pos!(0.05),
@@ -1688,7 +1634,7 @@ mod tests_bull_call_spread_probability {
 
     #[test]
     fn test_probability_with_uptrend() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let trend = Some(PriceTrend {
             drift_rate: 0.8,
             confidence: 0.95,
@@ -1704,7 +1650,7 @@ mod tests_bull_call_spread_probability {
 
     #[test]
     fn test_probability_with_downtrend() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let trend = Some(PriceTrend {
             drift_rate: -0.1,
             confidence: 0.95,
@@ -1720,7 +1666,7 @@ mod tests_bull_call_spread_probability {
 
     #[test]
     fn test_analyze_probabilities() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let result = spread.analyze_probabilities(None, None);
         assert!(result.is_ok());
 
@@ -1728,14 +1674,14 @@ mod tests_bull_call_spread_probability {
         assert!(analysis.probability_of_profit > Positive::ZERO);
         assert!(analysis.probability_of_max_profit >= Positive::ZERO);
         assert!(analysis.probability_of_max_loss >= Positive::ZERO);
-        assert!(analysis.expected_value > Positive::ZERO);
+        assert_pos_relative_eq!(analysis.expected_value, Positive::ZERO, pos!(0.000001));
         assert!(!analysis.break_even_points.is_empty());
         assert!(analysis.risk_reward_ratio > Positive::ZERO);
     }
 
     #[test]
     fn test_calculate_extreme_probabilities() {
-        let spread = create_test_spread();
+        let spread = bull_call_spread_test();
         let result = spread.calculate_extreme_probabilities(None, None);
         assert!(result.is_ok());
 
