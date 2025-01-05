@@ -606,7 +606,7 @@ mod tests {
         fn test_calculate_rnd_high_risk_free_rate() {
             let chain = create_test_option_chain();
             let params = RNDParameters {
-                risk_free_rate: dec!(0.5),   // 50% interest rate
+                risk_free_rate: dec!(0.5), // 50% interest rate
                 derivative_tolerance: pos!(0.001),
                 ..Default::default()
             };
@@ -661,7 +661,7 @@ mod tests {
                 spos!(5.5),
                 spos!(15.0),
                 spos!(15.5),
-                None,   // No implied volatility
+                None, // No implied volatility
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
@@ -733,31 +733,31 @@ mod tests {
 
             // Add options with extreme values
             chain.add_option(
-                pos!(50.0),   // Deep ITM
+                pos!(50.0), // Deep ITM
                 spos!(50.0),
                 spos!(51.0),
                 spos!(0.1),
                 spos!(0.2),
-                spos!(0.8),   // High volatility
+                spos!(0.8), // High volatility
                 Some(dec!(-0.99)),
                 spos!(10.0),
                 Some(5),
             );
 
             chain.add_option(
-                pos!(150.0),   // Deep OTM
+                pos!(150.0), // Deep OTM
                 spos!(0.1),
                 spos!(0.2),
                 spos!(50.0),
                 spos!(51.0),
-                spos!(0.8),   // High volatility
+                spos!(0.8), // High volatility
                 Some(dec!(0.99)),
                 spos!(10.0),
                 Some(5),
             );
 
             let params = RNDParameters {
-                risk_free_rate: dec!(0.10),   // High interest rate
+                risk_free_rate: dec!(0.10), // High interest rate
                 interpolation_points: 200,
                 derivative_tolerance: pos!(0.001),
             };
@@ -893,7 +893,7 @@ mod additional_tests {
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    spos!(0.5),   // Alta volatilidad
+                    spos!(0.5), // Alta volatilidad
                     Some(dec!(-0.3)),
                     spos!(100.0),
                     Some(50),
@@ -1492,7 +1492,7 @@ mod chain_test {
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,
-            derivative_tolerance: pos!(1.0),   // Using larger step size for testing
+            derivative_tolerance: pos!(1.0), // Using larger step size for testing
         };
 
         debug!("Initial option chain:");

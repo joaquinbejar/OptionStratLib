@@ -18,21 +18,21 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = IronButterfly::new(
         "GOLD".to_string(),
-        underlying_price,   // underlying_price
-        pos!(2725.0),   // short_call_strike
-        pos!(2800.0),   // long_call_strike
-        pos!(2500.0),   // long_put_strike
+        underlying_price, // underlying_price
+        pos!(2725.0),     // short_call_strike
+        pos!(2800.0),     // long_call_strike
+        pos!(2500.0),     // long_put_strike
         ExpirationDate::Days(pos!(30.0)),
         pos!(0.1548),   // implied_volatility
-        dec!(0.05),   // risk_free_rate
-        Positive::ZERO,   // dividend_yield
-        pos!(2.0),   // quantity
-        pos!(38.8),   // premium_short_call
-        pos!(30.4),   // premium_short_put
-        pos!(23.3),   // premium_long_call
-        pos!(16.8),   // premium_long_put
-        pos!(0.96),   // open_fee
-        pos!(0.96),   // close_fee
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(2.0),      // quantity
+        pos!(38.8),     // premium_short_call
+        pos!(30.4),     // premium_short_put
+        pos!(23.3),     // premium_long_call
+        pos!(16.8),     // premium_long_put
+        pos!(0.96),     // open_fee
+        pos!(0.96),     // close_fee
     );
 
     // Validate strategy
@@ -42,13 +42,13 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64(),
-        42.839,
+        42.84,
         epsilon = 0.001
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_pos_relative_eq!(strategy.max_profit()?, pos!(42.839), pos!(0.0001));
-    assert_pos_relative_eq!(strategy.total_cost()?, pos!(218.599), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(95.56), pos!(0.0001));
     assert_pos_relative_eq!(strategy.fees()?, pos!(15.36), pos!(0.0001));
 
     // Test range calculations

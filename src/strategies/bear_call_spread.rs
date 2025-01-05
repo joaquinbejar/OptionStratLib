@@ -204,7 +204,7 @@ impl Strategies for BearCallSpread {
                 },
             ))
         } else {
-            Ok(net_premium_received.into())
+            Ok(net_premium_received)
         }
     }
 
@@ -221,7 +221,6 @@ impl Strategies for BearCallSpread {
             Ok(mas_loss)
         }
     }
-    
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
@@ -362,7 +361,10 @@ impl Optimizable for BearCallSpread {
 impl Profit for BearCallSpread {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        Ok(self.short_call.pnl_at_expiration(&price)? + self.long_call.pnl_at_expiration(&price)?)
+        Ok(
+            self.short_call.pnl_at_expiration(&price)?
+                + self.long_call.pnl_at_expiration(&price)?,
+        )
     }
 }
 
@@ -619,7 +621,6 @@ mod tests_bear_call_spread_strategies {
         let result = spread.max_profit();
         assert!(result.is_ok());
         assert_relative_eq!(result.unwrap().to_f64(), 0.0, epsilon = 0.0001);
-
     }
 
     #[test]
@@ -664,8 +665,8 @@ mod tests_bear_call_spread_strategies {
     #[test]
     fn test_net_premium_received() {
         let spread = create_test_spread();
-        let expected_premium =
-            spread.short_call.net_premium_received().unwrap() - spread.long_call.net_cost().unwrap();
+        let expected_premium = spread.short_call.net_premium_received().unwrap()
+            - spread.long_call.net_cost().unwrap();
         assert_pos_relative_eq!(
             spread.net_premium_received().unwrap(),
             expected_premium,
@@ -679,7 +680,8 @@ mod tests_bear_call_spread_strategies {
         let expected_fees = (spread.short_call.open_fee
             + spread.short_call.close_fee
             + spread.long_call.open_fee
-            + spread.long_call.close_fee).to_f64();
+            + spread.long_call.close_fee)
+            .to_f64();
         assert_relative_eq!(
             spread.fees().unwrap().to_f64(),
             expected_fees,
@@ -717,7 +719,7 @@ mod tests_bear_call_spread_strategies {
     fn test_profit_ratio_zero_profit() {
         let mut spread = create_test_spread();
         // Modify premiums to create zero max profit
-        spread.short_call.premium =Positive::ONE;
+        spread.short_call.premium = Positive::ONE;
         spread.long_call.premium = Positive::ONE;
 
         assert_relative_eq!(
@@ -848,10 +850,10 @@ mod tests_bear_call_spread_positionable {
     fn create_test_position(side: Side) -> Position {
         Position::new(
             create_test_option(side),
-            pos!(1.0),        // premium
-            Utc::now(), // timestamp
-            Positive::ZERO,        // open_fee
-            Positive::ZERO,        // close_fee
+            pos!(1.0),      // premium
+            Utc::now(),     // timestamp
+            Positive::ZERO, // open_fee
+            Positive::ZERO, // close_fee
         )
     }
 
@@ -1052,9 +1054,9 @@ mod tests_bear_call_spread_validable {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            pos!(2.0),                              // premium_short_call
-            pos!(1.0),                              // premium_long_call
-            Positive::ZERO,                              // fees
+            pos!(2.0),                        // premium_short_call
+            pos!(1.0),                        // premium_long_call
+            Positive::ZERO,                   // fees
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
@@ -1239,20 +1241,23 @@ mod tests_bear_call_spread_profit {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            pos!(2.0),                              // premium_short_call
-            pos!(1.0),                              // premium_long_call
-            Positive::ZERO,                              // open_fee_short_call
-            Positive::ZERO,                              // close_fee_short_call
-            Positive::ZERO,                              // open_fee_long_call
-            Positive::ZERO,                              // close_fee_long_call
+            pos!(2.0),                        // premium_short_call
+            pos!(1.0),                        // premium_long_call
+            Positive::ZERO,                   // open_fee_short_call
+            Positive::ZERO,                   // close_fee_short_call
+            Positive::ZERO,                   // open_fee_long_call
+            Positive::ZERO,                   // close_fee_long_call
         )
     }
 
     #[test]
     fn test_profit_below_short_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(pos!(90.0))
-            .unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(pos!(90.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         // When price is below short strike, both options expire worthless
         // Profit should be the net premium received
         let expected_profit = spread.net_premium_received().unwrap().to_f64();
@@ -1262,7 +1267,11 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(pos!(95.0)).unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(pos!(95.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         // At short strike, short call is at-the-money
         let expected_profit = spread.net_premium_received().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
@@ -1272,7 +1281,11 @@ mod tests_bear_call_spread_profit {
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
         let test_price = pos!(100.0);
-        let profit = spread.calculate_profit_at(test_price).unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(test_price)
+            .unwrap()
+            .to_f64()
+            .unwrap();
         // Between strikes, only short call is in-the-money
         let intrinsic_value = test_price - spread.short_call.option.strike_price;
         let expected_profit =
@@ -1283,7 +1296,11 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(pos!(105.0)).unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(pos!(105.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         // At long strike, both options are in-the-money
         let short_intrinsic = pos!(105.0) - spread.short_call.option.strike_price;
         let long_intrinsic = pos!(105.0) - spread.long_call.option.strike_price;
@@ -1296,7 +1313,11 @@ mod tests_bear_call_spread_profit {
     #[test]
     fn test_profit_above_long_strike() {
         let spread = create_test_spread();
-        let profit = spread.calculate_profit_at(pos!(110.0)).unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(pos!(110.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         // Maximum loss occurs when price is above long strike
         let expected_profit = -spread.max_loss().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
@@ -1306,8 +1327,11 @@ mod tests_bear_call_spread_profit {
     fn test_profit_at_get_break_even_points() {
         let spread = create_test_spread();
         let break_even = spread.get_break_even_points().unwrap()[0];
-        let profit = spread.calculate_profit_at(break_even)
-            .unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(break_even)
+            .unwrap()
+            .to_f64()
+            .unwrap();
         // At break-even point, profit should be zero
         assert_relative_eq!(profit, 0.0, epsilon = 0.0001);
     }
@@ -1323,23 +1347,30 @@ mod tests_bear_call_spread_profit {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
-            pos!(2.0),                              // premium_short_call
-            pos!(1.0),                              // premium_long_call
-            Positive::ZERO,                              // open_fee_short_call
-            Positive::ZERO,                              // close_fee_short_call
-            Positive::ZERO,                              // open_fee_long_call
-            Positive::ZERO,                              // close_fee_long_call
+            pos!(2.0),      // quantity = 2
+            pos!(2.0),      // premium_short_call
+            pos!(1.0),      // premium_long_call
+            Positive::ZERO, // open_fee_short_call
+            Positive::ZERO, // close_fee_short_call
+            Positive::ZERO, // open_fee_long_call
+            Positive::ZERO, // close_fee_long_call
         );
 
-        let profit = spread.calculate_profit_at(pos!(90.0))
-            .unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(pos!(90.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         // With quantity = 2, profit should be double
         let expected_profit = spread.net_premium_received().unwrap().to_f64();
         assert_relative_eq!(profit, expected_profit, epsilon = 0.0001);
         assert_relative_eq!(
             profit,
-            2.0 * create_test_spread().calculate_profit_at(pos!(90.0)).unwrap().to_f64().unwrap(),
+            2.0 * create_test_spread()
+                .calculate_profit_at(pos!(90.0))
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             epsilon = 0.0001
         );
     }
@@ -1348,24 +1379,27 @@ mod tests_bear_call_spread_profit {
     fn test_profit_with_fees() {
         let spread = BearCallSpread::new(
             "SP500".to_string(),
-            pos!(5781.88),   // underlying_price
-            pos!(5750.0),   // long_strike_itm
-            pos!(5820.0),   // short_strike
+            pos!(5781.88), // underlying_price
+            pos!(5750.0),  // long_strike_itm
+            pos!(5820.0),  // short_strike
             ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(2.0),   // long quantity
-            pos!(85.04),   // premium_long
-            pos!(29.85),   // premium_short
-            pos!(0.78),   // open_fee_long
-            pos!(0.78),   // open_fee_long
-            pos!(0.73),   // close_fee_long
-            pos!(0.73),   // close_fee_short
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // long quantity
+            pos!(85.04),    // premium_long
+            pos!(29.85),    // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // open_fee_long
+            pos!(0.73),     // close_fee_long
+            pos!(0.73),     // close_fee_short
         );
 
-        let profit = spread.calculate_profit_at(pos!(90.0))
-            .unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(pos!(90.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         let fees = 6.04;
         assert_eq!(spread.fees().unwrap().to_f64(), fees);
 
@@ -1766,8 +1800,8 @@ mod tests_bear_call_spread_probability {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            pos!(2.0),                              // premium_short_call
-            pos!(1.0),                              // premium_long_call
+            pos!(2.0),                        // premium_short_call
+            pos!(1.0),                        // premium_long_call
             Positive::ZERO,                   // open_fee_short_call
             Positive::ZERO,                   // close_fee_short_call
             Positive::ZERO,                   // open_fee_long_call
@@ -1916,12 +1950,12 @@ mod tests_delta {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // long quantity
-            pos!(85.04),          // premium_long
-            pos!(29.85),          // premium_short
-            pos!(0.78),           // open_fee_long
-            pos!(0.78),           // open_fee_long
-            pos!(0.73),           // close_fee_long
-            pos!(0.73),           // close_fee_short
+            pos!(85.04),    // premium_long
+            pos!(29.85),    // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // open_fee_long
+            pos!(0.73),     // close_fee_long
+            pos!(0.73),     // close_fee_short
         )
     }
 
@@ -2028,12 +2062,12 @@ mod tests_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(3.0),      // long quantity
-            pos!(85.04),          // premium_long
-            pos!(29.85),          // premium_short
-            pos!(0.78),           // open_fee_long
-            pos!(0.78),           // open_fee_long
-            pos!(0.73),           // close_fee_long
-            pos!(0.73),           // close_fee_short
+            pos!(85.04),    // premium_long
+            pos!(29.85),    // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // open_fee_long
+            pos!(0.73),     // close_fee_long
+            pos!(0.73),     // close_fee_short
         )
     }
 

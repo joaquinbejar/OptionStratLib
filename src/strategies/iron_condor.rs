@@ -1028,10 +1028,10 @@ mod tests_iron_condor_validable {
 #[cfg(test)]
 mod tests_iron_condor_strategies {
     use super::*;
+    use crate::constants::ZERO;
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
-    use crate::constants::ZERO;
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -1132,22 +1132,22 @@ mod tests_iron_condor_strategies {
     fn test_get_break_even_points() {
         let condor = IronCondor::new(
             "GOLD".to_string(),
-            pos!(2646.9),   // underlying_price
-            pos!(2725.0),   // short_call_strike
-            pos!(2560.0),   // short_put_strike
-            pos!(2800.0),   // long_call_strike
-            pos!(2500.0),   // long_put_strike
+            pos!(2646.9), // underlying_price
+            pos!(2725.0), // short_call_strike
+            pos!(2560.0), // short_put_strike
+            pos!(2800.0), // long_call_strike
+            pos!(2500.0), // long_put_strike
             ExpirationDate::Days(pos!(30.0)),
             pos!(0.1548),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            pos!(38.8),   // premium_short_call
-            pos!(30.4),   // premium_short_put
-            pos!(23.3),   // premium_long_call
-            pos!(16.8),   // premium_long_put
-            pos!(0.96),   // open_fee
-            pos!(0.96),   // close_fee
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(38.8),     // premium_short_call
+            pos!(30.4),     // premium_short_put
+            pos!(23.3),     // premium_long_call
+            pos!(16.8),     // premium_long_put
+            pos!(0.96),     // open_fee
+            pos!(0.96),     // close_fee
         );
         let break_even_points = condor.get_break_even_points().unwrap();
 

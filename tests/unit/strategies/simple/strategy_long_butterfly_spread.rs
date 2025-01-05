@@ -42,14 +42,14 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64(),
-        -16.689,
+        0.0,
         epsilon = 0.001
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_pos_relative_eq!(strategy.max_profit()?, pos!(53.31), pos!(0.0001));
     assert_pos_relative_eq!(strategy.max_loss()?, pos!(16.68999), pos!(0.0001));
-    assert_pos_relative_eq!(strategy.total_cost()?, pos!(273.21), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(145.09), pos!(0.0001));
     assert_eq!(strategy.fees().unwrap().to_f64(), 0.14);
     assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);

@@ -70,7 +70,6 @@ use crate::model::types::{OptionStyle, Side};
 use std::error::Error;
 use std::fmt;
 
-
 /// Represents errors that can occur when managing positions in strategies
 #[derive(Debug)]
 pub enum PositionError {

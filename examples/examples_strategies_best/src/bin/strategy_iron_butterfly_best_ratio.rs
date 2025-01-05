@@ -22,21 +22,21 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut strategy = IronButterfly::new(
         "SP500".to_string(),
-        underlying_price,   // underlying_price
+        underlying_price, // underlying_price
         Positive::ZERO,   // short_strike
         Positive::ZERO,   // long_call_strike
         Positive::ZERO,   // long_put_strike
         ExpirationDate::Days(pos!(5.0)),
-        Positive::ZERO,   // implied_volatility
-        Decimal::ZERO,   // risk_free_rate
-        Positive::ZERO,   // dividend_yield
-        pos!(1.0),   // quantity
-        Positive::ZERO,   // premium_short_call
-        Positive::ZERO,   // premium_short_put
-        Positive::ZERO,   // premium_long_call
-        Positive::ZERO,   // premium_long_put
-        Positive::ONE,   // open_fee
-        Positive::ONE,   // close_fee
+        Positive::ZERO, // implied_volatility
+        Decimal::ZERO,  // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // quantity
+        Positive::ZERO, // premium_short_call
+        Positive::ZERO, // premium_short_put
+        Positive::ZERO, // premium_long_call
+        Positive::ZERO, // premium_long_put
+        Positive::ONE,  // open_fee
+        Positive::ONE,  // close_fee
     );
 
     strategy.best_ratio(&option_chain, FindOptimalSide::All);

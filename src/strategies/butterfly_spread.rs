@@ -2893,8 +2893,11 @@ mod tests_short_butterfly_profit {
         let break_even_points = butterfly.get_break_even_points().unwrap();
 
         for &point in break_even_points {
-            let profit = butterfly.calculate_profit_at(point)
-                .unwrap().to_f64().unwrap();
+            let profit = butterfly
+                .calculate_profit_at(point)
+                .unwrap()
+                .to_f64()
+                .unwrap();
             assert_relative_eq!(profit, 0.0, epsilon = 0.01);
         }
     }
@@ -2922,18 +2925,27 @@ mod tests_short_butterfly_profit {
             pos!(0.05), // open_fee_long_call_high
             pos!(0.05), // close_fee_long_call_high
         );
-        let scaled_profit = butterfly.calculate_profit_at(pos!(85.0))
-            .unwrap().to_f64().unwrap();
+        let scaled_profit = butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         assert_relative_eq!(scaled_profit, -0.8, epsilon = 0.0001);
     }
 
     #[test]
     fn test_profit_symmetry() {
         let butterfly = create_test();
-        let low_extreme_profit = butterfly.calculate_profit_at(pos!(85.0))
-            .unwrap().to_f64().unwrap();
-        let high_extreme_profit = butterfly.calculate_profit_at(pos!(115.0))
-            .unwrap().to_f64().unwrap();
+        let low_extreme_profit = butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        let high_extreme_profit = butterfly
+            .calculate_profit_at(pos!(115.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
 
         assert_relative_eq!(low_extreme_profit, high_extreme_profit, epsilon = 0.01);
     }
@@ -2963,10 +2975,16 @@ mod tests_short_butterfly_profit {
         );
 
         let base_butterfly = create_test();
-        let profit_without_fees = butterfly.calculate_profit_at(pos!(85.0))
-            .unwrap().to_f64().unwrap();
-        let profit_with_fees = base_butterfly.calculate_profit_at(pos!(85.0))
-            .unwrap().to_f64().unwrap();
+        let profit_without_fees = butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        let profit_with_fees = base_butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         assert!(profit_with_fees < profit_without_fees);
     }
 }

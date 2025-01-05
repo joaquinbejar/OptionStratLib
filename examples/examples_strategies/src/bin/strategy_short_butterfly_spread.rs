@@ -22,18 +22,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let strategy = ShortButterflySpread::new(
         "SP500".to_string(),
-        underlying_price,   // underlying_price
-        pos!(5700.0),   // short_strike_itm
-        pos!(5780.0),   // long_strike
-        pos!(5850.0),   // short_strike_otm
+        underlying_price, // underlying_price
+        pos!(5700.0),     // short_strike_itm
+        pos!(5780.0),     // long_strike
+        pos!(5850.0),     // short_strike_otm
         ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),   // implied_volatility
-        dec!(0.05),   // risk_free_rate
-        Positive::ZERO,   // dividend_yield
-        pos!(1.0),   // long quantity
+        pos!(0.18),     // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // long quantity
         pos!(119.01),   // premium_long
-        pos!(66.0),   // premium_short
-        pos!(29.85),   // open_fee_long
+        pos!(66.0),     // premium_short
+        pos!(29.85),    // open_fee_long
         pos!(0.05),
         pos!(0.05),
         pos!(0.05),

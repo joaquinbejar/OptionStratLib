@@ -25,9 +25,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         dec!(0.05),
         Positive::ZERO,
         pos!(3.0),
-        pos!(119.01),   // premium_long
+        pos!(119.01), // premium_long
         pos!(66.0),   // premium_short
-        pos!(29.85),   // open_fee_long
+        pos!(29.85),  // open_fee_long
         4.0,
         0.0,
         0.0,

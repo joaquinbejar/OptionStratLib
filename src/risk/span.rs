@@ -3,10 +3,10 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-use num_traits::ToPrimitive;
-use rust_decimal::Decimal;
 use crate::model::position::Position;
 use crate::{pos, Positive};
+use num_traits::ToPrimitive;
+use rust_decimal::Decimal;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -93,8 +93,13 @@ impl SPANMargin {
 
         ((scenario_price - current_price)
             * option.quantity
-            * if option.is_short() 
-        { Decimal::NEGATIVE_ONE } else { Decimal::ONE }).to_f64().unwrap()
+            * if option.is_short() {
+                Decimal::NEGATIVE_ONE
+            } else {
+                Decimal::ONE
+            })
+        .to_f64()
+        .unwrap()
     }
 
     fn calculate_short_option_minimum(&self, position: &Position) -> f64 {
@@ -138,10 +143,10 @@ mod tests_span {
         };
 
         let span = SPANMargin::new(
-            0.15,   // scanning_range (15%)
-            0.1,   // short_option_minimum (10%)
-            0.05,   // price_scan_range (5%)
-            0.1,   // volatility_scan_range (10%)
+            0.15, // scanning_range (15%)
+            0.1,  // short_option_minimum (10%)
+            0.05, // price_scan_range (5%)
+            0.1,  // volatility_scan_range (10%)
         );
 
         let margin = span.calculate_margin(&position);

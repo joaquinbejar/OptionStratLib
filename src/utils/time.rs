@@ -8,17 +8,17 @@ use crate::constants::*;
 /// Represents different timeframes for volatility calculations
 #[derive(Debug, Clone, Copy)]
 pub enum TimeFrame {
-    Microsecond,   // 1-microsecond data
-    Millisecond,   // 1-millisecond data
-    Second,   // 1-second data
-    Minute,   // 1-minute data
-    Hour,   // 1-hour data
-    Day,   // Daily data
-    Week,   // Weekly data
-    Month,   // Monthly data
-    Quarter,   // Quarterly data
-    Year,   // Yearly data
-    Custom(f64),   // Custom periods per year
+    Microsecond, // 1-microsecond data
+    Millisecond, // 1-millisecond data
+    Second,      // 1-second data
+    Minute,      // 1-minute data
+    Hour,        // 1-hour data
+    Day,         // Daily data
+    Week,        // Weekly data
+    Month,       // Monthly data
+    Quarter,     // Quarterly data
+    Year,        // Yearly data
+    Custom(f64), // Custom periods per year
 }
 
 impl TimeFrame {
@@ -31,15 +31,15 @@ impl TimeFrame {
             TimeFrame::Millisecond => {
                 TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND
             } // Milliseconds in trading year
-            TimeFrame::Second => TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR,   // Seconds in trading year
-            TimeFrame::Minute => TRADING_DAYS * TRADING_HOURS * MINUTES_PER_HOUR,   // Minutes in trading year
-            TimeFrame::Hour => TRADING_DAYS * TRADING_HOURS,   // Hours in trading year
-            TimeFrame::Day => TRADING_DAYS,   // Trading days in a year
-            TimeFrame::Week => WEEKS_PER_YEAR,   // Weeks in a year
-            TimeFrame::Month => MONTHS_PER_YEAR,   // Months in a year
-            TimeFrame::Quarter => QUARTERS_PER_YEAR,   // Quarters in a year
-            TimeFrame::Year => 1.0,   // Base unit
-            TimeFrame::Custom(periods) => *periods,   // Custom periods per year
+            TimeFrame::Second => TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR, // Seconds in trading year
+            TimeFrame::Minute => TRADING_DAYS * TRADING_HOURS * MINUTES_PER_HOUR, // Minutes in trading year
+            TimeFrame::Hour => TRADING_DAYS * TRADING_HOURS, // Hours in trading year
+            TimeFrame::Day => TRADING_DAYS,                  // Trading days in a year
+            TimeFrame::Week => WEEKS_PER_YEAR,               // Weeks in a year
+            TimeFrame::Month => MONTHS_PER_YEAR,             // Months in a year
+            TimeFrame::Quarter => QUARTERS_PER_YEAR,         // Quarters in a year
+            TimeFrame::Year => 1.0,                          // Base unit
+            TimeFrame::Custom(periods) => *periods,          // Custom periods per year
         }
     }
 }

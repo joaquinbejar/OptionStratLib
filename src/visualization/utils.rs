@@ -7,6 +7,7 @@ use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::{create_drawing_area, pos, Positive};
+use num_traits::ToPrimitive;
 use plotters::backend::BitMapBackend;
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
@@ -17,7 +18,6 @@ use plotters::prelude::{
 };
 use std::error::Error;
 use std::ops::Add;
-use num_traits::ToPrimitive;
 
 #[macro_export]
 macro_rules! create_drawing_area {
@@ -83,10 +83,10 @@ macro_rules! draw_line_segments {
 pub trait Graph: Profit {
     fn graph(
         &self,
-        x_axis_data: &[Positive],   // TODO: it should be Optional
+        x_axis_data: &[Positive], // TODO: it should be Optional
         file_path: &str,
-        title_size: u32,   // 15
-        canvas_size: (u32, u32),   // (1200, 800)
+        title_size: u32,         // 15
+        canvas_size: (u32, u32), // (1200, 800)
     ) -> Result<(), Box<dyn Error>> {
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
@@ -334,8 +334,8 @@ mod tests {
     use crate::visualization::model::LabelOffsetType;
     use crate::Positive;
     use plotters::style::RGBColor;
-    use std::error::Error;
     use rust_decimal::Decimal;
+    use std::error::Error;
 
     struct MockGraph;
 

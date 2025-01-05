@@ -423,7 +423,10 @@ impl Optimizable for PoorMansCoveredCall {
 impl Profit for PoorMansCoveredCall {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        Ok(self.long_call.pnl_at_expiration(&price)? + self.short_call.pnl_at_expiration(&price)?)
+        Ok(
+            self.long_call.pnl_at_expiration(&price)?
+                + self.short_call.pnl_at_expiration(&price)?,
+        )
     }
 }
 
@@ -1060,10 +1063,7 @@ mod tests_pmcc_pnl {
     fn test_net_premium() {
         let strategy = create_test_strategy();
         let net_premium = strategy.net_premium_received().unwrap();
-        assert_eq!(
-            net_premium,
-            0.0
-        );
+        assert_eq!(net_premium, 0.0);
     }
 
     #[test]

@@ -9,7 +9,6 @@ Key characteristics:
 - Lower cost than a straddle
 - Requires a larger price move to become profitable
 */
-use std::error::Error;
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -39,6 +38,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{debug, info, trace};
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
@@ -197,7 +197,6 @@ impl Strategies for ShortStrangle {
     fn max_loss(&self) -> Result<Positive, StrategyError> {
         Ok(Positive::INFINITY)
     }
-    
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
@@ -355,9 +354,13 @@ impl Profit for ShortStrangle {
             self.short_call.pnl_at_expiration(&price)?,
             self.short_put.option.strike_price,
             self.short_put.pnl_at_expiration(&price)?,
-            self.short_call.pnl_at_expiration(&price)? + self.short_put.pnl_at_expiration(&price)?
+            self.short_call.pnl_at_expiration(&price)?
+                + self.short_put.pnl_at_expiration(&price)?
         );
-        Ok(self.short_call.pnl_at_expiration(&price)? + self.short_put.pnl_at_expiration(&price)?)
+        Ok(
+            self.short_call.pnl_at_expiration(&price)?
+                + self.short_put.pnl_at_expiration(&price)?,
+        )
     }
 }
 
@@ -457,11 +460,14 @@ impl Graph for ShortStrangle {
             coordinates: (
                 self.short_put.option.underlying_price.to_f64(),
                 self.calculate_profit_at(self.short_put.option.underlying_price)
-                    .unwrap().to_f64().unwrap(),
+                    .unwrap()
+                    .to_f64()
+                    .unwrap(),
             ),
             label: format!(
                 "${:.2}",
-                self.calculate_profit_at(self.short_put.option.underlying_price).unwrap(),
+                self.calculate_profit_at(self.short_put.option.underlying_price)
+                    .unwrap(),
             ),
             label_offset: LabelOffsetType::Relative(-coordinates.0 * 10.0, -coordinates.1),
             point_color: DARK_GREEN,
@@ -469,7 +475,7 @@ impl Graph for ShortStrangle {
             point_size: 5,
             font_size,
         });
-        
+
         points
     }
 }
@@ -764,7 +770,6 @@ impl Strategies for LongStrangle {
     fn max_loss(&self) -> Result<Positive, StrategyError> {
         Ok(self.total_cost()?)
     }
-    
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
@@ -1243,7 +1248,14 @@ is expected and the underlying asset's price is anticipated to remain stable."
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 150.0;
-        assert_eq!(strategy.calculate_profit_at(pos!(price)).unwrap().to_f64().unwrap(), 310.0);
+        assert_eq!(
+            strategy
+                .calculate_profit_at(pos!(price))
+                .unwrap()
+                .to_f64()
+                .unwrap(),
+            310.0
+        );
     }
 
     #[test]
@@ -1267,10 +1279,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_total_cost() {
         let strategy = setup();
-        assert_eq!(
-            strategy.total_cost().unwrap(),
-            strategy.short_call.net_cost().unwrap() + strategy.short_put.net_cost().unwrap()
-        );
+        assert_eq!(strategy.total_cost().unwrap(), 40.0);
     }
 
     #[test]
@@ -1278,7 +1287,8 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let strategy = setup();
         assert_eq!(
             strategy.net_premium_received().unwrap().to_f64(),
-            strategy.short_call.net_premium_received().unwrap() + strategy.short_put.net_premium_received().unwrap()
+            strategy.short_call.net_premium_received().unwrap()
+                + strategy.short_put.net_premium_received().unwrap()
         );
     }
 
@@ -1315,8 +1325,14 @@ is expected and the underlying asset's price is anticipated to remain stable."
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(price)
-                .unwrap().to_f64().unwrap());
+            assert_eq!(
+                values[i],
+                strategy
+                    .calculate_profit_at(price)
+                    .unwrap()
+                    .to_f64()
+                    .unwrap()
+            );
         }
 
         let title = strategy.title();
@@ -1471,10 +1487,10 @@ is expected and the underlying asset's price is anticipated to remain stable."
 
 #[cfg(test)]
 mod tests_long_strangle {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::{pos, spos};
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1532,7 +1548,8 @@ mod tests_long_strangle {
         let long_strangle = setup_long_strangle();
         assert_eq!(
             long_strangle.total_cost().unwrap(),
-            long_strangle.long_call.net_cost().unwrap() + long_strangle.long_put.net_cost().unwrap()
+            long_strangle.long_call.net_cost().unwrap()
+                + long_strangle.long_put.net_cost().unwrap()
         );
     }
 
@@ -1540,9 +1557,18 @@ mod tests_long_strangle {
     fn test_calculate_profit_at() {
         let long_strangle = setup_long_strangle();
         let price = pos!(150.0);
-        let expected_profit = long_strangle.long_call.pnl_at_expiration(&Some(price)).unwrap()
-            + long_strangle.long_put.pnl_at_expiration(&Some(price)).unwrap();
-        assert_eq!(long_strangle.calculate_profit_at(price).unwrap(), expected_profit);
+        let expected_profit = long_strangle
+            .long_call
+            .pnl_at_expiration(&Some(price))
+            .unwrap()
+            + long_strangle
+                .long_put
+                .pnl_at_expiration(&Some(price))
+                .unwrap();
+        assert_eq!(
+            long_strangle.calculate_profit_at(price).unwrap(),
+            expected_profit
+        );
     }
 
     fn setup_long_strangle() -> LongStrangle {
@@ -1570,8 +1596,8 @@ mod tests_long_strangle {
         LongStrangle::new(
             "AAPL".to_string(),
             pos!(150.0),
-            pos!(140.0),   // Call strike lower than put
-            pos!(160.0),   // Put strike higher than call
+            pos!(140.0), // Call strike lower than put
+            pos!(160.0), // Put strike higher than call
             ExpirationDate::Days(pos!(30.0)),
             pos!(0.25),
             dec!(0.01),
@@ -1630,10 +1656,7 @@ mod tests_long_strangle {
     #[test]
     fn test_net_premium_received() {
         let strategy = setup_long_strangle();
-        assert_eq!(
-            strategy.net_premium_received().unwrap().to_f64(),
-            0.0
-        );
+        assert_eq!(strategy.net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
@@ -1689,7 +1712,14 @@ mod tests_long_strangle {
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(price).unwrap().to_f64().unwrap());
+            assert_eq!(
+                values[i],
+                strategy
+                    .calculate_profit_at(price)
+                    .unwrap()
+                    .to_f64()
+                    .unwrap()
+            );
         }
 
         // Test title
@@ -1837,20 +1867,20 @@ mod tests_short_strangle_probability {
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),   // underlying_price
-            pos!(110.0),   // call_strike
-            pos!(90.0),   // put_strike
-            ExpirationDate::Days(pos!(30.0)),   // expiration
-            pos!(0.2),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            Positive::TWO,   // premium_short_call
-            Positive::TWO,   // premium_short_put
-            Positive::ZERO,   // open_fee_short_call
-            Positive::ZERO,   // close_fee_short_call
-            Positive::ZERO,   // open_fee_short_put
-            Positive::ZERO,   // close_fee_short_put
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // call_strike
+            pos!(90.0),                       // put_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            Positive::TWO,                    // premium_short_call
+            Positive::TWO,                    // premium_short_put
+            Positive::ZERO,                   // open_fee_short_call
+            Positive::ZERO,                   // close_fee_short_call
+            Positive::ZERO,                   // open_fee_short_put
+            Positive::ZERO,                   // close_fee_short_put
         )
     }
 
@@ -1976,20 +2006,20 @@ mod tests_short_strangle_probability_bis {
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),   // underlying_price
-            pos!(110.0),   // call_strike
-            pos!(90.0),   // put_strike
-            ExpirationDate::Days(pos!(30.0)),   // expiration
-            pos!(0.2),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            Positive::TWO,   // premium_short_call
-            Positive::TWO,   // premium_short_put
-            Positive::ZERO,   // open_fee_short_call
-            Positive::ZERO,   // close_fee_short_call
-            Positive::ZERO,   // open_fee_short_put
-            Positive::ZERO,   // close_fee_short_put
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // call_strike
+            pos!(90.0),                       // put_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            Positive::TWO,                    // premium_short_call
+            Positive::TWO,                    // premium_short_put
+            Positive::ZERO,                   // open_fee_short_call
+            Positive::ZERO,                   // close_fee_short_call
+            Positive::ZERO,                   // open_fee_short_put
+            Positive::ZERO,                   // close_fee_short_put
         )
     }
 
@@ -2119,20 +2149,20 @@ mod tests_long_strangle_probability {
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),   // underlying_price
-            pos!(110.0),   // call_strike
-            pos!(90.0),   // put_strike
-            ExpirationDate::Days(pos!(30.0)),   // expiration
-            pos!(0.2),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            Positive::TWO,   // premium_long_call
-            Positive::TWO,   // premium_long_put
-            Positive::ZERO,   // open_fee_long_call
-            Positive::ZERO,   // close_fee_long_call
-            Positive::ZERO,   // open_fee_long_put
-            Positive::ZERO,   // close_fee_long_put
+            pos!(100.0),                      // underlying_price
+            pos!(110.0),                      // call_strike
+            pos!(90.0),                       // put_strike
+            ExpirationDate::Days(pos!(30.0)), // expiration
+            pos!(0.2),                        // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(1.0),                        // quantity
+            Positive::TWO,                    // premium_long_call
+            Positive::TWO,                    // premium_long_put
+            Positive::ZERO,                   // open_fee_long_call
+            Positive::ZERO,                   // close_fee_long_call
+            Positive::ZERO,                   // open_fee_long_put
+            Positive::ZERO,                   // close_fee_long_put
         )
     }
 
@@ -2269,20 +2299,20 @@ mod tests_short_strangle_delta {
         let underlying_price = pos!(7138.5);
         ShortStrangle::new(
             "CL".to_string(),
-            underlying_price,   // underlying_price
-            call_strike,   // call_strike 7450 (delta -0.415981)
-            put_strike,   // put_strike 7050 (delta 0.417810)
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            pos!(84.2),   // premium_short_call
-            pos!(353.2),   // premium_short_put
-            pos!(7.01),   // open_fee_short_call
-            pos!(7.01),   // close_fee_short_call
-            pos!(7.01),   // open_fee_short_put
-            pos!(7.01),   // close_fee_short_put
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
         )
     }
 
@@ -2379,20 +2409,20 @@ mod tests_long_strangle_delta {
         let underlying_price = pos!(7138.5);
         LongStrangle::new(
             "CL".to_string(),
-            underlying_price,   // underlying_price
-            call_strike,   // call_strike 7450 (delta -0.415981)
-            put_strike,   // put_strike 7050 (delta 0.417810)
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(1.0),   // quantity
-            pos!(84.2),   // premium_short_call
-            pos!(353.2),   // premium_short_put
-            pos!(7.01),   // open_fee_short_call
-            pos!(7.01),   // close_fee_short_call
-            pos!(7.01),   // open_fee_short_put
-            pos!(7.01),   // close_fee_short_put
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
         )
     }
 
@@ -2493,20 +2523,20 @@ mod tests_short_strangle_delta_size {
         let underlying_price = pos!(7138.5);
         ShortStrangle::new(
             "CL".to_string(),
-            underlying_price,   // underlying_price
-            call_strike,   // call_strike 7450 (delta -0.415981)
-            put_strike,   // put_strike 7050 (delta 0.417810)
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(2.0),   // quantity
-            pos!(84.2),   // premium_short_call
-            pos!(353.2),   // premium_short_put
-            pos!(7.01),   // open_fee_short_call
-            pos!(7.01),   // close_fee_short_call
-            pos!(7.01),   // open_fee_short_put
-            pos!(7.01),   // close_fee_short_put
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
         )
     }
 
@@ -2609,20 +2639,20 @@ mod tests_long_strangle_delta_size {
         let underlying_price = pos!(7138.5);
         LongStrangle::new(
             "CL".to_string(),
-            underlying_price,   // underlying_price
-            call_strike,   // call_strike 7450 (delta -0.415981)
-            put_strike,   // put_strike 7050 (delta 0.417810)
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
-            dec!(0.05),   // risk_free_rate
-            Positive::ZERO,   // dividend_yield
-            pos!(2.0),   // quantity
-            pos!(84.2),   // premium_short_call
-            pos!(353.2),   // premium_short_put
-            pos!(7.01),   // open_fee_short_call
-            pos!(7.01),   // close_fee_short_call
-            pos!(7.01),   // open_fee_short_put
-            pos!(7.01),   // close_fee_short_put
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
         )
     }
 

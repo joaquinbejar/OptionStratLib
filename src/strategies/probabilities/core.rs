@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use num_traits::ToPrimitive;
 use crate::error::probability::ProbabilityError;
 use crate::model::{ExpirationDate, ProfitLossRange};
 use crate::pricing::payoff::Profit;
@@ -13,6 +12,7 @@ use crate::strategies::probabilities::utils::{
     calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
 };
 use crate::{pos, Positive};
+use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;
 
@@ -32,8 +32,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
             return Ok(StrategyProbabilityAnalysis {
                 probability_of_profit,
-                probability_of_max_profit: Positive::ZERO,   // Default value when no volatility adjustment
-                probability_of_max_loss: Positive::ZERO,   // Default value when no volatility adjustment
+                probability_of_max_profit: Positive::ZERO, // Default value when no volatility adjustment
+                probability_of_max_loss: Positive::ZERO, // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
                 risk_reward_ratio: self.profit_ratio().unwrap().into(),
@@ -123,13 +123,14 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             last_prob = prob.0.into();
         }
 
-        let expected_value = range
-            .iter()
-            .zip(probabilities.iter())
-            .fold(0.0, |acc, (price, prob)| {
-                let ev = acc + self.calculate_profit_at(*price).unwrap().to_f64().unwrap() * *prob;
-                ev
-            });
+        let expected_value =
+            range
+                .iter()
+                .zip(probabilities.iter())
+                .fold(0.0, |acc, (price, prob)| {
+                    
+                    acc + self.calculate_profit_at(*price).unwrap().to_f64().unwrap() * *prob
+                });
 
         let total_prob: f64 = probabilities.iter().map(|p| p.to_f64()).sum();
         if (total_prob - 1.0).abs() > 0.05 {
@@ -240,7 +241,6 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
 #[cfg(test)]
 mod tests_probability_analysis {
-    use std::error::Error;
     use super::*;
     use crate::error::strategies::StrategyError;
     use crate::model::types::ExpirationDate;
@@ -249,6 +249,7 @@ mod tests_probability_analysis {
     use crate::strategies::base::{Positionable, Strategies, Validable};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
+    use std::error::Error;
 
     // Mock struct para testing
     struct MockStrategy {
@@ -466,11 +467,11 @@ mod tests_probability_analysis {
 
 #[cfg(test)]
 mod tests_expected_value {
-    use std::error::Error;
     use super::*;
     use crate::error::strategies::StrategyError;
     use crate::strategies::base::{Positionable, Validable};
     use rust_decimal_macros::dec;
+    use std::error::Error;
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> TestStrategy {
@@ -688,7 +689,7 @@ mod tests_expected_value {
         let strategy = create_test_strategy();
         // Use a very small but positive volatility value
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.0001),   // Very small but non-zero volatility
+            base_volatility: pos!(0.0001), // Very small but non-zero volatility
             std_dev_adjustment: Positive::ZERO,
         });
 

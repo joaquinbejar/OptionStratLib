@@ -1,4 +1,3 @@
-use std::error::Error;
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::error::{GreeksError, OptionsResult};
@@ -16,15 +15,16 @@ use chrono::{DateTime, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{error, trace};
 
 type PriceBinomialTree = OptionsResult<(Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>)>;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct ExoticParams {
-    pub spot_prices: Option<Vec<Positive>>,   // Asian
-    pub spot_min: Option<Decimal>,   // Lookback
-    pub spot_max: Option<Decimal>,   // Lookback
+    pub spot_prices: Option<Vec<Positive>>, // Asian
+    pub spot_min: Option<Decimal>,          // Lookback
+    pub spot_max: Option<Decimal>,          // Lookback
 }
 
 #[derive(Clone, PartialEq)]
@@ -280,11 +280,18 @@ impl Greeks for Options {
 }
 
 impl PnLCalculator for Options {
-    fn calculate_pnl(&self, _date_time: DateTime<Utc>, _market_price: Positive) -> Result<PnL, Box<dyn Error>> {
+    fn calculate_pnl(
+        &self,
+        _date_time: DateTime<Utc>,
+        _market_price: Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
         todo!()
     }
 
-    fn calculate_pnl_at_expiration(&self, _underlying_price: Option<Positive>) -> Result<PnL, Box<dyn Error>> {
+    fn calculate_pnl_at_expiration(
+        &self,
+        _underlying_price: Option<Positive>,
+    ) -> Result<PnL, Box<dyn Error>> {
         todo!()
     }
 }
@@ -349,7 +356,11 @@ mod tests_options {
     #[test]
     fn test_time_to_expiration() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_relative_eq!(option.time_to_expiration().unwrap().to_f64(), 30.0 / 365.0, epsilon = 0.0001);
+        assert_relative_eq!(
+            option.time_to_expiration().unwrap().to_f64(),
+            30.0 / 365.0,
+            epsilon = 0.0001
+        );
 
         let future_date = Utc::now() + Duration::days(60);
         let option_with_datetime = Options::new(
@@ -535,8 +546,8 @@ mod tests_valid_option {
 mod tests_time_value {
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
-    use crate::{assert_decimal_eq, pos};
     use crate::utils::logger::setup_logger;
+    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
     use tracing::debug;
 
@@ -602,20 +613,12 @@ mod tests_time_value {
 
         let call_time_value = call.time_value().unwrap();
         let put_time_value = put.time_value().unwrap();
-        
+
         let call_price = call.calculate_price_black_scholes().unwrap();
         let put_price = put.calculate_price_black_scholes().unwrap();
 
-        assert_decimal_eq!(
-            call_time_value,
-            call_price,
-            dec!(0.01)
-        );
-        assert_decimal_eq!(
-            put_time_value,
-            put_price,
-            dec!(0.01)
-        );
+        assert_decimal_eq!(call_time_value, call_price, dec!(0.01));
+        assert_decimal_eq!(put_time_value, put_price, dec!(0.01));
         debug!("Call time value: {}", call_time_value);
         debug!("Call BS price: {}", call_price);
         debug!("Put time value: {}", put_time_value);

@@ -19,20 +19,20 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = BullCallSpread::new(
         "SP500".to_string(),
-        underlying_price,   // underlying_price
-        pos!(5750.0),   // long_strike_itm
-        pos!(5820.0),   // short_strike
+        underlying_price, // underlying_price
+        pos!(5750.0),     // long_strike_itm
+        pos!(5820.0),     // short_strike
         ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),   // implied_volatility
-        dec!(0.05),   // risk_free_rate
-        Positive::ZERO,   // dividend_yield
-        pos!(2.0),   // long quantity
-        pos!(85.04),   // premium_long
-        pos!(29.85),   // premium_short
-        pos!(0.78),   // open_fee_long
-        pos!(0.78),   // open_fee_long
-        pos!(0.73),   // close_fee_long
-        pos!(0.73),   // close_fee_short
+        pos!(0.18),     // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(2.0),      // long quantity
+        pos!(85.04),    // premium_long
+        pos!(29.85),    // premium_short
+        pos!(0.78),     // open_fee_long
+        pos!(0.78),     // open_fee_long
+        pos!(0.73),     // close_fee_long
+        pos!(0.73),     // close_fee_short
     );
 
     // Assertions to validate strategy properties and computations
@@ -40,13 +40,13 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64(),
-        -116.42,
+        0.0,
         epsilon = 0.001
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
     assert_pos_relative_eq!(strategy.max_loss()?, pos!(116.42), pos!(0.0001));
-    assert_pos_relative_eq!(strategy.total_cost()?, pos!(229.98), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(176.12), pos!(0.0001));
     assert_eq!(strategy.fees().unwrap().to_f64(), 6.04);
     assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);

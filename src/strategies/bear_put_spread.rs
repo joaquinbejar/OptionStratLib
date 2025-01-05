@@ -202,7 +202,6 @@ impl Strategies for BearPutSpread {
             ))
         }
     }
-    
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
@@ -346,10 +345,7 @@ impl Optimizable for BearPutSpread {
 impl Profit for BearPutSpread {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        Ok(
-            self.long_put.pnl_at_expiration(&price)?
-                + self.short_put.pnl_at_expiration(&price)?
-        )
+        Ok(self.long_put.pnl_at_expiration(&price)? + self.short_put.pnl_at_expiration(&price)?)
     }
 }
 
@@ -1456,10 +1452,10 @@ mod tests_bear_put_spread_profit {
             pos!(1.0),                        // quantity
             pos!(4.0),                        // premium_long_put
             pos!(2.0),                        // premium_short_put
-            Positive::ZERO,                        // open_fee_long_put
-            Positive::ZERO,                        // close_fee_long_put
-            Positive::ZERO,                        // open_fee_short_put
-            Positive::ZERO,                        // close_fee_short_put
+            Positive::ZERO,                   // open_fee_long_put
+            Positive::ZERO,                   // close_fee_long_put
+            Positive::ZERO,                   // open_fee_short_put
+            Positive::ZERO,                   // close_fee_short_put
         )
     }
 
@@ -1643,10 +1639,10 @@ mod tests_bear_put_spread_probability {
             pos!(1.0),                        // quantity
             pos!(4.0),                        // premium_long_put
             pos!(2.0),                        // premium_short_put
-            Positive::ZERO,                        // open_fee_long_put
-            Positive::ZERO,                        // close_fee_long_put
-            Positive::ZERO,                        // open_fee_short_put
-            Positive::ZERO,                        // close_fee_short_put
+            Positive::ZERO,                   // open_fee_long_put
+            Positive::ZERO,                   // close_fee_long_put
+            Positive::ZERO,                   // open_fee_short_put
+            Positive::ZERO,                   // close_fee_short_put
         )
     }
 
@@ -1771,10 +1767,10 @@ mod tests_bear_put_spread_probability {
 
 #[cfg(test)]
 mod tests_bear_put_spread_graph {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearPutSpread {
@@ -1790,7 +1786,7 @@ mod tests_bear_put_spread_graph {
             pos!(1.0),                        // quantity
             pos!(4.0),                        // premium_long_put
             pos!(2.0),                        // premium_short_put
-            Positive::ZERO,                        // fees
+            Positive::ZERO,                   // fees
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
@@ -1877,8 +1873,11 @@ mod tests_bear_put_spread_graph {
 
         // Current price point
         assert_eq!(points[3].coordinates.0, 100.0);
-        let current_profit = spread.calculate_profit_at(pos!(100.0))
-            .unwrap().to_f64().unwrap();
+        let current_profit = spread
+            .calculate_profit_at(pos!(100.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         assert_eq!(points[3].coordinates.1, current_profit);
     }
 

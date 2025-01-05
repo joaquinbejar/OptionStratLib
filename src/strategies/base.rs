@@ -117,7 +117,7 @@ pub trait Strategies: Validable + Positionable {
             .map(|p| p.total_cost().unwrap())
             .sum::<Positive>();
 
-        Ok(costs.into())
+        Ok(costs)
     }
 
     fn net_cost(&self) -> Result<Decimal, PositionError> {
@@ -127,7 +127,7 @@ pub trait Strategies: Validable + Positionable {
             .map(|p| p.net_cost().unwrap())
             .sum::<Decimal>();
 
-        Ok(costs.into())
+        Ok(costs)
     }
 
     fn net_premium_received(&self) -> Result<Positive, StrategyError> {
@@ -1387,7 +1387,6 @@ mod tests_optimizable {
     }
 }
 
-
 #[cfg(test)]
 mod tests_strategy_net_operations {
     use super::*;
@@ -1459,13 +1458,8 @@ mod tests_strategy_net_operations {
         let option_short = create_sample_option_simplest(OptionStyle::Call, Side::Short);
 
         let fixed_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-        let position_long = Position::new(
-            option_long,
-            Positive::ONE,
-            fixed_date,
-            pos!(1.0),
-            pos!(0.5),
-        );
+        let position_long =
+            Position::new(option_long, Positive::ONE, fixed_date, pos!(1.0), pos!(0.5));
         let position_short = Position::new(
             option_short,
             Positive::ONE,
@@ -1486,13 +1480,7 @@ mod tests_strategy_net_operations {
         let mut strategy = TestStrategy::new();
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let fixed_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-        let position = Position::new(
-            option,
-            Positive::ONE,
-            fixed_date,
-            pos!(1.0),
-            pos!(0.5),
-        );
+        let position = Position::new(option, Positive::ONE, fixed_date, pos!(1.0), pos!(0.5));
 
         strategy.add_position(&position).unwrap();
 

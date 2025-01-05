@@ -49,11 +49,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.max_loss().is_ok());
     assert_pos_relative_eq!(strategy.max_profit()?, pos!(26.58), pos!(0.0001));
     assert_pos_relative_eq!(strategy.max_loss()?, pos!(213.42), pos!(0.0001));
-    assert_relative_eq!(
-        strategy.fees().unwrap().to_f64(),
-        23.9999,
-        epsilon = 0.001
-    );
+    assert_relative_eq!(strategy.fees().unwrap().to_f64(), 23.9999, epsilon = 0.001);
     assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 

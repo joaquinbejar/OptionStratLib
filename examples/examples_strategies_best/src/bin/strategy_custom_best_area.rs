@@ -22,10 +22,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
 
     let params = RandomPositionsParams::new(
-        None,   // qty_puts_long
-        None,   // qty_puts_short
-        Some(1),   // qty_calls_long
-        Some(1),   // qty_calls_short
+        None,    // qty_puts_long
+        None,    // qty_puts_short
+        Some(1), // qty_calls_long
+        Some(1), // qty_calls_short
         ExpirationDate::Days(pos!(30.0)),
         pos!(1.0),
         dec!(0.05),

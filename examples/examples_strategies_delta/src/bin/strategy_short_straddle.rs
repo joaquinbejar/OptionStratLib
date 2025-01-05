@@ -18,19 +18,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let strategy = ShortStraddle::new(
         "CL".to_string(),
-        underlying_price,   // underlying_price
-        pos!(7460.0),   // call_strike
+        underlying_price, // underlying_price
+        pos!(7460.0),     // call_strike
         ExpirationDate::Days(pos!(45.0)),
         pos!(0.3745),   // implied_volatility
-        Decimal::ZERO,   // risk_free_rate
-        Positive::ZERO,   // dividend_yield
-        pos!(1.0),   // quantity
-        pos!(84.2),   // premium_short_call
-        pos!(353.2),   // premium_short_put
-        pos!(7.01),   // open_fee_short_call
-        pos!(7.01),   // close_fee_short_call
-        pos!(7.01),   // open_fee_short_put
-        pos!(7.01),   // close_fee_short_put
+        Decimal::ZERO,  // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // quantity
+        pos!(84.2),     // premium_short_call
+        pos!(353.2),    // premium_short_put
+        pos!(7.01),     // open_fee_short_call
+        pos!(7.01),     // close_fee_short_call
+        pos!(7.01),     // open_fee_short_put
+        pos!(7.01),     // close_fee_short_put
     );
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 

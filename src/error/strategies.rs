@@ -67,9 +67,9 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
+use crate::error::PositionError;
 use std::error::Error;
 use std::fmt;
-use crate::error::PositionError;
 
 impl Error for StrategyError {}
 impl Error for PriceErrorKind {}
@@ -86,8 +86,10 @@ pub enum StrategyError {
     ProfitLossError(ProfitLossErrorKind),
     /// Errors related to strategy operations
     OperationError(OperationErrorKind),
-    
-    StdError { reason: String },
+
+    StdError {
+        reason: String,
+    },
 }
 
 #[derive(Debug)]
@@ -229,7 +231,6 @@ impl StrategyError {
     }
 }
 
-
 impl From<PositionError> for StrategyError {
     fn from(err: PositionError) -> Self {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
@@ -247,11 +248,10 @@ impl From<Box<dyn Error>> for StrategyError {
     }
 }
 
-
 #[cfg(test)]
 mod tests_from_str {
-    use crate::error::ProbabilityError;
     use super::*;
+    use crate::error::ProbabilityError;
 
     #[test]
     fn test_strategy_to_probability_error_conversion() {

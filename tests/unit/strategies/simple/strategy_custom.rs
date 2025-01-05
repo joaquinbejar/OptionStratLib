@@ -125,11 +125,7 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         572.83,
         epsilon = 0.001
     );
-    assert_relative_eq!(
-        strategy.fees().unwrap().to_f64(),
-        51.56,
-        epsilon = 0.001
-    );
+    assert_relative_eq!(strategy.fees().unwrap().to_f64(), 51.56, epsilon = 0.001);
 
     // Test range and break-even points
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();

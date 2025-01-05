@@ -68,34 +68,17 @@ use std::fmt;
 #[derive(Debug)]
 pub enum OptionsError {
     /// Error when validating option parameters
-    ValidationError {
-        field: String,
-        reason: String,
-    },
+    ValidationError { field: String, reason: String },
     /// Error during price calculation
-    PricingError {
-        method: String,
-        reason: String,
-    },
+    PricingError { method: String, reason: String },
     /// Error when calculating greeks
-    GreeksCalculationError {
-        greek: String,
-        reason: String,
-    },
+    GreeksCalculationError { greek: String, reason: String },
     /// Error when dealing with time calculations
-    TimeError {
-        operation: String,
-        reason: String,
-    },
+    TimeError { operation: String, reason: String },
     /// Error when performing payoff calculations
-    PayoffError {
-        reason: String,
-    },
+    PayoffError { reason: String },
     /// Error during option data updates
-    UpdateError {
-        field: String,
-        reason: String,
-    },
+    UpdateError { field: String, reason: String },
 }
 
 impl fmt::Display for OptionsError {

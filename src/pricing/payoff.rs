@@ -1,13 +1,12 @@
-use std::error::Error;
-use num_traits::ToPrimitive;
 use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::types::{OptionStyle, Side};
 use crate::visualization::model::{ChartPoint, LabelOffsetType};
 use crate::Positive;
+use num_traits::ToPrimitive;
 use plotters::prelude::RED;
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::trace;
-
 
 pub trait Payoff {
     fn payoff(&self, info: &PayoffInfo) -> f64;
@@ -30,9 +29,9 @@ pub struct PayoffInfo {
     pub strike: Positive,
     pub style: OptionStyle,
     pub side: Side,
-    pub spot_prices: Option<Vec<f64>>,   // Asian
-    pub spot_min: Option<f64>,   // Lookback
-    pub spot_max: Option<f64>,   // Lookback
+    pub spot_prices: Option<Vec<f64>>, // Asian
+    pub spot_min: Option<f64>,         // Lookback
+    pub spot_max: Option<f64>,         // Lookback
 }
 
 impl Default for PayoffInfo {

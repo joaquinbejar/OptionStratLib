@@ -69,10 +69,10 @@
 //! A type alias `ProbabilityResult<T>` is provided for convenience when working
 //! with Results that may contain probability errors.
 
-use std::error::Error;
-use std::fmt;
 use crate::error::strategies::{BreakEvenErrorKind, OperationErrorKind, ProfitLossErrorKind};
 use crate::error::StrategyError;
+use std::error::Error;
+use std::fmt;
 
 /// Represents all possible errors that can occur during probability analysis calculations
 #[derive(Debug)]
@@ -276,7 +276,7 @@ impl From<StrategyError> for ProbabilityError {
                     ))
                 }
             },
-            StrategyError::StdError{ reason: msg } => ProbabilityError::StdError(msg),
+            StrategyError::StdError { reason: msg } => ProbabilityError::StdError(msg),
         }
     }
 }

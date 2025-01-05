@@ -509,7 +509,8 @@ impl Graph for CallButterfly {
             ),
             label: format!(
                 "Left Loss\n\n{:.2}",
-                self.calculate_profit_at(self.long_call.option.strike_price).unwrap()
+                self.calculate_profit_at(self.long_call.option.strike_price)
+                    .unwrap()
             ),
             label_offset: LabelOffsetType::Relative(3.0, 3.0),
             point_color: RED,
@@ -728,7 +729,14 @@ mod tests_call_butterfly {
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(price).unwrap().to_f64().unwrap());
+            assert_eq!(
+                values[i],
+                strategy
+                    .calculate_profit_at(price)
+                    .unwrap()
+                    .to_f64()
+                    .unwrap()
+            );
         }
 
         let title = strategy.title();

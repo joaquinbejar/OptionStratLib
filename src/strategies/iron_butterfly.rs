@@ -741,7 +741,7 @@ mod tests_iron_butterfly {
             pos!(5.0),
             pos!(5.0),
         );
-        
+
         assert_eq!(butterfly.max_loss().unwrap(), 49.0);
     }
 
@@ -767,7 +767,7 @@ mod tests_iron_butterfly {
             pos!(0.07),
         );
 
-        let expected_profit: Positive = butterfly.net_premium_received().unwrap().into();
+        let expected_profit: Positive = butterfly.net_premium_received().unwrap();
         assert_eq!(butterfly.max_profit().unwrap(), expected_profit);
     }
 
