@@ -70,7 +70,6 @@
 use std::error::Error;
 use std::fmt;
 use crate::error::PositionError;
-use crate::error::ProbabilityError;
 
 impl Error for StrategyError {}
 impl Error for PriceErrorKind {}
@@ -251,6 +250,7 @@ impl From<Box<dyn Error>> for StrategyError {
 
 #[cfg(test)]
 mod tests_from_str {
+    use crate::error::ProbabilityError;
     use super::*;
 
     #[test]

@@ -135,12 +135,7 @@ pub trait Strategies: Validable + Positionable {
 
         match premiums > costs {
             true => Ok(premiums - costs),
-            false => Err(StrategyError::OperationError(
-                OperationErrorKind::InvalidParameters {
-                    operation: "Net premium received".to_string(),
-                    reason: "Net premium received is negative".to_string(),
-                },
-            )),
+            false => Ok(Positive::ZERO),
         }
     }
 
