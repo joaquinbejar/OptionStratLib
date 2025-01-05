@@ -43,7 +43,7 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.max_loss().is_ok());
     assert_eq!(strategy.max_profit()?, pos!(104.34));
     assert_eq!(strategy.max_loss()?, pos!(35.66));
-    assert_eq!(strategy.total_cost(), pos!(229.58));
+    assert_eq!(strategy.total_cost()?, pos!(229.58));
     assert_eq!(strategy.fees().unwrap().to_f64(), 6.04);
     assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);

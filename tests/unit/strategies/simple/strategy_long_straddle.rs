@@ -7,7 +7,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, pos};
+use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -45,8 +45,8 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(465.429), pos!(0.0001));
-    assert_positivef64_relative_eq!(strategy.total_cost()?, pos!(465.4299), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.max_loss()?, pos!(465.429), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(465.4299), pos!(0.0001));
     assert_eq!(strategy.fees().unwrap().to_f64(), 28.03);
 
     // Test range calculations

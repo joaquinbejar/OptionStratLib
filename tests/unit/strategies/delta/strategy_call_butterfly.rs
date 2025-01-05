@@ -28,8 +28,8 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,   // dividend_yield
         pos!(1.0),   // long quantity
         pos!(85.04),   // premium_long_itm
-        53.04,   // premium_long_otm
-        28.85,   // premium_short
+        pos!(53.04),   // premium_long_otm
+        pos!(28.85),   // premium_short
         pos!(0.78),   // premium_short
         pos!(0.78),   // open_fee_long
         pos!(0.78),   // close_fee_long

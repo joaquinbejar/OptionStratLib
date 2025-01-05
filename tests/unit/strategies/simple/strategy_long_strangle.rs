@@ -7,7 +7,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, pos};
+use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -28,12 +28,12 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(1.0),   // quantity
-        84.2,   // premium_short_call
-        353.2,   // premium_short_put
-        7.0,   // open_fee_short_call
-        7.01,   // close_fee_short_call
-        7.01,   // open_fee_short_put
-        7.01,   // close_fee_short_put
+        pos!(84.2),   // premium_short_call
+        pos!(353.2),   // premium_short_put
+        pos!(7.0),   // open_fee_short_call
+        pos!(7.01),   // close_fee_short_call
+        pos!(7.01),   // open_fee_short_put
+        pos!(7.01),   // close_fee_short_put
     );
 
     // Assertions to validate strategy properties and computations
@@ -46,8 +46,8 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(465.4299), pos!(0.0001));
-    assert_positivef64_relative_eq!(strategy.total_cost(), pos!(465.4299), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.max_loss()?, pos!(465.4299), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(465.4299), pos!(0.0001));
     assert_eq!(strategy.fees().unwrap().to_f64(), 28.03);
 
     // Test range calculations

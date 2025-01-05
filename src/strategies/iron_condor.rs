@@ -13,7 +13,7 @@ use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::greeks::equations::{Greek, Greeks};
@@ -1031,6 +1031,7 @@ mod tests_iron_condor_strategies {
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
+    use crate::constants::ZERO;
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(

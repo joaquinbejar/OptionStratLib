@@ -25,12 +25,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         Decimal::ZERO,   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(2.0),   // quantity
-        38.8,   // premium_short_call
-        30.4,   // premium_short_put
-        23.3,   // premium_long_call
-        16.8,   // premium_long_put
-        0.96,   // open_fee
-        0.96,   // close_fee
+        pos!(38.8),   // premium_short_call
+        pos!(30.4),   // premium_short_put
+        pos!(23.3),   // premium_long_call
+        pos!(16.8),   // premium_long_put
+        pos!(0.96),   // open_fee
+        pos!(0.96),   // close_fee
     );
 
     info!("Title: {}", strategy.title());

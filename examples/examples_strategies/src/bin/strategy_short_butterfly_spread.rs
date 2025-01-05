@@ -31,8 +31,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         dec!(0.05),   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(1.0),   // long quantity
-        119.01,   // premium_long
-        66.0,   // premium_short
+        pos!(119.01),   // premium_long
+        pos!(66.0),   // premium_short
         pos!(29.85),   // open_fee_long
         pos!(0.05),
         pos!(0.05),

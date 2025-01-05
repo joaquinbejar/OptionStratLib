@@ -5,7 +5,7 @@ use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, pos};
+use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -27,15 +27,15 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),
         Positive::ZERO,
         pos!(3.0),
-        119.01,
-        66.0,
-        29.85,
-        4.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
+        pos!(119.01),
+        pos!(66.0),
+        pos!(29.85),
+        pos!(4.0),
+        pos!(0.0),
+        pos!(0.0),
+        pos!(0.0),
+        pos!(0.0),
+        pos!(0.0),
     );
 
     // Assertions to validate strategy properties and computations
@@ -47,8 +47,8 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(26.58), pos!(0.0001));
-    assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(213.42), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.max_profit()?, pos!(26.58), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.max_loss()?, pos!(213.42), pos!(0.0001));
     assert_relative_eq!(
         strategy.fees().unwrap().to_f64(),
         23.9999,

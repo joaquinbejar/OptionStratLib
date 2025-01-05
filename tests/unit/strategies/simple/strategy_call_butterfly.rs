@@ -6,7 +6,7 @@ use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
-use optionstratlib::{assert_positivef64_relative_eq, pos, Positive};
+use optionstratlib::{assert_pos_relative_eq, pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -29,8 +29,8 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,   // dividend_yield
         pos!(1.0),   // long quantity
         pos!(85.04),   // premium_long_itm
-        53.04,   // premium_long_otm
-        28.85,   // premium_short
+        pos!(53.04),   // premium_long_otm
+        pos!(28.85),   // premium_short
         pos!(0.78),   // premium_short
         pos!(0.78),   // open_fee_long
         pos!(0.78),   // close_fee_long
@@ -49,9 +49,9 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(42.319), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.max_profit()?, pos!(42.319), pos!(0.0001));
     assert_eq!(strategy.max_loss()?, Positive::INFINITY);
-    assert_positivef64_relative_eq!(strategy.total_cost(), pos!(89.57), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(89.57), pos!(0.0001));
     assert_eq!(strategy.fees().unwrap().to_f64(), 4.53);
 
     // Test range calculations

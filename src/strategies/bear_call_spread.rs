@@ -566,7 +566,7 @@ impl DeltaNeutrality for BearCallSpread {
 mod tests_bear_call_spread_strategies {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::{assert_positivef64_relative_eq, pos};
+    use crate::{assert_pos_relative_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -670,7 +670,7 @@ mod tests_bear_call_spread_strategies {
         let spread = create_test_spread();
         let expected_premium =
             spread.short_call.net_premium_received().unwrap() - spread.long_call.net_cost().unwrap();
-        assert_positivef64_relative_eq!(
+        assert_pos_relative_eq!(
             spread.net_premium_received().unwrap(),
             expected_premium,
             pos!(0.0001)

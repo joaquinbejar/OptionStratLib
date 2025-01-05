@@ -27,12 +27,12 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(1.0),   // quantity
-        84.2,   // premium_short_call
-        353.2,   // premium_short_put
-        7.01,   // open_fee_short_call
-        7.01,   // close_fee_short_call
-        7.01,   // open_fee_short_put
-        7.01,   // close_fee_short_put
+        pos!(84.2),   // premium_short_call
+        pos!(35.2),   // premium_short_put
+        pos!(7.01),   // open_fee_short_call
+        pos!(7.01),   // close_fee_short_call
+        pos!(7.01),   // open_fee_short_put
+        pos!(7.01),   // close_fee_short_put
     );
 
     let option_chain =

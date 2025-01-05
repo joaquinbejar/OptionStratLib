@@ -1,12 +1,11 @@
 use approx::assert_relative_eq;
-use num_traits::ToPrimitive;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::{assert_positivef64_relative_eq, pos};
+use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -24,12 +23,12 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
         dec!(0.05),   // risk_free_rate
         Positive::ZERO,   // dividend_yield
         pos!(1.0),   // quantity
-        27.26,   // premium_long
-        5.33,   // premium_short
-        0.58,   // open_fee_long
-        0.58,   // close_fee_long
-        0.55,   // close_fee_short
-        0.54,   // open_fee_short
+        pos!(27.26),   // premium_long
+        pos!(5.33),   // premium_short
+        pos!(0.58),   // open_fee_long
+        pos!(0.58),   // close_fee_long
+        pos!(0.55),   // close_fee_short
+        pos!(0.54),   // open_fee_short
     );
 
     // Validate strategy properties
@@ -44,9 +43,9 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.max_profit().is_ok());
     assert!(strategy.max_loss().is_ok());
-    assert_positivef64_relative_eq!(strategy.max_profit()?, pos!(30.82), pos!(0.0001));
-    assert_positivef64_relative_eq!(strategy.max_loss()?, pos!(24.18), pos!(0.0001));
-    assert_positivef64_relative_eq!(strategy.total_cost(), pos!(32.66), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.max_profit()?, pos!(30.82), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.max_loss()?, pos!(24.18), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.total_cost()?, pos!(32.66), pos!(0.0001));
     assert_eq!(strategy.fees().unwrap().to_f64(), 2.25);
 
     // Test price range calculations
