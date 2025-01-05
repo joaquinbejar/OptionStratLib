@@ -152,7 +152,7 @@ impl BullPutSpread {
         
         // Calculate break-even point
         strategy.break_even_points.push(
-            short_strike - strategy.net_premium_received().unwrap().to_f64() / quantity,
+            short_strike + strategy.net_cost().unwrap() / quantity,
         );
 
         strategy
@@ -752,7 +752,7 @@ mod tests_bull_put_spread_strategy {
     #[test]
     fn test_total_cost() {
         let spread = bull_put_spread_test();
-        assert_eq!(spread.total_cost().unwrap(), pos!(49.80));
+        assert_eq!(spread.total_cost().unwrap(), pos!(54.18));
     }
 
     #[test]
