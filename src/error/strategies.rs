@@ -70,6 +70,7 @@
 use std::error::Error;
 use std::fmt;
 use crate::error::PositionError;
+use crate::error::ProbabilityError;
 
 impl Error for StrategyError {}
 impl Error for PriceErrorKind {}

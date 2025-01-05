@@ -1315,7 +1315,8 @@ is expected and the underlying asset's price is anticipated to remain stable."
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(price));
+            assert_eq!(values[i], strategy.calculate_profit_at(price)
+                .unwrap().to_f64().unwrap());
         }
 
         let title = strategy.title();
@@ -1350,7 +1351,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let expected_ratio =
             strategy.max_profit().unwrap_or(Positive::ZERO) / break_even_diff * 100.0;
         assert_relative_eq!(
-            strategy.profit_ratio().unwrap(),
+            strategy.profit_ratio().unwrap().to_f64().unwrap(),
             expected_ratio.to_f64(),
             epsilon = 0.0001
         );
@@ -1539,9 +1540,9 @@ mod tests_long_strangle {
     fn test_calculate_profit_at() {
         let long_strangle = setup_long_strangle();
         let price = pos!(150.0);
-        let expected_profit = long_strangle.long_call.pnl_at_expiration(&Some(price))
-            + long_strangle.long_put.pnl_at_expiration(&Some(price));
-        assert_eq!(long_strangle.calculate_profit_at(price), expected_profit);
+        let expected_profit = long_strangle.long_call.pnl_at_expiration(&Some(price)).unwrap()
+            + long_strangle.long_put.pnl_at_expiration(&Some(price)).unwrap();
+        assert_eq!(long_strangle.calculate_profit_at(price).unwrap(), expected_profit);
     }
 
     fn setup_long_strangle() -> LongStrangle {
@@ -1688,7 +1689,7 @@ mod tests_long_strangle {
         ];
         let values = strategy.get_values(&data);
         for (i, &price) in data.iter().enumerate() {
-            assert_eq!(values[i], strategy.calculate_profit_at(price));
+            assert_eq!(values[i], strategy.calculate_profit_at(price).unwrap().to_f64().unwrap());
         }
 
         // Test title
