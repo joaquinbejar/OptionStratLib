@@ -14,12 +14,11 @@ Key characteristics:
 - Maximum profit achieved when price rises above higher strike
 - Also known as a vertical call debit spread
 */
-
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
@@ -40,10 +39,10 @@ use crate::visualization::utils::Graph;
 use crate::Options;
 use crate::{d2fu, pos, Positive};
 use chrono::Utc;
-use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{debug, error, info};
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
@@ -75,12 +74,12 @@ impl BullCallSpread {
         risk_free_rate: Decimal,
         dividend_yield: Positive,
         quantity: Positive,
-        premium_long_call: f64,
-        premium_short_call: f64,
-        open_fee_long_call: f64,
-        close_fee_long_call: f64,
-        open_fee_short_call: f64,
-        close_fee_short_call: f64,
+        premium_long_call: Positive,
+        premium_short_call: Positive,
+        open_fee_long_call: Positive,
+        close_fee_long_call: Positive,
+        open_fee_short_call: Positive,
+        close_fee_short_call: Positive,
     ) -> Self {
         if long_strike == Positive::ZERO {
             long_strike = underlying_price;
@@ -152,7 +151,7 @@ impl BullCallSpread {
 
         // Calculate break-even point
         strategy.break_even_points.push(
-            long_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / quantity,
+            long_strike - strategy.net_premium_received().unwrap().to_f64() / quantity,
         );
 
         strategy
@@ -184,9 +183,9 @@ impl Strategies for BullCallSpread {
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(self.short_call.option.strike_price);
-        if profit >= ZERO {
-            Ok(pos!(profit))
+        let profit = self.calculate_profit_at(self.short_call.option.strike_price)?;
+        if profit >= Decimal::ZERO {
+            Ok(profit.into())
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -197,9 +196,9 @@ impl Strategies for BullCallSpread {
     }
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(self.long_call.option.strike_price);
-        if loss <= ZERO {
-            Ok(pos!(loss.abs()))
+        let loss = self.calculate_profit_at(self.long_call.option.strike_price)?;
+        if loss <= Decimal::ZERO {
+            Ok(loss.abs().into())
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -207,15 +206,6 @@ impl Strategies for BullCallSpread {
                 },
             ))
         }
-    }
-
-    fn total_cost(&self) -> Positive {
-        pos!(self.long_call.net_cost() + self.short_call.net_cost())
-    }
-
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_call.net_premium_received() - self.long_call.net_cost();
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -348,8 +338,8 @@ impl Optimizable for BullCallSpread {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long.call_ask.unwrap().to_f64(),
-            short.call_bid.unwrap().to_f64(),
+            long.call_ask.unwrap(),
+            short.call_bid.unwrap(),
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
@@ -359,9 +349,9 @@ impl Optimizable for BullCallSpread {
 }
 
 impl Profit for BullCallSpread {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        self.long_call.pnl_at_expiration(&price) + self.short_call.pnl_at_expiration(&price)
+        Ok(self.long_call.pnl_at_expiration(&price)? + self.short_call.pnl_at_expiration(&price)?)
     }
 }
 
@@ -568,6 +558,7 @@ impl DeltaNeutrality for BullCallSpread {
 
 #[cfg(test)]
 mod tests_bull_call_spread_strategy {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
@@ -584,12 +575,12 @@ mod tests_bull_call_spread_strategy {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            2.0,                              // premium_long_call
-            1.0,                              // premium_short_call
-            0.0,                              // fees
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),                              // premium_long_call
+            pos!(1.0),                              // premium_short_call
+            pos!(0.0),                              // fees
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         )
     }
 
@@ -623,10 +614,10 @@ mod tests_bull_call_spread_strategy {
                 Positive::ZERO,
                 None,
             ),
-            1.5,
+            pos!(1.5),
             Utc::now(),
-            0.0,
-            0.0,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         spread
@@ -664,7 +655,7 @@ mod tests_bull_call_spread_strategy {
     #[test]
     fn test_total_cost() {
         let spread = create_test_spread();
-        assert_eq!(spread.total_cost(), pos!(3.0));
+        assert_eq!(spread.total_cost().unwrap(), pos!(3.0));
     }
 
     #[test]
@@ -679,15 +670,15 @@ mod tests_bull_call_spread_strategy {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.5, // open_fee_long_call
-            0.5, // close_fee_long_call
-            0.5, // open_fee_short_call
-            0.5, // close_fee_short_call
+            Positive::TWO,
+            Positive::ONE,
+            pos!(0.5), // open_fee_long_call
+            pos!(0.5), // close_fee_long_call
+            pos!(0.5), // open_fee_short_call
+            pos!(0.5), // close_fee_short_call
         );
 
-        assert_eq!(spread.fees().unwrap().to_f64().unwrap(), 2.0);
+        assert_eq!(spread.fees().unwrap().to_f64(), 2.0);
     }
 
     #[test]
@@ -726,12 +717,12 @@ mod tests_bull_call_spread_strategy {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         assert_eq!(spread.long_call.option.strike_price, pos!(100.0));
@@ -750,12 +741,12 @@ mod tests_bull_call_spread_strategy {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(1.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         assert!(!spread.validate());
@@ -789,10 +780,10 @@ mod tests_bull_call_spread_validation {
                 Positive::ZERO,
                 None,
             ),
-            1.0,
+            Positive::ONE,
             Utc::now(),
-            0.0,
-            0.0,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -966,6 +957,7 @@ mod tests_bull_call_spread_validation {
 
 #[cfg(test)]
 mod tests_bull_call_spread_optimization {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::chain::OptionData;
     use crate::model::types::ExpirationDate;
@@ -1049,12 +1041,12 @@ mod tests_bull_call_spread_optimization {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            7.2, // premium_long_call
-            3.5, // premium_short_call
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(7.2), // premium_long_call
+            pos!(3.5), // premium_short_call
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         )
     }
 
@@ -1273,6 +1265,7 @@ mod tests_bull_call_spread_optimization {
 
 #[cfg(test)]
 mod tests_bull_call_spread_profit {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
@@ -1289,12 +1282,12 @@ mod tests_bull_call_spread_profit {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            4.0,                              // premium_long_call
-            2.0,                              // premium_short_call
-            0.0,                              // fees
-            0.0,
-            0.0,
-            0.0,
+            pos!(4.0),                              // premium_long_call
+            Positive::TWO,                             // premium_short_call
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1302,42 +1295,42 @@ mod tests_bull_call_spread_profit {
     fn test_profit_below_long_strike() {
         let spread = create_test_spread();
         let price = pos!(90.0);
-        assert_eq!(spread.calculate_profit_at(price), -2.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -2.0);
     }
 
     #[test]
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
         let price = pos!(95.0);
-        assert_eq!(spread.calculate_profit_at(price), -2.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -2.0);
     }
 
     #[test]
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
         let price = pos!(97.5);
-        assert_eq!(spread.calculate_profit_at(price), 0.5);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 0.5);
     }
 
     #[test]
     fn test_profit_at_get_break_even_points() {
         let spread = create_test_spread();
         let price = pos!(97.0);
-        assert!(spread.calculate_profit_at(price).abs() < 0.001);
+        assert!(spread.calculate_profit_at(price).unwrap().abs() < dec!(0.001));
     }
 
     #[test]
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
         let price = pos!(100.0);
-        assert_eq!(spread.calculate_profit_at(price), 3.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 3.0);
     }
 
     #[test]
     fn test_profit_above_short_strike() {
         let spread = create_test_spread();
         let price = pos!(105.0);
-        assert_eq!(spread.calculate_profit_at(price), 3.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 3.0);
     }
 
     #[test]
@@ -1352,16 +1345,16 @@ mod tests_bull_call_spread_profit {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0),
-            4.0,
-            2.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(4.0),
+            Positive::TWO,
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let price = pos!(105.0);
-        assert_eq!(spread.calculate_profit_at(price), 6.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 6.0);
     }
 
     #[test]
@@ -1376,35 +1369,36 @@ mod tests_bull_call_spread_profit {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            4.0,
-            2.0,
-            0.5, // open_fee_long_call
-            0.5, // close_fee_long_call
-            0.5, // open_fee_short_call
-            0.5, // close_fee_short_call
+            pos!(4.0),
+            Positive::TWO,
+            pos!(0.5), // open_fee_long_call
+            pos!(0.5), // close_fee_long_call
+            pos!(0.5), // open_fee_short_call
+            pos!(0.5), // close_fee_short_call
         );
 
         let price = pos!(105.0);
-        assert_eq!(spread.calculate_profit_at(price), 1.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 1.0);
     }
 
     #[test]
     fn test_maximum_profit() {
         let spread = create_test_spread();
         let price = pos!(150.0);
-        assert_eq!(spread.calculate_profit_at(price), 3.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 3.0);
     }
 
     #[test]
     fn test_maximum_loss() {
         let spread = create_test_spread();
         let price = pos!(50.0);
-        assert_eq!(spread.calculate_profit_at(price), -2.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -2.0);
     }
 }
 
 #[cfg(test)]
 mod tests_bull_call_spread_graph {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
@@ -1421,12 +1415,12 @@ mod tests_bull_call_spread_graph {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            4.0,                              // premium_long_call
-            2.0,                              // premium_short_call
-            0.0,                              // fees
-            0.0,
-            0.0,
-            0.0,
+            pos!(4.0),                              // premium_long_call
+            Positive::TWO,                              // premium_short_call
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1511,7 +1505,8 @@ mod tests_bull_call_spread_graph {
 
         // Current price point
         assert_eq!(points[3].coordinates.0, 100.0);
-        let current_profit = spread.calculate_profit_at(pos!(100.0));
+        let current_profit = spread.calculate_profit_at(pos!(100.0))
+            .unwrap().to_f64().unwrap();
         assert_eq!(points[3].coordinates.1, current_profit);
     }
 
@@ -1542,8 +1537,8 @@ mod tests_bull_call_spread_graph {
     #[test]
     fn test_graph_with_zero_profits() {
         let mut spread = create_test_spread();
-        spread.short_call.premium = 1.0;
-        spread.long_call.premium = 6.0;
+        spread.short_call.premium = pos!(1.0);
+        spread.long_call.premium = pos!(6.0);
 
         let points = spread.get_points();
         let max_profit_point = &points[1];
@@ -1564,12 +1559,12 @@ mod tests_bull_call_spread_graph {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0), // quantity = 2
-            4.0,
-            2.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(4.0),
+            Positive::TWO,
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let points = spread.get_points();
@@ -1583,11 +1578,11 @@ mod tests_bull_call_spread_graph {
     #[test]
     fn test_graph_at_extremes() {
         let spread = create_test_spread();
-        let profit_at_zero = spread.calculate_profit_at(pos!(0.0));
-        let profit_at_high = spread.calculate_profit_at(pos!(1000.0));
+        let profit_at_zero = spread.calculate_profit_at(pos!(0.0)).unwrap();
+        let profit_at_high = spread.calculate_profit_at(pos!(1000.0)).unwrap();
 
-        assert_eq!(profit_at_zero, -2.0);
-        assert_eq!(profit_at_high, 3.0);
+        assert_eq!(profit_at_zero, dec!(-2.0));
+        assert_eq!(profit_at_high, dec!(3.0));
     }
 }
 
@@ -1608,12 +1603,12 @@ mod tests_bull_call_spread_probability {
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
-            4.0,                              // premium_long_call
-            2.0,                              // premium_short_call
-            0.0,                              // fees
-            0.0,
-            0.0,
-            0.0,
+            pos!(4.0),                              // premium_long_call
+            Positive::TWO,                            // premium_short_call
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1762,12 +1757,12 @@ mod tests_bull_call_spread_probability {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            4.0,
-            2.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(4.0),
+            Positive::TWO,
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let result = spread.probability_of_profit(None, None);
@@ -1789,12 +1784,12 @@ mod tests_bull_call_spread_probability {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            4.0,
-            2.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(4.0),
+            Positive::TWO,
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let result = spread.probability_of_profit(None, None);
@@ -1828,12 +1823,12 @@ mod tests_delta {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // long quantity
-            85.04,          // premium_long
-            29.85,          // premium_short
-            0.78,           // open_fee_long
-            0.78,           // open_fee_long
-            0.73,           // close_fee_long
-            0.73,           // close_fee_short
+            pos!(85.04),   // premium_long
+            pos!(29.85),   // premium_short
+            pos!(0.78),   // open_fee_long
+            pos!(0.78),   // open_fee_long
+            pos!(0.73),   // close_fee_long
+            pos!(0.73),   // close_fee_short
         )
     }
 
@@ -1939,12 +1934,12 @@ mod tests_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(2.0),      // long quantity
-            85.04,          // premium_long
-            29.85,          // premium_short
-            0.78,           // open_fee_long
-            0.78,           // open_fee_long
-            0.73,           // close_fee_long
-            0.73,           // close_fee_short
+            pos!(85.04),   // premium_long
+            pos!(29.85),   // premium_short
+            pos!(0.78),   // open_fee_long
+            pos!(0.78),   // open_fee_long
+            pos!(0.73),   // close_fee_long
+            pos!(0.73),   // close_fee_short
         )
     }
 

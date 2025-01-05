@@ -868,11 +868,17 @@ mod tests_iron_butterfly {
 
         // Test at short strike (maximum profit point)
         let price = butterfly.short_call.option.strike_price;
-        let expected_profit = butterfly.short_call.pnl_at_expiration(&Some(price))
-            + butterfly.short_put.pnl_at_expiration(&Some(price))
-            + butterfly.long_call.pnl_at_expiration(&Some(price))
-            + butterfly.long_put.pnl_at_expiration(&Some(price));
-        assert_eq!(butterfly.calculate_profit_at(price), expected_profit);
+        let expected_profit = butterfly
+            .short_call
+            .pnl_at_expiration(&Some(price))
+            .unwrap()
+            + butterfly.short_put.pnl_at_expiration(&Some(price)).unwrap()
+            + butterfly.long_call.pnl_at_expiration(&Some(price)).unwrap()
+            + butterfly.long_put.pnl_at_expiration(&Some(price)).unwrap();
+        assert_eq!(
+            butterfly.calculate_profit_at(price).unwrap(),
+            expected_profit
+        );
     }
 }
 
@@ -1142,15 +1148,17 @@ mod tests_iron_butterfly_strategies {
     #[test]
     fn test_max_loss() {
         let butterfly = create_test_butterfly();
-        let max_loss = butterfly.max_loss().unwrap();
+        let max_loss = butterfly.max_loss().unwrap().to_dec();
 
         // Max loss should be equal at both wings
-        let loss_at_long_put =
-            butterfly.calculate_profit_at(butterfly.long_put.option.strike_price);
-        let loss_at_long_call =
-            butterfly.calculate_profit_at(butterfly.long_call.option.strike_price);
-        assert!((loss_at_long_put - loss_at_long_call).abs() < 0.01);
-        assert_eq!(max_loss, pos!(loss_at_long_put.abs()));
+        let loss_at_long_put = butterfly
+            .calculate_profit_at(butterfly.long_put.option.strike_price)
+            .unwrap();
+        let loss_at_long_call = butterfly
+            .calculate_profit_at(butterfly.long_call.option.strike_price)
+            .unwrap();
+        assert!((loss_at_long_put - loss_at_long_call).abs() < dec!(0.01));
+        assert_eq!(max_loss, loss_at_long_put.abs());
     }
 
     #[test]
@@ -1440,7 +1448,7 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,  // premium_long_call
             Positive::ONE,  // premium_long_put
             Positive::ZERO, // open_fee
-            Positive::ZERO,           // closing fee
+            Positive::ZERO, // closing fee
         )
     }
 
@@ -1533,7 +1541,8 @@ mod tests_iron_butterfly_profit {
     #[test]
     fn test_profit_above_long_call() {
         let butterfly = create_test_butterfly();
-        let profit = butterfly.calculate_profit_at(pos!(115.0))
+        let profit = butterfly
+            .calculate_profit_at(pos!(115.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -1562,7 +1571,8 @@ mod tests_iron_butterfly_profit {
             pos!(0.5), // closing fee
         );
 
-        let profit = butterfly.calculate_profit_at(pos!(100.0))
+        let profit = butterfly
+            .calculate_profit_at(pos!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -1591,7 +1601,8 @@ mod tests_iron_butterfly_profit {
             Positive::ZERO,
         );
 
-        let profit = butterfly.calculate_profit_at(butterfly.short_call.option.strike_price)
+        let profit = butterfly
+            .calculate_profit_at(butterfly.short_call.option.strike_price)
             .unwrap()
             .to_f64()
             .unwrap();
@@ -1608,11 +1619,11 @@ mod tests_iron_butterfly_profit {
         let lower_break_even = pos!((short_strike - 2.0).to_f64());
         let upper_break_even = pos!((short_strike + 2.0).to_f64());
 
-        let lower_profit = butterfly.calculate_profit_at(lower_break_even);
-        let upper_profit = butterfly.calculate_profit_at(upper_break_even);
+        let lower_profit = butterfly.calculate_profit_at(lower_break_even).unwrap();
+        let upper_profit = butterfly.calculate_profit_at(upper_break_even).unwrap();
 
-        assert!(lower_profit.abs() < 0.001);
-        assert!(upper_profit.abs() < 0.001);
+        assert!(lower_profit.abs() < dec!(0.001));
+        assert!(upper_profit.abs() < dec!(0.001));
 
         // Break-evens should be equidistant from short strike
         assert!(
@@ -1628,9 +1639,13 @@ mod tests_iron_butterfly_profit {
 
         // Test points equidistant from short strike should have equal profits
         for offset in [2.0, 4.0, 6.0, 8.0] {
-            let up_profit = butterfly.calculate_profit_at(pos!((short_strike + offset).to_f64()));
-            let down_profit = butterfly.calculate_profit_at(pos!((short_strike - offset).to_f64()));
-            assert!((up_profit - down_profit).abs() < 0.001);
+            let up_profit = butterfly
+                .calculate_profit_at(pos!((short_strike + offset).to_f64()))
+                .unwrap();
+            let down_profit = butterfly
+                .calculate_profit_at(pos!((short_strike - offset).to_f64()))
+                .unwrap();
+            assert!((up_profit - down_profit).abs() < dec!(0.001));
         }
     }
 }
@@ -1659,7 +1674,7 @@ mod tests_iron_butterfly_graph {
             Positive::ONE,  // premium_long_call
             Positive::ONE,  // premium_long_put
             Positive::ZERO, // open_fee
-            Positive::ZERO,            // closing fee
+            Positive::ZERO, // closing fee
         )
     }
 
@@ -1791,9 +1806,13 @@ mod tests_iron_butterfly_graph {
 
         // Test points equidistant from short strike should have equal profits
         for offset in [2.0, 4.0, 6.0, 8.0] {
-            let profit_up = butterfly.calculate_profit_at(pos!(short_strike + offset));
-            let profit_down = butterfly.calculate_profit_at(pos!(short_strike - offset));
-            assert!((profit_up - profit_down).abs() < 0.001);
+            let profit_up = butterfly
+                .calculate_profit_at(pos!(short_strike + offset))
+                .unwrap();
+            let profit_down = butterfly
+                .calculate_profit_at(pos!(short_strike - offset))
+                .unwrap();
+            assert!((profit_up - profit_down).abs() < dec!(0.001));
         }
     }
 }
@@ -1821,12 +1840,12 @@ mod tests_iron_condor_delta {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
-            pos!(38.8),           // premium_short_call
-            pos!(30.4),           // premium_short_put
-            pos!(23.3),           // premium_long_call
-            pos!(16.8),           // premium_long_put
-            pos!(0.96),           // open_fee
-            pos!(0.96),           // close_fee
+            pos!(38.8),     // premium_short_call
+            pos!(30.4),     // premium_short_put
+            pos!(23.3),     // premium_long_call
+            pos!(16.8),     // premium_long_put
+            pos!(0.96),     // open_fee
+            pos!(0.96),     // close_fee
         )
     }
 
@@ -1946,12 +1965,12 @@ mod tests_iron_condor_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(2.0),      // quantity
-            pos!(38.8),           // premium_short_call
-            pos!(30.4),           // premium_short_put
-            pos!(23.3),           // premium_long_call
-            pos!(16.8),           // premium_long_put
-            pos!(0.96),           // open_fee
-            pos!(0.96),           // close_fee
+            pos!(38.8),     // premium_short_call
+            pos!(30.4),     // premium_short_put
+            pos!(23.3),     // premium_long_call
+            pos!(16.8),     // premium_long_put
+            pos!(0.96),     // open_fee
+            pos!(0.96),     // close_fee
         )
     }
 
