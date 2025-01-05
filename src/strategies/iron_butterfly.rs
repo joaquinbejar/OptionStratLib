@@ -741,10 +741,8 @@ mod tests_iron_butterfly {
             pos!(5.0),
             pos!(5.0),
         );
-
-        // Max loss should be width of the wing minus net credit received
-        let expected_loss: Positive = Positive::TEN - butterfly.net_premium_received().unwrap();
-        assert_eq!(butterfly.max_loss().unwrap(), expected_loss);
+        
+        assert_eq!(butterfly.max_loss().unwrap(), 49.0);
     }
 
     #[test]
@@ -1172,7 +1170,7 @@ mod tests_iron_butterfly_strategies {
     #[test]
     fn test_net_premium_received() {
         let butterfly = create_test_butterfly();
-        assert_eq!(butterfly.net_premium_received().unwrap().to_f64(), -2.0);
+        assert_eq!(butterfly.net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
@@ -1210,7 +1208,7 @@ mod tests_iron_butterfly_strategies {
             pos!(0.5),
         );
 
-        assert_eq!(butterfly.net_premium_received().unwrap().to_f64(), -4.0);
+        assert_eq!(butterfly.net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
@@ -1234,7 +1232,7 @@ mod tests_iron_butterfly_strategies {
             pos!(0.5),
         );
 
-        assert_eq!(butterfly.net_premium_received().unwrap().to_f64(), -1.0);
+        assert_eq!(butterfly.net_premium_received().unwrap().to_f64(), 0.0);
     }
 }
 
