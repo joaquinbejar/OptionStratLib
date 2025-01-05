@@ -528,7 +528,7 @@ mod tests_strategies {
             strategy.max_loss().unwrap_or(Positive::ZERO),
             Positive::ZERO
         );
-        assert_eq!(strategy.total_cost().unwrap(), Positive::ZERO);
+        assert!(strategy.total_cost().is_err());
         assert!(strategy.profit_area().is_err());
         assert!(strategy.profit_ratio().is_err());
         assert!(strategy.validate());
