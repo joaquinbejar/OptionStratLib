@@ -2277,7 +2277,6 @@ mod tests_butterfly_strategies {
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
-    use num_traits::real::Real;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -2410,20 +2409,20 @@ mod tests_butterfly_strategies {
     #[test]
     fn test_max_profit_long_butterfly() {
         let butterfly = create_test_long();
-        let max_profit = butterfly.max_profit().unwrap();
+        let max_profit = butterfly.max_profit().unwrap().to_dec();
         // Max profit at middle strike
-        let expected_profit = butterfly.calculate_profit_at(pos!(100.0));
-        assert_eq!(max_profit.to_f64(), expected_profit);
+        let expected_profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
+        assert_eq!(max_profit, expected_profit);
     }
 
     #[test]
     fn test_max_loss_long_butterfly() {
         let butterfly = create_test_long();
-        let max_loss = butterfly.max_loss().unwrap();
+        let max_loss = butterfly.max_loss().unwrap().to_dec();
         // Max loss at wings
-        let left_loss = butterfly.calculate_profit_at(pos!(90.0));
-        let right_loss = butterfly.calculate_profit_at(pos!(110.0));
-        assert_eq!(max_loss.to_f64(), left_loss.min(right_loss).abs());
+        let left_loss = butterfly.calculate_profit_at(pos!(90.0)).unwrap();
+        let right_loss = butterfly.calculate_profit_at(pos!(110.0)).unwrap();
+        assert_eq!(max_loss, left_loss.min(right_loss).abs());
     }
 
     #[test]
@@ -2774,10 +2773,14 @@ mod tests_long_butterfly_profit {
     #[test]
     fn test_profit_below_lowest_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(pos!(85.0)).unwrap();
-        assert!(profit < Decimal::ZERO);
-        let expected = Positive::new_decimal(Decimal::from_str("0.4").unwrap()).unwrap();
-        assert_relative_eq!(-profit, expected.to_f64(), epsilon = 0.0001);
+        let profit = butterfly
+            .calculate_profit_at(pos!(85.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
+        assert!(profit < ZERO);
+        let expected = 0.4;
+        assert_relative_eq!(-profit, expected, epsilon = 0.0001);
     }
 
     #[test]
@@ -2786,7 +2789,7 @@ mod tests_long_butterfly_profit {
         let profit = butterfly.calculate_profit_at(pos!(115.0)).unwrap();
         assert!(profit < Decimal::ZERO);
         assert_relative_eq!(
-            profit,
+            profit.to_f64().unwrap(),
             -butterfly.max_loss().unwrap().to_f64(),
             epsilon = 0.0001
         );
@@ -2798,7 +2801,11 @@ mod tests_long_butterfly_profit {
         let break_even_points = butterfly.get_break_even_points().unwrap();
 
         for &point in break_even_points {
-            let profit = butterfly.calculate_profit_at(point);
+            let profit = butterfly
+                .calculate_profit_at(point)
+                .unwrap()
+                .to_f64()
+                .unwrap();
             assert_relative_eq!(profit, 0.0, epsilon = 0.01);
         }
     }
@@ -2827,7 +2834,11 @@ mod tests_long_butterfly_profit {
             pos!(0.05),     // close_fee_long_call_high
         );
 
-        let scaled_profit = butterfly.calculate_profit_at(pos!(100.0));
+        let scaled_profit = butterfly
+            .calculate_profit_at(pos!(100.0))
+            .unwrap()
+            .to_f64()
+            .unwrap();
         assert_relative_eq!(scaled_profit, 19.2, epsilon = 0.0001);
     }
 }
@@ -2882,7 +2893,8 @@ mod tests_short_butterfly_profit {
         let break_even_points = butterfly.get_break_even_points().unwrap();
 
         for &point in break_even_points {
-            let profit = butterfly.calculate_profit_at(point);
+            let profit = butterfly.calculate_profit_at(point)
+                .unwrap().to_f64().unwrap();
             assert_relative_eq!(profit, 0.0, epsilon = 0.01);
         }
     }
@@ -2910,15 +2922,18 @@ mod tests_short_butterfly_profit {
             pos!(0.05), // open_fee_long_call_high
             pos!(0.05), // close_fee_long_call_high
         );
-        let scaled_profit = butterfly.calculate_profit_at(pos!(85.0));
+        let scaled_profit = butterfly.calculate_profit_at(pos!(85.0))
+            .unwrap().to_f64().unwrap();
         assert_relative_eq!(scaled_profit, -0.8, epsilon = 0.0001);
     }
 
     #[test]
     fn test_profit_symmetry() {
         let butterfly = create_test();
-        let low_extreme_profit = butterfly.calculate_profit_at(pos!(85.0));
-        let high_extreme_profit = butterfly.calculate_profit_at(pos!(115.0));
+        let low_extreme_profit = butterfly.calculate_profit_at(pos!(85.0))
+            .unwrap().to_f64().unwrap();
+        let high_extreme_profit = butterfly.calculate_profit_at(pos!(115.0))
+            .unwrap().to_f64().unwrap();
 
         assert_relative_eq!(low_extreme_profit, high_extreme_profit, epsilon = 0.01);
     }
@@ -2948,8 +2963,10 @@ mod tests_short_butterfly_profit {
         );
 
         let base_butterfly = create_test();
-        let profit_without_fees = butterfly.calculate_profit_at(pos!(85.0));
-        let profit_with_fees = base_butterfly.calculate_profit_at(pos!(85.0));
+        let profit_without_fees = butterfly.calculate_profit_at(pos!(85.0))
+            .unwrap().to_f64().unwrap();
+        let profit_with_fees = base_butterfly.calculate_profit_at(pos!(85.0))
+            .unwrap().to_f64().unwrap();
         assert!(profit_with_fees < profit_without_fees);
     }
 }
