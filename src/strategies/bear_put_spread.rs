@@ -147,7 +147,7 @@ impl BearPutSpread {
         // Calculate break-even point
         strategy
             .break_even_points
-            .push(long_strike - strategy.net_premium_received().unwrap() / quantity);
+            .push(long_strike - strategy.net_cost().unwrap() / quantity);
 
         strategy
     }
@@ -653,14 +653,14 @@ mod tests_bear_put_spread_strategy {
     fn test_total_cost() {
         let spread = create_test_spread();
         // Long Premium - Short Premium (4 - 2 = 2)
-        assert_eq!(spread.total_cost().unwrap(), dec!(2.0));
+        assert_eq!(spread.total_cost().unwrap(), dec!(4.0));
     }
 
     #[test]
     fn test_net_premium_received() {
         let spread = create_test_spread();
         // Net Premium Received is actually Net Premium Paid in this case
-        assert_eq!(spread.net_premium_received().unwrap().to_f64(), 2.0);
+        assert_eq!(spread.net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
