@@ -14,6 +14,7 @@ Key characteristics:
 - Maximum profit achieved when price stays above higher strike
 - Also known as a vertical put credit spread
 */
+use std::error::Error;
 use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -39,7 +40,6 @@ use crate::visualization::utils::Graph;
 use crate::Options;
 use crate::{d2fu, pos, Positive};
 use chrono::Utc;
-use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
@@ -74,12 +74,12 @@ impl BullPutSpread {
         risk_free_rate: Decimal,
         dividend_yield: Positive,
         quantity: Positive,
-        premium_long_put: f64,
-        premium_short_put: f64,
-        open_fee_long_put: f64,
-        close_fee_long_put: f64,
-        open_fee_short_put: f64,
-        close_fee_short_put: f64,
+        premium_long_put: Positive,
+        premium_short_put: Positive,
+        open_fee_long_put: Positive,
+        close_fee_long_put: Positive,
+        open_fee_short_put: Positive,
+        close_fee_short_put: Positive,
     ) -> Self {
         if long_strike == Positive::ZERO {
             long_strike = underlying_price;
@@ -151,7 +151,7 @@ impl BullPutSpread {
 
         // Calculate break-even point
         strategy.break_even_points.push(
-            short_strike - strategy.net_premium_received().unwrap().to_f64().unwrap() / quantity,
+            short_strike - strategy.net_premium_received().unwrap().to_f64() / quantity,
         );
 
         strategy
@@ -207,15 +207,6 @@ impl Strategies for BullPutSpread {
         } else {
             Ok(max_loss)
         }
-    }
-
-    fn total_cost(&self) -> Positive {
-        pos!(self.long_put.net_cost() + self.short_put.net_cost())
-    }
-
-    fn net_premium_received(&self) -> Result<Decimal, StrategyError> {
-        let result = self.short_put.net_premium_received() - self.long_put.net_cost();
-        Ok(Decimal::from_f64(result).unwrap())
     }
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -325,12 +316,12 @@ impl Optimizable for BullPutSpread {
     ///         dec!(0.05),   // risk_free_rate
     ///         Positive::ZERO,   // dividend_yield
     ///         pos!(1.0),   // long quantity
-    ///         15.04,   // premium_long
-    ///         89.85,   // premium_short
-    ///         0.78,   // open_fee_long
-    ///         0.78,   // open_fee_long
-    ///         0.73,   // close_fee_long
-    ///         0.73,   // close_fee_short
+    ///         pos!(15.04),   // premium_long
+    ///         pos!(89.85),   // premium_short
+    ///         pos!(0.78),   // open_fee_long
+    ///         pos!(0.78),   // open_fee_long
+    ///         pos!(0.73),   // close_fee_long
+    ///         pos!(0.73),   // close_fee_short
     ///     );
     ///
     /// let side = FindOptimalSide::Lower;
@@ -441,8 +432,8 @@ impl Optimizable for BullPutSpread {
             self.long_put.option.risk_free_rate,
             self.long_put.option.dividend_yield,
             self.long_put.option.quantity,
-            long.put_ask.unwrap().to_f64(),
-            short.put_bid.unwrap().to_f64(),
+            long.put_ask.unwrap(),
+            short.put_bid.unwrap(),
             self.long_put.open_fee,
             self.long_put.close_fee,
             self.short_put.open_fee,
@@ -452,9 +443,9 @@ impl Optimizable for BullPutSpread {
 }
 
 impl Profit for BullPutSpread {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
-        self.long_put.pnl_at_expiration(&price) + self.short_put.pnl_at_expiration(&price)
+        Ok(self.long_put.pnl_at_expiration(&price)? + self.short_put.pnl_at_expiration(&price)?)
     }
 }
 
@@ -660,6 +651,7 @@ impl DeltaNeutrality for BullPutSpread {
 
 #[cfg(test)]
 mod tests_bull_put_spread_strategy {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
@@ -668,20 +660,20 @@ mod tests_bull_put_spread_strategy {
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(90.0),                       // long_strike
-            pos!(95.0),                       // short_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            1.0,                              // premium_long_put
-            2.0,                              // premium_short_put
-            0.0,                              // open_fee_long_put
-            0.0,                              // close_fee_long_put
-            0.0,                              // open_fee_short_put
-            0.0,                              // close_fee_short_put
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // long_strike
+            pos!(95.0),   // short_strike
+            ExpirationDate::Days(pos!(30.0)),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            Positive::ONE,   // quantity
+            Positive::ONE,   // premium_long_put
+            Positive::TWO,   // premium_short_put
+            Positive::ZERO,   // open_fee_long_put
+            Positive::ZERO,   // close_fee_long_put
+            Positive::ZERO,   // open_fee_short_put
+            Positive::ZERO,   // close_fee_short_put
         )
     }
 
@@ -715,10 +707,10 @@ mod tests_bull_put_spread_strategy {
                 Positive::ZERO,
                 None,
             ),
-            1.5,
+            pos!(1.5),
             Utc::now(),
-            0.0,
-            0.0,
+            pos!(0.0),
+            pos!(0.0),
         );
 
         spread
@@ -754,14 +746,14 @@ mod tests_bull_put_spread_strategy {
     #[test]
     fn test_total_cost() {
         let spread = create_test_spread();
-        assert_eq!(spread.total_cost(), pos!(3.0));
+        assert_eq!(spread.total_cost().unwrap(), pos!(3.0));
     }
 
     #[test]
     fn test_net_premium_received() {
         let spread = create_test_spread();
         assert_eq!(
-            spread.net_premium_received().unwrap().to_f64().unwrap(),
+            spread.net_premium_received().unwrap().to_f64(),
             1.0
         );
     }
@@ -778,15 +770,15 @@ mod tests_bull_put_spread_strategy {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            0.5, // open_fee_long_put
-            0.5, // close_fee_long_put
-            0.5, // open_fee_short_put
-            0.5, // close_fee_short_put
+            Positive::ONE,
+            Positive::TWO,
+            pos!(0.5),   // open_fee_long_put
+            pos!(0.5),   // close_fee_long_put
+            pos!(0.5),   // open_fee_short_put
+            pos!(0.5),   // close_fee_short_put
         );
 
-        assert_eq!(spread.fees().unwrap().to_f64().unwrap(), 2.0);
+        assert_eq!(spread.fees().unwrap().to_f64(), 2.0);
     }
 
     #[test]
@@ -820,19 +812,19 @@ mod tests_bull_put_spread_strategy {
         let spread = BullPutSpread::new(
             "TEST".to_string(),
             pos!(100.0),
-            Positive::ZERO, // long_strike = default
-            Positive::ZERO, // short_strike = default
+            Positive::ZERO,   // long_strike = default
+            Positive::ZERO,   // short_strike = default
             ExpirationDate::Days(pos!(30.0)),
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(1.0),
+            pos!(2.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         assert_eq!(spread.long_put.option.strike_price, pos!(100.0));
@@ -851,12 +843,12 @@ mod tests_bull_put_spread_strategy {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            1.0,
-            2.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(1.0),
+            pos!(2.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         assert!(!spread.validate());
@@ -890,10 +882,10 @@ mod tests_bull_put_spread_validation {
                 Positive::ZERO,
                 None,
             ),
-            1.0,
+            pos!(1.0),
             Utc::now(),
-            0.0,
-            0.0,
+            pos!(0.0),
+            pos!(0.0),
         )
     }
 
@@ -1046,6 +1038,7 @@ mod tests_bull_put_spread_validation {
 
 #[cfg(test)]
 mod tests_bull_put_spread_optimization {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::chains::chain::OptionData;
     use crate::model::types::ExpirationDate;
@@ -1056,15 +1049,15 @@ mod tests_bull_put_spread_optimization {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
         chain.add_option(
-            pos!(85.0),       // strike
-            None,             // call_bid
-            None,             // call_ask
-            spos!(2.0),       // put_bid
-            spos!(2.2),       // put_ask
-            spos!(0.2),       // implied_volatility
-            Some(dec!(-0.3)), // delta
-            spos!(100.0),     // volume
-            Some(50),         // open_interest
+            pos!(85.0),   // strike
+            None,   // call_bid
+            None,   // call_ask
+            spos!(2.0),   // put_bid
+            spos!(2.2),   // put_ask
+            spos!(0.2),   // implied_volatility
+            Some(dec!(-0.3)),   // delta
+            spos!(100.0),   // volume
+            Some(50),   // open_interest
         );
 
         chain.add_option(
@@ -1129,12 +1122,12 @@ mod tests_bull_put_spread_optimization {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            3.2, // premium_long_put
-            4.0, // premium_short_put
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(3.2),
+            pos!(4.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         )
     }
 
@@ -1309,6 +1302,7 @@ mod tests_bull_put_spread_optimization {
 
 #[cfg(test)]
 mod tests_bull_put_spread_profit {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
@@ -1317,20 +1311,20 @@ mod tests_bull_put_spread_profit {
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(90.0),                       // long_strike
-            pos!(95.0),                       // short_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            2.0,                              // premium_long_put
-            4.0,                              // premium_short_put
-            0.0,                              // open_fee_long_put
-            0.0,                              // close_fee_long_put
-            0.0,                              // open_fee_short_put
-            0.0,                              // close_fee_short_put
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // long_strike
+            pos!(95.0),   // short_strike
+            ExpirationDate::Days(pos!(30.0)),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            Positive::TWO,   // premium_long_put
+            pos!(4.0),   // premium_short_put
+            Positive::ZERO,   // open_fee_long_put
+            Positive::ZERO,   // close_fee_long_put
+            Positive::ZERO,   // open_fee_short_put
+            Positive::ZERO,   // close_fee_short_put
         )
     }
 
@@ -1338,14 +1332,14 @@ mod tests_bull_put_spread_profit {
     fn test_profit_above_short_strike() {
         let spread = create_test_spread();
         let price = pos!(100.0);
-        assert_eq!(spread.calculate_profit_at(price), 2.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 2.0);
     }
 
     #[test]
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
         let price = pos!(95.0);
-        assert_eq!(spread.calculate_profit_at(price), 2.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 2.0);
     }
 
     #[test]
@@ -1353,28 +1347,28 @@ mod tests_bull_put_spread_profit {
         let spread = create_test_spread();
         let price = pos!(92.5);
 
-        assert_eq!(spread.calculate_profit_at(price), -0.5);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -0.5);
     }
 
     #[test]
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
         let price = pos!(90.0);
-        assert_eq!(spread.calculate_profit_at(price), -3.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -3.0);
     }
 
     #[test]
     fn test_profit_below_long_strike() {
         let spread = create_test_spread();
         let price = pos!(85.0);
-        assert_eq!(spread.calculate_profit_at(price), -3.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -3.0);
     }
 
     #[test]
     fn test_profit_at_get_break_even_points() {
         let spread = create_test_spread();
         let price = pos!(93.0);
-        assert!(spread.calculate_profit_at(price).abs() < 0.001);
+        assert!(spread.calculate_profit_at(price).unwrap().abs() < dec!(0.001));
     }
 
     #[test]
@@ -1389,16 +1383,16 @@ mod tests_bull_put_spread_profit {
             dec!(0.05),
             Positive::ZERO,
             pos!(2.0),
-            2.0,
-            4.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),
+            pos!(4.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let price = pos!(85.0);
-        assert_eq!(spread.calculate_profit_at(price), -6.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), -6.0);
     }
 
     #[test]
@@ -1413,21 +1407,22 @@ mod tests_bull_put_spread_profit {
             dec!(0.05),
             Positive::ZERO,
             pos!(1.0),
-            2.0,
-            4.0,
-            0.5, // open_fee_long_put
-            0.5, // close_fee_long_put
-            0.5, // open_fee_short_put
-            0.5, // close_fee_short_put
+            pos!(2.0),
+            pos!(4.0),
+            pos!(0.5),   // open_fee_long_put
+            pos!(0.5),   // close_fee_long_put
+            pos!(0.5),   // open_fee_short_put
+            pos!(0.5),   // close_fee_short_put
         );
 
         let price = pos!(100.0);
-        assert_eq!(spread.calculate_profit_at(price), 0.0);
+        assert_eq!(spread.calculate_profit_at(price).unwrap().to_f64().unwrap(), 0.0);
     }
 }
 
 #[cfg(test)]
 mod tests_bull_put_spread_graph {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::pos;
@@ -1436,20 +1431,20 @@ mod tests_bull_put_spread_graph {
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(90.0),                       // long_strike
-            pos!(95.0),                       // short_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            2.0,                              // premium_long_put
-            4.0,                              // premium_short_put
-            0.0,                              // fees
-            0.0,
-            0.0,
-            0.0,
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // long_strike
+            pos!(95.0),   // short_strike
+            ExpirationDate::Days(pos!(30.0)),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            Positive::TWO,   // premium_long_put
+            pos!(4.0),   // premium_short_put
+            pos!(0.0),   // fees
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         )
     }
 
@@ -1532,7 +1527,8 @@ mod tests_bull_put_spread_graph {
 
         // Current price point
         assert_eq!(points[3].coordinates.0, 100.0);
-        let current_profit = spread.calculate_profit_at(pos!(100.0));
+        let current_profit = spread.calculate_profit_at(pos!(100.0))
+            .unwrap().to_f64().unwrap();
         assert_eq!(points[3].coordinates.1, current_profit);
     }
 
@@ -1564,8 +1560,8 @@ mod tests_bull_put_spread_graph {
     #[test]
     fn test_graph_with_zero_profits() {
         let mut spread = create_test_spread();
-        spread.short_put.premium = 2.0;
-        spread.long_put.premium = 2.0;
+        spread.short_put.premium = pos!(2.0);
+        spread.long_put.premium = pos!(2.0);
 
         let points = spread.get_points();
         let max_profit_point = &points[1];
@@ -1585,13 +1581,13 @@ mod tests_bull_put_spread_graph {
             pos!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
-            2.0,
-            4.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            pos!(2.0),   // quantity = 2
+            pos!(2.0),
+            pos!(4.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
+            pos!(0.0),
         );
 
         let points = spread.get_points();
@@ -1612,20 +1608,20 @@ mod tests_bull_put_spread_probability {
     fn create_test_spread() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(90.0),                       // long_strike
-            pos!(95.0),                       // short_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            1.0,                              // premium_long_put
-            2.0,                              // premium_short_put
-            0.0,                              // open_fee_long_put
-            0.0,                              // close_fee_long_put
-            0.0,                              // open_fee_short_put
-            0.0,                              // close_fee_short_put
+            pos!(100.0),   // underlying_price
+            pos!(90.0),   // long_strike
+            pos!(95.0),   // short_strike
+            ExpirationDate::Days(pos!(30.0)),   // expiration
+            pos!(0.2),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // quantity
+            Positive::ONE,   // premium_long_put
+            Positive::TWO,   // premium_short_put
+            Positive::ZERO,   // open_fee_long_put
+            Positive::ZERO,   // close_fee_long_put
+            Positive::ZERO,   // open_fee_short_put
+            Positive::ZERO,   // close_fee_short_put
         )
     }
 
@@ -1762,20 +1758,20 @@ mod tests_delta {
         let underlying_price = pos!(5801.88);
         BullPutSpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            underlying_price,   // underlying_price
+            long_strike,   // long_strike
+            short_strike,   // short_strike
             ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // long quantity
-            15.04,          // premium_long
-            89.85,          // premium_short
-            0.78,           // open_fee_long
-            0.78,           // open_fee_long
-            0.73,           // close_fee_long
-            0.73,           // close_fee_short
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(1.0),   // long quantity
+            pos!(15.04),   // premium_long
+            pos!(89.85),   // premium_short
+            pos!(0.78),   // open_fee_long
+            pos!(0.78),   // open_fee_long
+            pos!(0.73),   // close_fee_long
+            pos!(0.73),   // close_fee_short
         )
     }
 
@@ -1871,20 +1867,20 @@ mod tests_delta_size {
         let underlying_price = pos!(5781.88);
         BullPutSpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            underlying_price,   // underlying_price
+            long_strike,   // long_strike
+            short_strike,   // short_strike
             ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(2.0),      // long quantity
-            15.04,          // premium_long
-            89.85,          // premium_short
-            0.78,           // open_fee_long
-            0.78,           // open_fee_long
-            0.73,           // close_fee_long
-            0.73,           // close_fee_short
+            pos!(0.18),   // implied_volatility
+            dec!(0.05),   // risk_free_rate
+            Positive::ZERO,   // dividend_yield
+            pos!(2.0),   // long quantity
+            pos!(15.04),   // premium_long
+            pos!(89.85),   // premium_short
+            pos!(0.78),   // open_fee_long
+            pos!(0.78),   // open_fee_long
+            pos!(0.73),   // close_fee_long
+            pos!(0.73),   // close_fee_short
         )
     }
 
