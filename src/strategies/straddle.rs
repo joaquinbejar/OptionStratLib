@@ -1675,7 +1675,7 @@ mod tests_long_straddle {
         assert!(strategy.are_valid_prices(&legs));
 
         let mut invalid_call = call_option.clone();
-        invalid_call.call_ask = Some(pos!(0.0));
+        invalid_call.call_ask = Some(Positive::ZERO);
 
         let legs = StrategyLegs::TwoLegs {
             first: &invalid_call,

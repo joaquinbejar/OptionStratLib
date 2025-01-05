@@ -317,14 +317,14 @@ mod tests_probability_analysis {
             Ok(vec![ProfitLossRange::new(
                 Some(pos!(95.0)),
                 Some(pos!(105.0)),
-                pos!(0.0),
+                Positive::ZERO,
             )?])
         }
 
         fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
             Ok(vec![
-                ProfitLossRange::new(None, Some(pos!(95.0)), pos!(0.0))?,
-                ProfitLossRange::new(Some(pos!(105.0)), None, pos!(0.0))?,
+                ProfitLossRange::new(None, Some(pos!(95.0)), Positive::ZERO)?,
+                ProfitLossRange::new(Some(pos!(105.0)), None, Positive::ZERO)?,
             ])
         }
     }

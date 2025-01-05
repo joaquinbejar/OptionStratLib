@@ -577,10 +577,10 @@ mod tests_bull_call_spread_strategy {
             pos!(1.0),                        // quantity
             pos!(2.0),                              // premium_long_call
             pos!(1.0),                              // premium_short_call
-            pos!(0.0),                              // fees
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,                              // fees
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -719,10 +719,10 @@ mod tests_bull_call_spread_strategy {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         assert_eq!(spread.long_call.option.strike_price, pos!(100.0));
@@ -743,10 +743,10 @@ mod tests_bull_call_spread_strategy {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         assert!(!spread.validate());
@@ -1043,10 +1043,10 @@ mod tests_bull_call_spread_optimization {
             pos!(1.0),
             pos!(7.2), // premium_long_call
             pos!(3.5), // premium_short_call
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1201,7 +1201,7 @@ mod tests_bull_call_spread_optimization {
         let long_option = OptionData::new(
             pos!(95.0),
             spos!(7.2),
-            spos!(0.0),
+            Some(Positive::ZERO),
             None,
             None,
             spos!(0.2),
@@ -1211,7 +1211,7 @@ mod tests_bull_call_spread_optimization {
         );
         let short_option = OptionData::new(
             pos!(100.0),
-            spos!(0.0),
+            Some(Positive::ZERO),
             spos!(3.5),
             None,
             None,
@@ -1347,10 +1347,10 @@ mod tests_bull_call_spread_profit {
             pos!(2.0),
             pos!(4.0),
             Positive::TWO,
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let price = pos!(105.0);
@@ -1561,10 +1561,10 @@ mod tests_bull_call_spread_graph {
             pos!(2.0), // quantity = 2
             pos!(4.0),
             Positive::TWO,
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let points = spread.get_points();
@@ -1578,7 +1578,7 @@ mod tests_bull_call_spread_graph {
     #[test]
     fn test_graph_at_extremes() {
         let spread = create_test_spread();
-        let profit_at_zero = spread.calculate_profit_at(pos!(0.0)).unwrap();
+        let profit_at_zero = spread.calculate_profit_at(Positive::ZERO).unwrap();
         let profit_at_high = spread.calculate_profit_at(pos!(1000.0)).unwrap();
 
         assert_eq!(profit_at_zero, dec!(-2.0));
@@ -1759,10 +1759,10 @@ mod tests_bull_call_spread_probability {
             pos!(1.0),
             pos!(4.0),
             Positive::TWO,
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let result = spread.probability_of_profit(None, None);
@@ -1786,10 +1786,10 @@ mod tests_bull_call_spread_probability {
             pos!(1.0),
             pos!(4.0),
             Positive::TWO,
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let result = spread.probability_of_profit(None, None);

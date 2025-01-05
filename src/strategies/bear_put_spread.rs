@@ -726,10 +726,10 @@ mod tests_bear_put_spread_strategy {
             pos!(1.0),
             pos!(4.0),
             pos!(2.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         assert_eq!(spread.long_put.option.strike_price, pos!(100.0));
@@ -750,10 +750,10 @@ mod tests_bear_put_spread_strategy {
             pos!(2.0), // quantity = 2
             pos!(4.0),
             pos!(2.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let max_profit = spread.max_profit().unwrap();
@@ -1046,10 +1046,10 @@ mod tests_bear_put_spread_optimization {
             pos!(1.0),
             pos!(1.7), // premium_long_put
             pos!(4.0), // premium_short_put
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1185,10 +1185,10 @@ mod tests_bear_put_spread_optimization {
             pos!(2.0), // quantity = 2
             pos!(1.7),
             pos!(4.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let chain = create_test_chain();
@@ -1266,10 +1266,10 @@ mod tests_bear_put_spread_optimizable {
             pos!(1.0),
             pos!(2.0), // premium short put
             pos!(8.8), // premium long put
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1456,10 +1456,10 @@ mod tests_bear_put_spread_profit {
             pos!(1.0),                        // quantity
             pos!(4.0),                        // premium_long_put
             pos!(2.0),                        // premium_short_put
-            pos!(0.0),                        // open_fee_long_put
-            pos!(0.0),                        // close_fee_long_put
-            pos!(0.0),                        // open_fee_short_put
-            pos!(0.0),                        // close_fee_short_put
+            Positive::ZERO,                        // open_fee_long_put
+            Positive::ZERO,                        // close_fee_long_put
+            Positive::ZERO,                        // open_fee_short_put
+            Positive::ZERO,                        // close_fee_short_put
         )
     }
 
@@ -1552,10 +1552,10 @@ mod tests_bear_put_spread_profit {
             pos!(2.0), // quantity = 2
             pos!(4.0),
             pos!(2.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let max_profit_price = pos!(90.0);
@@ -1643,10 +1643,10 @@ mod tests_bear_put_spread_probability {
             pos!(1.0),                        // quantity
             pos!(4.0),                        // premium_long_put
             pos!(2.0),                        // premium_short_put
-            pos!(0.0),                        // open_fee_long_put
-            pos!(0.0),                        // close_fee_long_put
-            pos!(0.0),                        // open_fee_short_put
-            pos!(0.0),                        // close_fee_short_put
+            Positive::ZERO,                        // open_fee_long_put
+            Positive::ZERO,                        // close_fee_long_put
+            Positive::ZERO,                        // open_fee_short_put
+            Positive::ZERO,                        // close_fee_short_put
         )
     }
 
@@ -1790,10 +1790,10 @@ mod tests_bear_put_spread_graph {
             pos!(1.0),                        // quantity
             pos!(4.0),                        // premium_long_put
             pos!(2.0),                        // premium_short_put
-            pos!(0.0),                        // fees
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,                        // fees
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1921,10 +1921,10 @@ mod tests_bear_put_spread_graph {
             pos!(2.0), // quantity = 2
             pos!(4.0),
             pos!(2.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let points = spread.get_points();

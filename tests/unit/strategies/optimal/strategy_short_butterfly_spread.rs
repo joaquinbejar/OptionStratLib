@@ -32,11 +32,11 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         pos!(66.0),
         pos!(29.85),
         pos!(4.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     let option_chain =

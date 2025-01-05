@@ -715,8 +715,8 @@ mod tests_bull_put_spread_strategy {
             ),
             pos!(1.5),
             Utc::now(),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         spread
@@ -811,10 +811,10 @@ mod tests_bull_put_spread_strategy {
             pos!(1.0),
             pos!(1.0),
             pos!(2.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         assert_eq!(spread.long_put.option.strike_price, pos!(100.0));
@@ -835,10 +835,10 @@ mod tests_bull_put_spread_strategy {
             pos!(1.0),
             pos!(1.0),
             pos!(2.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         assert!(!spread.validate());
@@ -874,8 +874,8 @@ mod tests_bull_put_spread_validation {
             ),
             pos!(1.0),
             Utc::now(),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1114,10 +1114,10 @@ mod tests_bull_put_spread_optimization {
             pos!(1.0),
             pos!(3.2),
             pos!(4.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1357,10 +1357,10 @@ mod tests_bull_put_spread_profit {
             pos!(2.0),
             pos!(2.0),
             pos!(4.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let price = pos!(85.0);
@@ -1521,10 +1521,10 @@ mod tests_bull_put_spread_graph {
             pos!(2.0),   // quantity = 2
             pos!(2.0),
             pos!(4.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let points = spread.get_points();

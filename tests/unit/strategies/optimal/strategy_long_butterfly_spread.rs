@@ -32,11 +32,11 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         pos!(64.20),   // premium_short
         pos!(31.65),   // premium_long_high
         pos!(0.07),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     let option_chain =

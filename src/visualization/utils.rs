@@ -302,7 +302,7 @@ mod tests_calculate_axis_range {
 
     #[test]
     fn test_calculate_axis_range_zero_values() {
-        let x_data = vec![pos!(0.0), pos!(0.0), pos!(0.0)];
+        let x_data = vec![Positive::ZERO, Positive::ZERO, Positive::ZERO];
         let y_data = vec![0.0, 0.0, 0.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -379,7 +379,7 @@ mod tests {
     #[test]
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
+        let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
         mock_graph.graph(&x_axis_data, "test_graph.png", 20, (800, 600))?;
         std::fs::remove_file("test_graph.png")?;
         Ok(())
@@ -388,7 +388,7 @@ mod tests {
     #[test]
     fn test_get_values() {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
+        let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
         let values = mock_graph.get_values(&x_axis_data);
         assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }

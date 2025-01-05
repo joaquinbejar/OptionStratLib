@@ -854,8 +854,8 @@ mod tests_bear_call_spread_positionable {
             create_test_option(side),
             pos!(1.0),        // premium
             Utc::now(), // timestamp
-            pos!(0.0),        // open_fee
-            pos!(0.0),        // close_fee
+            Positive::ZERO,        // open_fee
+            Positive::ZERO,        // close_fee
         )
     }
 
@@ -873,10 +873,10 @@ mod tests_bear_call_spread_positionable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let short_position = create_test_position(Side::Short);
@@ -900,10 +900,10 @@ mod tests_bear_call_spread_positionable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let long_position = create_test_position(Side::Long);
@@ -927,10 +927,10 @@ mod tests_bear_call_spread_positionable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let result = spread.get_positions();
@@ -956,10 +956,10 @@ mod tests_bear_call_spread_positionable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let short_position = create_test_position(Side::Short);
@@ -986,10 +986,10 @@ mod tests_bear_call_spread_positionable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         // Create new positions
@@ -1015,10 +1015,10 @@ mod tests_bear_call_spread_positionable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
 
         let short_position = create_test_position(Side::Short);
@@ -1058,10 +1058,10 @@ mod tests_bear_call_spread_validable {
             pos!(1.0),                        // quantity
             pos!(2.0),                              // premium_short_call
             pos!(1.0),                              // premium_long_call
-            pos!(0.0),                              // fees
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,                              // fees
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1085,10 +1085,10 @@ mod tests_bear_call_spread_validable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
         assert!(!spread.validate());
     }
@@ -1107,10 +1107,10 @@ mod tests_bear_call_spread_validable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
         assert!(!spread.validate());
     }
@@ -1119,7 +1119,7 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_short_call() {
         let mut spread = create_valid_spread();
         // Invalidate short call by setting an invalid quantity
-        spread.short_call.option.quantity = pos!(0.0);
+        spread.short_call.option.quantity = Positive::ZERO;
         assert!(!spread.validate());
     }
 
@@ -1127,7 +1127,7 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_long_call() {
         let mut spread = create_valid_spread();
         // Invalidate long call by setting an invalid quantity
-        spread.long_call.option.quantity = pos!(0.0);
+        spread.long_call.option.quantity = Positive::ZERO;
         assert!(!spread.validate());
     }
 
@@ -1146,10 +1146,10 @@ mod tests_bear_call_spread_validable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
         assert!(!spread.validate());
     }
@@ -1158,7 +1158,7 @@ mod tests_bear_call_spread_validable {
     fn test_invalid_underlying_price() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
-            pos!(0.0), // Invalid underlying price
+            Positive::ZERO, // Invalid underlying price
             pos!(95.0),
             pos!(105.0),
             ExpirationDate::Days(pos!(30.0)),
@@ -1168,10 +1168,10 @@ mod tests_bear_call_spread_validable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
         assert!(!spread.validate());
     }
@@ -1190,10 +1190,10 @@ mod tests_bear_call_spread_validable {
             pos!(1.0),
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
         // Should still be valid as long as strikes are different
         assert!(spread.validate());
@@ -1213,10 +1213,10 @@ mod tests_bear_call_spread_validable {
             pos!(2.0), // Different quantity
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         );
         // Should be valid as quantity > 0
         assert!(spread.validate());
@@ -1245,10 +1245,10 @@ mod tests_bear_call_spread_profit {
             pos!(1.0),                        // quantity
             pos!(2.0),                              // premium_short_call
             pos!(1.0),                              // premium_long_call
-            pos!(0.0),                              // open_fee_short_call
-            pos!(0.0),                              // close_fee_short_call
-            pos!(0.0),                              // open_fee_long_call
-            pos!(0.0),                              // close_fee_long_call
+            Positive::ZERO,                              // open_fee_short_call
+            Positive::ZERO,                              // close_fee_short_call
+            Positive::ZERO,                              // open_fee_long_call
+            Positive::ZERO,                              // close_fee_long_call
         )
     }
 
@@ -1330,10 +1330,10 @@ mod tests_bear_call_spread_profit {
             pos!(2.0), // quantity = 2
             pos!(2.0),                              // premium_short_call
             pos!(1.0),                              // premium_long_call
-            pos!(0.0),                              // open_fee_short_call
-            pos!(0.0),                              // close_fee_short_call
-            pos!(0.0),                              // open_fee_long_call
-            pos!(0.0),                              // close_fee_long_call
+            Positive::ZERO,                              // open_fee_short_call
+            Positive::ZERO,                              // close_fee_short_call
+            Positive::ZERO,                              // open_fee_long_call
+            Positive::ZERO,                              // close_fee_long_call
         );
 
         let profit = spread.calculate_profit_at(pos!(90.0))
@@ -1444,10 +1444,10 @@ mod tests_bear_call_spread_optimizable {
             pos!(1.0),
             pos!(3.0),
             pos!(1.2),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
-            pos!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -1644,10 +1644,10 @@ mod tests_bear_call_spread_graph {
             pos!(1.0),                        // quantity
             pos!(2.0),
             pos!(1.0),
-            pos!(0.0), // open_fee_short_call
-            pos!(0.0), // close_fee_short_call
-            pos!(0.0), // open_fee_long_call
-            pos!(0.0), // close_fee_long_call
+            Positive::ZERO, // open_fee_short_call
+            Positive::ZERO, // close_fee_short_call
+            Positive::ZERO, // open_fee_long_call
+            Positive::ZERO, // close_fee_long_call
         )
     }
 

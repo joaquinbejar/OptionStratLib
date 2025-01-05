@@ -31,11 +31,11 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         pos!(64.20),
         pos!(31.65),
         pos!(0.07),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     // Assertions to validate strategy properties and computations

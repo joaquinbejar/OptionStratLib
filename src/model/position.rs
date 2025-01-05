@@ -692,8 +692,8 @@ mod tests_position {
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&spos!(7.0)).unwrap().to_f64().unwrap(),
-            ZERO,
+            position.pnl_at_expiration(&spos!(107.0)).unwrap(),
+            Positive::ZERO,
             "Unrealized PNL for long call is incorrect."
         );
     }
@@ -710,7 +710,7 @@ mod tests_position {
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&spos!(7.0)).unwrap().to_f64().unwrap(),
+            position.pnl_at_expiration(&spos!(107.0)).unwrap().to_f64().unwrap(),
             ZERO,
             "Unrealized PNL for long call is incorrect."
         );
@@ -1085,7 +1085,7 @@ mod tests_position_max_loss_profit {
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 7.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit().unwrap().to_f64(), f64::INFINITY, epsilon = 0.001);
+        assert_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
@@ -1100,7 +1100,7 @@ mod tests_position_max_loss_profit {
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 70.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit().unwrap().to_f64(), f64::INFINITY, epsilon = 0.001);
+        assert_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
@@ -1114,7 +1114,7 @@ mod tests_position_max_loss_profit {
             pos!(30.0),
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
-        assert_relative_eq!(position.max_loss().unwrap().to_f64(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
         assert_relative_eq!(position.max_profit().unwrap().to_f64(), 3.0, epsilon = 0.001);
     }
 
@@ -1129,7 +1129,7 @@ mod tests_position_max_loss_profit {
             pos!(30.0),
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
-        assert_relative_eq!(position.max_loss().unwrap().to_f64(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
         assert_relative_eq!(position.max_profit().unwrap().to_f64(), 30.0, epsilon = 0.001);
     }
 
@@ -1145,7 +1145,7 @@ mod tests_position_max_loss_profit {
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 7.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit().unwrap().to_f64(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
@@ -1160,7 +1160,7 @@ mod tests_position_max_loss_profit {
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 70.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit().unwrap().to_f64(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
@@ -1174,7 +1174,7 @@ mod tests_position_max_loss_profit {
             pos!(30.0),
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
-        assert_relative_eq!(position.max_loss().unwrap().to_f64(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
         assert_relative_eq!(position.max_profit().unwrap().to_f64(), 3.0, epsilon = 0.001);
     }
 
@@ -1189,7 +1189,7 @@ mod tests_position_max_loss_profit {
             pos!(30.0),
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
-        assert_relative_eq!(position.max_loss().unwrap().to_f64(), f64::INFINITY, epsilon = 0.001);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
         assert_relative_eq!(position.max_profit().unwrap().to_f64(), 30.0, epsilon = 0.001);
     }
 }
@@ -1387,10 +1387,10 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-    #[should_panic]
     fn test_calculate_pnl_at_zero_price() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let _ = position.calculate_pnl(Utc::now(), pos!(0.0));
+        let result = position.calculate_pnl(Utc::now(), Positive::ZERO);
+        assert!(result.is_ok());
     }
 }
 

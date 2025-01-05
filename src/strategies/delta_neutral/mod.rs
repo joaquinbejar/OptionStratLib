@@ -63,11 +63,11 @@
 //!            individual_deltas: vec![],
 //!            is_neutral: false,
 //!            neutrality_threshold: 0.0,
-//!            underlying_price: pos!(0.0),
+//!            underlying_price: Positive::ZERO,
 //!         }
 //!     }
 //!
-//! fn get_atm_strike(&self) -> Positive { pos!(0.0) } }
+//! fn get_atm_strike(&self) -> Positive { Positive::ZERO } }
 //!
 //! // Calculate net delta
 //! let delta_info = strategy.calculate_net_delta();

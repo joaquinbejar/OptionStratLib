@@ -33,11 +33,11 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         pos!(66.0),   // premium_short
         pos!(29.85),   // open_fee_long
         pos!(4.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     let greeks = strategy.greeks();
