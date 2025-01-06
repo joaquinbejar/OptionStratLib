@@ -486,8 +486,8 @@ impl ProbabilityAnalysis for BearCallSpread {
         ]);
 
         let mut loss_range = ProfitLossRange::new(
+            None,
             Some(break_even_point),
-            Some(self.long_call.option.strike_price),
             Positive::ZERO,
         )?;
 
