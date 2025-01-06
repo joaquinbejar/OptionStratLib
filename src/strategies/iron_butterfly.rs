@@ -37,6 +37,10 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
+use crate::error::ProbabilityError;
+use crate::model::ProfitLossRange;
+use crate::model::utils::mean_and_std;
+use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
@@ -572,6 +576,93 @@ impl Graph for IronButterfly {
         points.push(self.get_point_at_price(*current_price));
 
         points
+    }
+}
+
+impl ProbabilityAnalysis for IronButterfly {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
+        Ok(self.long_call.option.expiration_date.clone())
+    }
+
+    fn get_risk_free_rate(&self) -> Option<Decimal> {
+        Some(self.long_call.option.risk_free_rate)
+    }
+
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        let break_even_points = self.get_break_even_points()?;
+
+        let (mean_volatility, std_dev) = mean_and_std(vec![
+            self.short_call.option.implied_volatility,
+            self.short_put.option.implied_volatility,
+            self.long_call.option.implied_volatility,
+            self.long_put.option.implied_volatility,
+        ]);
+
+        let mut profit_range = ProfitLossRange::new(
+            Some(break_even_points[0]),
+            Some(break_even_points[1]),
+            self.max_profit()?,
+        )?;
+
+        profit_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        Ok(vec![profit_range])
+    }
+
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        let break_even_points = self.get_break_even_points()?;
+
+        let (mean_volatility, std_dev) = mean_and_std(vec![
+            self.short_call.option.implied_volatility,
+            self.short_put.option.implied_volatility,
+            self.long_call.option.implied_volatility,
+            self.long_put.option.implied_volatility,
+        ]);
+
+        let mut loss_range_lower = ProfitLossRange::new(
+            None,
+            Some(break_even_points[0]),
+            Positive::ZERO,
+        )?;
+
+        let mut loss_range_upper = ProfitLossRange::new(
+            Some(break_even_points[1]),
+            None,
+            Positive::ZERO,
+        )?;
+
+        loss_range_lower.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        loss_range_upper.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        Ok(vec![loss_range_lower,loss_range_upper])
     }
 }
 
@@ -2069,5 +2160,205 @@ mod tests_iron_condor_delta_size {
         assert!(strategy.is_delta_neutral());
         let suggestion = strategy.suggest_delta_adjustments();
         assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_iron_butterfly_probability {
+
+    use super::*;
+    use crate::{assert_pos_relative_eq, pos};
+    use crate::strategies::probabilities::utils::PriceTrend;
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
+
+    /// Creates a test Iron Butterfly with standard parameters
+    fn create_test_butterfly() -> IronButterfly {
+        IronButterfly::new(
+            "GOLD".to_string(),
+            pos!(2646.9), // underlying_price
+            pos!(2725.0),     // short_call_strike
+            pos!(2800.0),     // long_call_strike
+            pos!(2500.0),     // long_put_strike
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.1548),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(38.8),     // premium_short_call
+            pos!(30.4),     // premium_short_put
+            pos!(23.3),     // premium_long_call
+            pos!(16.8),     // premium_long_put
+            pos!(0.96),     // open_fee
+            pos!(0.96),     // close_fee
+        )
+    }
+
+    #[test]
+    fn test_get_expiration() {
+        let butterfly = create_test_butterfly();
+        let result = butterfly.get_expiration();
+        assert!(result.is_ok());
+        match result.unwrap() {
+            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            _ => panic!("Expected ExpirationDate::Days"),
+        }
+    }
+
+    #[test]
+    fn test_get_risk_free_rate() {
+        let butterfly = create_test_butterfly();
+        assert_eq!(butterfly.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
+    }
+
+    #[test]
+    fn test_get_profit_ranges() {
+        let butterfly = create_test_butterfly();
+        let result = butterfly.get_profit_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+
+        assert_eq!(ranges.len(), 1);
+        let range = &ranges[0];
+
+        // Verify range bounds
+        assert!(range.lower_bound.is_some());
+        assert!(range.upper_bound.is_some());
+        assert!(range.probability > Positive::ZERO);
+        assert!(range.probability <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_get_loss_ranges() {
+        let butterfly = create_test_butterfly();
+        let result = butterfly.get_loss_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+
+        assert_eq!(ranges.len(), 2); // Should have two loss ranges
+
+        // Test lower loss range
+        let lower_range = &ranges[0];
+        assert!(lower_range.lower_bound.is_none());
+        assert!(lower_range.upper_bound.is_some());
+        assert!(lower_range.probability > Positive::ZERO);
+
+        // Test upper loss range
+        let upper_range = &ranges[1];
+        assert!(upper_range.lower_bound.is_some());
+        assert!(upper_range.upper_bound.is_none());
+        assert!(upper_range.probability > Positive::ZERO);
+    }
+
+    #[test]
+    fn test_probability_sum_to_one() {
+        let butterfly = create_test_butterfly();
+    
+        let profit_ranges = butterfly.get_profit_ranges().unwrap();
+        let loss_ranges = butterfly.get_loss_ranges().unwrap();
+    
+        let total_profit_prob: Positive = profit_ranges.iter()
+            .map(|r| r.probability)
+            .sum();
+    
+        let total_loss_prob: Positive = loss_ranges.iter()
+            .map(|r| r.probability)
+            .sum();
+    
+        // Total probability should be approximately 1
+        assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_break_even_points_validity() {
+        let butterfly = create_test_butterfly();
+        let break_even_points = butterfly.get_break_even_points().unwrap();
+
+        assert_eq!(break_even_points.len(), 2);
+        // Lower break-even should be between long put and short put
+        assert!(break_even_points[0] >= butterfly.long_put.option.strike_price);
+        assert!(break_even_points[0] <= butterfly.short_put.option.strike_price);
+        // Upper break-even should be between short call and long call
+        assert!(break_even_points[1] >= butterfly.short_call.option.strike_price);
+        assert!(break_even_points[1] <= butterfly.long_call.option.strike_price);
+    }
+
+    #[test]
+    fn test_with_volatility_adjustment() {
+        let butterfly = create_test_butterfly();
+        let vol_adj = Some(VolatilityAdjustment {
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.05),
+        });
+
+        let prob = butterfly.probability_of_profit(vol_adj, None);
+        assert!(prob.is_ok());
+        let probability = prob.unwrap();
+        assert!(probability > Positive::ZERO);
+        assert!(probability <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_with_price_trend() {
+        let butterfly = create_test_butterfly();
+        let trend = Some(PriceTrend {
+            drift_rate: 0.1,
+            confidence: 0.95,
+        });
+
+        let prob = butterfly.probability_of_profit(None, trend);
+        assert!(prob.is_ok());
+        let probability = prob.unwrap();
+        assert!(probability > Positive::ZERO);
+        assert!(probability <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_extreme_probabilities() {
+        let butterfly = create_test_butterfly();
+        let result = butterfly.calculate_extreme_probabilities(None, None);
+
+        assert!(result.is_ok());
+        let (max_profit_prob, max_loss_prob) = result.unwrap();
+
+        assert!(max_profit_prob >= Positive::ZERO);
+        assert!(max_loss_prob >= Positive::ZERO);
+        // Sum of extreme probabilities should be less than or equal to 1
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_zero_volatility() {
+        let mut butterfly = create_test_butterfly();
+        // Set invalid volatility for one leg
+        butterfly.short_call.option.implied_volatility = pos!(0.0);
+
+        let result = butterfly.get_profit_ranges();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_different_expirations() {
+        let mut butterfly = create_test_butterfly();
+        let expirations = vec![
+            ExpirationDate::Days(pos!(7.0)),
+            ExpirationDate::Days(pos!(30.0)),
+            ExpirationDate::Days(pos!(90.0))
+        ];
+
+        for expiration in expirations {
+            butterfly.long_put.option.expiration_date = expiration.clone();
+            butterfly.short_put.option.expiration_date = expiration.clone();
+            butterfly.short_call.option.expiration_date = expiration.clone();
+            butterfly.long_call.option.expiration_date = expiration;
+
+            let result = butterfly.probability_of_profit(None, None);
+            assert!(result.is_ok());
+            let prob = result.unwrap();
+            assert!(prob > Positive::ZERO);
+            assert!(prob <= pos!(1.0));
+        }
     }
 }

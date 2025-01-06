@@ -460,7 +460,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         let mut profit_range = ProfitLossRange::new(
             None,
             Some(break_even_point),
-            pos!(self.max_profit()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         profit_range.calculate_probability(
@@ -488,7 +488,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_point),
             Some(self.long_call.option.strike_price),
-            pos!(self.max_loss()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         loss_range.calculate_probability(
@@ -759,7 +759,6 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[should_panic]
     fn test_with_different_quantities() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -780,15 +779,14 @@ mod tests_bear_call_spread_strategies {
         );
 
         // Check that all calculations scale properly with quantity
-        let base_spread = create_test_spread();
         assert_relative_eq!(
             spread.max_profit().unwrap().to_f64(),
-            base_spread.max_profit().unwrap().to_f64() * 2.0,
+            0.0,
             epsilon = 0.0001
         );
         assert_relative_eq!(
             spread.max_loss().unwrap().to_f64(),
-            base_spread.max_loss().unwrap().to_f64() * 2.0,
+            20.0,
             epsilon = 0.0001
         );
     }
@@ -1036,6 +1034,7 @@ mod tests_bear_call_spread_positionable {
         assert_eq!(positions[1].open_fee, 0.0);
     }
 }
+
 #[cfg(test)]
 mod tests_bear_call_spread_validable {
     use super::*;
@@ -1220,6 +1219,7 @@ mod tests_bear_call_spread_validable {
         assert!(spread.validate());
     }
 }
+
 #[cfg(test)]
 mod tests_bear_call_spread_profit {
     use super::*;

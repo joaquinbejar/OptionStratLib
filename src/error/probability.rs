@@ -87,6 +87,8 @@ pub enum ProbabilityError {
     PriceError(PriceErrorKind),
 
     StdError(String),
+
+    NoPositions(String),
 }
 
 /// Specific errors that can occur during probability calculations
@@ -139,6 +141,7 @@ impl fmt::Display for ProbabilityError {
             ProbabilityError::ExpirationError(err) => write!(f, "Expiration error: {}", err),
             ProbabilityError::PriceError(err) => write!(f, "Price error: {}", err),
             ProbabilityError::StdError(msg) => write!(f, "Error: {}", msg),
+            ProbabilityError::NoPositions(msg) => write!(f, "No positions: {}", msg),
         }
     }
 }
