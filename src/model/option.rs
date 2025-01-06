@@ -130,7 +130,7 @@ impl Options {
     }
 
     pub fn calculate_price_black_scholes(&self) -> OptionsResult<Decimal> {
-        Ok(Decimal::from_f64(black_scholes(self)).unwrap())
+        Ok(black_scholes(self)?)
     }
 
     pub fn calculate_price_telegraph(&self, no_steps: usize) -> Result<Decimal, Box<dyn Error>> {
@@ -305,7 +305,7 @@ impl PnLCalculator for Options {
 
         // Calculate unrealized PnL adjusted for position side
         let unrealized = Some((current_price - initial_price) * self.quantity);
-        
+
         Ok(PnL::new(
             None, // No realized PnL yet
             unrealized,
