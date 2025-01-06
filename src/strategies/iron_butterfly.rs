@@ -601,7 +601,7 @@ impl ProbabilityAnalysis for IronButterfly {
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            self.max_profit()?,
+            Positive::ZERO,
         )?;
 
         profit_range.calculate_probability(

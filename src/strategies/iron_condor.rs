@@ -35,6 +35,9 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
+use crate::error::ProbabilityError;
+use crate::model::ProfitLossRange;
+use crate::strategies::probabilities::ProbabilityAnalysis;
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -599,6 +602,24 @@ impl Graph for IronCondor {
         points.push(self.get_point_at_price(*current_price));
 
         points
+    }
+}
+
+impl ProbabilityAnalysis for IronCondor {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
+        Ok(self.long_call.option.expiration_date.clone())
+    }
+
+    fn get_risk_free_rate(&self) -> Option<Decimal> {
+        Some(self.long_call.option.risk_free_rate)
+    }
+
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        todo!()
+    }
+
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        todo!()
     }
 }
 
