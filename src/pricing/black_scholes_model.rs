@@ -851,7 +851,6 @@ mod tests_black_scholes_bis {
     use crate::{assert_decimal_eq, pos, Positive};
     use rust_decimal_macros::dec;
 
-    // Helper function para crear opciones base para los tests
     fn create_base_option(side: Side, style: OptionStyle) -> Options {
         Options::new(
             OptionType::European,

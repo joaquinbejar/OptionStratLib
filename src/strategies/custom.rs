@@ -7,15 +7,18 @@ use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::{OperationErrorKind, StrategyError};
+use crate::error::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
-use crate::model::Position;
+use crate::model::utils::mean_and_std;
+use crate::model::{Position, ProfitLossRange};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::Positive;
+use crate::{pos, ExpirationDate, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -191,6 +194,77 @@ impl CustomStrategy {
         {
             self.break_even_points.push(point);
         }
+    }
+
+    pub(crate) fn get_profit_loss_zones(
+        &self,
+        break_even_points: &[Positive],
+    ) -> Result<(Vec<ProfitLossRange>, Vec<ProfitLossRange>), ProbabilityError> {
+        if break_even_points.is_empty() {
+            return Ok((vec![], vec![]));
+        }
+
+        let mut profit_zones = Vec::new();
+        let mut loss_zones = Vec::new();
+
+        if break_even_points.len() == 1 {
+            let break_even = break_even_points[0];
+            let test_point = break_even - pos!(0.01);
+            let is_profit_below = self.calculate_profit_at(test_point)? > Decimal::ZERO;
+
+            if is_profit_below {
+                // Si hay beneficio por debajo del break even
+                profit_zones.push(ProfitLossRange::new(
+                    None,
+                    Some(break_even),
+                    Positive::ZERO,
+                )?);
+                loss_zones.push(ProfitLossRange::new(
+                    Some(break_even),
+                    None,
+                    Positive::ZERO,
+                )?);
+            } else {
+                // Si hay pérdida por debajo del break even
+                loss_zones.push(ProfitLossRange::new(
+                    None,
+                    Some(break_even),
+                    Positive::ZERO,
+                )?);
+                profit_zones.push(ProfitLossRange::new(
+                    Some(break_even),
+                    None,
+                    Positive::ZERO,
+                )?);
+            }
+        } else {
+            let test_point = break_even_points[0] - pos!(0.01);
+            let is_first_zone_profit = self.calculate_profit_at(test_point)? > Decimal::ZERO;
+
+            let ranges = (0..=break_even_points.len())
+                .map(|i| match i {
+                    0 => ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO),
+                    i if i == break_even_points.len() => {
+                        ProfitLossRange::new(Some(break_even_points[i - 1]), None, Positive::ZERO)
+                    }
+                    i => ProfitLossRange::new(
+                        Some(break_even_points[i - 1]),
+                        Some(break_even_points[i]),
+                        Positive::ZERO,
+                    ),
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            for (i, range) in ranges.into_iter().enumerate() {
+                if (is_first_zone_profit && i % 2 == 0) || (!is_first_zone_profit && i % 2 != 0) {
+                    profit_zones.push(range);
+                } else {
+                    loss_zones.push(range);
+                }
+            }
+        }
+
+        Ok((profit_zones, loss_zones))
     }
 }
 
@@ -490,6 +564,83 @@ impl Graph for CustomStrategy {
         });
 
         points
+    }
+}
+
+impl ProbabilityAnalysis for CustomStrategy {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
+        match self.positions.first() {
+            Some(position) => Ok(position.option.expiration_date.clone()),
+            None => Err(ProbabilityError::NoPositions(
+                "get_expiration: No positions found ".to_string(),
+            )),
+        }
+    }
+
+    fn get_risk_free_rate(&self) -> Option<Decimal> {
+        self.positions
+            .first()
+            .map(|position| position.option.risk_free_rate)
+    }
+
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        let break_even_points = self.get_break_even_points()?;
+
+        let implied_volatilities = self
+            .positions
+            .iter()
+            .map(|position| position.option.implied_volatility)
+            .collect();
+        let (mean_volatility, std_dev) = mean_and_std(implied_volatilities);
+
+        let (mut profit_ranges, _) = self.get_profit_loss_zones(break_even_points)?;
+
+        profit_ranges.iter_mut().for_each(|range| {
+            range
+                .calculate_probability(
+                    self.get_underlying_price(),
+                    Some(VolatilityAdjustment {
+                        base_volatility: mean_volatility,
+                        std_dev_adjustment: std_dev,
+                    }),
+                    None,
+                    self.get_expiration().unwrap(),
+                    self.get_risk_free_rate(),
+                )
+                .unwrap();
+        });
+
+        Ok(profit_ranges)
+    }
+
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        let break_even_points = self.get_break_even_points()?;
+
+        let implied_volatilities = self
+            .positions
+            .iter()
+            .map(|position| position.option.implied_volatility)
+            .collect();
+        let (mean_volatility, std_dev) = mean_and_std(implied_volatilities);
+
+        let (_, mut loss_ranges) = self.get_profit_loss_zones(break_even_points)?;
+
+        loss_ranges.iter_mut().for_each(|range| {
+            range
+                .calculate_probability(
+                    self.get_underlying_price(),
+                    Some(VolatilityAdjustment {
+                        base_volatility: mean_volatility,
+                        std_dev_adjustment: std_dev,
+                    }),
+                    None,
+                    self.get_expiration().unwrap(),
+                    self.get_risk_free_rate(),
+                )
+                .unwrap();
+        });
+
+        Ok(loss_ranges)
     }
 }
 
@@ -1474,5 +1625,442 @@ mod tests_greeks {
         assert!(strategy_greeks.theta < Decimal::ZERO);
         // Vega should be positive and roughly double the individual option's vega
         assert!(strategy_greeks.vega > Decimal::ZERO);
+    }
+}
+
+#[cfg(test)]
+mod tests_custom_strategy_probability {
+    use super::*;
+    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::{assert_pos_relative_eq, pos, OptionStyle, OptionType, Options, Side};
+    use chrono::Utc;
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
+
+    fn create_test_strategy() -> CustomStrategy {
+        let underlying_price = pos!(2340.0);
+        let underlying_symbol = "GAS".to_string();
+        let expiration = ExpirationDate::Days(pos!(6.0));
+        let implied_volatility = pos!(0.73);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = Positive::ZERO;
+
+        // Short Call 1
+        let short_strike_1_strike = pos!(2050.0);
+        let short_strike_1_quantity = pos!(3.0);
+        let short_strike_1_premium = pos!(192.0);
+        let short_strike_1_open_fee = pos!(7.51);
+        let short_strike_1_close_fee = pos!(7.51);
+
+        // Short Call 2
+        let short_strike_2_strike = pos!(2250.0);
+        let short_strike_2_quantity = pos!(2.0);
+        let short_strike_2_premium = pos!(88.0);
+        let short_strike_2_open_fee = pos!(6.68);
+        let short_strike_2_close_fee = pos!(6.68);
+
+        // Short Put
+        let short_put_strike = pos!(2400.0);
+        let short_put_premium = pos!(55.0);
+        let short_put_quantity = pos!(1.0);
+        let short_put_open_fee = pos!(6.68);
+        let short_put_close_fee = pos!(6.68);
+
+        let short_strike_1 = Position::new(
+            Options::new(
+                OptionType::European,
+                Side::Short,
+                underlying_symbol.clone(),
+                short_strike_1_strike,
+                expiration.clone(),
+                implied_volatility,
+                short_strike_1_quantity,
+                underlying_price,
+                risk_free_rate,
+                OptionStyle::Call,
+                dividend_yield,
+                None,
+            ),
+            short_strike_1_premium,
+            Utc::now(),
+            short_strike_1_open_fee,
+            short_strike_1_close_fee,
+        );
+
+        let short_strike_2 = Position::new(
+            Options::new(
+                OptionType::European,
+                Side::Short,
+                underlying_symbol.clone(),
+                short_strike_2_strike,
+                expiration.clone(),
+                implied_volatility,
+                short_strike_2_quantity,
+                underlying_price,
+                risk_free_rate,
+                OptionStyle::Call,
+                dividend_yield,
+                None,
+            ),
+            short_strike_2_premium,
+            Utc::now(),
+            short_strike_2_open_fee,
+            short_strike_2_close_fee,
+        );
+
+        let short_put = Position::new(
+            Options::new(
+                OptionType::European,
+                Side::Short,
+                underlying_symbol.clone(),
+                short_put_strike,
+                expiration.clone(),
+                implied_volatility,
+                short_put_quantity,
+                underlying_price,
+                risk_free_rate,
+                OptionStyle::Put,
+                dividend_yield,
+                None,
+            ),
+            short_put_premium,
+            Utc::now(),
+            short_put_open_fee,
+            short_put_close_fee,
+        );
+
+        let extra_strike = pos!(2160.0);
+        let extra_quantity = pos!(2.5);
+        let extra_premium = pos!(21.0);
+        let extra_open_fee = pos!(4.91);
+        let extra_close_fee = pos!(4.91);
+
+        let extra = Position::new(
+            Options::new(
+                OptionType::European,
+                Side::Short,
+                underlying_symbol.clone(),
+                extra_strike,
+                expiration.clone(),
+                implied_volatility,
+                extra_quantity,
+                underlying_price,
+                risk_free_rate,
+                OptionStyle::Put,
+                dividend_yield,
+                None,
+            ),
+            extra_premium,
+            Utc::now(),
+            extra_open_fee,
+            extra_close_fee,
+        );
+
+        let positions: Vec<Position> = vec![short_strike_1, short_strike_2, short_put, extra];
+
+        CustomStrategy::new(
+            "Custom Strategy".to_string(),
+            underlying_symbol,
+            "Example of a custom strategy".to_string(),
+            underlying_price,
+            positions,
+            pos!(0.01),
+            200,
+            pos!(0.01),
+        )
+    }
+
+    #[test]
+    fn test_get_profit_loss_zones() {
+        fn create_test_strategy() -> CustomStrategy {
+            let underlying_price = pos!(2340.0);
+            let underlying_symbol = "GAS".to_string();
+            let expiration = ExpirationDate::Days(pos!(6.0));
+            let implied_volatility = pos!(0.73);
+            let risk_free_rate = dec!(0.05);
+            let dividend_yield = Positive::ZERO;
+
+            // Short Call 1
+            let short_strike_1_strike = pos!(2050.0);
+            let short_strike_1_quantity = pos!(3.0);
+            let short_strike_1_premium = pos!(192.0);
+            let short_strike_1_open_fee = pos!(7.51);
+            let short_strike_1_close_fee = pos!(7.51);
+
+            // Short Call 2
+            let short_strike_2_strike = pos!(2250.0);
+            let short_strike_2_quantity = pos!(2.0);
+            let short_strike_2_premium = pos!(88.0);
+            let short_strike_2_open_fee = pos!(6.68);
+            let short_strike_2_close_fee = pos!(6.68);
+
+            // Short Put
+            let short_put_strike = pos!(2400.0);
+            let short_put_premium = pos!(55.0);
+            let short_put_quantity = pos!(1.0);
+            let short_put_open_fee = pos!(6.68);
+            let short_put_close_fee = pos!(6.68);
+
+            let short_strike_1 = Position::new(
+                Options::new(
+                    OptionType::European,
+                    Side::Short,
+                    underlying_symbol.clone(),
+                    short_strike_1_strike,
+                    expiration.clone(),
+                    implied_volatility,
+                    short_strike_1_quantity,
+                    underlying_price,
+                    risk_free_rate,
+                    OptionStyle::Call,
+                    dividend_yield,
+                    None,
+                ),
+                short_strike_1_premium,
+                Utc::now(),
+                short_strike_1_open_fee,
+                short_strike_1_close_fee,
+            );
+
+            let short_strike_2 = Position::new(
+                Options::new(
+                    OptionType::European,
+                    Side::Short,
+                    underlying_symbol.clone(),
+                    short_strike_2_strike,
+                    expiration.clone(),
+                    implied_volatility,
+                    short_strike_2_quantity,
+                    underlying_price,
+                    risk_free_rate,
+                    OptionStyle::Call,
+                    dividend_yield,
+                    None,
+                ),
+                short_strike_2_premium,
+                Utc::now(),
+                short_strike_2_open_fee,
+                short_strike_2_close_fee,
+            );
+
+            let short_put = Position::new(
+                Options::new(
+                    OptionType::European,
+                    Side::Short,
+                    underlying_symbol.clone(),
+                    short_put_strike,
+                    expiration.clone(),
+                    implied_volatility,
+                    short_put_quantity,
+                    underlying_price,
+                    risk_free_rate,
+                    OptionStyle::Put,
+                    dividend_yield,
+                    None,
+                ),
+                short_put_premium,
+                Utc::now(),
+                short_put_open_fee,
+                short_put_close_fee,
+            );
+
+            let extra_strike = pos!(2160.0);
+            let extra_quantity = pos!(2.5);
+            let extra_premium = pos!(21.0);
+            let extra_open_fee = pos!(4.91);
+            let extra_close_fee = pos!(4.91);
+
+            let extra = Position::new(
+                Options::new(
+                    OptionType::European,
+                    Side::Short,
+                    underlying_symbol.clone(),
+                    extra_strike,
+                    expiration.clone(),
+                    implied_volatility,
+                    extra_quantity,
+                    underlying_price,
+                    risk_free_rate,
+                    OptionStyle::Put,
+                    dividend_yield,
+                    None,
+                ),
+                extra_premium,
+                Utc::now(),
+                extra_open_fee,
+                extra_close_fee,
+            );
+
+            let positions: Vec<Position> = vec![short_strike_1, short_strike_2, short_put, extra];
+
+            CustomStrategy::new(
+                "Custom Strategy".to_string(),
+                underlying_symbol,
+                "Example of a custom strategy".to_string(),
+                underlying_price,
+                positions,
+                pos!(0.01),
+                200,
+                pos!(0.01),
+            )
+        }
+
+        let strategy = create_test_strategy();
+        let (profit_zones, loss_zones) = strategy
+            .get_profit_loss_zones(&strategy.break_even_points)
+            .unwrap();
+
+        assert_eq!(profit_zones.len() + loss_zones.len(), 3);
+        assert_eq!(profit_zones.len(), 1);
+        assert_eq!(loss_zones.len(), 2);
+
+        for zone in profit_zones.iter() {
+            assert_eq!(zone.probability, Positive::ZERO);
+        }
+
+        for zone in loss_zones.iter() {
+            assert_eq!(zone.probability, Positive::ZERO);
+        }
+    }
+
+    #[test]
+    fn test_get_expiration() {
+        let strategy = create_test_strategy();
+        let result = strategy.get_expiration();
+
+        assert!(result.is_ok());
+        match result.unwrap() {
+            ExpirationDate::Days(days) => assert_eq!(days, 6.0),
+            _ => panic!("Expected ExpirationDate::Days"),
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_get_expiration_empty_positions() {
+        let _ = CustomStrategy::new(
+            "Empty Strategy".to_string(),
+            "TEST".to_string(),
+            "Empty strategy for testing".to_string(),
+            pos!(100.0),
+            vec![],
+            pos!(0.01),
+            200,
+            pos!(0.01),
+        );
+    }
+
+    #[test]
+    fn test_get_risk_free_rate() {
+        let strategy = create_test_strategy();
+        let rate = strategy.get_risk_free_rate();
+
+        assert!(rate.is_some());
+        assert_eq!(rate.unwrap().to_f64().unwrap(), 0.05);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_get_risk_free_rate_empty_positions() {
+        let _ = CustomStrategy::new(
+            "Empty Strategy".to_string(),
+            "TEST".to_string(),
+            "Empty strategy for testing".to_string(),
+            pos!(100.0),
+            vec![],
+            pos!(0.01),
+            200,
+            pos!(0.01),
+        );
+    }
+
+    #[test]
+    fn test_get_profit_ranges() {
+        let strategy = create_test_strategy();
+        let result = strategy.get_profit_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+
+        assert!(!ranges.is_empty());
+
+        for range in ranges {
+            assert!(range.probability >= Positive::ZERO);
+            assert!(range.probability <= pos!(1.0));
+        }
+    }
+
+    #[test]
+    fn test_get_loss_ranges() {
+        let strategy = create_test_strategy();
+        let result = strategy.get_loss_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+
+        assert!(!ranges.is_empty());
+
+        for range in ranges {
+            assert!(range.probability >= Positive::ZERO);
+            assert!(range.probability <= pos!(1.0));
+        }
+    }
+
+    #[test]
+    fn test_profit_loss_ranges_consistency() {
+        let strategy = create_test_strategy();
+        let profit_ranges = strategy.get_profit_ranges().unwrap();
+        let loss_ranges = strategy.get_loss_ranges().unwrap();
+
+        let total_profit_prob: Positive = profit_ranges.iter().map(|r| r.probability).sum();
+        let total_loss_prob: Positive = loss_ranges.iter().map(|r| r.probability).sum();
+
+        assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_ranges_ordering() {
+        let strategy = create_test_strategy();
+        let profit_ranges = strategy.get_profit_ranges().unwrap();
+        let loss_ranges = strategy.get_loss_ranges().unwrap();
+
+        // Verificar que los rangos están ordenados correctamente
+        for ranges in [profit_ranges, loss_ranges] {
+            for i in 0..ranges.len().saturating_sub(1) {
+                if let (Some(upper), Some(lower)) =
+                    (ranges[i].upper_bound, ranges[i + 1].lower_bound)
+                {
+                    assert!(upper <= lower);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_volatility_calculation() {
+        let strategy = create_test_strategy();
+        let implied_volatilities: Vec<Positive> = strategy
+            .positions
+            .iter()
+            .map(|position| position.option.implied_volatility)
+            .collect();
+
+        assert!(!implied_volatilities.is_empty());
+        assert_eq!(implied_volatilities[0], pos!(0.73));
+    }
+
+    #[test]
+    fn test_probability_calculation_with_trend() {
+        let strategy = create_test_strategy();
+        let trend = Some(PriceTrend {
+            drift_rate: 0.1,
+            confidence: 0.95,
+        });
+
+        let prob = strategy.probability_of_profit(None, trend);
+        assert!(prob.is_ok());
+        let probability = prob.unwrap();
+        assert!(probability > Positive::ZERO);
+        assert!(probability <= pos!(1.0));
     }
 }

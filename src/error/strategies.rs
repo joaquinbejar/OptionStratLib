@@ -258,7 +258,6 @@ mod tests_from_str {
         let strategy_error = StrategyError::operation_not_supported("max_profit", "TestStrategy");
         let probability_error = ProbabilityError::from(strategy_error);
 
-        // Ajusta este assert según la estructura real de ProbabilityError
         assert!(probability_error.to_string().contains("max_profit"));
         assert!(probability_error.to_string().contains("TestStrategy"));
     }
@@ -270,7 +269,6 @@ mod tests_from_str {
         });
         let probability_error = ProbabilityError::from(strategy_error);
 
-        // Ajusta este assert según la estructura real de ProbabilityError
         assert!(probability_error.to_string().contains("Test error"));
     }
 }

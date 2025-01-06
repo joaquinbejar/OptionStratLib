@@ -37,13 +37,17 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::utils::mean_and_std;
+use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
 };
+use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -536,6 +540,64 @@ impl Graph for PoorMansCoveredCall {
         points.push(self.get_point_at_price(self.long_call.option.underlying_price));
 
         points
+    }
+}
+
+impl ProbabilityAnalysis for PoorMansCoveredCall {
+    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
+        Ok(self.long_call.option.expiration_date.clone())
+    }
+
+    fn get_risk_free_rate(&self) -> Option<Decimal> {
+        Some(self.long_call.option.risk_free_rate)
+    }
+
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        let break_even_point = self.get_break_even_points()?[0];
+
+        let (mean_volatility, std_dev) = mean_and_std(vec![
+            self.short_call.option.implied_volatility,
+            self.long_call.option.implied_volatility,
+        ]);
+
+        let mut profit_range = ProfitLossRange::new(Some(break_even_point), None, Positive::ZERO)?;
+
+        profit_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        Ok(vec![profit_range])
+    }
+
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        let break_even_point = self.get_break_even_points()?[0];
+
+        let (mean_volatility, std_dev) = mean_and_std(vec![
+            self.long_call.option.implied_volatility,
+            self.short_call.option.implied_volatility,
+        ]);
+
+        let mut loss_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
+
+        loss_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: mean_volatility,
+                std_dev_adjustment: std_dev,
+            }),
+            None,
+            self.get_expiration()?,
+            self.get_risk_free_rate(),
+        )?;
+
+        Ok(vec![loss_range])
     }
 }
 
@@ -1531,5 +1593,204 @@ mod tests_short_straddle_delta_size {
         assert!(strategy.is_delta_neutral());
         let suggestion = strategy.suggest_delta_adjustments();
         assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_poor_mans_covered_call_probability {
+    use super::*;
+    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::{assert_pos_relative_eq, pos};
+    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
+
+    /// Creates a test Poor Man's Covered Call with standard parameters
+    fn create_test_pmcc() -> PoorMansCoveredCall {
+        PoorMansCoveredCall::new(
+            "GOLD".to_string(),                // underlying_symbol
+            pos!(2703.3),                      // underlying_price
+            pos!(2600.0),                      // long_call_strike
+            pos!(2800.0),                      // short_call_strike OTM
+            ExpirationDate::Days(pos!(120.0)), // long_call_expiration
+            ExpirationDate::Days(pos!(30.0)),  // short_call_expiration
+            pos!(0.17),                        // implied_volatility
+            dec!(0.05),                        // risk_free_rate
+            Positive::ZERO,                    // dividend_yield
+            pos!(3.0),                         // quantity
+            pos!(154.7),                       // premium_short_call
+            pos!(30.8),                        // premium_short_put
+            pos!(1.74),                        // open_fee_short_call
+            pos!(1.74),                        // close_fee_short_call
+            pos!(0.85),                        // open_fee_short_put
+            pos!(0.85),                        // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn test_get_expiration() {
+        let pmcc = create_test_pmcc();
+        let result = pmcc.get_expiration();
+        assert!(result.is_ok());
+        match result.unwrap() {
+            ExpirationDate::Days(days) => assert_eq!(days, 120.0),
+            _ => panic!("Expected ExpirationDate::Days"),
+        }
+    }
+
+    #[test]
+    fn test_get_risk_free_rate() {
+        let pmcc = create_test_pmcc();
+        assert_eq!(pmcc.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
+    }
+
+    #[test]
+    fn test_get_profit_ranges() {
+        let pmcc = create_test_pmcc();
+        let result = pmcc.get_profit_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+
+        assert_eq!(ranges.len(), 1);
+        let range = &ranges[0];
+
+        // Verify range bounds
+        assert!(range.lower_bound.is_some());
+        assert!(range.upper_bound.is_none()); // Unlimited upside
+        assert!(range.probability > Positive::ZERO);
+        assert!(range.probability <= pos!(1.0));
+
+        // Break-even point should be above long call strike
+        assert!(range.lower_bound.unwrap() > pmcc.long_call.option.strike_price);
+    }
+
+    #[test]
+    fn test_get_loss_ranges() {
+        let pmcc = create_test_pmcc();
+        let result = pmcc.get_loss_ranges();
+
+        assert!(result.is_ok());
+        let ranges = result.unwrap();
+
+        assert_eq!(ranges.len(), 1); // Should have one loss range
+
+        let loss_range = &ranges[0];
+        assert!(loss_range.lower_bound.is_none()); // No lower bound
+        assert!(loss_range.upper_bound.is_some());
+        assert!(loss_range.probability > Positive::ZERO);
+        assert!(loss_range.probability <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_probability_sum_to_one() {
+        let pmcc = create_test_pmcc();
+
+        let profit_ranges = pmcc.get_profit_ranges().unwrap();
+        let loss_ranges = pmcc.get_loss_ranges().unwrap();
+
+        let total_profit_prob: Positive = profit_ranges.iter().map(|r| r.probability).sum();
+
+        let total_loss_prob: Positive = loss_ranges.iter().map(|r| r.probability).sum();
+
+        assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_break_even_points_validity() {
+        let pmcc = create_test_pmcc();
+        let break_even_points = pmcc.get_break_even_points().unwrap();
+
+        assert_eq!(break_even_points.len(), 1);
+        // Break-even point should be above long call strike and below short call strike
+        assert!(break_even_points[0] > pmcc.long_call.option.strike_price);
+        assert!(break_even_points[0] < pmcc.short_call.option.strike_price);
+    }
+
+    #[test]
+    fn test_with_volatility_adjustment() {
+        let pmcc = create_test_pmcc();
+        let vol_adj = Some(VolatilityAdjustment {
+            base_volatility: pos!(0.25),
+            std_dev_adjustment: pos!(0.05),
+        });
+
+        let prob = pmcc.probability_of_profit(vol_adj, None);
+        assert!(prob.is_ok());
+        let probability = prob.unwrap();
+        assert!(probability > Positive::ZERO);
+        assert!(probability <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_with_price_trend() {
+        let pmcc = create_test_pmcc();
+        let trend = Some(PriceTrend {
+            drift_rate: 0.1,
+            confidence: 0.95,
+        });
+
+        let prob = pmcc.probability_of_profit(None, trend);
+        assert!(prob.is_ok());
+        let probability = prob.unwrap();
+        assert!(probability > Positive::ZERO);
+        assert!(probability <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_analyze_probabilities() {
+        let pmcc = create_test_pmcc();
+        let analysis = pmcc.analyze_probabilities(None, None).unwrap();
+
+        assert!(analysis.probability_of_profit > Positive::ZERO);
+        assert!(analysis.expected_value >= Positive::ZERO);
+        assert_eq!(analysis.break_even_points.len(), 1);
+        assert!(analysis.risk_reward_ratio > Positive::ZERO);
+    }
+
+    #[test]
+    fn test_different_expirations_validity() {
+        let pmcc = create_test_pmcc();
+        // Short expiration should be less than long expiration
+        assert!(match pmcc.short_call.option.expiration_date {
+            ExpirationDate::Days(short_days) => {
+                match pmcc.long_call.option.expiration_date {
+                    ExpirationDate::Days(long_days) => short_days < long_days,
+                    _ => false,
+                }
+            }
+            _ => false,
+        });
+    }
+
+    #[test]
+    fn test_high_volatility_scenario() {
+        let pmcc = create_test_pmcc();
+        let vol_adj = Some(VolatilityAdjustment {
+            base_volatility: pos!(0.7),
+            std_dev_adjustment: pos!(0.05),
+        });
+
+        let analysis = pmcc.analyze_probabilities(vol_adj, None).unwrap();
+        assert!(analysis.expected_value == Positive::ZERO);
+    }
+
+    #[test]
+    fn test_extreme_probabilities() {
+        let pmcc = create_test_pmcc();
+        let result = pmcc.calculate_extreme_probabilities(None, None);
+
+        assert!(result.is_ok());
+        let (max_profit_prob, max_loss_prob) = result.unwrap();
+
+        assert!(max_profit_prob >= Positive::ZERO);
+        assert!(max_loss_prob >= Positive::ZERO);
+        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+    }
+
+    #[test]
+    fn test_strike_price_validity() {
+        let pmcc = create_test_pmcc();
+        // Short call strike should be higher than long call strike for a valid PMCC
+        assert!(pmcc.short_call.option.strike_price > pmcc.long_call.option.strike_price);
     }
 }
