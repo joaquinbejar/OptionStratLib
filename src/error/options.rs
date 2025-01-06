@@ -351,3 +351,138 @@ mod tests {
         assert!(failure.is_err());
     }
 }
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_error_chaining() {
+        let error1 = OptionsError::validation_error("strike", "invalid value");
+        let error2: OptionsError = error1.to_string().into();
+
+        match error2 {
+            OptionsError::ValidationError { field, reason } => {
+                assert!(reason.contains("invalid value"));
+                assert_eq!(field, "unknown");
+            }
+            _ => panic!("Expected ValidationError"),
+        }
+
+        // Segunda forma: usando From<&str>
+        let error3 = OptionsError::validation_error("price", "must be positive");
+        let error4: OptionsError = error3.to_string().as_str().into();
+
+        match error4 {
+            OptionsError::ValidationError { field, reason } => {
+                assert!(reason.contains("must be positive"));
+                assert_eq!(field, "unknown");
+            }
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_multiple_conversions() {
+        let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        let boxed: Box<dyn Error> = Box::new(io_error);
+        let error: OptionsError = boxed.into();
+
+        assert!(matches!(error, OptionsError::ValidationError { .. }));
+
+        match error {
+            OptionsError::ValidationError { field: _, reason } => {
+                assert!(reason.contains("test error"));
+            }
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_complex_error_scenario() {
+        fn nested_function() -> OptionsResult<()> {
+            Err(OptionsError::validation_error("nested", "inner error"))
+        }
+
+        fn outer_function() -> OptionsResult<()> {
+            nested_function().map_err(|e| OptionsError::time_error("outer", &e.to_string()))
+        }
+
+        let result = outer_function();
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(matches!(error, OptionsError::TimeError { .. }));
+    }
+
+    #[test]
+    fn test_validation_combinations() {
+        let errors = vec![
+            OptionsError::validation_error("price", "negative value"),
+            OptionsError::validation_error("strike", "too high"),
+            OptionsError::validation_error("expiry", "past date"),
+        ];
+
+        for error in errors {
+            match error {
+                OptionsError::ValidationError { field, reason } => {
+                    assert!(!field.is_empty());
+                    assert!(!reason.is_empty());
+                }
+                _ => panic!("Expected ValidationError"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_pricing_error_variants() {
+        let methods = ["black_scholes", "binomial", "monte_carlo"];
+        let reasons = ["invalid vol", "negative rate", "bad params"];
+
+        for (method, reason) in methods.iter().zip(reasons.iter()) {
+            let error = OptionsError::pricing_error(method, reason);
+            let error_str = error.to_string();
+            assert!(error_str.contains(method));
+            assert!(error_str.contains(reason));
+        }
+    }
+
+    #[test]
+    fn test_error_conversion_preservation() {
+        let original = "preserve this message";
+        let error1: OptionsError = original.into();
+        let error2: OptionsError = error1.to_string().into();
+
+        assert!(error2.to_string().contains(original));
+    }
+
+    #[test]
+    fn test_option_result_operations() {
+        let success: OptionsResult<i32> = Ok(42);
+        let failure: OptionsResult<i32> = Err(OptionsError::validation_error("test", "error"));
+
+        let mapped_success = success.map(|x| x * 2);
+        let mapped_failure = failure.map(|x| x * 2);
+
+        assert_eq!(mapped_success.unwrap(), 84);
+        assert!(mapped_failure.is_err());
+    }
+
+    #[test]
+    fn test_nested_error_handling() {
+        fn process_value(value: i32) -> OptionsResult<i32> {
+            if value < 0 {
+                Err(OptionsError::validation_error("value", "must be positive"))
+            } else {
+                Ok(value)
+            }
+        }
+
+        let results: Vec<OptionsResult<i32>> =
+            vec![-1, 0, 1].into_iter().map(process_value).collect();
+
+        assert_eq!(results.len(), 3);
+        assert!(results[0].is_err());
+        assert!(results[1].is_ok());
+        assert!(results[2].is_ok());
+    }
+}

@@ -348,3 +348,104 @@ mod tests {
         ));
     }
 }
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_validation_error_display() {
+        let error = PositionValidationErrorKind::InvalidSize {
+            size: -1.0,
+            reason: "Size must be positive".to_string(),
+        };
+
+        assert!(error.to_string().contains("-1"));
+        assert!(error.to_string().contains("Size must be positive"));
+
+        let error = PositionValidationErrorKind::IncompatibleSide {
+            position_side: Side::Long,
+            reason: "Strategy requires short positions".to_string(),
+        };
+        assert!(error.to_string().contains("Long"));
+        assert!(error.to_string().contains("Strategy requires short"));
+    }
+
+    #[test]
+    fn test_limit_error_display() {
+        let error = PositionLimitErrorKind::MaxPositionsReached {
+            current: 5,
+            maximum: 4,
+        };
+        assert!(error.to_string().contains("5"));
+        assert!(error.to_string().contains("4"));
+
+        let error = PositionLimitErrorKind::MaxExposureReached {
+            current_exposure: 1000.0,
+            max_exposure: 500.0,
+        };
+        assert!(error.to_string().contains("1000"));
+        assert!(error.to_string().contains("500"));
+    }
+
+    #[test]
+    fn test_error_conversions() {
+        // Test de str a PositionError
+        let str_error: PositionError = "test error".into();
+        assert!(matches!(
+            str_error,
+            PositionError::ValidationError(PositionValidationErrorKind::StdError { .. })
+        ));
+
+        // Test de String a PositionError
+        let string_error: PositionError = "test error".to_string().into();
+        assert!(matches!(
+            string_error,
+            PositionError::ValidationError(PositionValidationErrorKind::StdError { .. })
+        ));
+
+        // Test de Box<dyn Error> a PositionError
+        let std_error: Box<dyn Error> = Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "dynamic error",
+        ));
+        let position_error = PositionError::from(std_error);
+        assert!(matches!(
+            position_error,
+            PositionError::ValidationError(PositionValidationErrorKind::StdError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_position_error_helper_methods() {
+        let error = PositionError::invalid_position_size(-1.0, "Must be positive");
+        assert!(matches!(
+            error,
+            PositionError::ValidationError(PositionValidationErrorKind::InvalidSize { .. })
+        ));
+
+        let error = PositionError::invalid_position_type(
+            Side::Long,
+            "Strategy requires short positions".to_string(),
+        );
+        assert!(matches!(
+            error,
+            PositionError::ValidationError(PositionValidationErrorKind::IncompatibleSide { .. })
+        ));
+    }
+
+    #[test]
+    fn test_strategy_error_helper_methods() {
+        let error = PositionError::strategy_full("Iron Condor", 4);
+        assert!(matches!(
+            error,
+            PositionError::StrategyError(StrategyErrorKind::StrategyFull { .. })
+        ));
+
+        let error = PositionError::unsupported_operation("Iron Condor", "add_leg");
+        assert!(matches!(
+            error,
+            PositionError::StrategyError(StrategyErrorKind::UnsupportedOperation { .. })
+        ));
+    }
+}

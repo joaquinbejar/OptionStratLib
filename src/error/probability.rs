@@ -374,3 +374,146 @@ mod tests {
         ));
     }
 }
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_invalid_probability_error() {
+        let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
+        assert!(matches!(
+            error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::InvalidProbability { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_string_conversion() {
+        let error = ProbabilityError::from("Test error message".to_string());
+        assert!(matches!(
+            error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_error_formatting() {
+        let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
+        let error_string = error.to_string();
+        assert!(error_string.contains("Invalid probability"));
+        assert!(error_string.contains("1.2"));
+        assert!(error_string.contains("Probability cannot exceed 1.0"));
+    }
+
+    #[test]
+    fn test_profit_loss_range_error_display() {
+        let error = ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidProfitRange {
+            range: "100-200".to_string(),
+            reason: "Invalid range".to_string(),
+        });
+        assert!(error.to_string().contains("100-200"));
+        assert!(error.to_string().contains("Invalid range"));
+
+        let error =
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "No break-even points found".to_string(),
+            });
+        assert!(error.to_string().contains("No break-even points found"));
+    }
+
+    #[test]
+    fn test_calculation_error_display() {
+        let error = ProbabilityError::CalculationError(
+            ProbabilityCalculationErrorKind::VolatilityAdjustmentError {
+                reason: "Invalid volatility adjustment".to_string(),
+            },
+        );
+        assert!(error.to_string().contains("Invalid volatility adjustment"));
+
+        let error =
+            ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {
+                reason: "Invalid trend".to_string(),
+            });
+        assert!(error.to_string().contains("Invalid trend"));
+    }
+
+    #[test]
+    fn test_expiration_error() {
+        let error = ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidRiskFreeRate {
+            rate: Some(0.05),
+            reason: "Rate out of bounds".to_string(),
+        });
+        assert!(error.to_string().contains("0.05"));
+        assert!(error.to_string().contains("Rate out of bounds"));
+    }
+
+    #[test]
+    fn test_strategy_error_conversion() {
+        let strategy_error = StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+            reason: "Invalid max profit".to_string(),
+        });
+        let prob_error: ProbabilityError = strategy_error.into();
+        assert!(matches!(
+            prob_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_strategy_break_even_error_conversion() {
+        let strategy_error = StrategyError::BreakEvenError(BreakEvenErrorKind::NoBreakEvenPoints);
+        let prob_error: ProbabilityError = strategy_error.into();
+        assert!(matches!(
+            prob_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_strategy_operation_error_conversion() {
+        let strategy_error = StrategyError::OperationError(OperationErrorKind::NotSupported {
+            operation: "test".to_string(),
+            strategy_type: "TestStrategy".to_string(),
+        });
+        let prob_error: ProbabilityError = strategy_error.into();
+        assert!(matches!(
+            prob_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_box_dyn_error_conversion() {
+        let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        let boxed_error: Box<dyn Error> = Box::new(io_error);
+        let prob_error = ProbabilityError::from(boxed_error);
+        assert!(matches!(prob_error, ProbabilityError::StdError(..)));
+    }
+
+    #[test]
+    fn test_no_positions_error() {
+        let error = ProbabilityError::NoPositions("No positions found".to_string());
+        assert!(error.to_string().contains("No positions found"));
+    }
+
+    #[test]
+    fn test_probability_result_type() {
+        let success: ProbabilityResult<f64> = Ok(0.5);
+        let failure: ProbabilityResult<f64> =
+            Err(ProbabilityError::invalid_probability(1.5, "Value too high"));
+
+        assert!(success.is_ok());
+        assert!(failure.is_err());
+    }
+}

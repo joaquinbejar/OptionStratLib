@@ -380,3 +380,108 @@ mod tests {
         ));
     }
 }
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_chain_build_error_display() {
+        let error = ChainBuildErrorKind::InvalidParameters {
+            parameter: "size".to_string(),
+            reason: "must be positive".to_string(),
+        };
+        assert!(error.to_string().contains("size"));
+        assert!(error.to_string().contains("must be positive"));
+
+        let error = ChainBuildErrorKind::VolatilityAdjustmentError {
+            skew_factor: 0.5,
+            reason: "invalid adjustment".to_string(),
+        };
+        assert!(error.to_string().contains("0.5"));
+        assert!(error.to_string().contains("invalid adjustment"));
+    }
+
+    #[test]
+    fn test_file_error_display() {
+        let error = FileErrorKind::InvalidFormat {
+            format: "CSV".to_string(),
+            reason: "invalid header".to_string(),
+        };
+        assert!(error.to_string().contains("CSV"));
+        assert!(error.to_string().contains("invalid header"));
+
+        let error = FileErrorKind::ParseError {
+            line: 42,
+            content: "bad data".to_string(),
+            reason: "invalid number".to_string(),
+        };
+        assert!(error.to_string().contains("42"));
+        assert!(error.to_string().contains("bad data"));
+    }
+
+    #[test]
+    fn test_option_data_error_display() {
+        let error = OptionDataErrorKind::InvalidDelta {
+            delta: Some(1.5),
+            reason: "delta cannot exceed 1".to_string(),
+        };
+        assert!(error.to_string().contains("1.5"));
+        assert!(error.to_string().contains("delta cannot exceed 1"));
+    }
+
+    #[test]
+    fn test_strategy_error_equality() {
+        let error1 = StrategyErrorKind::InvalidLegs {
+            expected: 4,
+            found: 3,
+            reason: "Iron Condor needs 4 legs".to_string(),
+        };
+        let error2 = StrategyErrorKind::InvalidLegs {
+            expected: 4,
+            found: 3,
+            reason: "Iron Condor needs 4 legs".to_string(),
+        };
+        assert_eq!(error1, error2);
+    }
+
+    #[test]
+    fn test_error_conversions() {
+        // Test de String a ChainError
+        let string_error: ChainError = "test error".to_string().into();
+        assert!(matches!(
+            string_error,
+            ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(_))
+        ));
+
+        // Test de io::Error a ChainError
+        let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let chain_error = ChainError::from(io_error);
+        assert!(matches!(
+            chain_error,
+            ChainError::FileError(FileErrorKind::IOError(_))
+        ));
+
+        let std_error: Box<dyn Error> = Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "dynamic error",
+        ));
+        let chain_error = ChainError::from(std_error);
+        assert!(matches!(chain_error, ChainError::DynError { .. }));
+    }
+
+    #[test]
+    fn test_helper_methods() {
+        let error = ChainError::invalid_strike(-10.0, "Strike must be positive");
+        assert!(matches!(
+            error,
+            ChainError::OptionDataError(OptionDataErrorKind::InvalidStrike { .. })
+        ));
+
+        let error = ChainError::invalid_volatility(None, "Volatility missing");
+        assert!(matches!(
+            error,
+            ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility { .. })
+        ));
+    }
+}
