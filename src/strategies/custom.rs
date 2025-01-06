@@ -208,7 +208,6 @@ impl CustomStrategy {
         let mut profit_zones = Vec::new();
         let mut loss_zones = Vec::new();
 
-        // Si solo hay un punto de break even
         if break_even_points.len() == 1 {
             let break_even = break_even_points[0];
             let test_point = break_even - pos!(0.01);
@@ -240,11 +239,9 @@ impl CustomStrategy {
                 )?);
             }
         } else {
-            // Para múltiples puntos de break even
             let test_point = break_even_points[0] - pos!(0.01);
             let is_first_zone_profit = self.calculate_profit_at(test_point)? > Decimal::ZERO;
 
-            // Creamos todos los rangos
             let ranges = (0..=break_even_points.len())
                 .map(|i| match i {
                     0 => ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO),
@@ -259,7 +256,6 @@ impl CustomStrategy {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            // Distribuimos los rangos entre profit y loss
             for (i, range) in ranges.into_iter().enumerate() {
                 if (is_first_zone_profit && i % 2 == 0) || (!is_first_zone_profit && i % 2 != 0) {
                     profit_zones.push(range);
@@ -1915,7 +1911,6 @@ mod tests_custom_strategy_probability {
             .get_profit_loss_zones(&strategy.break_even_points)
             .unwrap();
 
-        // Verificar que tenemos el número correcto de zonas
         assert_eq!(profit_zones.len() + loss_zones.len(), 3);
         assert_eq!(profit_zones.len(), 1);
         assert_eq!(loss_zones.len(), 2);
@@ -1990,7 +1985,6 @@ mod tests_custom_strategy_probability {
 
         assert!(!ranges.is_empty());
 
-        // Verificar que todas las zonas tienen probabilidad calculada
         for range in ranges {
             assert!(range.probability >= Positive::ZERO);
             assert!(range.probability <= pos!(1.0));

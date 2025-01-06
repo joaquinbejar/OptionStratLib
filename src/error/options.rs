@@ -298,7 +298,6 @@ mod tests {
 
     #[test]
     fn test_from_box_dyn_error_conversion() {
-        // Usamos un error real en lugar de String
         struct TestError(String);
 
         impl fmt::Display for TestError {
