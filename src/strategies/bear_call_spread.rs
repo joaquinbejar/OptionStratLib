@@ -457,11 +457,7 @@ impl ProbabilityAnalysis for BearCallSpread {
             self.long_call.option.implied_volatility,
         ]);
 
-        let mut profit_range = ProfitLossRange::new(
-            None,
-            Some(break_even_point),
-            Positive::ZERO,
-        )?;
+        let mut profit_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
 
         profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -485,11 +481,7 @@ impl ProbabilityAnalysis for BearCallSpread {
             self.long_call.option.implied_volatility,
         ]);
 
-        let mut loss_range = ProfitLossRange::new(
-            None,
-            Some(break_even_point),
-            Positive::ZERO,
-        )?;
+        let mut loss_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
 
         loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -779,16 +771,8 @@ mod tests_bear_call_spread_strategies {
         );
 
         // Check that all calculations scale properly with quantity
-        assert_relative_eq!(
-            spread.max_profit().unwrap().to_f64(),
-            0.0,
-            epsilon = 0.0001
-        );
-        assert_relative_eq!(
-            spread.max_loss().unwrap().to_f64(),
-            20.0,
-            epsilon = 0.0001
-        );
+        assert_relative_eq!(spread.max_profit().unwrap().to_f64(), 0.0, epsilon = 0.0001);
+        assert_relative_eq!(spread.max_loss().unwrap().to_f64(), 20.0, epsilon = 0.0001);
     }
 
     #[test]
@@ -1791,21 +1775,21 @@ mod tests_bear_call_spread_probability {
 
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
-            "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(105.0),                      // short_strike
-            pos!(110.0),                      // long_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            pos!(2.0),                        // premium_short_call
-            pos!(1.0),                        // premium_long_call
-            Positive::ZERO,                   // open_fee_short_call
-            Positive::ZERO,                   // close_fee_short_call
-            Positive::ZERO,                   // open_fee_long_call
-            Positive::ZERO,                   // close_fee_long_call
+            "SP500".to_string(),
+            pos!(5781.88), // underlying_price
+            pos!(5750.0),  // long_strike_itm
+            pos!(5820.0),  // short_strike
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // long quantity
+            pos!(85.04),    // premium_long
+            pos!(29.85),    // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // open_fee_long
+            pos!(0.73),     // close_fee_long
+            pos!(0.73),     // close_fee_short
         )
     }
 
@@ -1815,7 +1799,7 @@ mod tests_bear_call_spread_probability {
         let result = spread.get_expiration();
         assert!(result.is_ok());
         match result.unwrap() {
-            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
+            ExpirationDate::Days(days) => assert_eq!(days, 2.0),
             _ => panic!("Expected ExpirationDate::Days"),
         }
     }
@@ -1851,7 +1835,7 @@ mod tests_bear_call_spread_probability {
         assert_eq!(ranges.len(), 1);
 
         let range = &ranges[0];
-        assert!(range.lower_bound.is_some());
+        assert!(range.lower_bound.is_none());
         assert!(range.upper_bound.is_some());
         assert!(range.probability > Positive::ZERO);
     }

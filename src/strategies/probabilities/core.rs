@@ -39,7 +39,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 risk_reward_ratio: self.profit_ratio().unwrap().into(),
             });
         }
-        
+
         // If we have adjustments, calculate with them
         let probability_of_profit =
             self.probability_of_profit(volatility_adj.clone(), trend.clone())?;
@@ -123,7 +123,6 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             probabilities.push(marginal_prob);
             last_prob = prob.0.into();
         }
-
 
         let expected_value =
             range

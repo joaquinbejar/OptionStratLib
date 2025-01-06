@@ -10,13 +10,16 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
+use crate::error::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
 };
+use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -29,9 +32,6 @@ use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
-use crate::error::ProbabilityError;
-use crate::model::utils::mean_and_std;
-use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -609,17 +609,11 @@ impl ProbabilityAnalysis for CallButterfly {
             self.short_call_high.option.implied_volatility,
         ]);
 
-        let mut loss_range_lower = ProfitLossRange::new(
-            None,
-            Some(break_even_points[0]),
-            Positive::ZERO,
-        )?;
+        let mut loss_range_lower =
+            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
 
-        let mut loss_range_upper = ProfitLossRange::new(
-            Some(break_even_points[1]),
-            None,
-            Positive::ZERO,
-        )?;
+        let mut loss_range_upper =
+            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
 
         loss_range_lower.calculate_probability(
             self.get_underlying_price(),
@@ -643,7 +637,7 @@ impl ProbabilityAnalysis for CallButterfly {
             self.get_risk_free_rate(),
         )?;
 
-        Ok(vec![loss_range_lower,loss_range_upper])
+        Ok(vec![loss_range_lower, loss_range_upper])
     }
 }
 
@@ -1483,8 +1477,8 @@ mod tests_call_butterfly_optimizable {
 #[cfg(test)]
 mod tests_call_butterfly_probability {
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
     use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1492,10 +1486,10 @@ mod tests_call_butterfly_probability {
     fn create_test_butterfly() -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
-            pos!(5781.88),  // underlying_price
-            pos!(5750.0),   // long_call_strike
-            pos!(5800.0),   // short_call_low_strike
-            pos!(5850.0),   // short_call_high_strike
+            pos!(5781.88), // underlying_price
+            pos!(5750.0),  // long_call_strike
+            pos!(5800.0),  // short_call_low_strike
+            pos!(5850.0),  // short_call_high_strike
             ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
@@ -1527,7 +1521,10 @@ mod tests_call_butterfly_probability {
     #[test]
     fn test_get_risk_free_rate() {
         let butterfly = create_test_butterfly();
-        assert_eq!(butterfly.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
+        assert_eq!(
+            butterfly.get_risk_free_rate().unwrap().to_f64().unwrap(),
+            0.05
+        );
     }
 
     #[test]
@@ -1582,13 +1579,9 @@ mod tests_call_butterfly_probability {
         let profit_ranges = butterfly.get_profit_ranges().unwrap();
         let loss_ranges = butterfly.get_loss_ranges().unwrap();
 
-        let total_profit_prob: Positive = profit_ranges.iter()
-            .map(|r| r.probability)
-            .sum();
+        let total_profit_prob: Positive = profit_ranges.iter().map(|r| r.probability).sum();
 
-        let total_loss_prob: Positive = loss_ranges.iter()
-            .map(|r| r.probability)
-            .sum();
+        let total_loss_prob: Positive = loss_ranges.iter().map(|r| r.probability).sum();
 
         assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
     }

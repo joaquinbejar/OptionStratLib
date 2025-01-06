@@ -560,9 +560,7 @@ impl ProbabilityAnalysis for PoorMansCoveredCall {
             self.long_call.option.implied_volatility,
         ]);
 
-
         let mut profit_range = ProfitLossRange::new(Some(break_even_point), None, Positive::ZERO)?;
-
 
         profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -587,7 +585,6 @@ impl ProbabilityAnalysis for PoorMansCoveredCall {
         ]);
 
         let mut loss_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
-
 
         loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -1602,8 +1599,8 @@ mod tests_short_straddle_delta_size {
 #[cfg(test)]
 mod tests_poor_mans_covered_call_probability {
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
     use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1691,13 +1688,9 @@ mod tests_poor_mans_covered_call_probability {
         let profit_ranges = pmcc.get_profit_ranges().unwrap();
         let loss_ranges = pmcc.get_loss_ranges().unwrap();
 
-        let total_profit_prob: Positive = profit_ranges.iter()
-            .map(|r| r.probability)
-            .sum();
+        let total_profit_prob: Positive = profit_ranges.iter().map(|r| r.probability).sum();
 
-        let total_loss_prob: Positive = loss_ranges.iter()
-            .map(|r| r.probability)
-            .sum();
+        let total_loss_prob: Positive = loss_ranges.iter().map(|r| r.probability).sum();
 
         assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
     }
@@ -1764,7 +1757,7 @@ mod tests_poor_mans_covered_call_probability {
                     ExpirationDate::Days(long_days) => short_days < long_days,
                     _ => false,
                 }
-            },
+            }
             _ => false,
         });
     }

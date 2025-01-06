@@ -18,8 +18,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
-use chrono::Utc;
+use crate::{pos, ExpirationDate, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -579,10 +578,9 @@ impl ProbabilityAnalysis for CustomStrategy {
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {
-        match self.positions.first() {
-            Some(position) => Some(position.option.risk_free_rate.clone()),
-            None => None,
-        }
+        self.positions
+            .first()
+            .map(|position| position.option.risk_free_rate)
     }
 
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
@@ -595,9 +593,9 @@ impl ProbabilityAnalysis for CustomStrategy {
             .collect();
         let (mean_volatility, std_dev) = mean_and_std(implied_volatilities);
 
-        let (mut profit_ranges, _) = self.get_profit_loss_zones(&break_even_points)?;
+        let (mut profit_ranges, _) = self.get_profit_loss_zones(break_even_points)?;
 
-        let _ = profit_ranges.iter_mut().for_each(|range| {
+        profit_ranges.iter_mut().for_each(|range| {
             range
                 .calculate_probability(
                     self.get_underlying_price(),
@@ -625,9 +623,9 @@ impl ProbabilityAnalysis for CustomStrategy {
             .collect();
         let (mean_volatility, std_dev) = mean_and_std(implied_volatilities);
 
-        let (_, mut loss_ranges) = self.get_profit_loss_zones(&break_even_points)?;
+        let (_, mut loss_ranges) = self.get_profit_loss_zones(break_even_points)?;
 
-        let _ = loss_ranges.iter_mut().for_each(|range| {
+        loss_ranges.iter_mut().for_each(|range| {
             range
                 .calculate_probability(
                     self.get_underlying_price(),
@@ -1634,7 +1632,8 @@ mod tests_greeks {
 mod tests_custom_strategy_probability {
     use super::*;
     use crate::strategies::probabilities::utils::PriceTrend;
-    use crate::{assert_pos_relative_eq, pos};
+    use crate::{assert_pos_relative_eq, pos, OptionStyle, OptionType, Options, Side};
+    use chrono::Utc;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 

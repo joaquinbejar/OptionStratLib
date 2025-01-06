@@ -18,13 +18,17 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::ProbabilityError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::utils::mean_and_std;
+use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
 };
+use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -37,10 +41,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
-use crate::error::ProbabilityError;
-use crate::model::ProfitLossRange;
-use crate::model::utils::mean_and_std;
-use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
@@ -628,17 +628,11 @@ impl ProbabilityAnalysis for IronButterfly {
             self.long_put.option.implied_volatility,
         ]);
 
-        let mut loss_range_lower = ProfitLossRange::new(
-            None,
-            Some(break_even_points[0]),
-            Positive::ZERO,
-        )?;
+        let mut loss_range_lower =
+            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
 
-        let mut loss_range_upper = ProfitLossRange::new(
-            Some(break_even_points[1]),
-            None,
-            Positive::ZERO,
-        )?;
+        let mut loss_range_upper =
+            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
 
         loss_range_lower.calculate_probability(
             self.get_underlying_price(),
@@ -662,7 +656,7 @@ impl ProbabilityAnalysis for IronButterfly {
             self.get_risk_free_rate(),
         )?;
 
-        Ok(vec![loss_range_lower,loss_range_upper])
+        Ok(vec![loss_range_lower, loss_range_upper])
     }
 }
 
@@ -2167,8 +2161,8 @@ mod tests_iron_condor_delta_size {
 mod tests_iron_butterfly_probability {
 
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
     use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -2177,9 +2171,9 @@ mod tests_iron_butterfly_probability {
         IronButterfly::new(
             "GOLD".to_string(),
             pos!(2646.9), // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
+            pos!(2725.0), // short_call_strike
+            pos!(2800.0), // long_call_strike
+            pos!(2500.0), // long_put_strike
             ExpirationDate::Days(pos!(30.0)),
             pos!(0.1548),   // implied_volatility
             dec!(0.05),     // risk_free_rate
@@ -2208,7 +2202,10 @@ mod tests_iron_butterfly_probability {
     #[test]
     fn test_get_risk_free_rate() {
         let butterfly = create_test_butterfly();
-        assert_eq!(butterfly.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
+        assert_eq!(
+            butterfly.get_risk_free_rate().unwrap().to_f64().unwrap(),
+            0.05
+        );
     }
 
     #[test]
@@ -2255,18 +2252,14 @@ mod tests_iron_butterfly_probability {
     #[test]
     fn test_probability_sum_to_one() {
         let butterfly = create_test_butterfly();
-    
+
         let profit_ranges = butterfly.get_profit_ranges().unwrap();
         let loss_ranges = butterfly.get_loss_ranges().unwrap();
-    
-        let total_profit_prob: Positive = profit_ranges.iter()
-            .map(|r| r.probability)
-            .sum();
-    
-        let total_loss_prob: Positive = loss_ranges.iter()
-            .map(|r| r.probability)
-            .sum();
-    
+
+        let total_profit_prob: Positive = profit_ranges.iter().map(|r| r.probability).sum();
+
+        let total_loss_prob: Positive = loss_ranges.iter().map(|r| r.probability).sum();
+
         // Total probability should be approximately 1
         assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
     }
@@ -2345,7 +2338,7 @@ mod tests_iron_butterfly_probability {
         let expirations = vec![
             ExpirationDate::Days(pos!(7.0)),
             ExpirationDate::Days(pos!(30.0)),
-            ExpirationDate::Days(pos!(90.0))
+            ExpirationDate::Days(pos!(90.0)),
         ];
 
         for expiration in expirations {
