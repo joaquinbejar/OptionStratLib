@@ -14,7 +14,7 @@ use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, S
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
-use crate::{pos, spos, Positive};
+use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
 use csv::WriterBuilder;
 use num_traits::FromPrimitive;
@@ -181,13 +181,13 @@ impl OptionData {
     ) -> Result<(), ChainError> {
         let mut option: Options = self.get_option(price_params, Side::Long, OptionStyle::Call)?;
 
-        self.call_ask = Some(black_scholes(&option).abs().into());
+        self.call_ask = Some(black_scholes(&option)?.abs().into());
         option.side = Side::Short;
-        self.call_bid = spos!(black_scholes(&option).abs());
+        self.call_bid = Some(black_scholes(&option)?.abs().into());
         option.option_style = OptionStyle::Put;
-        self.put_bid = spos!(black_scholes(&option).abs());
+        self.put_bid = Some(black_scholes(&option)?.abs().into());
         option.side = Side::Long;
-        self.put_ask = spos!(black_scholes(&option).abs());
+        self.put_ask = Some(black_scholes(&option)?.abs().into());
         Ok(())
     }
 
@@ -1569,9 +1569,9 @@ mod tests_chain_base {
 mod tests_option_data {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
     use crate::spos;
     use crate::utils::logger::setup_logger;
+    use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
     use tracing::info;
@@ -1761,10 +1761,10 @@ mod tests_option_data {
 
         assert!(result.is_ok());
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.41213504105628));
-        assert_eq!(option_data.call_bid, spos!(10.41213504105628));
-        assert_eq!(option_data.put_ask, spos!(0.0020194186563746));
-        assert_eq!(option_data.put_bid, spos!(0.0020194186563746));
+        assert_pos_relative_eq!(option_data.call_ask.unwrap(), pos!(10.4121), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.call_bid.unwrap(), pos!(10.4121), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.put_ask.unwrap(), pos!(0.0020194), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.put_bid.unwrap(), pos!(0.0020194), pos!(0.0001));
         option_data.apply_spread(pos!(0.02), 2);
         info!("{}", option_data);
         assert_eq!(option_data.call_ask, spos!(10.42));
@@ -1809,8 +1809,8 @@ mod tests_get_random_positions {
     use super::*;
     use crate::error::chains::ChainBuildErrorKind;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
     use crate::utils::logger::setup_logger;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
@@ -2200,7 +2200,7 @@ mod tests_option_data_display {
 #[cfg(test)]
 mod tests_filter_option_data {
     use super::*;
-    use crate::pos;
+    use crate::{pos, spos};
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
@@ -2262,7 +2262,7 @@ mod tests_filter_option_data {
 #[cfg(test)]
 mod tests_strike_price_range_vec {
     use super::*;
-    use crate::pos;
+    use crate::{pos, spos};
 
     #[test]
     fn test_empty_chain() {
@@ -2336,7 +2336,7 @@ mod tests_option_data_get_option {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
-    use crate::pos;
+    use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -2431,7 +2431,7 @@ mod tests_option_data_get_options_in_strike {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
     use crate::model::types::ExpirationDate;
-    use crate::{assert_decimal_eq, pos};
+    use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
