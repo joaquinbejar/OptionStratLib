@@ -408,7 +408,7 @@ impl Optimizable for CustomStrategy {
 
 impl Profit for CustomStrategy {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(price);
+        let price = Some(&price);
         self.positions
             .iter()
             .map(|position| position.pnl_at_expiration(&price))

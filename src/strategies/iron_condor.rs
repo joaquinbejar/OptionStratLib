@@ -440,7 +440,7 @@ impl Optimizable for IronCondor {
 
 impl Profit for IronCondor {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(price);
+        let price = Some(&price);
         Ok(self.short_call.pnl_at_expiration(&price)?
             + self.short_put.pnl_at_expiration(&price)?
             + self.long_call.pnl_at_expiration(&price)?
@@ -889,19 +889,19 @@ mod tests_iron_condor {
         let price = pos!(150.0);
         let expected_profit = iron_condor
             .short_call
-            .pnl_at_expiration(&Some(price))
+            .pnl_at_expiration(&Some(&price))
             .unwrap()
             + iron_condor
                 .short_put
-                .pnl_at_expiration(&Some(price))
+                .pnl_at_expiration(&Some(&price))
                 .unwrap()
             + iron_condor
                 .long_call
-                .pnl_at_expiration(&Some(price))
+                .pnl_at_expiration(&Some(&price))
                 .unwrap()
             + iron_condor
                 .long_put
-                .pnl_at_expiration(&Some(price))
+                .pnl_at_expiration(&Some(&price))
                 .unwrap();
         assert_eq!(
             iron_condor.calculate_profit_at(price).unwrap(),

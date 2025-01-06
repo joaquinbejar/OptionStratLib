@@ -442,7 +442,7 @@ impl Optimizable for LongButterflySpread {
 
 impl Profit for LongButterflySpread {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(price);
+        let price = Some(&price);
         Ok(self.long_call_low.pnl_at_expiration(&price)?
             + self.short_calls.pnl_at_expiration(&price)?
             + self.long_call_high.pnl_at_expiration(&price)?)
@@ -1152,7 +1152,7 @@ impl Optimizable for ShortButterflySpread {
 
 impl Profit for ShortButterflySpread {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(price);
+        let price = Some(&price);
         Ok(self.short_call_low.pnl_at_expiration(&price)?
             + self.long_calls.pnl_at_expiration(&price)?
             + self.short_call_high.pnl_at_expiration(&price)?)

@@ -11,7 +11,6 @@ use crate::pricing::{
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use crate::Positive;
-use chrono::{DateTime, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
@@ -282,17 +281,59 @@ impl Greeks for Options {
 impl PnLCalculator for Options {
     fn calculate_pnl(
         &self,
-        _date_time: DateTime<Utc>,
-        _market_price: Positive,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        todo!()
+        // Create a copy of the current option with updated parameters
+        let mut current_option = self.clone();
+        current_option.underlying_price = *market_price;
+        current_option.expiration_date = expiration_date;
+        current_option.implied_volatility = *implied_volatility;
+
+        // Calculate theoretical price at current market conditions
+        let current_price = current_option.calculate_price_black_scholes()?;
+
+        // Calculate initial price (when option was created)
+        let initial_price = self.calculate_price_black_scholes()?;
+
+        // Calculate initial costs (premium paid/received)
+        let (initial_costs, initial_income) = match self.side {
+            Side::Long => (initial_price * self.quantity, Decimal::ZERO),
+            Side::Short => (Decimal::ZERO, -initial_price * self.quantity),
+        };
+
+        // Calculate unrealized PnL adjusted for position side
+        let unrealized = Some((current_price - initial_price) * self.quantity);
+        
+        Ok(PnL::new(
+            None, // No realized PnL yet
+            unrealized,
+            initial_costs.into(),
+            initial_income.into(),
+            current_option.expiration_date.get_date()?,
+        ))
     }
 
     fn calculate_pnl_at_expiration(
         &self,
-        _underlying_price: Option<Positive>,
+        underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        todo!()
+        let realized = Some(self.payoff_at_price(*underlying_price)?);
+        let initial_price = self.calculate_price_black_scholes()?;
+
+        let (initial_costs, initial_income) = match self.side {
+            Side::Long => (initial_price * self.quantity, Decimal::ZERO),
+            Side::Short => (Decimal::ZERO, initial_price * self.quantity),
+        };
+
+        Ok(PnL::new(
+            realized, // No realized PnL yet
+            None,
+            initial_costs.into(),
+            initial_income.into(),
+            self.expiration_date.get_date()?,
+        ))
     }
 }
 

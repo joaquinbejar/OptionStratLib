@@ -346,7 +346,7 @@ impl Optimizable for ShortStrangle {
 
 impl Profit for ShortStrangle {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(price);
+        let price = Some(&price);
         trace!(
             "Price: {:?} Strike: {} Call: {:.2} Strike: {} Put: {:.2} Profit: {:.2}",
             price,
@@ -926,7 +926,7 @@ impl Optimizable for LongStrangle {
 
 impl Profit for LongStrangle {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(price);
+        let price = Some(&price);
         Ok(self.long_call.pnl_at_expiration(&price)? + self.long_put.pnl_at_expiration(&price)?)
     }
 }
@@ -1559,11 +1559,11 @@ mod tests_long_strangle {
         let price = pos!(150.0);
         let expected_profit = long_strangle
             .long_call
-            .pnl_at_expiration(&Some(price))
+            .pnl_at_expiration(&Some(&price))
             .unwrap()
             + long_strangle
                 .long_put
-                .pnl_at_expiration(&Some(price))
+                .pnl_at_expiration(&Some(&price))
                 .unwrap();
         assert_eq!(
             long_strangle.calculate_profit_at(price).unwrap(),
