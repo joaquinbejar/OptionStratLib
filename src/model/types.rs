@@ -26,7 +26,7 @@ impl ExpirationDate {
         }
     }
 
-    pub(crate) fn get_date(&self) -> Result<DateTime<Utc>, Box<dyn Error>> {
+    pub fn get_date(&self) -> Result<DateTime<Utc>, Box<dyn Error>> {
         match self {
             ExpirationDate::Days(days) => Ok(Utc::now() + Duration::days((*days).to_i64())),
             ExpirationDate::DateTime(datetime) => Ok(*datetime),

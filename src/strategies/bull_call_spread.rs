@@ -350,7 +350,7 @@ impl Optimizable for BullCallSpread {
 
 impl Profit for BullCallSpread {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(price);
+        let price = Some(&price);
         Ok(
             self.long_call.pnl_at_expiration(&price)?
                 + self.short_call.pnl_at_expiration(&price)?,

@@ -33,17 +33,17 @@ use tracing::{debug, trace};
 /// - `close_fee`: The fee paid to close the position per contract.
 ///
 /// # Methods
-/// - `new(option: Options, premium: f64, date: DateTime<Utc>, open_fee: f64, close_fee: f64) -> Self`
+/// - `new(option: Options, premium: Positive, date: DateTime<Utc>, open_fee: Positive, close_fee: Positive) -> Self`
 ///   Creates a new `Position` instance.
-/// - `total_cost(&self) -> f64`
+/// - `total_cost(&self) -> Result<Positive, PositionError>`
 ///   Calculates the total cost including the premium and open fee.
-/// - `unrealized_pnl(&self, current_price: f64) -> f64`
+/// - `unrealized_pnl(&self, Positive: Positive) -> Result<Decimal, PositionError>`
 ///   Calculates the unrealized profit or loss at the current price.
-/// - `realized_pnl(&self, close_price: f64) -> f64`
+/// - `pnl_at_expiration(&self, price: &Option<Positive>) -> Result<Decimal, Box<dyn Error>>`
 ///   Calculates the realized profit or loss at the closing price.
-/// - `days_held(&self) -> i64`
+/// - `days_held(&self) -> Result<Positive, PositionError>`
 ///   Returns the number of days the position has been held.
-/// - `days_to_expiration(&self) -> f64`
+/// - `days_to_expiration(&self) -> Result<Positive, PositionError>`
 ///   Returns the number of days until the option expires.
 /// - `is_long(&self) -> bool`
 ///   Checks if the position is a long position.
@@ -150,26 +150,26 @@ impl Position {
     pub fn pnl_at_expiration(
         // payoff
         &self,
-        underlying_price: &Option<Positive>,
+        price: &Option<&Positive>,
     ) -> Result<Decimal, Box<dyn Error>> {
-        match underlying_price {
+        match price {
             None => Ok(self.option.intrinsic_value(self.option.underlying_price)?
                 - self.total_cost()?
                 + self.premium_received()?),
-            Some(price) => Ok(self.option.intrinsic_value(*price)? - self.total_cost()?
+            Some(price) => Ok(self.option.intrinsic_value(**price)? - self.total_cost()?
                 + self.premium_received()?),
         }
     }
 
-    pub fn unrealized_pnl(&self, current_option_price: Positive) -> Result<Decimal, PositionError> {
+    pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self.option.side {
-            Side::Long => Ok((current_option_price.to_dec()
+            Side::Long => Ok((price.to_dec()
                 - self.premium.to_dec()
                 - self.open_fee.to_dec()
                 - self.close_fee.to_dec())
                 * self.option.quantity),
             Side::Short => Ok((self.premium.to_dec()
-                - current_option_price.to_dec()
+                - price.to_dec()
                 - self.open_fee.to_dec()
                 - self.close_fee.to_dec())
                 * self.option.quantity),
@@ -307,28 +307,21 @@ impl Greeks for Position {
 impl PnLCalculator for Position {
     fn calculate_pnl(
         &self,
-        date_time: DateTime<Utc>,
-        market_price: Positive,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        let initial_income = self.premium_received()?.to_f64();
-        let unrealized = Some(self.unrealized_pnl(market_price)?.to_f64().unwrap());
-        let initial_cost = self.total_cost()?.to_f64();
-        Ok(PnL::new(
-            None,
-            unrealized,
-            initial_cost,
-            initial_income,
-            date_time,
-        ))
+        self.option
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
-        underlying_price: Option<Positive>,
+        underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        let realized = self.pnl_at_expiration(&underlying_price)?.to_f64().unwrap();
-        let initial_cost = self.total_cost()?.to_f64();
-        let initial_income = self.premium_received()?.to_f64();
+        let realized = self.pnl_at_expiration(&Some(underlying_price))?;
+        let initial_cost = self.total_cost()?;
+        let initial_income = self.premium_received()?;
         let date_time = self.option.expiration_date.get_date()?;
 
         Ok(PnL::new(
@@ -343,7 +336,7 @@ impl PnLCalculator for Position {
 
 impl Profit for Position {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        self.pnl_at_expiration(&Some(price))
+        self.pnl_at_expiration(&Some(&price))
     }
 }
 
@@ -355,7 +348,7 @@ impl Graph for Position {
     fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
             .map(|&price| {
-                self.pnl_at_expiration(&Some(price))
+                self.pnl_at_expiration(&Some(&price))
                     .unwrap()
                     .to_f64()
                     .unwrap()
@@ -389,7 +382,7 @@ mod tests_position {
     use super::*;
     use crate::constants::ZERO;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{pos, spos};
+    use crate::pos;
     use chrono::Duration;
     use rust_decimal_macros::dec;
 
@@ -699,7 +692,7 @@ mod tests_position {
         );
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&spos!(107.0)).unwrap(),
+            position.pnl_at_expiration(&Some(&pos!(107.0))).unwrap(),
             Positive::ZERO,
             "Unrealized PNL for long call is incorrect."
         );
@@ -718,7 +711,7 @@ mod tests_position {
         let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
             position
-                .pnl_at_expiration(&spos!(107.0))
+                .pnl_at_expiration(&Some(&pos!(107.0)))
                 .unwrap()
                 .to_f64()
                 .unwrap(),
@@ -1355,49 +1348,148 @@ mod tests_premium {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use crate::pos;
+    use crate::{assert_decimal_eq, pos, OptionType};
+    use rust_decimal_macros::dec;
 
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {
-        let option = Options {
+        let option = Options::new(
+            OptionType::European,
             side,
+            "AAPL".to_string(),
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),
+            Positive::ONE,
+            pos!(100.0),
+            dec!(0.05),
             option_style,
-            strike_price: pos!(100.0),
-            quantity: pos!(1.0),
-            underlying_price: pos!(100.0),
-            ..Default::default()
-        };
+            pos!(0.01),
+            None,
+        );
 
         Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE)
     }
 
     #[test]
-    fn test_calculate_pnl_long_call() {
+    fn test_calculate_pnl_long_call_no_changes() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let pnl = position.calculate_pnl(Utc::now(), pos!(7.0)).unwrap();
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
 
-        assert_eq!(pnl.unrealized.unwrap(), -0.0); // 7.0 - 7.0 (premium + fees)
+        assert_eq!(pnl.unrealized.unwrap(), Decimal::ZERO); // 5.0 - 2.4933 - 2.0 (fees)
         assert_eq!(position.total_cost().unwrap(), 7.0);
         assert_eq!(position.premium_received().unwrap(), 0.0);
     }
 
     #[test]
-    fn test_calculate_pnl_short_call() {
-        let position = setup_test_position(Side::Short, OptionStyle::Call);
-        let pnl = position.calculate_pnl(Utc::now(), pos!(3.0)).unwrap();
+    fn test_calculate_pnl_long_call_price_up() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(107.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
 
-        assert_eq!(pnl.unrealized.unwrap(), 0.0); // 5.0 - 3.0 - 2.0 (fees)
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(5.2150), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_long_call_vol_down() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.1))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.1352), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_long_call_date_closer() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(3.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.7494), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_no_changes() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_eq!(pnl.unrealized.unwrap(), Decimal::ZERO); // 5.0 - 2.4933 - 2.0 (fees)
         assert_eq!(position.total_cost().unwrap(), 2.0);
         assert_eq!(position.premium_received().unwrap(), 5.0);
     }
 
     #[test]
-    fn test_calculate_pnl_at_expiration_long_call() {
-        let position = setup_test_position(Side::Long, OptionStyle::Call);
+    fn test_calculate_pnl_short_call_price_up() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl_at_expiration(Some(pos!(110.0)))
+            .calculate_pnl(&pos!(107.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
             .unwrap();
 
-        assert_eq!(pnl.realized.unwrap(), 3.0); // 10.0 - 7.0 (total cost)
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-5.2150), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_price_down() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(97.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.3069), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_vol_down() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.1))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.1352), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_vol_up() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.3))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.1386), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_date_closer() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(3.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.7494), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_date_further() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(40.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-0.4224), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_long_call() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position.calculate_pnl_at_expiration(&pos!(110.0)).unwrap();
+
+        assert_eq!(pnl.realized.unwrap(), dec!(3.0)); // 10.0 - 7.0 (total cost)
         assert_eq!(position.total_cost().unwrap(), 7.0);
         assert_eq!(position.premium_received().unwrap(), 0.0);
     }
@@ -1405,30 +1497,11 @@ mod tests_pnl_calculator {
     #[test]
     fn test_calculate_pnl_at_expiration_short_put() {
         let position = setup_test_position(Side::Short, OptionStyle::Put);
-        let pnl = position
-            .calculate_pnl_at_expiration(Some(pos!(90.0)))
-            .unwrap();
+        let pnl = position.calculate_pnl_at_expiration(&pos!(90.0)).unwrap();
 
-        assert_eq!(pnl.realized.unwrap(), -7.0); // -10.0 + 5.0 (premium) - 2.0 (fees)
+        assert_eq!(pnl.realized.unwrap(), dec!(-7.0)); // -10.0 + 5.0 (premium) - 2.0 (fees)
         assert_eq!(position.total_cost().unwrap(), 2.0);
         assert_eq!(position.premium_received().unwrap(), 5.0);
-    }
-
-    #[test]
-    fn test_calculate_pnl_at_expiration_no_underlying() {
-        let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let pnl = position.calculate_pnl_at_expiration(None).unwrap();
-
-        assert_eq!(pnl.realized.unwrap(), -7.0);
-        assert_eq!(position.total_cost().unwrap(), 7.0);
-        assert_eq!(position.premium_received().unwrap(), 0.0);
-    }
-
-    #[test]
-    fn test_calculate_pnl_at_zero_price() {
-        let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let result = position.calculate_pnl(Utc::now(), Positive::ZERO);
-        assert!(result.is_ok());
     }
 }
 

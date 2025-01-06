@@ -437,7 +437,7 @@ impl Optimizable for CallButterfly {
 
 impl Profit for CallButterfly {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(price);
+        let price = Some(&price);
         let long_call_itm_profit = self.long_call.pnl_at_expiration(&price)?;
         let long_call_otm_profit = self.short_call_low.pnl_at_expiration(&price)?;
         let short_call_profit = self.short_call_high.pnl_at_expiration(&price)?;
