@@ -88,7 +88,6 @@ pub trait Graph: Profit {
         title_size: u32,
         canvas_size: (u32, u32),
     ) -> Result<(), Box<dyn Error>> {
-        // Si no hay datos, retornamos un error
         if x_axis_data.is_empty() {
             return Err("Cannot create graph with empty data".into());
         }

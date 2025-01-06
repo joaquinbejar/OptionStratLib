@@ -668,6 +668,144 @@ impl Greeks for CustomStrategy {
 }
 
 #[cfg(test)]
+fn create_test_strategy() -> CustomStrategy {
+    use crate::{OptionStyle, OptionType, Options, Side};
+    use chrono::Utc;
+    use rust_decimal_macros::dec;
+
+    let underlying_price = pos!(2340.0);
+    let underlying_symbol = "GAS".to_string();
+    let expiration = ExpirationDate::Days(pos!(6.0));
+    let implied_volatility = pos!(0.73);
+    let risk_free_rate = dec!(0.05);
+    let dividend_yield = Positive::ZERO;
+
+    // Short Call 1
+    let short_strike_1_strike = pos!(2050.0);
+    let short_strike_1_quantity = pos!(3.0);
+    let short_strike_1_premium = pos!(192.0);
+    let short_strike_1_open_fee = pos!(7.51);
+    let short_strike_1_close_fee = pos!(7.51);
+
+    // Short Call 2
+    let short_strike_2_strike = pos!(2250.0);
+    let short_strike_2_quantity = pos!(2.0);
+    let short_strike_2_premium = pos!(88.0);
+    let short_strike_2_open_fee = pos!(6.68);
+    let short_strike_2_close_fee = pos!(6.68);
+
+    // Short Put
+    let short_put_strike = pos!(2400.0);
+    let short_put_premium = pos!(55.0);
+    let short_put_quantity = pos!(1.0);
+    let short_put_open_fee = pos!(6.68);
+    let short_put_close_fee = pos!(6.68);
+
+    let short_strike_1 = Position::new(
+        Options::new(
+            OptionType::European,
+            Side::Short,
+            underlying_symbol.clone(),
+            short_strike_1_strike,
+            expiration.clone(),
+            implied_volatility,
+            short_strike_1_quantity,
+            underlying_price,
+            risk_free_rate,
+            OptionStyle::Call,
+            dividend_yield,
+            None,
+        ),
+        short_strike_1_premium,
+        Utc::now(),
+        short_strike_1_open_fee,
+        short_strike_1_close_fee,
+    );
+
+    let short_strike_2 = Position::new(
+        Options::new(
+            OptionType::European,
+            Side::Short,
+            underlying_symbol.clone(),
+            short_strike_2_strike,
+            expiration.clone(),
+            implied_volatility,
+            short_strike_2_quantity,
+            underlying_price,
+            risk_free_rate,
+            OptionStyle::Call,
+            dividend_yield,
+            None,
+        ),
+        short_strike_2_premium,
+        Utc::now(),
+        short_strike_2_open_fee,
+        short_strike_2_close_fee,
+    );
+
+    let short_put = Position::new(
+        Options::new(
+            OptionType::European,
+            Side::Short,
+            underlying_symbol.clone(),
+            short_put_strike,
+            expiration.clone(),
+            implied_volatility,
+            short_put_quantity,
+            underlying_price,
+            risk_free_rate,
+            OptionStyle::Put,
+            dividend_yield,
+            None,
+        ),
+        short_put_premium,
+        Utc::now(),
+        short_put_open_fee,
+        short_put_close_fee,
+    );
+
+    let extra_strike = pos!(2160.0);
+    let extra_quantity = pos!(2.5);
+    let extra_premium = pos!(21.0);
+    let extra_open_fee = pos!(4.91);
+    let extra_close_fee = pos!(4.91);
+
+    let extra = Position::new(
+        Options::new(
+            OptionType::European,
+            Side::Short,
+            underlying_symbol.clone(),
+            extra_strike,
+            expiration.clone(),
+            implied_volatility,
+            extra_quantity,
+            underlying_price,
+            risk_free_rate,
+            OptionStyle::Put,
+            dividend_yield,
+            None,
+        ),
+        extra_premium,
+        Utc::now(),
+        extra_open_fee,
+        extra_close_fee,
+    );
+
+    let positions: Vec<Position> = vec![short_strike_1, short_strike_2, short_put, extra];
+
+    CustomStrategy::new(
+        "Custom Strategy".to_string(),
+        underlying_symbol,
+        "Example of a custom strategy".to_string(),
+        underlying_price,
+        positions,
+        pos!(0.01),
+        200,
+        pos!(0.01),
+    )
+}
+
+#[cfg(test)]
 mod tests_custom_strategy {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionType};
@@ -680,74 +818,26 @@ mod tests_custom_strategy {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
-    fn create_test_strategy() -> CustomStrategy {
-        let underlying_price = pos!(5780.0);
-        let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(pos!(60.0));
-        let implied_volatility = pos!(0.18);
-        let risk_free_rate = dec!(0.05);
-        let dividend_yield = Positive::ZERO;
-
-        // Short Call
-        let short_strike = pos!(5800.0);
-        let short_quantity = pos!(2.0);
-        let premium_short = pos!(53.04);
-        let open_fee_short = pos!(0.78);
-        let close_fee_short = pos!(0.78);
-
-        let short_call = Position::new(
-            Options::new(
-                OptionType::European,
-                Side::Short,
-                underlying_symbol.clone(),
-                short_strike,
-                expiration.clone(),
-                implied_volatility,
-                short_quantity,
-                underlying_price,
-                risk_free_rate,
-                OptionStyle::Call,
-                dividend_yield,
-                None,
-            ),
-            premium_short,
-            Utc::now(),
-            open_fee_short,
-            close_fee_short,
-        );
-
-        CustomStrategy::new(
-            "Test Strategy".to_string(),
-            "AAPL".to_string(),
-            "Test Description".to_string(),
-            pos!(100.0), // underlying_price
-            vec![short_call],
-            pos!(1e-2), // epsilon
-            2,          // max_iterations
-            pos!(0.1),  // step_by
-        )
-    }
-
     #[test]
     fn test_new_custom_strategy() {
         let strategy = create_test_strategy();
-        assert_eq!(strategy.name, "Test Strategy");
-        assert_eq!(strategy.symbol, "AAPL");
+        assert_eq!(strategy.name, "Custom Strategy");
+        assert_eq!(strategy.symbol, "GAS");
         assert_eq!(strategy.kind, StrategyType::Custom);
-        assert_eq!(strategy.description, "Test Description");
-        assert_eq!(strategy.underlying_price, 100.0);
+        assert_eq!(strategy.description, "Example of a custom strategy");
+        assert_eq!(strategy.underlying_price, 2340.0);
         assert!(!strategy.break_even_points.is_empty());
-        assert_eq!(strategy.positions.len(), 1);
+        assert_eq!(strategy.positions.len(), 4);
     }
 
     #[test]
     fn test_calculate_break_even_points_single_call() {
         setup_logger();
         let strategy = create_test_strategy();
-        assert_eq!(strategy.break_even_points.len(), 1);
+        assert_eq!(strategy.break_even_points.len(), 2);
         assert_relative_eq!(
             strategy.break_even_points[0].to_f64(),
-            5851.48,
+            2014.34,
             epsilon = strategy.epsilon.to_f64()
         );
     }
@@ -791,10 +881,10 @@ mod tests_custom_strategy {
         );
 
         strategy.add_position(&position).expect("Invalid position");
-        assert_eq!(strategy.break_even_points.len(), 1);
+        assert_eq!(strategy.break_even_points.len(), 2);
         assert_relative_eq!(
             strategy.break_even_points[0].to_f64(),
-            5866.36,
+            2039.08285,
             epsilon = strategy.epsilon.to_f64()
         );
     }
@@ -866,16 +956,16 @@ mod tests_custom_strategy {
         );
         strategy.add_position(&position).expect("Invalid position");
 
-        assert_eq!(strategy.positions.len(), 3);
+        assert_eq!(strategy.positions.len(), 6);
         assert_eq!(strategy.break_even_points.len(), 2);
         assert_relative_eq!(
             strategy.break_even_points[0].to_f64(),
-            5766.85,
+            2048.5714,
             epsilon = strategy.epsilon.to_f64()
         );
         assert_relative_eq!(
             strategy.break_even_points[1].to_f64(),
-            5833.15,
+            2190.0,
             epsilon = strategy.epsilon.to_f64()
         );
     }
@@ -900,7 +990,102 @@ mod tests_custom_strategy {
         ));
         strategy.calculate_break_even_points();
 
-        assert_eq!(strategy.break_even_points.len(), 1);
+        assert_eq!(strategy.break_even_points.len(), 0);
+    }
+
+    // En mod tests_custom_strategy
+    #[test]
+    fn test_new_with_empty_positions() {
+        let result = std::panic::catch_unwind(|| {
+            CustomStrategy::new(
+                "Test Strategy".to_string(),
+                "TEST".to_string(),
+                "Test Description".to_string(),
+                pos!(100.0),
+                vec![],
+                pos!(0.001),
+                100,
+                pos!(1.0),
+            )
+        });
+        assert!(result.is_err()); // Debería paniquear por positions vacías
+    }
+
+    #[test]
+    fn test_add_position_invalid_strategy() {
+        let mut strategy = create_test_strategy();
+        let invalid_position = Position::new(
+            create_sample_option(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(0.0), // precio inválido
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            pos!(5.0),
+            Default::default(),
+            Positive::ZERO,
+            Positive::ZERO,
+        );
+
+        let result = strategy.add_position(&invalid_position);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_profit_ratio_missing_points() {
+        let mut strategy = create_test_strategy();
+        strategy.max_profit_point = None;
+        let result = strategy.profit_ratio();
+        assert!(result.is_err());
+
+        strategy.max_profit_point = Some((pos!(100.0), 50.0));
+        strategy.max_loss_point = None;
+        let result = strategy.profit_ratio();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_calculate_break_even_points_edge_cases() {
+        let strategy = create_test_strategy();
+
+        let result = strategy.refine_break_even_point(pos!(0.0001));
+        assert!(result.is_some());
+
+        let result = strategy.refine_break_even_point(pos!(100.0));
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_add_duplicate_break_even_point() {
+        let mut strategy = create_test_strategy();
+        let point = pos!(100.0);
+
+        strategy.add_unique_break_even(point);
+        let initial_len = strategy.break_even_points.len();
+
+        strategy.add_unique_break_even(point);
+        assert_eq!(strategy.break_even_points.len(), initial_len);
+    }
+
+    #[test]
+    fn test_graph_implementation() {
+        let strategy = create_test_strategy();
+
+        // Test title
+        let title = strategy.title();
+        assert!(title.contains(&strategy.name));
+        assert!(title.contains(&strategy.symbol));
+
+        // Test vertical lines
+        let lines = strategy.get_vertical_lines();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].x_coordinate, strategy.underlying_price.to_f64());
+
+        // Test points
+        let points = strategy.get_points();
+        assert!(!points.is_empty());
     }
 }
 
@@ -914,54 +1099,6 @@ mod tests_max_profit {
     use crate::Options;
     use chrono::Utc;
     use rust_decimal_macros::dec;
-
-    fn create_test_strategy() -> CustomStrategy {
-        let underlying_price = pos!(5780.0);
-        let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(pos!(60.0));
-        let implied_volatility = pos!(0.18);
-        let risk_free_rate = dec!(0.05);
-        let dividend_yield = Positive::ZERO;
-
-        // Short Call
-        let short_strike = pos!(5800.0);
-        let short_quantity = pos!(2.0);
-        let premium_short = pos!(53.04);
-        let open_fee_short = pos!(0.78);
-        let close_fee_short = pos!(0.78);
-
-        let short_call = Position::new(
-            Options::new(
-                OptionType::European,
-                Side::Short,
-                underlying_symbol.clone(),
-                short_strike,
-                expiration.clone(),
-                implied_volatility,
-                short_quantity,
-                underlying_price,
-                risk_free_rate,
-                OptionStyle::Call,
-                dividend_yield,
-                None,
-            ),
-            premium_short,
-            Utc::now(),
-            open_fee_short,
-            close_fee_short,
-        );
-
-        CustomStrategy::new(
-            "Test Strategy".to_string(),
-            "AAPL".to_string(),
-            "Test Description".to_string(),
-            pos!(100.0), // underlying_price
-            vec![short_call],
-            pos!(1e-2), // epsilon
-            10,         // max_iterations
-            pos!(0.1),  // step_by
-        )
-    }
 
     #[test]
     fn test_max_profit_single_long_call() {
@@ -1052,54 +1189,6 @@ mod tests_max_loss {
     use crate::Options;
     use chrono::Utc;
     use rust_decimal_macros::dec;
-
-    fn create_test_strategy() -> CustomStrategy {
-        let underlying_price = pos!(5780.0);
-        let underlying_symbol = "SP500".to_string();
-        let expiration = ExpirationDate::Days(pos!(60.0));
-        let implied_volatility = pos!(0.18);
-        let risk_free_rate = dec!(0.05);
-        let dividend_yield = Positive::ZERO;
-
-        // Short Call
-        let short_strike = pos!(5800.0);
-        let short_quantity = pos!(2.0);
-        let premium_short = pos!(53.04);
-        let open_fee_short = pos!(0.78);
-        let close_fee_short = pos!(0.78);
-
-        let short_call = Position::new(
-            Options::new(
-                OptionType::European,
-                Side::Short,
-                underlying_symbol.clone(),
-                short_strike,
-                expiration.clone(),
-                implied_volatility,
-                short_quantity,
-                underlying_price,
-                risk_free_rate,
-                OptionStyle::Call,
-                dividend_yield,
-                None,
-            ),
-            premium_short,
-            Utc::now(),
-            open_fee_short,
-            close_fee_short,
-        );
-
-        CustomStrategy::new(
-            "Test Strategy".to_string(),
-            "AAPL".to_string(),
-            "Test Description".to_string(),
-            pos!(100.0), // underlying_price
-            vec![short_call],
-            pos!(1e-16), // epsilon
-            1000,        // max_iterations
-            pos!(0.1),   // step_by
-        )
-    }
 
     #[test]
     fn test_max_loss_single_long_call() {
@@ -1459,7 +1548,6 @@ mod tests_greeks {
 
     const EPSILON: Decimal = dec!(1e-10);
 
-    // Helper function to create a test position
     fn create_test_position(strike: Positive, side: Side, option_style: OptionStyle) -> Position {
         Position::new(
             Options::new(
@@ -1632,279 +1720,11 @@ mod tests_greeks {
 mod tests_custom_strategy_probability {
     use super::*;
     use crate::strategies::probabilities::utils::PriceTrend;
-    use crate::{assert_pos_relative_eq, pos, OptionStyle, OptionType, Options, Side};
-    use chrono::Utc;
+    use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
-    use rust_decimal_macros::dec;
-
-    fn create_test_strategy() -> CustomStrategy {
-        let underlying_price = pos!(2340.0);
-        let underlying_symbol = "GAS".to_string();
-        let expiration = ExpirationDate::Days(pos!(6.0));
-        let implied_volatility = pos!(0.73);
-        let risk_free_rate = dec!(0.05);
-        let dividend_yield = Positive::ZERO;
-
-        // Short Call 1
-        let short_strike_1_strike = pos!(2050.0);
-        let short_strike_1_quantity = pos!(3.0);
-        let short_strike_1_premium = pos!(192.0);
-        let short_strike_1_open_fee = pos!(7.51);
-        let short_strike_1_close_fee = pos!(7.51);
-
-        // Short Call 2
-        let short_strike_2_strike = pos!(2250.0);
-        let short_strike_2_quantity = pos!(2.0);
-        let short_strike_2_premium = pos!(88.0);
-        let short_strike_2_open_fee = pos!(6.68);
-        let short_strike_2_close_fee = pos!(6.68);
-
-        // Short Put
-        let short_put_strike = pos!(2400.0);
-        let short_put_premium = pos!(55.0);
-        let short_put_quantity = pos!(1.0);
-        let short_put_open_fee = pos!(6.68);
-        let short_put_close_fee = pos!(6.68);
-
-        let short_strike_1 = Position::new(
-            Options::new(
-                OptionType::European,
-                Side::Short,
-                underlying_symbol.clone(),
-                short_strike_1_strike,
-                expiration.clone(),
-                implied_volatility,
-                short_strike_1_quantity,
-                underlying_price,
-                risk_free_rate,
-                OptionStyle::Call,
-                dividend_yield,
-                None,
-            ),
-            short_strike_1_premium,
-            Utc::now(),
-            short_strike_1_open_fee,
-            short_strike_1_close_fee,
-        );
-
-        let short_strike_2 = Position::new(
-            Options::new(
-                OptionType::European,
-                Side::Short,
-                underlying_symbol.clone(),
-                short_strike_2_strike,
-                expiration.clone(),
-                implied_volatility,
-                short_strike_2_quantity,
-                underlying_price,
-                risk_free_rate,
-                OptionStyle::Call,
-                dividend_yield,
-                None,
-            ),
-            short_strike_2_premium,
-            Utc::now(),
-            short_strike_2_open_fee,
-            short_strike_2_close_fee,
-        );
-
-        let short_put = Position::new(
-            Options::new(
-                OptionType::European,
-                Side::Short,
-                underlying_symbol.clone(),
-                short_put_strike,
-                expiration.clone(),
-                implied_volatility,
-                short_put_quantity,
-                underlying_price,
-                risk_free_rate,
-                OptionStyle::Put,
-                dividend_yield,
-                None,
-            ),
-            short_put_premium,
-            Utc::now(),
-            short_put_open_fee,
-            short_put_close_fee,
-        );
-
-        let extra_strike = pos!(2160.0);
-        let extra_quantity = pos!(2.5);
-        let extra_premium = pos!(21.0);
-        let extra_open_fee = pos!(4.91);
-        let extra_close_fee = pos!(4.91);
-
-        let extra = Position::new(
-            Options::new(
-                OptionType::European,
-                Side::Short,
-                underlying_symbol.clone(),
-                extra_strike,
-                expiration.clone(),
-                implied_volatility,
-                extra_quantity,
-                underlying_price,
-                risk_free_rate,
-                OptionStyle::Put,
-                dividend_yield,
-                None,
-            ),
-            extra_premium,
-            Utc::now(),
-            extra_open_fee,
-            extra_close_fee,
-        );
-
-        let positions: Vec<Position> = vec![short_strike_1, short_strike_2, short_put, extra];
-
-        CustomStrategy::new(
-            "Custom Strategy".to_string(),
-            underlying_symbol,
-            "Example of a custom strategy".to_string(),
-            underlying_price,
-            positions,
-            pos!(0.01),
-            200,
-            pos!(0.01),
-        )
-    }
 
     #[test]
     fn test_get_profit_loss_zones() {
-        fn create_test_strategy() -> CustomStrategy {
-            let underlying_price = pos!(2340.0);
-            let underlying_symbol = "GAS".to_string();
-            let expiration = ExpirationDate::Days(pos!(6.0));
-            let implied_volatility = pos!(0.73);
-            let risk_free_rate = dec!(0.05);
-            let dividend_yield = Positive::ZERO;
-
-            // Short Call 1
-            let short_strike_1_strike = pos!(2050.0);
-            let short_strike_1_quantity = pos!(3.0);
-            let short_strike_1_premium = pos!(192.0);
-            let short_strike_1_open_fee = pos!(7.51);
-            let short_strike_1_close_fee = pos!(7.51);
-
-            // Short Call 2
-            let short_strike_2_strike = pos!(2250.0);
-            let short_strike_2_quantity = pos!(2.0);
-            let short_strike_2_premium = pos!(88.0);
-            let short_strike_2_open_fee = pos!(6.68);
-            let short_strike_2_close_fee = pos!(6.68);
-
-            // Short Put
-            let short_put_strike = pos!(2400.0);
-            let short_put_premium = pos!(55.0);
-            let short_put_quantity = pos!(1.0);
-            let short_put_open_fee = pos!(6.68);
-            let short_put_close_fee = pos!(6.68);
-
-            let short_strike_1 = Position::new(
-                Options::new(
-                    OptionType::European,
-                    Side::Short,
-                    underlying_symbol.clone(),
-                    short_strike_1_strike,
-                    expiration.clone(),
-                    implied_volatility,
-                    short_strike_1_quantity,
-                    underlying_price,
-                    risk_free_rate,
-                    OptionStyle::Call,
-                    dividend_yield,
-                    None,
-                ),
-                short_strike_1_premium,
-                Utc::now(),
-                short_strike_1_open_fee,
-                short_strike_1_close_fee,
-            );
-
-            let short_strike_2 = Position::new(
-                Options::new(
-                    OptionType::European,
-                    Side::Short,
-                    underlying_symbol.clone(),
-                    short_strike_2_strike,
-                    expiration.clone(),
-                    implied_volatility,
-                    short_strike_2_quantity,
-                    underlying_price,
-                    risk_free_rate,
-                    OptionStyle::Call,
-                    dividend_yield,
-                    None,
-                ),
-                short_strike_2_premium,
-                Utc::now(),
-                short_strike_2_open_fee,
-                short_strike_2_close_fee,
-            );
-
-            let short_put = Position::new(
-                Options::new(
-                    OptionType::European,
-                    Side::Short,
-                    underlying_symbol.clone(),
-                    short_put_strike,
-                    expiration.clone(),
-                    implied_volatility,
-                    short_put_quantity,
-                    underlying_price,
-                    risk_free_rate,
-                    OptionStyle::Put,
-                    dividend_yield,
-                    None,
-                ),
-                short_put_premium,
-                Utc::now(),
-                short_put_open_fee,
-                short_put_close_fee,
-            );
-
-            let extra_strike = pos!(2160.0);
-            let extra_quantity = pos!(2.5);
-            let extra_premium = pos!(21.0);
-            let extra_open_fee = pos!(4.91);
-            let extra_close_fee = pos!(4.91);
-
-            let extra = Position::new(
-                Options::new(
-                    OptionType::European,
-                    Side::Short,
-                    underlying_symbol.clone(),
-                    extra_strike,
-                    expiration.clone(),
-                    implied_volatility,
-                    extra_quantity,
-                    underlying_price,
-                    risk_free_rate,
-                    OptionStyle::Put,
-                    dividend_yield,
-                    None,
-                ),
-                extra_premium,
-                Utc::now(),
-                extra_open_fee,
-                extra_close_fee,
-            );
-
-            let positions: Vec<Position> = vec![short_strike_1, short_strike_2, short_put, extra];
-
-            CustomStrategy::new(
-                "Custom Strategy".to_string(),
-                underlying_symbol,
-                "Example of a custom strategy".to_string(),
-                underlying_price,
-                positions,
-                pos!(0.01),
-                200,
-                pos!(0.01),
-            )
-        }
-
         let strategy = create_test_strategy();
         let (profit_zones, loss_zones) = strategy
             .get_profit_loss_zones(&strategy.break_even_points)
