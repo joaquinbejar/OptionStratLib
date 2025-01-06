@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dividend_yield = Positive::ZERO;
 
     // Short Call 1
-    let short_strike_1_strike = pos!(2100.0);
+    let short_strike_1_strike = pos!(2050.0);
     let short_strike_1_quantity = pos!(3.0);
     let short_strike_1_premium = pos!(192.0);
     let short_strike_1_open_fee = pos!(7.51);
@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let short_strike_2_close_fee = pos!(6.68);
 
     // Short Put
-    let short_put_strike = pos!(2500.0);
+    let short_put_strike = pos!(2400.0);
     let short_put_premium = pos!(55.0);
     let short_put_quantity = pos!(1.0);
     let short_put_open_fee = pos!(6.68);
