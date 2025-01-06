@@ -5,7 +5,7 @@ use optionstratlib::strategies::bull_put_spread::BullPutSpread;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, f2p};
+use optionstratlib::{assert_decimal_eq, pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -14,24 +14,24 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the BullPutSpread strategy
-    let underlying_price = f2p!(5781.88);
+    let underlying_price = pos!(5781.88);
 
     let strategy = BullPutSpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        f2p!(5750.0),     // long_strike_itm
-        f2p!(5920.0),     // short_strike
-        ExpirationDate::Days(2.0),
-        0.18,      // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(2.0), // long quantity
-        15.04,     // premium_long
-        89.85,     // premium_short
-        0.78,      // open_fee_long
-        0.78,      // open_fee_long
-        0.73,      // close_fee_long
-        0.73,      // close_fee_short
+        pos!(5750.0),     // long_strike_itm
+        pos!(5920.0),     // short_strike
+        ExpirationDate::Days(pos!(2.0)),
+        pos!(0.18),     // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(2.0),      // long quantity
+        pos!(15.04),    // premium_long
+        pos!(89.85),    // premium_short
+        pos!(0.78),     // open_fee_long
+        pos!(0.78),     // open_fee_long
+        pos!(0.73),     // close_fee_long
+        pos!(0.73),     // close_fee_short
     );
 
     let greeks = strategy.greeks();
@@ -65,8 +65,8 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: f2p!(3.829496711654006),
-            strike: f2p!(5750.0),
+            quantity: pos!(3.829496711654006),
+            strike: pos!(5750.0),
             option_type: OptionStyle::Put
         }
     );

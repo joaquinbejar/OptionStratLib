@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
+use crate::Positive;
 use plotters::style::RGBColor;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -14,15 +15,14 @@ pub const ZERO: f64 = 0.0;
 #[allow(dead_code)]
 pub(crate) const SECONDS_IN_A_DAY: i64 = 86400;
 
-#[allow(dead_code)]
-pub(crate) const DAYS_IN_A_YEAR: i64 = 365;
+pub(crate) const DAYS_IN_A_YEAR: Positive = Positive(dec!(365.0));
 
 pub(crate) const TOLERANCE: f64 = 1e-8;
 
 pub const EPSILON: Decimal = dec!(1e-16);
 
-pub(crate) const MIN_VOLATILITY: f64 = 1e-16;
-pub(crate) const MAX_VOLATILITY: f64 = 100.0; // 10000%
+pub(crate) const MIN_VOLATILITY: Positive = Positive(dec!(1e-16));
+pub(crate) const MAX_VOLATILITY: Positive = Positive::HUNDRED;
 
 pub(crate) const DARK_GREEN: RGBColor = RGBColor(0, 150, 0);
 pub(crate) const DARK_RED: RGBColor = RGBColor(220, 0, 0);

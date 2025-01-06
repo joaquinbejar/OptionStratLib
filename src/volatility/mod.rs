@@ -38,25 +38,26 @@
 //! ### Implied Volatility Calculation
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::volatility::implied_volatility;
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //!
 //! let mut option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     "STOCK".to_string(),
-//!     f2p!(100.0),              // Strike price
-//!     ExpirationDate::Days(30.0),
-//!     0.2,                      // Initial volatility guess
-//!     Positive::ONE,                 // Quantity
-//!     f2p!(100.0),              // Current price
-//!     0.05,                     // Risk-free rate
+//!     pos!(100.0),   // Strike price
+//!     ExpirationDate::Days(pos!(30.0)),
+//!     pos!(0.2),   // Initial volatility guess
+//!     Positive::ONE,   // Quantity
+//!     pos!(100.0),   // Current price
+//!     dec!(0.05),   // Risk-free rate
 //!     OptionStyle::Call,
-//!     0.0,                      // Dividend yield
-//!     None,                     // Exotic parameters
+//!     Positive::ZERO,   // Dividend yield
+//!     None,   // Exotic parameters
 //! );
 //!
 //! let market_price = 3.0;
@@ -89,7 +90,7 @@
 //! use optionstratlib::volatility::interpolate_volatility_surface;
 //!
 //! let vol_surface = vec![
-//!     (100.0, 0.5, 0.2),  // (Strike, Time to Expiry, Volatility)
+//!     (100.0, 0.5, 0.2),   // (Strike, Time to Expiry, Volatility)
 //!     (100.0, 1.0, 0.25),
 //!     (110.0, 0.5, 0.22),
 //!     (110.0, 1.0, 0.27),

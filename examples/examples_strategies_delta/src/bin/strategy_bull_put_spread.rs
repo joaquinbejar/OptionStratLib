@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::bull_put_spread::BullPutSpread;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::Strategies;
@@ -11,30 +11,31 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let underlying_price = f2p!(5801.88);
+    let underlying_price = pos!(5801.88);
 
     let strategy = BullPutSpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        f2p!(5750.0),     // long_strike
-        f2p!(5920.0),     // short_strike
-        ExpirationDate::Days(2.0),
-        0.18,      // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(1.0), // long quantity
-        15.04,     // premium_long
-        89.85,     // premium_short
-        0.78,      // open_fee_long
-        0.78,      // open_fee_long
-        0.73,      // close_fee_long
-        0.73,      // close_fee_short
+        pos!(5750.0),     // long_strike
+        pos!(5920.0),     // short_strike
+        ExpirationDate::Days(pos!(2.0)),
+        pos!(0.18),     // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // long quantity
+        pos!(15.04),    // premium_long
+        pos!(89.85),    // premium_short
+        pos!(0.78),     // open_fee_long
+        pos!(0.78),     // open_fee_long
+        pos!(0.73),     // close_fee_long
+        pos!(0.73),     // close_fee_short
     );
 
     info!("Title: {}", strategy.title());

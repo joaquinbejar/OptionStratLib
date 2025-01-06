@@ -5,7 +5,7 @@ use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, f2p};
+use optionstratlib::{assert_decimal_eq, pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -14,23 +14,28 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the LongButterflySpread strategy
-    let underlying_price = f2p!(5795.88);
+    let underlying_price = pos!(5795.88);
 
     let strategy = LongButterflySpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        f2p!(5710.0),     // long_strike_itm
-        f2p!(5780.0),     // short_strike
-        f2p!(5850.0),     // long_strike_otm
-        ExpirationDate::Days(2.0),
-        0.18,      // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(1.0), // long quantity
-        113.30,    // premium_long_low
-        64.20,     // premium_short
-        31.65,     // premium_long_high
-        0.07,      // fees
+        pos!(5710.0),     // long_strike_itm
+        pos!(5780.0),     // short_strike
+        pos!(5850.0),     // long_strike_otm
+        ExpirationDate::Days(pos!(2.0)),
+        pos!(0.18),     // implied_volatility
+        dec!(0.05),     // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // long quantity
+        pos!(113.3),    // premium_long_low
+        pos!(64.20),    // premium_short
+        pos!(31.65),    // premium_long_high
+        pos!(0.07),     // fees
+        pos!(0.05),     // fees
+        pos!(0.03),     // fees
+        pos!(0.07),     // fees
+        pos!(0.05),     // fees
+        pos!(0.03),     // fees
     );
 
     let greeks = strategy.greeks();
@@ -64,8 +69,8 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         strategy.suggest_delta_adjustments()[0],
         BuyOptions {
-            quantity: f2p!(0.06699841451825994),
-            strike: f2p!(5710.0),
+            quantity: pos!(0.06699841451825994),
+            strike: pos!(5710.0),
             option_type: OptionStyle::Call
         }
     );

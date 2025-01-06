@@ -34,17 +34,19 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use std::error::Error;
 //! use optionstratlib::pnl::utils::{PnL, PnLCalculator};
 //! use chrono::{DateTime, Utc};
-//! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use rust_decimal_macros::dec;
+//! use optionstratlib::{ExpirationDate, Positive};
+//! use optionstratlib::pos;
 //!
 //! // Create a new PnL instance
 //! let pnl = PnL::new(
-//!     Some(100.0),  // Realized PnL
-//!     Some(50.0),   // Unrealized PnL
-//!     25.0,         // Initial costs
-//!     75.0,         // Initial income
+//!     Some(dec!(100.0)),   // Realized PnL
+//!     Some(dec!(50.0)),   // Unrealized PnL
+//!     pos!(25.0),   // Initial costs
+//!     pos!(75.0),   // Initial income
 //!     Utc::now(),   // Calculation timestamp
 //! );
 //!
@@ -52,15 +54,35 @@
 //! struct MyOption;
 //!
 //! impl PnLCalculator for MyOption {
-//!     fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: Positive) -> PnL {
-//!         // Implement PnL calculation logic
-//!         PnL::new(None, Some(market_price.to_f64()), 10.0, 0.0, date_time)
-//!     }
 //!
-//!     fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> PnL {
-//!         // Implement expiration PnL logic
-//!         PnL::new(Some(100.0), None, 10.0, 0.0, Utc::now())
-//!     }
+//!  fn calculate_pnl(
+//!      &self,
+//!      market_price: &Positive,
+//!      expiration_date: ExpirationDate,
+//!      _implied_volatility: &Positive,
+//!  ) -> Result<PnL, Box<dyn Error>> {
+//!      Ok(PnL::new(
+//!          Some(market_price.into()),
+//!          None,
+//!          pos!(10.0),
+//!          pos!(20.0),
+//!          expiration_date.get_date()?,
+//!      ))
+//!  }
+//!  
+//!  fn calculate_pnl_at_expiration(
+//!      &self,
+//!      underlying_price: &Positive,
+//!  ) -> Result<PnL, Box<dyn Error>> {
+//!      let underlying_price = underlying_price.to_dec();
+//!      Ok(PnL::new(
+//!          Some(underlying_price),
+//!          None,
+//!          pos!(10.0),
+//!          pos!(20.0),
+//!          Utc::now(),
+//!      ))
+//!  }
 //! }
 //! ```
 //!

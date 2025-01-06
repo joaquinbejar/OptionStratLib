@@ -3,9 +3,10 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-
-use crate::f2p;
 use crate::model::position::Position;
+use crate::{pos, Positive};
+use num_traits::ToPrimitive;
+use rust_decimal::Decimal;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -68,7 +69,7 @@ impl SPANMargin {
         ]
     }
 
-    fn generate_volatility_scenarios(&self, implied_volatility: f64) -> Vec<f64> {
+    fn generate_volatility_scenarios(&self, implied_volatility: Positive) -> Vec<Positive> {
         vec![
             implied_volatility * (1.0 - self.volatility_scan_range),
             implied_volatility,
@@ -80,19 +81,25 @@ impl SPANMargin {
         &self,
         position: &Position,
         scenario_price: f64,
-        scenario_volatility: f64,
+        scenario_volatility: Positive,
     ) -> f64 {
         let option = &position.option;
-        let current_price = option.calculate_price_black_scholes();
+        let current_price = option.calculate_price_black_scholes().unwrap();
 
         let mut scenario_option = option.clone();
-        scenario_option.underlying_price = f2p!(scenario_price);
+        scenario_option.underlying_price = pos!(scenario_price);
         scenario_option.implied_volatility = scenario_volatility;
-        let scenario_price = scenario_option.calculate_price_black_scholes();
+        let scenario_price = scenario_option.calculate_price_black_scholes().unwrap();
 
-        (scenario_price - current_price)
+        ((scenario_price - current_price)
             * option.quantity
-            * if option.is_short() { -1.0 } else { 1.0 }
+            * if option.is_short() {
+                Decimal::NEGATIVE_ONE
+            } else {
+                Decimal::ONE
+            })
+        .to_f64()
+        .unwrap()
     }
 
     fn calculate_short_option_minimum(&self, position: &Position) -> f64 {
@@ -108,9 +115,9 @@ impl SPANMargin {
 #[cfg(test)]
 mod tests_span {
     use super::*;
-    use crate::f2p;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use chrono::Utc;
     use tracing::info;
@@ -121,18 +128,18 @@ mod tests_span {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            f2p!(155.0),
-            f2p!(1.0),
-            f2p!(150.0),
-            0.2,
+            pos!(155.0),
+            pos!(1.0),
+            pos!(150.0),
+            pos!(0.2),
         );
 
         let position = Position {
             option,
-            premium: 5.0,
+            premium: pos!(5.0),
             date: Utc::now(),
-            open_fee: 0.5,
-            close_fee: 0.5,
+            open_fee: pos!(0.5),
+            close_fee: pos!(0.5),
         };
 
         let span = SPANMargin::new(

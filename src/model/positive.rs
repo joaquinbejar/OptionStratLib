@@ -21,26 +21,12 @@ pub struct Positive(pub(crate) Decimal);
 #[macro_export]
 macro_rules! pos {
     ($val:expr) => {
-        Positive::new($val).unwrap()
+        $crate::Positive::new($val).unwrap()
     };
 }
 
 #[macro_export]
 macro_rules! spos {
-    ($val:expr) => {
-        Some(Positive::new($val).unwrap())
-    };
-}
-
-#[macro_export]
-macro_rules! f2p {
-    ($val:expr) => {
-        $crate::Positive::new($val).unwrap_or($crate::Positive::ZERO)
-    };
-}
-
-#[macro_export]
-macro_rules! sf2p {
     ($val:expr) => {
         Some($crate::Positive::new($val).unwrap())
     };
@@ -93,6 +79,10 @@ impl Positive {
         self.0.to_f64().unwrap()
     }
 
+    pub fn to_i64(&self) -> i64 {
+        self.0.to_i64().unwrap()
+    }
+
     pub fn max(self, other: Positive) -> Positive {
         if self.0 > other.0 {
             self
@@ -117,12 +107,16 @@ impl Positive {
         Positive(self.0.powi(n))
     }
 
+    pub(crate) fn powd(&self, p0: Decimal) -> Positive {
+        Positive(self.0.powd(p0))
+    }
+
     pub fn round(&self) -> Positive {
         Positive(self.0.round())
     }
 
     pub fn sqrt(&self) -> Positive {
-        Positive(self.0.ln())
+        Positive(self.0.sqrt().unwrap())
     }
 
     pub fn ln(&self) -> Positive {
@@ -131,6 +125,10 @@ impl Positive {
 
     pub fn round_to(&self, decimal_places: u32) -> Positive {
         Positive(self.0.round_dp(decimal_places))
+    }
+
+    pub fn exp(&self) -> Positive {
+        Positive(self.0.exp())
     }
 }
 
@@ -254,6 +252,14 @@ impl Div<f64> for Positive {
     }
 }
 
+impl Div<f64> for &Positive {
+    type Output = Positive;
+
+    fn div(self, rhs: f64) -> Positive {
+        (self.to_f64() / rhs).into()
+    }
+}
+
 impl Sub<f64> for Positive {
     type Output = Positive;
 
@@ -360,7 +366,7 @@ impl Sub for Positive {
 impl Div for Positive {
     type Output = Positive;
 
-    fn div(self, other: Positive) -> Positive {
+    fn div(self, other: Positive) -> Self::Output {
         Positive(self.0 / other.0)
     }
 }
@@ -654,9 +660,9 @@ mod tests_positive_decimal_extended {
 
     #[test]
     fn test_positive_decimal_ordering() {
-        let a = f2p!(1.0);
-        let b = f2p!(2.0);
-        let c = f2p!(2.0);
+        let a = pos!(1.0);
+        let b = pos!(2.0);
+        let c = pos!(2.0);
 
         assert!(a < b);
         assert!(b > a);
@@ -666,8 +672,8 @@ mod tests_positive_decimal_extended {
 
     #[test]
     fn test_positive_decimal_add_assign() {
-        let mut a = f2p!(1.0);
-        let b = f2p!(2.0);
+        let mut a = pos!(1.0);
+        let b = pos!(2.0);
         a += b;
         assert_eq!(a.value(), dec!(3.0));
     }
@@ -688,22 +694,22 @@ mod tests_positive_decimal_extended {
 
     #[test]
     fn test_positive_decimal_max_min() {
-        let a = f2p!(1.0);
-        let b = f2p!(2.0);
+        let a = pos!(1.0);
+        let b = pos!(2.0);
         assert_eq!(a.max(b).value(), dec!(2.0));
         assert_eq!(a.min(b).value(), dec!(1.0));
     }
 
     #[test]
     fn test_positive_decimal_floor() {
-        let a = f2p!(1.7);
+        let a = pos!(1.7);
         assert_eq!(a.floor().value(), dec!(1.0));
     }
 
     #[test]
     #[should_panic(expected = "Cannot negate a Positive value!")]
     fn test_positive_decimal_neg() {
-        let a = f2p!(1.0);
+        let a = pos!(1.0);
         let _ = -a;
     }
 }
@@ -714,14 +720,14 @@ mod tests_positive_decimal_sum {
 
     #[test]
     fn test_sum_owned_values() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let sum: Positive = values.into_iter().sum();
         assert_eq!(sum.to_f64(), 6.0);
     }
 
     #[test]
     fn test_sum_referenced_values() {
-        let values = [f2p!(1.0), f2p!(2.0), f2p!(3.0)];
+        let values = [pos!(1.0), pos!(2.0), pos!(3.0)];
         let sum: Positive = values.iter().sum();
         assert_eq!(sum.to_f64(), 6.0);
     }
@@ -742,7 +748,7 @@ mod tests_eq {
     #[test]
     #[ignore = "This test is failing because of the precision limit"]
     fn test_eq() {
-        let a = f2p!(0.5848105371755788);
+        let a = pos!(0.5848105371755788);
         let b = Positive::new_decimal(dec!(0.5848105371755788)).unwrap();
         assert_eq!(a, b);
     }
@@ -754,81 +760,81 @@ mod tests_macros {
     use rust_decimal::Decimal;
 
     #[test]
-    fn test_f2p_positive_values() {
-        assert_eq!(f2p!(5.0).value(), Decimal::new(5, 0));
-        assert_eq!(f2p!(1.5).value(), Decimal::new(15, 1));
-        assert_eq!(f2p!(0.1).value(), Decimal::new(1, 1));
+    fn test_pos_positive_values() {
+        assert_eq!(pos!(5.0).value(), Decimal::new(5, 0));
+        assert_eq!(pos!(1.5).value(), Decimal::new(15, 1));
+        assert_eq!(pos!(0.1).value(), Decimal::new(1, 1));
     }
 
     #[test]
-    fn test_f2p_zero() {
-        assert_eq!(f2p!(0.0), Positive::ZERO);
+    fn test_pos_zero() {
+        assert_eq!(Positive::ZERO, Positive::ZERO);
     }
 
     #[test]
-    fn test_f2p_small_decimals() {
-        assert_eq!(f2p!(0.0001).value(), Decimal::new(1, 4));
-        assert_eq!(f2p!(0.00001).value(), Decimal::new(1, 5));
-        assert_eq!(f2p!(0.000001).value(), Decimal::new(1, 6));
+    fn test_pos_small_decimals() {
+        assert_eq!(pos!(0.0001).value(), Decimal::new(1, 4));
+        assert_eq!(pos!(0.00001).value(), Decimal::new(1, 5));
+        assert_eq!(pos!(0.000001).value(), Decimal::new(1, 6));
     }
 
     #[test]
-    fn test_f2p_large_decimals() {
+    fn test_pos_large_decimals() {
         let val = 0.1234567890123456;
         let expected = Decimal::from_str("0.1234567890123456").unwrap();
-        assert_eq!(f2p!(val).value(), expected);
+        assert_eq!(pos!(val).value(), expected);
     }
 
     #[test]
-    fn test_f2p_precision_limits() {
+    fn test_pos_precision_limits() {
         // Test the maximum precision of 16 decimal places
         let val = ((0.123_456_789_012_345_68_f64 * 1e16) as u64) as f64 / 1e16; // More than 16 decimal places
         let expected = Decimal::from_str("0.1234567890123456").unwrap();
-        assert_eq!(f2p!(val).value(), expected);
+        assert_eq!(pos!(val).value(), expected);
     }
 
     #[test]
     #[ignore = "This test is failing because of the precision limit"]
-    fn test_f2p_precision_limits_bis() {
+    fn test_pos_precision_limits_bis() {
         let val = ((987_654_321.123_456_8_f64 * 1e16) as u64) as f64 / 1e16; // More than 16 decimal places
         let expected = Decimal::from_str("987654321.1234567890123456").unwrap();
-        assert_eq!(f2p!(val).value(), expected);
+        assert_eq!(pos!(val).value(), expected);
     }
 
     #[test]
-    fn test_f2p_negative_values() {
+    #[should_panic(expected = "Value must be positive, got -1")]
+    fn test_pos_negative_values() {
         // Negative values should return ZERO
-        assert_eq!(f2p!(-1.0), Positive::ZERO);
-        assert_eq!(f2p!(-0.1), Positive::ZERO);
+        assert_eq!(pos!(-1.0), Positive::ZERO);
     }
 
     #[test]
-    fn test_f2p_edge_cases() {
+    fn test_pos_edge_cases() {
         // Test with very large numbers
         assert_eq!(
-            f2p!(1e15).value(),
+            pos!(1e15).value(),
             Decimal::from_str("1000000000000000").unwrap()
         );
 
         // Test with very small numbers
         assert_eq!(
-            f2p!(1e-15).value(),
+            pos!(1e-15).value(),
             Decimal::from_str("0.000000000000001").unwrap()
         );
     }
 
     #[test]
-    fn test_f2p_expressions() {
-        assert_eq!(f2p!(2.0 + 3.0).value(), Decimal::new(5, 0));
-        assert_eq!(f2p!(1.5 * 2.0).value(), Decimal::new(3, 0));
+    fn test_pos_expressions() {
+        assert_eq!(pos!(2.0 + 3.0).value(), Decimal::new(5, 0));
+        assert_eq!(pos!(1.5 * 2.0).value(), Decimal::new(3, 0));
     }
 
     #[test]
-    fn test_f2p_conversions() {
+    fn test_pos_conversions() {
         // Test integer to float conversion
-        assert_eq!(f2p!(5.0).value(), Decimal::new(5, 0));
+        assert_eq!(pos!(5.0).value(), Decimal::new(5, 0));
 
         // Test float literals
-        assert_eq!(f2p!(5.0).value(), Decimal::new(5, 0));
+        assert_eq!(pos!(5.0).value(), Decimal::new(5, 0));
     }
 }

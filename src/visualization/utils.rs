@@ -6,7 +6,8 @@
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::{create_drawing_area, f2p, Positive};
+use crate::{create_drawing_area, pos, Positive};
+use num_traits::ToPrimitive;
 use plotters::backend::BitMapBackend;
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
@@ -92,7 +93,7 @@ pub trait Graph: Profit {
 
         let x_axis_point = if x_axis_data.is_empty() {
             &mut (0..y_axis_data.len())
-                .map(|i| f2p!(i as f64))
+                .map(|i| pos!(i as f64))
                 .collect::<Vec<Positive>>()
         } else {
             x_axis_data
@@ -127,7 +128,7 @@ pub trait Graph: Profit {
 
     fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
-            .map(|&price| self.calculate_profit_at(price))
+            .map(|&price| self.calculate_profit_at(price).unwrap().to_f64().unwrap())
             .collect()
     }
 
@@ -275,7 +276,7 @@ mod tests_calculate_axis_range {
 
     #[test]
     fn test_calculate_axis_range() {
-        let x_data = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0), f2p!(4.0), f2p!(5.0)];
+        let x_data = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -288,20 +289,20 @@ mod tests_calculate_axis_range {
 
     #[test]
     fn test_calculate_axis_range_single_value() {
-        let x_data = vec![f2p!(1.0)];
+        let x_data = vec![pos!(1.0)];
         let y_data = vec![0.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
 
-        assert_eq!(max_x, f2p!(1.0));
-        assert_eq!(min_x, f2p!(1.0));
+        assert_eq!(max_x, pos!(1.0));
+        assert_eq!(min_x, pos!(1.0));
         assert_eq!(max_y, 0.0);
         assert_eq!(min_y, 0.0);
     }
 
     #[test]
     fn test_calculate_axis_range_zero_values() {
-        let x_data = vec![f2p!(0.0), f2p!(0.0), f2p!(0.0)];
+        let x_data = vec![Positive::ZERO, Positive::ZERO, Positive::ZERO];
         let y_data = vec![0.0, 0.0, 0.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -314,7 +315,7 @@ mod tests_calculate_axis_range {
 
     #[test]
     fn test_calculate_axis_range_large_values() {
-        let x_data = vec![f2p!(1e6), f2p!(2e6), f2p!(3e6)];
+        let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
         let y_data = vec![1e9, 2e9, 3e9];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -329,17 +330,18 @@ mod tests_calculate_axis_range {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use crate::visualization::model::LabelOffsetType;
     use crate::Positive;
     use plotters::style::RGBColor;
+    use rust_decimal::Decimal;
     use std::error::Error;
 
     struct MockGraph;
 
     impl Profit for MockGraph {
-        fn calculate_profit_at(&self, price: Positive) -> f64 {
-            (price * 2.0).into()
+        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok((price * 2.0).to_dec())
         }
     }
 
@@ -377,7 +379,7 @@ mod tests {
     #[test]
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![f2p!(0.0), f2p!(50.0), f2p!(100.0)];
+        let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
         mock_graph.graph(&x_axis_data, "test_graph.png", 20, (800, 600))?;
         std::fs::remove_file("test_graph.png")?;
         Ok(())
@@ -386,7 +388,7 @@ mod tests {
     #[test]
     fn test_get_values() {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![f2p!(0.0), f2p!(50.0), f2p!(100.0)];
+        let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
         let values = mock_graph.get_values(&x_axis_data);
         assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }
@@ -395,8 +397,8 @@ mod tests {
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: Positive) -> f64 {
-                0.0
+            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(Decimal::ZERO)
             }
         }
         impl Graph for DefaultGraph {
@@ -412,8 +414,8 @@ mod tests {
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: Positive) -> f64 {
-                0.0
+            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(Decimal::ZERO)
             }
         }
         impl Graph for DefaultGraph {

@@ -1,7 +1,7 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::f2p;
 use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::strategies::ShortStrangle;
@@ -9,6 +9,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -23,22 +24,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         underlying_price, // underlying_price
         Positive::ZERO,   // call_strike
         Positive::ZERO,   // put_strike
-        ExpirationDate::Days(5.0),
-        ZERO,      // implied_volatility
-        ZERO,      // risk_free_rate
-        ZERO,      // dividend_yield
-        f2p!(1.0), // quantity
-        ZERO,      // premium_short_call
-        ZERO,      // premium_short_put
-        0.82,      // open_fee_short_call
-        0.82,      // close_fee_short_call
-        0.82,      // open_fee_short_put
-        0.82,      // close_fee_short_put
+        ExpirationDate::Days(pos!(5.0)),
+        Positive::ZERO, // implied_volatility
+        Decimal::ZERO,  // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        pos!(1.0),      // quantity
+        Positive::ZERO, // premium_short_call
+        Positive::ZERO, // premium_short_put
+        pos!(0.82),     // open_fee_short_call
+        pos!(0.82),     // close_fee_short_call
+        pos!(0.82),     // open_fee_short_put
+        pos!(0.82),     // close_fee_short_put
     );
     // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(5700.0), pos!(6100.0)));
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

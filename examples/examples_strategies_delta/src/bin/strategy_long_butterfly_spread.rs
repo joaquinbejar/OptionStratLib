@@ -1,4 +1,4 @@
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::Strategies;
@@ -6,28 +6,34 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    let underlying_price = f2p!(5781.88);
+    let underlying_price = pos!(5781.88);
 
     let strategy = LongButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        f2p!(5710.0),     // long_strike_itm
-        f2p!(5820.0),     // short_strike
-        f2p!(6100.0),     // long_strike_otm
-        ExpirationDate::Days(2.0),
-        0.18,      // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(1.0), // long quantity
-        49.65,     // premium_long
-        42.93,     // premium_short
-        1.0,       // open_fee_long
-        4.0,       // open_fee_long
+        underlying_price,
+        pos!(5710.0),
+        pos!(5820.0),
+        pos!(6100.0),
+        ExpirationDate::Days(pos!(2.0)),
+        pos!(0.18),
+        dec!(0.05),
+        Positive::ZERO,
+        pos!(1.0),
+        pos!(49.65),
+        pos!(42.93),
+        Positive::ONE,
+        pos!(4.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     info!("Title: {}", strategy.title());

@@ -5,7 +5,7 @@ use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, f2p, Positive};
+use optionstratlib::{assert_decimal_eq, pos, Positive};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -16,23 +16,28 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the ShortButterflySpread strategy
-    let underlying_price = f2p!(5781.88);
+    let underlying_price = pos!(5781.88);
 
     let strategy = ShortButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        f2p!(5700.0),     // short_strike_itm
-        f2p!(5780.0),     // long_strike
-        f2p!(5850.0),     // short_strike_otm
-        ExpirationDate::Days(2.0),
-        0.18,      // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(3.0), // long quantity
-        119.01,    // premium_long
-        66.0,      // premium_short
-        29.85,     // open_fee_long
-        4.0,       // open_fee_long
+        underlying_price,
+        pos!(5700.0),
+        pos!(5780.0),
+        pos!(5850.0),
+        ExpirationDate::Days(pos!(2.0)),
+        pos!(0.18),
+        dec!(0.05),
+        Positive::ZERO,
+        pos!(3.0),
+        pos!(119.01), // premium_long
+        pos!(66.0),   // premium_short
+        pos!(29.85),  // open_fee_long
+        pos!(4.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     let greeks = strategy.greeks();
@@ -68,7 +73,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         BuyOptions {
             quantity: Positive::new_decimal(Decimal::from_str("0.11409430831966512").unwrap())
                 .unwrap(),
-            strike: f2p!(5780.0),
+            strike: pos!(5780.0),
             option_type: OptionStyle::Call
         }
     );

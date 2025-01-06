@@ -7,8 +7,8 @@ use crate::constants::ZERO;
 use crate::greeks::utils::{big_n, calculate_d_values};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::Options;
-use num_traits::{FromPrimitive, ToPrimitive};
-use rust_decimal::Decimal;
+use num_traits::ToPrimitive;
+use rust_decimal::{Decimal, MathematicalOps};
 
 /// Computes the price of an option using the Black-Scholes model.
 ///
@@ -126,8 +126,7 @@ fn calculate_long_position(
 /// - `time_to_expiry`: The calculated or given time to expiry in years.
 ///
 fn calculate_d1_d2_and_time(option: &Options) -> (Decimal, Decimal, Decimal) {
-    let calculated_time_to_expiry: Decimal =
-        Decimal::from_f64(option.time_to_expiration()).unwrap();
+    let calculated_time_to_expiry: Decimal = option.time_to_expiration().unwrap().to_dec();
     let (d1, d2) = calculate_d_values(option).unwrap();
     (d1, d2, calculated_time_to_expiry)
 }
@@ -147,9 +146,10 @@ fn calculate_call_option_price(option: &Options, d1: Decimal, d2: Decimal, t: De
     let big_n_d1 = big_n(d1).unwrap();
     let big_n_d2 = big_n(d2).unwrap();
 
-    (option.underlying_price * big_n_d1
-        - option.strike_price * (-option.risk_free_rate * t.to_f64().unwrap()).exp() * big_n_d2)
-        .to_f64()
+    let result = option.underlying_price * big_n_d1
+        - option.strike_price * (-option.risk_free_rate * t).exp() * big_n_d2;
+
+    result.to_f64()
 }
 
 /// Calculates the price of a European put option using the Black-Scholes model.
@@ -185,8 +185,10 @@ fn calculate_put_option_price(option: &Options, d1: Decimal, d2: Decimal, t: Dec
     let big_n_d1 = big_n(-d1).unwrap().to_f64().unwrap();
     let big_n_d2 = big_n(-d2).unwrap().to_f64().unwrap();
 
-    option.strike_price.to_f64() * (-option.risk_free_rate * t.to_f64().unwrap()).exp() * big_n_d2
-        - option.underlying_price * big_n_d1
+    let result = option.strike_price * (-option.risk_free_rate * t).exp() * big_n_d2
+        - option.underlying_price * big_n_d1;
+
+    result.to_f64()
 }
 
 pub trait BlackScholes {
@@ -201,25 +203,26 @@ pub trait BlackScholes {
 #[cfg(test)]
 mod tests_black_scholes {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use crate::greeks::utils::{d1, d2};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::Options;
-    use crate::{f2p, Positive};
+    use crate::{pos, Options, Positive};
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn mock_options_call() -> Options {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(2476.6),
-            strike_price: f2p!(2485.0),
-            implied_volatility: 0.22,
-            risk_free_rate: 0.006,
-            expiration_date: ExpirationDate::Days(3.0),
+            underlying_price: pos!(2476.6),
+            strike_price: pos!(2485.0),
+            implied_volatility: pos!(0.22),
+            risk_free_rate: dec!(0.006),
+            expiration_date: ExpirationDate::Days(pos!(3.0)),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -228,15 +231,15 @@ mod tests_black_scholes {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
-            implied_volatility: 0.01,
-            risk_free_rate: ZERO,
-            expiration_date: ExpirationDate::Days(365.0),
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
+            implied_volatility: pos!(0.01),
+            risk_free_rate: Decimal::ZERO,
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
 
             exotic_params: None,
         }
@@ -246,15 +249,15 @@ mod tests_black_scholes {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(100.0),
-            implied_volatility: 0.2,
-            risk_free_rate: 0.05,
-            expiration_date: ExpirationDate::Days(365.0), // 1 year from now
+            underlying_price: pos!(100.0),
+            strike_price: pos!(100.0),
+            implied_volatility: pos!(0.2),
+            risk_free_rate: dec!(0.05),
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR), // 1 year from now
             option_style: OptionStyle::Put,
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -262,12 +265,16 @@ mod tests_black_scholes {
     #[test]
     fn test_black_scholes_simplest_call() {
         let mut option = mock_options_simplest_call();
-        assert_relative_eq!(option.expiration_date.get_years(), 1.0, epsilon = 0.00001);
+        assert_relative_eq!(
+            option.expiration_date.get_years().unwrap().to_f64(),
+            1.0,
+            epsilon = 0.00001
+        );
         let d1 = d1(
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -276,7 +283,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -299,17 +306,15 @@ mod tests_black_scholes {
         assert_relative_eq!(price, 0.39894, epsilon = 0.001);
         assert_relative_eq!(price, option_value.to_f64(), epsilon = 0.001);
 
-        option.implied_volatility = 0.2;
+        option.implied_volatility = pos!(0.2);
         let price = black_scholes(&option);
         assert_relative_eq!(price, 7.965, epsilon = 0.001);
 
-        option.implied_volatility = 0.2;
-        option.strike_price = f2p!(50.0);
+        option.strike_price = pos!(50.0);
         let price = black_scholes(&option);
         assert_relative_eq!(price, 50.000, epsilon = 0.001);
 
-        option.implied_volatility = 0.2;
-        option.strike_price = f2p!(100.0);
+        option.strike_price = pos!(100.0);
         let price = black_scholes(&option);
         assert_relative_eq!(price, 7.96556, epsilon = 0.001);
     }
@@ -319,15 +324,15 @@ mod tests_black_scholes {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(100.0),
-            strike_price: f2p!(50.0),
-            implied_volatility: 0.01,
-            risk_free_rate: ZERO,
-            expiration_date: ExpirationDate::Days(365.0),
+            underlying_price: pos!(100.0),
+            strike_price: pos!(50.0),
+            implied_volatility: pos!(0.01),
+            risk_free_rate: Decimal::ZERO,
+            expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
 
             exotic_params: None,
         };
@@ -336,7 +341,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -345,7 +350,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -373,24 +378,28 @@ mod tests_black_scholes {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: f2p!(60.0),
-            strike_price: f2p!(65.0),
-            implied_volatility: 0.3,
-            risk_free_rate: 0.08,
-            expiration_date: ExpirationDate::Days(365.0 / 4.0),
+            underlying_price: pos!(60.0),
+            strike_price: pos!(65.0),
+            implied_volatility: pos!(0.3),
+            risk_free_rate: dec!(0.08),
+            expiration_date: ExpirationDate::Days(pos!(365.0 / 4.0)),
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
 
             exotic_params: None,
         };
-        assert_relative_eq!(option.expiration_date.get_years(), 0.25, epsilon = 0.00001);
+        assert_relative_eq!(
+            option.expiration_date.get_years().unwrap().to_f64(),
+            0.25,
+            epsilon = 0.00001
+        );
         let d1 = d1(
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -399,7 +408,7 @@ mod tests_black_scholes {
             option.underlying_price,
             option.strike_price,
             option.risk_free_rate,
-            option.expiration_date.get_years(),
+            option.expiration_date.get_years().unwrap(),
             option.implied_volatility,
         )
         .unwrap();
@@ -412,7 +421,9 @@ mod tests_black_scholes {
         let option_value = option.underlying_price * big_n_d1
             - option.strike_price
                 * big_n_d2
-                * (-option.risk_free_rate * option.expiration_date.get_years()).exp();
+                * (-option.risk_free_rate.to_f64().unwrap()
+                    * option.expiration_date.get_years().unwrap())
+                .exp();
         assert_relative_eq!(option_value.to_f64(), 2.133368, epsilon = 0.00001);
 
         let price = black_scholes(&option.clone());
@@ -420,7 +431,11 @@ mod tests_black_scholes {
         assert_relative_eq!(price, 2.133368, epsilon = 0.001);
         assert_relative_eq!(price, option_value.to_f64(), epsilon = 0.001);
         assert_relative_eq!(
-            option.calculate_price_black_scholes(),
+            option
+                .calculate_price_black_scholes()
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             option_value.to_f64(),
             epsilon = 0.0001
         );
@@ -460,9 +475,9 @@ mod tests_black_scholes {
 #[cfg(test)]
 mod tests_black_scholes_trait {
     use super::*;
-    use crate::f2p;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::{pos, Positive};
     use approx::assert_relative_eq;
 
     // Mock struct to implement BlackScholes trait
@@ -487,10 +502,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0), // underlying price
-            f2p!(1.0),   // quantity
-            f2p!(100.0), // strike price
-            0.2,         // volatility
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            pos!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -502,10 +517,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0), // underlying price
-            f2p!(1.0),   // quantity
-            f2p!(90.0),  // strike price
-            0.2,         // volatility
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(90.0),  // strike price
+            pos!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -517,10 +532,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0), // underlying price
-            f2p!(1.0),   // quantity
-            f2p!(110.0), // strike price
-            0.2,         // volatility
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(110.0), // strike price
+            pos!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -532,10 +547,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            f2p!(100.0), // underlying price
-            f2p!(1.0),   // quantity
-            f2p!(100.0), // strike price
-            0.2,         // volatility
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            pos!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -547,10 +562,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0), // underlying price
-            f2p!(1.0),   // quantity
-            f2p!(100.0), // strike price
-            0.5,         // high volatility
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            pos!(0.5),   // high volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -563,10 +578,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0), // underlying price
-            f2p!(1.0),   // quantity
-            f2p!(100.0), // strike price
-            0.0,         // zero volatility
+            pos!(100.0),    // underlying price
+            pos!(1.0),      // quantity
+            pos!(100.0),    // strike price
+            Positive::ZERO, // zero volatility
         );
         let mock = MockOption::new(option);
         let _price = mock.calculate_price_black_scholes();
@@ -577,10 +592,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            f2p!(100.0), // underlying price
-            f2p!(1.0),   // quantity
-            f2p!(100.0), // strike price
-            0.2,         // volatility
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            pos!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -592,10 +607,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            f2p!(100.0), // underlying price
-            f2p!(1.0),   // quantity
-            f2p!(100.0), // strike price
-            0.2,         // volatility
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            pos!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -607,10 +622,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0), // underlying price
-            f2p!(10.0),  // quantity
-            f2p!(100.0), // strike price
-            0.2,         // volatility
+            pos!(100.0), // underlying price
+            pos!(10.0),  // quantity
+            pos!(100.0), // strike price
+            pos!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -621,9 +636,9 @@ mod tests_black_scholes_trait {
 #[cfg(test)]
 mod tests_black_scholes_trait_bis {
     use super::*;
-    use crate::f2p;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
+    use crate::{pos, Positive};
     use approx::assert_relative_eq;
 
     struct MockOption {
@@ -647,19 +662,19 @@ mod tests_black_scholes_trait_bis {
         let call_option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
         );
 
         let put_option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
         );
 
         let call_mock = MockOption::new(call_option);
@@ -684,19 +699,19 @@ mod tests_black_scholes_trait_bis {
         let call_option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
         );
 
         let put_option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
         );
 
         let call_mock = MockOption::new(call_option);
@@ -721,28 +736,28 @@ mod tests_black_scholes_trait_bis {
         let call1 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(90.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(90.0),
+            pos!(0.2),
         ));
 
         let call2 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
         ));
 
         let call3 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(110.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(110.0),
+            pos!(0.2),
         ));
 
         let price1 = call1.calculate_price_black_scholes();
@@ -759,10 +774,10 @@ mod tests_black_scholes_trait_bis {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(95.0),
-            0.0,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(95.0),
+            Positive::ZERO,
         ));
 
         let _price = option.calculate_price_black_scholes();
@@ -779,10 +794,10 @@ mod tests_black_scholes_trait_bis {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(150.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.2,
+            pos!(150.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
         ));
 
         let price = option.calculate_price_black_scholes();
@@ -792,8 +807,7 @@ mod tests_black_scholes_trait_bis {
         let k: f64 = 100.0;
 
         let intrinsic_value = s - k * f64::exp(-r * t);
-        assert!(price > intrinsic_value);
-        assert_relative_eq!(price, intrinsic_value, epsilon = 5.0);
+        assert_relative_eq!(price, intrinsic_value, epsilon = 0.01);
     }
 
     #[test]
@@ -801,10 +815,10 @@ mod tests_black_scholes_trait_bis {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(200.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(200.0),
+            pos!(0.2),
         ));
 
         let price = option.calculate_price_black_scholes();
@@ -816,28 +830,28 @@ mod tests_black_scholes_trait_bis {
         let call1 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.1,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.1),
         ));
 
         let call2 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.2,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
         ));
 
         let call3 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            f2p!(100.0),
-            f2p!(1.0),
-            f2p!(100.0),
-            0.3,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.3),
         ));
 
         let price1 = call1.calculate_price_black_scholes();
