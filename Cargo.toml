@@ -43,10 +43,18 @@ itertools = "0.14.0"
 rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
 rust_decimal_macros = "1.36.0"
 
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
 
 [[test]]
 name = "tests"
 path = "tests/unit/mod.rs"
+
+[[bench]]
+name = "benches"
+path = "benches/mod.rs"
+harness = false
 
 [lib]
 name = "optionstratlib"
