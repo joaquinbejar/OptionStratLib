@@ -359,7 +359,12 @@ impl Sub for Positive {
     type Output = Positive;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Positive(self.0 - rhs.0)
+        let result = self.0 - rhs.0;
+        if result < Decimal::ZERO {
+            panic!("Resulting value must be positive");
+        } else {
+            Positive(result)
+        }
     }
 }
 
