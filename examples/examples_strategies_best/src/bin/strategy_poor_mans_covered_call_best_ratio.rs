@@ -1,6 +1,6 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -8,6 +8,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -19,28 +20,28 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
 
     let mut strategy = PoorMansCoveredCall::new(
-        "SP500".to_string(),         // underlying_symbol
-        underlying_price,            // underlying_price
-        Positive::ZERO,              // long_call_strike
-        Positive::ZERO,              // short_call_strike OTM
-        ExpirationDate::Days(120.0), // long_call_expiration
-        ExpirationDate::Days(30.0),  // short_call_expiration 30-45 days delta 0.30 or less
-        ZERO,                        // implied_volatility
-        ZERO,                        // risk_free_rate
-        ZERO,                        // dividend_yield
-        f2p!(2.0),                   // quantity
-        ZERO,                        // premium_short_call
-        ZERO,                        // premium_short_put
-        1.74,                        // open_fee_short_call
-        1.74,                        // close_fee_short_call
-        0.85,                        // open_fee_short_put
-        0.85,                        // close_fee_short_put
+        "SP500".to_string(),               // underlying_symbol
+        underlying_price,                  // underlying_price
+        Positive::ZERO,                    // long_call_strike
+        Positive::ZERO,                    // short_call_strike OTM
+        ExpirationDate::Days(pos!(120.0)), // long_call_expiration
+        ExpirationDate::Days(pos!(30.0)),  // short_call_expiration 30-45 days delta 0.30 or less
+        Positive::ZERO,                    // implied_volatility
+        Decimal::ZERO,                     // risk_free_rate
+        Positive::ZERO,                    // dividend_yield
+        pos!(2.0),                         // quantity
+        Positive::ZERO,                    // premium_short_call
+        Positive::ZERO,                    // premium_short_put
+        pos!(1.74),                        // open_fee_short_call
+        pos!(1.74),                        // close_fee_short_call
+        pos!(0.85),                        // open_fee_short_put
+        pos!(0.85),                        // close_fee_short_put
     );
 
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

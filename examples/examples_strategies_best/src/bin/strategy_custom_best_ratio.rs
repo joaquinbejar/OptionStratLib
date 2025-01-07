@@ -9,7 +9,8 @@ use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
-use optionstratlib::{f2p, Positive};
+use optionstratlib::{pos, Positive};
+use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -25,14 +26,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(1), // qty_puts_short
         None,    // qty_calls_long
         Some(1), // qty_calls_short
-        ExpirationDate::Days(30.0),
-        f2p!(1.0),
-        0.05,
-        0.02,
-        1.0,
-        1.0,
-        1.0,
-        1.0,
+        ExpirationDate::Days(pos!(30.0)),
+        pos!(1.0),
+        dec!(0.05),
+        pos!(0.02),
+        Positive::ONE,
+        Positive::ONE,
+        Positive::ONE,
+        Positive::ONE,
     );
     let positions: Vec<Position> = option_chain.get_random_positions(params)?;
 
@@ -42,12 +43,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Example of a custom strategy".to_string(),
         underlying_price,
         positions,
-        f2p!(0.01),
+        pos!(0.01),
         100,
-        f2p!(0.1),
+        pos!(0.1),
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::All);
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!(
         "Range of analysis: {} - {}",

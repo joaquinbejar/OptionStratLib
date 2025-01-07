@@ -1,62 +1,58 @@
-use crate::constants::ZERO;
+use crate::constants::{DAYS_IN_A_YEAR, ZERO};
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use crate::Positive;
+use crate::{pos, Positive};
 use chrono::{DateTime, Duration, Utc};
+use rust_decimal::Decimal;
+use std::error::Error;
 
-#[allow(dead_code)]
 #[derive(Clone, PartialEq)]
 pub enum ExpirationDate {
-    Days(f64),
+    Days(Positive),
     DateTime(DateTime<Utc>),
 }
 
 impl ExpirationDate {
-    pub(crate) fn get_years(&self) -> f64 {
+    pub(crate) fn get_years(&self) -> Result<Positive, Box<dyn Error>> {
         match self {
-            ExpirationDate::Days(days) => {
-                if *days < 0.0 {
-                    panic!("Days cannot be negative");
-                }
-                days / 365.0
-            }
+            ExpirationDate::Days(days) => Ok(*days / DAYS_IN_A_YEAR),
             ExpirationDate::DateTime(datetime) => {
                 let now = Utc::now();
                 let duration = datetime.signed_duration_since(now);
                 let num_days = duration.num_days();
                 if num_days < 0 {
-                    panic!("DateTime results in negative duration");
+                    return Err("DateTime results in negative duration".into());
                 }
-                num_days as f64 / 365.0
+                Ok(pos!(num_days as f64) / DAYS_IN_A_YEAR)
             }
         }
     }
 
-    pub(crate) fn get_date(&self) -> DateTime<Utc> {
+    pub fn get_date(&self) -> Result<DateTime<Utc>, Box<dyn Error>> {
         match self {
-            ExpirationDate::Days(days) => Utc::now() + Duration::days(*days as i64),
-            ExpirationDate::DateTime(datetime) => *datetime,
+            ExpirationDate::Days(days) => Ok(Utc::now() + Duration::days((*days).to_i64())),
+            ExpirationDate::DateTime(datetime) => Ok(*datetime),
         }
     }
 
-    pub(crate) fn get_date_string(&self) -> String {
-        let date = self.get_date();
-        date.format("%Y-%m-%d").to_string()
+    pub(crate) fn get_date_string(&self) -> Result<String, Box<dyn Error>> {
+        let date = self.get_date()?;
+        Ok(date.format("%Y-%m-%d").to_string())
     }
 
-    pub fn from_string(s: &String) -> Result<Self, String> {
-        if let Ok(days) = s.parse::<f64>() {
+    pub fn from_string(s: &str) -> Result<Self, Box<dyn Error>> {
+        if let Ok(days) = s.parse::<Positive>() {
             Ok(ExpirationDate::Days(days))
         } else if let Ok(datetime) = DateTime::parse_from_rfc3339(s) {
             Ok(ExpirationDate::DateTime(DateTime::from(datetime)))
         } else {
-            Err(format!("Failed to parse ExpirationDate from string: {}", s))
+            Err("Failed to parse ExpirationDate from string".into())
         }
     }
 }
 
 impl Default for ExpirationDate {
     fn default() -> Self {
-        ExpirationDate::Days(365.0)
+        ExpirationDate::Days(pos!(365.0))
     }
 }
 
@@ -260,7 +256,11 @@ impl Payoff for OptionType {
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
             OptionType::Chooser { .. } => (info.spot - info.strike)
                 .max(Positive::ZERO)
-                .max((info.strike - info.spot).max(Positive::ZERO))
+                .max(
+                    (info.strike.to_dec() - info.spot.to_dec())
+                        .max(Decimal::ZERO)
+                        .into(),
+                )
                 .to_f64(),
             OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }
@@ -359,14 +359,14 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
 #[cfg(test)]
 mod tests_payoff {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     #[test]
     fn test_european_call() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -378,8 +378,8 @@ mod tests_payoff {
     fn test_european_put() {
         let option = OptionType::European;
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -393,8 +393,8 @@ mod tests_payoff {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -410,8 +410,8 @@ mod tests_payoff {
             barrier_level: 120.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(130.0),
-            strike: f2p!(100.0),
+            spot: pos!(130.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -425,8 +425,8 @@ mod tests_payoff {
             binary_type: BinaryType::CashOrNothing,
         };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -440,8 +440,8 @@ mod tests_payoff {
             lookback_type: LookbackType::FixedStrike,
         };
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -453,8 +453,8 @@ mod tests_payoff {
     fn test_quanto_call() {
         let option = OptionType::Quanto { exchange_rate: 1.5 };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -466,8 +466,8 @@ mod tests_payoff {
     fn test_power_call() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
-            spot: f2p!(10.0),
-            strike: f2p!(90.0),
+            spot: pos!(10.0),
+            strike: pos!(90.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -479,18 +479,19 @@ mod tests_payoff {
 #[cfg(test)]
 mod tests_expiration_date {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use chrono::{Duration, TimeZone};
 
     #[test]
     fn test_expiration_date_days() {
-        let expiration = ExpirationDate::Days(365.0);
-        assert_eq!(expiration.get_years(), 1.0);
+        let expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
+        assert_eq!(expiration.get_years().unwrap(), 1.0);
 
-        let expiration = ExpirationDate::Days(182.5);
-        assert_eq!(expiration.get_years(), 0.5);
+        let expiration = ExpirationDate::Days(pos!(182.5));
+        assert_eq!(expiration.get_years().unwrap(), 0.5);
 
-        let expiration = ExpirationDate::Days(ZERO);
-        assert_eq!(expiration.get_years(), ZERO);
+        let expiration = ExpirationDate::Days(Positive::ZERO);
+        assert_eq!(expiration.get_years().unwrap(), ZERO);
     }
 
     #[test]
@@ -498,12 +499,12 @@ mod tests_expiration_date {
         // Test for a date exactly one year in the future
         let one_year_future = Utc::now() + Duration::days(365);
         let expiration = ExpirationDate::DateTime(one_year_future);
-        assert!((expiration.get_years() - 1.0).abs() < 0.01); // Allow small deviation due to leap years
+        assert!((expiration.get_years().unwrap().to_f64() - 1.0).abs() < 0.01); // Allow small deviation due to leap years
 
         // Test for a date 6 months in the future
         let six_months_future = Utc::now() + Duration::days(182);
         let expiration = ExpirationDate::DateTime(six_months_future);
-        assert!((expiration.get_years() - 0.5).abs() < 0.01);
+        assert!((expiration.get_years().unwrap().to_f64() - 0.5).abs() < 0.01);
     }
 
     #[test]
@@ -517,15 +518,15 @@ mod tests_expiration_date {
         let now = Utc::now();
         let expected_years = (specific_date - now).num_days() as f64 / 365.0;
 
-        assert!((expiration.get_years() - expected_years).abs() < 0.01);
+        assert!((expiration.get_years().unwrap().to_f64() - expected_years).abs() < 0.01);
     }
 
     #[test]
     fn test_get_date_from_days() {
-        let days = 30;
-        let expiration = ExpirationDate::Days(days as f64);
-        let expected_date = Utc::now() + Duration::days(days);
-        let result = expiration.get_date();
+        let days = pos!(30.0);
+        let expiration = ExpirationDate::Days(days);
+        let expected_date = Utc::now() + Duration::days(days.to_i64());
+        let result = expiration.get_date().unwrap();
 
         assert!((result - expected_date).num_seconds().abs() <= 1);
     }
@@ -534,7 +535,7 @@ mod tests_expiration_date {
     fn test_get_date_from_datetime() {
         let future_date = Utc::now() + Duration::days(60);
         let expiration = ExpirationDate::DateTime(future_date);
-        let result = expiration.get_date();
+        let result = expiration.get_date().unwrap();
 
         assert_eq!(result, future_date);
     }
@@ -543,36 +544,28 @@ mod tests_expiration_date {
     fn test_get_date_from_past_datetime() {
         let past_date = Utc::now() - Duration::days(30);
         let expiration = ExpirationDate::DateTime(past_date);
-        let result = expiration.get_date();
-
+        let result = expiration.get_date().unwrap();
         assert_eq!(result, past_date);
     }
 
     #[test]
     fn test_get_date_from_zero_days() {
-        let expiration = ExpirationDate::Days(0.0);
+        let expiration = ExpirationDate::Days(Positive::ZERO);
         let expected_date = Utc::now();
-        let result = expiration.get_date();
+        let result = expiration.get_date().unwrap();
 
         assert!((result - expected_date).num_seconds().abs() <= 1);
     }
 
     #[test]
     fn test_get_date_from_fractional_days() {
-        let days = 1.0;
+        let days = Positive::ONE;
         let expiration = ExpirationDate::Days(days);
         let expected_date =
-            Utc::now() + Duration::milliseconds((days * 24.0 * 60.0 * 60.0 * 1000.0) as i64);
-        let result = expiration.get_date();
+            Utc::now() + Duration::milliseconds((days * 24.0 * 60.0 * 60.0 * 1000.0).to_i64());
+        let result = expiration.get_date().unwrap();
 
         assert!((result - expected_date).num_seconds().abs() <= 1);
-    }
-
-    #[test]
-    #[should_panic(expected = "Days cannot be negative")]
-    fn test_negative_days_panic() {
-        let expiration = ExpirationDate::Days(-10.0);
-        expiration.get_years();
     }
 
     #[test]
@@ -580,13 +573,13 @@ mod tests_expiration_date {
     fn test_negative_datetime_panic() {
         let past_date = Utc::now() - Duration::days(10);
         let expiration = ExpirationDate::DateTime(past_date);
-        expiration.get_years();
+        let _ = expiration.get_years().unwrap();
     }
 
     #[test]
     fn test_positive_days() {
-        let expiration = ExpirationDate::Days(365.0);
-        let years = expiration.get_years();
+        let expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
+        let years = expiration.get_years().unwrap();
         assert_eq!(years, 1.0);
     }
 
@@ -598,8 +591,8 @@ mod tests_expiration_date {
         #[test]
         fn test_get_date_string_days() {
             let today = Utc::now();
-            let expiration = ExpirationDate::Days(30.0);
-            let date_str = expiration.get_date_string();
+            let expiration = ExpirationDate::Days(pos!(30.0));
+            let date_str = expiration.get_date_string().unwrap();
             let expected_date = (today + Duration::days(30)).format("%Y-%m-%d").to_string();
             assert_eq!(date_str, expected_date);
         }
@@ -608,7 +601,7 @@ mod tests_expiration_date {
         fn test_get_date_string_datetime() {
             let specific_date = Utc.with_ymd_and_hms(2024, 12, 31, 0, 0, 0).unwrap();
             let expiration = ExpirationDate::DateTime(specific_date);
-            assert_eq!(expiration.get_date_string(), "2024-12-31");
+            assert_eq!(expiration.get_date_string().unwrap(), "2024-12-31");
         }
     }
 }
@@ -616,13 +609,13 @@ mod tests_expiration_date {
 #[cfg(test)]
 mod tests_calculate_floating_strike_payoff {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     #[test]
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0), // Not used in floating strike
+            spot: pos!(100.0),
+            strike: Positive::ZERO, // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -635,8 +628,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -649,8 +642,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -663,8 +656,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -677,8 +670,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -691,8 +684,8 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(0.0),
+            spot: pos!(100.0),
+            strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -706,7 +699,7 @@ mod tests_calculate_floating_strike_payoff {
 #[cfg(test)]
 mod tests_option_type {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     #[test]
     fn test_asian_geometric_call() {
@@ -714,8 +707,8 @@ mod tests_option_type {
             averaging_type: AsianAveragingType::Geometric,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -731,8 +724,8 @@ mod tests_option_type {
             averaging_type: AsianAveragingType::Geometric,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(95.0),
+            spot: pos!(100.0),
+            strike: pos!(95.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -750,8 +743,8 @@ mod tests_option_type {
             barrier_level: 90.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(95.0),
-            strike: f2p!(100.0),
+            spot: pos!(95.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -765,8 +758,8 @@ mod tests_option_type {
             binary_type: BinaryType::AssetOrNothing,
         };
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -781,8 +774,8 @@ mod tests_option_type {
             underlying_option: Box::new(inner_option),
         };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -794,8 +787,8 @@ mod tests_option_type {
     fn test_chooser_option() {
         let option = OptionType::Chooser { choice_date: 30.0 };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -807,8 +800,8 @@ mod tests_option_type {
     fn test_power_put() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
-            spot: f2p!(8.0),
-            strike: f2p!(100.0),
+            spot: pos!(8.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -819,8 +812,8 @@ mod tests_option_type {
 
 #[cfg(test)]
 mod tests_vec_collection {
-    use crate::f2p;
     use crate::model::positive::Positive;
+    use crate::pos;
 
     #[test]
     fn test_collect_empty_iterator() {
@@ -831,51 +824,51 @@ mod tests_vec_collection {
 
     #[test]
     fn test_collect_single_value() {
-        let values = vec![f2p!(1.0)];
+        let values = vec![pos!(1.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
         assert_eq!(collected.len(), 1);
-        assert_eq!(collected[0], f2p!(1.0));
+        assert_eq!(collected[0], pos!(1.0));
     }
 
     #[test]
     fn test_collect_multiple_values() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
         assert_eq!(collected.len(), 3);
-        assert_eq!(collected[0], f2p!(1.0));
-        assert_eq!(collected[1], f2p!(2.0));
-        assert_eq!(collected[2], f2p!(3.0));
+        assert_eq!(collected[0], pos!(1.0));
+        assert_eq!(collected[1], pos!(2.0));
+        assert_eq!(collected[2], pos!(3.0));
     }
 
     #[test]
     fn test_collect_from_filter() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0), f2p!(4.0)];
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0)];
         let collected: Vec<Positive> = values.into_iter().filter(|x| x.to_f64() > 2.0).collect();
         assert_eq!(collected.len(), 2);
-        assert_eq!(collected[0], f2p!(3.0));
-        assert_eq!(collected[1], f2p!(4.0));
+        assert_eq!(collected[0], pos!(3.0));
+        assert_eq!(collected[1], pos!(4.0));
     }
 
     #[test]
     fn test_collect_from_map() {
-        let values = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0)];
-        let collected: Vec<Positive> = values.into_iter().map(|x| f2p!(x.to_f64() * 2.0)).collect();
+        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let collected: Vec<Positive> = values.into_iter().map(|x| pos!(x.to_f64() * 2.0)).collect();
         assert_eq!(collected.len(), 3);
-        assert_eq!(collected[0], f2p!(2.0));
-        assert_eq!(collected[1], f2p!(4.0));
-        assert_eq!(collected[2], f2p!(6.0));
+        assert_eq!(collected[0], pos!(2.0));
+        assert_eq!(collected[1], pos!(4.0));
+        assert_eq!(collected[2], pos!(6.0));
     }
 
     #[test]
     fn test_collect_from_chain() {
-        let values1 = vec![f2p!(1.0), f2p!(2.0)];
-        let values2 = vec![f2p!(3.0), f2p!(4.0)];
+        let values1 = vec![pos!(1.0), pos!(2.0)];
+        let values2 = vec![pos!(3.0), pos!(4.0)];
         let collected: Vec<Positive> = values1.into_iter().chain(values2).collect();
         assert_eq!(collected.len(), 4);
-        assert_eq!(collected[0], f2p!(1.0));
-        assert_eq!(collected[1], f2p!(2.0));
-        assert_eq!(collected[2], f2p!(3.0));
-        assert_eq!(collected[3], f2p!(4.0));
+        assert_eq!(collected[0], pos!(1.0));
+        assert_eq!(collected[1], pos!(2.0));
+        assert_eq!(collected[2], pos!(3.0));
+        assert_eq!(collected[3], pos!(4.0));
     }
 }
 
@@ -885,7 +878,7 @@ mod test_expiration_date {
 
     #[test]
     fn test_from_string_valid_days() {
-        let result = ExpirationDate::from_string(&"30.0".to_string());
+        let result = ExpirationDate::from_string("30.0");
         assert!(result.is_ok());
         match result.unwrap() {
             ExpirationDate::Days(days) => assert_eq!(days, 30.0),
@@ -895,22 +888,22 @@ mod test_expiration_date {
 
     #[test]
     fn test_from_string_valid_datetime() {
-        let result = ExpirationDate::from_string(&"2024-12-31T00:00:00Z".to_string());
+        let result = ExpirationDate::from_string("2024-12-31T00:00:00Z");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_from_string_invalid_format() {
-        let result = ExpirationDate::from_string(&"invalid date".to_string());
+        let result = ExpirationDate::from_string("invalid date");
         assert!(result.is_err());
     }
 }
 
 #[cfg(test)]
 mod test_asian_options {
-    use crate::f2p;
     use crate::model::types::AsianAveragingType;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -919,8 +912,8 @@ mod test_asian_options {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: f2p!(90.0),
-            strike: f2p!(100.0),
+            spot: pos!(90.0),
+            strike: pos!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: Some(vec![85.0, 90.0, 95.0]),
@@ -935,8 +928,8 @@ mod test_asian_options {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -948,9 +941,9 @@ mod test_asian_options {
 
 #[cfg(test)]
 mod test_barrier_options {
-    use crate::f2p;
     use crate::model::types::BarrierType;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -960,8 +953,8 @@ mod test_barrier_options {
             barrier_level: 90.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(100.0),
-            strike: f2p!(100.0),
+            spot: pos!(100.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -977,8 +970,8 @@ mod test_barrier_options {
             barrier_level: 110.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(120.0),
-            strike: f2p!(100.0),
+            spot: pos!(120.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -990,8 +983,8 @@ mod test_barrier_options {
 
 #[cfg(test)]
 mod test_cliquet_options {
-    use crate::f2p;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -1000,8 +993,8 @@ mod test_cliquet_options {
             reset_dates: vec![30.0, 60.0, 90.0],
         };
         let info = PayoffInfo {
-            spot: f2p!(120.0),
-            strike: f2p!(100.0),
+            spot: pos!(120.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1013,16 +1006,16 @@ mod test_cliquet_options {
 
 #[cfg(test)]
 mod test_rainbow_options {
-    use crate::f2p;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
     fn test_rainbow_option_multiple_assets() {
         let option = OptionType::Rainbow { num_assets: 3 };
         let info = PayoffInfo {
-            spot: f2p!(120.0),
-            strike: f2p!(100.0),
+            spot: pos!(120.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1034,16 +1027,16 @@ mod test_rainbow_options {
 
 #[cfg(test)]
 mod test_exchange_options {
-    use crate::f2p;
     use crate::model::{OptionStyle, OptionType, Side};
+    use crate::pos;
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
     fn test_exchange_option_positive_diff() {
         let option = OptionType::Exchange { second_asset: 90.0 };
         let info = PayoffInfo {
-            spot: f2p!(120.0),
-            strike: f2p!(100.0),
+            spot: pos!(120.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1058,8 +1051,8 @@ mod test_exchange_options {
             second_asset: 110.0,
         };
         let info = PayoffInfo {
-            spot: f2p!(110.0),
-            strike: f2p!(100.0),
+            spot: pos!(110.0),
+            strike: pos!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,

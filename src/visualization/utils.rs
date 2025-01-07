@@ -6,7 +6,8 @@
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::{create_drawing_area, f2p, Positive};
+use crate::{create_drawing_area, Positive};
+use num_traits::ToPrimitive;
 use plotters::backend::BitMapBackend;
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
@@ -82,27 +83,26 @@ macro_rules! draw_line_segments {
 pub trait Graph: Profit {
     fn graph(
         &self,
-        x_axis_data: &[Positive], // TODO: it should be Optional
+        x_axis_data: &[Positive],
         file_path: &str,
-        title_size: u32,         // 15
-        canvas_size: (u32, u32), // (1200, 800)
+        title_size: u32,
+        canvas_size: (u32, u32),
     ) -> Result<(), Box<dyn Error>> {
+        if x_axis_data.is_empty() {
+            return Err("Cannot create graph with empty data".into());
+        }
+
         // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
-
-        let x_axis_point = if x_axis_data.is_empty() {
-            &mut (0..y_axis_data.len())
-                .map(|i| f2p!(i as f64))
-                .collect::<Vec<Positive>>()
-        } else {
-            x_axis_data
-        };
+        if y_axis_data.is_empty() {
+            return Err("No valid profit values to plot".into());
+        }
 
         // Determine the range for the X and Y axes
         let (max_x_value, min_x_value, max_y_value, min_y_value) =
-            calculate_axis_range(x_axis_point, &y_axis_data);
+            calculate_axis_range(x_axis_data, &y_axis_data);
 
-        // Set up the drawing area with a 1200x800 pixel canvas
+        // Set up the drawing area
         let root = create_drawing_area!(file_path, canvas_size.0, canvas_size.1);
 
         let mut chart = build_chart!(
@@ -114,8 +114,9 @@ pub trait Graph: Profit {
             min_y_value,
             max_y_value
         );
+
         configure_chart_and_draw_mesh!(chart, 20, 20, min_x_value.to_f64(), max_x_value.to_f64());
-        draw_line_segments!(chart, x_axis_point, y_axis_data, DARK_GREEN, DARK_RED);
+        draw_line_segments!(chart, x_axis_data, y_axis_data, DARK_GREEN, DARK_RED);
 
         draw_points_on_chart(&mut chart, &self.get_points())?;
         draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
@@ -127,7 +128,11 @@ pub trait Graph: Profit {
 
     fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
-            .map(|&price| self.calculate_profit_at(price))
+            .filter_map(|&price| {
+                self.calculate_profit_at(price)
+                    .ok() // Result in Option
+                    .and_then(|d| d.to_f64())
+            })
             .collect()
     }
 
@@ -272,10 +277,11 @@ where
 #[cfg(test)]
 mod tests_calculate_axis_range {
     use super::*;
+    use crate::pos;
 
     #[test]
     fn test_calculate_axis_range() {
-        let x_data = vec![f2p!(1.0), f2p!(2.0), f2p!(3.0), f2p!(4.0), f2p!(5.0)];
+        let x_data = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -288,20 +294,20 @@ mod tests_calculate_axis_range {
 
     #[test]
     fn test_calculate_axis_range_single_value() {
-        let x_data = vec![f2p!(1.0)];
+        let x_data = vec![pos!(1.0)];
         let y_data = vec![0.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
 
-        assert_eq!(max_x, f2p!(1.0));
-        assert_eq!(min_x, f2p!(1.0));
+        assert_eq!(max_x, pos!(1.0));
+        assert_eq!(min_x, pos!(1.0));
         assert_eq!(max_y, 0.0);
         assert_eq!(min_y, 0.0);
     }
 
     #[test]
     fn test_calculate_axis_range_zero_values() {
-        let x_data = vec![f2p!(0.0), f2p!(0.0), f2p!(0.0)];
+        let x_data = vec![Positive::ZERO, Positive::ZERO, Positive::ZERO];
         let y_data = vec![0.0, 0.0, 0.0];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -314,7 +320,7 @@ mod tests_calculate_axis_range {
 
     #[test]
     fn test_calculate_axis_range_large_values() {
-        let x_data = vec![f2p!(1e6), f2p!(2e6), f2p!(3e6)];
+        let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
         let y_data = vec![1e9, 2e9, 3e9];
 
         let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data);
@@ -329,17 +335,18 @@ mod tests_calculate_axis_range {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
     use crate::visualization::model::LabelOffsetType;
     use crate::Positive;
     use plotters::style::RGBColor;
+    use rust_decimal::Decimal;
     use std::error::Error;
 
     struct MockGraph;
 
     impl Profit for MockGraph {
-        fn calculate_profit_at(&self, price: Positive) -> f64 {
-            (price * 2.0).into()
+        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok((price * 2.0).to_dec())
         }
     }
 
@@ -377,7 +384,7 @@ mod tests {
     #[test]
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![f2p!(0.0), f2p!(50.0), f2p!(100.0)];
+        let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
         mock_graph.graph(&x_axis_data, "test_graph.png", 20, (800, 600))?;
         std::fs::remove_file("test_graph.png")?;
         Ok(())
@@ -386,7 +393,7 @@ mod tests {
     #[test]
     fn test_get_values() {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![f2p!(0.0), f2p!(50.0), f2p!(100.0)];
+        let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
         let values = mock_graph.get_values(&x_axis_data);
         assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }
@@ -395,8 +402,8 @@ mod tests {
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: Positive) -> f64 {
-                0.0
+            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(Decimal::ZERO)
             }
         }
         impl Graph for DefaultGraph {
@@ -412,8 +419,8 @@ mod tests {
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: Positive) -> f64 {
-                0.0
+            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(Decimal::ZERO)
             }
         }
         impl Graph for DefaultGraph {
@@ -444,5 +451,264 @@ mod tests {
         assert_eq!(max_x, Positive::INFINITY);
         assert_eq!(min_y, f64::NEG_INFINITY);
         assert_eq!(max_y, f64::INFINITY);
+    }
+}
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+    use crate::pos;
+    use crate::visualization::model::LabelOffsetType;
+    use plotters::style::RGBColor;
+    use rust_decimal::Decimal;
+
+    struct MockGraph;
+
+    impl Profit for MockGraph {
+        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok((price * 2.0).to_dec())
+        }
+    }
+
+    impl Graph for MockGraph {
+        fn title(&self) -> String {
+            "Mock Graph".to_string()
+        }
+
+        fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
+            vec![ChartVerticalLine {
+                x_coordinate: 50.0,
+                y_range: (-100.0, 100.0),
+                label: "Test Line".to_string(),
+                label_offset: (0.0, 0.0),
+                line_color: RGBColor(0, 0, 0),
+                label_color: RGBColor(0, 0, 0),
+                line_style: plotters::style::ShapeStyle::from(&RGBColor(0, 0, 0)).stroke_width(1),
+                font_size: 12,
+            }]
+        }
+
+        fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+            vec![ChartPoint {
+                coordinates: (50.0, 0.0),
+                label: "Test Point".to_string(),
+                label_offset: LabelOffsetType::Relative(0.0, 0.0),
+                point_color: RGBColor(0, 0, 0),
+                label_color: RGBColor(0, 0, 0),
+                point_size: 5,
+                font_size: 12,
+            }]
+        }
+    }
+
+    #[test]
+    fn test_graph_with_empty_data() -> Result<(), Box<dyn Error>> {
+        let mock_graph = MockGraph;
+        let x_axis_data: Vec<Positive> = vec![];
+        let result = mock_graph.graph(&x_axis_data, "test_empty_graph.png", 20, (800, 600));
+
+        // Verificamos que recibimos un error
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("empty data"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_graph_with_single_point() -> Result<(), Box<dyn Error>> {
+        let mock_graph = MockGraph;
+        let x_axis_data = vec![pos!(50.0)];
+        mock_graph.graph(&x_axis_data, "test_single_point.png", 20, (800, 600))?;
+        std::fs::remove_file("test_single_point.png")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_graph_with_negative_values() -> Result<(), Box<dyn Error>> {
+        struct NegativeGraph;
+
+        impl Profit for NegativeGraph {
+            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(price.to_dec() * Decimal::from(-1))
+            }
+        }
+
+        impl Graph for NegativeGraph {
+            fn title(&self) -> String {
+                "Negative Graph".to_string()
+            }
+        }
+
+        let graph = NegativeGraph;
+        let x_axis_data = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        graph.graph(&x_axis_data, "test_negative.png", 20, (800, 600))?;
+        std::fs::remove_file("test_negative.png")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiple_vertical_lines() -> Result<(), Box<dyn Error>> {
+        struct MultiLineGraph;
+
+        impl Profit for MultiLineGraph {
+            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(price.to_dec())
+            }
+        }
+
+        impl Graph for MultiLineGraph {
+            fn title(&self) -> String {
+                "Multi Line Graph".to_string()
+            }
+
+            fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
+                vec![
+                    ChartVerticalLine {
+                        x_coordinate: 25.0,
+                        y_range: (-50.0, 50.0),
+                        label: "Line 1".to_string(),
+                        label_offset: (5.0, 5.0),
+                        line_color: RGBColor(0, 0, 0),
+                        label_color: RGBColor(0, 0, 0),
+                        line_style: plotters::style::ShapeStyle::from(&RGBColor(0, 0, 0))
+                            .stroke_width(1),
+                        font_size: 12,
+                    },
+                    ChartVerticalLine {
+                        x_coordinate: 75.0,
+                        y_range: (-50.0, 50.0),
+                        label: "Line 2".to_string(),
+                        label_offset: (-5.0, -5.0),
+                        line_color: RGBColor(0, 0, 0),
+                        label_color: RGBColor(0, 0, 0),
+                        line_style: plotters::style::ShapeStyle::from(&RGBColor(0, 0, 0))
+                            .stroke_width(1),
+                        font_size: 12,
+                    },
+                ]
+            }
+        }
+
+        let graph = MultiLineGraph;
+        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
+        graph.graph(&x_axis_data, "test_multi_line.png", 20, (800, 600))?;
+        std::fs::remove_file("test_multi_line.png")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiple_points() -> Result<(), Box<dyn Error>> {
+        struct MultiPointGraph;
+
+        impl Profit for MultiPointGraph {
+            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Ok(price.to_dec())
+            }
+        }
+
+        impl Graph for MultiPointGraph {
+            fn title(&self) -> String {
+                "Multi Point Graph".to_string()
+            }
+
+            fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
+                vec![
+                    ChartPoint {
+                        coordinates: (25.0, 25.0),
+                        label: "Point 1".to_string(),
+                        label_offset: LabelOffsetType::Absolute(5.0, 5.0),
+                        point_color: RGBColor(0, 0, 0),
+                        label_color: RGBColor(0, 0, 0),
+                        point_size: 5,
+                        font_size: 12,
+                    },
+                    ChartPoint {
+                        coordinates: (75.0, 75.0),
+                        label: "Point 2".to_string(),
+                        label_offset: LabelOffsetType::Absolute(-5.0, -5.0),
+                        point_color: RGBColor(0, 0, 0),
+                        label_color: RGBColor(0, 0, 0),
+                        point_size: 5,
+                        font_size: 12,
+                    },
+                ]
+            }
+        }
+
+        let graph = MultiPointGraph;
+        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
+        graph.graph(&x_axis_data, "test_multi_point.png", 20, (800, 600))?;
+        std::fs::remove_file("test_multi_point.png")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_values_error_handling() {
+        struct ErrorGraph;
+
+        impl Profit for ErrorGraph {
+            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+                Err("Test error".into())
+            }
+        }
+
+        impl Graph for ErrorGraph {
+            fn title(&self) -> String {
+                "Error Graph".to_string()
+            }
+        }
+
+        let graph = ErrorGraph;
+        let x_axis_data = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let values = graph.get_values(&x_axis_data);
+
+        // Verificamos que no hay valores cuando hay errores
+        assert!(values.is_empty());
+
+        // También podemos probar con una mezcla de éxitos y errores
+        struct MixedErrorGraph;
+
+        impl Profit for MixedErrorGraph {
+            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+                if price > pos!(1.5) {
+                    Err("Test error".into())
+                } else {
+                    Ok(price.to_dec())
+                }
+            }
+        }
+
+        impl Graph for MixedErrorGraph {
+            fn title(&self) -> String {
+                "Mixed Error Graph".to_string()
+            }
+        }
+
+        let mixed_graph = MixedErrorGraph;
+        let values = mixed_graph.get_values(&x_axis_data);
+
+        // Solo deberían estar los valores válidos
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0], 1.0);
+    }
+
+    #[test]
+    fn test_custom_canvas_sizes() -> Result<(), Box<dyn Error>> {
+        let mock_graph = MockGraph;
+        let x_axis_data = vec![pos!(50.0)];
+
+        // Test diferentes tamaños de canvas
+        let sizes = vec![(400, 300), (1920, 1080), (300, 300)];
+
+        for (width, height) in sizes {
+            mock_graph.graph(
+                &x_axis_data,
+                &format!("test_size_{}x{}.png", width, height),
+                20,
+                (width, height),
+            )?;
+            std::fs::remove_file(format!("test_size_{}x{}.png", width, height))?;
+        }
+
+        Ok(())
     }
 }

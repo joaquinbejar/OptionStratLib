@@ -3,12 +3,14 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
 use crate::greeks::utils::big_n;
 use crate::model::ExpirationDate;
-use crate::{f2du, f2p, Positive};
+use crate::{f2du, pos, Positive};
+use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 
 /// Struct to hold volatility adjustment parameters
@@ -65,12 +67,12 @@ pub fn calculate_single_point_probability(
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
-    risk_free_rate: Option<f64>,
+    risk_free_rate: Option<Decimal>,
 ) -> Result<(Positive, Positive), ProbabilityError> {
     if target_price == Positive::ZERO {
         return Ok((Positive::ZERO, Positive::ONE));
     }
-    let time_to_expiry = expiration_date.get_years();
+    let time_to_expiry = expiration_date.get_years()?;
     if time_to_expiry <= 0.0 {
         return Err(ProbabilityError::ExpirationError(
             ExpirationErrorKind::InvalidExpiration {
@@ -80,7 +82,7 @@ pub fn calculate_single_point_probability(
     }
 
     // Get base parameters
-    let risk_free = risk_free_rate.unwrap_or(0.0);
+    let risk_free = risk_free_rate.unwrap_or(Decimal::ZERO);
 
     // Calculate adjusted volatility if provided
     let volatility = match volatility_adj {
@@ -94,7 +96,7 @@ pub fn calculate_single_point_probability(
             }
             adj.base_volatility * (1.0 + adj.std_dev_adjustment)
         }
-        None => f2p!(0.2), // Default volatility if not provided
+        None => pos!(0.2), // Default volatility if not provided
     };
 
     // Adjust drift rate based on trend if provided
@@ -107,9 +109,9 @@ pub fn calculate_single_point_probability(
                     },
                 ));
             }
-            risk_free + (t.drift_rate * t.confidence)
+            risk_free.to_f64().unwrap() + (t.drift_rate * t.confidence)
         }
-        None => risk_free,
+        None => risk_free.to_f64().unwrap(),
     };
 
     // Calculate parameters for the log-normal distribution
@@ -161,7 +163,7 @@ pub fn calculate_price_probability(
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
-    risk_free_rate: Option<f64>,
+    risk_free_rate: Option<Decimal>,
 ) -> Result<(Positive, Positive, Positive), ProbabilityError> {
     if lower_bound > upper_bound {
         return Err(ProbabilityError::PriceError(
@@ -235,7 +237,7 @@ pub fn calculate_bounds_probability(
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
     expiration_date: ExpirationDate,
-    risk_free_rate: Option<f64>,
+    risk_free_rate: Option<Decimal>,
 ) -> Result<Vec<Positive>, ProbabilityError> {
     // Check if bounds vector is empty
     if bounds.is_empty() {
@@ -285,7 +287,7 @@ pub fn calculate_bounds_probability(
     }
 
     // Probability above last bound
-    range_probs.push(f2p!(1.0 - bound_probs[bound_probs.len() - 1]));
+    range_probs.push(pos!(1.0 - bound_probs[bound_probs.len() - 1]));
 
     Ok(range_probs)
 }
@@ -293,17 +295,18 @@ pub fn calculate_bounds_probability(
 #[cfg(test)]
 mod tests_calculate_bounds_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
 
     #[test]
     fn test_bounds_probability_basic() {
-        let bounds = vec![f2p!(95.0), f2p!(100.0), f2p!(105.0)];
+        let bounds = vec![pos!(95.0), pos!(100.0), pos!(105.0)];
         let result = calculate_bounds_probability(
-            f2p!(100.0),
+            pos!(100.0),
             bounds,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -317,7 +320,7 @@ mod tests_calculate_bounds_probability {
 
         // Verify all probabilities are between 0 and 1
         for prob in probs {
-            assert!(prob >= Positive::ZERO && prob <= f2p!(1.0));
+            assert!(prob >= Positive::ZERO && prob <= pos!(1.0));
         }
     }
 
@@ -325,11 +328,11 @@ mod tests_calculate_bounds_probability {
     fn test_bounds_probability_empty_bounds() {
         let bounds = vec![];
         let result = calculate_bounds_probability(
-            f2p!(100.0),
+            pos!(100.0),
             bounds,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -347,13 +350,13 @@ mod tests_calculate_bounds_probability {
 
     #[test]
     fn test_bounds_probability_unordered_bounds() {
-        let bounds = vec![f2p!(100.0), f2p!(95.0), f2p!(105.0)];
+        let bounds = vec![pos!(100.0), pos!(95.0), pos!(105.0)];
         let result = calculate_bounds_probability(
-            f2p!(100.0),
+            pos!(100.0),
             bounds,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -370,13 +373,13 @@ mod tests_calculate_bounds_probability {
 
     #[test]
     fn test_bounds_probability_single_bound() {
-        let bounds = vec![f2p!(100.0)];
+        let bounds = vec![pos!(100.0)];
         let result = calculate_bounds_probability(
-            f2p!(100.0),
+            pos!(100.0),
             bounds,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -388,18 +391,18 @@ mod tests_calculate_bounds_probability {
 
     #[test]
     fn test_bounds_probability_with_volatility() {
-        let bounds = vec![f2p!(90.0), f2p!(100.0), f2p!(110.0)];
+        let bounds = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.5),
+            base_volatility: pos!(0.5),
             std_dev_adjustment: Positive::ZERO,
         });
 
         let result = calculate_bounds_probability(
-            f2p!(100.0),
+            pos!(100.0),
             bounds,
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -417,14 +420,16 @@ mod tests_calculate_bounds_probability {
 #[cfg(test)]
 mod tests_single_point_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
     use chrono::{Duration, Utc};
+    use rust_decimal_macros::dec;
 
     // Helper function to create default volatility adjustment
     fn default_volatility_adj() -> VolatilityAdjustment {
         VolatilityAdjustment {
-            base_volatility: f2p!(0.2),
-            std_dev_adjustment: f2p!(0.1),
+            base_volatility: pos!(0.2),
+            std_dev_adjustment: pos!(0.1),
         }
     }
 
@@ -438,27 +443,27 @@ mod tests_single_point_probability {
 
     #[test]
     fn test_basic_calculation_with_days() {
-        let current_price = f2p!(100.0);
-        let target_price = f2p!(105.0);
+        let current_price = pos!(100.0);
+        let target_price = pos!(105.0);
         let result = calculate_single_point_probability(
             current_price,
             target_price,
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_calculation_with_datetime() {
-        let current_price = f2p!(100.0);
-        let target_price = f2p!(105.0);
+        let current_price = pos!(100.0);
+        let target_price = pos!(105.0);
         let expiration_date = Utc::now() + Duration::days(365);
 
         let result = calculate_single_point_probability(
@@ -472,14 +477,14 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_with_volatility_adjustment() {
-        let current_price = f2p!(100.0);
-        let target_price = f2p!(105.0);
+        let current_price = pos!(100.0);
+        let target_price = pos!(105.0);
         let vol_adj = Some(default_volatility_adj());
 
         let result = calculate_single_point_probability(
@@ -487,20 +492,20 @@ mod tests_single_point_probability {
             target_price,
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_with_trend() {
-        let current_price = f2p!(100.0);
-        let target_price = f2p!(105.0);
+        let current_price = pos!(100.0);
+        let target_price = pos!(105.0);
         let trend = Some(default_trend());
 
         let result = calculate_single_point_probability(
@@ -508,40 +513,40 @@ mod tests_single_point_probability {
             target_price,
             None,
             trend,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_with_risk_free_rate() {
-        let current_price = f2p!(100.0);
-        let target_price = f2p!(105.0);
+        let current_price = pos!(100.0);
+        let target_price = pos!(105.0);
 
         let result = calculate_single_point_probability(
             current_price,
             target_price,
             None,
             None,
-            ExpirationDate::Days(365.0),
-            Some(0.05),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_all_parameters() {
-        let current_price = f2p!(100.0);
-        let target_price = f2p!(105.0);
+        let current_price = pos!(100.0);
+        let target_price = pos!(105.0);
         let vol_adj = Some(default_volatility_adj());
         let trend = Some(default_trend());
 
@@ -550,26 +555,26 @@ mod tests_single_point_probability {
             target_price,
             vol_adj,
             trend,
-            ExpirationDate::Days(365.0),
-            Some(0.05),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            Some(dec!(0.05)),
         );
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_target_equals_current() {
-        let price = f2p!(100.0);
+        let price = pos!(100.0);
 
         let result = calculate_single_point_probability(
             price,
             price,
             Some({
                 VolatilityAdjustment {
-                    base_volatility: f2p!(0.8),
+                    base_volatility: pos!(0.8),
                     std_dev_adjustment: Positive::ZERO,
                 }
             }),
@@ -579,7 +584,7 @@ mod tests_single_point_probability {
                     confidence: 1.0,
                 }
             }),
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -593,11 +598,11 @@ mod tests_single_point_probability {
     #[test]
     fn test_zero_days_to_expiry() {
         let result = calculate_single_point_probability(
-            f2p!(100.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(105.0),
             None,
             None,
-            ExpirationDate::Days(0.0),
+            ExpirationDate::Days(Positive::ZERO),
             None,
         );
 
@@ -614,13 +619,12 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[should_panic]
     fn test_past_datetime() {
         let past_date = Utc::now() - Duration::days(1);
 
         let result = calculate_single_point_probability(
-            f2p!(100.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(105.0),
             None,
             None,
             ExpirationDate::DateTime(past_date),
@@ -634,15 +638,15 @@ mod tests_single_point_probability {
     fn test_invalid_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: Positive::ZERO,
-            std_dev_adjustment: f2p!(0.1),
+            std_dev_adjustment: pos!(0.1),
         });
 
         let result = calculate_single_point_probability(
-            f2p!(100.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(105.0),
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -666,11 +670,11 @@ mod tests_single_point_probability {
         });
 
         let result = calculate_single_point_probability(
-            f2p!(100.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(105.0),
             None,
             trend,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -690,54 +694,54 @@ mod tests_single_point_probability {
     fn test_extreme_target_prices() {
         // Test with very high target price
         let result_high = calculate_single_point_probability(
-            f2p!(100.0),
-            f2p!(1000000.0),
+            pos!(100.0),
+            pos!(1000000.0),
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
         assert!(result_high.is_ok());
         let (_, prob_above) = result_high.unwrap();
-        assert!(prob_above < f2p!(0.01)); // Probability should be very low
+        assert!(prob_above < pos!(0.01)); // Probability should be very low
 
         // Test with very low target price
         let result_low = calculate_single_point_probability(
-            f2p!(100.0),
-            f2p!(0.1),
+            pos!(100.0),
+            pos!(0.1),
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
         assert!(result_low.is_ok());
         let (prob_below, prob_above) = result_low.unwrap();
-        assert!(prob_above > f2p!(0.99)); // Probability should be very high
-        assert!(prob_below < f2p!(0.01)); // Probability should be very low
+        assert!(prob_above > pos!(0.99)); // Probability should be very high
+        assert!(prob_below < pos!(0.01)); // Probability should be very low
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_extreme_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(1.0),
-            std_dev_adjustment: f2p!(5.0),
+            base_volatility: pos!(1.0),
+            std_dev_adjustment: pos!(5.0),
         });
 
         let result = calculate_single_point_probability(
-            f2p!(100.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(105.0),
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
@@ -749,17 +753,17 @@ mod tests_single_point_probability {
         });
 
         let result = calculate_single_point_probability(
-            f2p!(100.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(105.0),
             None,
             trend,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 }
@@ -767,25 +771,26 @@ mod tests_single_point_probability {
 #[cfg(test)]
 mod tests_calculate_price_probability {
     use super::*;
+    use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
 
     #[test]
     fn test_price_probability_basic() {
         let result = calculate_price_probability(
-            f2p!(100.0),
-            f2p!(95.0),
-            f2p!(105.0),
+            pos!(100.0),
+            pos!(95.0),
+            pos!(105.0),
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
         assert!(result.is_ok());
         let (prob_below, prob_in_range, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= f2p!(1.0));
-        assert!(prob_in_range >= Positive::ZERO && prob_in_range <= f2p!(1.0));
-        assert!(prob_above >= Positive::ZERO && prob_above <= f2p!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_in_range >= Positive::ZERO && prob_in_range <= pos!(1.0));
+        assert!(prob_above >= Positive::ZERO && prob_above <= pos!(1.0));
         assert_relative_eq!(
             (prob_below + prob_in_range + prob_above).to_f64(),
             1.0,
@@ -796,12 +801,12 @@ mod tests_calculate_price_probability {
     #[test]
     fn test_price_probability_invalid_bounds() {
         let result = calculate_price_probability(
-            f2p!(100.0),
-            f2p!(105.0), // Lower bound higher than upper bound
-            f2p!(95.0),
+            pos!(100.0),
+            pos!(105.0), // Lower bound higher than upper bound
+            pos!(95.0),
             None,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -819,17 +824,17 @@ mod tests_calculate_price_probability {
     #[test]
     fn test_price_probability_with_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: f2p!(0.5),
+            base_volatility: pos!(0.5),
             std_dev_adjustment: Positive::ZERO,
         });
 
         let result = calculate_price_probability(
-            f2p!(100.0),
-            f2p!(90.0),
-            f2p!(110.0),
+            pos!(100.0),
+            pos!(90.0),
+            pos!(110.0),
             vol_adj,
             None,
-            ExpirationDate::Days(365.0),
+            ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 

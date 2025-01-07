@@ -18,7 +18,7 @@
  [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
  [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
 
- # OptionStratLib v0.3.0: Financial Options Library
+ # OptionStratLib v0.3.1: Financial Options Library
 
  ## Table of Contents
  1. [Introduction](#introduction)
@@ -173,12 +173,12 @@
  +underlying_symbol: String
  +strike_price: Positive
  +expiration_date: ExpirationDate
- +implied_volatility: f64
+ +implied_volatility: Positive
  +quantity: Positive
  +underlying_price: Positive
- +risk_free_rate: f64
+ +risk_free_rate: Decimal
  +option_style: OptionStyle
- +dividend_yield: f64
+ +dividend_yield: Positive
  +exotic_params: Option~ExoticParams~
  +calculate_price_black_scholes()
  +calculate_price_binomial()
@@ -547,25 +547,26 @@ use optionstratlib::greeks::equations::Greeks;
 use optionstratlib::Options;
 use optionstratlib::Positive;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use std::error::Error;
 use tracing::info;
 
 fn create_sample_option() -> Options {
-    use optionstratlib::f2p;Options::new(
+    use rust_decimal_macros::dec;
+use optionstratlib::pos;Options::new(
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        f2p!(100.0),
-        ExpirationDate::Days(30.0),
-        0.2,
-        f2p!(1.0),
-        f2p!(105.0),
-        0.05,
+        pos!(100.0),
+        ExpirationDate::Days(pos!(30.0)),
+        pos!(0.2),
+        pos!(1.0),
+        pos!(105.0),
+        dec!(0.05),
         OptionStyle::Call,
-        0.0,
+        Positive::ZERO,
         None,
     )
 }
@@ -577,7 +578,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Define a range of prices for the graph
     let price_range: Vec<Positive> = (50..150)
-        .map(|x| f2p!(x as f64))
+        .map(|x| pos!(x as f64))
         .collect();
 
     // Generate the intrinsic value graph
@@ -595,7 +596,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 ```rust
 use optionstratlib::Positive;
 use optionstratlib::ExpirationDate;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::utils::setup_logger;
@@ -604,29 +605,30 @@ use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
+    use rust_decimal_macros::dec;
+setup_logger();
 
-    let underlying_price = f2p!(5781.88);
+    let underlying_price = pos!(5781.88);
 
     let strategy = BullCallSpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        f2p!(5750.0),     // long_strike_itm
-        f2p!(5820.0),     // short_strike
-        ExpirationDate::Days(2.0),
-        0.18,      // implied_volatility
-        0.05,      // risk_free_rate
-        0.0,       // dividend_yield
-        f2p!(2.0), // long quantity
-        85.04,     // premium_long
-        29.85,     // premium_short
-        0.78,      // open_fee_long
-        0.78,      // open_fee_long
-        0.73,      // close_fee_long
-        0.73,      // close_fee_short
+        underlying_price,   // underlying_price
+        pos!(5750.0),   // long_strike_itm
+        pos!(5820.0),   // short_strike
+        ExpirationDate::Days(pos!(2.0)),
+        pos!(0.18),   // implied_volatility
+        dec!(0.05),   // risk_free_rate
+        Positive::ZERO,   // dividend_yield
+        pos!(2.0),   // long quantity
+        pos!(85.04),   // premium_long
+        pos!(29.85),   // premium_short
+        pos!(0.78),   // open_fee_long
+        pos!(0.78),   // open_fee_long
+        pos!(0.73),   // close_fee_long
+        pos!(0.73),   // close_fee_short
     );
 
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

@@ -4,7 +4,8 @@
    Date: 18/8/24
 ******************************************************************************/
 use crate::chains::chain::OptionData;
-use crate::constants::ZERO;
+use crate::error::position::PositionValidationErrorKind;
+use crate::error::PositionError;
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -12,9 +13,12 @@ use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use crate::Options;
-use crate::{f2p, Positive};
+use crate::{pos, Positive};
 use chrono::{DateTime, Utc};
+use num_traits::ToPrimitive;
 use plotters::prelude::{ShapeStyle, BLACK};
+use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{debug, trace};
 
 /// The `Position` struct represents a financial position in an options market.
@@ -29,17 +33,17 @@ use tracing::{debug, trace};
 /// - `close_fee`: The fee paid to close the position per contract.
 ///
 /// # Methods
-/// - `new(option: Options, premium: f64, date: DateTime<Utc>, open_fee: f64, close_fee: f64) -> Self`
+/// - `new(option: Options, premium: Positive, date: DateTime<Utc>, open_fee: Positive, close_fee: Positive) -> Self`
 ///   Creates a new `Position` instance.
-/// - `total_cost(&self) -> f64`
+/// - `total_cost(&self) -> Result<Positive, PositionError>`
 ///   Calculates the total cost including the premium and open fee.
-/// - `unrealized_pnl(&self, current_price: f64) -> f64`
+/// - `unrealized_pnl(&self, Positive: Positive) -> Result<Decimal, PositionError>`
 ///   Calculates the unrealized profit or loss at the current price.
-/// - `realized_pnl(&self, close_price: f64) -> f64`
+/// - `pnl_at_expiration(&self, price: &Option<Positive>) -> Result<Decimal, Box<dyn Error>>`
 ///   Calculates the realized profit or loss at the closing price.
-/// - `days_held(&self) -> i64`
+/// - `days_held(&self) -> Result<Positive, PositionError>`
 ///   Returns the number of days the position has been held.
-/// - `days_to_expiration(&self) -> f64`
+/// - `days_to_expiration(&self) -> Result<Positive, PositionError>`
 ///   Returns the number of days until the option expires.
 /// - `is_long(&self) -> bool`
 ///   Checks if the position is a long position.
@@ -51,22 +55,20 @@ use tracing::{debug, trace};
 #[derive(Clone, PartialEq)]
 pub struct Position {
     pub option: Options,
-    pub premium: f64,
+    pub premium: Positive,
     pub date: DateTime<Utc>,
-    pub open_fee: f64,
-    pub close_fee: f64,
+    pub open_fee: Positive,
+    pub close_fee: Positive,
 }
 
 impl Position {
     pub fn new(
         option: Options,
-        premium: f64,
+        premium: Positive,
         date: DateTime<Utc>,
-        open_fee: f64,
-        close_fee: f64,
+        open_fee: Positive,
+        close_fee: Positive,
     ) -> Self {
-        let premium = Self::check_premium(premium);
-
         Position {
             option,
             premium,
@@ -82,16 +84,16 @@ impl Position {
 
         match (self.option.side.clone(), self.option.option_style.clone()) {
             (Side::Long, OptionStyle::Call) => {
-                self.premium = option_data.call_ask.unwrap().to_f64();
+                self.premium = option_data.call_ask.unwrap();
             }
             (Side::Long, OptionStyle::Put) => {
-                self.premium = option_data.put_ask.unwrap().to_f64();
+                self.premium = option_data.put_ask.unwrap();
             }
             (Side::Short, OptionStyle::Call) => {
-                self.premium = option_data.call_bid.unwrap().to_f64();
+                self.premium = option_data.call_bid.unwrap();
             }
             (Side::Short, OptionStyle::Put) => {
-                self.premium = option_data.put_bid.unwrap().to_f64();
+                self.premium = option_data.put_bid.unwrap();
             }
         }
         trace!("Updated position: {:#?}", self);
@@ -111,64 +113,79 @@ impl Position {
     ///
     /// A `f64` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE
     ///
-    pub fn total_cost(&self) -> Positive {
-        let f64_total_cost = match self.option.side {
-            Side::Long => {
-                (self.premium + self.open_fee + self.close_fee) * self.option.quantity.to_f64()
-            }
-            Side::Short => (self.open_fee + self.close_fee) * self.option.quantity.to_f64(),
+    pub fn total_cost(&self) -> Result<Positive, PositionError> {
+        let total_cost = match self.option.side {
+            Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
+            Side::Short => self.fees()?,
         };
-        f2p!(f64_total_cost)
+        Ok(total_cost)
     }
 
-    pub fn premium_received(&self) -> f64 {
+    pub fn premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
-            Side::Long => ZERO,
-            Side::Short => self.premium * self.option.quantity.to_f64(),
+            Side::Long => Ok(Positive::ZERO),
+            Side::Short => Ok(self.premium * self.option.quantity),
         }
     }
 
-    pub fn net_premium_received(&self) -> f64 {
+    pub fn net_premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
-            Side::Long => ZERO,
-            Side::Short => self.premium_received() - self.total_cost().to_f64(),
-        }
-    }
-
-    pub fn pnl_at_expiration(&self, underlying_price: &Option<Positive>) -> f64 {
-        match underlying_price {
-            None => {
-                self.option.intrinsic_value(self.option.underlying_price) - self.total_cost()
-                    + self.premium_received()
-            }
-            Some(price) => {
-                self.option.intrinsic_value(*price) - self.total_cost() + self.premium_received()
-            }
-        }
-    }
-
-    pub fn unrealized_pnl(&self, current_option_price: Positive) -> f64 {
-        match self.option.side {
-            Side::Long => ((current_option_price - self.premium - self.open_fee - self.close_fee)
-                * self.option.quantity)
-                .into(),
+            Side::Long => Ok(Positive::ZERO),
             Side::Short => {
-                (self.premium - current_option_price - self.open_fee - self.close_fee)
-                    * self.option.quantity
+                // max profit is premium received - fees (cost)
+                let premium = self.premium * self.option.quantity;
+                let cost = -self.total_cost()?.to_dec();
+                match premium > cost {
+                    true => Ok(premium + cost),
+                    false => Err(PositionError::ValidationError(
+                        PositionValidationErrorKind::InvalidPosition {
+                            reason: "Max profit is negative.".to_string(),
+                        },
+                    )),
+                }
             }
         }
     }
 
-    pub fn days_held(&self) -> i64 {
-        (Utc::now() - self.date).num_days()
+    pub fn pnl_at_expiration(
+        // payoff
+        &self,
+        price: &Option<&Positive>,
+    ) -> Result<Decimal, Box<dyn Error>> {
+        match price {
+            None => Ok(self.option.intrinsic_value(self.option.underlying_price)?
+                - self.total_cost()?
+                + self.premium_received()?),
+            Some(price) => Ok(self.option.intrinsic_value(**price)? - self.total_cost()?
+                + self.premium_received()?),
+        }
     }
 
-    pub fn days_to_expiration(&self) -> f64 {
+    pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
+        match self.option.side {
+            Side::Long => Ok((price.to_dec()
+                - self.premium.to_dec()
+                - self.open_fee.to_dec()
+                - self.close_fee.to_dec())
+                * self.option.quantity),
+            Side::Short => Ok((self.premium.to_dec()
+                - price.to_dec()
+                - self.open_fee.to_dec()
+                - self.close_fee.to_dec())
+                * self.option.quantity),
+        }
+    }
+
+    pub fn days_held(&self) -> Result<Positive, PositionError> {
+        Ok(pos!((Utc::now() - self.date).num_days() as f64))
+    }
+
+    pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
-            ExpirationDate::Days(days) => days,
-            ExpirationDate::DateTime(datetime) => {
-                datetime.signed_duration_since(Utc::now()).num_days() as f64
-            }
+            ExpirationDate::Days(days) => Ok(days),
+            ExpirationDate::DateTime(datetime) => Ok(pos!(datetime
+                .signed_duration_since(Utc::now())
+                .num_days() as f64)),
         }
     }
 
@@ -197,30 +214,25 @@ impl Position {
     ///
     /// # Returns
     ///
-    /// A `f64` representing the net cost of the position.
+    /// A `Decimal` representing the net cost of the position.
     /// The value should be positive but if the fee is higher than the premium it will be negative
     /// in short positions
-    pub(crate) fn net_cost(&self) -> f64 {
+    pub fn net_cost(&self) -> Result<Decimal, PositionError> {
         match self.option.side {
-            Side::Long => self.total_cost().into(),
+            Side::Long => Ok(self.total_cost()?.to_dec()),
             Side::Short => {
-                (self.open_fee + self.close_fee - self.premium).abs() * self.option.quantity
+                let fees = self.fees()?.to_dec();
+                let premium = self.premium_received()?.to_dec();
+                Ok(fees - premium)
             }
         }
     }
 
-    fn check_premium(mut premium: f64) -> f64 {
-        if premium < ZERO {
-            premium *= -1.0;
-        }
-        premium
-    }
-
     pub fn break_even(&self) -> Option<Positive> {
-        if self.option.quantity == ZERO {
+        if self.option.quantity == Positive::ZERO {
             return None;
         }
-        let total_cost_per_contract = self.total_cost() / self.option.quantity;
+        let total_cost_per_contract = self.total_cost().unwrap() / self.option.quantity;
         match (&self.option.side, &self.option.option_style) {
             (Side::Long, OptionStyle::Call) => {
                 Some(self.option.strike_price + total_cost_per_contract)
@@ -238,28 +250,28 @@ impl Position {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn max_profit(&self) -> f64 {
+    pub(crate) fn max_profit(&self) -> Result<Positive, PositionError> {
         match self.option.side {
-            Side::Long => f64::INFINITY,
-            Side::Short => self.premium * self.option.quantity - self.total_cost(),
-        }
-    }
-    #[allow(dead_code)]
-    pub(crate) fn max_loss(&self) -> f64 {
-        match self.option.side {
-            Side::Long => self.total_cost().into(),
-            Side::Short => f64::INFINITY,
+            Side::Long => Ok(Positive::INFINITY),
+            Side::Short => self.net_premium_received(),
         }
     }
 
     #[allow(dead_code)]
-    pub(crate) fn fees(&self) -> f64 {
-        (self.open_fee + self.close_fee) * self.option.quantity
+    pub(crate) fn max_loss(&self) -> Result<Positive, PositionError> {
+        match self.option.side {
+            Side::Long => self.total_cost(),
+            Side::Short => Ok(Positive::INFINITY),
+        }
     }
 
-    pub(crate) fn validate(&self) -> bool {
+    pub fn fees(&self) -> Result<Positive, PositionError> {
+        Ok((self.open_fee + self.close_fee) * self.option.quantity)
+    }
+
+    pub fn validate(&self) -> bool {
         if self.option.side == Side::Short {
-            if self.premium == ZERO {
+            if self.premium == Positive::ZERO {
                 debug!("Premium must be greater than zero for short positions.");
                 return false;
             }
@@ -267,18 +279,6 @@ impl Position {
                 debug!("Premium must be greater than the sum of the fees.");
                 return false;
             }
-        }
-        if self.premium < ZERO {
-            debug!("Premium must be greater than zero.");
-            return false;
-        }
-        if self.open_fee < ZERO {
-            debug!("Open fee must be greater than zero.");
-            return false;
-        }
-        if self.close_fee < ZERO {
-            debug!("Close fee must be greater than zero.");
-            return false;
         }
         if !self.option.validate() {
             debug!("Option is not valid.");
@@ -292,10 +292,10 @@ impl Default for Position {
     fn default() -> Self {
         Position {
             option: Options::default(),
-            premium: ZERO,
+            premium: Positive::ZERO,
             date: Utc::now(),
-            open_fee: ZERO,
-            close_fee: ZERO,
+            open_fee: Positive::ZERO,
+            close_fee: Positive::ZERO,
         }
     }
 }
@@ -307,31 +307,38 @@ impl Greeks for Position {
 }
 
 impl PnLCalculator for Position {
-    fn calculate_pnl(&self, date_time: DateTime<Utc>, market_price: Positive) -> PnL {
-        PnL::new(
-            None,
-            Some(self.unrealized_pnl(market_price)),
-            self.total_cost().into(),
-            self.premium_received(),
-            date_time,
-        )
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        self.option
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
     }
 
-    fn calculate_pnl_at_expiration(&self, underlying_price: Option<Positive>) -> PnL {
-        PnL::new(
-            Some(self.pnl_at_expiration(&underlying_price)),
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        let realized = self.pnl_at_expiration(&Some(underlying_price))?;
+        let initial_cost = self.total_cost()?;
+        let initial_income = self.premium_received()?;
+        let date_time = self.option.expiration_date.get_date()?;
+
+        Ok(PnL::new(
+            Some(realized),
             None,
-            self.total_cost().into(),
-            self.premium_received(),
-            self.option.expiration_date.get_date(),
-        )
+            initial_cost,
+            initial_income,
+            date_time,
+        ))
     }
 }
 
 impl Profit for Position {
-    fn calculate_profit_at(&self, price: Positive) -> f64 {
-        let price = price.into();
-        self.pnl_at_expiration(&price)
+    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+        self.pnl_at_expiration(&Some(&price))
     }
 }
 
@@ -342,7 +349,12 @@ impl Graph for Position {
 
     fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
-            .map(|&price| self.pnl_at_expiration(&Some(price)))
+            .map(|&price| {
+                self.pnl_at_expiration(&Some(&price))
+                    .unwrap()
+                    .to_f64()
+                    .unwrap()
+            })
             .collect()
     }
 
@@ -371,9 +383,10 @@ impl Graph for Position {
 mod tests_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
     use chrono::Duration;
+    use rust_decimal_macros::dec;
 
     fn setup_option(
         side: Side,
@@ -381,20 +394,20 @@ mod tests_position {
         strike_price: Positive,
         underlying_price: Positive,
         quantity: Positive,
-        expiration_days: i64,
+        expiration_days: Positive,
     ) -> Options {
         Options {
             option_type: OptionType::European,
             side,
             underlying_symbol: "".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(expiration_days as f64),
-            implied_volatility: 0.2,
+            expiration_date: ExpirationDate::Days(expiration_days),
+            implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
-            risk_free_rate: 0.01,
+            risk_free_rate: dec!(0.01),
             option_style,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -404,14 +417,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.total_cost(),
+            position.total_cost().unwrap(),
             7.0,
             "Total cost calculation is incorrect."
         );
@@ -422,14 +435,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.total_cost(),
+            position.total_cost().unwrap(),
             70.0,
             "Total cost calculation is incorrect."
         );
@@ -440,14 +453,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.total_cost(),
+            position.total_cost().unwrap(),
             2.0,
             "Total cost calculation is incorrect."
         );
@@ -458,14 +471,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.total_cost(),
+            position.total_cost().unwrap(),
             20.0,
             "Total cost calculation is incorrect."
         );
@@ -476,15 +489,15 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(110.0),
-            f2p!(1.0),
-            0,
+            pos!(100.0),
+            pos!(110.0),
+            pos!(1.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
-            3.0,
+            position.pnl_at_expiration(&None).unwrap(),
+            dec!(3.0),
             "PNL at expiration for long call ITM is incorrect."
         );
     }
@@ -494,15 +507,15 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(110.0),
-            f2p!(1.0),
-            0,
+            pos!(100.0),
+            pos!(110.0),
+            pos!(1.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
-            3.0,
+            position.pnl_at_expiration(&None).unwrap(),
+            dec!(3.0),
             "PNL at expiration for long call ITM is incorrect."
         );
     }
@@ -512,15 +525,15 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(110.0),
-            f2p!(10.0),
-            0,
+            pos!(100.0),
+            pos!(110.0),
+            pos!(10.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
-            30.0,
+            position.pnl_at_expiration(&None).unwrap(),
+            dec!(30.0),
             "PNL at expiration for long call ITM is incorrect."
         );
     }
@@ -530,14 +543,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(110.0),
-            f2p!(1.0),
-            0,
+            pos!(100.0),
+            pos!(110.0),
+            pos!(1.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
+            position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             -7.0,
             "PNL at expiration for short call ITM is incorrect."
         );
@@ -548,14 +561,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(110.0),
-            f2p!(10.0),
-            0,
+            pos!(100.0),
+            pos!(110.0),
+            pos!(10.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
+            position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             -70.0,
             "PNL at expiration for short call ITM is incorrect."
         );
@@ -566,14 +579,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(90.0),
-            f2p!(1.0),
-            0,
+            pos!(100.0),
+            pos!(90.0),
+            pos!(1.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
+            position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             3.0,
             "PNL at expiration for long put ITM is incorrect."
         );
@@ -584,14 +597,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(90.0),
-            f2p!(10.0),
-            0,
+            pos!(100.0),
+            pos!(90.0),
+            pos!(10.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
+            position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             30.0,
             "PNL at expiration for long put ITM is incorrect."
         );
@@ -602,14 +615,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(90.0),
-            f2p!(1.0),
-            0,
+            pos!(100.0),
+            pos!(90.0),
+            pos!(1.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
+            position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             -7.0,
             "PNL at expiration for short put ITM is incorrect."
         );
@@ -620,14 +633,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(90.0),
-            f2p!(10.0),
-            0,
+            pos!(100.0),
+            pos!(90.0),
+            pos!(10.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
+            position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             -70.0,
             "PNL at expiration for short put ITM is incorrect."
         );
@@ -638,14 +651,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(110.0),
-            f2p!(1.0),
-            0,
+            pos!(100.0),
+            pos!(110.0),
+            pos!(1.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
+            position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             3.0,
             "PNL at expiration for short put ITM is incorrect."
         );
@@ -656,14 +669,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(110.0),
-            f2p!(10.0),
-            0,
+            pos!(100.0),
+            pos!(110.0),
+            pos!(10.0),
+            Positive::ZERO,
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.pnl_at_expiration(&None),
+            position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             30.0,
             "PNL at expiration for short put ITM is incorrect."
         );
@@ -674,15 +687,15 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.unrealized_pnl(f2p!(7.0)),
-            ZERO,
+            position.pnl_at_expiration(&Some(&pos!(107.0))).unwrap(),
+            Positive::ZERO,
             "Unrealized PNL for long call is incorrect."
         );
     }
@@ -692,14 +705,18 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.unrealized_pnl(f2p!(7.0)),
+            position
+                .pnl_at_expiration(&Some(&pos!(107.0)))
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             ZERO,
             "Unrealized PNL for long call is incorrect."
         );
@@ -710,14 +727,18 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.unrealized_pnl(f2p!(3.0)),
+            position
+                .unrealized_pnl(pos!(3.0))
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             ZERO,
             "Unrealized PNL for short call is incorrect."
         );
@@ -728,14 +749,18 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.unrealized_pnl(f2p!(10.0)),
+            position
+                .unrealized_pnl(pos!(10.0))
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             -7.0,
             "Unrealized PNL for short call is incorrect."
         );
@@ -746,16 +771,16 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
         let date = Utc::now() - Duration::days(10);
-        let position = Position::new(option, 5.0, date, 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), date, Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.days_held(),
-            10,
+            position.days_held().unwrap().to_f64(),
+            10.0,
             "Days held calculation is incorrect."
         );
     }
@@ -765,14 +790,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(
-            position.days_to_expiration(),
+            position.days_to_expiration().unwrap().to_f64(),
             30.0,
             "Days to expiration calculation is incorrect."
         );
@@ -783,12 +808,12 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert!(
             position.is_long(),
             "is_long should return true for long positions."
@@ -804,12 +829,12 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert!(
             position.is_short(),
             "is_short should return true for short positions."
@@ -824,24 +849,24 @@ mod tests_position {
 #[cfg(test)]
 mod tests_valid_position {
     use super::*;
-    use crate::constants::ZERO;
-    use crate::f2p;
     use crate::model::types::OptionType;
+    use crate::pos;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
 
     fn create_valid_option() -> Options {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
-            strike_price: f2p!(100.0),
-            expiration_date: ExpirationDate::Days(30.0),
-            implied_volatility: 0.2,
-            quantity: f2p!(1.0),
-            underlying_price: f2p!(105.0),
-            risk_free_rate: 0.05,
+            strike_price: pos!(100.0),
+            expiration_date: ExpirationDate::Days(pos!(30.0)),
+            implied_volatility: pos!(0.2),
+            quantity: pos!(1.0),
+            underlying_price: pos!(105.0),
+            risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
-            dividend_yield: 0.01,
+            dividend_yield: pos!(0.01),
             exotic_params: None,
         }
     }
@@ -849,10 +874,10 @@ mod tests_valid_position {
     fn create_valid_position() -> Position {
         Position {
             option: create_valid_option(),
-            premium: 5.0,
+            premium: pos!(5.0),
             date: Utc::now(),
-            open_fee: 0.5,
-            close_fee: 0.5,
+            open_fee: pos!(0.5),
+            close_fee: pos!(0.5),
         }
     }
 
@@ -865,29 +890,8 @@ mod tests_valid_position {
     #[test]
     fn test_zero_premium() {
         let mut position = create_valid_position();
-        position.premium = ZERO;
+        position.premium = Positive::ZERO;
         assert!(position.validate());
-    }
-
-    #[test]
-    fn test_negative_premium() {
-        let mut position = create_valid_position();
-        position.premium = -1.0;
-        assert!(!position.validate());
-    }
-
-    #[test]
-    fn test_negative_open_fee() {
-        let mut position = create_valid_position();
-        position.open_fee = -0.1;
-        assert!(!position.validate());
-    }
-
-    #[test]
-    fn test_negative_close_fee() {
-        let mut position = create_valid_position();
-        position.close_fee = -0.1;
-        assert!(!position.validate());
     }
 
     #[test]
@@ -900,8 +904,8 @@ mod tests_valid_position {
     #[test]
     fn test_zero_fees() {
         let mut position = create_valid_position();
-        position.open_fee = ZERO;
-        position.close_fee = ZERO;
+        position.open_fee = Positive::ZERO;
+        position.close_fee = Positive::ZERO;
         assert!(position.validate());
     }
 }
@@ -909,9 +913,9 @@ mod tests_valid_position {
 #[cfg(test)]
 mod tests_position_break_even {
     use super::*;
-    use crate::constants::ZERO;
-    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn setup_option(
         side: Side,
@@ -919,20 +923,20 @@ mod tests_position_break_even {
         strike_price: Positive,
         underlying_price: Positive,
         quantity: Positive,
-        expiration_days: i64,
+        expiration_days: Positive,
     ) -> Options {
         Options {
             option_type: OptionType::European,
             side,
             underlying_symbol: "".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(expiration_days as f64),
-            implied_volatility: 0.2,
+            expiration_date: ExpirationDate::Days(expiration_days),
+            implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
-            risk_free_rate: 0.01,
+            risk_free_rate: dec!(0.01),
             option_style,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -942,12 +946,12 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(position.break_even().unwrap(), 107.0);
     }
 
@@ -956,12 +960,12 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(position.break_even().unwrap(), 107.0);
     }
 
@@ -970,12 +974,12 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(position.break_even().unwrap(), 103.0);
     }
 
@@ -984,12 +988,12 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(position.break_even().unwrap(), 103.0);
     }
 
@@ -998,12 +1002,12 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(position.break_even().unwrap(), 93.0);
     }
 
@@ -1012,12 +1016,12 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(position.break_even().unwrap(), 93.0);
     }
 
@@ -1026,12 +1030,12 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(position.break_even().unwrap(), 97.0);
     }
 
@@ -1040,12 +1044,12 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
         assert_eq!(position.break_even().unwrap(), 97.0);
     }
 }
@@ -1053,10 +1057,10 @@ mod tests_position_break_even {
 #[cfg(test)]
 mod tests_position_max_loss_profit {
     use super::*;
-    use crate::constants::ZERO;
-    use crate::f2p;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::pos;
     use approx::assert_relative_eq;
+    use rust_decimal_macros::dec;
 
     fn setup_option(
         side: Side,
@@ -1064,20 +1068,20 @@ mod tests_position_max_loss_profit {
         strike_price: Positive,
         underlying_price: Positive,
         quantity: Positive,
-        expiration_days: i64,
+        expiration_days: Positive,
     ) -> Options {
         Options {
             option_type: OptionType::European,
             side,
             underlying_symbol: "".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(expiration_days as f64),
-            implied_volatility: 0.2,
+            expiration_date: ExpirationDate::Days(expiration_days),
+            implied_volatility: pos!(0.2),
             quantity,
             underlying_price,
-            risk_free_rate: 0.01,
+            risk_free_rate: dec!(0.01),
             option_style,
-            dividend_yield: ZERO,
+            dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
     }
@@ -1087,14 +1091,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_relative_eq!(position.max_loss(), 7.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit(), f64::INFINITY, epsilon = 0.001);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_relative_eq!(position.max_loss().unwrap().to_f64(), 7.0, epsilon = 0.001);
+        assert_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
@@ -1102,14 +1106,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_relative_eq!(position.max_loss(), 70.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit(), f64::INFINITY, epsilon = 0.001);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_relative_eq!(position.max_loss().unwrap().to_f64(), 70.0, epsilon = 0.001);
+        assert_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
@@ -1117,14 +1121,18 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit(), 3.0, epsilon = 0.001);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(
+            position.max_profit().unwrap().to_f64(),
+            3.0,
+            epsilon = 0.001
+        );
     }
 
     #[test]
@@ -1132,14 +1140,18 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit(), 30.0, epsilon = 0.001);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(
+            position.max_profit().unwrap().to_f64(),
+            30.0,
+            epsilon = 0.001
+        );
     }
 
     #[test]
@@ -1147,14 +1159,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_relative_eq!(position.max_loss(), 7.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit(), f64::INFINITY, epsilon = 0.001);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_relative_eq!(position.max_loss().unwrap().to_f64(), 7.0, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
@@ -1162,14 +1174,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_relative_eq!(position.max_loss(), 70.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit(), f64::INFINITY, epsilon = 0.001);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_relative_eq!(position.max_loss().unwrap().to_f64(), 70.0, epsilon = 0.001);
+        assert_relative_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
@@ -1177,14 +1189,18 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(1.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(1.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit(), 3.0, epsilon = 0.001);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(
+            position.max_profit().unwrap().to_f64(),
+            3.0,
+            epsilon = 0.001
+        );
     }
 
     #[test]
@@ -1192,31 +1208,36 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            f2p!(100.0),
-            f2p!(105.0),
-            f2p!(10.0),
-            30,
+            pos!(100.0),
+            pos!(105.0),
+            pos!(10.0),
+            pos!(30.0),
         );
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_relative_eq!(position.max_loss(), f64::INFINITY, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit(), 30.0, epsilon = 0.001);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(
+            position.max_profit().unwrap().to_f64(),
+            30.0,
+            epsilon = 0.001
+        );
     }
 }
 
 #[cfg(test)]
 mod tests_update_from_option_data {
     use super::*;
-    use crate::{f2p, spos};
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            f2p!(110.0),
+            pos!(110.0),
             spos!(9.5),
             spos!(10.0),
             spos!(8.5),
             spos!(9.0),
             spos!(0.25),
-            Some(-0.3),
+            Some(dec!(-0.3)),
             None,
             None,
         )
@@ -1231,7 +1252,7 @@ mod tests_update_from_option_data {
         let option_data = create_test_option_data();
         position.update_from_option_data(&option_data);
 
-        assert_eq!(position.option.strike_price, f2p!(110.0));
+        assert_eq!(position.option.strike_price, pos!(110.0));
         assert_eq!(position.option.implied_volatility, 0.25);
         assert_eq!(position.premium, 10.0); // call_ask
     }
@@ -1276,40 +1297,40 @@ mod tests_update_from_option_data {
 #[cfg(test)]
 mod tests_premium {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     fn setup_basic_position(side: Side) -> Position {
         let option = Options {
             side,
-            quantity: f2p!(1.0),
+            quantity: pos!(1.0),
             ..Default::default()
         };
 
-        Position::new(option, 5.0, Utc::now(), 1.0, 1.0)
+        Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE)
     }
 
     #[test]
     fn test_premium_received_long() {
         let position = setup_basic_position(Side::Long);
-        assert_eq!(position.premium_received(), 0.0);
+        assert_eq!(position.premium_received().unwrap(), Positive::ZERO);
     }
 
     #[test]
     fn test_premium_received_short() {
         let position = setup_basic_position(Side::Short);
-        assert_eq!(position.premium_received(), 5.0);
+        assert_eq!(position.premium_received().unwrap(), 5.0);
     }
 
     #[test]
     fn test_net_premium_received_long() {
         let position = setup_basic_position(Side::Long);
-        assert_eq!(position.net_premium_received(), 0.0);
+        assert_eq!(position.net_premium_received().unwrap(), 0.0);
     }
 
     #[test]
     fn test_net_premium_received_short() {
         let position = setup_basic_position(Side::Short);
-        assert_eq!(position.net_premium_received(), 3.0); // 5.0 - 2.0 (fees)
+        assert_eq!(position.net_premium_received().unwrap(), 3.0); // 5.0 - 2.0 (fees)
     }
 
     #[test]
@@ -1317,95 +1338,179 @@ mod tests_premium {
         let side = Side::Short;
         let option = Options {
             side,
-            quantity: f2p!(10.0),
+            quantity: pos!(10.0),
             ..Default::default()
         };
 
-        let position = Position::new(option, 5.0, Utc::now(), 1.0, 1.0);
-        assert_eq!(position.premium_received(), 50.0);
+        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        assert_eq!(position.premium_received().unwrap(), 50.0);
     }
 }
 
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use crate::f2p;
+    use crate::{assert_decimal_eq, pos, OptionType};
+    use rust_decimal_macros::dec;
 
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {
-        let option = Options {
+        let option = Options::new(
+            OptionType::European,
             side,
+            "AAPL".to_string(),
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),
+            Positive::ONE,
+            pos!(100.0),
+            dec!(0.05),
             option_style,
-            strike_price: f2p!(100.0),
-            quantity: f2p!(1.0),
-            underlying_price: f2p!(100.0),
-            ..Default::default()
-        };
+            pos!(0.01),
+            None,
+        );
 
-        Position::new(option, 5.0, Utc::now(), 1.0, 1.0)
+        Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE)
     }
 
     #[test]
-    fn test_calculate_pnl_long_call() {
+    fn test_calculate_pnl_long_call_no_changes() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let pnl = position.calculate_pnl(Utc::now(), f2p!(7.0));
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
 
-        assert_eq!(pnl.unrealized.unwrap(), -0.0); // 7.0 - 7.0 (premium + fees)
-        assert_eq!(position.total_cost(), 7.0);
-        assert_eq!(position.premium_received(), 0.0);
+        assert_eq!(pnl.unrealized.unwrap(), Decimal::ZERO); // 5.0 - 2.4933 - 2.0 (fees)
+        assert_eq!(position.total_cost().unwrap(), 7.0);
+        assert_eq!(position.premium_received().unwrap(), 0.0);
     }
 
     #[test]
-    fn test_calculate_pnl_short_call() {
-        let position = setup_test_position(Side::Short, OptionStyle::Call);
-        let pnl = position.calculate_pnl(Utc::now(), f2p!(3.0));
+    fn test_calculate_pnl_long_call_price_up() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(107.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
 
-        assert_eq!(pnl.unrealized.unwrap(), 0.0); // 5.0 - 3.0 - 2.0 (fees)
-        assert_eq!(position.total_cost(), 2.0);
-        assert_eq!(position.premium_received(), 5.0);
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(5.2150), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_long_call_vol_down() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.1))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.1352), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_long_call_date_closer() {
+        let position = setup_test_position(Side::Long, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(3.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.7494), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_no_changes() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_eq!(pnl.unrealized.unwrap(), Decimal::ZERO); // 5.0 - 2.4933 - 2.0 (fees)
+        assert_eq!(position.total_cost().unwrap(), 2.0);
+        assert_eq!(position.premium_received().unwrap(), 5.0);
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_price_up() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(107.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-5.2150), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_price_down() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(97.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.3069), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_vol_down() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.1))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.1352), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_vol_up() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.3))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.1386), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_date_closer() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(3.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.7494), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_calculate_pnl_short_call_date_further() {
+        let position = setup_test_position(Side::Short, OptionStyle::Call);
+        let pnl = position
+            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(40.0)), &pos!(0.2))
+            .unwrap();
+
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-0.4224), dec!(0.0001));
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_long_call() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let pnl = position.calculate_pnl_at_expiration(Some(f2p!(110.0)));
+        let pnl = position.calculate_pnl_at_expiration(&pos!(110.0)).unwrap();
 
-        assert_eq!(pnl.realized.unwrap(), 3.0); // 10.0 - 7.0 (total cost)
-        assert_eq!(position.total_cost(), 7.0);
-        assert_eq!(position.premium_received(), 0.0);
+        assert_eq!(pnl.realized.unwrap(), dec!(3.0)); // 10.0 - 7.0 (total cost)
+        assert_eq!(position.total_cost().unwrap(), 7.0);
+        assert_eq!(position.premium_received().unwrap(), 0.0);
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_short_put() {
         let position = setup_test_position(Side::Short, OptionStyle::Put);
-        let pnl = position.calculate_pnl_at_expiration(Some(f2p!(90.0)));
+        let pnl = position.calculate_pnl_at_expiration(&pos!(90.0)).unwrap();
 
-        assert_eq!(pnl.realized.unwrap(), -7.0); // -10.0 + 5.0 (premium) - 2.0 (fees)
-        assert_eq!(position.total_cost(), 2.0);
-        assert_eq!(position.premium_received(), 5.0);
-    }
-
-    #[test]
-    fn test_calculate_pnl_at_expiration_no_underlying() {
-        let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let pnl = position.calculate_pnl_at_expiration(None);
-
-        assert_eq!(pnl.realized.unwrap(), -7.0);
-        assert_eq!(position.total_cost(), 7.0);
-        assert_eq!(position.premium_received(), 0.0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_calculate_pnl_at_zero_price() {
-        let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let _ = position.calculate_pnl(Utc::now(), f2p!(0.0));
+        assert_eq!(pnl.realized.unwrap(), dec!(-7.0)); // -10.0 + 5.0 (premium) - 2.0 (fees)
+        assert_eq!(position.total_cost().unwrap(), 2.0);
+        assert_eq!(position.premium_received().unwrap(), 5.0);
     }
 }
 
 #[cfg(test)]
 mod tests_graph {
     use super::*;
-    use crate::f2p;
+    use crate::pos;
 
     #[test]
     fn test_title() {
@@ -1416,7 +1521,7 @@ mod tests_graph {
     #[test]
     fn test_get_values() {
         let position = Position::default();
-        let prices = vec![f2p!(90.0), f2p!(100.0), f2p!(110.0)];
+        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
         let values = position.get_values(&prices);
 
         assert_eq!(values.len(), 3);

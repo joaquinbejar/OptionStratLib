@@ -66,7 +66,7 @@
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //!
 //! // Create a Telegraph Process with transition rates
 //! let process = TelegraphProcess::new(dec!(0.5), dec!(0.3));
@@ -76,14 +76,14 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: f2p!(100.0),
-//!             expiration_date: ExpirationDate::Days(30.0),
-//!             implied_volatility: 0.2,
+//!             strike_price: pos!(100.0),
+//!             expiration_date: ExpirationDate::Days(pos!(30.0)),
+//!             implied_volatility: pos!(0.2),
 //!             quantity: Positive::ONE,
-//!             underlying_price: f2p!(105.0),
-//!             risk_free_rate: 0.05,
+//!             underlying_price: pos!(105.0),
+//!             risk_free_rate: dec!(0.05),
 //!             option_style: OptionStyle::Call,
-//!             dividend_yield: 0.01,
+//!             dividend_yield: pos!(0.01),
 //!             exotic_params: None,
 //!         };
 //! let price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
@@ -96,7 +96,7 @@
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::Positive;
-//! use optionstratlib::f2p;
+//! use optionstratlib::pos;
 //! use optionstratlib::pricing::{
 //!     black_scholes_model::black_scholes,
 //!     monte_carlo::monte_carlo_option_pricing,
@@ -106,14 +106,14 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: f2p!(100.0),
-//!             expiration_date: ExpirationDate::Days(30.0),
-//!             implied_volatility: 0.2,
+//!             strike_price: pos!(100.0),
+//!             expiration_date: ExpirationDate::Days(pos!(30.0)),
+//!             implied_volatility: pos!(0.2),
 //!             quantity: Positive::ONE,
-//!             underlying_price: f2p!(105.0),
-//!             risk_free_rate: 0.05,
+//!             underlying_price: pos!(105.0),
+//!             risk_free_rate: dec!(0.05),
 //!             option_style: OptionStyle::Call,
-//!             dividend_yield: 0.01,
+//!             dividend_yield: pos!(0.01),
 //!             exotic_params: None,
 //!         };
 //! // Compare prices across different models

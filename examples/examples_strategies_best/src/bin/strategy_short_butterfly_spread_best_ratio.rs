@@ -1,6 +1,6 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::f2p;
+use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
@@ -8,6 +8,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -19,25 +20,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     let underlying_price = option_chain.underlying_price;
     let mut strategy = ShortButterflySpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        Positive::ZERO,   // short_strike_itm
-        Positive::ZERO,   // middle_strike
-        Positive::ZERO,   // short_strike_otm
-        ExpirationDate::Days(5.0),
-        ZERO,      // implied_volatility
-        ZERO,      // risk_free_rate
-        ZERO,      // dividend_yield
-        f2p!(1.0), // quantity
-        ZERO,      // premium_short_call
-        ZERO,      // premium_short_put
-        ZERO,      // open_fee_short_call
-        4.0,       // close_fee_short_call
+        underlying_price,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        ExpirationDate::Days(pos!(5.0)),
+        Positive::ZERO,
+        Decimal::ZERO,
+        Positive::ZERO,
+        pos!(1.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        pos!(4.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
 
-    let price_range = strategy.best_range_to_show(f2p!(1.0)).unwrap();
+    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

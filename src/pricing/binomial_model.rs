@@ -1,7 +1,7 @@
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
-use crate::{d2f, f2d, Positive};
+use crate::{d2f, f2d, pos, Positive};
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 
@@ -10,10 +10,10 @@ type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), Box<dyn
 #[derive(Clone)]
 pub struct BinomialPricingParams<'a> {
     pub asset: Positive,
-    pub volatility: Decimal,
+    pub volatility: Positive,
     pub int_rate: Decimal,
     pub strike: Positive,
-    pub expiry: Decimal,
+    pub expiry: Positive,
     pub no_steps: usize,
     pub option_type: &'a OptionType,
     pub option_style: &'a OptionStyle,
@@ -73,7 +73,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn 
         return Ok(calculate_discounted_payoff(params)?);
     }
 
-    let dt = params.expiry / f2d!(params.no_steps as f64);
+    let dt = (params.expiry / pos!(params.no_steps as f64)).to_dec();
     let u = calculate_up_factor(params.volatility, dt)?;
     let d = calculate_down_factor(params.volatility, dt)?;
     let p = calculate_probability(params.int_rate, dt, d, u)?;
@@ -102,11 +102,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn 
             }
         }
     }
-
-    match params.side {
-        Side::Long => Ok(prices[0]),
-        Side::Short => Ok(-prices[0]),
-    }
+    Ok(prices[0])
 }
 
 /// Generates a binomial tree for option pricing.
@@ -140,15 +136,15 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn 
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
 /// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-/// use optionstratlib::f2p;
+/// use optionstratlib::pos;
 /// use optionstratlib::pricing::binomial_model::{BinomialPricingParams, generate_binomial_tree};
 /// use optionstratlib::Positive;
 /// let params = BinomialPricingParams {
-///             asset: f2p!(100.0),
-///             volatility: dec!(0.2),
+///             asset: pos!(100.0),
+///             volatility: pos!(0.2),
 ///             int_rate: dec!(0.05),
-///             strike: f2p!(100.0),
-///             expiry: Decimal::ONE,
+///             strike: pos!(100.0),
+///             expiry: Positive::ONE,
 ///             no_steps: 1000,
 ///             option_type: &OptionType::European,
 ///             option_style: &OptionStyle::Call,
@@ -167,7 +163,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
         spot_max: None,
     };
 
-    let dt = params.expiry / f2d!(params.no_steps as f64);
+    let dt = (params.expiry / f2d!(params.no_steps as f64)).to_dec();
     let up_factor = calculate_up_factor(params.volatility, dt)?;
     let down_factor = calculate_down_factor(params.volatility, dt)?;
     let probability = calculate_probability(params.int_rate, dt, down_factor, up_factor)?;
@@ -225,7 +221,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
 mod tests_price_binomial {
     use super::*;
     use crate::model::types::OptionType;
-    use crate::{assert_decimal_eq, f2p};
+    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
@@ -233,11 +229,11 @@ mod tests_price_binomial {
     #[test]
     fn test_european_call_option() {
         let params = BinomialPricingParams {
-            asset: f2p!(100.0),
-            strike: f2p!(100.0),
+            asset: pos!(100.0),
+            strike: pos!(100.0),
             int_rate: dec!(0.05),
-            volatility: dec!(0.2),
-            expiry: Decimal::ONE,
+            volatility: pos!(0.2),
+            expiry: Positive::ONE,
             no_steps: 3,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -251,11 +247,11 @@ mod tests_price_binomial {
     #[test]
     fn test_european_put_option() {
         let params = BinomialPricingParams {
-            asset: f2p!(100.0),
-            volatility: dec!(0.2),
+            asset: pos!(100.0),
+            volatility: pos!(0.2),
             int_rate: dec!(0.05),
-            strike: f2p!(100.0),
-            expiry: Decimal::ONE,
+            strike: pos!(100.0),
+            expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -269,11 +265,11 @@ mod tests_price_binomial {
     #[test]
     fn test_european_put_option_extended() {
         let params = BinomialPricingParams {
-            asset: f2p!(50.0),
-            volatility: dec!(0.2),
+            asset: pos!(50.0),
+            volatility: pos!(0.2),
             int_rate: dec!(0.05),
-            strike: f2p!(52.0),
-            expiry: Decimal::ONE,
+            strike: pos!(52.0),
+            expiry: Positive::ONE,
             no_steps: 1,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -287,11 +283,11 @@ mod tests_price_binomial {
     #[test]
     fn test_short_option() {
         let params = BinomialPricingParams {
-            asset: f2p!(100.0),
-            volatility: dec!(0.2),
+            asset: pos!(100.0),
+            volatility: pos!(0.2),
             int_rate: dec!(0.05),
-            strike: f2p!(100.0),
-            expiry: Decimal::ONE,
+            strike: pos!(100.0),
+            expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -304,19 +300,19 @@ mod tests_price_binomial {
             ..params
         })
         .unwrap();
-        assert_decimal_eq!(long_price, short_price, EPSILON);
+        assert_decimal_eq!(long_price, -short_price, EPSILON);
     }
 
     #[test]
     fn test_zero_volatility() {
-        let asset = f2p!(100.0);
-        let strike = f2p!(100.0);
+        let asset = pos!(100.0);
+        let strike = pos!(100.0);
         let int_rate = dec!(0.05);
-        let expiry = Decimal::ONE;
+        let expiry = Positive::ONE;
 
         let params = BinomialPricingParams {
             asset,
-            volatility: Decimal::ZERO,
+            volatility: Positive::ZERO,
             int_rate,
             strike,
             expiry,
@@ -337,11 +333,11 @@ mod tests_price_binomial {
     #[test]
     fn test_deep_in_the_money() {
         let params = BinomialPricingParams {
-            asset: f2p!(150.0),
-            volatility: dec!(0.2),
+            asset: pos!(150.0),
+            volatility: pos!(0.2),
             int_rate: dec!(0.05),
-            strike: f2p!(100.0),
-            expiry: Decimal::ONE,
+            strike: pos!(100.0),
+            expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -355,11 +351,11 @@ mod tests_price_binomial {
     #[test]
     fn test_deep_out_of_the_money() {
         let params = BinomialPricingParams {
-            asset: f2p!(50.0),
-            volatility: dec!(0.2),
+            asset: pos!(50.0),
+            volatility: pos!(0.2),
             int_rate: dec!(0.05),
-            strike: f2p!(100.0),
-            expiry: Decimal::ONE,
+            strike: pos!(100.0),
+            expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -373,11 +369,11 @@ mod tests_price_binomial {
     #[test]
     fn test_zero_time_to_expiry() {
         let params = BinomialPricingParams {
-            asset: f2p!(100.0),
-            volatility: dec!(0.2),
+            asset: pos!(100.0),
+            volatility: pos!(0.2),
             int_rate: dec!(0.05),
-            strike: f2p!(100.0),
-            expiry: Decimal::ZERO,
+            strike: pos!(100.0),
+            expiry: Positive::ZERO,
             no_steps: 1000,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -393,7 +389,7 @@ mod tests_price_binomial {
 mod tests_generate_binomial_tree {
     use super::*;
     use crate::model::types::OptionType;
-    use crate::{assert_decimal_eq, f2p};
+    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
@@ -401,11 +397,11 @@ mod tests_generate_binomial_tree {
     #[test]
     fn test_binomial_tree_basic() {
         let params = BinomialPricingParams {
-            asset: f2p!(100.0),
-            strike: f2p!(100.0),
+            asset: pos!(100.0),
+            strike: pos!(100.0),
             int_rate: dec!(0.05),
-            volatility: dec!(0.2),
-            expiry: Decimal::ONE,
+            volatility: pos!(0.2),
+            expiry: Positive::ONE,
             no_steps: 3,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -433,11 +429,11 @@ mod tests_generate_binomial_tree {
     #[test]
     fn test_binomial_tree_put_option() {
         let params = BinomialPricingParams {
-            asset: f2p!(100.0),
-            strike: f2p!(100.0),
+            asset: pos!(100.0),
+            strike: pos!(100.0),
             int_rate: dec!(0.05),
-            volatility: dec!(0.2),
-            expiry: Decimal::ONE,
+            volatility: pos!(0.2),
+            expiry: Positive::ONE,
             no_steps: 3,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -455,11 +451,11 @@ mod tests_generate_binomial_tree {
     #[test]
     fn test_binomial_tree_call_option_check() {
         let params = BinomialPricingParams {
-            asset: f2p!(30.0),
-            strike: f2p!(30.0),
-            expiry: Decimal::ONE,
+            asset: pos!(30.0),
+            strike: pos!(30.0),
+            expiry: Positive::ONE,
             int_rate: dec!(0.05),
-            volatility: dec!(0.17),
+            volatility: pos!(0.17),
             no_steps: 1,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -478,11 +474,11 @@ mod tests_generate_binomial_tree {
         assert_decimal_eq!(option_tree[1][1], Decimal::ZERO, EPSILON);
 
         let params = BinomialPricingParams {
-            asset: f2p!(30.0),
-            strike: f2p!(30.0),
-            expiry: Decimal::ONE,
+            asset: pos!(30.0),
+            strike: pos!(30.0),
+            expiry: Positive::ONE,
             int_rate: dec!(0.05),
-            volatility: dec!(0.17),
+            volatility: pos!(0.17),
             no_steps: 2,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
@@ -511,11 +507,11 @@ mod tests_generate_binomial_tree {
     #[test]
     fn test_binomial_tree_put_option_check() {
         let params = BinomialPricingParams {
-            asset: f2p!(100.0),
-            strike: f2p!(110.0),
-            expiry: dec!(3.0), // Assuming each time step is 1 unit of time
+            asset: pos!(100.0),
+            strike: pos!(110.0),
+            expiry: pos!(3.0), // Assuming each time step is 1 unit of time
             int_rate: dec!(0.05),
-            volatility: dec!(0.09531018), // Calculated to match the 10% up/down movement
+            volatility: pos!(0.09531018), // Calculated to match the 10% up/down movement
             no_steps: 3,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -552,11 +548,11 @@ mod tests_generate_binomial_tree {
     fn test_binomial_tree_european_put_option() {
         // Define parameters for an American option test case
         let params = BinomialPricingParams {
-            asset: f2p!(50.0),
-            volatility: dec!(0.2),
+            asset: pos!(50.0),
+            volatility: pos!(0.2),
             int_rate: dec!(0.05),
-            strike: f2p!(52.0),
-            expiry: dec!(2.0),
+            strike: pos!(52.0),
+            expiry: pos!(2.0),
             no_steps: 2,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -583,11 +579,11 @@ mod tests_generate_binomial_tree {
     fn test_binomial_tree_american_put_option() {
         // Define parameters for an American option test case
         let params = BinomialPricingParams {
-            asset: f2p!(50.0),
-            volatility: dec!(0.2),
+            asset: pos!(50.0),
+            volatility: pos!(0.2),
             int_rate: dec!(0.05),
-            strike: f2p!(52.0),
-            expiry: dec!(2.0),
+            strike: pos!(52.0),
+            expiry: pos!(2.0),
             no_steps: 2,
             option_type: &OptionType::American,
             option_style: &OptionStyle::Put,
