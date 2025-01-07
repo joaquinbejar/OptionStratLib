@@ -212,7 +212,11 @@ impl Strategies for BullPutSpread {
 
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.max_profit().unwrap_or(Positive::ZERO);
-        let base = self.short_put.option.strike_price - self.break_even_points[0];
+        let base = if self.short_put.option.strike_price > self.break_even_points[0] {
+            self.short_put.option.strike_price - self.break_even_points[0]
+        } else {
+            self.break_even_points[0] - self.short_put.option.strike_price
+        };
         Ok((high * base / 200.0).into())
     }
 

@@ -260,6 +260,7 @@ pub(crate) fn calculate_option_price(
         spot_max: None,
     };
     let payoff = Decimal::from_f64(params.option_type.payoff(&info)).unwrap();
+
     Ok(payoff)
 }
 

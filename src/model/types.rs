@@ -2,6 +2,7 @@ use crate::constants::{DAYS_IN_A_YEAR, ZERO};
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use crate::{pos, Positive};
 use chrono::{DateTime, Duration, Utc};
+use rust_decimal::Decimal;
 use std::error::Error;
 
 #[derive(Clone, PartialEq)]
@@ -255,7 +256,11 @@ impl Payoff for OptionType {
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
             OptionType::Chooser { .. } => (info.spot - info.strike)
                 .max(Positive::ZERO)
-                .max((info.strike - info.spot).max(Positive::ZERO))
+                .max(
+                    (info.strike.to_dec() - info.spot.to_dec())
+                        .max(Decimal::ZERO)
+                        .into(),
+                )
                 .to_f64(),
             OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }

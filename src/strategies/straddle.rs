@@ -1721,8 +1721,8 @@ mod tests_long_straddle {
         let call_option = chain.options.first().unwrap();
         let put_option = chain.options.last().unwrap();
         let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
+            first: put_option,
+            second: call_option,
         };
         let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());

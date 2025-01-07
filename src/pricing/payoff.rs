@@ -74,9 +74,13 @@ pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
         "standard_payoff - (info.spot - info.strike): {}",
         info.spot - info.strike
     );
+
+    let spot: Decimal = info.spot.into();
+    let strike: Decimal = info.strike.into();
+
     let payoff = match info.style {
-        OptionStyle::Call => (info.spot - info.strike).max(Positive::ZERO).into(),
-        OptionStyle::Put => (info.strike - info.spot).max(Positive::ZERO).into(),
+        OptionStyle::Call => (spot - strike).max(Decimal::ZERO).to_f64().unwrap(),
+        OptionStyle::Put => (strike - spot).max(Decimal::ZERO).to_f64().unwrap(),
     };
 
     match info.side {

@@ -1,6 +1,6 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
-use crate::error::{GreeksError, OptionsResult};
+use crate::error::{GreeksError, OptionsError, OptionsResult};
 use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -93,6 +93,11 @@ impl Options {
     }
 
     pub fn calculate_price_binomial(&self, no_steps: usize) -> OptionsResult<Decimal> {
+        if no_steps == 0 {
+            return Err(OptionsError::OtherError {
+                reason: "Number of steps cannot be zero".to_string(),
+            });
+        }
         let expiry = self.time_to_expiration()?;
         let cpb = price_binomial(BinomialPricingParams {
             asset: self.underlying_price,
@@ -1267,5 +1272,159 @@ mod tests_graph {
         assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);
         assert_relative_eq!(values[1], 0.0, epsilon = 1e-6);
         assert_relative_eq!(values[2], -10.0, epsilon = 1e-6);
+    }
+}
+
+#[cfg(test)]
+mod tests_calculate_price_binomial {
+    use super::*;
+    use crate::model::utils::{
+        create_sample_option, create_sample_option_simplest, create_sample_option_with_date,
+    };
+    use crate::pos;
+    use chrono::Utc;
+    use rust_decimal_macros::dec;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_european_call_option_basic() {
+        // Test a basic European call option with standard parameters
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let result = option.calculate_price_binomial(100);
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // Price should be positive for a long call at-the-money
+        assert!(price > Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_american_put_option() {
+        // Test American put option which should have early exercise value
+        let option = Options::new(
+            OptionType::American,
+            Side::Long,
+            "TEST".to_string(),
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),  // volatility
+            pos!(1.0),  // quantity
+            pos!(95.0), // underlying price (slightly ITM for put)
+            dec!(0.05), // risk-free rate
+            OptionStyle::Put,
+            Positive::ZERO, // dividend yield
+            None,
+        );
+
+        let result = option.calculate_price_binomial(100);
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // Price should be positive and reflect early exercise premium
+        assert!(price > Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_zero_volatility() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.implied_volatility = Positive::ZERO;
+        let result = option.calculate_price_binomial(100);
+        assert!(result.is_ok());
+        // With zero volatility, price should equal discounted intrinsic value
+    }
+
+    #[test]
+    fn test_zero_time_to_expiry() {
+        // Test option at expiration
+        let now = Utc::now().naive_utc();
+        let option = create_sample_option_with_date(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+            now,
+        );
+
+        let result = option.calculate_price_binomial(100);
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // At expiry, price should equal intrinsic value
+        assert_eq!(price, Decimal::from(5)); // 100 - 95 = 5
+    }
+
+    #[test]
+    fn test_invalid_steps() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let result = option.calculate_price_binomial(0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_deep_itm_call() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0), // Underlying price much higher than strike
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+        );
+
+        let result = option.calculate_price_binomial(100);
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // Price should be close to intrinsic value for deep ITM
+        assert!(price > Decimal::from(45)); // At least intrinsic - some time value
+    }
+
+    #[test]
+    fn test_deep_otm_put() {
+        let option = create_sample_option(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(150.0), // Underlying price much higher than strike
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+        );
+
+        let result = option.calculate_price_binomial(100);
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // Price should be very small for deep OTM
+        assert!(price < Decimal::from(1));
+    }
+
+    #[test]
+    fn test_convergence() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+
+        // Test that increasing steps leads to convergence
+        let price_100 = option.calculate_price_binomial(100).unwrap();
+        let price_1000 = option.calculate_price_binomial(1000).unwrap();
+
+        // Prices should be close to each other
+        let diff = (price_1000 - price_100).abs();
+        assert!(diff < Decimal::from_str("0.1").unwrap());
+    }
+
+    #[test]
+    fn test_short_position() {
+        let long_call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let mut short_call_option = long_call_option.clone();
+        short_call_option.side = Side::Short;
+        let mut short_put_option = short_call_option.clone();
+        short_put_option.option_style = OptionStyle::Put;
+        let mut long_put_option = short_put_option.clone();
+        long_put_option.side = Side::Long;
+
+        let long_call_price = long_call_option.calculate_price_binomial(100).unwrap();
+        let short_call_price = short_call_option.calculate_price_binomial(100).unwrap();
+        let long_put_price = long_put_option.calculate_price_binomial(100).unwrap();
+        let short_put_price = short_put_option.calculate_price_binomial(100).unwrap();
+
+        // Short position should be negative of long position
+        assert_eq!(long_call_price, -short_call_price);
+        assert_eq!(long_put_price, -short_put_price);
     }
 }

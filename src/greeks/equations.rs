@@ -81,6 +81,7 @@ pub trait Greeks {
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
 /// use optionstratlib::constants::ZERO;
 /// use optionstratlib::greeks::equations::delta;
 /// use optionstratlib::Options;
@@ -102,8 +103,8 @@ pub trait Greeks {
 /// };
 ///
 /// match delta(&option) {
-///     Ok(result) => println!("Delta: {}", result),
-///     Err(e) => eprintln!("Error calculating delta: {:?}", e),
+///     Ok(result) => info!("Delta: {}", result),
+///     Err(e) => error!("Error calculating delta: {:?}", e),
 /// }
 /// ```
 pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
@@ -204,6 +205,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::equations::gamma;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -224,8 +226,8 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// };
 ///
 /// match gamma(&option) {
-///     Ok(result) => println!("Gamma: {}", result),
-///     Err(e) => eprintln!("Error calculating gamma: {:?}", e),
+///     Ok(result) => info!("Gamma: {}", result),
+///     Err(e) => error!("Error calculating gamma: {:?}", e),
 /// }
 /// ```
 ///
@@ -331,6 +333,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::equations::theta;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -351,8 +354,8 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// };
 ///
 /// match theta(&option) {
-///     Ok(result) => println!("Theta: {}", result),
-///     Err(e) => eprintln!("Error calculating Theta: {:?}", e),
+///     Ok(result) => info!("Theta: {}", result),
+///     Err(e) => error!("Error calculating Theta: {:?}", e),
 /// }
 /// ```
 ///
@@ -472,6 +475,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::equations::vega;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -493,8 +497,8 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// };
 ///
 /// match vega(&option) {
-///     Ok(result) => println!("Vega: {}", result),
-///     Err(e) => eprintln!("Error calculating Vega: {:?}", e),
+///     Ok(result) => info!("Vega: {}", result),
+///     Err(e) => error!("Error calculating Vega: {:?}", e),
 /// }
 /// ```
 ///
@@ -590,6 +594,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::equations::rho;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -611,8 +616,8 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// };
 ///
 /// match rho(&option) {
-///     Ok(result) => println!("Rho: {}", result),
-///     Err(e) => eprintln!("Error calculating rho: {:?}", e),
+///     Ok(result) => info!("Rho: {}", result),
+///     Err(e) => error!("Error calculating rho: {:?}", e),
 /// }
 /// ```
 ///
@@ -721,6 +726,7 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::equations::rho_d;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -742,8 +748,8 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 /// };
 ///
 /// match rho_d(&option) {
-///     Ok(result) => println!("Dividend Rho (Rho_d): {}", result),
-///     Err(e) => eprintln!("Error calculating Rho_d: {:?}", e),
+///     Ok(result) => info!("Dividend Rho (Rho_d): {}", result),
+///     Err(e) => error!("Error calculating Rho_d: {:?}", e),
 /// }
 /// ```
 ///

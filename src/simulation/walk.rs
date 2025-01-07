@@ -10,6 +10,7 @@ use crate::pricing::payoff::Profit;
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::Graph;
 use crate::{pos, Positive};
+use num_traits::ToPrimitive;
 use rand::distributions::Distribution;
 use rand::thread_rng;
 use rust_decimal::Decimal;
@@ -98,7 +99,7 @@ impl RandomWalkGraph {
 
         let returns: Vec<f64> = self.values[..self.current_index]
             .windows(2)
-            .map(|w| ((w[1] - w[0]) / w[0]).to_f64())
+            .map(|w| ((w[1].to_dec() - w[0]) / w[0]).to_f64().unwrap())
             .collect();
 
         if returns.is_empty() {
@@ -230,6 +231,7 @@ impl Iterator for RandomWalkGraph {
 mod tests_random_walk {
     use super::*;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use statrs::statistics::Statistics;
 
     struct TestWalk {
@@ -305,7 +307,7 @@ mod tests_random_walk {
         let changes: Vec<f64> = walk
             .values
             .windows(2)
-            .map(|w| (w[1] - w[0]).to_f64())
+            .map(|w| (w[1].to_dec() - w[0]).to_f64().unwrap())
             .collect();
 
         let empirical_mean = changes.mean();

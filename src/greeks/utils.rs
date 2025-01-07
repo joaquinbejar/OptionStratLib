@@ -57,6 +57,7 @@ use statrs::distribution::{ContinuousCDF, Normal};
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::d1;
 /// use optionstratlib::{pos, Positive};
 ///
@@ -73,8 +74,8 @@ use statrs::distribution::{ContinuousCDF, Normal};
 ///     expiration_date,
 ///     implied_volatility,
 /// ) {
-///     Ok(result) => println!("d1: {}", result),
-///     Err(e) => eprintln!("Error: {:?}", e),
+///     Ok(result) => info!("d1: {}", result),
+///     Err(e) => error!("Error: {:?}", e),
 /// }
 /// ```
 pub fn d1(
@@ -172,6 +173,7 @@ pub fn d1(
 /// ```rust
 ///
 /// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::d2;
 /// use optionstratlib::{pos, Positive};
 /// let underlying_price = Positive::new(100.0).unwrap();
@@ -187,8 +189,8 @@ pub fn d1(
 ///     expiration_date,
 ///     implied_volatility,
 /// ) {
-///     Ok(result) => println!("d2: {}", result),
-///     Err(e) => eprintln!("Error: {:?}", e),
+///     Ok(result) => info!("d2: {}", result),
+///     Err(e) => error!("Error: {:?}", e),
 /// }
 /// ```
 pub fn d2(
@@ -260,13 +262,14 @@ pub fn d2(
 ///
 /// ```rust
 /// use rust_decimal::Decimal;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::utils::n;
 ///
 /// let x = Decimal::new(100, 2); // 1.00
 ///
 /// match n(x) {
-///     Ok(result) => println!("N(x): {}", result),
-///     Err(e) => eprintln!("Error calculating N(x): {:?}", e),
+///     Ok(result) => info!("N(x): {}", result),
+///     Err(e) => error!("Error calculating N(x): {:?}", e),
 /// }
 /// ```
 ///
@@ -360,13 +363,14 @@ pub(crate) fn n_prime(x: Decimal) -> Result<Decimal, GreeksError> {
 ///
 /// ```rust
 /// use rust_decimal::Decimal;
+/// use tracing::{error, info};
 /// use optionstratlib::greeks::utils::big_n;
 ///
 /// let x = Decimal::new(100, 2); // 1.00
 ///
 /// match big_n(x) {
-///     Ok(result) => println!("N(x): {}", result),
-///     Err(e) => eprintln!("Error: {:?}", e),
+///     Ok(result) => info!("N(x): {}", result),
+///     Err(e) => error!("Error: {:?}", e),
 /// }
 /// ```
 pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {

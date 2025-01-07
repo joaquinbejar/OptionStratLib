@@ -249,6 +249,7 @@ impl Position {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn max_profit(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::INFINITY),
@@ -256,6 +257,7 @@ impl Position {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn max_loss(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => self.total_cost(),

@@ -102,11 +102,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn 
             }
         }
     }
-
-    match params.side {
-        Side::Long => Ok(prices[0]),
-        Side::Short => Ok(-prices[0]),
-    }
+    Ok(prices[0])
 }
 
 /// Generates a binomial tree for option pricing.
@@ -304,7 +300,7 @@ mod tests_price_binomial {
             ..params
         })
         .unwrap();
-        assert_decimal_eq!(long_price, short_price, EPSILON);
+        assert_decimal_eq!(long_price, -short_price, EPSILON);
     }
 
     #[test]

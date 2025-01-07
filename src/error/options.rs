@@ -79,6 +79,9 @@ pub enum OptionsError {
     PayoffError { reason: String },
     /// Error during option data updates
     UpdateError { field: String, reason: String },
+
+    /// Error when performing other operations
+    OtherError { reason: String },
 }
 
 impl fmt::Display for OptionsError {
@@ -101,6 +104,9 @@ impl fmt::Display for OptionsError {
             }
             OptionsError::UpdateError { field, reason } => {
                 write!(f, "Update error for field '{}': {}", field, reason)
+            }
+            OptionsError::OtherError { reason } => {
+                write!(f, "Other error: {}", reason)
             }
         }
     }

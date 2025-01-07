@@ -158,10 +158,7 @@ impl PoorMansCoveredCall {
             .add_position(&short_call.clone())
             .expect("Invalid short call option");
 
-        // Calculate break-even point
-        let net_debit = (strategy.long_call.max_loss().unwrap()
-            - strategy.short_call.max_profit().unwrap())
-            / quantity;
+        let net_debit = strategy.net_cost().unwrap() / quantity;
 
         strategy
             .break_even_points

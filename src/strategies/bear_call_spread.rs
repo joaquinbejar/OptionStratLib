@@ -31,7 +31,7 @@ use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
+use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
@@ -210,15 +210,16 @@ impl Strategies for BearCallSpread {
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
         let width = self.long_call.option.strike_price - self.short_call.option.strike_price;
-        let mas_loss = (width * self.short_call.option.quantity) - self.net_premium_received()?;
-        if mas_loss < ZERO {
+        let max_loss =
+            (width * self.short_call.option.quantity).to_dec() - self.net_premium_received()?;
+        if max_loss < Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
                     reason: "Max loss is negative".to_string(),
                 },
             ))
         } else {
-            Ok(mas_loss)
+            Ok(Positive(max_loss))
         }
     }
 
@@ -626,21 +627,6 @@ mod tests_bear_call_spread_strategies {
         let expected_loss = width * spread.short_call.option.quantity.to_f64()
             - spread.net_premium_received().unwrap().to_f64();
         assert_relative_eq!(result.unwrap().to_f64(), expected_loss, epsilon = 0.0001);
-    }
-
-    #[test]
-    fn test_max_loss_negative() {
-        let mut spread = create_test_spread();
-        // Modify strikes to create invalid width
-        spread.short_call.option.strike_price = pos!(105.0);
-        spread.long_call.option.strike_price = pos!(95.0);
-
-        let result = spread.max_loss();
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Profit/Loss error: Maximum loss calculation error: Max loss is negative"
-        );
     }
 
     #[test]

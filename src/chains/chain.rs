@@ -17,7 +17,7 @@ use crate::utils::others::get_random_element;
 use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
 use csv::WriterBuilder;
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -56,7 +56,7 @@ pub struct OptionData {
 
 impl OptionData {
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
+    pub fn new(
         strike_price: Positive,
         call_bid: Option<Positive>,
         call_ask: Option<Positive>,
@@ -80,7 +80,7 @@ impl OptionData {
         }
     }
 
-    pub(crate) fn validate(&self) -> bool {
+    pub fn validate(&self) -> bool {
         self.strike_price > Positive::ZERO
             && self.implied_volatility.is_some()
             && (self.valid_call() || self.valid_put())
@@ -371,11 +371,11 @@ impl OptionChain {
         );
 
         for strike in strikes {
-            let atm_distance = strike - params.price_params.underlying_price;
+            let atm_distance = strike.to_dec() - params.price_params.underlying_price;
             let adjusted_volatility = adjust_volatility(
                 params.price_params.implied_volatility,
                 params.skew_factor,
-                atm_distance.into(),
+                atm_distance.to_f64().unwrap(),
             );
             let mut option_data = OptionData::new(
                 strike,
@@ -1071,7 +1071,7 @@ impl RNDAnalysis for OptionChain {
     /// * Failed density calculations
     fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, Box<dyn Error>> {
         let mut densities = BTreeMap::new();
-        let mut h = params.derivative_tolerance;
+        let mut h = params.derivative_tolerance.to_dec();
 
         // Step 1: Validate parameters
         if h == Positive::ZERO {
@@ -1095,8 +1095,8 @@ impl RNDAnalysis for OptionChain {
             .min()
             .ok_or("Cannot determine strike interval")?;
 
-        if h < min_interval {
-            h = min_interval;
+        if h < min_interval.to_dec() {
+            h = min_interval.to_dec();
         }
 
         // Step 3: Calculate time to expiry
