@@ -122,3 +122,7 @@ zip:
 		! -name ".*" \
 		| zip -@ $(ZIP_NAME)
 	@echo "$(ZIP_NAME) created successfully."
+
+.PHONY: bench
+bench:
+	cargo clean && cargo bench -- --quiet
