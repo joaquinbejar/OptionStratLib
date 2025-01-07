@@ -217,7 +217,7 @@ impl Position {
     /// A `Decimal` representing the net cost of the position.
     /// The value should be positive but if the fee is higher than the premium it will be negative
     /// in short positions
-    pub(crate) fn net_cost(&self) -> Result<Decimal, PositionError> {
+    pub fn net_cost(&self) -> Result<Decimal, PositionError> {
         match self.option.side {
             Side::Long => Ok(self.total_cost()?.to_dec()),
             Side::Short => {
@@ -265,11 +265,11 @@ impl Position {
         }
     }
 
-    pub(crate) fn fees(&self) -> Result<Positive, PositionError> {
+    pub fn fees(&self) -> Result<Positive, PositionError> {
         Ok((self.open_fee + self.close_fee) * self.option.quantity)
     }
 
-    pub(crate) fn validate(&self) -> bool {
+    pub fn validate(&self) -> bool {
         if self.option.side == Side::Short {
             if self.premium == Positive::ZERO {
                 debug!("Premium must be greater than zero for short positions.");

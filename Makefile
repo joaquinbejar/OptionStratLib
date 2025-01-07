@@ -123,6 +123,30 @@ zip:
 		| zip -@ $(ZIP_NAME)
 	@echo "$(ZIP_NAME) created successfully."
 
+	
+.PHONY: check-cargo-criterion
+check-cargo-criterion:
+	@command -v cargo-criterion > /dev/null || (echo "Installing cargo-criterion..."; cargo install cargo-criterion)
+
 .PHONY: bench
-bench:
-	cargo clean && cargo bench -- --quiet
+bench: check-cargo-criterion
+	cargo criterion
+
+.PHONY: bench-show
+bench-show:
+	open target/criterion/report/index.html
+
+.PHONY: bench-save
+bench-save: check-cargo-criterion
+	cargo criterion --baseline v0.3.1
+
+.PHONY: bench-compare
+bench-compare: check-cargo-criterion
+	cargo criterion --baseline v0.3.1 --save-baseline v0.3.2
+
+.PHONY: bench-clean
+bench-clean:
+	rm -rf target/criterion
+
+.PHONY: bench-full
+bench-full: bench-clean bench bench-show

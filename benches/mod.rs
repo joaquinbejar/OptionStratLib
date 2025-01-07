@@ -8,13 +8,20 @@ use model::positive::{
     benchmark_arithmetic,
     benchmark_comparisons,
     benchmark_conversions,
-    // asumiendo que el archivo está en chains/positive.rs
     benchmark_creation,
     benchmark_math_operations,
 };
 
 use model::option::{
     benchmark_binary_tree, benchmark_greeks, benchmark_pricing, benchmark_valuations,
+};
+
+use model::position::{
+    benchmark_costs_and_fees,
+    benchmark_graphics,
+    benchmark_profit_calculations,
+    benchmark_time_calculations,
+    benchmark_validations,
 };
 
 criterion_group!(
@@ -28,6 +35,11 @@ criterion_group!(
     benchmark_pricing,
     benchmark_greeks,
     benchmark_valuations,
-    benchmark_binary_tree
+    benchmark_binary_tree,
+    benchmark_costs_and_fees,
+    benchmark_profit_calculations,
+    benchmark_time_calculations,
+    benchmark_graphics,
+    benchmark_validations
 );
 criterion_main!(benches);
