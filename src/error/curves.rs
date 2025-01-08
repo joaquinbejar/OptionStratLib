@@ -181,89 +181,97 @@ impl From<Box<dyn Error>> for CurvesError {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::error::Error;
 
     #[test]
-    fn test_operation_error_not_supported_display() {
-        let error = OperationErrorKind::NotSupported {
-            operation: "calculate_profit".to_string(),
-            strategy_type: "IronCondor".to_string(),
-        };
+    fn test_curves_error_display() {
+        let error = CurvesError::Point2D { reason: "Invalid coordinates" };
+        assert_eq!(error.to_string(), "Error: Invalid coordinates");
 
-        assert_eq!(
-            error.to_string(),
-            "Operation 'calculate_profit' is not supported for strategy 'IronCondor'"
-        );
+        let error = CurvesError::StdError { reason: "Standard error".to_string() };
+        assert_eq!(error.to_string(), "Error: Standard error");
+
+        let error = CurvesError::operation_not_supported("calculate", "Strategy");
+        assert_eq!(error.to_string(), "Operation error: Operation 'calculate' is not supported for strategy 'Strategy'");
     }
 
     #[test]
-    fn test_operation_error_invalid_parameters_display() {
-        let error = OperationErrorKind::InvalidParameters {
-            operation: "validate_strikes".to_string(),
-            reason: "Strike prices must be positive".to_string(),
-        };
-
-        assert_eq!(
-            error.to_string(),
-            "Invalid parameters for operation 'validate_strikes': Strike prices must be positive"
-        );
+    fn test_operation_not_supported() {
+        let error = CurvesError::operation_not_supported("test_op", "TestStrat");
+        match error {
+            CurvesError::OperationError(OperationErrorKind::NotSupported { operation, strategy_type }) => {
+                assert_eq!(operation, "test_op");
+                assert_eq!(strategy_type, "TestStrat");
+            }
+            _ => panic!("Wrong error variant"),
+        }
     }
 
     #[test]
-    fn test_operation_error_debug() {
-        let error = OperationErrorKind::NotSupported {
-            operation: "calculate_profit".to_string(),
-            strategy_type: "IronCondor".to_string(),
-        };
-
-        assert_eq!(
-            format!("{:?}", error),
-            "NotSupported { operation: \"calculate_profit\", strategy_type: \"IronCondor\" }"
-        );
+    fn test_invalid_parameters() {
+        let error = CurvesError::invalid_parameters("test_op", "invalid input");
+        match error {
+            CurvesError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }) => {
+                assert_eq!(operation, "test_op");
+                assert_eq!(reason, "invalid input");
+            }
+            _ => panic!("Wrong error variant"),
+        }
     }
 
     #[test]
-    fn test_operation_error_as_error() {
-        let error = OperationErrorKind::InvalidParameters {
-            operation: "validate_strikes".to_string(),
-            reason: "Strike prices must be positive".to_string(),
-        };
-
+    fn test_error_trait_implementation() {
+        let error = CurvesError::Point2D { reason: "test error" };
         let error_ref: &dyn Error = &error;
-        assert_eq!(
-            error_ref.to_string(),
-            "Invalid parameters for operation 'validate_strikes': Strike prices must be positive"
-        );
+        assert_eq!(error_ref.to_string(), "Error: test error");
     }
 
     #[test]
-    fn test_operation_error_kinds_distinct() {
-        let error1 = OperationErrorKind::NotSupported {
-            operation: "op".to_string(),
-            strategy_type: "strat".to_string(),
-        };
-
-        let error2 = OperationErrorKind::InvalidParameters {
-            operation: "op".to_string(),
-            reason: "err".to_string(),
-        };
-
-        assert_ne!(format!("{:?}", error1), format!("{:?}", error2));
+    fn test_from_box_dyn_error() {
+        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "io error"
+        ));
+        let curves_error = CurvesError::from(boxed_error);
+        match curves_error {
+            CurvesError::StdError { reason } => assert_eq!(reason, "io error"),
+            _ => panic!("Wrong error variant"),
+        }
     }
 
     #[test]
-    fn test_operation_error_empty_strings() {
-        let error = OperationErrorKind::NotSupported {
-            operation: "".to_string(),
-            strategy_type: "".to_string(),
-        };
+    fn test_curves_result_type() {
+        let success_result: CurvesResult<i32> = Ok(42);
+        let error_result: CurvesResult<i32> = Err(CurvesError::Point2D { reason: "test error" });
 
-        assert_eq!(
-            error.to_string(),
-            "Operation '' is not supported for strategy ''"
-        );
+        assert!(success_result.is_ok());
+        assert!(error_result.is_err());
+        assert_eq!(success_result.unwrap(), 42);
+    }
+
+    #[test]
+    fn test_from_position_error() {
+        let position_error = PositionError::unsupported_operation("TestStruct", "test_op");
+        let curves_error = CurvesError::from(position_error);
+
+        match curves_error {
+            CurvesError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }) => {
+                assert_eq!(operation, "Position");
+                assert!(reason.contains("test_op"));
+            }
+            _ => panic!("Wrong error variant"),
+        }
+    }
+
+    #[test]
+    fn test_debug_implementation() {
+        let error = CurvesError::Point2D { reason: "test debug" };
+        assert!(format!("{:?}", error).contains("test debug"));
+
+        let error = CurvesError::StdError { reason: "test debug".to_string() };
+        assert!(format!("{:?}", error).contains("test debug"));
     }
 }
