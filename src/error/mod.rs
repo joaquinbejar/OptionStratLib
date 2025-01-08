@@ -86,3 +86,4 @@ pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
 pub use common::{OperationErrorKind};
+pub use curves::CurvesError;

@@ -7,3 +7,4 @@ mod types;
 mod visualization;
 
 pub use types::Point2D;
+pub use operations::arithmetic::MergeOperation;

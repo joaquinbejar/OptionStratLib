@@ -78,7 +78,7 @@ impl Error for CurvesError {}
 #[derive(Debug)]
 pub enum CurvesError {
     /// Errors related to price calculations
-    Point2D{
+    Point2DError {
         reason: &'static str,
     },
     /// Errors related to break-even points
@@ -89,6 +89,10 @@ pub enum CurvesError {
     StdError {
         reason: String,
     },
+
+    InterpolationError(String),
+    ConstructionError(String),
+    AnalysisError(String),
 }
 
 /// Implementation of utility methods for constructing specific `CurvesError`
@@ -157,7 +161,11 @@ impl fmt::Display for CurvesError {
         match self {
             CurvesError::OperationError(err) => write!(f, "Operation error: {}", err),
             CurvesError::StdError { reason } => write!(f, "Error: {}", reason),
-            CurvesError::Point2D { reason } => write!(f, "Error: {}", reason),
+            CurvesError::Point2DError { reason } => write!(f, "Error: {}", reason),
+            CurvesError::InterpolationError(reason) => write!(f, "Interpolation error: {}", reason),
+            CurvesError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
+            CurvesError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
+            
         }
     }
 }
@@ -188,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_curves_error_display() {
-        let error = CurvesError::Point2D { reason: "Invalid coordinates" };
+        let error = CurvesError::Point2DError { reason: "Invalid coordinates" };
         assert_eq!(error.to_string(), "Error: Invalid coordinates");
 
         let error = CurvesError::StdError { reason: "Standard error".to_string() };
@@ -224,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_error_trait_implementation() {
-        let error = CurvesError::Point2D { reason: "test error" };
+        let error = CurvesError::Point2DError { reason: "test error" };
         let error_ref: &dyn Error = &error;
         assert_eq!(error_ref.to_string(), "Error: test error");
     }
@@ -245,7 +253,7 @@ mod tests {
     #[test]
     fn test_curves_result_type() {
         let success_result: CurvesResult<i32> = Ok(42);
-        let error_result: CurvesResult<i32> = Err(CurvesError::Point2D { reason: "test error" });
+        let error_result: CurvesResult<i32> = Err(CurvesError::Point2DError { reason: "test error" });
 
         assert!(success_result.is_ok());
         assert!(error_result.is_err());
@@ -268,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_debug_implementation() {
-        let error = CurvesError::Point2D { reason: "test debug" };
+        let error = CurvesError::Point2DError { reason: "test debug" };
         assert!(format!("{:?}", error).contains("test debug"));
 
         let error = CurvesError::StdError { reason: "test debug".to_string() };

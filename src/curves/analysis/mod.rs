@@ -31,3 +31,6 @@
 
 pub(crate) mod metrics;
 pub(crate) mod statistics;
+
+pub use metrics::CurveMetrics;
+pub use statistics::CurveAnalysisResult;
