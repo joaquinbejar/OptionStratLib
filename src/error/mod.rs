@@ -75,6 +75,8 @@ mod options;
 pub mod position;
 pub mod probability;
 pub mod strategies;
+pub mod curves;
+mod common;
 
 pub use chains::ChainError;
 pub use decimal::{DecimalError, DecimalResult};
@@ -83,3 +85,4 @@ pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
+pub use common::{OperationErrorKind};

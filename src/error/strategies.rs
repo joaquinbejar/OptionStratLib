@@ -70,12 +70,13 @@
 use crate::error::PositionError;
 use std::error::Error;
 use std::fmt;
+use crate::error::common::OperationErrorKind;
 
 impl Error for StrategyError {}
 impl Error for PriceErrorKind {}
 impl Error for BreakEvenErrorKind {}
 impl Error for ProfitLossErrorKind {}
-impl Error for OperationErrorKind {}
+
 #[derive(Debug)]
 pub enum StrategyError {
     /// Errors related to price calculations
@@ -122,16 +123,6 @@ pub enum ProfitLossErrorKind {
     ProfitRangeError { reason: String },
 }
 
-#[derive(Debug)]
-pub enum OperationErrorKind {
-    /// Operation not supported for this strategy
-    NotSupported {
-        operation: String,
-        strategy_type: String,
-    },
-    /// Invalid parameters for operation
-    InvalidParameters { operation: String, reason: String },
-}
 
 impl fmt::Display for StrategyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -187,29 +178,7 @@ impl fmt::Display for ProfitLossErrorKind {
     }
 }
 
-impl fmt::Display for OperationErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            OperationErrorKind::NotSupported {
-                operation,
-                strategy_type,
-            } => {
-                write!(
-                    f,
-                    "Operation '{}' is not supported for strategy '{}'",
-                    operation, strategy_type
-                )
-            }
-            OperationErrorKind::InvalidParameters { operation, reason } => {
-                write!(
-                    f,
-                    "Invalid parameters for operation '{}': {}",
-                    operation, reason
-                )
-            }
-        }
-    }
-}
+
 
 // Type alias for convenience
 pub type StrategyResult<T> = Result<T, StrategyError>;
