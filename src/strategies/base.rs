@@ -8,7 +8,7 @@ use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::position::PositionError;
-use crate::error::strategies::{BreakEvenErrorKind, OperationErrorKind, StrategyError};
+use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
 use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::{Positive, Side};
@@ -16,6 +16,7 @@ use itertools::Itertools;
 use rust_decimal::Decimal;
 use std::f64;
 use tracing::error;
+use crate::error::OperationErrorKind;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.

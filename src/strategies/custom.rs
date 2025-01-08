@@ -6,8 +6,8 @@
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
-use crate::error::strategies::{OperationErrorKind, StrategyError};
-use crate::error::ProbabilityError;
+use crate::error::strategies::StrategyError;
+use crate::error::{OperationErrorKind, ProbabilityError};
 use crate::greeks::equations::{Greek, Greeks};
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
