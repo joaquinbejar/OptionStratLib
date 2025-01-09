@@ -1,8 +1,8 @@
 mod analysis;
-mod construction;
+pub mod construction;
 mod curve_traits;
-mod interpolation;
-mod operations;
+pub mod interpolation;
+pub mod operations;
 mod types;
 mod visualization;
 mod curve;
