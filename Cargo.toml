@@ -69,6 +69,7 @@ members = [
     "examples/examples_visualization",
     "examples/examples_chain",
     "examples/examples_volatility",
+    "examples/examples_curves",
 ]
 
 [workspace.dependencies]

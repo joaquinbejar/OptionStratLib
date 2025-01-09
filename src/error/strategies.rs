@@ -67,6 +67,7 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
+use crate::error::common::OperationErrorKind;
 use crate::error::PositionError;
 use std::error::Error;
 use std::fmt;
@@ -75,7 +76,7 @@ impl Error for StrategyError {}
 impl Error for PriceErrorKind {}
 impl Error for BreakEvenErrorKind {}
 impl Error for ProfitLossErrorKind {}
-impl Error for OperationErrorKind {}
+
 #[derive(Debug)]
 pub enum StrategyError {
     /// Errors related to price calculations
@@ -120,17 +121,6 @@ pub enum ProfitLossErrorKind {
     MaxLossError { reason: String },
     /// Error in profit range calculation
     ProfitRangeError { reason: String },
-}
-
-#[derive(Debug)]
-pub enum OperationErrorKind {
-    /// Operation not supported for this strategy
-    NotSupported {
-        operation: String,
-        strategy_type: String,
-    },
-    /// Invalid parameters for operation
-    InvalidParameters { operation: String, reason: String },
 }
 
 impl fmt::Display for StrategyError {
@@ -187,30 +177,6 @@ impl fmt::Display for ProfitLossErrorKind {
     }
 }
 
-impl fmt::Display for OperationErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            OperationErrorKind::NotSupported {
-                operation,
-                strategy_type,
-            } => {
-                write!(
-                    f,
-                    "Operation '{}' is not supported for strategy '{}'",
-                    operation, strategy_type
-                )
-            }
-            OperationErrorKind::InvalidParameters { operation, reason } => {
-                write!(
-                    f,
-                    "Invalid parameters for operation '{}': {}",
-                    operation, reason
-                )
-            }
-        }
-    }
-}
-
 // Type alias for convenience
 pub type StrategyResult<T> = Result<T, StrategyError>;
 
@@ -219,7 +185,7 @@ impl StrategyError {
     pub fn operation_not_supported(operation: &str, strategy_type: &str) -> Self {
         StrategyError::OperationError(OperationErrorKind::NotSupported {
             operation: operation.to_string(),
-            strategy_type: strategy_type.to_string(),
+            reason: strategy_type.to_string(),
         })
     }
 

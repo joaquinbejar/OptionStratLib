@@ -1,7 +1,15 @@
-mod analysis;
-mod construction;
+pub mod analysis;
+pub mod construction;
+mod curve;
 mod curve_traits;
-mod interpolation;
-mod operations;
+pub mod interpolation;
+pub mod operations;
 mod types;
-mod visualization;
+mod utils;
+pub mod visualization;
+
+pub use curve::Curve;
+pub use curve_traits::CurveOperations;
+pub use operations::arithmetic::MergeOperation;
+pub use types::Point2D;
+pub use utils::{create_constant_curve, create_linear_curve};

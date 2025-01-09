@@ -692,7 +692,7 @@ extern crate core;
 pub mod backtesting;
 pub mod chains;
 pub mod constants;
-mod curves;
+pub mod curves;
 pub mod error;
 pub mod greeks;
 pub mod model;

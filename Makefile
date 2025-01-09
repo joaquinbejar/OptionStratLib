@@ -143,10 +143,6 @@ bench-save: check-cargo-criterion
 .PHONY: bench-compare
 bench-compare: check-cargo-criterion
 	cargo criterion --output-format verbose
-    
-.PHONY: bench-show
-bench-show:
-	open target/criterion/report/index.html
 
 .PHONY: bench-json
 bench-json: check-cargo-criterion
