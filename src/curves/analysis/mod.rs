@@ -29,8 +29,11 @@
 //! * Performing curve fitting analysis
 //! * Statistical hypothesis testing
 
-pub(crate) mod metrics;
-pub(crate) mod statistics;
+mod metrics;
+mod statistics;
+mod traits;
 
-pub use metrics::CurveMetrics;
+
 pub use statistics::CurveAnalysisResult;
+pub use traits::CurveMetricsExtractor;
+pub use metrics::{CurveMetrics, BasicMetrics, ShapeMetrics, RangeMetrics, TrendMetrics, RiskMetrics};

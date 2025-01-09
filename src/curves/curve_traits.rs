@@ -3,11 +3,12 @@
    Email: jb@taunais.com
    Date: 26/8/24
 ******************************************************************************/
-use crate::curves::analysis::statistics::CurveAnalysisResult;
+
 use crate::curves::interpolation::InterpolationType;
-use crate::curves::types::{Curve, CurveType};
+use crate::curves::types::CurveType;
 use rust_decimal::Decimal;
-use crate::curves::{MergeOperation, Point2D};
+use crate::curves::{Curve, MergeOperation, Point2D};
+use crate::curves::analysis::CurveAnalysisResult;
 use crate::error::CurvesError;
 
 /// The `CurveOperations` trait defines a comprehensive set of operations for mathematical curves.
