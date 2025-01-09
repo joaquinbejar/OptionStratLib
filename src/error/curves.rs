@@ -4,150 +4,140 @@
     Date: 24/12/24
 ******************************************************************************/
 
-
+use crate::error::common::OperationErrorKind;
 use crate::error::PositionError;
 use std::error::Error;
 use std::fmt;
-use crate::error::common::OperationErrorKind;
 
 impl Error for CurvesError {}
 
-/// Represents errors related to the management and calculation of trading curves.
+/// Represents different types of errors that can occur in the `curves` module.
 ///
-/// This enum provides detailed errors for various situations encountered in
-/// the `curves` module, including price calculations, break-even errors, and
-/// general operation failures. Each variant is designed to encapsulate specific
-/// information related to its context, aiding in debugging and error recovery.
+/// This enum provides categorization of errors that may be encountered while using 
+/// the `curves` module for tasks such as interpolation, data analysis, or curve construction.
 ///
 /// ## Variants
 ///
-/// ### `Point2D`
-/// Represents errors that arise during calculations or operations involving
-/// 2D points (e.g., plotting, data interpolation).
+/// ### `Point2DError`
+/// Indicates an issue related to a 2D point operation.
 /// - Fields:
-///   - `reason` (`&'static str`): A static string describing the reason for
-///     the error.
+///   - `reason` (`&'static str`): A static string explaining the nature of the error.
 ///
-/// Use this variant to signal issues like missing data points, invalid input,
-/// or calculation failures specific to two-dimensional curve data.
+/// Use this variant to represent fundamental issues related to points, such as missing
+/// values or invalid coordinates.
+///
 ///
 /// ### `OperationError`
-/// Reflects errors related to trading strategy operations, such as unsupported
-/// operations or invalid parameters. It encapsulates the `OperationErrorKind`
-/// type, which provides more granular categorization:
-/// - `NotSupported`: Indicates the operation is not supported for a specific
-///   strategy type.
-/// - `InvalidParameters`: Represents issues with input parameters for the
-///   operation.
+/// Represents a broader category of operational errors, encapsulated by the
+/// [`OperationErrorKind`](crate::error::common::OperationErrorKind) enum.
+/// - Fields:
+///   - `OperationErrorKind`: Encapsulates the specific kind of operation failure.
 ///
-/// This variant is helpful for handling errors that arise during complex
-/// strategy-related workflows, ensuring clear and structured error reporting.
 ///
 /// ### `StdError`
-/// Captures general-purpose errors that do not fall under the other specialized
-/// categories.
+/// Wraps a standard error with additional context.
 /// - Fields:
-///   - `reason` (`String`): A string describing the error, meant for dynamic
-///     error messages or data.
+///   - `reason` (`String`): A dynamic string explaining the error in detail.
 ///
-/// Use this variant for errors that might originate outside of the library or
-/// represent unexpected conditions.
+/// Leverage this for general-purpose error handling where a static string or specialized
+/// variant might not offer enough flexibility or context.
 ///
-/// ## Implementation Notes
-/// - Implements the `Debug` trait for easy error inspection during development.
-/// - Each variant is designed to correspond with specific aspects of the `curves`
-///   module functionality, ensuring precise categorization and improved maintainability.
 ///
-/// ## Examples
-/// - `Point2D(reason: "Invalid point value")`: An example of a failure when
-///   trying to perform a calculation involving invalid data.
-/// - `OperationError(OperationErrorKind::NotSupported { operation: "SomeOp", strategy_type: "SomeStrategy" })`: Indicates an unsupported operation for a trading strategy.
-/// - `StdError { reason: "File not found" }`: Represents a general error unrelated to specific logic.
+/// ### `InterpolationError`
+/// Reflects issues encountered during a curve's interpolation process.
+/// - Fields:
+///   - `String`: A human-readable explanation of the problem.
+///
+/// This variant is commonly used for failures in interpolating data points or generating
+/// smooth curves.
+///
+///
+/// ### `ConstructionError`
+/// Represents errors encountered during the construction of curves or related structures.
+/// - Fields:
+///   - `String`: A description of the problem that arose during construction.
+///
+/// Use this variant when there are issues initializing or creating curve objects, such
+/// as missing inputs or unsupported formats.
+///
+///
+/// ### `AnalysisError`
+/// Captures errors related to the analysis of curves.
+/// - Fields:
+///   - `String`: A detailed explanation of the problem during analysis.
+///
+/// Frequently used for scenarios where analytical methods, such as curve fitting 
+/// or sampling, fail due to input errors or computational issues.
+///
 ///
 /// ## Integration
-/// This enum can integrate seamlessly into a broader library structure, leveraging
-/// the categorized error handling paradigm:
-/// - Commonly used with higher-level modules like `strategies` or `chains`.
-/// - Compatible with other custom errors for a unified error-handling approach.
 ///
-/// ## Compatibility
-/// - Errors in this enum may interact closely with the `OperationErrorKind` type,
-///   specifically for strategy-related operations.
-/// - Designed to provide sufficient information for debugging and guiding the user
-///   towards resolving the issue.
+/// - This error type is closely tied to the `curves` module's functionality and is meant 
+/// to be used wherever curve-related operations (e.g., interpolation, construction, or analysis) might fail.
+/// - It is part of a broader error handling system outlined in the `error` module.
+///
+///
+/// ## Debugging
+///
+/// Errors of this type implement the `Debug` trait to aid in diagnosing issues during
+/// development and testing processes. This ensures detailed debug output for better traceability.
+///
 #[derive(Debug)]
 pub enum CurvesError {
-    /// Errors related to price calculations
     Point2DError {
         reason: &'static str,
     },
-    /// Errors related to break-even points
-
-    /// Errors related to strategy operations
     OperationError(OperationErrorKind),
-
     StdError {
         reason: String,
     },
-
     InterpolationError(String),
     ConstructionError(String),
     AnalysisError(String),
 }
 
-/// Implementation of utility methods for constructing specific `CurvesError`
-/// variants related to trading strategy operations.
+/// Provides helper methods for constructing specific variants of the `CurvesError` type.
 ///
-/// These methods provide convenient ways to generate errors of the 
-/// `OperationErrorKind` type, encapsulated within the `CurvesError::OperationError` variant.
+/// These methods encapsulate common patterns of error creation, making it easier
+/// to consistently generate errors with the necessary context.
 ///
-/// ## Methods
 ///
-/// ### `operation_not_supported`
-/// Creates a `CurvesError` representing an unsupported operation error.
-/// - Parameters:
-///   - `operation` (`&str`): The name of the operation that is not supported.
-///   - `strategy_type` (`&str`): The strategy type for which the operation is not supported.
-/// - Returns:
-///   - `CurvesError` containing an `OperationErrorKind::NotSupported` instance.
-///
-/// Use this method to indicate that the requested operation cannot be performed
-/// for the specified trading strategy.
-///
-/// ### `invalid_parameters`
-/// Constructs a `CurvesError` representing an invalid parameters error.
-/// - Parameters:
-///   - `operation` (`&str`): The name of the operation that failed.
-///   - `reason` (`&str`): A description of why the parameters are invalid.
-/// - Returns:
-///   - `CurvesError` containing an `OperationErrorKind::InvalidParameters` instance.
-///
-/// This method is useful for scenarios where an operation failure occurs due to
-/// malformed or invalid input parameters.
-///
-/// ## Example Integration
-/// These methods are designed to provide a standardized way of creating errors
-/// for operation failures in the context of trading curves or strategy management.
-/// They are closely tied to the `OperationErrorKind` enum, which categorizes 
-/// strategy-related errors in a structured manner.
-///
-/// ## Debugging and Error Handling
-/// Utilizing these methods ensures that the error reporting is consistent and 
-/// provides detailed information for developers or library users to resolve 
-/// issues effectively.
-///
-/// ## Related Types
-/// - `CurvesError`: The parent enum which encapsulates `OperationErrorKind`.
-/// - `OperationErrorKind`: The enum representing granular types of errors for
-///   strategy operations.
+/// ## Integration
+/// - These methods simplify the process of creating meaningful error objects, improving readability
+///   and maintainability of the code using the `CurvesError` type.
+/// - The constructed errors leverage the [`OperationErrorKind`](crate::error::common::OperationErrorKind)
+///   to ensure structured and detailed error categorization.
 impl CurvesError {
-    pub fn operation_not_supported(operation: &str, strategy_type: &str) -> Self {
+
+    /// ### `operation_not_supported`
+    /// Constructs a `CurvesError::OperationError` with an [`OperationErrorKind::NotSupported`] variant.
+    /// - **Parameters:**
+    ///   - `operation` (`&str`): The name of the operation that is not supported.
+    ///   - `reason` (`&str`): A description of why the operation is not supported.
+    /// - **Returns:** 
+    ///   - A `CurvesError` containing a `NotSupported` operation error.
+    /// - **Use Cases:**
+    ///   - Invoked when a requested operation is not compatible with the current context.
+    ///   - For example, attempting an unsupported computation method on a specific curve type.
+    ///
+    pub fn operation_not_supported(operation: &str, reason: &str) -> Self {
         CurvesError::OperationError(OperationErrorKind::NotSupported {
             operation: operation.to_string(),
-            strategy_type: strategy_type.to_string(),
+            reason: reason.to_string(),
         })
     }
 
+    /// ### `invalid_parameters`
+    /// Constructs a `CurvesError::OperationError` with an [`OperationErrorKind::InvalidParameters`] variant.
+    /// - **Parameters:**
+    ///   - `operation` (`&str`): The name of the operation that encountered invalid parameters.
+    ///   - `reason` (`&str`): A description of why the parameters are invalid.
+    /// - **Returns:**
+    ///   - A `CurvesError` containing an `InvalidParameters` operation error.
+    /// - **Use Cases:**
+    ///   - Used when an operation fails due to issues with the provided input.
+    ///   - For example, providing malformed or missing parameters for interpolation or curve construction.
+    ///
     pub fn invalid_parameters(operation: &str, reason: &str) -> Self {
         CurvesError::OperationError(OperationErrorKind::InvalidParameters {
             operation: operation.to_string(),
@@ -165,13 +155,52 @@ impl fmt::Display for CurvesError {
             CurvesError::InterpolationError(reason) => write!(f, "Interpolation error: {}", reason),
             CurvesError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
             CurvesError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
-            
         }
     }
 }
 
 pub type CurvesResult<T> = Result<T, CurvesError>;
 
+
+/// Converts a `PositionError` into a `CurvesError` by mapping it to an
+/// `OperationError` with the `InvalidParameters` variant.
+///
+/// This implementation ensures a smooth transition between error types
+/// when a `PositionError` is encountered within a context that operates
+/// on the `curves` module. The `InvalidParameters` variant is used to
+/// provide detailed information about the failed operation and the reason
+/// for its failure.
+///
+/// ## Details:
+/// - The `operation` field is hardcoded as `"Position"` to indicate the 
+///   context of the error (i.e., relating to position management).
+/// - The `reason` field is derived from the `to_string` representation of
+///   the `PositionError`, ensuring a human-readable explanation.
+///
+/// ## Example Integration:
+/// 1. If a `PositionError` is encountered during curve calculations, this
+///    implementation converts it into a `CurvesError` for consistent error
+///    handling within the `curves` module.
+/// 2. The generated `CurvesError` provides detailed diagnostic information
+///    about the reason for the failure, enabling effective debugging.
+///
+/// ## Implementation Notes:
+/// - This conversion leverages the `OperationErrorKind::InvalidParameters`
+///   variant to communicate that invalid parameters (or settings) were the
+///   root cause of failure.
+/// - Use this implementation to handle interoperability between error types
+///   in modular design contexts.
+///
+/// ## Example Use Case:
+/// This conversion is frequently used in scenarios where:
+/// - A position-related error (e.g., from validation or limits) occurs during a
+///   curve operation.
+/// - Such errors need to be mapped into the `CurvesError` domain to maintain
+///   consistent error handling across the library.
+///
+/// ## Debugging:
+/// The resulting `CurvesError` will include contextual details, making it
+/// straightforward to trace and debug the underlying issue.
 impl From<PositionError> for CurvesError {
     fn from(err: PositionError) -> Self {
         CurvesError::OperationError(OperationErrorKind::InvalidParameters {
@@ -181,6 +210,50 @@ impl From<PositionError> for CurvesError {
     }
 }
 
+/// Implements the `From` trait to enable seamless conversion from a boxed `dyn Error`
+/// into a `CurvesError`. This is particularly useful for integrating standard error
+/// handling mechanisms with the custom `CurvesError` type.
+///
+/// # Behavior
+///
+/// When constructing a `CurvesError` from a `Box<dyn Error>`, the `StdError` variant
+/// is utilized. The `Box<dyn Error>` is unwrapped, and its string representation
+/// (via `to_string`) is used to populate the `reason` field of the `StdError` variant.
+///
+/// # Parameters
+///
+/// - `err`: A boxed standard error (`Box<dyn Error>`). Represents the error to be
+///   wrapped within a `CurvesError` variant.
+///
+/// # Returns
+///
+/// - `CurvesError::StdError`: The custom error type with a detailed `reason`
+///   string derived from the provided error.
+///
+/// # Usage
+///
+/// This implementation is commonly employed when you need to bridge standard Rust
+/// errors with the specific error handling system provided by the `curves` module.
+/// It facilitates scenarios where standard error contexts need to be preserved
+/// in a flexible, string-based `reason` for debugging or logging purposes.
+///
+/// # Example Scenario
+///
+/// Instead of handling standard errors separately, you can propagate them as `CurvesError`
+/// within the larger error system of the `curves` module, ensuring consistent error
+/// wrapping and management.
+///
+/// # Notes
+///
+/// - This implementation assumes that all input errors (`Box<dyn Error>`) are stringifiable
+///   using the `to_string()` method.
+/// - This conversion is particularly useful for libraries integrating generalized errors
+///   (e.g., I/O errors, or third-party library errors) into a standardized error system.
+///
+/// # Module Context
+///
+/// This conversion is provided in the `crate::error::curves` module, which defines
+/// the `CurvesError` enum encompassing multiple errors related to curve operations.
 impl From<Box<dyn Error>> for CurvesError {
     fn from(err: Box<dyn Error>) -> Self {
         CurvesError::StdError {
@@ -189,6 +262,8 @@ impl From<Box<dyn Error>> for CurvesError {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -196,21 +271,31 @@ mod tests {
 
     #[test]
     fn test_curves_error_display() {
-        let error = CurvesError::Point2DError { reason: "Invalid coordinates" };
+        let error = CurvesError::Point2DError {
+            reason: "Invalid coordinates",
+        };
         assert_eq!(error.to_string(), "Error: Invalid coordinates");
 
-        let error = CurvesError::StdError { reason: "Standard error".to_string() };
+        let error = CurvesError::StdError {
+            reason: "Standard error".to_string(),
+        };
         assert_eq!(error.to_string(), "Error: Standard error");
 
         let error = CurvesError::operation_not_supported("calculate", "Strategy");
-        assert_eq!(error.to_string(), "Operation error: Operation 'calculate' is not supported for strategy 'Strategy'");
+        assert_eq!(
+            error.to_string(),
+            "Operation error: Operation 'calculate' is not supported for strategy 'Strategy'"
+        );
     }
 
     #[test]
     fn test_operation_not_supported() {
         let error = CurvesError::operation_not_supported("test_op", "TestStrat");
         match error {
-            CurvesError::OperationError(OperationErrorKind::NotSupported { operation, strategy_type }) => {
+            CurvesError::OperationError(OperationErrorKind::NotSupported {
+                operation,
+                                            reason: strategy_type,
+            }) => {
                 assert_eq!(operation, "test_op");
                 assert_eq!(strategy_type, "TestStrat");
             }
@@ -222,7 +307,10 @@ mod tests {
     fn test_invalid_parameters() {
         let error = CurvesError::invalid_parameters("test_op", "invalid input");
         match error {
-            CurvesError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }) => {
+            CurvesError::OperationError(OperationErrorKind::InvalidParameters {
+                operation,
+                reason,
+            }) => {
                 assert_eq!(operation, "test_op");
                 assert_eq!(reason, "invalid input");
             }
@@ -232,17 +320,17 @@ mod tests {
 
     #[test]
     fn test_error_trait_implementation() {
-        let error = CurvesError::Point2DError { reason: "test error" };
+        let error = CurvesError::Point2DError {
+            reason: "test error",
+        };
         let error_ref: &dyn Error = &error;
         assert_eq!(error_ref.to_string(), "Error: test error");
     }
 
     #[test]
     fn test_from_box_dyn_error() {
-        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "io error"
-        ));
+        let boxed_error: Box<dyn Error> =
+            Box::new(std::io::Error::new(std::io::ErrorKind::Other, "io error"));
         let curves_error = CurvesError::from(boxed_error);
         match curves_error {
             CurvesError::StdError { reason } => assert_eq!(reason, "io error"),
@@ -253,7 +341,9 @@ mod tests {
     #[test]
     fn test_curves_result_type() {
         let success_result: CurvesResult<i32> = Ok(42);
-        let error_result: CurvesResult<i32> = Err(CurvesError::Point2DError { reason: "test error" });
+        let error_result: CurvesResult<i32> = Err(CurvesError::Point2DError {
+            reason: "test error",
+        });
 
         assert!(success_result.is_ok());
         assert!(error_result.is_err());
@@ -266,7 +356,10 @@ mod tests {
         let curves_error = CurvesError::from(position_error);
 
         match curves_error {
-            CurvesError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }) => {
+            CurvesError::OperationError(OperationErrorKind::InvalidParameters {
+                operation,
+                reason,
+            }) => {
                 assert_eq!(operation, "Position");
                 assert!(reason.contains("test_op"));
             }
@@ -276,10 +369,14 @@ mod tests {
 
     #[test]
     fn test_debug_implementation() {
-        let error = CurvesError::Point2DError { reason: "test debug" };
+        let error = CurvesError::Point2DError {
+            reason: "test debug",
+        };
         assert!(format!("{:?}", error).contains("test debug"));
 
-        let error = CurvesError::StdError { reason: "test debug".to_string() };
+        let error = CurvesError::StdError {
+            reason: "test debug".to_string(),
+        };
         assert!(format!("{:?}", error).contains("test debug"));
     }
 }

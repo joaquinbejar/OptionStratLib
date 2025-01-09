@@ -268,7 +268,7 @@ impl From<StrategyError> for ProbabilityError {
             StrategyError::OperationError(kind) => match kind {
                 OperationErrorKind::NotSupported {
                     operation,
-                    strategy_type,
+                    reason: strategy_type,
                 } => ProbabilityError::from(format!(
                     "Operation '{}' not supported for strategy '{}'",
                     operation, strategy_type
@@ -483,7 +483,7 @@ mod tests_extended {
     fn test_strategy_operation_error_conversion() {
         let strategy_error = StrategyError::OperationError(OperationErrorKind::NotSupported {
             operation: "test".to_string(),
-            strategy_type: "TestStrategy".to_string(),
+            reason: "TestStrategy".to_string(),
         });
         let prob_error: ProbabilityError = strategy_error.into();
         assert!(matches!(

@@ -1,3 +1,5 @@
-pub(crate) mod from_data;
-pub(crate) mod parametric;
-pub(crate) mod types;
+mod from_data;
+mod parametric;
+mod types;
+
+pub  use types::CurveConstructionMethod;

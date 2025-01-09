@@ -4,7 +4,7 @@
    Date: 26/8/24
 ******************************************************************************/
 use crate::curves::analysis::statistics::CurveAnalysisResult;
-use crate::curves::interpolation::types::InterpolationType;
+use crate::curves::interpolation::InterpolationType;
 use crate::curves::types::{Curve, CurveType};
 use rust_decimal::Decimal;
 use crate::curves::{MergeOperation, Point2D};

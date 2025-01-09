@@ -1,5 +1,13 @@
-pub(crate) mod bilinear;
-pub(crate) mod cubic;
-pub(crate) mod linear;
-pub(crate) mod spline;
-pub(crate) mod types;
+mod bilinear;
+mod cubic;
+mod linear;
+mod spline;
+mod types;
+mod traits;
+
+pub use types::InterpolationType;
+pub use traits::Interpolate;
+pub use linear::LinearInterpolation;
+pub use cubic::CubicInterpolation;
+pub use spline::SplineInterpolation;
+pub use bilinear::BiLinearInterpolation;

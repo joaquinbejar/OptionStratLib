@@ -57,7 +57,7 @@ pub enum OperationErrorKind {
     /// Operation not supported for this strategy
     NotSupported {
         operation: String,
-        strategy_type: String,
+        reason: String,
     },
     /// Invalid parameters for operation
     InvalidParameters { operation: String, reason: String },
@@ -68,7 +68,7 @@ impl fmt::Display for OperationErrorKind {
         match self {
             OperationErrorKind::NotSupported {
                 operation,
-                strategy_type,
+                reason: strategy_type,
             } => {
                 write!(
                     f,
@@ -95,7 +95,7 @@ mod tests {
     fn test_operation_error_not_supported_display() {
         let error = OperationErrorKind::NotSupported {
             operation: "calculate_profit".to_string(),
-            strategy_type: "IronCondor".to_string(),
+            reason: "IronCondor".to_string(),
         };
 
         assert_eq!(
@@ -121,7 +121,7 @@ mod tests {
     fn test_operation_error_debug() {
         let error = OperationErrorKind::NotSupported {
             operation: "calculate_profit".to_string(),
-            strategy_type: "IronCondor".to_string(),
+            reason: "IronCondor".to_string(),
         };
 
         assert_eq!(
@@ -148,7 +148,7 @@ mod tests {
     fn test_operation_error_kinds_distinct() {
         let error1 = OperationErrorKind::NotSupported {
             operation: "op".to_string(),
-            strategy_type: "strat".to_string(),
+            reason: "strat".to_string(),
         };
 
         let error2 = OperationErrorKind::InvalidParameters {
@@ -163,7 +163,7 @@ mod tests {
     fn test_operation_error_empty_strings() {
         let error = OperationErrorKind::NotSupported {
             operation: "".to_string(),
-            strategy_type: "".to_string(),
+            reason: "".to_string(),
         };
 
         assert_eq!(

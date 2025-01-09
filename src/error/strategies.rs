@@ -188,7 +188,7 @@ impl StrategyError {
     pub fn operation_not_supported(operation: &str, strategy_type: &str) -> Self {
         StrategyError::OperationError(OperationErrorKind::NotSupported {
             operation: operation.to_string(),
-            strategy_type: strategy_type.to_string(),
+            reason: strategy_type.to_string(),
         })
     }
 
