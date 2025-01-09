@@ -1,10 +1,5 @@
 use crate::curves::analysis::metrics::{
-    BasicMetrics,
-    ShapeMetrics,
-    RangeMetrics,
-    TrendMetrics,
-    RiskMetrics,
-    CurveMetrics
+    BasicMetrics, CurveMetrics, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
 };
 use crate::error::CurvesError;
 
@@ -82,4 +77,3 @@ pub trait CurveMetricsExtractor {
         Ok(CurveMetrics::new(basic, shape, range, trend, risk))
     }
 }
-

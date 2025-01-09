@@ -1,13 +1,12 @@
 use crate::curves::{Curve, MergeOperation};
 use crate::error::CurvesError;
 
-
 /// A trait for performing arithmetic operations between curves.
 ///
 /// # Overview
-/// The `CurveArithmetic` trait provides methods to perform various arithmetic 
-/// operations between two or more curves. It supports operations like addition, 
-/// subtraction, multiplication, division, finding maximum, and finding minimum 
+/// The `CurveArithmetic` trait provides methods to perform various arithmetic
+/// operations between two or more curves. It supports operations like addition,
+/// subtraction, multiplication, division, finding maximum, and finding minimum
 /// values across multiple curves.
 ///
 /// # Operations
@@ -22,12 +21,12 @@ use crate::error::CurvesError;
 /// 2. Handle cases where curves have different lengths or x-ranges
 ///
 /// ## Interpolation Strategy
-/// The default implementation uses cubic interpolation to ensure smooth 
-/// transitions and minimize artifacts when combining curves with different 
+/// The default implementation uses cubic interpolation to ensure smooth
+/// transitions and minimize artifacts when combining curves with different
 /// point distributions.
 ///
 /// # Error Handling
-/// Returns `CurvesError` to provide detailed context about potential 
+/// Returns `CurvesError` to provide detailed context about potential
 /// failures during curve arithmetic operations.
 ///
 pub trait CurveArithmetic {
@@ -40,10 +39,7 @@ pub trait CurveArithmetic {
     /// # Returns
     /// - `Ok(Curve)`: A new curve resulting from the merge operation
     /// - `Err(CurvesError)`: Error if merging fails
-    fn merge_curves(
-        curves: &[&Curve],
-        operation: MergeOperation
-    ) -> Result<Curve, CurvesError>;
+    fn merge_curves(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurvesError>;
 
     /// Performs an arithmetic operation between two curves.
     ///
@@ -54,9 +50,5 @@ pub trait CurveArithmetic {
     /// # Returns
     /// - `Ok(Curve)`: A new curve resulting from the merge operation
     /// - `Err(CurvesError)`: Error if merging fails
-    fn merge_with(
-        &self,
-        other: &Curve,
-        operation: MergeOperation
-    ) -> Result<Curve, CurvesError>;
+    fn merge_with(&self, other: &Curve, operation: MergeOperation) -> Result<Curve, CurvesError>;
 }

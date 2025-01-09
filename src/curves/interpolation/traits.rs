@@ -1,6 +1,6 @@
-
 use crate::curves::interpolation::{
-    BiLinearInterpolation, CubicInterpolation, LinearInterpolation, SplineInterpolation, InterpolationType
+    BiLinearInterpolation, CubicInterpolation, InterpolationType, LinearInterpolation,
+    SplineInterpolation,
 };
 use crate::curves::Point2D;
 use crate::error::CurvesError;
@@ -46,7 +46,6 @@ use rust_decimal::Decimal;
 pub trait Interpolate:
     LinearInterpolation + BiLinearInterpolation + CubicInterpolation + SplineInterpolation
 {
-
     /// Retrieves the dataset of 2D points used for interpolation.
     ///
     /// # Returns
@@ -55,7 +54,7 @@ pub trait Interpolate:
     /// The returned points must:
     /// - Be sorted in ascending order based on the x-coordinate.
     /// - Contain at least two points for interpolation to be valid.
-    fn get_points(&self) -> &[Point2D];
+    fn get_points(&self) -> Vec<&Point2D>;
 
     /// Interpolates a value at the specified x-coordinate using the given interpolation method.
     ///
@@ -140,14 +139,14 @@ pub trait Interpolate:
     }
 }
 
-
 #[cfg(test)]
 mod tests_interpolate {
     use super::*;
     use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
 
     struct MockInterpolator {
-        points: Vec<Point2D>
+        points: BTreeSet<Point2D>,
     }
 
     impl LinearInterpolation for MockInterpolator {
@@ -196,20 +195,20 @@ mod tests_interpolate {
     }
 
     impl Interpolate for MockInterpolator {
-        fn get_points(&self) -> &[Point2D] {
-            &self.points
+        fn get_points(&self) -> Vec<&Point2D> {
+            self.points.iter().collect::<Vec<_>>()
         }
     }
 
     // Rest of the tests remain the same...
 
-    fn create_mock_interpolator(points: Vec<Point2D>) -> MockInterpolator {
+    fn create_mock_interpolator(points: BTreeSet<Point2D>) -> MockInterpolator {
         MockInterpolator { points }
     }
-    
+
     #[test]
     fn test_interpolate_empty_points() {
-        let interpolator = create_mock_interpolator(vec![]);
+        let interpolator = create_mock_interpolator(BTreeSet::new());
 
         let linear = interpolator.interpolate(dec!(0.5), InterpolationType::Linear);
         assert!(linear.is_err());
@@ -227,52 +226,67 @@ mod tests_interpolate {
     #[test]
     fn test_interpolate_insufficient_points() {
         // Test with only one point
-        let interpolator = create_mock_interpolator(vec![
-            Point2D::new(dec!(0), dec!(0)),
-        ]);
+        let interpolator =
+            create_mock_interpolator(BTreeSet::from_iter(vec![Point2D::new(dec!(0), dec!(0))]));
 
         let linear = interpolator.interpolate(dec!(0.5), InterpolationType::Linear);
         assert!(linear.is_err());
 
         // Test with two points (should fail for all except linear)
-        let interpolator = create_mock_interpolator(vec![
+        let interpolator = create_mock_interpolator(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0), dec!(0)),
+            Point2D::new(dec!(1), dec!(1)),
+        ]));
+
+        assert!(interpolator
+            .interpolate(dec!(0.5), InterpolationType::Bilinear)
+            .is_err());
+        assert!(interpolator
+            .interpolate(dec!(0.5), InterpolationType::Cubic)
+            .is_err());
+        assert!(interpolator
+            .interpolate(dec!(0.5), InterpolationType::Spline)
+            .is_err());
+    }
+
+    #[test]
+    fn test_get_points() {
+        let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
             Point2D::new(dec!(1), dec!(1)),
         ]);
-
-        assert!(interpolator.interpolate(dec!(0.5), InterpolationType::Bilinear).is_err());
-        assert!(interpolator.interpolate(dec!(0.5), InterpolationType::Cubic).is_err());
-        assert!(interpolator.interpolate(dec!(0.5), InterpolationType::Spline).is_err());
-    }
-    
-    
-    #[test]
-    fn test_get_points() {
-        let points = vec![
-            Point2D::new(dec!(0), dec!(0)),
-            Point2D::new(dec!(1), dec!(1)),
-        ];
         let interpolator = create_mock_interpolator(points.clone());
 
-        assert_eq!(interpolator.get_points(), points.as_slice());
+        assert_eq!(
+            interpolator.get_points(),
+            points.iter().collect::<Vec<_>>().as_slice()
+        );
     }
 
     #[test]
     fn test_interpolate_routing() {
-        let points = vec![
-            Point2D::new(dec!(0), dec!(0)),    // Point 1
-            Point2D::new(dec!(1), dec!(1)),    // Point 2
-            Point2D::new(dec!(2), dec!(2)),    // Point 3
-            Point2D::new(dec!(3), dec!(3)),    // Point 4
-        ];
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0), dec!(0)), // Point 1
+            Point2D::new(dec!(1), dec!(1)), // Point 2
+            Point2D::new(dec!(2), dec!(2)), // Point 3
+            Point2D::new(dec!(3), dec!(3)), // Point 4
+        ]);
         let interpolator = create_mock_interpolator(points);
         let x = dec!(0.5);
 
         // Test that each interpolation type routes to its corresponding method
-        let linear = interpolator.interpolate(x, InterpolationType::Linear).unwrap();
-        let bilinear = interpolator.interpolate(x, InterpolationType::Bilinear).unwrap();
-        let cubic = interpolator.interpolate(x, InterpolationType::Cubic).unwrap();
-        let spline = interpolator.interpolate(x, InterpolationType::Spline).unwrap();
+        let linear = interpolator
+            .interpolate(x, InterpolationType::Linear)
+            .unwrap();
+        let bilinear = interpolator
+            .interpolate(x, InterpolationType::Bilinear)
+            .unwrap();
+        let cubic = interpolator
+            .interpolate(x, InterpolationType::Cubic)
+            .unwrap();
+        let spline = interpolator
+            .interpolate(x, InterpolationType::Spline)
+            .unwrap();
 
         // In our mock implementation, all methods return (x, x)
         assert_eq!(linear.x, x);
@@ -283,11 +297,11 @@ mod tests_interpolate {
 
     #[test]
     fn test_find_bracket_points_success() {
-        let points = vec![
+        let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
             Point2D::new(dec!(1), dec!(1)),
             Point2D::new(dec!(2), dec!(2)),
-        ];
+        ]);
         let interpolator = create_mock_interpolator(points);
 
         // Test finding brackets for a point in the middle
@@ -303,7 +317,7 @@ mod tests_interpolate {
 
     #[test]
     fn test_find_bracket_points_insufficient_points() {
-        let points = vec![Point2D::new(dec!(0), dec!(0))];
+        let points = BTreeSet::from_iter(vec![Point2D::new(dec!(0), dec!(0))]);
         let interpolator = create_mock_interpolator(points);
 
         assert!(interpolator.find_bracket_points(dec!(0.5)).is_err());
@@ -311,10 +325,10 @@ mod tests_interpolate {
 
     #[test]
     fn test_find_bracket_points_out_of_range() {
-        let points = vec![
+        let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
             Point2D::new(dec!(1), dec!(1)),
-        ];
+        ]);
         let interpolator = create_mock_interpolator(points);
 
         // Test x below range
@@ -326,11 +340,11 @@ mod tests_interpolate {
 
     #[test]
     fn test_find_bracket_points_edge_cases() {
-        let points = vec![
+        let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
             Point2D::new(dec!(1), dec!(1)),
             Point2D::new(dec!(2), dec!(2)),
-        ];
+        ]);
         let interpolator = create_mock_interpolator(points);
 
         // Test at lower boundary
@@ -346,7 +360,7 @@ mod tests_interpolate {
 
     #[test]
     fn test_interpolate_with_empty_points() {
-        let interpolator = create_mock_interpolator(vec![]);
+        let interpolator = create_mock_interpolator(BTreeSet::from_iter(vec![]));
         let result = interpolator.interpolate(dec!(0.5), InterpolationType::Linear);
         assert!(result.is_err());
     }
@@ -356,37 +370,35 @@ mod tests_interpolate {
         // Test each interpolation type with its minimum required points
 
         // Linear needs 2 points
-        let linear_points = vec![
+        let linear_points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
             Point2D::new(dec!(1), dec!(1)),
-        ];
+        ]);
         let interpolator = create_mock_interpolator(linear_points);
         let linear = interpolator.interpolate(dec!(0.5), InterpolationType::Linear);
         assert!(linear.is_ok());
 
         // Spline needs 3 points
-        let spline_points = vec![
+        let spline_points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
             Point2D::new(dec!(1), dec!(1)),
             Point2D::new(dec!(2), dec!(2)),
-        ];
+        ]);
         let interpolator = create_mock_interpolator(spline_points);
         let spline = interpolator.interpolate(dec!(0.5), InterpolationType::Spline);
         assert!(spline.is_ok());
 
         // Bilinear and Cubic need 4 points
-        let four_points = vec![
+        let four_points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
             Point2D::new(dec!(1), dec!(1)),
             Point2D::new(dec!(2), dec!(2)),
             Point2D::new(dec!(3), dec!(3)),
-        ];
+        ]);
         let interpolator = create_mock_interpolator(four_points);
         let bilinear = interpolator.interpolate(dec!(0.5), InterpolationType::Bilinear);
         let cubic = interpolator.interpolate(dec!(0.5), InterpolationType::Cubic);
         assert!(bilinear.is_ok());
         assert!(cubic.is_ok());
     }
-    
 }
-

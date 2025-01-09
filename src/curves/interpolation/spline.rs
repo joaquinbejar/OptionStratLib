@@ -1,19 +1,18 @@
-
-use rust_decimal::Decimal;
 use crate::curves::Point2D;
 use crate::error::CurvesError;
+use rust_decimal::Decimal;
 
 /// A trait that defines the behavior for performing spline interpolation on a given dataset.
 ///
 /// # Overview
 /// The `SplineInterpolation` trait provides a method for interpolating data points
-/// using a spline, a piecewise polynomial function that is smooth and continuous 
+/// using a spline, a piecewise polynomial function that is smooth and continuous
 /// across its entire range. This is commonly used in numerical analysis, computer graphics,
 /// and scientific applications to generate smooth curves that pass through or near
 /// a set of given data points.
 ///
 /// ## When to Use
-/// Use `SplineInterpolation` to approximate unknown values within the range of 
+/// Use `SplineInterpolation` to approximate unknown values within the range of
 /// known data points. Spline interpolation is particularly suited for scenarios
 /// requiring smooth transitions and accurate representation of data trends.
 ///
@@ -29,7 +28,7 @@ use crate::error::CurvesError;
 ///
 /// - **Returns:**
 ///   - A `Result` where:
-///     - `Ok(Point2D)`: The interpolated point in 2D space, with the given `x` coordinate 
+///     - `Ok(Point2D)`: The interpolated point in 2D space, with the given `x` coordinate
 ///       and its corresponding `y` coordinate calculated using the spline.
 ///     - `Err(CurvesError)`: An error indicating why the interpolation failed. This could
 ///       be due to insufficient data, boundary conditions, or other issues.
@@ -44,13 +43,13 @@ use crate::error::CurvesError;
 ///
 /// # Required Dependencies
 /// This trait depends on the following code components:
-/// - [`Point2D`](crate::curves::types::Point2D): Represents a 2D Cartesian point where the 
+/// - [`Point2D`]: Represents a 2D Cartesian point where the
 ///   x-coordinate is interpolated and the y-coordinate is calculated.
-/// - [`CurvesError`](crate::error::curves::CurvesError): Represents errors encountered during 
+/// - [`CurvesError`]: Represents errors encountered during
 ///   interpolation.
 ///
 /// # Example Usage
-/// Implement this trait for your custom spline-based interpolator to handle 
+/// Implement this trait for your custom spline-based interpolator to handle
 /// specific datasets and interpolation logic, ensuring proper error handling
 /// and achieving smooth, accurate approximations.
 ///

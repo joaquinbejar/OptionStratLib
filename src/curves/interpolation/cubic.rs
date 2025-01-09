@@ -1,12 +1,11 @@
-
-use rust_decimal::Decimal;
 use crate::curves::Point2D;
 use crate::error::CurvesError;
+use rust_decimal::Decimal;
 
 /// A trait that provides functionality for performing cubic interpolation.
 ///
 /// # Overview
-/// The `CubicInterpolation` trait is used to define the behavior for 
+/// The `CubicInterpolation` trait is used to define the behavior for
 /// interpolating values along a curve using cubic interpolation.
 /// Implementors of this trait must define the `cubic_interpolate` method
 /// to calculate a `Point2D` based on a given input `x` value.
@@ -24,12 +23,12 @@ use crate::error::CurvesError;
 /// This method performs the core cubic interpolation operation.
 ///
 /// - **Input:**  
-///   Requires an `x` coordinate represented as a `Decimal` value for which the 
+///   Requires an `x` coordinate represented as a `Decimal` value for which the
 ///   corresponding point on the curve is interpolated.
 ///
 /// - **Returns:**  
 ///   - On success, returns a `Point2D` representing the interpolated point on the curve.
-///   - On failure, returns a `CurvesError` describing the reason for the error (e.g., 
+///   - On failure, returns a `CurvesError` describing the reason for the error (e.g.,
 ///     attempting to interpolate with missing data or invalid input).
 ///
 /// # Use Case Examples (General)
@@ -47,7 +46,7 @@ use crate::error::CurvesError;
 ///
 /// # Errors
 /// Implementations of this trait should handle and return appropriate errors
-/// using the `CurvesError` type when the operation cannot be completed. 
+/// using the `CurvesError` type when the operation cannot be completed.
 ///
 /// ## Typical Errors:
 /// - `InterpolationError`: Issues during the interpolation process, such as

@@ -1,6 +1,7 @@
-use rust_decimal::Decimal;
 use crate::curves::Point2D;
+use rust_decimal::Decimal;
 
+#[allow(dead_code)]
 pub enum CurveTransformation {
     /// Translates the curve horizontally and vertically
     Translate { dx: Decimal, dy: Decimal },
@@ -9,7 +10,10 @@ pub enum CurveTransformation {
     Scale { sx: Decimal, sy: Decimal },
 
     /// Rotates the curve around a given point
-    Rotate { angle: Decimal, pivot: Option<Point2D> },
+    Rotate {
+        angle: Decimal,
+        pivot: Option<Point2D>,
+    },
 
     /// Reflects the curve across an axis
     Reflect {
@@ -25,12 +29,14 @@ pub enum CurveTransformation {
 }
 
 /// Defines the axis of reflection
+#[allow(dead_code)]
 pub enum ReflectionAxis {
     XAxis,
     YAxis,
     Line(Point2D, Point2D), // Reflect across an arbitrary line
 }
 
+#[allow(dead_code)]
 pub enum TopologicalTransformation {
     /// Extracts a subset of the curve between two x-coordinates
     Slice { start: Decimal, end: Decimal },
@@ -51,12 +57,14 @@ pub enum TopologicalTransformation {
     Denoise { method: DenoiseMethod },
 }
 
+#[allow(dead_code)]
 pub enum DenoiseMethod {
     MovingAverage,
     LowPassFilter,
     MedianFilter,
 }
 
+#[allow(dead_code)]
 pub enum SpectralTransformation {
     /// Performs Fourier Transform
     FourierTransform,
@@ -71,6 +79,7 @@ pub enum SpectralTransformation {
     },
 }
 
+#[allow(dead_code)]
 pub enum StatisticalTransformation {
     /// Calculates moving statistics
     MovingStatistics {
@@ -79,11 +88,10 @@ pub enum StatisticalTransformation {
     },
 
     /// Applies a statistical transformation
-    Transform {
-        transformation: StatTransformType,
-    },
+    Transform { transformation: StatTransformType },
 }
 
+#[allow(dead_code)]
 pub enum MovingStatisticType {
     Mean,
     Median,
@@ -91,6 +99,7 @@ pub enum MovingStatisticType {
     Variance,
 }
 
+#[allow(dead_code)]
 pub enum StatTransformType {
     Log,
     Exponential,
@@ -98,30 +107,30 @@ pub enum StatTransformType {
     ZScore,
 }
 
+#[allow(dead_code)]
 pub enum DomainSpecificTransformation {
     /// Financial curve transformations
-    Financial {
-        method: FinancialTransformMethod,
-    },
+    Financial { method: FinancialTransformMethod },
 
     /// Signal processing transformations
-    SignalProcessing {
-        method: SignalProcessingMethod,
-    },
+    SignalProcessing { method: SignalProcessingMethod },
 }
 
+#[allow(dead_code)]
 pub enum FinancialTransformMethod {
     Returns,
     LogReturns,
     CumulativeReturns,
 }
 
+#[allow(dead_code)]
 pub enum SignalProcessingMethod {
     Envelope,
     Rectification,
     Windowing { window_type: WindowType },
 }
 
+#[allow(dead_code)]
 pub enum WindowType {
     Hamming,
     Hanning,

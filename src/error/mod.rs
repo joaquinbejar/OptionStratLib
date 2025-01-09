@@ -69,21 +69,21 @@
 //! for seamless error handling and propagation throughout the library.
 
 pub mod chains;
+mod common;
+pub mod curves;
 pub mod decimal;
 pub mod greeks;
 mod options;
 pub mod position;
 pub mod probability;
 pub mod strategies;
-pub mod curves;
-mod common;
 
 pub use chains::ChainError;
+pub use common::OperationErrorKind;
+pub use curves::CurvesError;
 pub use decimal::{DecimalError, DecimalResult};
 pub use greeks::GreeksError;
 pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
-pub use common::{OperationErrorKind};
-pub use curves::CurvesError;

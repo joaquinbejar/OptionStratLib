@@ -20,7 +20,7 @@ impl Error for OperationErrorKind {}
 ///   - `operation` (`String`): The name of the operation that was attempted.
 ///   - `strategy_type` (`String`): The type of strategy for which the operation is not supported.
 ///
-/// Use this variant to signify an incompatibility between a requested operation and 
+/// Use this variant to signify an incompatibility between a requested operation and
 /// the context (e.g., trying to calculate an invalid metric for the strategy type).
 ///
 /// ### `InvalidParameters`
@@ -29,12 +29,12 @@ impl Error for OperationErrorKind {}
 ///   - `operation` (`String`): The name of the operation that failed.
 ///   - `reason` (`String`): A human-readable explanation of why the parameters are invalid.
 ///
-/// Leverage this variant when a specific operation fails due to malformed input or missing 
+/// Leverage this variant when a specific operation fails due to malformed input or missing
 /// configuration.
 ///
 /// ## Example Use Cases:
 /// - `NotSupported`: Attempting to calculate delta for a non-standard options strategy.
-/// - `InvalidParameters`: Invalid expiration date or pricing information provided during 
+/// - `InvalidParameters`: Invalid expiration date or pricing information provided during
 ///   probability or profit calculations.
 ///
 /// ## Implementation Notes:
@@ -55,10 +55,7 @@ impl Error for OperationErrorKind {}
 #[derive(Debug)]
 pub enum OperationErrorKind {
     /// Operation not supported for this strategy
-    NotSupported {
-        operation: String,
-        reason: String,
-    },
+    NotSupported { operation: String, reason: String },
     /// Invalid parameters for operation
     InvalidParameters { operation: String, reason: String },
 }
@@ -126,7 +123,7 @@ mod tests {
 
         assert_eq!(
             format!("{:?}", error),
-            "NotSupported { operation: \"calculate_profit\", strategy_type: \"IronCondor\" }"
+            "NotSupported { operation: \"calculate_profit\", reason: \"IronCondor\" }"
         );
     }
 

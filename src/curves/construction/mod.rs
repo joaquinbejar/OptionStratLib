@@ -23,10 +23,15 @@
 //! use optionstratlib::curves::{Curve, Point2D};
 //!
 //! // Create a curve from data points
-//! let curve = Curve::construct(CurveConstructionMethod::FromData { points });
+//! let curve = Curve::from_vector(vec![
+//!             Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
+//!             Point2D::new(Decimal::ONE, Decimal::ONE),   // p12
+//!             Point2D::new(Decimal::ZERO, Decimal::ONE),  // p21
+//!             Point2D::new(Decimal::ONE, Decimal::TWO),   // p22
+//!         ]);
 //!
 //! // Generate a parametric curve
-//! let parametric_curve = Curve::construct(CurveConstructionMethod::Parametric { 
+//! let parametric_curve = Curve::construct(CurveConstructionMethod::Parametric {
 //!     f: Box::new(|t| Ok(Point2D::new(t, t.sin()))),
 //!     t_start: Decimal::ZERO,
 //!     t_end: Decimal::TWO_PI,
@@ -38,4 +43,4 @@ mod from_data;
 mod parametric;
 mod types;
 
-pub  use types::CurveConstructionMethod;
+pub use types::CurveConstructionMethod;

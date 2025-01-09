@@ -25,7 +25,8 @@
 //! ```rust
 //! use rust_decimal::Decimal;
 //! use optionstratlib::curves::{Curve, Point2D};
-//! let curve = Curve::new(vec![
+//! use crate::optionstratlib::curves::analysis::CurveMetricsExtractor;
+//! let curve = Curve::from_vector(vec![
 //!            Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
 //!            Point2D::new(Decimal::ONE, Decimal::ONE),   // p12
 //!            Point2D::new(Decimal::ZERO, Decimal::ONE),  // p21
@@ -39,7 +40,7 @@ mod metrics;
 mod statistics;
 mod traits;
 
-
+pub use metrics::CurveMetrics;
+pub use metrics::{BasicMetrics, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics};
 pub use statistics::CurveAnalysisResult;
 pub use traits::CurveMetricsExtractor;
-pub use metrics::{CurveMetrics, BasicMetrics, ShapeMetrics, RangeMetrics, TrendMetrics, RiskMetrics};

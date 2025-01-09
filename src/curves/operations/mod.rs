@@ -21,7 +21,7 @@
 //! use rust_decimal::Decimal;
 //! use optionstratlib::curves::{Curve, MergeOperation, Point2D};
 //! use optionstratlib::curves::operations::CurveArithmetic;
-//! let curve1 = Curve::new(vec![
+//! let curve1 = Curve::from_vector(vec![
 //!            Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
 //!            Point2D::new(Decimal::ONE, Decimal::ONE),   // p12
 //!            Point2D::new(Decimal::ZERO, Decimal::ONE),  // p21
@@ -36,9 +36,9 @@
 //! - High-precision arithmetic using Decimal type
 //! - Error handling for robust curve operations
 //! - Parallel processing for efficient computations
-//! 
+//!
 pub mod arithmetic;
-mod transformations;
 mod traits;
+mod transformations;
 
 pub use traits::CurveArithmetic;

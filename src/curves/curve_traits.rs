@@ -4,12 +4,12 @@
    Date: 26/8/24
 ******************************************************************************/
 
+use crate::curves::analysis::CurveAnalysisResult;
 use crate::curves::interpolation::InterpolationType;
 use crate::curves::types::CurveType;
-use rust_decimal::Decimal;
 use crate::curves::{Curve, MergeOperation, Point2D};
-use crate::curves::analysis::CurveAnalysisResult;
 use crate::error::CurvesError;
+use rust_decimal::Decimal;
 
 /// The `CurveOperations` trait defines a comprehensive set of operations for mathematical curves.
 ///
@@ -35,7 +35,7 @@ use crate::error::CurvesError;
 /// - `translate_curve(&self, curve: &Curve, dx: Decimal, dy: Decimal) -> Result<Curve, CurvesError>`
 ///   Shifts curve by dx horizontally and dy vertically.
 ///
-/// - `scale_curve(&self, curve: &Curve, sx: Decimal, sy: Decimal) -> Result<Curve, CurvesError>` 
+/// - `scale_curve(&self, curve: &Curve, sx: Decimal, sy: Decimal) -> Result<Curve, CurvesError>`
 ///   Scales curve by factors sx and sy.
 ///
 /// ## Analysis Operations
@@ -51,31 +51,48 @@ use crate::error::CurvesError;
 /// - `area_under_curve(&self, curve: &Curve, x1: Decimal, x2: Decimal) -> Result<Decimal, CurvesError>`
 ///   Calculates definite integral between x1 and x2.
 pub trait CurveOperations {
-    
     fn generate_curve<T: Into<Decimal>>(
         &self,
         x_values: Vec<T>,
         curve_type: CurveType,
     ) -> Result<Curve, CurvesError>;
-    
-    fn interpolate<T: Into<Decimal>>(&self, x: T, curve: &Curve, interpolation: InterpolationType) -> Option<T>;
-    
+
+    fn interpolate<T: Into<Decimal>>(
+        &self,
+        x: T,
+        curve: &Curve,
+        interpolation: InterpolationType,
+    ) -> Option<T>;
+
     fn analyze_curve(&self, curve: &Curve) -> CurveAnalysisResult;
-    
+
     // Combines multiple curves into a single curve using the specified operation
-    fn merge_curves(&self, curves: Vec<&Curve>, operation: MergeOperation) -> Result<Curve, CurvesError>;
+    fn merge_curves(
+        &self,
+        curves: Vec<&Curve>,
+        operation: MergeOperation,
+    ) -> Result<Curve, CurvesError>;
 
     // Extracts a section of the curve between x1 and x2
     fn slice_curve(&self, curve: &Curve, x1: Decimal, x2: Decimal) -> Result<Curve, CurvesError>;
 
     // Shifts the curve by dx and dy
-    fn translate_curve(&self, curve: &Curve, dx: Decimal, dy: Decimal) -> Result<Curve, CurvesError>;
+    fn translate_curve(
+        &self,
+        curve: &Curve,
+        dx: Decimal,
+        dy: Decimal,
+    ) -> Result<Curve, CurvesError>;
 
     // Scales the curve by sx and sy factors
     fn scale_curve(&self, curve: &Curve, sx: Decimal, sy: Decimal) -> Result<Curve, CurvesError>;
 
     // Finds intersection points between two curves
-    fn find_intersections(&self, curve1: &Curve, curve2: &Curve) -> Result<Vec<Point2D>, CurvesError>;
+    fn find_intersections(
+        &self,
+        curve1: &Curve,
+        curve2: &Curve,
+    ) -> Result<Vec<Point2D>, CurvesError>;
 
     // Calculates derivative of the curve at point x
     fn derivative_at(&self, curve: &Curve, x: Decimal) -> Result<Decimal, CurvesError>;
@@ -84,5 +101,10 @@ pub trait CurveOperations {
     fn get_extrema(&self, curve: &Curve) -> Result<(Point2D, Point2D), CurvesError>;
 
     // Calculates area under curve between x1 and x2
-    fn area_under_curve(&self, curve: &Curve, x1: Decimal, x2: Decimal) -> Result<Decimal, CurvesError>;
+    fn area_under_curve(
+        &self,
+        curve: &Curve,
+        x1: Decimal,
+        x2: Decimal,
+    ) -> Result<Decimal, CurvesError>;
 }

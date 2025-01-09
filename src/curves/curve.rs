@@ -1,18 +1,25 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 9/1/25
- ******************************************************************************/
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-use crate::curves::analysis::{BasicMetrics, CurveMetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics};
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 9/1/25
+******************************************************************************/
+use crate::curves::analysis::{
+    BasicMetrics, CurveMetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
+};
 use crate::curves::construction::CurveConstructionMethod;
-use crate::curves::interpolation::{BiLinearInterpolation, CubicInterpolation, Interpolate, LinearInterpolation, SplineInterpolation};
+use crate::curves::interpolation::{
+    BiLinearInterpolation, CubicInterpolation, Interpolate, LinearInterpolation,
+    SplineInterpolation,
+};
+use crate::curves::operations::CurveArithmetic;
 use crate::curves::{MergeOperation, Point2D};
 use crate::error::CurvesError;
-use crate::curves::operations::CurveArithmetic;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
-use rayon::iter::{ParallelIterator, IntoParallelIterator};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
+use std::collections::BTreeSet;
+use std::ops::Index;
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -28,7 +35,7 @@ use rayon::iter::{ParallelIterator, IntoParallelIterator};
 /// particularly suitable for scientific, financial, or mathematical applications.
 ///
 /// # Fields
-/// - **points**: 
+/// - **points**:
 ///   - A vector of `Point2D` values representing the points that define the curve.
 ///   - Points must ideally be ordered along the x-axis to ensure meaningful interpolation
 ///     and transformation operations.
@@ -66,9 +73,9 @@ use rayon::iter::{ParallelIterator, IntoParallelIterator};
 ///   operations.
 ///
 /// # See Also
-/// - [`Point2D`](crate::curves::types::Point2D): The fundamental data type for representing points in 2D space.
-/// - [`CurveOperations`](crate::curves::curve_traits::CurveOperations): The trait providing operations on curves.
-/// - [`MergeOperation`](crate::curves::operations::arithmetic::MergeOperation): Enum for combining multiple curves.
+/// - [`Point2D`]: The fundamental data type for representing points in 2D space.
+/// - [`crate::curves::curve_traits::CurveOperations`]: The trait providing operations on curves.
+/// - [`MergeOperation`]: Enum for combining multiple curves.
 ///
 /// # Fields
 /// - **points**:
@@ -78,22 +85,21 @@ use rayon::iter::{ParallelIterator, IntoParallelIterator};
 ///     for the curve. Operations performed on the curve should ensure they fall within this range.
 #[derive(Debug, Clone)]
 pub struct Curve {
-    pub points: Vec<Point2D>,
+    pub points: BTreeSet<Point2D>,
     pub x_range: (Decimal, Decimal),
 }
 
 impl Curve {
-
     /// Creates a new curve from a vector of points.
     ///
     /// This constructor initializes a `Curve` instance using a list of 2D points
-    /// provided as a `Vec<Point2D>`. Additionally, the x-range of the curve is calculated
+    /// provided as a `BTreeSet<Point2D>`. Additionally, the x-range of the curve is calculated
     /// and stored. The x-range is determined by evaluating the minimum and maximum
     /// x-coordinates among the provided points.
     ///
     /// # Parameters
     ///
-    /// - `points` (`Vec<Point2D>`): A vector of points that define the curve in a
+    /// - `points` (`BTreeSet<Point2D>`): A vector of points that define the curve in a
     ///   two-dimensional Cartesian coordinate plane.
     ///
     /// # Returns
@@ -109,9 +115,15 @@ impl Curve {
     /// # See Also
     ///
     /// - [`Point2D`]: The type of points used to define the curve.
-    /// - [`calculate_range`]: Computes the x-range of a set of points.
-    pub fn new(points: Vec<Point2D>) -> Self {
+    /// - [`crate::curves::Curve::calculate_range`]: Computes the x-range of a set of points.
+    pub fn new(points: BTreeSet<Point2D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
+        Curve { points, x_range }
+    }
+
+    pub fn from_vector(points: Vec<Point2D>) -> Self {
+        let x_range = Self::calculate_range(points.iter().map(|p| p.x));
+        let points = points.into_iter().collect();
         Curve { points, x_range }
     }
 
@@ -137,7 +149,7 @@ impl Curve {
     /// - Iterates over the input to compute the x-range in a fold operation.
     /// - Returns `(Decimal::MAX, Decimal::MIN)` for an empty iterator (although such
     ///   cases are expected to be handled elsewhere).
-    fn calculate_range<I>(iter: I) -> (Decimal, Decimal)
+    pub fn calculate_range<I>(iter: I) -> (Decimal, Decimal)
     where
         I: Iterator<Item = Decimal>,
     {
@@ -214,7 +226,7 @@ impl Curve {
             } => {
                 let step_size = (t_end - t_start) / Decimal::from(steps);
 
-                let points: Result<Vec<Point2D>, CurvesError> = (0..=steps)
+                let points: Result<BTreeSet<Point2D>, CurvesError> = (0..=steps)
                     .into_par_iter()
                     .map(|i| {
                         let t = t_start + step_size * Decimal::from(i);
@@ -222,17 +234,87 @@ impl Curve {
                     })
                     .collect();
 
-                points.map(|points| Curve::new(points))
+                points.map(Curve::new)
             }
         }
+    }
+
+    pub fn vector(&self) -> Vec<&Point2D> {
+        self.points.iter().collect()
+    }
+}
+
+/// Allows indexed access to the points in a `Curve` using `usize` indices.
+///
+/// # Overview
+/// This implementation provides intuitive, array-like access to the points
+/// within a `Curve`. By using the `Index<usize>` trait, users can directly
+/// reference specific points by their index within the internal `points` collection
+/// without manually iterating or managing indices themselves.
+///
+/// # Behavior
+/// - The `index` method fetches the `Point2D` at the specified position in the order
+///   of the curve's `points` (sorted by the `Point2D` ordering, typically based on the `x` values).
+/// - If the specified index exceeds the range of available points, it triggers a panic
+///   with the message `"Index out of bounds"`.
+///
+/// # Constraints
+/// - The index must be a valid value between `0` and `self.points.len() - 1`.
+/// - The `Curve`'s `points` are internally stored as a `BTreeSet<Point2D>`, so indexing
+///   reflects the natural order of the set, which is determined by the `Ord` trait
+///   implementation for `Point2D`.
+///
+/// # Fields Accessed
+/// - **`points`**: A `BTreeSet` of `Point2D` structs representing the curve's 2D points.
+///
+/// # Panics
+/// This implementation will panic if:
+/// - The index provided is out of bounds (less than `0` or greater than/equal to the number
+///   of points in the curve).
+///
+/// # Use Cases
+/// - Quickly accessing specific points on a curve during visualization, interpolation,
+///   or analysis operations.
+/// - Performing operations that require stepwise access to points, such as
+///   slicing or filtering points along the curve.
+///
+/// # Example
+/// Suppose you have a `Curve` instance `curve` with multiple points:
+/// ```ignore
+/// let point = curve[0]; // Access the first point
+/// println!("{:?}", point); // Print the `Point2D` representation
+/// ```
+///
+/// # Important Notes
+/// - This indexing implementation provides read-only access (`&Self::Output`).
+/// - Modifying the `points` collection or its contents directly is not allowed through
+///   this implementation, ensuring immutability when using indexed access.
+///
+/// # Type Associations
+/// - **Input**:
+///   - The input type for the `Index` operation is `usize`, the standard for indexing.
+/// - **Output**:
+///   - The output type for the `Index` operation is a reference to `Point2D`,
+///     specifically `&Point2D`.
+///
+/// # Key Implementations
+/// - **`Index<usize>`**: Provides indexing-based access to curve points.
+impl Index<usize> for Curve {
+    type Output = Point2D;
+
+    /// Fetches the `Point2D` at the specified index.
+    ///
+    /// Panics if the index is invalid.
+    fn index(&self, index: usize) -> &Self::Output {
+        self.points.iter().nth(index).expect("Index out of bounds")
     }
 }
 
 /// Implements the `LinearInterpolation` trait for the `Curve` struct.
 ///
 /// This implementation provides linear interpolation functionality for a given set
-/// of points on a curve. The interpolation computes the `y` value corresponding 
-/// to a given `x` value using the linear interpolation formula. The method ensures 
+/// of points on a curve. The interpolation computes the `y` value corresponding
+/// to a given `x` value using the linear interpolation formula. The method ensures
 /// that the input `x` is within the range of the curve's defined points.
 ///
 /// ```text
@@ -240,7 +322,7 @@ impl Curve {
 /// ```
 ///
 /// # Parameters
-/// - `x`: A `Decimal` representing the `x`-coordinate for which the corresponding 
+/// - `x`: A `Decimal` representing the `x`-coordinate for which the corresponding
 ///   interpolated `y` value is to be computed.
 ///
 /// # Returns
@@ -292,18 +374,17 @@ impl Curve {
 /// - `Point2D`: Represents points in 2D space.
 /// - `CurvesError`: Represents errors related to curve operations.
 impl LinearInterpolation for Curve {
-
     /// # Method
     /// ### `linear_interpolate`
     ///
     /// Performs linear interpolation for a given `x` value by finding two consecutive
-    /// points on the curve (`p1` and `p2`) that bracket the provided `x`. The `y` value 
+    /// points on the curve (`p1` and `p2`) that bracket the provided `x`. The `y` value
     /// is then calculated using the linear interpolation formula:
     fn linear_interpolate(&self, x: Decimal) -> Result<Point2D, CurvesError> {
         let (i, j) = self.find_bracket_points(x)?;
 
-        let p1 = &self.points[i];
-        let p2 = &self.points[j];
+        let p1 = &self[i];
+        let p2 = &self[j];
 
         // Linear interpolation for y value
         let y = p1.y + (x - p1.x) * (p2.y - p1.y) / (p2.x - p1.x);
@@ -377,22 +458,21 @@ impl LinearInterpolation for Curve {
 ///
 /// # Related Traits
 ///
-/// - [`BiLinearInterpolation`](crate::curves::interpolation::bilinear::BiLinearInterpolation): The trait defining this method.
-/// - [`Interpolate`](crate::curves::interpolation::traits::Interpolate): Ensures compatibility of the curve with multiple interpolation methods.
+/// - [`BiLinearInterpolation`]: The trait defining this method.
+/// - [`Interpolate`]: Ensures compatibility of the curve with multiple interpolation methods.
 ///
 /// # See Also
 ///
-/// - [`Curve`](crate::curves::types::Curve): The overarching structure that represents the curve.
-/// - [`Point2D`](crate::curves::types::Point2D): The data type used to represent individual points on the curve.
-/// - [`find_bracket_points`](crate::curves::interpolation::traits::Interpolate::find_bracket_points):
+/// - [`Curve`]: The overarching structure that represents the curve.
+/// - [`Point2D`]: The data type used to represent individual points on the curve.
+/// - [`find_bracket_points`](crate::curves::interpolation::Interpolate::find_bracket_points):
 ///   A helper method used to locate the two points that bracket the given x-coordinate.
 impl BiLinearInterpolation for Curve {
-
     /// Performs bilinear interpolation to find the value of the curve at a given `x` coordinate.
     ///
     /// # Parameters
     /// - `x`: The x-coordinate at which the interpolation is to be performed. This should be a `Decimal` value
-    ///        within the range of the curve's known points. 
+    ///        within the range of the curve's known points.
     ///
     /// # Returns
     /// - On success, returns a `Point2D` instance representing the interpolated point at the given `x` value.
@@ -408,7 +488,7 @@ impl BiLinearInterpolation for Curve {
     ///   for bilinear interpolation using `self.find_bracket_points()`.
     /// - From the bracketing points, it computes:
     ///   - `dx`: A normalized value representing the relative position of `x` between its bracketing x-coordinates
-    ///           in the [0,1] interval.
+    ///           in the `[`0,1`]` interval.
     ///   - `bottom`: The interpolated y-value along the bottom edge of the grid.
     ///   - `top`: The interpolated y-value along the top edge of the grid.
     ///   - `y`: The final interpolated value along the y-dimension from `bottom` to `top`.
@@ -425,7 +505,7 @@ impl BiLinearInterpolation for Curve {
     ///
     /// # Example Use Case
     /// This method is useful for calculating intermediate values on a 2D grid when exact measurements are unavailable.
-    /// Bilinear interpolation is particularly applicable for approximating smoother values in a tabular dataset 
+    /// Bilinear interpolation is particularly applicable for approximating smoother values in a tabular dataset
     /// or a regularly sampled grid.
     fn bilinear_interpolate(&self, x: Decimal) -> Result<Point2D, CurvesError> {
         let points = self.get_points();
@@ -439,10 +519,10 @@ impl BiLinearInterpolation for Curve {
 
         // For exact points, return the actual point value
         if let Some(point) = points.iter().find(|p| p.x == x) {
-            return Ok(*point);
+            return Ok(**point);
         }
 
-        let (i, j) = self.find_bracket_points(x)?;
+        let (i, _j) = self.find_bracket_points(x)?;
 
         // Get four points forming a grid
         let p11 = &points[i]; // Bottom left
@@ -466,7 +546,7 @@ impl BiLinearInterpolation for Curve {
     }
 }
 
-/// Implements the `CubicInterpolation` trait for the `Curve` struct, 
+/// Implements the `CubicInterpolation` trait for the `Curve` struct,
 /// providing an algorithm for cubic interpolation utilizing a Catmull-Rom spline.
 ///
 /// # Method: `cubic_interpolate`
@@ -522,11 +602,10 @@ impl BiLinearInterpolation for Curve {
 ///   making this method suitable for curves, animations, and numerical analysis.
 ///
 /// # See Also
-/// - [`CubicInterpolation`](crate::curves::interpolation::cubic::CubicInterpolation): The trait defining this method.
-/// - [`Point2D`](crate::curves::types::Point2D): Represents the points used for interpolation.
-/// - [`find_bracket_points`](crate::curves::interpolation::traits::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
+/// - [`CubicInterpolation`]: The trait defining this method.
+/// - [`Point2D`]: Represents the points used for interpolation.
+/// - [`find_bracket_points`](crate::curves::interpolation::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
 impl CubicInterpolation for Curve {
-
     /// Performs cubic interpolation on a set of points to estimate the y-coordinate
     /// for a given x value using a Catmull-Rom spline.
     ///
@@ -606,7 +685,7 @@ impl CubicInterpolation for Curve {
 
         // For exact points, return the actual point value
         if let Some(point) = points.iter().find(|p| p.x == x) {
-            return Ok(*point);
+            return Ok(**point);
         }
 
         let (i, _) = self.find_bracket_points(x)?;
@@ -635,9 +714,9 @@ impl CubicInterpolation for Curve {
 
         let y = dec!(0.5)
             * (dec!(2) * p1.y
-            + (-p0.y + p2.y) * t
-            + (dec!(2) * p0.y - dec!(5) * p1.y + dec!(4) * p2.y - p3.y) * t2
-            + (-p0.y + dec!(3) * p1.y - dec!(3) * p2.y + p3.y) * t3);
+                + (-p0.y + p2.y) * t
+                + (dec!(2) * p0.y - dec!(5) * p1.y + dec!(4) * p2.y - p3.y) * t2
+                + (-p0.y + dec!(3) * p1.y - dec!(3) * p2.y + p3.y) * t3);
 
         Ok(Point2D::new(x, y))
     }
@@ -647,18 +726,18 @@ impl CubicInterpolation for Curve {
 /// to perform cubic spline interpolation.
 ///
 /// # Overview
-/// This method calculates the interpolated `y` value for a given `x` value by using cubic 
-/// spline interpolation on the points in the `Curve`. The method ensures a smooth transition 
-/// between points by computing second derivatives of the curve at each point, and uses those 
+/// This method calculates the interpolated `y` value for a given `x` value by using cubic
+/// spline interpolation on the points in the `Curve`. The method ensures a smooth transition
+/// between points by computing second derivatives of the curve at each point, and uses those
 /// derivatives in the spline interpolation formula.
 ///
 /// # Parameters
-/// - `x`: The x-coordinate at which the curve should be interpolated. This value is passed as 
+/// - `x`: The x-coordinate at which the curve should be interpolated. This value is passed as
 ///   a `Decimal` for precise calculations.
 ///
 /// # Returns
 /// - On success, returns a `Point2D` instance representing the interpolated point.
-/// - On error, returns a `CurvesError` indicating the reason for failure (e.g., insufficient points 
+/// - On error, returns a `CurvesError` indicating the reason for failure (e.g., insufficient points
 ///   or an out-of-range x-coordinate).
 ///
 /// # Errors
@@ -668,42 +747,41 @@ impl CubicInterpolation for Curve {
 ///   - If a valid segment for interpolation cannot be located.
 ///
 /// # Details
-/// 1. **Validation**: 
+/// 1. **Validation**:
 ///    - Ensures that there are at least three points in the curve for spline interpolation.
 ///    - Validates that the provided `x` value is within the range of `x` values of the curve.
-/// 2. **Exact Match**: If the `x` value matches the x-coordinate of an existing point, the corresponding 
+/// 2. **Exact Match**: If the `x` value matches the x-coordinate of an existing point, the corresponding
 ///    `Point2D` is returned immediately.
 /// 3. **Second Derivative Calculation**:
-///    - Uses a tridiagonal matrix to compute the second derivatives at each point. This step 
-///      involves setting up the system of equations based on the boundary conditions (natural spline) 
+///    - Uses a tridiagonal matrix to compute the second derivatives at each point. This step
+///      involves setting up the system of equations based on the boundary conditions (natural spline)
 ///      and solving it using the Thomas algorithm.
 /// 4. **Segment Identification**:
 ///    - Determines the segment (interval between two consecutive points) in which the provided `x` value lies.
 /// 5. **Interpolation**:
-///    - Computes the interpolated y-coordinate using the cubic spline formula, which is based on 
+///    - Computes the interpolated y-coordinate using the cubic spline formula, which is based on
 ///      the second derivatives and the positions of the surrounding points.
 ///
 /// # Implementation Notes
-/// - This implementation uses `Decimal` from the `rust_decimal` crate to ensure high precision 
+/// - This implementation uses `Decimal` from the `rust_decimal` crate to ensure high precision
 ///   in calculations, making it suitable for scientific and financial applications.
 /// - The Thomas algorithm is employed to solve the tridiagonal matrix system efficiently.
-/// - The method assumes natural spline boundary conditions, where the second derivatives at the 
+/// - The method assumes natural spline boundary conditions, where the second derivatives at the
 ///   endpoints are set to zero, ensuring a smooth and continuous curve shape.
 ///
 /// # Example Usage
-/// Refer to the documentation for how to use the `SplineInterpolation` trait, as examples 
+/// Refer to the documentation for how to use the `SplineInterpolation` trait, as examples
 /// are not provided inline with this implementation.
 ///
 /// # See Also
-/// - [`SplineInterpolation`](crate::curves::interpolation::spline::SplineInterpolation): The trait definition for spline interpolation.
-/// - [`Point2D`](crate::curves::types::Point2D): Represents a point in 2D space.
-/// - [`Curve`](crate::curves::types::Curve): Represents a mathematical curve made up of points for interpolation.
-/// - [`CurvesError`](crate::curves::errors::CurvesError): Enumerates possible errors during curve operations.
+/// - [`SplineInterpolation`]: The trait definition for spline interpolation.
+/// - [`Point2D`]: Represents a point in 2D space.
+/// - [`Curve`]: Represents a mathematical curve made up of points for interpolation.
+/// - [`CurvesError`]: Enumerates possible errors during curve operations.
 impl SplineInterpolation for Curve {
-
-    /// Performs cubic spline interpolation for a given x-coordinate and returns the interpolated 
-    /// `Point2D` value. This function computes the second derivatives of the curve points, solves 
-    /// a tridiagonal system to derive the interpolation parameters, and evaluates the spline 
+    /// Performs cubic spline interpolation for a given x-coordinate and returns the interpolated
+    /// `Point2D` value. This function computes the second derivatives of the curve points, solves
+    /// a tridiagonal system to derive the interpolation parameters, and evaluates the spline
     /// function for the provided `x` value.
     ///
     /// # Parameters
@@ -728,11 +806,11 @@ impl SplineInterpolation for Curve {
     ///
     /// - `CurvesError::InterpolationError`:
     ///   - Occurs under the following conditions:
-    ///     - **"Need at least three points for spline interpolation"**: 
+    ///     - **"Need at least three points for spline interpolation"**:
     ///       Requires at least 3 points to perform cubic spline interpolation.
-    ///     - **"x is outside the range of points"**: 
+    ///     - **"x is outside the range of points"**:
     ///       The provided `x` value lies outside the domain of the curve points.
-    ///     - **"Could not find valid segment for interpolation"**: 
+    ///     - **"Could not find valid segment for interpolation"**:
     ///       Spline interpolation fails due to an invalid segment determination.
     ///
     /// # Pre-conditions
@@ -743,12 +821,12 @@ impl SplineInterpolation for Curve {
     /// # Implementation Details
     ///
     /// - **Inputs**:
-    ///   - Uses the `get_points` method of the curve to retrieve the list of `Point2D` instances 
+    ///   - Uses the `get_points` method of the curve to retrieve the list of `Point2D` instances
     ///     that define the interpolation curve.
-    ///   - Computes the second derivatives (`m`) for each point using the Thomas algorithm to solve 
+    ///   - Computes the second derivatives (`m`) for each point using the Thomas algorithm to solve
     ///     a tridiagonal system.
     /// - **Boundary Conditions**:
-    ///   - Natural spline boundary conditions are used, with the second derivatives on the boundary 
+    ///   - Natural spline boundary conditions are used, with the second derivatives on the boundary
     ///     set to zero.
     /// - **Interpolation**:
     ///   - Determines the segment `[x_i, x_{i+1}]` to which the input `x` belongs.
@@ -756,13 +834,13 @@ impl SplineInterpolation for Curve {
     ///
     /// # Mathematical Formulation
     ///
-    /// Let `x_i`, `x_{i+1}`, `y_i`, `y_{i+1}` refer to the points of the segment where `x` lies. 
+    /// Let `x_i`, `x_{i+1}`, `y_i`, `y_{i+1}` refer to the points of the segment where `x` lies.
     /// The cubic spline function at `x` is computed as follows:
     ///
     /// ```text
-    /// S(x) = m_i * (x_{i+1} - x)^3 / (6 * h) 
-    ///      + m_{i+1} * (x - x_i)^3 / (6 * h) 
-    ///      + (y_i / h - h * m_i / 6) * (x_{i+1} - x) 
+    /// S(x) = m_i * (x_{i+1} - x)^3 / (6 * h)
+    ///      + m_{i+1} * (x - x_i)^3 / (6 * h)
+    ///      + (y_i / h - h * m_i / 6) * (x_{i+1} - x)
     ///      + (y_{i+1} / h - h * m_{i+1} / 6) * (x - x_i)
     /// ```
     ///
@@ -773,7 +851,7 @@ impl SplineInterpolation for Curve {
     ///
     /// # Example Usages (Non-code)
     ///
-    /// This method is typically used for high-precision curve fitting or graphical rendering where 
+    /// This method is typically used for high-precision curve fitting or graphical rendering where
     /// smooth transitions between points are essential. Common applications include:
     /// - Signal processing.
     /// - Data interpolation for missing values.
@@ -781,20 +859,20 @@ impl SplineInterpolation for Curve {
     ///
     /// # Related Types
     ///
-    /// - [`Point2D`](crate::curves::types::Point2D): Represents a 2D point and is used as input/output 
+    /// - [`Point2D`]: Represents a 2D point and is used as input/output
     ///   for this function.
-    /// - [`CurvesError`](crate::curves::types::CurvesError): Represents any error encountered during 
+    /// - [`CurvesError`] Represents any error encountered during
     ///   interpolation.
     ///
     /// # Performance
     ///
-    /// - The function operates with `O(n)` complexity, where `n` is the number of points. The 
+    /// - The function operates with `O(n)` complexity, where `n` is the number of points. The
     ///   tridiagonal system is solved efficiently using the Thomas algorithm.
     ///
     /// # Notes
     ///
-    /// - Natural spline interpolation may introduce minor deviations beyond the range of existing 
-    ///   data points due to its boundary conditions. For strictly constrained results, consider 
+    /// - Natural spline interpolation may introduce minor deviations beyond the range of existing
+    ///   data points due to its boundary conditions. For strictly constrained results, consider
     ///   alternative interpolation methods, such as linear or cubic Hermite interpolation.
     fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, CurvesError> {
         let points = self.get_points();
@@ -815,7 +893,7 @@ impl SplineInterpolation for Curve {
 
         // For exact points, return the actual point value
         if let Some(point) = points.iter().find(|p| p.x == x) {
-            return Ok(*point);
+            return Ok(**point);
         }
 
         let n = points.len();
@@ -827,60 +905,60 @@ impl SplineInterpolation for Curve {
         let mut r = vec![Decimal::ZERO; n];
 
         // Fill the matrices
-        for i in 1..n-1 {
-            let hi = points[i].x - points[i-1].x;
-            let hi1 = points[i+1].x - points[i].x;
+        for i in 1..n - 1 {
+            let hi = points[i].x - points[i - 1].x;
+            let hi1 = points[i + 1].x - points[i].x;
 
             a[i] = hi;
             b[i] = dec!(2) * (hi + hi1);
             c[i] = hi1;
 
-            r[i] = dec!(6) * (
-                (points[i+1].y - points[i].y) / hi1 -
-                    (points[i].y - points[i-1].y) / hi
-            );
+            r[i] = dec!(6)
+                * ((points[i + 1].y - points[i].y) / hi1 - (points[i].y - points[i - 1].y) / hi);
         }
 
         // Add boundary conditions (natural spline)
         b[0] = dec!(1);
-        b[n-1] = dec!(1);
+        b[n - 1] = dec!(1);
 
         // Solve tridiagonal system using Thomas algorithm
         let mut m = vec![Decimal::ZERO; n];
 
-        for i in 1..n-1 {
-            let w = a[i] / b[i-1];
-            b[i] = b[i] - w * c[i-1];
-            r[i] = r[i] - w * r[i-1];
+        for i in 1..n - 1 {
+            let w = a[i] / b[i - 1];
+            b[i] -= w * c[i - 1];
+            r[i] = r[i] - w * r[i - 1];
         }
 
-        m[n-1] = r[n-1] / b[n-1];
-        for i in (1..n-1).rev() {
-            m[i] = (r[i] - c[i] * m[i+1]) / b[i];
+        m[n - 1] = r[n - 1] / b[n - 1];
+        for i in (1..n - 1).rev() {
+            m[i] = (r[i] - c[i] * m[i + 1]) / b[i];
         }
 
         // Find segment for interpolation
         let mut segment = None;
-        for i in 0..n-1 {
-            if points[i].x <= x && x <= points[i+1].x {
+        for i in 0..n - 1 {
+            if points[i].x <= x && x <= points[i + 1].x {
                 segment = Some(i);
                 break;
             }
         }
 
         let segment = segment.ok_or_else(|| {
-            CurvesError::InterpolationError("Could not find valid segment for interpolation".to_string())
+            CurvesError::InterpolationError(
+                "Could not find valid segment for interpolation".to_string(),
+            )
         })?;
 
         // Calculate interpolated value
-        let h = points[segment+1].x - points[segment].x;
-        let dx = points[segment+1].x - x;
+        let h = points[segment + 1].x - points[segment].x;
+        let dx = points[segment + 1].x - x;
         let dx1 = x - points[segment].x;
 
-        let y = m[segment] * dx * dx * dx / (dec!(6) * h) +
-            m[segment+1] * dx1 * dx1 * dx1 / (dec!(6) * h) +
-            (points[segment].y / h - m[segment] * h / dec!(6)) * dx +
-            (points[segment+1].y / h - m[segment+1] * h / dec!(6)) * dx1;
+        let y = m[segment] * dx * dx * dx / (dec!(6) * h)
+            + m[segment + 1] * dx1 * dx1 * dx1 / (dec!(6) * h)
+            + (points[segment].y / h - m[segment] * h / dec!(6)) * dx
+            + (points[segment + 1].y / h - m[segment + 1] * h / dec!(6)) * dx1;
 
         Ok(Point2D::new(x, y))
     }
@@ -897,10 +975,10 @@ impl SplineInterpolation for Curve {
 /// # Traits Involved
 ///
 /// The `Interpolate` trait is an aggregation of multiple interpolation-related traits:
-/// - [`LinearInterpolation`](crate::curves::interpolation::traits::LinearInterpolation)
-/// - [`BiLinearInterpolation`](crate::curves::interpolation::traits::BiLinearInterpolation)
-/// - [`CubicInterpolation`](crate::curves::interpolation::traits::CubicInterpolation)
-/// - [`SplineInterpolation`](crate::curves::interpolation::traits::SplineInterpolation)
+/// - [`LinearInterpolation`]
+/// - [`BiLinearInterpolation`]
+/// - [`CubicInterpolation`]
+/// - [`SplineInterpolation`]
 ///
 /// These underlying traits implement specific interpolation algorithms,
 /// enabling `Curve` to support a robust set of interpolation options through the associated methods.
@@ -909,13 +987,11 @@ impl SplineInterpolation for Curve {
 ///
 /// # See Also
 ///
-/// - [`Curve`](crate::curves::types::Curve): The underlying mathematical structure being interpolated.
-/// - [`Point2D`](crate::curves::types::Point2D): The fundamental data type for the curve's points.
-/// - [`Interpolate`](crate::curves::interpolation::traits::Interpolate): The trait defining interpolation operations.
+/// - [`Curve`]: The underlying mathematical structure being interpolated.
+/// - [`Point2D`]: The fundamental data type for the curve's points.
+/// - [`Interpolate`]: The trait defining interpolation operations.
 ///
 impl Interpolate for Curve {
-
-
     /// ## `get_points`
     ///
     /// - **Signature**: `fn get_points(&self) -> &[Point2D]`
@@ -923,8 +999,8 @@ impl Interpolate for Curve {
     /// - **Returns**: A slice of `Point2D` instances contained in the `points` vector of the struct.
     /// - **Usage**: This method is critical for interpolation algorithms, allowing access to the
     ///   ordered list of points necessary for calculations.
-    fn get_points(&self) -> &[Point2D] {
-        &self.points
+    fn get_points(&self) -> Vec<&Point2D> {
+        self.vector()
     }
 }
 
@@ -942,10 +1018,10 @@ impl CurveMetricsExtractor for Curve {
         // TODO: Implement actual basic metrics computation
         // This is a placeholder implementation
         Ok(BasicMetrics {
-            mean: rust_decimal::Decimal::ZERO,
-            median: rust_decimal::Decimal::ZERO,
-            mode: rust_decimal::Decimal::ZERO,
-            std_dev: rust_decimal::Decimal::ZERO,
+            mean: Decimal::ZERO,
+            median: Decimal::ZERO,
+            mode: Decimal::ZERO,
+            std_dev: Decimal::ZERO,
         })
     }
 
@@ -953,8 +1029,8 @@ impl CurveMetricsExtractor for Curve {
         // TODO: Implement actual shape metrics computation
         // This is a placeholder implementation
         Ok(ShapeMetrics {
-            skewness: rust_decimal::Decimal::ZERO,
-            kurtosis: rust_decimal::Decimal::ZERO,
+            skewness: Decimal::ZERO,
+            kurtosis: Decimal::ZERO,
             peaks: vec![],
             valleys: vec![],
             inflection_points: vec![],
@@ -964,15 +1040,23 @@ impl CurveMetricsExtractor for Curve {
     fn compute_range_metrics(&self) -> Result<RangeMetrics, CurvesError> {
         // TODO: Implement actual range metrics computation
         // This is a placeholder implementation
-        let min_point = self.points.first().cloned().unwrap_or(Point2D::new(rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO));
-        let max_point = self.points.last().cloned().unwrap_or(Point2D::new(rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO));
+        let min_point = self
+            .points
+            .first()
+            .cloned()
+            .unwrap_or(Point2D::new(Decimal::ZERO, Decimal::ZERO));
+        let max_point = self
+            .points
+            .last()
+            .cloned()
+            .unwrap_or(Point2D::new(Decimal::ZERO, Decimal::ZERO));
 
         Ok(RangeMetrics {
             min: min_point,
             max: max_point,
-            range: rust_decimal::Decimal::ZERO,
-            quartiles: (rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO),
-            interquartile_range: rust_decimal::Decimal::ZERO,
+            range: Decimal::ZERO,
+            quartiles: (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
+            interquartile_range: Decimal::ZERO,
         })
     }
 
@@ -980,9 +1064,9 @@ impl CurveMetricsExtractor for Curve {
         // TODO: Implement actual trend metrics computation
         // This is a placeholder implementation
         Ok(TrendMetrics {
-            slope: rust_decimal::Decimal::ZERO,
-            intercept: rust_decimal::Decimal::ZERO,
-            r_squared: rust_decimal::Decimal::ZERO,
+            slope: Decimal::ZERO,
+            intercept: Decimal::ZERO,
+            r_squared: Decimal::ZERO,
             moving_average: vec![],
         })
     }
@@ -991,52 +1075,51 @@ impl CurveMetricsExtractor for Curve {
         // TODO: Implement actual risk metrics computation
         // This is a placeholder implementation
         Ok(RiskMetrics {
-            volatility: rust_decimal::Decimal::ZERO,
-            value_at_risk: rust_decimal::Decimal::ZERO,
-            expected_shortfall: rust_decimal::Decimal::ZERO,
-            beta: rust_decimal::Decimal::ZERO,
-            sharpe_ratio: rust_decimal::Decimal::ZERO,
+            volatility: Decimal::ZERO,
+            value_at_risk: Decimal::ZERO,
+            expected_shortfall: Decimal::ZERO,
+            beta: Decimal::ZERO,
+            sharpe_ratio: Decimal::ZERO,
         })
     }
 }
 
-/// Implements the `CurveArithmetic` trait for the `Curve` type, providing 
-/// functionality for merging multiple curves using a specified mathematical 
+/// Implements the `CurveArithmetic` trait for the `Curve` type, providing
+/// functionality for merging multiple curves using a specified mathematical
 /// operation and performing arithmetic operations between two curves.
 impl CurveArithmetic for Curve {
-
-    /// Merges a collection of curves into a single curve based on the specified 
+    /// Merges a collection of curves into a single curve based on the specified
     /// mathematical operation.
     ///
     /// # Parameters
     ///
     /// - `curves` (`&[&Curve]`): A slice of references to the curves to be merged.
     ///   Each curve must have defined x-ranges and interpolation capabilities.
-    /// - `operation` (`MergeOperation`): The arithmetic operation to perform on the 
-    ///   interpolated y-values for the provided curves. Operations include addition, 
+    /// - `operation` (`MergeOperation`): The arithmetic operation to perform on the
+    ///   interpolated y-values for the provided curves. Operations include addition,
     ///   subtraction, multiplication, division, and aggregation (e.g., max, min).
     ///
     /// # Returns
     ///
     /// - `Ok(Curve)`: Returns a new curve resulting from the merging operation.
-    /// - `Err(CurvesError)`: If input parameters are invalid or the merge operation 
-    ///   encounters an error (e.g., incompatible x-ranges or interpolation failure), 
+    /// - `Err(CurvesError)`: If input parameters are invalid or the merge operation
+    ///   encounters an error (e.g., incompatible x-ranges or interpolation failure),
     ///   an error is returned.
     ///
     /// # Behavior
     ///
-    /// 1. **Parameter Validation**: 
+    /// 1. **Parameter Validation**:
     ///   - Verifies that at least one curve is provided in the `curves` parameter.
     ///   - Returns an error if no curves are included or if x-ranges are incompatible.
     ///
     /// 2. **Cloning Single Curve**:
-    ///   - If only one curve is provided, its clone is returned as the result without 
+    ///   - If only one curve is provided, its clone is returned as the result without
     ///     performing any further calculations.
     ///
     /// 3. **Range Computation**:
-    ///   - Computes the intersection of x-ranges across the curves by finding the 
+    ///   - Computes the intersection of x-ranges across the curves by finding the
     ///     maximum lower bound (`min_x`) and minimum upper bound (`max_x`).
-    ///   - If the x-range intersection is invalid (i.e., `min_x >= max_x`), an error 
+    ///   - If the x-range intersection is invalid (i.e., `min_x >= max_x`), an error
     ///     is returned.
     ///
     /// 4. **Interpolation and Arithmetic**:
@@ -1045,18 +1128,18 @@ impl CurveArithmetic for Curve {
     ///   - Applies the specified `operation` to the aggregated y-values at each x-point.
     ///
     /// 5. **Parallel Processing**:
-    ///   - Uses parallel iteration to perform interpolation and value combination 
+    ///   - Uses parallel iteration to perform interpolation and value combination
     ///     efficiently, leveraging the Rayon library.
     ///
     /// 6. **Error Handling**:
-    ///   - Any errors during interpolation or arithmetic operations are propagated 
+    ///   - Any errors during interpolation or arithmetic operations are propagated
     ///     back to the caller.
     ///
     /// # Errors
     ///
-    /// - **Invalid Parameter** (`CurvesError`): Returned when no curves are provided 
+    /// - **Invalid Parameter** (`CurvesError`): Returned when no curves are provided
     ///   or x-ranges are incompatible.
-    /// - **Interpolation Failure** (`CurvesError`): Raised if interpolation fails 
+    /// - **Interpolation Failure** (`CurvesError`): Raised if interpolation fails
     ///   for a specific curve or x-value.
     ///
     /// # Example Use Case
@@ -1064,14 +1147,11 @@ impl CurveArithmetic for Curve {
     /// This function enables combining multiple curves for tasks such as:
     /// - Summing y-values across different curves to compute a composite curve.
     /// - Finding the maximum/minimum y-value at each x-point for a collection of curves.
-    fn merge_curves(
-        curves: &[&Curve],
-        operation: MergeOperation
-    ) -> Result<Curve, CurvesError> {
+    fn merge_curves(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurvesError> {
         if curves.is_empty() {
             return Err(CurvesError::invalid_parameters(
                 "merge_curves",
-                "No curves provided for merging"
+                "No curves provided for merging",
             ));
         }
 
@@ -1081,12 +1161,14 @@ impl CurveArithmetic for Curve {
         }
 
         // Find the intersection of x-ranges
-        let min_x = curves.iter()
+        let min_x = curves
+            .iter()
             .map(|c| c.x_range.0)
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap_or(Decimal::ZERO);
 
-        let max_x = curves.iter()
+        let max_x = curves
+            .iter()
             .map(|c| c.x_range.1)
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap_or(Decimal::ZERO);
@@ -1095,7 +1177,7 @@ impl CurveArithmetic for Curve {
         if min_x >= max_x {
             return Err(CurvesError::invalid_parameters(
                 "merge_curves",
-                "Curves have incompatible x-ranges"
+                "Curves have incompatible x-ranges",
             ));
         }
 
@@ -1113,7 +1195,8 @@ impl CurveArithmetic for Curve {
                 let y_values: Result<Vec<Decimal>, CurvesError> = curves
                     .iter()
                     .map(|curve| {
-                        curve.interpolate(x, crate::curves::interpolation::InterpolationType::Cubic)
+                        curve
+                            .interpolate(x, crate::curves::interpolation::InterpolationType::Cubic)
                             .map(|point| point.y)
                     })
                     .collect();
@@ -1125,33 +1208,33 @@ impl CurveArithmetic for Curve {
                     MergeOperation::Add => y_values.par_iter().sum(),
                     MergeOperation::Subtract => {
                         // Use Rayon's fold to parallelize subtraction
-                        y_values.par_iter()
+                        y_values
+                            .par_iter()
                             .enumerate()
                             .map(|(i, &val)| if i == 0 { val } else { -val })
                             .reduce(|| Decimal::ZERO, |a, b| a + b)
-                    },
+                    }
                     MergeOperation::Multiply => y_values.par_iter().product(),
-                    MergeOperation::Divide => {
-                        y_values.par_iter()
-                            .enumerate()
-                            .map(|(i, &val)| {
-                                if i == 0 {
-                                    val
-                                } else {
-                                    if val == Decimal::ZERO {
-                                        Decimal::MAX
-                                    } else {
-                                        Decimal::ONE / val
-                                    }
-                                }
-                            })
-                            .reduce(|| Decimal::ONE, |a, b| a * b)
-                    },
-                    MergeOperation::Max => y_values.par_iter()
+                    MergeOperation::Divide => y_values
+                        .par_iter()
+                        .enumerate()
+                        .map(|(i, &val)| {
+                            if i == 0 {
+                                val
+                            } else if val == Decimal::ZERO {
+                                Decimal::MAX
+                            } else {
+                                Decimal::ONE / val
+                            }
+                        })
+                        .reduce(|| Decimal::ONE, |a, b| a * b),
+                    MergeOperation::Max => y_values
+                        .par_iter()
                         .cloned()
                         .max_by(|a, b| a.partial_cmp(b).unwrap())
                         .unwrap_or(Decimal::ZERO),
-                    MergeOperation::Min => y_values.par_iter()
+                    MergeOperation::Min => y_values
+                        .par_iter()
                         .cloned()
                         .min_by(|a, b| a.partial_cmp(b).unwrap())
                         .unwrap_or(Decimal::ZERO),
@@ -1164,11 +1247,10 @@ impl CurveArithmetic for Curve {
         // Handle potential errors during parallel processing
         let result_points = result_points?;
 
-        Ok(Curve::new(result_points))
+        Ok(Curve::from_vector(result_points))
     }
 
-
-    /// Combines the current `Curve` instance with another curve using a mathematical 
+    /// Combines the current `Curve` instance with another curve using a mathematical
     /// operation, resulting in a new curve.
     ///
     /// # Parameters
@@ -1180,40 +1262,36 @@ impl CurveArithmetic for Curve {
     /// # Returns
     ///
     /// - `Ok(Curve)`: Returns a new curve that represents the result of the operation.
-    /// - `Err(CurvesError)`: If the merge operation fails (e.g., incompatible x-ranges or 
+    /// - `Err(CurvesError)`: If the merge operation fails (e.g., incompatible x-ranges or
     ///   interpolation errors), an error is returned.
     ///
     /// # Behavior
     ///
-    /// This function is a convenience wrapper around `merge_curves` that operates 
-    /// specifically on two curves. It passes `self` and `other` as an array to 
+    /// This function is a convenience wrapper around `merge_curves` that operates
+    /// specifically on two curves. It passes `self` and `other` as an array to
     /// `merge_curves` and applies the desired operation.
     ///
     /// # Errors
     ///
-    /// - Inherits all errors returned by the `merge_curves` method, including parameter 
+    /// - Inherits all errors returned by the `merge_curves` method, including parameter
     ///   validation and interpolation errors.
     ///
     /// # Examples
     ///
-    /// Use this method to easily perform arithmetic operations between two curves, 
+    /// Use this method to easily perform arithmetic operations between two curves,
     /// such as summing their y-values or finding their pointwise maximum.
-    fn merge_with(
-        &self,
-        other: &Curve,
-        operation: MergeOperation
-    ) -> Result<Curve, CurvesError> {
+    fn merge_with(&self, other: &Curve, operation: MergeOperation) -> Result<Curve, CurvesError> {
         Self::merge_curves(&[self, other], operation)
     }
 }
 
-
 #[cfg(test)]
 mod tests_curves {
     use super::*;
+    use crate::curves::utils::{create_constant_curve, create_linear_curve};
     use crate::{pos, Positive};
-    use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
+    use Decimal;
 
     #[test]
     fn test_new_with_decimal() {
@@ -1271,20 +1349,40 @@ mod tests_curves {
         assert_eq!(point.x, dec!(1.5));
         assert_eq!(point.y, dec!(2.5));
     }
+
+    #[test]
+    fn test_create_constant_curve() {
+        let curve = create_constant_curve(dec!(1.0), dec!(2.0), dec!(5.0));
+        assert_eq!(curve.get_points().len(), 11);
+        for point in curve.get_points() {
+            assert_eq!(point.y, dec!(5.0));
+        }
+    }
+
+    #[test]
+    fn test_create_linear_curve() {
+        let curve = create_linear_curve(dec!(1.0), dec!(2.0), dec!(2.0));
+        assert_eq!(curve.get_points().len(), 11);
+        let mut slope = dec!(2.0);
+        for point in curve.get_points() {
+            assert_eq!(point.y, slope);
+            slope += dec!(0.2);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests_linear_interpolate {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::curves::interpolation::InterpolationType;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_linear_interpolation_exact_points() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
             Point2D::new(Decimal::ONE, Decimal::TWO),
-        ]);
+        ]));
 
         // Test exact input points
         let p0 = curve
@@ -1302,10 +1400,10 @@ mod tests_linear_interpolate {
 
     #[test]
     fn test_linear_interpolation_midpoint() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
             Point2D::new(Decimal::ONE, Decimal::TWO),
-        ]);
+        ]));
 
         // Test midpoint
         let mid = curve
@@ -1317,10 +1415,10 @@ mod tests_linear_interpolate {
 
     #[test]
     fn test_linear_interpolation_quarter_points() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
             Point2D::new(Decimal::ONE, Decimal::TWO),
-        ]);
+        ]));
 
         // Test at x = 0.25
         let p25 = curve
@@ -1339,10 +1437,10 @@ mod tests_linear_interpolate {
 
     #[test]
     fn test_linear_interpolation_out_of_range() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(2.0)),
-        ]);
+        ]));
 
         assert!(curve
             .interpolate(dec!(-0.1), InterpolationType::Linear)
@@ -1354,7 +1452,10 @@ mod tests_linear_interpolate {
 
     #[test]
     fn test_linear_interpolation_insufficient_points() {
-        let curve = Curve::new(vec![Point2D::new(dec!(0.0), dec!(0.0))]);
+        let curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
+            dec!(0.0),
+            dec!(0.0),
+        )]));
 
         assert!(curve
             .interpolate(dec!(0.5), InterpolationType::Linear)
@@ -1363,11 +1464,11 @@ mod tests_linear_interpolate {
 
     #[test]
     fn test_linear_interpolation_non_monotonic() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(2.0)),
             Point2D::new(dec!(2.0), dec!(1.0)),
-        ]);
+        ]));
 
         let p15 = curve
             .interpolate(dec!(1.5), InterpolationType::Linear)
@@ -1380,17 +1481,17 @@ mod tests_linear_interpolate {
 #[cfg(test)]
 mod tests_bilinear_interpolate {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::curves::interpolation::InterpolationType;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_bilinear_interpolation() {
-        let curve = Curve::new(vec![
-            Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
-            Point2D::new(Decimal::ONE, Decimal::ONE),   // p12
-            Point2D::new(Decimal::ZERO, Decimal::ONE),  // p21
-            Point2D::new(Decimal::ONE, Decimal::TWO),   // p22
-        ]);
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(Decimal::ZERO, Decimal::ZERO),
+            Point2D::new(Decimal::TWO, Decimal::ONE),
+            Point2D::new(Decimal::TEN, Decimal::ONE),
+            Point2D::new(Decimal::ONE, Decimal::TWO),
+        ]));
 
         // Test exact points
         let corner = curve
@@ -1409,12 +1510,12 @@ mod tests_bilinear_interpolate {
 
     #[test]
     fn test_bilinear_interpolation_out_of_range() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(0.0), dec!(1.0)),
             Point2D::new(dec!(1.0), dec!(2.0)),
-        ]);
+        ]));
 
         assert!(curve
             .interpolate(dec!(-0.5), InterpolationType::Bilinear)
@@ -1426,11 +1527,11 @@ mod tests_bilinear_interpolate {
 
     #[test]
     fn test_bilinear_interpolation_insufficient_points() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(2.0)),
-        ]);
+        ]));
 
         assert!(curve
             .interpolate(dec!(0.5), InterpolationType::Bilinear)
@@ -1439,12 +1540,12 @@ mod tests_bilinear_interpolate {
 
     #[test]
     fn test_bilinear_interpolation_quarter_points() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11 (0,0)
             Point2D::new(Decimal::ONE, Decimal::ONE),   // p12 (1,1)
-            Point2D::new(Decimal::ZERO, Decimal::ONE),  // p21 (0,1)
-            Point2D::new(Decimal::ONE, Decimal::TWO),   // p22 (1,2)
-        ]);
+            Point2D::new(Decimal::TWO, Decimal::ONE),   // p21 (0,1)
+            Point2D::new(Decimal::TEN, Decimal::TWO),   // p22 (1,2)
+        ]));
 
         // At x = 0.25:
         // Bottom edge: 0.25 * (1 - 0) = 0.25
@@ -1469,12 +1570,12 @@ mod tests_bilinear_interpolate {
 
     #[test]
     fn test_bilinear_interpolation_boundaries() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(0.0), dec!(1.0)),
             Point2D::new(dec!(1.0), dec!(2.0)),
-        ]);
+        ]));
 
         assert!(curve
             .interpolate(dec!(-0.1), InterpolationType::Bilinear)
@@ -1486,12 +1587,12 @@ mod tests_bilinear_interpolate {
 
     #[test]
     fn test_out_of_range() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
             Point2D::new(Decimal::ONE, Decimal::ONE),
             Point2D::new(Decimal::ZERO, Decimal::ONE),
             Point2D::new(Decimal::ONE, Decimal::TWO),
-        ]);
+        ]));
 
         assert!(curve
             .interpolate(dec!(-1), InterpolationType::Bilinear)
@@ -1505,18 +1606,18 @@ mod tests_bilinear_interpolate {
 #[cfg(test)]
 mod tests_cubic_interpolate {
     use super::*;
+    use crate::curves::interpolation::InterpolationType;
     use rust_decimal_macros::dec;
     use tracing::info;
-    use crate::curves::interpolation::InterpolationType;
 
     #[test]
     fn test_cubic_interpolation_exact_points() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
             Point2D::new(dec!(3.0), dec!(9.0)),
-        ]);
+        ]));
 
         // Test exact points
         let p1 = curve
@@ -1528,12 +1629,12 @@ mod tests_cubic_interpolate {
 
     #[test]
     fn test_cubic_interpolation_midpoints() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
             Point2D::new(dec!(3.0), dec!(9.0)),
-        ]);
+        ]));
 
         // Test midpoint interpolation
         let mid = curve
@@ -1546,11 +1647,11 @@ mod tests_cubic_interpolate {
 
     #[test]
     fn test_cubic_interpolation_insufficient_points() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
-        ]);
+        ]));
 
         assert!(curve
             .interpolate(dec!(1.5), InterpolationType::Cubic)
@@ -1559,12 +1660,12 @@ mod tests_cubic_interpolate {
 
     #[test]
     fn test_cubic_interpolation_out_of_range() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
             Point2D::new(dec!(3.0), dec!(9.0)),
-        ]);
+        ]));
 
         assert!(curve
             .interpolate(dec!(-0.5), InterpolationType::Cubic)
@@ -1576,12 +1677,12 @@ mod tests_cubic_interpolate {
 
     #[test]
     fn test_cubic_interpolation_monotonicity() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
             Point2D::new(dec!(3.0), dec!(9.0)),
-        ]);
+        ]));
 
         let p1 = curve
             .interpolate(dec!(0.5), InterpolationType::Cubic)
@@ -1604,33 +1705,37 @@ mod tests_cubic_interpolate {
 #[cfg(test)]
 mod tests_spline_interpolate {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::curves::interpolation::InterpolationType;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_spline_interpolation_exact_points() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
             Point2D::new(dec!(3.0), dec!(9.0)),
-        ]);
+        ]));
 
-        let p1 = curve.interpolate(dec!(1.0), InterpolationType::Spline).unwrap();
+        let p1 = curve
+            .interpolate(dec!(1.0), InterpolationType::Spline)
+            .unwrap();
         assert_eq!(p1.x, dec!(1.0));
         assert_eq!(p1.y, dec!(1.0));
     }
 
     #[test]
     fn test_spline_interpolation_midpoints() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
             Point2D::new(dec!(3.0), dec!(9.0)),
-        ]);
+        ]));
 
-        let mid = curve.interpolate(dec!(1.5), InterpolationType::Spline).unwrap();
+        let mid = curve
+            .interpolate(dec!(1.5), InterpolationType::Spline)
+            .unwrap();
         assert_eq!(mid.x, dec!(1.5));
         // Value should be continuous and between the points
         assert!(mid.y > dec!(1.0) && mid.y < dec!(4.0));
@@ -1638,41 +1743,57 @@ mod tests_spline_interpolate {
 
     #[test]
     fn test_spline_interpolation_insufficient_points() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
-        ]);
+        ]));
 
-        assert!(curve.interpolate(dec!(0.5), InterpolationType::Spline).is_err());
+        assert!(curve
+            .interpolate(dec!(0.5), InterpolationType::Spline)
+            .is_err());
     }
 
     #[test]
     fn test_spline_interpolation_out_of_range() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
-        ]);
+        ]));
 
-        assert!(curve.interpolate(dec!(-0.5), InterpolationType::Spline).is_err());
-        assert!(curve.interpolate(dec!(2.5), InterpolationType::Spline).is_err());
+        assert!(curve
+            .interpolate(dec!(-0.5), InterpolationType::Spline)
+            .is_err());
+        assert!(curve
+            .interpolate(dec!(2.5), InterpolationType::Spline)
+            .is_err());
     }
 
     #[test]
     fn test_spline_interpolation_smoothness() {
-        let curve = Curve::new(vec![
+        let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
             Point2D::new(dec!(1.0), dec!(1.0)),
             Point2D::new(dec!(2.0), dec!(4.0)),
             Point2D::new(dec!(3.0), dec!(9.0)),
-        ]);
+        ]));
 
         // Test points close together to verify smoothness
-        let p1 = curve.interpolate(dec!(1.48), InterpolationType::Spline).unwrap();
-        let p2 = curve.interpolate(dec!(1.49), InterpolationType::Spline).unwrap();
-        let p3 = curve.interpolate(dec!(1.50), InterpolationType::Spline).unwrap();
-        let p4 = curve.interpolate(dec!(1.51), InterpolationType::Spline).unwrap();
-        let p5 = curve.interpolate(dec!(1.52), InterpolationType::Spline).unwrap();
+        let p1 = curve
+            .interpolate(dec!(1.48), InterpolationType::Spline)
+            .unwrap();
+        let p2 = curve
+            .interpolate(dec!(1.49), InterpolationType::Spline)
+            .unwrap();
+        let p3 = curve
+            .interpolate(dec!(1.50), InterpolationType::Spline)
+            .unwrap();
+        let p4 = curve
+            .interpolate(dec!(1.51), InterpolationType::Spline)
+            .unwrap();
+        let p5 = curve
+            .interpolate(dec!(1.52), InterpolationType::Spline)
+            .unwrap();
 
         // Verify monotonicity and smooth transitions
         assert!(p1.y < p2.y);
@@ -1713,8 +1834,13 @@ mod tests_curve_arithmetic {
                 + curve2.interpolate(*x, InterpolationType::Cubic).unwrap().y;
 
             let result_point = result.interpolate(*x, InterpolationType::Cubic).unwrap();
-            assert!((result_point.y - expected_y).abs() < dec!(0.001),
-                    "Failed at x = {}, expected {}, got {}", x, expected_y, result_point.y);
+            assert!(
+                (result_point.y - expected_y).abs() < dec!(0.001),
+                "Failed at x = {}, expected {}, got {}",
+                x,
+                expected_y,
+                result_point.y
+            );
         }
     }
 
@@ -1730,8 +1856,13 @@ mod tests_curve_arithmetic {
                 - curve2.interpolate(*x, InterpolationType::Cubic).unwrap().y;
 
             let result_point = result.interpolate(*x, InterpolationType::Cubic).unwrap();
-            assert!((result_point.y - expected_y).abs() < dec!(0.001),
-                    "Failed at x = {}, expected {}, got {}", x, expected_y, result_point.y);
+            assert!(
+                (result_point.y - expected_y).abs() < dec!(0.001),
+                "Failed at x = {}, expected {}, got {}",
+                x,
+                expected_y,
+                result_point.y
+            );
         }
     }
 
@@ -1749,8 +1880,13 @@ mod tests_curve_arithmetic {
                 * curve2.interpolate(*x, InterpolationType::Cubic).unwrap().y;
 
             let result_point = result.interpolate(*x, InterpolationType::Cubic).unwrap();
-            assert!((result_point.y - expected_y).abs() < dec!(0.001),
-                    "Failed at x = {}, expected {}, got {}", x, expected_y, result_point.y);
+            assert!(
+                (result_point.y - expected_y).abs() < dec!(0.001),
+                "Failed at x = {}, expected {}, got {}",
+                x,
+                expected_y,
+                result_point.y
+            );
         }
     }
 
@@ -1773,8 +1909,13 @@ mod tests_curve_arithmetic {
             let expected_y = curve1.interpolate(*x, InterpolationType::Cubic).unwrap().y / y2;
 
             let result_point = result.interpolate(*x, InterpolationType::Cubic).unwrap();
-            assert!((result_point.y - expected_y).abs() < dec!(0.001),
-                    "Failed at x = {}, expected {}, got {}", x, expected_y, result_point.y);
+            assert!(
+                (result_point.y - expected_y).abs() < dec!(0.001),
+                "Failed at x = {}, expected {}, got {}",
+                x,
+                expected_y,
+                result_point.y
+            );
         }
     }
 
@@ -1793,8 +1934,13 @@ mod tests_curve_arithmetic {
             let expected_y = y1.max(y2);
 
             let result_point = result.interpolate(*x, InterpolationType::Cubic).unwrap();
-            assert!((result_point.y - expected_y).abs() < dec!(0.001),
-                    "Failed at x = {}, expected {}, got {}", x, expected_y, result_point.y);
+            assert!(
+                (result_point.y - expected_y).abs() < dec!(0.001),
+                "Failed at x = {}, expected {}, got {}",
+                x,
+                expected_y,
+                result_point.y
+            );
         }
     }
 
@@ -1813,8 +1959,13 @@ mod tests_curve_arithmetic {
             let expected_y = y1.min(y2);
 
             let result_point = result.interpolate(*x, InterpolationType::Cubic).unwrap();
-            assert!((result_point.y - expected_y).abs() < dec!(0.001),
-                    "Failed at x = {}, expected {}, got {}", x, expected_y, result_point.y);
+            assert!(
+                (result_point.y - expected_y).abs() < dec!(0.001),
+                "Failed at x = {}, expected {}, got {}",
+                x,
+                expected_y,
+                result_point.y
+            );
         }
     }
 
@@ -1832,8 +1983,8 @@ mod tests_curve_arithmetic {
         assert_eq!(result.points.len(), merged_result.points.len());
 
         for i in 0..result.points.len() {
-            assert!((result.points[i].x - merged_result.points[i].x).abs() < dec!(0.001));
-            assert!((result.points[i].y - merged_result.points[i].y).abs() < dec!(0.001));
+            assert!((result[i].x - merged_result[i].x).abs() < dec!(0.001));
+            assert!((result[i].y - merged_result[i].y).abs() < dec!(0.001));
         }
     }
 
@@ -1858,7 +2009,8 @@ mod tests_curve_arithmetic {
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve3 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2, &curve3], MergeOperation::Add).unwrap();
+        let result =
+            Curve::merge_curves(&[&curve1, &curve2, &curve3], MergeOperation::Add).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1868,8 +2020,13 @@ mod tests_curve_arithmetic {
                 + curve3.interpolate(*x, InterpolationType::Cubic).unwrap().y;
 
             let result_point = result.interpolate(*x, InterpolationType::Cubic).unwrap();
-            assert!((result_point.y - expected_y).abs() < dec!(0.001),
-                    "Failed at x = {}, expected {}, got {}", x, expected_y, result_point.y);
+            assert!(
+                (result_point.y - expected_y).abs() < dec!(0.001),
+                "Failed at x = {}, expected {}, got {}",
+                x,
+                expected_y,
+                result_point.y
+            );
         }
     }
 }

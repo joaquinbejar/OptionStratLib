@@ -74,7 +74,6 @@ use crate::error::{OperationErrorKind, StrategyError};
 use std::error::Error;
 use std::fmt;
 
-
 /// Represents all possible errors that can occur during probability analysis calculations
 #[derive(Debug)]
 pub enum ProbabilityError {

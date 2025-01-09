@@ -1,4 +1,3 @@
-
 /// Represents the different types of interpolation methods supported in the library.
 ///
 /// # Variants
@@ -41,10 +40,10 @@
 /// in a context where multiple types of interpolation are supported.
 ///
 /// # See Also
-/// - [`LinearInterpolation`](crate::linear::LinearInterpolation): Implements linear interpolation.
-/// - [`CubicInterpolation`](crate::cubic::CubicInterpolation): Implements cubic interpolation.
-/// - [`SplineInterpolation`](crate::spline::SplineInterpolation): Implements spline interpolation.
-/// - [`BiLinearInterpolation`](crate::bilinear::BiLinearInterpolation): Implements bilinear interpolation.
+/// - [`crate::curves::interpolation::LinearInterpolation`]: Implements linear interpolation.
+/// - [`crate::curves::interpolation::CubicInterpolation`]: Implements cubic interpolation.
+/// - [`crate::curves::interpolation::SplineInterpolation`]: Implements spline interpolation.
+/// - [`crate::curves::interpolation::BiLinearInterpolation`]: Implements bilinear interpolation.
 ///
 /// This enum is part of a modular design, with each interpolation type defined in its own
 /// module for clarity and separation of concerns.
@@ -59,4 +58,3 @@ pub enum InterpolationType {
     Spline,
     Bilinear,
 }
-

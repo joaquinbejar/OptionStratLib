@@ -1,5 +1,4 @@
-
-/// Represents mathematical or aggregation operations that can be applied 
+/// Represents mathematical or aggregation operations that can be applied
 /// during a merge or combination process.
 ///
 /// Variants:

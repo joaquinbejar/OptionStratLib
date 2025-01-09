@@ -1,6 +1,6 @@
-use rust_decimal::Decimal;
 use crate::curves::Point2D;
 use crate::error::CurvesError;
+use rust_decimal::Decimal;
 
 /// A trait that defines bilinear interpolation functionality.
 ///
@@ -8,20 +8,20 @@ use crate::error::CurvesError;
 /// The `BiLinearInterpolation` trait provides an abstraction for performing bilinear
 /// interpolation on a set of data. Bilinear interpolation is a mathematical
 /// method used to estimate values within a grid of known points, commonly
-/// used in 2D data, such as image processing, geographical mapping, or 
+/// used in 2D data, such as image processing, geographical mapping, or
 /// numerical simulations.
 ///
 /// # Required Method
 ///
 /// This trait requires the implementation of one method:
 /// - `bilinear_interpolate`: Takes a single value `x` of type `Decimal` and calculates
-///   the corresponding interpolated `Point2D`, or returns an error of type `CurvesError` 
+///   the corresponding interpolated `Point2D`, or returns an error of type `CurvesError`
 ///   if the interpolation cannot be performed.
 ///
 /// # Usage
 /// Implementing this trait on a struct makes that struct capable of performing
-/// bilinear interpolation. This allows developers to use the underlying 
-/// implementation to estimate intermediate values between known 2D points 
+/// bilinear interpolation. This allows developers to use the underlying
+/// implementation to estimate intermediate values between known 2D points
 /// with high precision.
 ///
 /// # Examples
@@ -41,17 +41,17 @@ use crate::error::CurvesError;
 /// The specific type or reason for the error is encapsulated by the `CurvesError` enum.
 ///
 /// # Related Types
-/// - [`Point2D`](crate::curves::types::Point2D): The output type representing 
+/// - [`Point2D`]: The output type representing
 ///   a point in 2D space.
-/// - [`CurvesError`](crate::error::curves::CurvesError): The error type representing
+/// - [`CurvesError`]: The error type representing
 ///   different categories of errors that may occur during interpolation.
 ///
 /// # See Also
-/// - [`InterpolationType::Bilinear`](crate::types::InterpolationType): 
+/// - [`crate::curves::interpolation::InterpolationType::Bilinear`]:
 ///   Represents bilinear interpolation as one of the general interpolation types in the module.
-/// - [`LinearInterpolation`](crate::linear::LinearInterpolation): Similar interpolation
+/// - [`crate::curves::interpolation::LinearInterpolation`]: Similar interpolation
 ///   type for one-dimensional data.
-/// - [`CubicInterpolation`](crate::cubic::CubicInterpolation): Higher-order interpolation
+/// - [`crate::curves::interpolation::CubicInterpolation`]: Higher-order interpolation
 ///   for smooth curve fitting in one dimension.
 pub trait BiLinearInterpolation {
     /// Performs bilinear interpolation on the implementing data structure.

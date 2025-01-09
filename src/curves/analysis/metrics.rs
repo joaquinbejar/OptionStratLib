@@ -1,7 +1,7 @@
-use rust_decimal::Decimal;
 use crate::curves::analysis::CurveAnalysisResult;
 use crate::curves::Point2D;
 use crate::error::CurvesError;
+use rust_decimal::Decimal;
 
 /// Represents a comprehensive set of statistical and analytical metrics for curve data.
 ///
@@ -18,7 +18,7 @@ use crate::error::CurvesError;
 ///   These measures provide a quick overview of the distribution of the observations within the curve.
 ///
 /// - **Shape Metrics (`shape`)**:
-///   Captures the structural characteristics of the curve, such as skewness, kurtosis, 
+///   Captures the structural characteristics of the curve, such as skewness, kurtosis,
 ///   the locations of peaks and valleys, and the points where the curve inflects.
 ///   Useful for understanding curve symmetry, tail behavior, and general shape nuances.
 ///
@@ -68,11 +68,11 @@ use crate::error::CurvesError;
 /// generating insights.
 ///
 /// ## Related Concepts
-/// - [`BasicMetrics`](crate::curves::analysis::metrics::BasicMetrics): Encodes fundamental statistics.
-/// - [`ShapeMetrics`](crate::curves::analysis::metrics::ShapeMetrics): Provides characteristics associated with curve shape.
-/// - [`RangeMetrics`](crate::curves::analysis::metrics::RangeMetrics): Range and quartile information for a curve.
-/// - [`TrendMetrics`](crate::curves::analysis::metrics::TrendMetrics): Trendline and regression fit metrics.
-/// - [`RiskMetrics`](crate::curves::analysis::metrics::RiskMetrics): Quantifies financial risk.
+/// - [`BasicMetrics`]: Encodes fundamental statistics.
+/// - [`ShapeMetrics`]: Provides characteristics associated with curve shape.
+/// - [`RangeMetrics`]: Range and quartile information for a curve.
+/// - [`TrendMetrics`]: Trendline and regression fit metrics.
+/// - [`RiskMetrics`]: Quantifies financial risk.
 ///
 /// ## Examples of Associated Tools
 /// - Statistical Analysis: Plots, descriptive statistics, trend analysis.
@@ -86,7 +86,7 @@ use crate::error::CurvesError;
 pub struct CurveMetrics {
     // Basic statistics
     pub basic: BasicMetrics,
-    // Shape characteristics 
+    // Shape characteristics
     pub shape: ShapeMetrics,
     // Range information
     pub range: RangeMetrics,
@@ -127,7 +127,6 @@ pub struct CurveMetrics {
 /// - [`CurveAnalysisResult`]: The result type combining key metrics into a single analytic perspective.
 /// - [`CurvesError`]: Represents potential errors that may arise during curve analysis operations.
 impl CurveMetrics {
-
     /// ### `new`
     /// Constructs a new instance of `CurveMetrics` and initializes all relevant fields with the provided
     /// metric structures.
@@ -166,7 +165,7 @@ impl CurveMetrics {
     ///   [`CurveAnalysisResult`] structure with basic statistics and shape metrics.
     /// - `Err(CurvesError)`: An error of type [`CurvesError`] when analysis fails.
     ///
-    /// The result provides the basic statistical measures (`BasicMetrics`) and 
+    /// The result provides the basic statistical measures (`BasicMetrics`) and
     /// shape metrics (`ShapeMetrics`) that were part of the `CurveMetrics` instance.
     ///
     pub fn curve_analysis_result(&self) -> Result<CurveAnalysisResult, CurvesError> {
@@ -181,8 +180,8 @@ impl CurveMetrics {
 ///
 /// # Overview
 /// The `BasicMetrics` structure encapsulates the core descriptive statistics
-/// for a dataset, providing a quick summary of its central tendency, spread, 
-/// and distribution properties. These metrics are widely used in statistical analysis, 
+/// for a dataset, providing a quick summary of its central tendency, spread,
+/// and distribution properties. These metrics are widely used in statistical analysis,
 /// curve analysis, and various financial or scientific computations.
 ///
 /// ## Fields
@@ -220,25 +219,25 @@ impl CurveMetrics {
 ///
 /// ## Integration
 /// The `BasicMetrics` structure is often used as part of larger metric aggregations, such as:
-/// - [`CurveMetrics`](crate::curves::analysis::metrics::CurveMetrics): Combines `BasicMetrics` with other
+/// - [`crate::curves::analysis::metrics::CurveMetrics`]: Combines `BasicMetrics` with other
 ///   metrics for a detailed analysis of curve behavior.
-/// - [`CurveAnalysisResult`](crate::curves::analysis::statistics::CurveAnalysisResult): Provides a high-level
+/// - [`CurveAnalysisResult`]: Provides a high-level
 ///   result of statistical and shape analysis for curves.
 ///
 /// ## Remarks
-/// - The values are expressed as [`Decimal`] to maintain precision, important in financial 
+/// - The values are expressed as [`Decimal`] to maintain precision, important in financial
 ///   computations or datasets requiring high accuracy.
 /// - The `BasicMetrics` structure is immutable and can be cloned/copied, making it efficient for use in
 ///   concurrent or parallel computations.
 ///
 /// ## Example Workflow
-/// Typically, `BasicMetrics` is computed from a dataset using statistical functions 
+/// Typically, `BasicMetrics` is computed from a dataset using statistical functions
 /// and then integrated into a more comprehensive analysis pipeline.
 ///
 /// ## Related Concepts
-/// - [`ShapeMetrics`](crate::curves::analysis::metrics::ShapeMetrics): Captures shape-related properties.
-/// - [`RiskMetrics`](crate::curves::analysis::metrics::RiskMetrics): Measures risk characteristics.
-/// - [`TrendMetrics`](crate::curves::analysis::metrics::TrendMetrics): Represents time-based trends.
+/// - [`ShapeMetrics`]: Captures shape-related properties.
+/// - [`RiskMetrics`]: Measures risk characteristics.
+/// - [`TrendMetrics`]: Represents time-based trends.
 #[derive(Clone, Copy, Debug)]
 pub struct BasicMetrics {
     pub mean: Decimal,
@@ -251,39 +250,39 @@ pub struct BasicMetrics {
 ///
 /// # Overview
 /// The `ShapeMetrics` structure is designed to encapsulate key shape-related
-/// properties of a curve, as well as critical points that describe the curve's 
+/// properties of a curve, as well as critical points that describe the curve's
 /// geometrical behavior. This structure is typically used during mathematical
 /// or statistical analysis of curves.
 ///
 /// The main properties include:
-/// - **Skewness**: A measure of the asymmetry of the probability distribution 
+/// - **Skewness**: A measure of the asymmetry of the probability distribution
 ///   of a real-valued random variable. This indicates the degree and direction
 ///   of asymmetry of the curve's shape.
 /// - **Kurtosis**: A measure of the "tailedness" of the probability distribution.
-///   High kurtosis implies the presence of heavy tails, whereas low kurtosis 
+///   High kurtosis implies the presence of heavy tails, whereas low kurtosis
 ///   indicates light tails.
-/// - **Peaks, Valleys, and Inflection Points**: These are points along the curve 
+/// - **Peaks, Valleys, and Inflection Points**: These are points along the curve
 ///   that highlight its geometrical features, such as high/low points and areas
 ///   where the curvature direction changes.
 ///
 /// # Fields
-/// - **skewness (`Decimal`)**: 
-///   Describes the asymmetry of the curve's distribution. 
+/// - **skewness (`Decimal`)**:
+///   Describes the asymmetry of the curve's distribution.
 ///   A positive value indicates a tail on the right, while a negative value
 ///   implies a tail on the left.
-/// - **kurtosis (`Decimal`)**: 
-///   Indicates the tailedness of the curve's distribution. Higher values correspond 
+/// - **kurtosis (`Decimal`)**:
+///   Indicates the tailedness of the curve's distribution. Higher values correspond
 ///   to more extreme values in the tails.
-/// - **peaks (`Vec<Point2D>`)**: 
+/// - **peaks (`Vec<Point2D>`)**:
 ///   Collection of `Point2D` instances indicating the global or local maxima (peaks) along the curve.
-/// - **valleys (`Vec<Point2D>`)**: 
+/// - **valleys (`Vec<Point2D>`)**:
 ///   Collection of `Point2D` instances representing the global or local minima (valleys) along the curve.
-/// - **inflection_points (`Vec<Point2D>`)**: 
-///   Points where the curve changes its concavity, transitioning from concave up 
+/// - **inflection_points (`Vec<Point2D>`)**:
+///   Points where the curve changes its concavity, transitioning from concave up
 ///   to concave down (or vice versa).
 ///
 /// # Applications
-/// This structure is a core component of the `CurveAnalysisResult` and plays an 
+/// This structure is a core component of the `CurveAnalysisResult` and plays an
 /// essential role in:
 /// - Financial metrics analysis (e.g., identifying extreme price levels or trend reversals)
 /// - Mathematical curve investigation to describe its distribution and critical behaviors
@@ -291,7 +290,7 @@ pub struct BasicMetrics {
 ///
 /// # Example Use in Statistical Analysis
 /// The `ShapeMetrics` structure is typically instantiated and analyzed as part
-/// of a comprehensive curve analysis process. Through this, important statistical 
+/// of a comprehensive curve analysis process. Through this, important statistical
 /// and geometrical insights can be derived, such as:
 /// - Identifying skewed or symmetric curves
 /// - Evaluating the significance of outliers through kurtosis
@@ -329,28 +328,28 @@ pub struct ShapeMetrics {
 /// - **max**: A `Point2D` structure representing the maximum point in the range.
 ///   This captures the largest x and y coordinates observed in the data.
 ///
-/// - **range**: A `Decimal` value representing the difference between the maximum and 
+/// - **range**: A `Decimal` value representing the difference between the maximum and
 ///   minimum values in the dataset. This is a key measure of variability.
 ///
 /// - **quartiles**: A tuple `(Decimal, Decimal, Decimal)` representing the first (Q1),
-///   second (Q2, or median), and third (Q3) quartiles of the dataset. These provide 
+///   second (Q2, or median), and third (Q3) quartiles of the dataset. These provide
 ///   insight into the distribution of the data within the range.
 ///
 /// - **interquartile_range**: The interquartile range (IQR) is a `Decimal` value
-///   that represents the spread between the first (Q1) and third (Q3) quartiles. 
+///   that represents the spread between the first (Q1) and third (Q3) quartiles.
 ///   This measure is a robust indicator of variability, as it excludes potential
 ///   outliers.
 ///
 /// # Overview
 ///
-/// The `RangeMetrics` struct focuses on summarizing key metrics of a dataset. 
-/// It's especially suited for analyzing data distributions, identifying outliers 
-/// through IQR, and pinpointing extreme values via its `min` and `max` fields. 
-/// This structure ensures precision by utilizing `Decimal` for all numerical 
+/// The `RangeMetrics` struct focuses on summarizing key metrics of a dataset.
+/// It's especially suited for analyzing data distributions, identifying outliers
+/// through IQR, and pinpointing extreme values via its `min` and `max` fields.
+/// This structure ensures precision by utilizing `Decimal` for all numerical
 /// values, making it a great fit for applications requiring high numerical accuracy.
 ///
-/// Derived traits such as `Clone`, `Copy`, and `Debug` make the structure both 
-/// versatile and convenient to use, whether duplicating values or debugging 
+/// Derived traits such as `Clone`, `Copy`, and `Debug` make the structure both
+/// versatile and convenient to use, whether duplicating values or debugging
 /// intermediate results.
 #[derive(Clone, Copy, Debug)]
 pub struct RangeMetrics {
@@ -377,9 +376,9 @@ pub struct RangeMetrics {
 ///     - Represents the value of the dependent variable when the independent variable
 ///       is zero.
 /// - **r_squared**: A `Decimal` value known as the coefficient of determination.
-///     - Measures the goodness-of-fit of the regression line to the data. A value 
+///     - Measures the goodness-of-fit of the regression line to the data. A value
 ///       closer to 1 indicates a stronger fit.
-/// - **moving_average**: A `Vec<Point2D>` representing the smoothed version of the data points using a moving 
+/// - **moving_average**: A `Vec<Point2D>` representing the smoothed version of the data points using a moving
 ///   average technique.
 ///     - Each `Point2D` in the vector contains an x and y coordinate for the smoothed dataset.
 ///
@@ -448,7 +447,7 @@ pub struct TrendMetrics {
 ///   It provides a more comprehensive assessment of tail risk than VaR alone.
 ///
 /// - **Beta (`beta`)**:
-///   Measures the sensitivity of an asset's returns to the market returns. 
+///   Measures the sensitivity of an asset's returns to the market returns.
 ///   A beta greater than 1 indicates higher volatility compared to the market,
 ///   while a beta less than 1 indicates lower volatility.
 ///   Useful for determining the systemic risk in relation to the broader market.
@@ -485,13 +484,13 @@ pub struct TrendMetrics {
 ///
 /// ## Remarks
 /// The `RiskMetrics` structure is a critical component in financial analysis and
-/// often serves as an input to higher-level structures like [`CurveMetrics`]. By
+/// often serves as an input to higher-level structures like [`crate::curves::analysis::metrics::CurveMetrics`]. By
 /// combining these risk metrics with other statistical measures, it is possible to
 /// gain a comprehensive understanding of the risk-return characteristics of an asset
 /// or portfolio.
 ///
 /// ## Related Concepts
-/// - [`CurveMetrics`](crate::curves::analysis::metrics::CurveMetrics): Aggregates risk
+/// - [`CurveMetrics`]: Aggregates risk
 ///   alongside other statistical measures (e.g., trend, range, and shape metrics).
 /// - **Financial Risk Indicators**:
 ///   Includes measures like maximum drawdown, Treynor ratio, and Sortino ratio

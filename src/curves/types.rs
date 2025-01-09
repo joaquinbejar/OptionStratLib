@@ -3,22 +3,19 @@
    Email: jb@taunais.com
    Date: 26/8/24
 ******************************************************************************/
-
 use crate::curves::construction::CurveConstructionMethod;
-use crate::curves::interpolation::{
-    BiLinearInterpolation, CubicInterpolation, Interpolate, InterpolationType, LinearInterpolation,
-    SplineInterpolation,
-};
+use crate::curves::interpolation::InterpolationType;
 use crate::error::curves::CurvesError;
 use crate::model::positive::is_positive;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 /// Represents a point in two-dimensional space with `x` and `y` coordinates.
 ///
 /// # Overview
-/// The `Point2D` struct is used to define a point in a 2D Cartesian coordinate system. 
+/// The `Point2D` struct is used to define a point in a 2D Cartesian coordinate system.
 /// Both coordinates (`x` and `y`) are stored as `Decimal` values to provide high precision,
 /// making it suitable for applications requiring accurate numerical calculations, such
 /// as mathematical curve analysis, interpolation, and geometry.
@@ -48,14 +45,28 @@ use std::collections::HashMap;
 ///
 /// This structure enables high precision for x and y values, making it particularly
 /// well-suited for scientific applications and precise geometry.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Point2D {
     pub x: Decimal,
     pub y: Decimal,
 }
 
-impl Point2D {
+impl PartialOrd for Point2D {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
+impl Ord for Point2D {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.x.cmp(&other.x) {
+            Ordering::Equal => self.y.cmp(&other.y),
+            x_ordering => x_ordering,
+        }
+    }
+}
+
+impl Point2D {
     /// Creates a new instance of `Point2D` using the specified `x` and `y` coordinates.
     ///
     /// # Parameters
@@ -175,9 +186,9 @@ impl Point2D {
 /// or manipulated in mathematical and financial applications.
 ///
 /// # Overview
-/// The `CurveType` enum defines a comprehensive set of curve categories, providing clear 
-/// differentiation between different types of curves used in computations. These curves 
-/// are often employed in mathematical modeling, financial analysis, data interpolation, 
+/// The `CurveType` enum defines a comprehensive set of curve categories, providing clear
+/// differentiation between different types of curves used in computations. These curves
+/// are often employed in mathematical modeling, financial analysis, data interpolation,
 /// and visualization.
 ///
 /// This enum supports extensibility and can be used in conjunction with traits like
@@ -200,8 +211,8 @@ impl Point2D {
 /// - **TimeValue**: Refers to the curve denoting the time value of an option beyond its intrinsic value.
 ///
 /// # Usage
-/// This enumeration is typically employed in financial modeling or mathematical computations 
-/// requiring different categories of curves. It is used extensively within various `CurveOperations` 
+/// This enumeration is typically employed in financial modeling or mathematical computations
+/// requiring different categories of curves. It is used extensively within various `CurveOperations`
 /// to categorize and generate specific types of curves and mathematical constructs.
 ///
 /// # Examples
@@ -238,31 +249,31 @@ pub enum CurveType {
     TimeValue,
 }
 
-/// Represents the configuration for constructing or analyzing a curve. 
-/// The `CurveConfig` structure encapsulates the necessary details required 
-/// to define the type of curve, the interpolation method, construction methodology, 
+/// Represents the configuration for constructing or analyzing a curve.
+/// The `CurveConfig` structure encapsulates the necessary details required
+/// to define the type of curve, the interpolation method, construction methodology,
 /// and additional parameters associated with the curve.
 ///
 /// # Fields
 ///
 /// - `curve_type: CurveType`
 ///    Specifies the type of curve that the configuration applies to.
-///    Curve types such as `Volatility`, `Delta`, `Gamma`, etc., are defined 
-///    in the `CurveType` enumeration. Different curve types are typically 
+///    Curve types such as `Volatility`, `Delta`, `Gamma`, etc., are defined
+///    in the `CurveType` enumeration. Different curve types are typically
 ///    used in mathematical modeling, financial analysis, or other specialized areas.
 ///
 /// - `interpolation: InterpolationType`  
-///    Defines the method of interpolation used for estimating values between 
-///    discrete points on the curve. Supported interpolation methods include `Linear`, 
+///    Defines the method of interpolation used for estimating values between
+///    discrete points on the curve. Supported interpolation methods include `Linear`,
 ///    `Cubic`, `Spline`, and others, as specified in the `InterpolationType` enum.
 ///
 /// - `construction_method: CurveConstructionMethod`  
-///    Specifies how the curve is constructed. This could be based on discrete 
-///    data points (`FromData`) or parametrically (`Parametric`), as defined in 
+///    Specifies how the curve is constructed. This could be based on discrete
+///    data points (`FromData`) or parametrically (`Parametric`), as defined in
 ///    the `CurveConstructionMethod` enum. For instance:
 ///       - `FromData`: Build the curve from a collection of data points.
-///       - `Parametric`: Construct the curve using a parametric function, 
-///         defining the curve behavior over a range of input values (t_start to t_end) 
+///       - `Parametric`: Construct the curve using a parametric function,
+///         defining the curve behavior over a range of input values (t_start to t_end)
 ///         and the number of intermediate steps in computation.
 ///
 /// - `extra_params: HashMap<String, Decimal>`  
@@ -274,33 +285,33 @@ pub enum CurveType {
 /// This configuration structure can be used in multiple scenarios:
 ///
 /// 1. **Curve Construction:**  
-///    A user can specify `curve_type` and `construction_method` to create a custom 
+///    A user can specify `curve_type` and `construction_method` to create a custom
 ///    curve for financial modeling. The `extra_params` can include details such as
 ///    scaling factors or normalization parameters.
 ///
 /// 2. **Analysis or Simulation:**  
 ///    When performing operations like interpolation, slicing, or analyzing
-///    statistics of a curve, the `CurveConfig` can store relevant input parameters 
+///    statistics of a curve, the `CurveConfig` can store relevant input parameters
 ///    (e.g. interpolation type and additional processing rules via `extra_params`).
 ///
 /// 3. **Visualization:**  
-///    The configuration can also help define curves for rendering graphical data 
+///    The configuration can also help define curves for rendering graphical data
 ///    with specified interpolation styles, ensuring smoother and more realistic
 ///    representations of the modeled scenario.
 ///
 /// # Integrations
 /// This structure integrates with the following modules and traits:
 ///
-/// - **Curves Module:** Used alongside `CurveType`, `CurveConstructionMethod`, 
+/// - **Curves Module:** Used alongside `CurveType`, `CurveConstructionMethod`,
 ///   and `InterpolationType` enums.
-/// - **CurveOperations Trait:** Provides operations such as interpolation, 
+/// - **CurveOperations Trait:** Provides operations such as interpolation,
 ///   scaling, and slicing that can utilize instances of `CurveConfig`.
-/// - **Visualization Module:** Ensures flexibility in configuring graphs 
+/// - **Visualization Module:** Ensures flexibility in configuring graphs
 ///   and curve representation when constructing plots of specific curve types.
+#[allow(dead_code)]
 pub struct CurveConfig {
     pub curve_type: CurveType,
     pub interpolation: InterpolationType,
     pub construction_method: CurveConstructionMethod,
     pub extra_params: HashMap<String, Decimal>,
 }
-

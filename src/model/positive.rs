@@ -65,8 +65,8 @@ macro_rules! spos {
 ///
 /// # Implementation
 ///
-/// The function relies on the `TypeId` mechanism, part of Rust's type 
-/// reflection system, which allows runtime comparison of types. This is 
+/// The function relies on the `TypeId` mechanism, part of Rust's type
+/// reflection system, which allows runtime comparison of types. This is
 /// efficient and avoids adding unnecessary overhead.
 ///
 /// # Examples
@@ -78,13 +78,13 @@ macro_rules! spos {
 /// assert!(!is_positive::<i32>());
 /// ```
 ///
-/// This example demonstrates that the function correctly identifies the 
+/// This example demonstrates that the function correctly identifies the
 /// `Positive` type while distinguishing it from unrelated types like `i32`.
 ///
 /// # Note
 ///
 /// This function does **not** perform runtime checks on instances of values,
-/// nor does it check type compatibility with conversions. It works 
+/// nor does it check type compatibility with conversions. It works
 /// exclusively at the type level.
 ///
 /// # See Also

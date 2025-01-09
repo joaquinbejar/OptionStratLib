@@ -1,6 +1,6 @@
-use rust_decimal::Decimal;
 use crate::curves::Point2D;
 use crate::error::CurvesError;
+use rust_decimal::Decimal;
 
 /// A trait for performing linear interpolation on a set of 2D points.
 ///

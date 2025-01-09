@@ -67,10 +67,10 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
+use crate::error::common::OperationErrorKind;
 use crate::error::PositionError;
 use std::error::Error;
 use std::fmt;
-use crate::error::common::OperationErrorKind;
 
 impl Error for StrategyError {}
 impl Error for PriceErrorKind {}
@@ -122,7 +122,6 @@ pub enum ProfitLossErrorKind {
     /// Error in profit range calculation
     ProfitRangeError { reason: String },
 }
-
 
 impl fmt::Display for StrategyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -177,8 +176,6 @@ impl fmt::Display for ProfitLossErrorKind {
         }
     }
 }
-
-
 
 // Type alias for convenience
 pub type StrategyResult<T> = Result<T, StrategyError>;

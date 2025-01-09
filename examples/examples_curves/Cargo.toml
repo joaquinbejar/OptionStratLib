@@ -1,0 +1,8 @@
+[package]
+name = "examples_curves"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+optionstratlib = { path = "../.." }
+rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
