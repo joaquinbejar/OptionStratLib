@@ -11,14 +11,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let curve_sin = Curve::construct(CurveConstructionMethod::Parametric {
         f: Box::new(|t| Ok(Point2D::new(t, t.sin()))),
         t_start: Decimal::ZERO,
-        t_end: Decimal::TWO_PI,
+        t_end: Decimal::TWO_PI  * Decimal::TWO,
         steps: 100
     })?;
 
     let curve_cos = Curve::construct(CurveConstructionMethod::Parametric {
         f: Box::new(|t| Ok(Point2D::new(t, t.cos()))),
-        t_start: Decimal::ZERO,
-        t_end: Decimal::TWO_PI,
+        t_start: Decimal::ZERO ,
+        t_end: Decimal::TWO_PI * Decimal::TWO,
         steps: 100
     })?;
     
@@ -31,6 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .x_label("X")
         .y_label("Sin")
         .line_width(1)
+        .curve_name(["Sin".to_string(), "Cos".to_string()].to_vec())
         .save("./Draws/Curves/vector_curve.png")?;
 
     Ok(())

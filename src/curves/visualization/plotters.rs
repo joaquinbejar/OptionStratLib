@@ -70,6 +70,9 @@ pub struct PlotOptions {
     pub width: u32,
     /// Plot height
     pub height: u32,
+    /// Curve names
+    pub curve_name: Option<Vec<String>>,
+    
 }
 
 impl PlotOptions {
@@ -96,6 +99,7 @@ impl Default for PlotOptions {
             background_color: RGBColor(255, 255, 255), // White
             width: 800,                                // Dimensión por defecto
             height: 600,                               // Dimensión por defecto
+            curve_name: None,
         }
     }
 }
@@ -132,6 +136,11 @@ impl<T: Plottable> PlotBuilder<T> {
     /// Set y-axis label
     pub fn y_label(mut self, label: impl Into<String>) -> Self {
         self.options.y_label = Some(label.into());
+        self
+    }
+
+    pub fn curve_name(mut self, label: Vec<String>) -> Self {
+        self.options.curve_name = Some(label.into());
         self
     }
 
@@ -476,13 +485,22 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
             })?;
 
         // Determine colors
-        let colors = self
+        let colors: &Vec<RGBColor> = &self
             .options
             .line_colors
-            .unwrap_or_else(PlotOptions::default_colors);
+            .unwrap_or_else(PlotOptions::default_colors);  
 
         // Draw curves
         for (i, points) in all_curve_points.into_iter().enumerate() {
+            let default_name = &format!("Curve {}", i + 1);
+            let label = match &self.options.curve_name {
+                Some(names) => names.get(i).map(|s| s.as_str()).unwrap_or(&default_name),
+                None => default_name,
+            };
+
+            // Clone colors for this iteration
+            let legend_color = colors[i % colors.len()].clone();
+
             chart
                 .draw_series(LineSeries::new(
                     points,
@@ -491,7 +509,11 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
                 .map_err(|e| CurvesError::StdError {
                     reason: e.to_string(),
                 })?
-                .label(format!("Curve {}", i + 1));
+                .label(label)
+                .legend(move |c| {
+                    Circle::new(c, 3, legend_color.filled())
+                })
+            ;
         }
 
         // Add legend
