@@ -2,9 +2,17 @@ name: Code Coverage Report.
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+      - 'release/**'
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+      - 'release/**'
 
 env:
   CARGO_TERM_COLOR: always
