@@ -151,3 +151,28 @@ bench-json: check-cargo-criterion
 .PHONY: bench-clean
 bench-clean:
 	rm -rf target/criterion
+	
+
+.PHONY: workflow-coverage
+workflow-coverage:
+	DOCKER_HOST="$${DOCKER_HOST}" act push --job code_coverage_report \
+       -P ubuntu-latest=catthehacker/ubuntu:latest \
+       --privileged
+
+.PHONY: workflow-build
+workflow-build:
+	DOCKER_HOST="$${DOCKER_HOST}" act push --job build \
+       -P ubuntu-latest=catthehacker/ubuntu:latest
+       
+.PHONY: workflow-lint
+workflow-lint:
+	DOCKER_HOST="$${DOCKER_HOST}" act push --job lint \
+       -P ubuntu-latest=catthehacker/ubuntu:latest
+
+.PHONY: workflow-test
+workflow-test:
+	DOCKER_HOST="$${DOCKER_HOST}" act push --job run_tests \
+       -P ubuntu-latest=catthehacker/ubuntu:latest
+       
+.PHONY: workflow
+workflow: workflow-build workflow-lint workflow-test workflow-coverage     
