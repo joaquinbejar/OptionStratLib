@@ -253,7 +253,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_walk_initialization() {
         let mut walk = TestWalk::new();
         let initial_price = pos!(100.0);
@@ -265,7 +265,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_random_walk_length() {
         let mut walk = TestWalk::new();
         let n_steps = 100;
@@ -278,7 +278,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_random_walk_starts_at_initial_price() {
         let mut walk = TestWalk::new();
 
@@ -288,7 +288,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_all_values_are_positive() {
         let mut walk = TestWalk::new();
         let n_steps = 1000;
@@ -301,7 +301,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_statistical_properties() {
         let mut walk = TestWalk::new();
 
@@ -322,7 +322,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_std_dev_change() {
         let mut walk = TestWalk::new();
 
@@ -338,7 +338,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_edge_cases() {
         let mut walk = TestWalk::new();
 
@@ -354,7 +354,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic]
     fn test_zero_steps_should_panic() {
         let mut walk = TestWalk::new();
@@ -374,7 +374,7 @@ mod tests {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_random_walk_iterator() {
         setup_logger_with_level("debug");
         let years = 3.0;

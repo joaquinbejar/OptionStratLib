@@ -68,14 +68,10 @@ mod tests_setup_logger {
     use tracing::subscriber::set_global_default;
     use tracing_subscriber::FmtSubscriber;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_logger_initialization_info() {
         env::set_var("LOGLEVEL", "INFO");
         setup_logger();
@@ -87,7 +83,7 @@ mod tests_setup_logger {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_logger_initialization_debug() {
         env::set_var("LOGLEVEL", "DEBUG");
         setup_logger();
@@ -99,7 +95,7 @@ mod tests_setup_logger {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_logger_initialization_default() {
         env::remove_var("LOGLEVEL");
         setup_logger();
@@ -111,7 +107,7 @@ mod tests_setup_logger {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_logger_called_once() {
         env::set_var("LOGLEVEL", "INFO");
 
@@ -133,11 +129,7 @@ mod tests_setup_logger_bis {
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::Layer;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
 
@@ -171,7 +163,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_default_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::remove_var("LOGLEVEL");
@@ -188,7 +180,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_debug_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "DEBUG");
@@ -207,7 +199,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_error_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "ERROR");
@@ -226,7 +218,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_warn_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "WARN");
@@ -245,7 +237,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_trace_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "TRACE");
@@ -264,7 +256,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "INVALID");

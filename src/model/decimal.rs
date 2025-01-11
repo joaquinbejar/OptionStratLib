@@ -193,14 +193,12 @@ pub mod tests {
 
     use std::str::FromStr;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
     // #[cfg(target_arch = "wasm32")]
     // wasm_bindgen_test_configure!(run_in_node);  // Change this from run_in_browser to run_in_node
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_f64_to_decimal_valid() {
         let value = 42.42;
         let result = f64_to_decimal(value);

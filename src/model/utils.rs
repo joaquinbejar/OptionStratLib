@@ -152,14 +152,10 @@ pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
 mod tests_positive_f64_to_f64 {
     use super::*;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_positive_f64_to_f64_non_empty() {
         let positive_vec = vec![
             Positive::new(10.0).unwrap(),
@@ -173,7 +169,7 @@ mod tests_positive_f64_to_f64 {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_positive_f64_to_f64_single_element() {
         let positive_vec = vec![Positive::new(42.0).unwrap()];
 
@@ -183,7 +179,7 @@ mod tests_positive_f64_to_f64 {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic]
     fn test_positive_f64_to_f64_invalid_positivef64() {
         Positive::new(-10.0).unwrap();
@@ -199,7 +195,7 @@ mod tests_mean_and_std {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_basic_mean_and_std() {
         let values = vec![
             pos!(2.0),
@@ -218,7 +214,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_identical_values() {
         let values = vec![pos!(5.0), pos!(5.0), pos!(5.0), pos!(5.0)];
         let (mean, std) = mean_and_std(values);
@@ -228,7 +224,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_single_value() {
         let values = vec![pos!(3.0)];
         let (mean, std) = mean_and_std(values);
@@ -238,7 +234,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_small_numbers() {
         let values = vec![pos!(0.1), pos!(0.2), pos!(0.3)];
         let (mean, std) = mean_and_std(values);
@@ -248,7 +244,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_large_numbers() {
         let values = vec![pos!(1000.0), pos!(2000.0), pos!(3000.0)];
         let (mean, std) = mean_and_std(values);
@@ -258,7 +254,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_mixed_range() {
         let values = vec![pos!(0.5), pos!(5.0), pos!(50.0), pos!(500.0)];
         let (mean, std) = mean_and_std(values);
@@ -268,7 +264,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic]
     fn test_empty_vector() {
         let values: Vec<Positive> = vec![];
@@ -276,7 +272,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_symmetric_distribution() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let (mean, std) = mean_and_std(values);
@@ -286,7 +282,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_result_is_positive() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let (mean, std) = mean_and_std(values);
@@ -296,7 +292,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_precision() {
         let values = vec![pos!(1.23456789), pos!(2.34567890), pos!(3.45678901)];
         let (mean, std) = mean_and_std(values);
@@ -306,7 +302,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_precision_bis() {
         let values = vec![pos!(0.123456789), pos!(0.134567890), pos!(0.145678901)];
         let (mean, std) = mean_and_std(values);

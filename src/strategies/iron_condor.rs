@@ -796,14 +796,10 @@ mod tests_iron_condor {
     use chrono::{TimeZone, Utc};
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_iron_condor_creation() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -837,7 +833,7 @@ mod tests_iron_condor {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -864,7 +860,7 @@ mod tests_iron_condor {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -895,7 +891,7 @@ mod tests_iron_condor {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -925,7 +921,7 @@ mod tests_iron_condor {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -960,7 +956,7 @@ mod tests_iron_condor {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_profit_at() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -1014,11 +1010,7 @@ mod tests_iron_condor_validable {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_valid_position(
         side: Side,
@@ -1071,14 +1063,14 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_valid_condor() {
         let condor = create_valid_condor();
         assert!(condor.validate());
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_short_call() {
         let mut condor = create_valid_condor();
         // Make short call invalid by setting quantity to zero
@@ -1088,7 +1080,7 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_short_put() {
         let mut condor = create_valid_condor();
         // Make short put invalid by setting quantity to zero
@@ -1098,7 +1090,7 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_long_call() {
         let mut condor = create_valid_condor();
         // Make long call invalid by setting quantity to zero
@@ -1108,7 +1100,7 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_long_put() {
         let mut condor = create_valid_condor();
         // Make long put invalid by setting quantity to zero
@@ -1118,7 +1110,7 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_all_invalid() {
         let mut condor = create_valid_condor();
         // Make all positions invalid
@@ -1142,11 +1134,7 @@ mod tests_iron_condor_strategies {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -1171,7 +1159,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg() {
         let mut condor = create_test_condor();
 
@@ -1229,7 +1217,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_legs() {
         let condor = create_test_condor();
         let legs = condor.get_positions().expect("Invalid legs");
@@ -1246,7 +1234,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let condor = IronCondor::new(
             "GOLD".to_string(),
@@ -1275,7 +1263,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1301,7 +1289,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit_bis() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1327,7 +1315,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1353,7 +1341,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss_with_uneven_wings() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1380,7 +1368,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_total_cost() {
         let condor = create_test_condor();
         // Total cost = 2.0 + 2.0 + 1.0 + 1.0 = 6.0
@@ -1388,14 +1376,14 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received() {
         let condor = create_test_condor();
         assert_eq!(condor.net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_bis_i() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1420,7 +1408,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_bis_ii() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1445,7 +1433,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_bis_iii() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1470,7 +1458,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_bis_iv() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1495,7 +1483,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_bis_v() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1520,7 +1508,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let condor = create_test_condor();
         // Total fees = (0.5 + 0.5) * 4 = 4.0
@@ -1528,14 +1516,14 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_area() {
         let condor = create_test_condor();
         assert_eq!(condor.profit_area().unwrap().to_f64().unwrap(), 0.0);
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_best_range_to_show() {
         let condor = create_test_condor();
         let range = condor.best_range_to_show(pos!(1.0)).unwrap();
@@ -1546,7 +1534,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_multiple_contracts() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1573,7 +1561,7 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_no_premium() {
         let mut condor = create_test_condor();
         condor.short_call.premium = Positive::ONE;
@@ -1595,11 +1583,7 @@ mod tests_iron_condor_optimizable {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -1644,7 +1628,7 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_lower_side() {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
@@ -1657,7 +1641,7 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_upper_side() {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
@@ -1670,7 +1654,7 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_range() {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
@@ -1687,7 +1671,7 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_by_area() {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
@@ -1700,7 +1684,7 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_long_option() {
         let condor = create_test_condor();
         let option = OptionData::new(
@@ -1725,7 +1709,7 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_short_option() {
         let condor = create_test_condor();
         let option = OptionData::new(
@@ -1749,7 +1733,7 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_create_strategy() {
         let condor = create_test_condor();
         let chain = create_test_chain();
@@ -1771,7 +1755,7 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic(expected = "Invalid number of legs for Iron Condor strategy")]
     fn test_create_strategy_invalid_legs() {
         let condor = create_test_condor();
@@ -1794,11 +1778,7 @@ mod tests_iron_condor_profit {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -1823,7 +1803,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_max_profit_price() {
         let condor = create_test_condor();
         let profit = condor
@@ -1836,7 +1816,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_below_long_put() {
         let condor = create_test_condor();
         let profit = condor
@@ -1849,7 +1829,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_long_put() {
         let condor = create_test_condor();
         let profit = condor
@@ -1862,7 +1842,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_between_puts() {
         let condor = create_test_condor();
         let profit = condor
@@ -1874,7 +1854,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_short_put() {
         let condor = create_test_condor();
         let profit = condor
@@ -1886,7 +1866,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_in_profit_zone() {
         let condor = create_test_condor();
         let profit = condor
@@ -1898,7 +1878,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_short_call() {
         let condor = create_test_condor();
         let profit = condor
@@ -1910,7 +1890,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_between_calls() {
         let condor = create_test_condor();
         let profit = condor
@@ -1922,7 +1902,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_long_call() {
         let condor = create_test_condor();
         let profit = condor
@@ -1935,7 +1915,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_above_long_call() {
         let condor = create_test_condor();
         let profit = condor
@@ -1947,7 +1927,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_with_fees() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1980,7 +1960,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_with_fees_qty() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -2012,7 +1992,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_with_multiple_contracts() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -2044,7 +2024,7 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_break_even_points() {
         let condor = create_test_condor();
 
@@ -2075,11 +2055,7 @@ mod tests_iron_condor_graph {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -2104,7 +2080,7 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_title_format() {
         let condor = create_test_condor();
         let title = condor.title();
@@ -2122,7 +2098,7 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_vertical_lines() {
         let condor = create_test_condor();
         let lines = condor.get_vertical_lines();
@@ -2140,7 +2116,7 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_points() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2170,7 +2146,7 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_colors() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2195,7 +2171,7 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_styles() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2208,7 +2184,7 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_profit_points() {
         let mut condor = create_test_condor();
         condor.short_call.premium = Positive::ONE;
@@ -2224,7 +2200,7 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_points_with_different_quantities() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2237,7 +2213,7 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_current_price_point() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2267,11 +2243,7 @@ mod tests_iron_condor_delta {
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
@@ -2296,7 +2268,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(2800.0));
 
@@ -2336,7 +2308,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2500.0));
 
@@ -2376,7 +2348,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(2100.0));
 
@@ -2401,11 +2373,7 @@ mod tests_iron_condor_delta_size {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
@@ -2430,7 +2398,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(2800.9));
 
@@ -2470,7 +2438,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2500.9));
 
@@ -2510,7 +2478,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(2100.0));
 

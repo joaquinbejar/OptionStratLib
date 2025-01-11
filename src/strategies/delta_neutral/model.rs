@@ -213,11 +213,7 @@ mod tests {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     // Mock struct to implement required traits for testing
     struct MockStrategy {
@@ -267,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_net_delta() {
         let strategy = create_mock_strategy(dec!(0.5), 100.0);
         let info = strategy.calculate_net_delta();
@@ -279,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_delta_neutral() {
         let neutral_strategy = create_mock_strategy(dec!(0.005), 100.0);
         let non_neutral_strategy = create_mock_strategy(dec!(0.5), 100.0);
@@ -289,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_suggest_delta_adjustments_neutral() {
         let strategy = create_mock_strategy(dec!(0.005), 100.0);
         let adjustments = strategy.suggest_delta_adjustments();
@@ -298,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_suggest_delta_adjustments_positive() {
         let strategy = create_mock_strategy(dec!(0.5), 100.0);
         let adjustments = strategy.suggest_delta_adjustments();
@@ -322,7 +318,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_suggest_delta_adjustments_negative() {
         let strategy = create_mock_strategy(dec!(-0.5), 100.0);
         let adjustments = strategy.suggest_delta_adjustments();
@@ -346,7 +342,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_info_display() {
         let strategy = create_mock_strategy(dec!(0.5), 100.0);
         let info = strategy.calculate_net_delta();
@@ -359,7 +355,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_generate_delta_reducing_adjustments() {
         let strategy = create_mock_strategy(dec!(0.5), 100.0);
         let adjustments = strategy.generate_delta_reducing_adjustments();
@@ -383,7 +379,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_generate_delta_increasing_adjustments() {
         let strategy = create_mock_strategy(dec!(-0.5), 100.0);
         let adjustments = strategy.generate_delta_increasing_adjustments();

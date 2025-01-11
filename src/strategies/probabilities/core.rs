@@ -250,11 +250,7 @@ mod tests_probability_analysis {
     use rust_decimal_macros::dec;
     use std::error::Error;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     // Mock struct para testing
     struct MockStrategy {
@@ -336,7 +332,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_analyze_probabilities_without_adjustments() {
         let strategy = MockStrategy::new();
         let result = strategy.analyze_probabilities(None, None);
@@ -350,7 +346,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_analyze_probabilities_with_adjustments() {
         let strategy = MockStrategy::new();
         let vol_adj = Some(VolatilityAdjustment {
@@ -372,7 +368,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_calculation() {
         let strategy = MockStrategy::new();
         let result = strategy.expected_value(None, None);
@@ -382,7 +378,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_trend() {
         let strategy = MockStrategy::new();
         let trend = Some(PriceTrend {
@@ -397,7 +393,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_of_profit() {
         let strategy = MockStrategy::new();
         let result = strategy.probability_of_profit(None, None);
@@ -409,7 +405,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_of_loss() {
         let strategy = MockStrategy::new();
         let result = strategy.probability_of_loss(None, None);
@@ -421,7 +417,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_extreme_probabilities() {
         let strategy = MockStrategy::new();
         let result = strategy.calculate_extreme_probabilities(None, None);
@@ -434,7 +430,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_probabilities_with_adjustments() {
         let strategy = MockStrategy::new();
         let vol_adj = Some(VolatilityAdjustment {
@@ -456,7 +452,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_calculations_sum_to_one() {
         let strategy = MockStrategy::new();
         let profit_prob = strategy.probability_of_profit(None, None).unwrap();
@@ -467,7 +463,7 @@ mod tests_probability_analysis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_volatility() {
         let strategy = MockStrategy::new();
         let vol_adj = Some(VolatilityAdjustment {
@@ -488,11 +484,7 @@ mod tests_expected_value {
     use rust_decimal_macros::dec;
     use std::error::Error;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> TestStrategy {
@@ -563,7 +555,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_basic() {
         let strategy = create_test_strategy();
         let result = strategy.expected_value(None, None);
@@ -577,7 +569,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_volatility() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
@@ -591,7 +583,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_trend() {
         let strategy = create_test_strategy();
         let trend = Some(PriceTrend {
@@ -605,7 +597,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_both_adjustments() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
@@ -623,7 +615,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_high_volatility() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
@@ -637,7 +629,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_negative_trend() {
         let strategy = create_test_strategy();
         let trend = Some(PriceTrend {
@@ -651,7 +643,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_probabilities_sum() {
         let strategy = create_test_strategy();
         let result = strategy.expected_value(None, None);
@@ -662,7 +654,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_extreme_prices() {
         struct ExtremeStrategy {
             base: TestStrategy,
@@ -714,7 +706,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_minimal_volatility() {
         let strategy = create_test_strategy();
         // Use a very small but positive volatility value
@@ -735,7 +727,7 @@ mod tests_expected_value {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_with_zero_volatility() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {

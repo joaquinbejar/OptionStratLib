@@ -218,11 +218,7 @@ mod tests_black_scholes {
     use crate::{assert_decimal_eq, assert_pos_relative_eq, pos, Options, Positive};
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn mock_options_call() -> Options {
         Options {
@@ -277,7 +273,7 @@ mod tests_black_scholes {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_simplest_call() {
         let mut option = mock_options_simplest_call();
         assert_pos_relative_eq!(
@@ -440,7 +436,7 @@ mod tests_black_scholes {
     // }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_call_with_explicit_time_to_expiry() {
         let option = mock_options_call();
         let price = black_scholes(&option).unwrap();
@@ -448,7 +444,7 @@ mod tests_black_scholes {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_put_with_explicit_time_to_expiry() {
         let option = mock_options_put();
         let price = black_scholes(&option).unwrap();
@@ -456,7 +452,7 @@ mod tests_black_scholes {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_call_without_explicit_time_to_expiry() {
         let option = mock_options_call();
         let price = black_scholes(&option).unwrap();
@@ -464,7 +460,7 @@ mod tests_black_scholes {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_put_without_explicit_time_to_expiry() {
         let option = mock_options_put();
         let price = black_scholes(&option).unwrap();
@@ -480,11 +476,7 @@ mod tests_black_scholes_trait {
     use crate::{assert_decimal_eq, pos, Positive};
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     // Mock struct to implement BlackScholes trait
     struct MockOption {
@@ -504,7 +496,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_at_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -520,7 +512,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_in_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -536,7 +528,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_out_of_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -552,7 +544,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_at_the_money_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -568,7 +560,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_high_volatility() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -599,7 +591,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_short_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -615,7 +607,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_short_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -631,7 +623,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_different_quantity() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -656,11 +648,7 @@ mod tests_black_scholes_trait_bis {
     use num_traits::FromPrimitive;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     struct MockOption {
         option: Options,
@@ -679,7 +667,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_put_parity() {
         let call_option = create_sample_option(
             OptionStyle::Call,
@@ -716,7 +704,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_put_parity_short() {
         let call_option = create_sample_option(
             OptionStyle::Call,
@@ -753,7 +741,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monotonicity_with_strike() {
         let call1 = MockOption::new(create_sample_option(
             OptionStyle::Call,
@@ -805,7 +793,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_deep_itm_call() {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
@@ -827,7 +815,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_deep_otm_call() {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
@@ -843,7 +831,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monotonicity_with_volatility() {
         let call1 = MockOption::new(create_sample_option(
             OptionStyle::Call,

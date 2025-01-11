@@ -50,14 +50,10 @@ mod tests_strategies_utils {
     use super::*;
     use crate::pos;
     use approx::assert_relative_eq;
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_side_variants() {
         let upper = FindOptimalSide::Upper;
         let lower = FindOptimalSide::Lower;
@@ -71,7 +67,7 @@ mod tests_strategies_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_optimization_criteria_variants() {
         let ratio = OptimizationCriteria::Ratio;
         let area = OptimizationCriteria::Area;
@@ -81,7 +77,7 @@ mod tests_strategies_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_price_range_basic() {
         let start = pos!(100.0);
         let end = pos!(110.0);
@@ -100,7 +96,7 @@ mod tests_strategies_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_price_range_single_step() {
         let start = pos!(100.0);
         let end = pos!(100.0);
@@ -113,7 +109,7 @@ mod tests_strategies_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_price_range_large_step() {
         let start = pos!(100.0);
         let end = pos!(110.0);
@@ -126,7 +122,7 @@ mod tests_strategies_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_price_range_fractional_step() {
         let start = pos!(1.0);
         let end = pos!(2.0);
@@ -142,7 +138,7 @@ mod tests_strategies_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_price_range_empty() {
         let start = pos!(100.0);
         let end = pos!(90.0);

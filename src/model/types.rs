@@ -361,14 +361,10 @@ mod tests_payoff {
     use super::*;
     use crate::pos;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_european_call() {
         let option = OptionType::European;
         let info = PayoffInfo {
@@ -382,7 +378,7 @@ mod tests_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_european_put() {
         let option = OptionType::European;
         let info = PayoffInfo {
@@ -396,7 +392,7 @@ mod tests_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_asian_arithmetic_call() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
@@ -413,7 +409,7 @@ mod tests_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_barrier_up_and_in_call() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndIn,
@@ -430,7 +426,7 @@ mod tests_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_binary_cash_or_nothing_call() {
         let option = OptionType::Binary {
             binary_type: BinaryType::CashOrNothing,
@@ -446,7 +442,7 @@ mod tests_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_lookback_fixed_strike_put() {
         let option = OptionType::Lookback {
             lookback_type: LookbackType::FixedStrike,
@@ -462,7 +458,7 @@ mod tests_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_quanto_call() {
         let option = OptionType::Quanto { exchange_rate: 1.5 };
         let info = PayoffInfo {
@@ -476,7 +472,7 @@ mod tests_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_power_call() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
@@ -496,14 +492,10 @@ mod tests_expiration_date {
     use crate::constants::DAYS_IN_A_YEAR;
     use chrono::{Duration, TimeZone};
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expiration_date_days() {
         let expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
         assert_eq!(expiration.get_years().unwrap(), 1.0);
@@ -516,7 +508,7 @@ mod tests_expiration_date {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expiration_date_datetime() {
         // Test for a date exactly one year in the future
         let one_year_future = Utc::now() + Duration::days(365);
@@ -530,7 +522,7 @@ mod tests_expiration_date {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic(expected = "DateTime results in negative duration")]
     fn test_expiration_date_datetime_specific() {
         // Test with a specific date
@@ -545,7 +537,7 @@ mod tests_expiration_date {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_date_from_days() {
         let days = pos!(30.0);
         let expiration = ExpirationDate::Days(days);
@@ -556,7 +548,7 @@ mod tests_expiration_date {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_date_from_datetime() {
         let future_date = Utc::now() + Duration::days(60);
         let expiration = ExpirationDate::DateTime(future_date);
@@ -566,7 +558,7 @@ mod tests_expiration_date {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_date_from_past_datetime() {
         let past_date = Utc::now() - Duration::days(30);
         let expiration = ExpirationDate::DateTime(past_date);
@@ -575,7 +567,7 @@ mod tests_expiration_date {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_date_from_zero_days() {
         let expiration = ExpirationDate::Days(Positive::ZERO);
         let expected_date = Utc::now();
@@ -585,7 +577,7 @@ mod tests_expiration_date {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_date_from_fractional_days() {
         let days = Positive::ONE;
         let expiration = ExpirationDate::Days(days);
@@ -605,7 +597,7 @@ mod tests_expiration_date {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_positive_days() {
         let expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
         let years = expiration.get_years().unwrap();
@@ -617,14 +609,10 @@ mod tests_expiration_date {
         use super::*;
         use chrono::TimeZone;
 
-        #[cfg(target_arch = "wasm32")]
-        use wasm_bindgen_test::*;
     
-        #[cfg(target_arch = "wasm32")]
-        wasm_bindgen_test_configure!(run_in_browser);
     
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_date_string_days() {
             let today = Utc::now();
             let expiration = ExpirationDate::Days(pos!(30.0));
@@ -634,7 +622,7 @@ mod tests_expiration_date {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_date_string_datetime() {
             let specific_date = Utc.with_ymd_and_hms(2024, 12, 31, 0, 0, 0).unwrap();
             let expiration = ExpirationDate::DateTime(specific_date);
@@ -648,14 +636,10 @@ mod tests_calculate_floating_strike_payoff {
     use super::*;
     use crate::pos;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -670,7 +654,7 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -685,7 +669,7 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -700,7 +684,7 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -715,7 +699,7 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -730,7 +714,7 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -750,14 +734,10 @@ mod tests_option_type {
     use super::*;
     use crate::pos;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_asian_geometric_call() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Geometric,
@@ -775,7 +755,7 @@ mod tests_option_type {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_asian_geometric_call_positive_payoff() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Geometric,
@@ -794,7 +774,7 @@ mod tests_option_type {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_barrier_down_and_out_put() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::DownAndOut,
@@ -811,7 +791,7 @@ mod tests_option_type {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_binary_asset_or_nothing_put() {
         let option = OptionType::Binary {
             binary_type: BinaryType::AssetOrNothing,
@@ -827,7 +807,7 @@ mod tests_option_type {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_compound_option() {
         let inner_option = OptionType::European;
         let option = OptionType::Compound {
@@ -844,7 +824,7 @@ mod tests_option_type {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_chooser_option() {
         let option = OptionType::Chooser { choice_date: 30.0 };
         let info = PayoffInfo {
@@ -858,7 +838,7 @@ mod tests_option_type {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_power_put() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
@@ -877,14 +857,10 @@ mod tests_vec_collection {
     use crate::model::positive::Positive;
     use crate::pos;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_collect_empty_iterator() {
         let empty_vec: Vec<Positive> = Vec::new();
         let collected: Vec<Positive> = empty_vec.into_iter().collect();
@@ -892,7 +868,7 @@ mod tests_vec_collection {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_collect_single_value() {
         let values = vec![pos!(1.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
@@ -901,7 +877,7 @@ mod tests_vec_collection {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_collect_multiple_values() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
@@ -912,7 +888,7 @@ mod tests_vec_collection {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_collect_from_filter() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0)];
         let collected: Vec<Positive> = values.into_iter().filter(|x| x.to_f64() > 2.0).collect();
@@ -922,7 +898,7 @@ mod tests_vec_collection {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_collect_from_map() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let collected: Vec<Positive> = values.into_iter().map(|x| pos!(x.to_f64() * 2.0)).collect();
@@ -933,7 +909,7 @@ mod tests_vec_collection {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_collect_from_chain() {
         let values1 = vec![pos!(1.0), pos!(2.0)];
         let values2 = vec![pos!(3.0), pos!(4.0)];

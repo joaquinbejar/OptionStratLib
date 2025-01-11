@@ -770,14 +770,10 @@ mod tests_iron_butterfly {
     use chrono::{TimeZone, Utc};
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_iron_butterfly_creation() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
@@ -813,7 +809,7 @@ mod tests_iron_butterfly {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
@@ -839,7 +835,7 @@ mod tests_iron_butterfly {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
@@ -866,7 +862,7 @@ mod tests_iron_butterfly {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
@@ -905,7 +901,7 @@ mod tests_iron_butterfly {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
@@ -939,7 +935,7 @@ mod tests_iron_butterfly {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_profit_at() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
@@ -990,11 +986,7 @@ mod tests_iron_butterfly_validable {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_valid_position(
         side: Side,
@@ -1046,14 +1038,14 @@ mod tests_iron_butterfly_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_valid_butterfly() {
         let butterfly = create_valid_butterfly();
         assert!(butterfly.validate());
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_short_call() {
         let mut butterfly = create_valid_butterfly();
         // Make short call invalid by setting quantity to zero
@@ -1063,7 +1055,7 @@ mod tests_iron_butterfly_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_short_put() {
         let mut butterfly = create_valid_butterfly();
         // Make short put invalid by setting quantity to zero
@@ -1073,7 +1065,7 @@ mod tests_iron_butterfly_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_long_call() {
         let mut butterfly = create_valid_butterfly();
         // Make long call invalid by setting quantity to zero
@@ -1083,7 +1075,7 @@ mod tests_iron_butterfly_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_long_put() {
         let mut butterfly = create_valid_butterfly();
         // Make long put invalid by setting quantity to zero
@@ -1093,7 +1085,7 @@ mod tests_iron_butterfly_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_all_invalid() {
         let mut butterfly = create_valid_butterfly();
         // Make all positions invalid
@@ -1109,7 +1101,7 @@ mod tests_iron_butterfly_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_different_short_strikes() {
         let mut butterfly = create_valid_butterfly();
         // Make short strikes different
@@ -1121,7 +1113,7 @@ mod tests_iron_butterfly_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_inverted_strikes() {
         let mut butterfly = create_valid_butterfly();
         // Invert the strikes
@@ -1140,11 +1132,7 @@ mod tests_iron_butterfly_strategies {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
@@ -1168,7 +1156,7 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg() {
         let mut butterfly = create_test_butterfly();
 
@@ -1229,7 +1217,7 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_legs() {
         let butterfly = create_test_butterfly();
         let legs = butterfly.get_positions().expect("Failed to get legs");
@@ -1249,7 +1237,7 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let butterfly = create_test_butterfly();
         let break_even_points = butterfly.get_break_even_points().unwrap();
@@ -1264,14 +1252,14 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit() {
         let butterfly = create_test_butterfly();
         assert!(butterfly.max_profit().is_err());
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss() {
         let butterfly = create_test_butterfly();
         let max_loss = butterfly.max_loss().unwrap().to_dec();
@@ -1288,7 +1276,7 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_total_cost() {
         let butterfly = create_test_butterfly();
         let total_cost = butterfly.total_cost().unwrap();
@@ -1297,14 +1285,14 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received() {
         let butterfly = create_test_butterfly();
         assert_eq!(butterfly.net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let butterfly = create_test_butterfly();
         let expected_fees = 4.0; // (0.5 + 0.5) * 4 legs
@@ -1312,7 +1300,7 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_area() {
         let butterfly = create_test_butterfly();
         // Profit area should be smaller than Iron Condor due to higher concentration
@@ -1320,7 +1308,7 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_multiple_contracts() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
@@ -1345,7 +1333,7 @@ mod tests_iron_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_asymmetric_premiums() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
@@ -1379,11 +1367,7 @@ mod tests_iron_butterfly_optimizable {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
@@ -1427,7 +1411,7 @@ mod tests_iron_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_at_the_money() {
         let mut butterfly = create_test_butterfly();
         let chain = create_test_chain();
@@ -1447,7 +1431,7 @@ mod tests_iron_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_symmetric_wings() {
         let mut butterfly = create_test_butterfly();
         let chain = create_test_chain();
@@ -1464,7 +1448,7 @@ mod tests_iron_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_range() {
         let mut butterfly = create_test_butterfly();
         let chain = create_test_chain();
@@ -1487,7 +1471,7 @@ mod tests_iron_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_long_option() {
         let butterfly = create_test_butterfly();
         let option = OptionData::new(
@@ -1509,7 +1493,7 @@ mod tests_iron_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_short_option() {
         let butterfly = create_test_butterfly();
         let option = OptionData::new(
@@ -1531,7 +1515,7 @@ mod tests_iron_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_create_strategy() {
         let butterfly = create_test_butterfly();
         let chain = create_test_chain();
@@ -1553,7 +1537,7 @@ mod tests_iron_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic(expected = "Invalid number of legs for Iron Butterfly strategy")]
     fn test_create_strategy_invalid_legs() {
         let butterfly = create_test_butterfly();
@@ -1576,11 +1560,7 @@ mod tests_iron_butterfly_profit {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
@@ -1604,7 +1584,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_max_profit_price() {
         let butterfly = create_test_butterfly();
         let profit = butterfly
@@ -1617,7 +1597,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_below_long_put() {
         let butterfly = create_test_butterfly();
         let profit = butterfly
@@ -1630,7 +1610,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_long_put() {
         let butterfly = create_test_butterfly();
         let profit = butterfly
@@ -1643,7 +1623,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_between_put_wing() {
         let butterfly = create_test_butterfly();
         let profit = butterfly
@@ -1657,7 +1637,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_short_strike() {
         let butterfly = create_test_butterfly();
         let profit = butterfly
@@ -1670,7 +1650,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_between_call_wing() {
         let butterfly = create_test_butterfly();
         let profit = butterfly
@@ -1684,7 +1664,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_long_call() {
         let butterfly = create_test_butterfly();
         let profit = butterfly
@@ -1697,7 +1677,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_above_long_call() {
         let butterfly = create_test_butterfly();
         let profit = butterfly
@@ -1710,7 +1690,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_with_fees() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
@@ -1741,7 +1721,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_with_multiple_contracts() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
@@ -1772,7 +1752,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_break_even_points() {
         let butterfly = create_test_butterfly();
 
@@ -1795,7 +1775,7 @@ mod tests_iron_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_symmetric_profits() {
         let butterfly = create_test_butterfly();
         let short_strike = butterfly.short_call.option.strike_price;
@@ -1820,11 +1800,7 @@ mod tests_iron_butterfly_graph {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
@@ -1848,7 +1824,7 @@ mod tests_iron_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_title_format() {
         let butterfly = create_test_butterfly();
         let title = butterfly.title();
@@ -1866,7 +1842,7 @@ mod tests_iron_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_vertical_lines() {
         let butterfly = create_test_butterfly();
         let lines = butterfly.get_vertical_lines();
@@ -1880,7 +1856,7 @@ mod tests_iron_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_points() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -1911,7 +1887,7 @@ mod tests_iron_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_colors() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -1933,7 +1909,7 @@ mod tests_iron_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_styles() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -1946,7 +1922,7 @@ mod tests_iron_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_profit_points() {
         let mut butterfly = create_test_butterfly();
         butterfly.short_call.premium = Positive::ONE;
@@ -1962,7 +1938,7 @@ mod tests_iron_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_points_with_different_quantities() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -1976,7 +1952,7 @@ mod tests_iron_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_curve_symmetry() {
         let butterfly = create_test_butterfly();
         let short_strike = butterfly.short_call.option.strike_price.to_f64();
@@ -2005,11 +1981,7 @@ mod tests_iron_condor_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
         IronButterfly::new(
@@ -2033,7 +2005,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(2900.0));
 
@@ -2073,7 +2045,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2500.0));
 
@@ -2113,7 +2085,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(2100.0));
 
@@ -2139,11 +2111,7 @@ mod tests_iron_condor_delta_size {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
         IronButterfly::new(
@@ -2167,7 +2135,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(2900.0));
 
@@ -2207,7 +2175,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2700.0));
         let size = 0.5645;
@@ -2248,7 +2216,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(2100.0));
 

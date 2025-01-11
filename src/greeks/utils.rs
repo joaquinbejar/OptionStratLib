@@ -427,11 +427,7 @@ mod tests_exp {
     use super::*;
     use rust_decimal_macros::dec;
     
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
     #[should_panic]
@@ -455,14 +451,10 @@ mod tests_calculate_d_values {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_d_values() {
         let option = Options {
             option_type: OptionType::European,
@@ -503,11 +495,7 @@ mod tests_src_greeks_utils {
     use statrs::distribution::ContinuousCDF;
     use statrs::distribution::Normal;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
     fn test_d1_zero_sigma() {
@@ -520,7 +508,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_t() {
         let s = pos!(100.0);
         let k = pos!(100.0);
@@ -531,7 +519,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_bis_i() {
         let s = pos!(100.0);
         let k = pos!(110.0);
@@ -545,7 +533,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_bis_ii() {
         let s = pos!(100.0);
         let k = pos!(95.0);
@@ -559,7 +547,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_sigma() {
         let s = pos!(100.0);
         let k = pos!(100.0);
@@ -570,7 +558,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_t() {
         let s = pos!(100.0);
         let k = pos!(100.0);
@@ -581,7 +569,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n() {
         let x = Decimal::ZERO;
         let expected_n = 1.0 / (2.0 * f64::PI()).sqrt();
@@ -595,7 +583,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n() {
         let x = Decimal::ZERO;
         let normal_distribution = Normal::new(0.0, 1.0).unwrap();
@@ -622,14 +610,10 @@ mod calculate_d1_values {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_volatility() {
         // Case where volatility (sigma) is zero
         let underlying_price = pos!(100.0);
@@ -650,7 +634,7 @@ mod calculate_d1_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_time_to_expiry() {
         // Case where time to expiry is zero
         let underlying_price = pos!(100.0);
@@ -671,7 +655,7 @@ mod calculate_d1_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_high_volatility() {
         // Case with extremely high volatility
         let underlying_price = pos!(100.0);
@@ -700,7 +684,7 @@ mod calculate_d1_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_high_underlying_price() {
         // Case with extremely high underlying price
         let underlying_price = Positive::INFINITY; // Very high stock price
@@ -721,7 +705,7 @@ mod calculate_d1_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_low_underlying_price() {
         // Case with extremely low underlying price (near zero)
         let underlying_price = pos!(0.01); // Very low stock price
@@ -750,7 +734,7 @@ mod calculate_d1_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_strike_price() {
         // Case where strike price is zero
         let underlying_price = pos!(100.0);
@@ -771,7 +755,7 @@ mod calculate_d1_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_infinite_risk_free_rate() {
         // Case where risk-free rate is very high (infinite-like)
         let underlying_price = pos!(100.0);
@@ -984,14 +968,10 @@ mod calculate_d2_values {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_volatility() {
         // Case where volatility (implied_volatility) is zero
         let underlying_price = pos!(100.0);
@@ -1012,7 +992,7 @@ mod calculate_d2_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_time_to_expiry() {
         // Case where time to expiration is zero
         let underlying_price = pos!(100.0);
@@ -1033,7 +1013,7 @@ mod calculate_d2_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_high_volatility() {
         // Case with extremely high volatility
         let underlying_price = pos!(100.0);
@@ -1062,7 +1042,7 @@ mod calculate_d2_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_high_underlying_price() {
         // Case with extremely high underlying price
         let underlying_price = Positive::INFINITY;
@@ -1083,7 +1063,7 @@ mod calculate_d2_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_low_underlying_price() {
         // Case with extremely low underlying price (near zero)
         let underlying_price = pos!(0.01);
@@ -1112,7 +1092,7 @@ mod calculate_d2_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_strike_price() {
         // Case where strike price is zero
         let underlying_price = pos!(100.0);
@@ -1133,7 +1113,7 @@ mod calculate_d2_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_infinite_risk_free_rate() {
         // Case where risk-free rate is very high (infinite-like)
         let underlying_price = pos!(100.0);
@@ -1508,14 +1488,10 @@ mod calculate_n_values {
     use rust_decimal_macros::dec;
     use std::f64::consts::PI;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_zero() {
         // Case where x = 0.0
         let x = Decimal::ZERO;
@@ -1561,7 +1537,7 @@ mod calculate_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_positive_small_value() {
         // Case where x is a small positive value
         let x = dec!(0.5);
@@ -1577,7 +1553,7 @@ mod calculate_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_negative_small_value() {
         // Case where x is a small negative value
         let x = dec!(-0.5);
@@ -1593,7 +1569,7 @@ mod calculate_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_large_positive_value() {
         // Case where x is a large positive value
         let x = dec!(5.0);
@@ -1606,7 +1582,7 @@ mod calculate_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_large_negative_value() {
         // Case where x is a large negative value
         let x = dec!(-5.0);
@@ -1619,7 +1595,7 @@ mod calculate_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_extreme_positive_value() {
         // Case where x is a very large positive value
         let x = dec!(100.0);
@@ -1635,7 +1611,7 @@ mod calculate_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_extreme_negative_value() {
         // Case where x is a very large negative value
         let x = dec!(-100.0);
@@ -1657,14 +1633,10 @@ mod calculate_n_prime_values {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_zero() {
         // Case where x = 0.0
         let x = dec!(0.0);
@@ -1710,7 +1682,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_positive_small_value() {
         // Case where x is a small positive value
         let x = dec!(0.5);
@@ -1726,7 +1698,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_negative_small_value() {
         // Case where x is a small negative value
         let x = dec!(-0.5);
@@ -1742,7 +1714,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_large_positive_value() {
         // Case where x is a large positive value
         let x = dec!(5.0);
@@ -1758,7 +1730,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_large_negative_value() {
         // Case where x is a large negative value
         let x = -dec!(5.0);
@@ -1774,7 +1746,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_extreme_positive_value() {
         // Case where x is a very large positive value
         let x = dec!(100.0);
@@ -1790,7 +1762,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_extreme_negative_value() {
         // Case where x is a very large negative value
         let x = -dec!(100.0);
@@ -1813,14 +1785,10 @@ mod calculate_big_n_values {
     use rust_decimal_macros::dec;
     use statrs::distribution::Normal;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_zero() {
         // Case where x = 0.0
         let x = Decimal::ZERO;
@@ -1866,7 +1834,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_positive_small_value() {
         // Case where x is a small positive value
         let x = dec!(0.5);
@@ -1883,7 +1851,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_negative_small_value() {
         // Case where x is a small negative value
         let x = -dec!(0.5);
@@ -1900,7 +1868,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_large_positive_value() {
         // Case where x is a large positive value
         let x = dec!(5.0);
@@ -1916,7 +1884,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_large_negative_value() {
         // Case where x is a large negative value
         let x = -dec!(5.0);
@@ -1932,7 +1900,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_extreme_positive_value() {
         // Case where x is an extremely large positive value
         let x = dec!(100.0);
@@ -1948,7 +1916,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_extreme_negative_value() {
         // Case where x is an extremely large negative value
         let x = -dec!(100.0);

@@ -229,7 +229,7 @@ mod tests_price_binomial {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_european_call_option() {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
@@ -248,7 +248,7 @@ mod tests_price_binomial {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_european_put_option() {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
@@ -267,7 +267,7 @@ mod tests_price_binomial {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_european_put_option_extended() {
         let params = BinomialPricingParams {
             asset: pos!(50.0),
@@ -286,7 +286,7 @@ mod tests_price_binomial {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_short_option() {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
@@ -310,7 +310,7 @@ mod tests_price_binomial {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_volatility() {
         let asset = pos!(100.0);
         let strike = pos!(100.0);
@@ -338,7 +338,7 @@ mod tests_price_binomial {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_deep_in_the_money() {
         let params = BinomialPricingParams {
             asset: pos!(150.0),
@@ -357,7 +357,7 @@ mod tests_price_binomial {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_deep_out_of_the_money() {
         let params = BinomialPricingParams {
             asset: pos!(50.0),
@@ -376,7 +376,7 @@ mod tests_price_binomial {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_time_to_expiry() {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
@@ -407,7 +407,7 @@ mod tests_generate_binomial_tree {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_binomial_tree_basic() {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
@@ -440,7 +440,7 @@ mod tests_generate_binomial_tree {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_binomial_tree_put_option() {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
@@ -463,7 +463,7 @@ mod tests_generate_binomial_tree {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_binomial_tree_call_option_check() {
         let params = BinomialPricingParams {
             asset: pos!(30.0),
@@ -520,7 +520,7 @@ mod tests_generate_binomial_tree {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_binomial_tree_put_option_check() {
         let params = BinomialPricingParams {
             asset: pos!(100.0),
@@ -561,7 +561,7 @@ mod tests_generate_binomial_tree {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_binomial_tree_european_put_option() {
         // Define parameters for an American option test case
         let params = BinomialPricingParams {
@@ -593,7 +593,7 @@ mod tests_generate_binomial_tree {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_binomial_tree_american_put_option() {
         // Define parameters for an American option test case
         let params = BinomialPricingParams {

@@ -1469,11 +1469,7 @@ mod tests_long_butterfly_spread {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -1500,7 +1496,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_butterfly_basic_properties() {
         let butterfly = create_test_butterfly();
 
@@ -1511,7 +1507,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_strikes() {
         let butterfly = create_test_butterfly();
 
@@ -1521,7 +1517,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_quantities() {
         let butterfly = create_test_butterfly();
 
@@ -1531,7 +1527,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_sides() {
         let butterfly = create_test_butterfly();
 
@@ -1541,7 +1537,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_option_styles() {
         let butterfly = create_test_butterfly();
 
@@ -1557,7 +1553,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_expiration_consistency() {
         let butterfly = create_test_butterfly();
         let expiration = ExpirationDate::Days(pos!(30.0));
@@ -1577,7 +1573,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_fees_distribution() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -1607,7 +1603,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_break_even_points() {
         let butterfly = create_test_butterfly();
         let break_even_points = butterfly.break_even_points;
@@ -1620,7 +1616,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_with_different_quantities() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -1650,7 +1646,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_with_symmetric_strikes() {
         let butterfly = create_test_butterfly();
 
@@ -1663,7 +1659,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_with_equal_implied_volatility() {
         let butterfly = create_test_butterfly();
 
@@ -1678,7 +1674,7 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_with_invalid_premiums() {
         let check_profit = LongButterflySpread::new(
             "TEST".to_string(),
@@ -1712,11 +1708,7 @@ mod tests_short_butterfly_spread {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -1743,7 +1735,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_butterfly_basic_properties() {
         let butterfly = create_test_butterfly();
 
@@ -1754,7 +1746,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_strikes() {
         let butterfly = create_test_butterfly();
 
@@ -1764,7 +1756,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_quantities() {
         let butterfly = create_test_butterfly();
 
@@ -1774,7 +1766,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_sides() {
         let butterfly = create_test_butterfly();
 
@@ -1784,7 +1776,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_option_styles() {
         let butterfly = create_test_butterfly();
 
@@ -1800,7 +1792,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_expiration_consistency() {
         let butterfly = create_test_butterfly();
         let expiration = ExpirationDate::Days(pos!(30.0));
@@ -1820,7 +1812,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_fees_distribution() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -1850,7 +1842,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_break_even_points() {
         let butterfly = create_test_butterfly();
         let break_even_points = butterfly.break_even_points;
@@ -1863,7 +1855,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_with_different_quantities() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -1893,7 +1885,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_with_symmetric_strikes() {
         let butterfly = create_test_butterfly();
 
@@ -1906,7 +1898,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_with_equal_implied_volatility() {
         let butterfly = create_test_butterfly();
 
@@ -1921,7 +1913,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_underlying_price_consistency() {
         let butterfly = create_test_butterfly();
         let underlying_price = pos!(100.0);
@@ -1941,7 +1933,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 
     fn test_butterfly_with_invalid_premiums() {
         let max_loss = ShortButterflySpread::new(
@@ -1969,7 +1961,7 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_butterfly_risk_free_rate_consistency() {
         let butterfly = create_test_butterfly();
         let risk_free_rate = dec!(0.05);
@@ -1991,11 +1983,7 @@ mod tests_long_butterfly_validation {
     use super::*;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
     
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
     
     fn create_valid_position(side: Side, strike_price: Positive, quantity: Positive) -> Position {
         Position::new(
@@ -2021,7 +2009,7 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_valid_long_butterfly() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2048,7 +2036,7 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_long_call_low() {
         let mut butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2076,7 +2064,7 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_strike_order_low() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2103,7 +2091,7 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_quantities() {
         let mut butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2131,7 +2119,7 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unequal_wing_quantities() {
         let mut butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2164,11 +2152,7 @@ mod tests_short_butterfly_validation {
     use super::*;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
     
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
     
     fn create_valid_position(side: Side, strike_price: Positive, quantity: Positive) -> Position {
         Position::new(
@@ -2194,7 +2178,7 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_valid_short_butterfly() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2221,7 +2205,7 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_short_call_low() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2249,7 +2233,7 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_strike_order_high() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2276,7 +2260,7 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_middle_quantities() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2304,7 +2288,7 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unequal_wing_quantities_short() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2340,11 +2324,7 @@ mod tests_butterfly_strategies {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_long() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -2395,7 +2375,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_underlying_price() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -2405,7 +2385,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg_long_butterfly() {
         let mut butterfly = create_test_long();
         let new_long = Position::new(
@@ -2436,7 +2416,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg_short_butterfly() {
         let mut butterfly = create_test_short();
         let new_short = Position::new(
@@ -2467,7 +2447,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_legs() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -2477,7 +2457,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit_long_butterfly() {
         let butterfly = create_test_long();
         let max_profit = butterfly.max_profit().unwrap().to_dec();
@@ -2487,7 +2467,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss_long_butterfly() {
         let butterfly = create_test_long();
         let max_loss = butterfly.max_loss().unwrap().to_dec();
@@ -2498,7 +2478,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss_short_butterfly() {
         let butterfly = create_test_short();
         let max_loss = butterfly.max_loss().unwrap();
@@ -2508,7 +2488,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_total_cost() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -2518,7 +2498,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2545,7 +2525,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees_bis() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2573,7 +2553,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_area_long_butterfly() {
         let butterfly = create_test_long();
         let area = butterfly.profit_area().unwrap().to_f64().unwrap();
@@ -2581,7 +2561,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_area_short_butterfly() {
         let butterfly = create_test_short();
         let area = butterfly.profit_area().unwrap().to_f64().unwrap();
@@ -2589,7 +2569,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_ratio() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -2599,7 +2579,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_break_even_points() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -2609,7 +2589,7 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profits_with_quantities() {
         let long_butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2649,11 +2629,7 @@ mod tests_butterfly_optimizable {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
@@ -2723,7 +2699,7 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_area() {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
@@ -2736,7 +2712,7 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_valid_strike_order() {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
@@ -2753,7 +2729,7 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_ratio_short() {
         let mut butterfly = create_test_short();
         let chain = create_test_option_chain();
@@ -2766,7 +2742,7 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_area_long() {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
@@ -2779,7 +2755,7 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_valid_strike_order_short() {
         let mut butterfly = create_test_short();
         let chain = create_test_option_chain();
@@ -2796,7 +2772,7 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_with_range() {
         let mut long_butterfly = create_test_long();
         let mut short_butterfly = create_test_short();
@@ -2830,11 +2806,7 @@ mod tests_long_butterfly_profit {
     use rust_decimal_macros::dec;
     use std::str::FromStr;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -2861,7 +2833,7 @@ mod tests_long_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_middle_strike() {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
@@ -2871,7 +2843,7 @@ mod tests_long_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_below_lowest_strike() {
         let butterfly = create_test();
         let profit = butterfly
@@ -2885,7 +2857,7 @@ mod tests_long_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_above_highest_strike() {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(pos!(115.0)).unwrap();
@@ -2898,7 +2870,7 @@ mod tests_long_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_break_even_points() {
         let butterfly = create_test();
         let break_even_points = butterfly.get_break_even_points().unwrap();
@@ -2914,7 +2886,7 @@ mod tests_long_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_with_different_quantities() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2957,11 +2929,7 @@ mod tests_short_butterfly_profit {
     use rust_decimal_macros::dec;
     use std::str::FromStr;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -2988,7 +2956,7 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_middle_strike() {
         let butterfly = create_test();
         let profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
@@ -2999,7 +2967,7 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_at_break_even_points() {
         let butterfly = create_test();
         let break_even_points = butterfly.get_break_even_points().unwrap();
@@ -3015,7 +2983,7 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_with_different_quantities() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -3047,7 +3015,7 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_symmetry() {
         let butterfly = create_test();
         let low_extreme_profit = butterfly
@@ -3065,7 +3033,7 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_with_fees() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -3111,11 +3079,7 @@ mod tests_long_butterfly_graph {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3142,7 +3106,7 @@ mod tests_long_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_title_format() {
         let butterfly = create_test_butterfly();
         let title = butterfly.title();
@@ -3157,7 +3121,7 @@ mod tests_long_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vertical_lines() {
         let butterfly = create_test_butterfly();
         let lines = butterfly.get_vertical_lines();
@@ -3171,7 +3135,7 @@ mod tests_long_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_points() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -3204,7 +3168,7 @@ mod tests_long_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_colors() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -3237,11 +3201,7 @@ mod tests_short_butterfly_graph {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_butterfly() -> ShortButterflySpread {
         let underlying_price = pos!(5781.88);
@@ -3269,7 +3229,7 @@ mod tests_short_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_title_format() {
         let butterfly = create_test_butterfly();
         let title = butterfly.title();
@@ -3283,7 +3243,7 @@ mod tests_short_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vertical_lines() {
         let butterfly = create_test_butterfly();
         let lines = butterfly.get_vertical_lines();
@@ -3297,7 +3257,7 @@ mod tests_short_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_points() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -3331,7 +3291,7 @@ mod tests_short_butterfly_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_symmetry() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -3353,11 +3313,7 @@ mod tests_butterfly_probability {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_long() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3410,14 +3366,10 @@ mod tests_butterfly_probability {
     mod long_butterfly_tests {
         use super::*;
 
-        #[cfg(target_arch = "wasm32")]
-        use wasm_bindgen_test::*;
     
-        #[cfg(target_arch = "wasm32")]
-        wasm_bindgen_test_configure!(run_in_browser);
     
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_expiration() {
             let butterfly = create_test_long();
             let expiration = butterfly.get_expiration().unwrap();
@@ -3428,14 +3380,14 @@ mod tests_butterfly_probability {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_risk_free_rate() {
             let butterfly = create_test_long();
             assert_eq!(butterfly.get_risk_free_rate(), Some(dec!(0.05)));
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_profit_ranges() {
             let butterfly = create_test_long();
             let ranges = butterfly.get_profit_ranges().unwrap();
@@ -3450,7 +3402,7 @@ mod tests_butterfly_probability {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_loss_ranges() {
             let butterfly = create_test_long();
             let ranges = butterfly.get_loss_ranges().unwrap();
@@ -3484,14 +3436,10 @@ mod tests_butterfly_probability {
     mod short_butterfly_tests {
         use super::*;
 
-        #[cfg(target_arch = "wasm32")]
-        use wasm_bindgen_test::*;
     
-        #[cfg(target_arch = "wasm32")]
-        wasm_bindgen_test_configure!(run_in_browser);
     
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_expiration() {
             let butterfly = create_test_short();
             let expiration = butterfly.get_expiration().unwrap();
@@ -3502,14 +3450,14 @@ mod tests_butterfly_probability {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_risk_free_rate() {
             let butterfly = create_test_short();
             assert_eq!(butterfly.get_risk_free_rate(), Some(dec!(0.05)));
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_profit_ranges() {
             let butterfly = create_test_short();
             let ranges = butterfly.get_profit_ranges().unwrap();
@@ -3540,7 +3488,7 @@ mod tests_butterfly_probability {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_loss_ranges() {
             let butterfly = create_test_short();
             let ranges = butterfly.get_loss_ranges().unwrap();
@@ -3556,7 +3504,7 @@ mod tests_butterfly_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_volatility_calculations() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -3571,7 +3519,7 @@ mod tests_butterfly_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_sum() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -3613,11 +3561,7 @@ mod tests_long_butterfly_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3644,7 +3588,7 @@ mod tests_long_butterfly_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5881.88));
 
@@ -3684,7 +3628,7 @@ mod tests_long_butterfly_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5710.81));
         let size = 0.3518;
@@ -3717,7 +3661,7 @@ mod tests_long_butterfly_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5501.88));
 
@@ -3745,11 +3689,7 @@ mod tests_long_butterfly_delta_size {
     use rust_decimal_macros::dec;
     use std::str::FromStr;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3776,7 +3716,7 @@ mod tests_long_butterfly_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5881.85));
         let size = -1.7905;
@@ -3818,7 +3758,7 @@ mod tests_long_butterfly_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5710.88));
 
@@ -3854,7 +3794,7 @@ mod tests_long_butterfly_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5480.0));
 
@@ -3881,11 +3821,7 @@ mod tests_short_butterfly_delta {
     use rust_decimal::Decimal;
     use std::str::FromStr;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -3912,7 +3848,7 @@ mod tests_short_butterfly_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5781.88));
         let size = -0.0259;
@@ -3947,7 +3883,7 @@ mod tests_short_butterfly_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5881.88));
 
@@ -3987,7 +3923,7 @@ mod tests_short_butterfly_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5787.88));
 
@@ -4015,11 +3951,7 @@ mod tests_short_butterfly_delta_size {
     use rust_decimal_macros::dec;
     use std::str::FromStr;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -4046,7 +3978,7 @@ mod tests_short_butterfly_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5781.88));
         let size = -0.0593;
@@ -4081,7 +4013,7 @@ mod tests_short_butterfly_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5881.88));
         let size = 0.4787;
@@ -4126,7 +4058,7 @@ mod tests_short_butterfly_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5786.88));
 

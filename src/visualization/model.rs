@@ -163,14 +163,10 @@ pub struct ChartVerticalLine<X, Y> {
 #[cfg(test)]
 mod tests_chart_point {
     use super::*;
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_relative_offset_scaling() {
         // Create a point with 5% relative offset
         let point =
@@ -188,7 +184,7 @@ mod tests_chart_point {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_relative_offset_scaling_bis() {
         let point =
             ChartPoint::new((100.0, 100.0), "Test".to_string()).with_relative_offset(5.0, 5.0);
@@ -203,7 +199,7 @@ mod tests_chart_point {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_auto_offset_scaling() {
         let point = ChartPoint::new((100.0, 100.0), "Test".to_string()).with_auto_offset();
 
@@ -221,11 +217,7 @@ mod tests_chart_point {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     // Helper function to compare f64 values with a small epsilon
     fn assert_float_eq(a: f64, b: f64) {
@@ -236,7 +228,7 @@ mod tests {
         use super::*;
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_new_chart_point_defaults() {
             let point = ChartPoint::new((100.0, 100.0), "Test".to_string());
 
@@ -250,7 +242,7 @@ mod tests {
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_empty_label() {
             let point = ChartPoint::new((0.0, 0.0), String::new());
             assert_eq!(point.label, "");
@@ -261,7 +253,7 @@ mod tests {
         use super::*;
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_absolute_offset() {
             let point =
                 ChartPoint::new((0.0, 0.0), "Test".to_string()).with_absolute_offset(10.0, 20.0);
@@ -277,7 +269,7 @@ mod tests {
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_relative_offset() {
             let point =
                 ChartPoint::new((0.0, 0.0), "Test".to_string()).with_relative_offset(10.0, 20.0);
@@ -292,7 +284,7 @@ mod tests {
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_auto_offset() {
             let point = ChartPoint::new((0.0, 0.0), "Test".to_string()).with_auto_offset();
 
@@ -306,7 +298,7 @@ mod tests {
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_zero_dimensions() {
             let point =
                 ChartPoint::new((0.0, 0.0), "Test".to_string()).with_relative_offset(10.0, 10.0);
@@ -321,7 +313,7 @@ mod tests {
         use super::*;
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_with_point_color() {
             let point = ChartPoint::new((0.0, 0.0), "Test".to_string())
                 .with_point_color(RGBColor(255, 0, 0));
@@ -329,7 +321,7 @@ mod tests {
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_with_label_color() {
             let point = ChartPoint::new((0.0, 0.0), "Test".to_string())
                 .with_label_color(RGBColor(0, 255, 0));
@@ -337,21 +329,21 @@ mod tests {
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_with_point_size() {
             let point = ChartPoint::new((0.0, 0.0), "Test".to_string()).with_point_size(10);
             assert_eq!(point.point_size, 10);
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_with_font_size() {
             let point = ChartPoint::new((0.0, 0.0), "Test".to_string()).with_font_size(16);
             assert_eq!(point.font_size, 16);
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_builder_chain() {
             let point = ChartPoint::new((0.0, 0.0), "Test".to_string())
                 .with_point_color(RGBColor(255, 0, 0))
@@ -372,7 +364,7 @@ mod tests {
         use super::*;
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_label_offset_type_equality() {
             assert_eq!(
                 LabelOffsetType::Absolute(1.0, 2.0),
@@ -392,7 +384,7 @@ mod tests {
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_label_offset_type_clone() {
             let offset = LabelOffsetType::Absolute(1.0, 2.0);
             let cloned = offset.clone();
@@ -404,21 +396,21 @@ mod tests {
         use super::*;
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_integer_coordinates() {
             let point = ChartPoint::new((1, 2), "Test".to_string());
             assert_eq!(point.coordinates, (1, 2));
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_float_coordinates() {
             let point = ChartPoint::new((1.5f32, 2.5f32), "Test".to_string());
             assert_eq!(point.coordinates, (1.5f32, 2.5f32));
         }
 
         #[cfg_attr(not(target_arch = "wasm32"), test)]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_tuple_coordinates() {
             let point = ChartPoint::new(((1, 2), (3, 4)), "Test".to_string());
             assert_eq!(point.coordinates, ((1, 2), (3, 4)));
@@ -429,14 +421,10 @@ mod tests {
 #[cfg(test)]
 mod tests_label_offset {
     use super::*;
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_absolute_offset_get() {
         let offset = LabelOffsetType::Absolute(10.0, 20.0);
         let (x, y) = offset.get_offset();
@@ -445,7 +433,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_relative_offset_get() {
         let offset = LabelOffsetType::Relative(5.0, 15.0);
         let (x, y) = offset.get_offset();
@@ -454,7 +442,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_auto_offset_get() {
         let offset = LabelOffsetType::Auto;
         let (x, y) = offset.get_offset();
@@ -463,7 +451,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_negative_values() {
         let offset = LabelOffsetType::Absolute(-10.0, -20.0);
         let (x, y) = offset.get_offset();
@@ -472,7 +460,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_values() {
         let offset = LabelOffsetType::Absolute(0.0, 0.0);
         let (x, y) = offset.get_offset();
@@ -481,7 +469,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_floating_point_precision() {
         let offset = LabelOffsetType::Relative(0.1, 0.2);
         let (x, y) = offset.get_offset();
@@ -490,7 +478,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_large_values() {
         let offset = LabelOffsetType::Absolute(f64::MAX / 2.0, f64::MAX / 2.0);
         let (x, y) = offset.get_offset();
@@ -499,7 +487,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_different_xy_values() {
         let test_cases = vec![
             LabelOffsetType::Absolute(1.0, 2.0),
@@ -527,7 +515,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_clone_and_get_offset() {
         let original = LabelOffsetType::Absolute(5.0, 10.0);
         let cloned = original.clone();
@@ -540,7 +528,7 @@ mod tests_label_offset {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_multiple_calls_consistency() {
         let offset = LabelOffsetType::Relative(7.0, 14.0);
 

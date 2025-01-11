@@ -298,14 +298,10 @@ mod tests_calculate_bounds_probability {
     use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_bounds_probability_basic() {
         let bounds = vec![pos!(95.0), pos!(100.0), pos!(105.0)];
         let result = calculate_bounds_probability(
@@ -332,7 +328,7 @@ mod tests_calculate_bounds_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_bounds_probability_empty_bounds() {
         let bounds = vec![];
         let result = calculate_bounds_probability(
@@ -357,7 +353,7 @@ mod tests_calculate_bounds_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_bounds_probability_unordered_bounds() {
         let bounds = vec![pos!(100.0), pos!(95.0), pos!(105.0)];
         let result = calculate_bounds_probability(
@@ -381,7 +377,7 @@ mod tests_calculate_bounds_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_bounds_probability_single_bound() {
         let bounds = vec![pos!(100.0)];
         let result = calculate_bounds_probability(
@@ -400,7 +396,7 @@ mod tests_calculate_bounds_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_bounds_probability_with_volatility() {
         let bounds = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
         let vol_adj = Some(VolatilityAdjustment {
@@ -436,11 +432,7 @@ mod tests_single_point_probability {
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     // Helper function to create default volatility adjustment
     fn default_volatility_adj() -> VolatilityAdjustment {
@@ -459,7 +451,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_basic_calculation_with_days() {
         let current_price = pos!(100.0);
         let target_price = pos!(105.0);
@@ -479,7 +471,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculation_with_datetime() {
         let current_price = pos!(100.0);
         let target_price = pos!(105.0);
@@ -501,7 +493,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_volatility_adjustment() {
         let current_price = pos!(100.0);
         let target_price = pos!(105.0);
@@ -523,7 +515,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_trend() {
         let current_price = pos!(100.0);
         let target_price = pos!(105.0);
@@ -545,7 +537,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_risk_free_rate() {
         let current_price = pos!(100.0);
         let target_price = pos!(105.0);
@@ -566,7 +558,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_all_parameters() {
         let current_price = pos!(100.0);
         let target_price = pos!(105.0);
@@ -589,7 +581,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_target_equals_current() {
         let price = pos!(100.0);
 
@@ -620,7 +612,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_days_to_expiry() {
         let result = calculate_single_point_probability(
             pos!(100.0),
@@ -644,7 +636,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_past_datetime() {
         let past_date = Utc::now() - Duration::days(1);
 
@@ -661,7 +653,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: Positive::ZERO,
@@ -690,7 +682,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_trend_confidence() {
         let trend = Some(PriceTrend {
             drift_rate: 0.05,
@@ -719,7 +711,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_target_prices() {
         // Test with very high target price
         let result_high = calculate_single_point_probability(
@@ -753,7 +745,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos!(1.0),
@@ -776,7 +768,7 @@ mod tests_single_point_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_trend() {
         let trend = Some(PriceTrend {
             drift_rate: 2.0, // 200% annual drift
@@ -805,14 +797,10 @@ mod tests_calculate_price_probability {
     use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_price_probability_basic() {
         let result = calculate_price_probability(
             pos!(100.0),
@@ -837,7 +825,7 @@ mod tests_calculate_price_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_price_probability_invalid_bounds() {
         let result = calculate_price_probability(
             pos!(100.0),
@@ -861,7 +849,7 @@ mod tests_calculate_price_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_price_probability_with_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos!(0.5),

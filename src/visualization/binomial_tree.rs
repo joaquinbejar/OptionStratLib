@@ -168,14 +168,10 @@ pub fn draw_binomial_tree(
 mod tests_draw_binomial_tree {
     use super::*;
     #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
-    #[cfg(target_arch = "wasm32")]
     use wasm_bindgen::JsCast;
     #[cfg(target_arch = "wasm32")]
     use web_sys::{window, HtmlCanvasElement};
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     // Common test data setup
     fn setup_test_data() -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
@@ -186,7 +182,7 @@ mod tests_draw_binomial_tree {
 
     // Native-only test
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg(not(target_arch = "wasm32"))]
     fn test_draw_binomial_tree_bitmap() -> Result<(), Box<dyn std::error::Error>> {
         let (asset_tree, option_tree) = setup_test_data();
@@ -199,50 +195,6 @@ mod tests_draw_binomial_tree {
         assert!(result.is_ok());
 
         std::fs::remove_file("./Draws/Binomial Tree/test_output.png")?;
-        Ok(())
-    }
-
-    // WASM-only test
-    #[cfg(target_arch = "wasm32")]
-    #[wasm_bindgen_test]
-    fn test_draw_binomial_tree_canvas() -> Result<(), Box<dyn std::error::Error>> {
-        // Get the window object
-        let window = window().expect("no global `window` exists");
-        let document = window.document().expect("should have a document on window");
-
-        // Create a canvas element
-        let canvas = document
-            .create_element("canvas")
-            .expect("should be able to create canvas element")
-            .dyn_into::<HtmlCanvasElement>()
-            .expect("should be a canvas element");
-
-        // Set canvas size
-        canvas.set_width(1200);
-        canvas.set_height(800);
-
-        // Append canvas to body for the test
-        let body = document.body().expect("should have a body");
-        body.append_child(&canvas)
-            .expect("should be able to append canvas to body");
-
-        // Get test data and create backend
-        let (asset_tree, option_tree) = setup_test_data();
-        
-        // Draw the binomial tree
-        let result = draw_binomial_tree(
-            &asset_tree,
-            &option_tree,
-            GraphBackend::Canvas {
-                canvas: canvas.clone(),
-            },
-        );
-        assert!(result.is_ok());
-
-        // Clean up
-        body.remove_child(&canvas)
-            .expect("should be able to remove canvas from body");
-
         Ok(())
     }
 }

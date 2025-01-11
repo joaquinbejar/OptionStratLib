@@ -294,14 +294,10 @@ mod tests_telegraph_process_basis {
     use crate::{pos, Positive};
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_process_new() {
         let tp = TelegraphProcess::new(dec!(0.5), dec!(0.3));
         assert_eq!(tp.lambda_up, dec!(0.5));
@@ -310,7 +306,7 @@ mod tests_telegraph_process_basis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_process_next_state() {
         let mut tp = TelegraphProcess::new(Decimal::ONE, Decimal::ONE);
         let _initial_state = tp.get_current_state();
@@ -320,7 +316,7 @@ mod tests_telegraph_process_basis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_process_get_current_state() {
         let tp = TelegraphProcess::new(dec!(0.5), dec!(0.5));
         let state = tp.get_current_state();
@@ -328,7 +324,7 @@ mod tests_telegraph_process_basis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_estimate_telegraph_parameters() {
         let returns = vec![
             dec!(-0.01),
@@ -347,7 +343,7 @@ mod tests_telegraph_process_basis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph() {
         // Create a mock Options struct
         let option = Options {
@@ -371,7 +367,7 @@ mod tests_telegraph_process_basis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_with_estimated_parameters() {
         // Create a mock Options struct
         let option = Options {
@@ -395,7 +391,7 @@ mod tests_telegraph_process_basis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_with_one_estimated_parameter() {
         // Create a mock Options struct
         let option = Options {
@@ -429,11 +425,7 @@ mod tests_telegraph_process_extended {
     use crate::Positive;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     // Helper function to create a mock Options struct
     fn create_mock_option() -> Options {
@@ -454,7 +446,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_process_new() {
         let tp = TelegraphProcess::new(dec!(0.5), dec!(0.3));
         assert_eq!(tp.lambda_up, dec!(0.5));
@@ -463,7 +455,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_process_next_state() {
         let mut tp = TelegraphProcess::new(dec!(1000.0), dec!(1000.0)); // High rates to ensure state change
         let initial_state = tp.get_current_state();
@@ -472,7 +464,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_process_get_current_state() {
         let tp = TelegraphProcess::new(dec!(0.5), dec!(0.5));
         let state = tp.get_current_state();
@@ -480,7 +472,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_estimate_telegraph_parameters() {
         let returns = vec![
             dec!(-0.01),
@@ -497,7 +489,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_estimate_telegraph_parameters_all_positive() {
         let returns = vec![
             dec!(0.01),
@@ -514,7 +506,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_estimate_telegraph_parameters_all_negative() {
         let returns = vec![
             dec!(-0.01),
@@ -531,7 +523,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_with_provided_parameters() {
         let option = create_mock_option();
         let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
@@ -539,7 +531,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_with_estimated_parameters() {
         let option = create_mock_option();
         let _price = telegraph(&option, 100, None, None);
@@ -547,7 +539,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_with_one_estimated_parameter() {
         let option = create_mock_option();
         let _price_up = telegraph(&option, 100, Some(dec!(0.5)), None);
@@ -558,7 +550,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_different_no_steps() {
         let option = create_mock_option();
         let _price_100 = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
@@ -570,7 +562,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_zero_volatility() {
         let mut option = create_mock_option();
         option.implied_volatility = Positive::ZERO;
@@ -579,7 +571,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_zero_risk_free_rate() {
         let mut option = create_mock_option();
         option.risk_free_rate = Decimal::ZERO;
@@ -588,7 +580,7 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_zero_time_to_expiration() {
         let option = create_mock_option();
         let price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5))).unwrap();

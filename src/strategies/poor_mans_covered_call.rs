@@ -664,11 +664,7 @@ mod tests {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
         let underlying_symbol = "AAPL".to_string();
@@ -709,7 +705,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_create_pmcc_strategy() {
         let pmcc = create_pmcc_strategy();
         assert_eq!(pmcc.name, "Poor Man's Covered Call");
@@ -718,7 +714,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit() {
         let pmcc = create_pmcc_strategy();
         let max_profit = pmcc.max_profit().unwrap_or(Positive::ZERO);
@@ -726,7 +722,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss() {
         let pmcc = create_pmcc_strategy();
         let max_loss = pmcc.max_loss().unwrap_or(Positive::ZERO);
@@ -734,7 +730,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let pmcc = create_pmcc_strategy();
         let break_even = pmcc.get_break_even_points().unwrap();
@@ -743,7 +739,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_total_cost() {
         let pmcc = create_pmcc_strategy();
         let total_cost = pmcc.total_cost().unwrap();
@@ -751,7 +747,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let pmcc = create_pmcc_strategy();
         let fees = pmcc.fees().unwrap();
@@ -759,7 +755,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_area() {
         let pmcc = create_pmcc_strategy();
         let profit_area = pmcc.profit_area().unwrap().to_f64().unwrap();
@@ -767,7 +763,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_ratio() {
         let pmcc = create_pmcc_strategy();
         let profit_ratio = pmcc.profit_ratio().unwrap().to_f64().unwrap();
@@ -775,7 +771,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_best_range_to_show() {
         let pmcc = create_pmcc_strategy();
         let step = pos!(1.0);
@@ -786,7 +782,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_profit_at() {
         let pmcc = create_pmcc_strategy();
         let profit = pmcc.calculate_profit_at(pos!(150.0)).unwrap();
@@ -797,7 +793,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_graph_title() {
         let pmcc = create_pmcc_strategy();
         let title = pmcc.title();
@@ -805,7 +801,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vertical_lines() {
         let pmcc = create_pmcc_strategy();
         let vertical_lines = pmcc.get_vertical_lines();
@@ -814,7 +810,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_graph_points() {
         let pmcc = create_pmcc_strategy();
         let points = pmcc.get_points();
@@ -829,11 +825,7 @@ mod tests_pmcc_validation {
     use crate::error::position::PositionValidationErrorKind;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -857,14 +849,14 @@ mod tests_pmcc_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_valid_strategy() {
         let strategy = create_basic_strategy();
         assert!(strategy.validate());
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg_long_call() {
         let mut strategy = create_basic_strategy();
         let option = Options::new(
@@ -889,7 +881,7 @@ mod tests_pmcc_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg_short_call() {
         let mut strategy = create_basic_strategy();
         let option = Options::new(
@@ -914,7 +906,7 @@ mod tests_pmcc_validation {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg_invalid_option() {
         let mut strategy = create_basic_strategy();
         let option = Options::new(
@@ -952,11 +944,7 @@ mod tests_pmcc_optimization {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string(), None, None);
@@ -1000,7 +988,7 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_short_option() {
         let strategy = create_base_strategy();
         let option = OptionData::new(
@@ -1018,7 +1006,7 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_long_option() {
         let strategy = create_base_strategy();
         let option = OptionData::new(
@@ -1036,7 +1024,7 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_ratio() {
         let mut strategy = create_base_strategy();
         let chain = create_test_option_chain();
@@ -1045,7 +1033,7 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_area() {
         let mut strategy = create_base_strategy();
         let chain = create_test_option_chain();
@@ -1054,7 +1042,7 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_short_option_zero_underlying() {
         let mut strategy = create_base_strategy();
         strategy.short_call.option.underlying_price = Positive::ZERO;
@@ -1073,7 +1061,7 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_long_option_zero_underlying() {
         let mut strategy = create_base_strategy();
         strategy.long_call.option.underlying_price = Positive::ZERO;
@@ -1099,11 +1087,7 @@ mod tests_pmcc_pnl {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1127,7 +1111,7 @@ mod tests_pmcc_pnl {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_profit_at_various_prices() {
         let strategy = create_test_strategy();
 
@@ -1154,7 +1138,7 @@ mod tests_pmcc_pnl {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_break_even_point() {
         let strategy = create_test_strategy();
         assert_eq!(strategy.break_even_points.len(), 1);
@@ -1168,7 +1152,7 @@ mod tests_pmcc_pnl {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium() {
         let strategy = create_test_strategy();
         let net_premium = strategy.net_premium_received().unwrap();
@@ -1176,7 +1160,7 @@ mod tests_pmcc_pnl {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit_max_loss_relationship() {
         let strategy = create_test_strategy();
         assert!(strategy.max_profit().unwrap_or(Positive::ZERO) > Positive::ZERO);
@@ -1194,11 +1178,7 @@ mod tests_pmcc_graph {
     use crate::constants::DAYS_IN_A_YEAR;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1222,7 +1202,7 @@ mod tests_pmcc_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_title_format() {
         let strategy = create_test_strategy();
         let title = strategy.title();
@@ -1233,7 +1213,7 @@ mod tests_pmcc_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vertical_lines_format() {
         let strategy = create_test_strategy();
         let lines = strategy.get_vertical_lines();
@@ -1244,7 +1224,7 @@ mod tests_pmcc_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_points_format() {
         let strategy = create_test_strategy();
         let points = strategy.get_points();
@@ -1261,7 +1241,7 @@ mod tests_pmcc_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_colors() {
         let strategy = create_test_strategy();
         let points = strategy.get_points();
@@ -1452,11 +1432,7 @@ mod tests_short_straddle_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
         let underlying_price = pos!(7138.5);
@@ -1481,7 +1457,7 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos!(7250.0), pos!(7300.0));
 
@@ -1513,7 +1489,7 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
@@ -1545,7 +1521,7 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos!(7390.0), pos!(7250.0));
 
@@ -1571,11 +1547,7 @@ mod tests_short_straddle_delta_size {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::*;
 
-    #[cfg(target_arch = "wasm32")]
-    wasm_bindgen_test_configure!(run_in_browser);
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
         let underlying_price = pos!(7138.5);
@@ -1600,7 +1572,7 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos!(7250.1), pos!(7300.0));
         let size = 0.1773;
@@ -1633,7 +1605,7 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
 
@@ -1665,7 +1637,7 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos!(7390.0), pos!(7255.0));
 
