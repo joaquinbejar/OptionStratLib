@@ -1,5 +1,4 @@
 name: Build
-
 on:
   push:
     branches: ['*']
@@ -12,29 +11,34 @@ env:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     
     strategy:
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04, archlinux, macos-latest]
-    
-    steps:
-      - uses: actions/checkout@v2
+        include:
+          - os: ubuntu-20.04
+          - os: ubuntu-22.04
+          - os: ubuntu-24.04
+          - os: ubuntu-latest
+            container: archlinux:latest
+          - os: macos-latest
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
 
-      - name: Install dependencies (make)
-        if: runner.os != 'Linux'
+      - name: Install dependencies
         run: |
-          if [ "${{ matrix.os }}" = "archlinux" ]; then
-            sudo pacman -Syu --noconfirm make
-          else
-            sudo apt-get update
-            sudo apt-get install -y make
+          if [ "${{ matrix.container }}" = "archlinux:latest" ]; then
+            pacman -Syu --noconfirm make
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y make
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            brew install make
           fi
 
       - name: Build
