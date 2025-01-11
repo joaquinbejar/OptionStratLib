@@ -166,13 +166,11 @@ workflow-build:
        
 .PHONY: workflow-lint
 workflow-lint:
-	DOCKER_HOST="$${DOCKER_HOST}" act push --job lint \
-       -P ubuntu-latest=catthehacker/ubuntu:latest
+	DOCKER_HOST="$${DOCKER_HOST}" act push --job lint 
 
 .PHONY: workflow-test
 workflow-test:
-	DOCKER_HOST="$${DOCKER_HOST}" act push --job run_tests \
-       -P ubuntu-latest=catthehacker/ubuntu:latest
+	DOCKER_HOST="$${DOCKER_HOST}" act push --job run_tests
        
 .PHONY: workflow
 workflow: workflow-build workflow-lint workflow-test workflow-coverage     
