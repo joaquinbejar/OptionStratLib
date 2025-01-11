@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -13,7 +13,8 @@ categories = ["finance", "data-structures"]
 
 
 include = [
-    "src/**/*.rs",
+    "benches/**/*",
+    "src/**/*",
     "Cargo.toml",
     "README.md",
     "LICENSE",

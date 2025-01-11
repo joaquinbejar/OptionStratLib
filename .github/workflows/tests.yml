@@ -1,0 +1,30 @@
+name: Run Tests
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: ['*']
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install make
+        run: sudo apt-get install make
+
+      - name: Run tests
+        run: make test
