@@ -269,6 +269,13 @@ pub trait PlotBuilderExt<T: Plottable> {
 
 /// Plotting implementation for single Curve
 impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
+    #[cfg(target_arch = "wasm32")]
+    fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError> {
+        // Do nothing in wasm
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError> {
         // Convert points to f64
         let points: Vec<(f64, f64)> = self
@@ -417,6 +424,13 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
 /// - The precision of `Point2D::x` and `Point2D::y` values is preserved by converting them from
 ///   `Decimal` to `f64` when plotting.
 impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
+    #[cfg(target_arch = "wasm32")]
+    fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError> {
+        // Do nothing in wasm
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError> {
         // Prepare all curve points
         let all_curve_points: Vec<Vec<(f64, f64)>> = self
