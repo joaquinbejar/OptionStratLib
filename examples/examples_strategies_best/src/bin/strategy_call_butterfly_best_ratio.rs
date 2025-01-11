@@ -4,7 +4,6 @@
    Date: 25/9/24
 ******************************************************************************/
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::constants::ZERO;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::call_butterfly::CallButterfly;

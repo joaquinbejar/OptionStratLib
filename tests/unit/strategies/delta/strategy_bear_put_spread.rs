@@ -12,6 +12,7 @@ use std::error::Error;
 use std::str::FromStr;
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

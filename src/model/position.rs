@@ -1296,6 +1296,12 @@ mod tests_update_from_option_data {
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     fn create_test_option_data() -> OptionData {
         OptionData::new(
             pos!(110.0),
@@ -1370,6 +1376,12 @@ mod tests_premium {
     use super::*;
     use crate::pos;
 
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
+
     fn setup_basic_position(side: Side) -> Position {
         let option = Options {
             side,
@@ -1428,6 +1440,12 @@ mod tests_pnl_calculator {
     use super::*;
     use crate::{assert_decimal_eq, pos, OptionType};
     use rust_decimal_macros::dec;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {
         let option = Options::new(
@@ -1591,6 +1609,12 @@ mod tests_pnl_calculator {
 mod tests_graph {
     use super::*;
     use crate::pos;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]

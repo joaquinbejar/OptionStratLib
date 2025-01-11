@@ -11,6 +11,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
+#[cfg(not(target_arch = "wasm32"))]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

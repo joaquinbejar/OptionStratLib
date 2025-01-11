@@ -1503,6 +1503,7 @@ mod tests_chain_base {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_save_to_csv() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -1530,6 +1531,7 @@ mod tests_chain_base {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_save_to_json() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -1558,6 +1560,7 @@ mod tests_chain_base {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_load_from_csv() {
         setup_logger();
         let mut chain = OptionChain::new(
@@ -1594,6 +1597,7 @@ mod tests_chain_base {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_load_from_json() {
         let mut chain =
             OptionChain::new("SP500", pos!(5781.9), "18-oct-2024".to_string(), None, None);

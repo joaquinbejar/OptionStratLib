@@ -7,7 +7,6 @@ use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::Positive;
 use optionstratlib::{pos, spos};
 use rust_decimal_macros::dec;
 use tracing::info;

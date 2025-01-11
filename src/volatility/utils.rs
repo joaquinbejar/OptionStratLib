@@ -729,15 +729,13 @@ mod tests_implied_volatility {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::pos;
+    #[cfg(not(target_arch = "wasm32"))]
     use crate::utils::logger::setup_logger;
     use crate::Positive;
 
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
     
-    #[cfg(not(target_arch = "wasm32"))]
-    use crate::utils::logger::setup_logger;
-
     #[cfg(not(target_arch = "wasm32"))]
     use tracing::info;
 

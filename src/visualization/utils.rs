@@ -6,7 +6,7 @@
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::{create_drawing_area, Positive};
+use crate::Positive;
 use num_traits::ToPrimitive;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -380,8 +380,6 @@ mod tests_calculate_axis_range {
 mod tests {
     use super::*;
     use crate::pos;
-    #[cfg(feature = "wasm")]
-    use wasm_bindgen_test::*;
     use crate::visualization::model::LabelOffsetType;
     use crate::Positive;
     use plotters::style::RGBColor;
@@ -569,10 +567,18 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_graph_with_empty_data() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data: Vec<Positive> = vec![];
-        let result = mock_graph.graph(&x_axis_data, "test_empty_graph.png", 20, (800, 600));
+        let result = mock_graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_empty_graph.png",
+                size: (800, 600),
+            },
+            20,
+        );
 
         // Verificamos que recibimos un error
         assert!(result.is_err());
@@ -581,15 +587,24 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_graph_with_single_point() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![pos!(50.0)];
-        mock_graph.graph(&x_axis_data, "test_single_point.png", 20, (800, 600))?;
+        mock_graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_single_point.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_single_point.png")?;
         Ok(())
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_graph_with_negative_values() -> Result<(), Box<dyn Error>> {
         struct NegativeGraph;
 
@@ -607,12 +622,20 @@ mod tests_extended {
 
         let graph = NegativeGraph;
         let x_axis_data = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
-        graph.graph(&x_axis_data, "test_negative.png", 20, (800, 600))?;
+        graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_negative.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_negative.png")?;
         Ok(())
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_multiple_vertical_lines() -> Result<(), Box<dyn Error>> {
         struct MultiLineGraph;
 
@@ -657,12 +680,20 @@ mod tests_extended {
 
         let graph = MultiLineGraph;
         let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
-        graph.graph(&x_axis_data, "test_multi_line.png", 20, (800, 600))?;
+        graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_multi_line.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_multi_line.png")?;
         Ok(())
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_multiple_points() -> Result<(), Box<dyn Error>> {
         struct MultiPointGraph;
 
@@ -703,7 +734,14 @@ mod tests_extended {
 
         let graph = MultiPointGraph;
         let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
-        graph.graph(&x_axis_data, "test_multi_point.png", 20, (800, 600))?;
+        graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_multi_point.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_multi_point.png")?;
         Ok(())
     }
@@ -759,6 +797,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_custom_canvas_sizes() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![pos!(50.0)];
@@ -769,9 +808,11 @@ mod tests_extended {
         for (width, height) in sizes {
             mock_graph.graph(
                 &x_axis_data,
-                &format!("test_size_{}x{}.png", width, height),
+                GraphBackend::Bitmap {
+                    file_path: &format!("test_size_{}x{}.png", width, height),
+                    size: (width, height),
+                },
                 20,
-                (width, height),
             )?;
             std::fs::remove_file(format!("test_size_{}x{}.png", width, height))?;
         }
