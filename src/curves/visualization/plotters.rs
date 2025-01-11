@@ -72,7 +72,6 @@ pub struct PlotOptions {
     pub height: u32,
     /// Curve names
     pub curve_name: Option<Vec<String>>,
-    
 }
 
 impl PlotOptions {
@@ -140,7 +139,7 @@ impl<T: Plottable> PlotBuilder<T> {
     }
 
     pub fn curve_name(mut self, label: Vec<String>) -> Self {
-        self.options.curve_name = Some(label.into());
+        self.options.curve_name = Some(label);
         self
     }
 
@@ -488,18 +487,18 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
         let colors: &Vec<RGBColor> = &self
             .options
             .line_colors
-            .unwrap_or_else(PlotOptions::default_colors);  
+            .unwrap_or_else(PlotOptions::default_colors);
 
         // Draw curves
         for (i, points) in all_curve_points.into_iter().enumerate() {
             let default_name = &format!("Curve {}", i + 1);
             let label = match &self.options.curve_name {
-                Some(names) => names.get(i).map(|s| s.as_str()).unwrap_or(&default_name),
+                Some(names) => names.get(i).map(|s| s.as_str()).unwrap_or(default_name),
                 None => default_name,
             };
 
             // Clone colors for this iteration
-            let legend_color = colors[i % colors.len()].clone();
+            let legend_color = colors[i % colors.len()];
 
             chart
                 .draw_series(LineSeries::new(
@@ -510,10 +509,7 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
                     reason: e.to_string(),
                 })?
                 .label(label)
-                .legend(move |c| {
-                    Circle::new(c, 3, legend_color.filled())
-                })
-            ;
+                .legend(move |c| Circle::new(c, 3, legend_color.filled()));
         }
 
         // Add legend
