@@ -177,6 +177,7 @@
 //! - Heston (1993) stochastic volatility model
 //! - GARCH by Bollerslev (1986)
 
+mod traits;
 mod utils;
 
 pub use utils::{
@@ -184,3 +185,5 @@ pub use utils::{
     garch_volatility, historical_volatility, implied_volatility, interpolate_volatility_surface,
     simulate_heston_volatility, uncertain_volatility_bounds,
 };
+
+pub use traits::VolatilitySmile;

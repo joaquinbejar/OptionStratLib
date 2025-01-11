@@ -4,11 +4,9 @@
    Date: 26/8/24
 ******************************************************************************/
 
-#[allow(dead_code)]
+use crate::curves::analysis::metrics::{BasicMetrics, ShapeMetrics};
+
 pub struct CurveAnalysisResult {
-    pub mean: f64,
-    pub median: f64,
-    pub std_dev: f64,
-    pub skew: f64,
-    pub kurtosis: f64,
+    pub statistics: BasicMetrics,
+    pub shape_metrics: ShapeMetrics,
 }

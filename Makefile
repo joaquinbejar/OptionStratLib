@@ -138,15 +138,11 @@ bench-show:
 
 .PHONY: bench-save
 bench-save: check-cargo-criterion
-	cargo criterion --output-format quiet --history-id v0.3.1 --history-description "Version 0.3.1 baseline"
+	cargo criterion --output-format quiet --history-id v0.3.2 --history-description "Version 0.3.2 baseline"
 
 .PHONY: bench-compare
 bench-compare: check-cargo-criterion
 	cargo criterion --output-format verbose
-    
-.PHONY: bench-show
-bench-show:
-	open target/criterion/report/index.html
 
 .PHONY: bench-json
 bench-json: check-cargo-criterion

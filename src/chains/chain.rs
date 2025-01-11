@@ -8,12 +8,15 @@ use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
 };
 use crate::chains::{DeltasInStrike, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
+use crate::curves::interpolation::LinearInterpolation;
+use crate::curves::{Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::greeks::equations::delta;
 use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
+use crate::volatility::VolatilitySmile;
 use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
 use csv::WriterBuilder;
@@ -1243,6 +1246,40 @@ impl fmt::Display for OptionChain {
             writeln!(f, "{}", option,)?;
         }
         Ok(())
+    }
+}
+
+impl VolatilitySmile for OptionChain {
+    fn smile(&self) -> Curve {
+        // Build a BTreeSet with the known points (options with implied volatility)
+        let mut bt_points: BTreeSet<Point2D> = self
+            .options
+            .iter()
+            .filter_map(|option| {
+                // Only include options with a valid implied volatility
+                option
+                    .implied_volatility
+                    .map(|vol| Point2D::new(option.strike_price.to_dec(), vol.to_dec()))
+            })
+            .collect();
+
+        // Create an initial Curve object using the known points
+        let curve = Curve::new(bt_points.clone());
+
+        // Interpolate missing points (options without implied volatility)
+        for option in self
+            .options
+            .iter()
+            .filter(|o| o.implied_volatility.is_none())
+        {
+            // Use linear interpolation to estimate the missing implied volatility
+            if let Ok(interpolated_point) = curve.linear_interpolate(option.strike_price.to_dec()) {
+                bt_points.insert(interpolated_point);
+            }
+        }
+
+        // Return the final Curve with all points, including interpolated ones
+        Curve::new(bt_points)
     }
 }
 

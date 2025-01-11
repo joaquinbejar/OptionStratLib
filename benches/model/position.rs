@@ -1,19 +1,16 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 7/1/25
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 7/1/25
+******************************************************************************/
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rust_decimal_macros::dec;
 use chrono::Utc;
-use optionstratlib::{
-    Options, OptionType, Side, OptionStyle, ExpirationDate,
-    Positive, pos
-};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use optionstratlib::model::Position;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use rust_decimal_macros::dec;
 
 fn create_test_option() -> Options {
     Options::new(
@@ -91,7 +88,7 @@ pub(crate) fn benchmark_profit_calculations(c: &mut Criterion) {
             black_box(position.calculate_pnl(
                 &test_price,
                 ExpirationDate::Days(pos!(15.0)),
-                &pos!(0.25)
+                &pos!(0.25),
             ))
         })
     });

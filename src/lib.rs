@@ -22,7 +22,7 @@
 //!  [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
 //!  [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
 //!  
-//!  # OptionStratLib v0.3.1: Financial Options Library
+//!  # OptionStratLib v0.3.2: Financial Options Library
 //!  
 //!  ## Table of Contents
 //!  1. [Introduction](#introduction)
@@ -692,7 +692,7 @@ extern crate core;
 pub mod backtesting;
 pub mod chains;
 pub mod constants;
-mod curves;
+pub mod curves;
 pub mod error;
 pub mod greeks;
 pub mod model;

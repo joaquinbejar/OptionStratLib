@@ -69,8 +69,8 @@
 //! A type alias `ProbabilityResult<T>` is provided for convenience when working
 //! with Results that may contain probability errors.
 
-use crate::error::strategies::{BreakEvenErrorKind, OperationErrorKind, ProfitLossErrorKind};
-use crate::error::StrategyError;
+use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind};
+use crate::error::{OperationErrorKind, StrategyError};
 use std::error::Error;
 use std::fmt;
 
@@ -267,7 +267,7 @@ impl From<StrategyError> for ProbabilityError {
             StrategyError::OperationError(kind) => match kind {
                 OperationErrorKind::NotSupported {
                     operation,
-                    strategy_type,
+                    reason: strategy_type,
                 } => ProbabilityError::from(format!(
                     "Operation '{}' not supported for strategy '{}'",
                     operation, strategy_type
@@ -482,7 +482,7 @@ mod tests_extended {
     fn test_strategy_operation_error_conversion() {
         let strategy_error = StrategyError::OperationError(OperationErrorKind::NotSupported {
             operation: "test".to_string(),
-            strategy_type: "TestStrategy".to_string(),
+            reason: "TestStrategy".to_string(),
         });
         let prob_error: ProbabilityError = strategy_error.into();
         assert!(matches!(
