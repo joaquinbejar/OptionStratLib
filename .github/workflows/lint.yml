@@ -15,6 +15,16 @@ jobs:
     
     steps:
       - uses: actions/checkout@v2
+        
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.container }}" = "archlinux:latest" ]; then
+            pacman -Syu --noconfirm make fontconfig pkgconf
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            brew install make fontconfig pkg-config
+          fi
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
