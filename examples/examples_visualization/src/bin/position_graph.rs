@@ -7,7 +7,7 @@ use chrono::Utc;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::pos;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::Options;
 use optionstratlib::Positive;
 use rust_decimal_macros::dec;
@@ -43,9 +43,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     position.graph(
         &price_range,
-        "Draws/Position/pnl_at_expiration_chart.png",
-        25,
-        (1400, 933),
+        GraphBackend::Bitmap {
+            file_path: "Draws/Position/pnl_at_expiration_chart.png",
+            size: (1400, 933)
+        },
+        20,
     )?;
 
     Ok(())

@@ -6,18 +6,10 @@
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-<<<<<<< HEAD
 use crate::{create_drawing_area, Positive};
 use num_traits::ToPrimitive;
-#[cfg(not(feature = "wasm"))]
-||||||| parent of c916997 (remove wasm feature and use target_arch)
-use crate::{f2p, Positive};
-#[cfg(not(feature = "wasm"))]
-=======
-use crate::{f2p, Positive};
 
 #[cfg(not(target_arch = "wasm32"))]
->>>>>>> c916997 (remove wasm feature and use target_arch)
 use plotters::backend::BitMapBackend;
 #[cfg(target_arch = "wasm32")]
 use plotters_canvas::CanvasBackend;
@@ -387,17 +379,9 @@ mod tests_calculate_axis_range {
 #[cfg(test)]
 mod tests {
     use super::*;
-<<<<<<< HEAD
     use crate::pos;
     #[cfg(feature = "wasm")]
     use wasm_bindgen_test::*;
-||||||| parent of c916997 (remove wasm feature and use target_arch)
-    use crate::f2p;
-    #[cfg(feature = "wasm")]
-    use wasm_bindgen_test::*;
-=======
-    use crate::f2p;
->>>>>>> c916997 (remove wasm feature and use target_arch)
     use crate::visualization::model::LabelOffsetType;
     use crate::Positive;
     use plotters::style::RGBColor;

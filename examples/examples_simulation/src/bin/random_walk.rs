@@ -6,7 +6,7 @@
 use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::Positive;
 use optionstratlib::{pos, spos};
 use rust_decimal_macros::dec;
@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         initial_volatility,
     );
     random_walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change);
-    let _ = random_walk.graph(&[], "Draws/Simulation/random_walk.png", 20, (1200, 800));
+    let _ = random_walk.graph(&[], GraphBackend::Bitmap { file_path: "Draws/Simulation/random_walk.png", size: (1200, 800) }, 20);
 
     for (i, price_params) in random_walk.enumerate() {
         info!("Step {}: Params: {}", i, price_params,);

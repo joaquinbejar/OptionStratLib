@@ -9,6 +9,7 @@ use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::GraphBackend;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use rust_decimal_macros::dec;
@@ -58,9 +59,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Generate the profit/loss graph
     strategy.graph(
         &price_range,
-        "Draws/Strategy/poor_mans_covered_call_profit_loss_chart.png",
+        GraphBackend::Bitmap { file_path: "Draws/Strategy/poor_mans_covered_call_profit_loss_chart.png", size: (1400, 933) },
         20,
-        (1400, 933),
     )?;
 
     Ok(())

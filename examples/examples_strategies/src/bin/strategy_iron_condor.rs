@@ -2,7 +2,7 @@ use optionstratlib::pos;
 use optionstratlib::strategies::base::{Strategies, Validable};
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use rust_decimal_macros::dec;
@@ -65,9 +65,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Generate the profit/loss graph
     strategy.graph(
         &price_range,
-        "Draws/Strategy/iron_condor_profit_loss_chart.png",
+        GraphBackend::Bitmap { file_path: "Draws/Strategy/iron_condor_profit_loss_chart.png", size: (1400, 933) },
         20,
-        (1400, 933),
     )?;
 
     Ok(())
