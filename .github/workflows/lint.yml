@@ -1,0 +1,40 @@
+name: Lint
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: ['*']
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+        
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.container }}" = "archlinux:latest" ]; then
+            pacman -Syu --noconfirm make fontconfig pkgconf
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            brew install make fontconfig pkg-config
+          fi
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install make
+        run: sudo apt-get install make
+
+      - name: Lint
+        run: make lint
