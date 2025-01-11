@@ -11,7 +11,7 @@ env:
 
 jobs:
   run_tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v2
@@ -23,8 +23,15 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Install make
-        run: sudo apt-get install make
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.container }}" = "archlinux:latest" ]; then
+            pacman -Syu --noconfirm make fontconfig pkgconf
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            brew install make fontconfig pkg-config
+          fi
 
       - name: Run tests
         run: make test

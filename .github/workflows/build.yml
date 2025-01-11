@@ -16,12 +16,12 @@ jobs:
     strategy:
       matrix:
         include:
-#          - os: ubuntu-20.04
-#          - os: ubuntu-22.04
-#          - os: ubuntu-24.04
+          - os: ubuntu-20.04
+          - os: ubuntu-22.04
+          - os: ubuntu-24.04
           - os: ubuntu-latest
-#            container: archlinux:latest
-#          - os: macos-latest
+            container: archlinux:latest
+          - os: macos-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
           elif [ "${{ runner.os }}" = "Linux" ]; then
             sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config
           elif [ "${{ runner.os }}" = "macOS" ]; then
-            brew install make
+            brew install make fontconfig pkg-config
           fi
 
       - name: Build
