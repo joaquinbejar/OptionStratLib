@@ -91,8 +91,6 @@ where
 mod tests_approx_equal {
     use super::*;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_exact_values() {
@@ -170,8 +168,6 @@ mod tests_get_random_element {
     use crate::chains::chain::OptionData;
     use crate::pos;
     use std::collections::BTreeSet;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -253,8 +249,6 @@ mod tests_get_random_element {
 #[cfg(test)]
 mod tests_process_n_times_iter {
     use super::*;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

@@ -557,8 +557,6 @@ mod tests_bear_put_spread_strategy {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
@@ -784,8 +782,6 @@ mod tests_bear_put_spread_validation {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
-
-
     fn create_valid_position(
         side: Side,
         strike_price: Positive,
@@ -960,8 +956,6 @@ mod tests_bear_put_spread_optimization {
 
     use crate::model::types::ExpirationDate;
     use crate::spos;
-
-
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(90.0), "2024-12-31".to_string(), None, None);
@@ -1238,8 +1232,6 @@ mod tests_bear_put_spread_optimizable {
     use crate::utils::setup_logger;
     use rust_decimal_macros::dec;
 
-
-
     fn create_mock_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
 
@@ -1478,8 +1470,6 @@ mod tests_bear_put_spread_profit {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
@@ -1676,8 +1666,6 @@ mod tests_bear_put_spread_probability {
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
@@ -1833,8 +1821,6 @@ mod tests_bear_put_spread_graph {
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
@@ -2017,8 +2003,6 @@ mod tests_delta {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
         let underlying_price = pos!(5810.5);
         BearPutSpread::new(
@@ -2131,8 +2115,6 @@ mod tests_delta_size {
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
         let underlying_price = pos!(5781.88);

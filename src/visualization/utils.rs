@@ -313,8 +313,6 @@ mod tests_calculate_axis_range {
     use super::*;
     use crate::pos;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_axis_range() {
@@ -381,8 +379,6 @@ mod tests {
     use plotters::style::RGBColor;
     use rust_decimal::Decimal;
     use std::error::Error;
-
-
 
     struct MockGraph;
 
@@ -739,6 +735,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_values_error_handling() {
         struct ErrorGraph;
 

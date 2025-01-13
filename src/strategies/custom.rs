@@ -818,8 +818,6 @@ mod tests_custom_strategy {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_custom_strategy() {
@@ -1019,6 +1017,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_position_invalid_strategy() {
         let mut strategy = create_test_strategy();
         let invalid_position = Position::new(
@@ -1041,6 +1040,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_ratio_missing_points() {
         let mut strategy = create_test_strategy();
         strategy.max_profit_point = None;
@@ -1054,6 +1054,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_break_even_points_edge_cases() {
         let strategy = create_test_strategy();
 
@@ -1065,6 +1066,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_duplicate_break_even_point() {
         let mut strategy = create_test_strategy();
         let point = pos!(100.0);
@@ -1077,6 +1079,7 @@ mod tests_custom_strategy {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_graph_implementation() {
         let strategy = create_test_strategy();
 
@@ -1106,8 +1109,6 @@ mod tests_max_profit {
     use crate::Options;
     use chrono::Utc;
     use rust_decimal_macros::dec;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1201,8 +1202,6 @@ mod tests_max_loss {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss_single_long_call() {
@@ -1294,8 +1293,6 @@ mod tests_total_cost {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
-    
-    
     fn create_test_position(side: Side, premium: Positive, fees: Positive) -> Position {
         Position::new(
             Options::new(
@@ -1423,8 +1420,6 @@ mod tests_best_range_to_show {
     use crate::{pos, Options};
     use chrono::Utc;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_position(strike: Positive, side: Side) -> Position {
         Position::new(
@@ -1577,8 +1572,6 @@ mod tests_greeks {
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-10);
-
-
 
     // Helper function to create a test position
     fn create_test_position(strike: Positive, side: Side, option_style: OptionStyle) -> Position {
@@ -1761,6 +1754,7 @@ mod tests_custom_strategy_probability {
     use num_traits::ToPrimitive;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_loss_zones() {
         let strategy = create_test_strategy();
         let (profit_zones, loss_zones) = strategy
@@ -1781,6 +1775,7 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_expiration() {
         let strategy = create_test_strategy();
         let result = strategy.get_expiration();
@@ -1808,6 +1803,7 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let strategy = create_test_strategy();
         let rate = strategy.get_risk_free_rate();
@@ -1832,6 +1828,7 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let strategy = create_test_strategy();
         let result = strategy.get_profit_ranges();
@@ -1848,6 +1845,7 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let strategy = create_test_strategy();
         let result = strategy.get_loss_ranges();
@@ -1864,6 +1862,7 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_loss_ranges_consistency() {
         let strategy = create_test_strategy();
         let profit_ranges = strategy.get_profit_ranges().unwrap();
@@ -1876,6 +1875,7 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_ranges_ordering() {
         let strategy = create_test_strategy();
         let profit_ranges = strategy.get_profit_ranges().unwrap();
@@ -1894,6 +1894,7 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_volatility_calculation() {
         let strategy = create_test_strategy();
         let implied_volatilities: Vec<Positive> = strategy
@@ -1907,6 +1908,7 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_calculation_with_trend() {
         let strategy = create_test_strategy();
         let trend = Some(PriceTrend {

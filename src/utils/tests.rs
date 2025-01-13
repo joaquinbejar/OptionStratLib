@@ -39,8 +39,6 @@ mod tests_assert_positivef64_relative_eq {
     use crate::pos;
     use crate::Positive;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_exact_equality() {

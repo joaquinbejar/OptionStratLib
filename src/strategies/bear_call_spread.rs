@@ -566,8 +566,6 @@ mod tests_bear_call_spread_strategies {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
@@ -811,8 +809,6 @@ mod tests_bear_call_spread_positionable {
     use crate::Options;
     use chrono::Utc;
     use rust_decimal_macros::dec;
-    
-
 
     // Helper function to create a test option
     fn create_test_option(side: Side) -> Options {
@@ -1036,8 +1032,6 @@ mod tests_bear_call_spread_validable {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_valid_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
@@ -1235,8 +1229,6 @@ mod tests_bear_call_spread_profit {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
@@ -1430,8 +1422,6 @@ mod tests_bear_call_spread_optimizable {
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     // Helper function to create a mock OptionChain for testing
     fn create_mock_option_chain() -> OptionChain {
@@ -1686,8 +1676,6 @@ mod tests_bear_call_spread_graph {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
@@ -1819,8 +1807,6 @@ mod tests_bear_call_spread_probability {
     use crate::strategies::probabilities::utils::PriceTrend;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    
-
 
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
@@ -1980,8 +1966,6 @@ mod tests_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
         let underlying_price = pos!(5781.88);
         BearCallSpread::new(
@@ -2096,8 +2080,6 @@ mod tests_delta_size {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-
-
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
         let underlying_price = pos!(5781.88);

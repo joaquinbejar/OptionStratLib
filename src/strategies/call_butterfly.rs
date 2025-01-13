@@ -721,8 +721,6 @@ mod tests_call_butterfly {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn setup() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
@@ -841,8 +839,6 @@ mod tests_call_butterfly_validation {
     use super::*;
     use rust_decimal_macros::dec;
 
-
-
     fn setup_basic_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
@@ -895,8 +891,6 @@ mod tests_call_butterfly_validation {
 mod tests_call_butterfly_pnl {
     use super::*;
     use rust_decimal_macros::dec;
-
-
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -953,8 +947,6 @@ mod tests_call_butterfly_graph {
     use crate::model::types::ExpirationDate;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-
-
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -1100,8 +1092,6 @@ mod tests_iron_condor_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
@@ -1225,8 +1215,6 @@ mod tests_iron_condor_delta_size {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
@@ -1345,8 +1333,6 @@ mod tests_call_butterfly_optimizable {
     use super::*;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
@@ -1551,6 +1537,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_expiration() {
         let butterfly = create_test_butterfly();
         let result = butterfly.get_expiration();
@@ -1562,6 +1549,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let butterfly = create_test_butterfly();
         assert_eq!(
@@ -1571,6 +1559,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let butterfly = create_test_butterfly();
         let result = butterfly.get_profit_ranges();
@@ -1593,6 +1582,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let butterfly = create_test_butterfly();
         let result = butterfly.get_loss_ranges();
@@ -1616,6 +1606,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_sum_to_one() {
         let butterfly = create_test_butterfly();
 
@@ -1630,6 +1621,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_break_even_points_validity() {
         let butterfly = create_test_butterfly();
         let break_even_points = butterfly.get_break_even_points().unwrap();
@@ -1644,6 +1636,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_volatility_adjustment() {
         let butterfly = create_test_butterfly();
         let vol_adj = Some(VolatilityAdjustment {
@@ -1659,6 +1652,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_price_trend() {
         let butterfly = create_test_butterfly();
         let trend = Some(PriceTrend {
@@ -1674,6 +1668,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_analyze_probabilities() {
         let butterfly = create_test_butterfly();
         let analysis = butterfly.analyze_probabilities(None, None).unwrap();
@@ -1685,6 +1680,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_near_expiration() {
         let mut butterfly = create_test_butterfly();
         butterfly.long_call.option.expiration_date = ExpirationDate::Days(pos!(0.5));
@@ -1697,6 +1693,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_high_volatility_scenario() {
         let mut butterfly = create_test_butterfly();
         butterfly.long_call.option.implied_volatility = pos!(0.5);
@@ -1709,6 +1706,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_probabilities() {
         let butterfly = create_test_butterfly();
         let result = butterfly.calculate_extreme_probabilities(None, None);

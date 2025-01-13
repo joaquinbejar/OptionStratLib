@@ -591,8 +591,6 @@ mod tests_bull_call_spread_strategy {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_bull_call_spread() {
@@ -779,8 +777,6 @@ mod tests_bull_call_spread_validation {
     use crate::model::types::ExpirationDate;
     use chrono::Utc;
     use rust_decimal_macros::dec;
-
-
 
     fn create_valid_position(
         side: Side,
@@ -992,8 +988,6 @@ mod tests_bull_call_spread_optimization {
     use crate::spos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
@@ -1312,8 +1306,6 @@ mod tests_bull_call_spread_profit {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_below_long_strike() {
@@ -1463,8 +1455,6 @@ mod tests_bull_call_spread_graph {
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1645,8 +1635,6 @@ mod tests_bull_call_spread_probability {
     use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1859,8 +1847,6 @@ mod tests_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
         let underlying_price = pos!(5781.88);
         BullCallSpread::new(
@@ -1974,8 +1960,6 @@ mod tests_delta_size {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-
-
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
         let underlying_price = pos!(5781.88);

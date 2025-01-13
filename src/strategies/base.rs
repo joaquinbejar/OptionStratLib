@@ -422,8 +422,6 @@ mod tests_strategies {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_new() {
@@ -587,8 +585,6 @@ mod tests_strategies_extended {
     use crate::model::utils::create_sample_option_simplest;
     use crate::pos;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_enum() {
@@ -720,8 +716,6 @@ mod tests_strategies_extended {
 mod tests_strategy_type {
     use super::*;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_type_equality() {
@@ -784,8 +778,6 @@ mod tests_strategy_type {
 mod tests_max_min_strikes {
     use super::*;
     use crate::{pos, Side};
-
-
 
     struct TestStrategy {
         strikes: Vec<Positive>,
@@ -986,8 +978,6 @@ mod tests_best_range_to_show {
     use super::*;
     use crate::pos;
 
-
-
     struct TestStrategy {
         underlying_price: Positive,
         break_even_points: Vec<Positive>,
@@ -1116,8 +1106,6 @@ mod tests_range_to_show {
     use super::*;
     use crate::pos;
 
-
-
     struct TestStrategy {
         underlying_price: Positive,
         break_even_points: Vec<Positive>,
@@ -1200,8 +1188,6 @@ mod tests_range_of_profit {
     use super::*;
     use crate::pos;
 
-
-
     struct TestStrategy {
         break_even_points: Vec<Positive>,
     }
@@ -1275,6 +1261,7 @@ mod tests_strategy_methods {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_type_debug_all_variants() {
         let variants = vec![
             StrategyType::BullCallSpread,
@@ -1329,6 +1316,7 @@ mod tests_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_long_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
@@ -1386,6 +1374,7 @@ mod tests_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_short_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
@@ -1480,6 +1469,7 @@ mod tests_strategy_net_operations {
     impl Strategies for TestStrategy {}
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_cost_calculation() {
         let mut strategy = TestStrategy::new();
         let option_long = create_sample_option_simplest(OptionStyle::Call, Side::Long);
@@ -1508,6 +1498,7 @@ mod tests_strategy_net_operations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_calculation() {
         let mut strategy = TestStrategy::new();
         let option_long = create_sample_option_simplest(OptionStyle::Call, Side::Long);
@@ -1532,6 +1523,7 @@ mod tests_strategy_net_operations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees_calculation() {
         let mut strategy = TestStrategy::new();
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);

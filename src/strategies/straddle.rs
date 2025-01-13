@@ -1094,8 +1094,6 @@ mod tests_short_straddle {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn setup() -> ShortStraddle {
         ShortStraddle::new(
             "AAPL".to_string(),
@@ -1465,8 +1463,6 @@ mod tests_long_straddle {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn setup_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "AAPL".to_string(),
@@ -1817,8 +1813,6 @@ mod tests_short_straddle_probability {
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
-
-
     /// Helper function that creates a basic short Straddle for testing purposes
     /// Returns a ShortStraddle instance with predefined test values
     fn create_test_short_straddle() -> ShortStraddle {
@@ -1965,8 +1959,6 @@ mod tests_short_straddle_probability_bis {
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
@@ -2116,8 +2108,6 @@ mod tests_long_straddle_probability {
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_long_straddle() -> LongStraddle {
         LongStraddle::new(
@@ -2276,8 +2266,6 @@ mod tests_short_straddle_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn get_strategy(strike: Positive) -> ShortStraddle {
         let underlying_price = pos!(7138.5);
         ShortStraddle::new(
@@ -2387,8 +2375,6 @@ mod tests_long_straddle_delta {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-
-
 
     fn get_strategy(strike: Positive) -> LongStraddle {
         let underlying_price = pos!(7138.5);
@@ -2505,8 +2491,6 @@ mod tests_short_straddle_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
-
-
 
     fn get_strategy(strike: Positive) -> ShortStraddle {
         let underlying_price = pos!(7138.5);
@@ -2625,8 +2609,6 @@ mod tests_long_straddle_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
-
-
 
     fn get_strategy(strike: Positive) -> LongStraddle {
         let underlying_price = pos!(7138.5);

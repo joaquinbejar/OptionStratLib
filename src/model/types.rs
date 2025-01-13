@@ -361,8 +361,6 @@ mod tests_payoff {
     use super::*;
     use crate::pos;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_european_call() {
@@ -492,8 +490,6 @@ mod tests_expiration_date {
     use crate::constants::DAYS_IN_A_YEAR;
     use chrono::{Duration, TimeZone};
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expiration_date_days() {
@@ -609,8 +605,6 @@ mod tests_expiration_date {
         use super::*;
         use chrono::TimeZone;
 
-    
-    
         #[test]
         #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_date_string_days() {
@@ -635,8 +629,6 @@ mod tests_expiration_date {
 mod tests_calculate_floating_strike_payoff {
     use super::*;
     use crate::pos;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -733,8 +725,6 @@ mod tests_calculate_floating_strike_payoff {
 mod tests_option_type {
     use super::*;
     use crate::pos;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -857,8 +847,6 @@ mod tests_vec_collection {
     use crate::model::positive::Positive;
     use crate::pos;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_collect_empty_iterator() {
@@ -927,6 +915,7 @@ mod test_expiration_date {
     use crate::model::ExpirationDate;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_string_valid_days() {
         let result = ExpirationDate::from_string("30.0");
         assert!(result.is_ok());
@@ -937,12 +926,14 @@ mod test_expiration_date {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_string_valid_datetime() {
         let result = ExpirationDate::from_string("2024-12-31T00:00:00Z");
         assert!(result.is_ok());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_string_invalid_format() {
         let result = ExpirationDate::from_string("invalid date");
         assert!(result.is_err());
@@ -957,6 +948,7 @@ mod test_asian_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_asian_arithmetic_put() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
@@ -973,6 +965,7 @@ mod test_asian_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_asian_no_spot_prices() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
@@ -997,6 +990,7 @@ mod test_barrier_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_barrier_down_and_in_put() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::DownAndIn,
@@ -1014,6 +1008,7 @@ mod test_barrier_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_barrier_up_and_out_call() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndOut,
@@ -1038,6 +1033,7 @@ mod test_cliquet_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_cliquet_option_with_resets() {
         let option = OptionType::Cliquet {
             reset_dates: vec![30.0, 60.0, 90.0],
@@ -1061,6 +1057,7 @@ mod test_rainbow_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rainbow_option_multiple_assets() {
         let option = OptionType::Rainbow { num_assets: 3 };
         let info = PayoffInfo {
@@ -1082,6 +1079,7 @@ mod test_exchange_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_exchange_option_positive_diff() {
         let option = OptionType::Exchange { second_asset: 90.0 };
         let info = PayoffInfo {
@@ -1096,6 +1094,7 @@ mod test_exchange_options {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_exchange_option_negative_diff() {
         let option = OptionType::Exchange {
             second_asset: 110.0,

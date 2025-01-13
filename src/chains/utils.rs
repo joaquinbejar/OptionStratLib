@@ -142,7 +142,7 @@ pub trait OptionChainParams {
 pub struct RandomPositionsParams {
     /// Number of long put positions to generate
     pub qty_puts_long: Option<usize>,
-    /// Number of short put positions to generate  
+    /// Number of short put positions to generate
     pub qty_puts_short: Option<usize>,
     /// Number of long call positions to generate
     pub qty_calls_long: Option<usize>,
@@ -290,8 +290,6 @@ mod tests_rounder {
     use super::*;
     use crate::pos;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rounder() {
@@ -316,8 +314,6 @@ mod tests_rounder {
 mod tests_generate_list_of_strikes {
     use super::*;
     use crate::Positive;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -388,8 +384,6 @@ mod tests_parse {
     use crate::spos;
     use std::f64::consts::PI;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_parse_valid_integer() {
@@ -426,8 +420,6 @@ mod tests_parse {
 #[cfg(test)]
 mod tests_default_empty_string {
     use super::*;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -468,8 +460,6 @@ mod tests_random_positions_params {
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_params() -> RandomPositionsParams {
         RandomPositionsParams::new(
@@ -566,8 +556,6 @@ mod tests_adjust_volatility {
     use super::*;
     use crate::spos;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_adjust_volatility_none() {
@@ -609,8 +597,6 @@ mod tests_option_data_price_params {
     use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -677,8 +663,6 @@ mod tests_option_chain_build_params {
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_chain_build_params() {
@@ -735,8 +719,6 @@ mod tests_random_positions_params_extended {
     use super::*;
     use crate::pos;
     use rust_decimal_macros::dec;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -817,6 +799,7 @@ mod tests_sample {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_chain() {
         let chain = OptionDataPriceParams::new(
             Positive::new(2000.0).unwrap(),

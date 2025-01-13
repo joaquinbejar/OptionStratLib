@@ -152,8 +152,6 @@ pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
 mod tests_positive_f64_to_f64 {
     use super::*;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_positive_f64_to_f64_non_empty() {

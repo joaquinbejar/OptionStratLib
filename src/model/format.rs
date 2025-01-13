@@ -304,8 +304,6 @@ mod tests_options {
     use crate::pos;
     use chrono::{NaiveDate, TimeZone, Utc};
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_debug_options() {
@@ -439,8 +437,6 @@ mod tests_expiration_date {
     use chrono::{Duration, NaiveDate, TimeZone};
     use tracing::info;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_display_days() {
@@ -510,8 +506,6 @@ mod tests_expiration_date {
 mod tests_side_option_style_display_debug {
     use super::*;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_side_display() {
@@ -544,8 +538,6 @@ mod tests_side_option_style_display_debug {
 #[cfg(test)]
 mod tests_option_type_display_debug {
     use super::*;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -845,8 +837,6 @@ mod tests_position_type_display_debug {
     use crate::pos;
     use chrono::{DateTime, NaiveDate, TimeZone};
 
-
-
     fn get_option() -> (Options, DateTime<Utc>) {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
@@ -946,8 +936,6 @@ mod tests_strategy_type_display_debug {
     use crate::pos;
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

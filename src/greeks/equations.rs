@@ -805,10 +805,6 @@ pub mod tests_delta_equations {
     use num_traits::ToPrimitive;
     use tracing::info;
 
-
-    // #[cfg(target_arch = "wasm32")]
-    // wasm_bindgen_test_configure!(run_in_browser);
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_itm() {
@@ -1041,10 +1037,6 @@ pub mod tests_gamma_equations {
     use num_traits::ToPrimitive;
     use tracing::info;
 
-
-    // #[cfg(target_arch = "wasm32")]
-    // wasm_bindgen_test_configure!(run_in_browser);
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_gamma_deep_in_the_money_call() {
@@ -1169,10 +1161,6 @@ pub mod tests_vega_equation {
     use crate::{pos, Positive};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
-    // #[cfg(target_arch = "wasm32")]
-    // wasm_bindgen_test_configure!(run_in_browser);
 
    fn create_test_option(
         underlying_price: Positive,
@@ -1308,10 +1296,6 @@ pub mod tests_rho_equations {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-    // #[cfg(target_arch = "wasm32")]
-    // wasm_bindgen_test_configure!(run_in_browser);
-
    fn create_test_option(style: OptionStyle) -> Options {
         Options {
             option_type: OptionType::European,
@@ -1400,10 +1384,6 @@ pub mod tests_theta_long_equations {
     use crate::pos;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-
-
-    // #[cfg(target_arch = "wasm32")]
-    // wasm_bindgen_test_configure!(run_in_browser);
 
    #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1509,10 +1489,6 @@ pub mod tests_theta_short_equations {
     use crate::pos;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-
-
-    // #[cfg(target_arch = "wasm32")]
-    // wasm_bindgen_test_configure!(run_in_browser);
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

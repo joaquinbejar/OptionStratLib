@@ -10,7 +10,7 @@ static INIT: Once = Once::new();
 ///
 /// The logger level is determined by the `LOGLEVEL` environment variable.
 /// If the variable is not set, it defaults to `INFO`.
-/// 
+///
 /// Note: This is a no-op when targeting wasm32.
 pub fn setup_logger() {
     #[cfg(not(target_arch = "wasm32"))]
@@ -37,7 +37,7 @@ pub fn setup_logger() {
 }
 
 /// Sets up the logger with a specific log level.
-/// 
+///
 /// Note: This is a no-op when targeting wasm32.
 pub fn setup_logger_with_level(log_level: &str) {
     #[cfg(not(target_arch = "wasm32"))]
@@ -67,8 +67,6 @@ mod tests_setup_logger {
     use std::env;
     use tracing::subscriber::set_global_default;
     use tracing_subscriber::FmtSubscriber;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -128,8 +126,6 @@ mod tests_setup_logger_bis {
     use tracing::subscriber::with_default;
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::Layer;
-
-
 
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
 

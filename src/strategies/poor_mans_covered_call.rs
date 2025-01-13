@@ -664,8 +664,6 @@ mod tests {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn create_pmcc_strategy() -> PoorMansCoveredCall {
         let underlying_symbol = "AAPL".to_string();
         let underlying_price = pos!(150.0);
@@ -825,8 +823,6 @@ mod tests_pmcc_validation {
     use crate::error::position::PositionValidationErrorKind;
     use rust_decimal_macros::dec;
 
-
-
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
@@ -943,8 +939,6 @@ mod tests_pmcc_optimization {
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::spos;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string(), None, None);
@@ -1087,8 +1081,6 @@ mod tests_pmcc_pnl {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
@@ -1177,8 +1169,6 @@ mod tests_pmcc_graph {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1432,8 +1422,6 @@ mod tests_short_straddle_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
         let underlying_price = pos!(7138.5);
         PoorMansCoveredCall::new(
@@ -1546,8 +1534,6 @@ mod tests_short_straddle_delta_size {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-
-
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
         let underlying_price = pos!(7138.5);
@@ -1683,6 +1669,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_expiration() {
         let pmcc = create_test_pmcc();
         let result = pmcc.get_expiration();
@@ -1694,12 +1681,14 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let pmcc = create_test_pmcc();
         assert_eq!(pmcc.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let pmcc = create_test_pmcc();
         let result = pmcc.get_profit_ranges();
@@ -1721,6 +1710,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let pmcc = create_test_pmcc();
         let result = pmcc.get_loss_ranges();
@@ -1738,6 +1728,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_sum_to_one() {
         let pmcc = create_test_pmcc();
 
@@ -1752,6 +1743,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_break_even_points_validity() {
         let pmcc = create_test_pmcc();
         let break_even_points = pmcc.get_break_even_points().unwrap();
@@ -1763,6 +1755,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_volatility_adjustment() {
         let pmcc = create_test_pmcc();
         let vol_adj = Some(VolatilityAdjustment {
@@ -1778,6 +1771,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_price_trend() {
         let pmcc = create_test_pmcc();
         let trend = Some(PriceTrend {
@@ -1793,6 +1787,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_analyze_probabilities() {
         let pmcc = create_test_pmcc();
         let analysis = pmcc.analyze_probabilities(None, None).unwrap();
@@ -1804,6 +1799,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_different_expirations_validity() {
         let pmcc = create_test_pmcc();
         // Short expiration should be less than long expiration
@@ -1819,6 +1815,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_high_volatility_scenario() {
         let pmcc = create_test_pmcc();
         let vol_adj = Some(VolatilityAdjustment {
@@ -1831,6 +1828,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_probabilities() {
         let pmcc = create_test_pmcc();
         let result = pmcc.calculate_extreme_probabilities(None, None);
@@ -1844,6 +1842,7 @@ mod tests_poor_mans_covered_call_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strike_price_validity() {
         let pmcc = create_test_pmcc();
         // Short call strike should be higher than long call strike for a valid PMCC

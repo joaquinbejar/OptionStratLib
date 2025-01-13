@@ -190,12 +190,7 @@ macro_rules! f2d {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-
     use std::str::FromStr;
-
-
-    // #[cfg(target_arch = "wasm32")]
-    // wasm_bindgen_test_configure!(run_in_node);  // Change this from run_in_browser to run_in_node
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -207,6 +202,7 @@ pub mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_f64_to_decimal_zero() {
         let value = 0.0;
         let result = f64_to_decimal(value);
@@ -215,6 +211,7 @@ pub mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_decimal_to_f64_valid() {
         let decimal = Decimal::from_str("42.42").unwrap();
         let result = decimal_to_f64(decimal);
@@ -223,6 +220,7 @@ pub mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_decimal_to_f64_zero() {
         let decimal = Decimal::from_str("0").unwrap();
         let result = decimal_to_f64(decimal);

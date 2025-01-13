@@ -391,8 +391,6 @@ mod tests_options {
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_option() {
@@ -547,8 +545,6 @@ mod tests_valid_option {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_valid_option() -> Options {
         Options {
             option_type: OptionType::European,
@@ -614,8 +610,6 @@ mod tests_time_value {
     use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
     use tracing::debug;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -708,8 +702,6 @@ mod tests_options_payoffs {
     use crate::utils::logger::setup_logger;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_payoff_european_call_long() {
@@ -776,8 +768,6 @@ mod tests_options_payoff_at_price {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_payoff_european_call_long() {
@@ -833,8 +823,6 @@ mod tests_options_payoffs_with_quantity {
     use crate::model::utils::create_sample_option;
     use crate::pos;
     use rust_decimal_macros::dec;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1027,8 +1015,6 @@ mod tests_in_the_money {
     use crate::model::utils::create_sample_option;
     use crate::pos;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_in_the_money() {
@@ -1128,8 +1114,6 @@ mod tests_greeks {
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1233,8 +1217,6 @@ mod tests_greek_trait {
 
     const EPSILON: Decimal = dec!(1e-6);
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_greeks_implementation() {
@@ -1290,8 +1272,6 @@ mod tests_graph {
     use crate::pos;
     use crate::visualization::utils::Graph;
     use approx::assert_relative_eq;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1372,6 +1352,7 @@ mod tests_calculate_price_binomial {
     use std::str::FromStr;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_european_call_option_basic() {
         // Test a basic European call option with standard parameters
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
@@ -1383,6 +1364,7 @@ mod tests_calculate_price_binomial {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_american_put_option() {
         // Test American put option which should have early exercise value
         let option = Options::new(
@@ -1408,6 +1390,7 @@ mod tests_calculate_price_binomial {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_volatility() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.implied_volatility = Positive::ZERO;
@@ -1417,6 +1400,7 @@ mod tests_calculate_price_binomial {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_time_to_expiry() {
         // Test option at expiration
         let now = Utc::now().naive_utc();
@@ -1438,6 +1422,7 @@ mod tests_calculate_price_binomial {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_steps() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let result = option.calculate_price_binomial(0);
@@ -1445,6 +1430,7 @@ mod tests_calculate_price_binomial {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_deep_itm_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1463,6 +1449,7 @@ mod tests_calculate_price_binomial {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_deep_otm_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1481,6 +1468,7 @@ mod tests_calculate_price_binomial {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_convergence() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
 
@@ -1494,6 +1482,7 @@ mod tests_calculate_price_binomial {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_short_position() {
         let long_call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let mut short_call_option = long_call_option.clone();

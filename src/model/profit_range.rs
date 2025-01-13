@@ -133,8 +133,6 @@ mod tests_profit_range {
     use super::*;
     use crate::pos;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_range_creation() {
@@ -190,8 +188,6 @@ mod tests_calculate_probability {
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::pos;
     use rust_decimal_macros::dec;
-
-
 
     fn create_basic_range() -> ProfitLossRange {
         ProfitLossRange::new(Some(pos!(90.0)), Some(pos!(110.0)), Positive::ZERO).unwrap()

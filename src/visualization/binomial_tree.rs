@@ -172,7 +172,6 @@ mod tests_draw_binomial_tree {
     #[cfg(target_arch = "wasm32")]
     use web_sys::{window, HtmlCanvasElement};
 
-
     // Common test data setup
     fn setup_test_data() -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
         let asset_tree = vec![vec![100.0], vec![110.0, 90.0], vec![121.0, 99.0, 81.0]];

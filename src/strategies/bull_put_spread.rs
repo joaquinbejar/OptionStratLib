@@ -686,8 +686,6 @@ mod tests_bull_put_spread_strategy {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_bull_put_spread() {
@@ -866,8 +864,6 @@ mod tests_bull_put_spread_validation {
     use crate::model::types::ExpirationDate;
     use chrono::Utc;
     use rust_decimal_macros::dec;
-
-
 
     fn create_valid_position(
         side: Side,
@@ -1057,8 +1053,6 @@ mod tests_bull_put_spread_optimization {
     use crate::spos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
@@ -1332,8 +1326,6 @@ mod tests_bull_put_spread_profit {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_above_short_strike() {
@@ -1447,8 +1439,6 @@ mod tests_bull_put_spread_graph {
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1618,8 +1608,6 @@ mod tests_bull_put_spread_probability {
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
-    
-    
     fn bull_put_spread_test() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
@@ -1778,8 +1766,6 @@ mod tests_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    
-    
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullPutSpread {
         let underlying_price = pos!(5801.88);
         BullPutSpread::new(
@@ -1892,8 +1878,6 @@ mod tests_delta_size {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-    
-    
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullPutSpread {
         let underlying_price = pos!(5781.88);
         BullPutSpread::new(

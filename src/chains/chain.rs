@@ -608,7 +608,7 @@ impl OptionChain {
     /// # Arguments
     ///
     /// * `qty_puts_long` - Number of long put positions to create
-    /// * `qty_puts_short` - Number of short put positions to create  
+    /// * `qty_puts_short` - Number of short put positions to create
     /// * `qty_calls_long` - Number of long call positions to create
     /// * `qty_calls_short` - Number of short call positions to create
     ///
@@ -1298,9 +1298,7 @@ mod tests_chain_base {
     use std::fs;
     use tracing::info;
 
-
-
-    #[test]   
+    #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_option_chain() {
         let chain = OptionChain::new(
@@ -1316,7 +1314,7 @@ mod tests_chain_base {
         assert!(chain.options.is_empty());
     }
 
-    #[test]   
+    #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new_option_chain_build_chain() {
         setup_logger();
@@ -1635,8 +1633,6 @@ mod tests_option_data {
     use rust_decimal_macros::dec;
     use tracing::info;
 
-
-
     fn create_valid_option_data() -> OptionData {
         OptionData::new(
             pos!(100.0),      // strike_price
@@ -1888,8 +1884,6 @@ mod tests_get_random_positions {
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_chain() -> OptionChain {
         // Create a sample option chain
@@ -2182,8 +2176,6 @@ mod tests_option_data_get_prices {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_option_data() -> OptionData {
         OptionData::new(
             pos!(100.0),
@@ -2254,8 +2246,6 @@ mod tests_option_data_display {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_display_full_data() {
@@ -2297,8 +2287,6 @@ mod tests_option_data_display {
 mod tests_filter_option_data {
     use super::*;
     use crate::{pos, spos};
-
-
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
@@ -2365,8 +2353,6 @@ mod tests_filter_option_data {
 mod tests_strike_price_range_vec {
     use super::*;
     use crate::{pos, spos};
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -2447,8 +2433,6 @@ mod tests_option_data_get_option {
     use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
@@ -2547,8 +2531,6 @@ mod tests_option_data_get_options_in_strike {
     use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
@@ -2741,8 +2723,6 @@ mod tests_filter_options_in_strike {
     use crate::{pos, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
@@ -2941,8 +2921,6 @@ mod tests_chain_iterators {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
 
@@ -3098,8 +3076,6 @@ mod tests_chain_iterators_bis {
     use super::*;
     use crate::spos;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
@@ -3319,8 +3295,6 @@ mod tests_chain_iterators_bis {
 #[cfg(test)]
 mod tests_is_valid_optimal_side {
     use super::*;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -3546,6 +3520,7 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_basic_rnd_calculation() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -3571,6 +3546,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_tolerance_adjustment() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -3584,6 +3560,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_default() {
             let chain = OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
             let params = RNDParameters::default();
@@ -3597,6 +3574,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_zero_tolerance() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -3613,6 +3591,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_expired_option() {
             let mut chain = create_standard_chain();
             chain.expiration_date = "2023-01-01".to_string(); // Past date
@@ -3632,6 +3611,7 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_basic_skew_calculation() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew();
@@ -3649,6 +3629,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_flat_volatility_surface() {
             let chain = create_standard_chain(); // All vols are 0.17
             let result = chain.calculate_skew().unwrap();
@@ -3660,6 +3641,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_empty_chain_skew() {
             let chain = OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
 
@@ -3672,6 +3654,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_missing_implied_volatility() {
             let mut chain = create_standard_chain();
 
@@ -3693,6 +3676,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_relative_strike_calculation() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew().unwrap();
@@ -3709,6 +3693,7 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_invalid_date_format() {
             let mut chain = create_standard_chain();
             chain.expiration_date = "invalid_date".to_string();
@@ -3724,6 +3709,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_negative_risk_free_rate() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -3737,6 +3723,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_verify_rnd_properties() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -3765,6 +3752,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_strike_interval_detection() {
             let mut chain = create_standard_chain();
 
@@ -3796,6 +3784,7 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_skew_with_smile() {
             let mut chain =
                 OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
@@ -3835,6 +3824,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_skew_monotonic() {
             let mut chain =
                 OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
@@ -3869,6 +3859,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_strike_range_coverage() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew().unwrap();

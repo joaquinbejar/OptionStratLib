@@ -62,8 +62,6 @@ mod tests_pnl_calculator {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_pnl_new() {

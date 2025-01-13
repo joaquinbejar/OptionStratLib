@@ -164,7 +164,6 @@ pub struct ChartVerticalLine<X, Y> {
 mod tests_chart_point {
     use super::*;
 
-
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_relative_offset_scaling() {
@@ -217,8 +216,6 @@ mod tests_chart_point {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-
     // Helper function to compare f64 values with a small epsilon
     fn assert_float_eq(a: f64, b: f64) {
         assert!((a - b).abs() < f64::EPSILON);
@@ -421,7 +418,6 @@ mod tests {
 #[cfg(test)]
 mod tests_label_offset {
     use super::*;
-
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

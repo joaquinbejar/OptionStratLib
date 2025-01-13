@@ -402,8 +402,6 @@ mod tests_annualize_volatility {
     use super::*;
     use approx::assert_relative_eq;
 
-
-
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_annualize_daily_volatility() {
@@ -453,8 +451,6 @@ mod tests_constant_volatility {
     use super::*;
     use approx::assert_relative_eq;
 
-
-
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_constant_volatility_single_value() {
@@ -500,8 +496,6 @@ mod tests_constant_volatility {
 mod tests_historical_volatility {
     use super::*;
     use approx::assert_relative_eq;
-
-
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -562,8 +556,6 @@ mod tests_historical_volatility {
 mod tests_ewma_volatility {
     use super::*;
     use approx::assert_relative_eq;
-
-
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -719,12 +711,10 @@ mod tests_implied_volatility {
 
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     use tracing::info;
 
-
-    
     fn create_test_option() -> Options {
         Options::new(
             OptionType::European,
@@ -750,17 +740,17 @@ mod tests_implied_volatility {
             setup_logger();
             info!("Starting test_implied_volatility_long_short");
         }
-        
+
         let mut option_long = create_test_option();
         let mut option_short = create_test_option();
         option_short.side = Side::Short;
         let market_price = 10.0; // Assume this is the observed market price
         let iv_long = implied_volatility(market_price, &mut option_long, 100);
         let iv_short = implied_volatility(market_price, &mut option_short, 100);
-        
+
         #[cfg(not(target_arch = "wasm32"))]
         info!("IV Long {} short {}", iv_long, iv_short);
-        
+
         // Check if the calculated price with the new IV is close to the market price
         option_long.implied_volatility = iv_long;
         option_short.implied_volatility = iv_short;
@@ -776,7 +766,7 @@ mod tests_implied_volatility {
             .to_f64()
             .unwrap()
             .abs();
-        
+
         #[cfg(not(target_arch = "wasm32"))]
         info!(
             "Price Long {} short {}",
@@ -852,8 +842,6 @@ mod tests_implied_volatility {
 mod tests_garch_volatility {
     use super::*;
     use approx::assert_relative_eq;
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_garch_volatility_single_return() {
@@ -1032,7 +1020,6 @@ mod tests_simulate_heston_volatility {
     use super::*;
     use approx::assert_relative_eq;
 
-
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_heston_volatility_basic() {
@@ -1157,7 +1144,6 @@ mod tests_interpolate_volatility_surface {
     use super::*;
     use approx::assert_relative_eq;
 
-
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_interpolate_volatility_surface_success() {
@@ -1263,7 +1249,6 @@ mod tests_uncertain_volatility_bounds {
 
     use approx::assert_relative_eq;
 
-
     fn create_test_option() -> Options {
         Options::new(
             OptionType::European,
@@ -1280,7 +1265,6 @@ mod tests_uncertain_volatility_bounds {
             None,           // exotic params
         )
     }
-
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1371,7 +1355,6 @@ mod tests_uncertain_volatility_bounds_side {
     use rust_decimal_macros::dec;
     use tracing::info;
 
-
     fn create_test_option(option_style: OptionStyle, side: Side) -> Options {
         Options::new(
             OptionType::European,
@@ -1388,7 +1371,6 @@ mod tests_uncertain_volatility_bounds_side {
             None,           // exotic params
         )
     }
-
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

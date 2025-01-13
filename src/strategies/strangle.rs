@@ -1177,8 +1177,6 @@ mod tests_short_strangle {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-
-
     fn setup() -> ShortStrangle {
         ShortStrangle::new(
             "AAPL".to_string(),
@@ -1510,8 +1508,6 @@ mod tests_long_strangle {
     use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1903,8 +1899,6 @@ mod tests_short_strangle_probability {
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
-
-
     /// Helper function that creates a basic short strangle for testing purposes
     /// Returns a ShortStrangle instance with predefined test values
     fn create_test() -> ShortStrangle {
@@ -2052,8 +2046,6 @@ mod tests_short_strangle_probability_bis {
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
@@ -2206,8 +2198,6 @@ mod tests_long_strangle_probability {
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
@@ -2367,8 +2357,6 @@ mod tests_short_strangle_delta {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
         let underlying_price = pos!(7138.5);
         ShortStrangle::new(
@@ -2481,8 +2469,6 @@ mod tests_long_strangle_delta {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    
-
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos!(7138.5);
@@ -2600,8 +2586,6 @@ mod tests_short_strangle_delta_size {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    
-
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
         let underlying_price = pos!(7138.5);
@@ -2721,8 +2705,6 @@ mod tests_long_strangle_delta_size {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    
-
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos!(7138.5);

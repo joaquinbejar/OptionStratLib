@@ -298,8 +298,6 @@ mod tests_calculate_bounds_probability {
     use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_bounds_probability_basic() {
@@ -431,8 +429,6 @@ mod tests_single_point_probability {
     use approx::assert_relative_eq;
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
-
-
 
     // Helper function to create default volatility adjustment
     fn default_volatility_adj() -> VolatilityAdjustment {
@@ -796,8 +792,6 @@ mod tests_calculate_price_probability {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use approx::assert_relative_eq;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

@@ -250,8 +250,6 @@ mod tests_probability_analysis {
     use rust_decimal_macros::dec;
     use std::error::Error;
 
-
-
     // Mock struct para testing
     struct MockStrategy {
         underlying_price: Positive,
@@ -483,8 +481,6 @@ mod tests_expected_value {
     use crate::strategies::base::{Positionable, Validable};
     use rust_decimal_macros::dec;
     use std::error::Error;
-
-
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> TestStrategy {

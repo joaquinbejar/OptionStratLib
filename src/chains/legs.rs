@@ -91,8 +91,6 @@ mod tests {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
-
-
     // Helper function to create a test OptionData with a specific strike price
     fn create_test_option(strike: Decimal) -> OptionData {
         OptionData::new(

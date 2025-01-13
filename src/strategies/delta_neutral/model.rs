@@ -82,7 +82,7 @@ impl fmt::Display for DeltaInfo {
 /// It implements key concepts needed to manage the delta exposure efficiently.
 ///
 /// # Methods
-///   
+///
 /// * `calculate_net_delta`: Calculates the net delta of the trading strategy and provides detailed delta-related information.
 /// * `is_delta_neutral`: Determines if the strategy is delta-neutral within a specified threshold.
 /// * `suggest_delta_adjustments`: Suggests potential actions to achieve delta neutrality.
@@ -212,8 +212,6 @@ mod tests {
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
-
-
 
     // Mock struct to implement required traits for testing
     struct MockStrategy {

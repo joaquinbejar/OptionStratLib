@@ -1469,8 +1469,6 @@ mod tests_long_butterfly_spread {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
@@ -1707,8 +1705,6 @@ mod tests_short_butterfly_spread {
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -1983,8 +1979,6 @@ mod tests_long_butterfly_validation {
     use super::*;
     use rust_decimal_macros::dec;
 
-    
-    
     fn create_valid_position(side: Side, strike_price: Positive, quantity: Positive) -> Position {
         Position::new(
             Options::new(
@@ -2152,8 +2146,6 @@ mod tests_short_butterfly_validation {
     use super::*;
     use rust_decimal_macros::dec;
 
-    
-    
     fn create_valid_position(side: Side, strike_price: Positive, quantity: Positive) -> Position {
         Position::new(
             Options::new(
@@ -2323,8 +2315,6 @@ mod tests_butterfly_strategies {
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_long() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -2629,8 +2619,6 @@ mod tests_butterfly_optimizable {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -2806,8 +2794,6 @@ mod tests_long_butterfly_profit {
     use rust_decimal_macros::dec;
     use std::str::FromStr;
 
-
-
     fn create_test() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
@@ -2928,8 +2914,6 @@ mod tests_short_butterfly_profit {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
-
-
 
     fn create_test() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -3079,8 +3063,6 @@ mod tests_long_butterfly_graph {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
@@ -3201,8 +3183,6 @@ mod tests_short_butterfly_graph {
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_butterfly() -> ShortButterflySpread {
         let underlying_price = pos!(5781.88);
         ShortButterflySpread::new(
@@ -3313,8 +3293,6 @@ mod tests_butterfly_probability {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_long() -> LongButterflySpread {
         LongButterflySpread::new(
             "TEST".to_string(),
@@ -3366,8 +3344,6 @@ mod tests_butterfly_probability {
     mod long_butterfly_tests {
         use super::*;
 
-    
-    
         #[test]
         #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_expiration() {
@@ -3436,8 +3412,6 @@ mod tests_butterfly_probability {
     mod short_butterfly_tests {
         use super::*;
 
-    
-    
         #[test]
         #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_get_expiration() {
@@ -3560,8 +3534,6 @@ mod tests_long_butterfly_delta {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-
-
 
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3688,8 +3660,6 @@ mod tests_long_butterfly_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
-
-
 
     fn get_strategy(underlying_price: Positive) -> LongButterflySpread {
         LongButterflySpread::new(
@@ -3821,8 +3791,6 @@ mod tests_short_butterfly_delta {
     use rust_decimal::Decimal;
     use std::str::FromStr;
 
-
-
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
             "SP500".to_string(),
@@ -3950,8 +3918,6 @@ mod tests_short_butterfly_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
-
-
 
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(

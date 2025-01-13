@@ -69,8 +69,6 @@ mod tests {
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_option() -> Options {
         Options {
             option_type: OptionType::European,

@@ -388,8 +388,6 @@ mod tests_position {
     use chrono::Duration;
     use rust_decimal_macros::dec;
 
-
-
     fn setup_option(
         side: Side,
         option_style: OptionStyle,
@@ -879,8 +877,6 @@ mod tests_valid_position {
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
-
-
     fn create_valid_option() -> Options {
         Options {
             option_type: OptionType::European,
@@ -947,8 +943,6 @@ mod tests_position_break_even {
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
-
-
 
     fn setup_option(
         side: Side,
@@ -1102,8 +1096,6 @@ mod tests_position_max_loss_profit {
     use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-
-
 
     fn setup_option(
         side: Side,
@@ -1280,8 +1272,6 @@ mod tests_update_from_option_data {
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_option_data() -> OptionData {
         OptionData::new(
             pos!(110.0),
@@ -1356,8 +1346,6 @@ mod tests_premium {
     use super::*;
     use crate::pos;
 
-
-
     fn setup_basic_position(side: Side) -> Position {
         let option = Options {
             side,
@@ -1417,8 +1405,6 @@ mod tests_pnl_calculator {
     use crate::{assert_decimal_eq, pos, OptionType};
     use rust_decimal_macros::dec;
 
-
-
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {
         let option = Options::new(
             OptionType::European,
@@ -1463,6 +1449,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_long_call_vol_down() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1473,6 +1460,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_long_call_date_closer() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1483,6 +1471,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_no_changes() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1495,6 +1484,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_price_up() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1505,6 +1495,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_price_down() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1515,6 +1506,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_vol_down() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1525,6 +1517,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_vol_up() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1535,6 +1528,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_date_closer() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1545,6 +1539,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_date_further() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1581,8 +1576,6 @@ mod tests_pnl_calculator {
 mod tests_graph {
     use super::*;
     use crate::pos;
-
-
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

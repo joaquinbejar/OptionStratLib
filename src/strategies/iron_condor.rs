@@ -796,8 +796,6 @@ mod tests_iron_condor {
     use chrono::{TimeZone, Utc};
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_iron_condor_creation() {
@@ -1010,8 +1008,6 @@ mod tests_iron_condor_validable {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_valid_position(
         side: Side,
         option_style: OptionStyle,
@@ -1133,8 +1129,6 @@ mod tests_iron_condor_strategies {
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -1583,8 +1577,6 @@ mod tests_iron_condor_optimizable {
     use crate::spos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
@@ -1777,8 +1769,6 @@ mod tests_iron_condor_profit {
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
-
-
 
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -2055,8 +2045,6 @@ mod tests_iron_condor_graph {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-
-
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
@@ -2243,8 +2231,6 @@ mod tests_iron_condor_delta {
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
 
-
-
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
             "GOLD".to_string(),
@@ -2372,8 +2358,6 @@ mod tests_iron_condor_delta_size {
     use crate::strategies::iron_condor::IronCondor;
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
-
-
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
@@ -2525,6 +2509,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_expiration() {
         let condor = create_test_condor();
         let result = condor.get_expiration();
@@ -2536,12 +2521,14 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let condor = create_test_condor();
         assert_eq!(condor.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let condor = create_test_condor();
         let result = condor.get_profit_ranges();
@@ -2564,6 +2551,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let condor = create_test_condor();
         let result = condor.get_loss_ranges();
@@ -2587,6 +2575,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_sum_to_one() {
         let condor = create_test_condor();
 
@@ -2601,6 +2590,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strike_prices_validity() {
         let condor = create_test_condor();
         // Verify strike price ordering
@@ -2610,6 +2600,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_break_even_points_validity() {
         let condor = create_test_condor();
         let break_even_points = condor.get_break_even_points().unwrap();
@@ -2623,6 +2614,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_volatility_adjustment() {
         let condor = create_test_condor();
         let vol_adj = Some(VolatilityAdjustment {
@@ -2638,6 +2630,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_price_trend() {
         let condor = create_test_condor();
         let trend = Some(PriceTrend {
@@ -2653,6 +2646,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_analyze_probabilities() {
         let condor = create_test_condor();
         let analysis = condor.analyze_probabilities(None, None).unwrap();
@@ -2664,6 +2658,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_high_volatility_scenario() {
         let mut condor = create_test_condor();
         let high_vol = pos!(0.5);
@@ -2678,6 +2673,7 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_probabilities() {
         let condor = create_test_condor();
         let result = condor.calculate_extreme_probabilities(None, None);

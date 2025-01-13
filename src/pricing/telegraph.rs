@@ -294,8 +294,6 @@ mod tests_telegraph_process_basis {
     use crate::{pos, Positive};
     use rust_decimal_macros::dec;
 
-
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_telegraph_process_new() {
@@ -424,8 +422,6 @@ mod tests_telegraph_process_extended {
     use crate::pos;
     use crate::Positive;
     use rust_decimal_macros::dec;
-
-
 
     // Helper function to create a mock Options struct
     fn create_mock_option() -> Options {
