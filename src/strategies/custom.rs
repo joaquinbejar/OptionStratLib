@@ -7,8 +7,8 @@ use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::StrategyError;
-use crate::error::{OperationErrorKind, ProbabilityError};
-use crate::greeks::equations::{Greek, Greeks};
+use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
+use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pricing::payoff::Profit;
@@ -18,7 +18,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, ExpirationDate, Positive};
+use crate::{pos, ExpirationDate, Options, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -645,25 +645,8 @@ impl ProbabilityAnalysis for CustomStrategy {
 }
 
 impl Greeks for CustomStrategy {
-    fn greeks(&self) -> Greek {
-        let mut greek = Greek {
-            delta: Decimal::ZERO,
-            gamma: Decimal::ZERO,
-            theta: Decimal::ZERO,
-            vega: Decimal::ZERO,
-            rho: Decimal::ZERO,
-            rho_d: Decimal::ZERO,
-        };
-        for position in self.positions.iter() {
-            let current_greek = position.greeks();
-            greek.delta += current_greek.delta;
-            greek.gamma += current_greek.gamma;
-            greek.theta += current_greek.theta;
-            greek.vega += current_greek.vega;
-            greek.rho += current_greek.rho;
-            greek.rho_d += current_greek.rho_d;
-        }
-        greek
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(self.positions.iter().map(|position| &position.option).collect())
     }
 }
 
@@ -1585,8 +1568,8 @@ mod tests_greeks {
             Positive::ONE,
         );
 
-        let strategy_greeks = strategy.greeks();
-        let position_greeks = position.greeks();
+        let strategy_greeks = strategy.greeks().unwrap();
+        let position_greeks = position.greeks().unwrap();
 
         assert_decimal_eq!(strategy_greeks.delta, position_greeks.delta, EPSILON);
         assert_decimal_eq!(strategy_greeks.gamma, position_greeks.gamma, EPSILON);
@@ -1611,8 +1594,8 @@ mod tests_greeks {
             Positive::ONE,
         );
 
-        let strategy_greeks = strategy.greeks();
-        let position_greeks = position.greeks();
+        let strategy_greeks = strategy.greeks().unwrap();
+        let position_greeks = position.greeks().unwrap();
 
         assert_decimal_eq!(strategy_greeks.delta, position_greeks.delta, EPSILON);
         assert_decimal_eq!(strategy_greeks.gamma, position_greeks.gamma, EPSILON);
@@ -1639,10 +1622,10 @@ mod tests_greeks {
             Positive::ONE,
         );
 
-        let strategy_greeks = strategy.greeks();
-        let long_call_greeks = long_call.greeks();
-        let short_put_greeks = short_put.greeks();
-        let long_put_greeks = long_put.greeks();
+        let strategy_greeks = strategy.greeks().unwrap();
+        let long_call_greeks = long_call.greeks().unwrap();
+        let short_put_greeks = short_put.greeks().unwrap();
+        let long_put_greeks = long_put.greeks().unwrap();
 
         assert_decimal_eq!(
             strategy_greeks.delta,
@@ -1692,9 +1675,9 @@ mod tests_greeks {
             Positive::ONE,
         );
 
-        let strategy_greeks = strategy.greeks();
-        let call_greeks = long_call.greeks();
-        let put_greeks = long_put.greeks();
+        let strategy_greeks = strategy.greeks().unwrap();
+        let call_greeks = long_call.greeks().unwrap();
+        let put_greeks = long_put.greeks().unwrap();
 
         // Straddle specific assertions
         assert_decimal_eq!(

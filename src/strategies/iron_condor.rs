@@ -16,8 +16,8 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::ProbabilityError;
-use crate::greeks::equations::{Greek, Greeks};
+use crate::error::{GreeksError, ProbabilityError};
+use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -688,38 +688,13 @@ impl ProbabilityAnalysis for IronCondor {
 }
 
 impl Greeks for IronCondor {
-    fn greeks(&self) -> Greek {
-        let long_call_greek = self.long_call.greeks();
-        let long_put_greek = self.long_put.greeks();
-        let short_call_greek = self.short_call.greeks();
-        let short_put_greek = self.short_put.greeks();
-
-        Greek {
-            delta: long_call_greek.delta
-                + long_put_greek.delta
-                + short_call_greek.delta
-                + short_put_greek.delta,
-            gamma: long_call_greek.gamma
-                + long_put_greek.gamma
-                + short_call_greek.gamma
-                + short_put_greek.gamma,
-            theta: long_call_greek.theta
-                + long_put_greek.theta
-                + short_call_greek.theta
-                + short_put_greek.theta,
-            vega: long_call_greek.vega
-                + long_put_greek.vega
-                + short_call_greek.vega
-                + short_put_greek.vega,
-            rho: long_call_greek.rho
-                + long_put_greek.rho
-                + short_call_greek.rho
-                + short_put_greek.rho,
-            rho_d: long_call_greek.rho_d
-                + long_put_greek.rho_d
-                + short_call_greek.rho_d
-                + short_put_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![
+            &self.short_call.option,
+            &self.short_put.option,
+            &self.long_call.option,
+            &self.long_put.option,
+        ])
     }
 }
 
@@ -2169,6 +2144,7 @@ mod tests_iron_condor_delta {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
+    use crate::greeks::Greeks;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(

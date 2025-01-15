@@ -1,5 +1,5 @@
 use approx::assert_relative_eq;
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
@@ -35,7 +35,7 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
         pos!(0.73),     // close_fee_short
     );
 
-    let greeks = strategy.greeks();
+    let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);
 
     assert_decimal_eq!(greeks.delta, dec!(-0.7004), epsilon);

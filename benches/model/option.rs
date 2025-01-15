@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Side};
 use rust_decimal_macros::dec;
@@ -51,23 +51,23 @@ pub(crate) fn benchmark_greeks(c: &mut Criterion) {
     let option = create_test_option();
 
     group.bench_function("delta", |bencher| {
-        bencher.iter(|| black_box(option.delta()))
+        bencher.iter(|| black_box(option.delta().unwrap()))
     });
 
     group.bench_function("gamma", |bencher| {
-        bencher.iter(|| black_box(option.gamma()))
+        bencher.iter(|| black_box(option.gamma().unwrap()))
     });
 
     group.bench_function("theta", |bencher| {
-        bencher.iter(|| black_box(option.theta()))
+        bencher.iter(|| black_box(option.theta().unwrap()))
     });
 
-    group.bench_function("vega", |bencher| bencher.iter(|| black_box(option.vega())));
+    group.bench_function("vega", |bencher| bencher.iter(|| black_box(option.vega().unwrap())));
 
-    group.bench_function("rho", |bencher| bencher.iter(|| black_box(option.rho())));
+    group.bench_function("rho", |bencher| bencher.iter(|| black_box(option.rho().unwrap())));
 
     group.bench_function("all_greeks", |bencher| {
-        bencher.iter(|| black_box(option.greeks()))
+        bencher.iter(|| black_box(option.greeks().unwrap()))
     });
 
     group.finish();

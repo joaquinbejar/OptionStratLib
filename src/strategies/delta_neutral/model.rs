@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 //! # Delta Neutral Strategies Module
-use crate::greeks::equations::Greeks;
+use crate::greeks::Greeks;
 use crate::model::types::OptionStyle;
 use crate::{pos, Positive};
 use std::fmt;
@@ -208,10 +208,12 @@ pub trait DeltaNeutrality: Greeks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::greeks::equations::Greek;
+    use crate::greeks::Greek;
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
+    use crate::error::GreeksError;
+    use crate::Options;
 
     // Mock struct to implement required traits for testing
     struct MockStrategy {
@@ -222,15 +224,20 @@ mod tests {
 
     // Implement Greeks trait for MockStrategy
     impl Greeks for MockStrategy {
-        fn greeks(&self) -> Greek {
-            Greek {
+        fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+            todo!()
+        }
+
+        fn greeks(&self) -> Result<Greek, GreeksError>  {
+            Ok(Greek {
                 delta: self.delta,
                 gamma: Decimal::ZERO,
                 theta: Decimal::ZERO,
                 vega: Decimal::ZERO,
                 rho: Decimal::ZERO,
                 rho_d: Decimal::ZERO,
-            }
+                alpha: Decimal::ZERO,
+            })
         }
     }
 

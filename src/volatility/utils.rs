@@ -12,6 +12,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 use std::f64;
 use tracing::debug;
+use crate::greeks::Greeks;
 
 /// Calculates the constant volatility from a series of returns.
 ///

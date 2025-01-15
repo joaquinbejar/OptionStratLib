@@ -85,7 +85,9 @@
 //! * Adjustments for dividends
 //! * Special case handling for extreme values
 
-pub mod equations;
-pub mod utils;
+mod equations;
+mod utils;
 
-pub use utils::{d1, d2};
+pub use utils::{d1, d2,big_n, n};
+pub(crate) use utils::calculate_d_values;
+pub use equations::{delta, gamma, rho, theta, vega, rho_d, Greeks, Greek};

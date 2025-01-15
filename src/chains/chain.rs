@@ -11,7 +11,7 @@ use crate::chains::{DeltasInStrike, OptionsInStrike, RNDAnalysis, RNDParameters,
 use crate::curves::interpolation::LinearInterpolation;
 use crate::curves::{Curve, Point2D};
 use crate::error::chains::ChainError;
-use crate::greeks::equations::delta;
+use crate::greeks::delta;
 use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::strategies::utils::FindOptimalSide;
@@ -2471,6 +2471,7 @@ mod tests_option_data_get_options_in_strike {
     use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+    use crate::greeks::Greeks;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(

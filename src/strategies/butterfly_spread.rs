@@ -23,7 +23,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::greeks::equations::{Greek, Greeks};
+use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -45,6 +45,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
+use crate::error::GreeksError;
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =
     "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -672,19 +673,12 @@ impl ProbabilityAnalysis for LongButterflySpread {
 }
 
 impl Greeks for LongButterflySpread {
-    fn greeks(&self) -> Greek {
-        let long_call_low_greek = self.long_call_low.greeks();
-        let long_call_high_greek = self.long_call_high.greeks();
-        let short_calls_greek = self.short_calls.greeks();
-
-        Greek {
-            delta: long_call_low_greek.delta + long_call_high_greek.delta + short_calls_greek.delta,
-            gamma: long_call_low_greek.gamma + long_call_high_greek.gamma + short_calls_greek.gamma,
-            theta: long_call_low_greek.theta + long_call_high_greek.theta + short_calls_greek.theta,
-            vega: long_call_low_greek.vega + long_call_high_greek.vega + short_calls_greek.vega,
-            rho: long_call_low_greek.rho + long_call_high_greek.rho + short_calls_greek.rho,
-            rho_d: long_call_low_greek.rho_d + long_call_high_greek.rho_d + short_calls_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![
+            &self.long_call_low.option,
+            &self.short_calls.option,
+            &self.long_call_high.option,
+        ])
     }
 }
 
@@ -1380,27 +1374,12 @@ impl ProbabilityAnalysis for ShortButterflySpread {
 }
 
 impl Greeks for ShortButterflySpread {
-    fn greeks(&self) -> Greek {
-        let short_call_low_greek = self.short_call_low.greeks();
-        let short_call_high_greek = self.short_call_high.greeks();
-        let long_calls_greek = self.long_calls.greeks();
-
-        Greek {
-            delta: short_call_low_greek.delta
-                + short_call_high_greek.delta
-                + long_calls_greek.delta,
-            gamma: short_call_low_greek.gamma
-                + short_call_high_greek.gamma
-                + long_calls_greek.gamma,
-            theta: short_call_low_greek.theta
-                + short_call_high_greek.theta
-                + long_calls_greek.theta,
-            vega: short_call_low_greek.vega + short_call_high_greek.vega + long_calls_greek.vega,
-            rho: short_call_low_greek.rho + short_call_high_greek.rho + long_calls_greek.rho,
-            rho_d: short_call_low_greek.rho_d
-                + short_call_high_greek.rho_d
-                + long_calls_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![
+            &self.short_call_low.option,
+            &self.long_calls.option,
+            &self.short_call_high.option,
+        ])
     }
 }
 

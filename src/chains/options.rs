@@ -6,6 +6,7 @@
 use crate::Options;
 use rust_decimal::Decimal;
 use std::error::Error;
+use crate::greeks::Greeks;
 
 #[derive(Debug, Clone)]
 pub struct OptionsInStrike {

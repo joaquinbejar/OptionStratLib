@@ -22,7 +22,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::greeks::equations::{Greek, Greeks};
+use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -44,6 +44,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info};
+use crate::error::GreeksError;
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \
@@ -501,18 +502,8 @@ impl ProbabilityAnalysis for BullCallSpread {
 }
 
 impl Greeks for BullCallSpread {
-    fn greeks(&self) -> Greek {
-        let long_call_greek = self.long_call.greeks();
-        let short_call_greek = self.short_call.greeks();
-
-        Greek {
-            delta: long_call_greek.delta + short_call_greek.delta,
-            gamma: long_call_greek.gamma + short_call_greek.gamma,
-            theta: long_call_greek.theta + short_call_greek.theta,
-            vega: long_call_greek.vega + short_call_greek.vega,
-            rho: long_call_greek.rho + short_call_greek.rho,
-            rho_d: long_call_greek.rho_d + short_call_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![&self.long_call.option, &self.short_call.option])
     }
 }
 
@@ -1786,6 +1777,7 @@ mod tests_delta {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    use crate::greeks::Greeks;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
         let underlying_price = pos!(5781.88);
@@ -1897,6 +1889,7 @@ mod tests_delta_size {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    use crate::greeks::Greeks;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
         let underlying_price = pos!(5781.88);
