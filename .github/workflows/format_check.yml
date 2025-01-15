@@ -6,7 +6,8 @@ on:
       - '**'
   pull_request:
     branches:
-      - '**'
+      - main
+      - 'release/**'
 
 env:
   CARGO_TERM_COLOR: always
