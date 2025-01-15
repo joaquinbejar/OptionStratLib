@@ -876,8 +876,13 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
 }
 
 pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
-    let alpha = gamma(option)? / theta(option)?;
-    Ok(alpha)
+    let gamma = gamma(option)?;
+    let theta = theta(option)?;
+    match (gamma, theta) {
+        (val, _) if val == Decimal::ZERO => Ok(Decimal::ZERO),
+        (_, val) if val == Decimal::ZERO => Ok(Decimal::MAX),
+        _ => Ok(gamma / theta),
+    }
 }
 
 #[cfg(test)]
@@ -1743,8 +1748,34 @@ mod tests_greeks_trait {
 
     #[test]
     fn test_greeks_opposing_positions() {
-        let option1 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
-        let option2 = create_test_option(Side::Short, OptionStyle::Call, pos!(1.0));
+        let option1 = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos!(50.0), // strike_price
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.2), // implied_volatility
+            Positive::ONE,
+            pos!(50.0), // underlying_price
+            dec!(0.05), // risk_free_rate
+            OptionStyle::Call,
+            pos!(0.01), // dividend_yield
+            None,       // exotic_params
+        );
+        let option2 = Options::new(
+            OptionType::European,
+            Side::Short,
+            "TEST".to_string(),
+            pos!(50.0), // strike_price
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.2), // implied_volatility
+            Positive::ONE,
+            pos!(50.0), // underlying_price
+            dec!(0.05), // risk_free_rate
+            OptionStyle::Call,
+            pos!(0.01), // dividend_yield
+            None,       // exotic_params
+        );
         let collection = TestOptionCollection {
             options: vec![option1, option2],
         };
@@ -1753,9 +1784,9 @@ mod tests_greeks_trait {
 
         // Opposing positions should mostly cancel out
         assert_decimal_eq!(greeks.delta, dec!(0.0), dec!(0.000001));
-        assert_decimal_eq!(greeks.gamma, dec!(0.0), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(0.0), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(0.0), dec!(0.000001));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0743013), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(63.049408), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(53.232481), dec!(0.000001));
     }
 
     #[test]

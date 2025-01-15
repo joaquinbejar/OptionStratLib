@@ -37,7 +37,7 @@
 //!
 //! ```rust
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::greeks::equations::{delta, gamma, rho, theta, vega};
+//! use optionstratlib::greeks::{delta, gamma, rho, theta, vega};
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::pos;
