@@ -4,7 +4,42 @@
    Date: 10/12/24
 ******************************************************************************/
 
-//! # Delta Neutral Strategies Module
+/// # Delta Neutrality Management Module
+///
+/// This module provides tools and structures to manage and maintain delta neutrality
+/// in trading strategies. It includes enumerations, structures, and a trait to calculate
+/// net delta, check neutrality status, and suggest adjustments to achieve or maintain 
+/// delta neutrality.
+///
+/// ## Overview
+/// - **`DeltaAdjustment`**: Enum defining the types of actions that can be taken to adjust delta.
+/// - **`DeltaInfo`**: Structure containing detailed information about the delta status of a strategy.
+/// - **`DeltaNeutrality`**: Trait implementing methods for managing delta neutrality, such as
+///   calculating net delta, checking neutrality, and generating suggestions for adjustments.
+///
+/// ## Components
+/// 1. **DeltaAdjustment Enum**
+///    - Represents possible adjustments needed to achieve delta neutrality.
+///    - Covers buying/selling options, underlying assets, or no adjustment if strategy is neutral.
+///
+/// 2. **DeltaInfo Structure**
+///    - Provides detailed information about the delta of a trading strategy.
+///    - Includes the net delta, individual deltas, neutrality status, and more.
+///
+/// 3. **DeltaNeutrality Trait**
+///    - A trait for trading strategies that provides the ability to calculate net delta,
+///      determine neutrality, and suggest actions for neutrality adjustments.
+///
+/// ## Code Highlights
+/// - **`DELTA_THRESHOLD`** defines the maximum allowed deviation from neutrality.
+/// - The module introduces two levels of adjustment:
+///   - `generate_delta_reducing_adjustments`: Suggests adjustments to reduce a positive delta.
+///   - `generate_delta_increasing_adjustments`: Suggests adjustments to increase a negative delta.
+///
+/// ## Usage
+/// This module is designed to help maintain a delta-neutral portfolio by suggesting
+/// appropriate hedging actions (e.g., buying or selling options or underlying assets)
+/// based on the delta exposure of the strategy.
 use crate::greeks::Greeks;
 use crate::model::types::OptionStyle;
 use crate::{pos, Positive};
