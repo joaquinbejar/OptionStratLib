@@ -4,7 +4,7 @@
    Date: 5/8/24
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
-use crate::greeks::utils::{big_n, d2};
+use crate::greeks::{big_n, d2};
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};

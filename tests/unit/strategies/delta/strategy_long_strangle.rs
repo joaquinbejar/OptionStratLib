@@ -1,5 +1,5 @@
 use approx::assert_relative_eq;
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::LongStrangle;
@@ -34,7 +34,7 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
         pos!(7.01),     // close_fee_short_put
     );
 
-    let greeks = strategy.greeks();
+    let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);
 
     assert_decimal_eq!(greeks.delta, dec!(-0.0018), epsilon);

@@ -22,7 +22,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::greeks::equations::{Greek, Greeks};
+use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -44,6 +44,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 
+use crate::error::GreeksError;
 use tracing::debug;
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =
@@ -597,18 +598,8 @@ impl ProbabilityAnalysis for BullPutSpread {
 }
 
 impl Greeks for BullPutSpread {
-    fn greeks(&self) -> Greek {
-        let long_put_greek = self.long_put.greeks();
-        let short_put_greek = self.short_put.greeks();
-
-        Greek {
-            delta: long_put_greek.delta + short_put_greek.delta,
-            gamma: long_put_greek.gamma + short_put_greek.gamma,
-            theta: long_put_greek.theta + short_put_greek.theta,
-            vega: long_put_greek.vega + short_put_greek.vega,
-            rho: long_put_greek.rho + short_put_greek.rho,
-            rho_d: long_put_greek.rho_d + short_put_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![&self.long_put.option, &self.short_put.option])
     }
 }
 

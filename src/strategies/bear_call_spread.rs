@@ -35,7 +35,8 @@ use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::greeks::equations::{Greek, Greeks};
+use crate::error::GreeksError;
+use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -500,18 +501,8 @@ impl ProbabilityAnalysis for BearCallSpread {
 }
 
 impl Greeks for BearCallSpread {
-    fn greeks(&self) -> Greek {
-        let long_call_greek = self.long_call.greeks();
-        let short_call_greek = self.short_call.greeks();
-
-        Greek {
-            delta: long_call_greek.delta + short_call_greek.delta,
-            gamma: long_call_greek.gamma + short_call_greek.gamma,
-            theta: long_call_greek.theta + short_call_greek.theta,
-            vega: long_call_greek.vega + short_call_greek.vega,
-            rho: long_call_greek.rho + short_call_greek.rho,
-            rho_d: long_call_greek.rho_d + short_call_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![&self.short_call.option, &self.long_call.option])
     }
 }
 
@@ -2012,6 +2003,7 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;

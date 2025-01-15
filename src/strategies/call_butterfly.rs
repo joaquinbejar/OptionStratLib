@@ -10,8 +10,8 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
-use crate::error::ProbabilityError;
-use crate::greeks::equations::{Greek, Greeks};
+use crate::error::{GreeksError, ProbabilityError};
+use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
@@ -642,19 +642,12 @@ impl ProbabilityAnalysis for CallButterfly {
 }
 
 impl Greeks for CallButterfly {
-    fn greeks(&self) -> Greek {
-        let short_call_low_greek = self.short_call_low.greeks();
-        let short_call_high_greek = self.short_call_high.greeks();
-        let long_call_greek = self.long_call.greeks();
-
-        Greek {
-            delta: short_call_low_greek.delta + short_call_high_greek.delta + long_call_greek.delta,
-            gamma: short_call_low_greek.gamma + short_call_high_greek.gamma + long_call_greek.gamma,
-            theta: short_call_low_greek.theta + short_call_high_greek.theta + long_call_greek.theta,
-            vega: short_call_low_greek.vega + short_call_high_greek.vega + long_call_greek.vega,
-            rho: short_call_low_greek.rho + short_call_high_greek.rho + long_call_greek.rho,
-            rho_d: short_call_low_greek.rho_d + short_call_high_greek.rho_d + long_call_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![
+            &self.long_call.option,
+            &self.short_call_low.option,
+            &self.short_call_high.option,
+        ])
     }
 }
 

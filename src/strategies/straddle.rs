@@ -17,7 +17,8 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::greeks::equations::{Greek, Greeks};
+use crate::error::GreeksError;
+use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -515,18 +516,8 @@ impl ProbabilityAnalysis for ShortStraddle {
 }
 
 impl Greeks for ShortStraddle {
-    fn greeks(&self) -> Greek {
-        let call_greek = self.short_call.greeks();
-        let put_greek = self.short_put.greeks();
-
-        Greek {
-            delta: call_greek.delta + put_greek.delta,
-            gamma: call_greek.gamma + put_greek.gamma,
-            theta: call_greek.theta + put_greek.theta,
-            vega: call_greek.vega + put_greek.vega,
-            rho: call_greek.rho + put_greek.rho,
-            rho_d: call_greek.rho_d + put_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![&self.short_call.option, &self.short_put.option])
     }
 }
 
@@ -1027,18 +1018,8 @@ impl ProbabilityAnalysis for LongStraddle {
 }
 
 impl Greeks for LongStraddle {
-    fn greeks(&self) -> Greek {
-        let call_greek = self.long_call.greeks();
-        let put_greek = self.long_put.greeks();
-
-        Greek {
-            delta: call_greek.delta + put_greek.delta,
-            gamma: call_greek.gamma + put_greek.gamma,
-            theta: call_greek.theta + put_greek.theta,
-            vega: call_greek.vega + put_greek.vega,
-            rho: call_greek.rho + put_greek.rho,
-            rho_d: call_greek.rho_d + put_greek.rho_d,
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![&self.long_call.option, &self.long_put.option])
     }
 }
 
@@ -2190,6 +2171,7 @@ mod tests_long_straddle_probability {
 
 #[cfg(test)]
 mod tests_short_straddle_delta {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2298,6 +2280,7 @@ mod tests_short_straddle_delta {
 
 #[cfg(test)]
 mod tests_long_straddle_delta {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2408,6 +2391,7 @@ mod tests_long_straddle_delta {
 
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2524,6 +2508,7 @@ mod tests_short_straddle_delta_size {
 
 #[cfg(test)]
 mod tests_long_straddle_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
