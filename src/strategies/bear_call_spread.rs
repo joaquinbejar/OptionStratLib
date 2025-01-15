@@ -35,6 +35,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::GreeksError;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -57,7 +58,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::debug;
-use crate::error::GreeksError;
 
 const BEAR_CALL_SPREAD_DESCRIPTION: &str =
     "A bear call spread is created by selling a call option with a lower strike price \
@@ -2003,6 +2003,7 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
@@ -2010,7 +2011,6 @@ mod tests_delta_size {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
         let underlying_price = pos!(5781.88);

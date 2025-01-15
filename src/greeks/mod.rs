@@ -88,6 +88,6 @@
 mod equations;
 mod utils;
 
-pub use utils::{d1, d2,big_n, n};
+pub use equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
 pub(crate) use utils::calculate_d_values;
-pub use equations::{delta, gamma, rho, theta, vega, rho_d, Greeks, Greek};
+pub use utils::{big_n, d1, d2, n};

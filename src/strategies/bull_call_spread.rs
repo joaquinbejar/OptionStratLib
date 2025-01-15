@@ -22,6 +22,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::GreeksError;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -44,7 +45,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info};
-use crate::error::GreeksError;
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \
@@ -1770,6 +1770,7 @@ mod tests_bull_call_spread_probability {
 
 #[cfg(test)]
 mod tests_delta {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
@@ -1777,7 +1778,6 @@ mod tests_delta {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
         let underlying_price = pos!(5781.88);
@@ -1882,6 +1882,7 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
@@ -1889,7 +1890,6 @@ mod tests_delta_size {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
         let underlying_price = pos!(5781.88);

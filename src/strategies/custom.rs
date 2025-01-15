@@ -646,7 +646,11 @@ impl ProbabilityAnalysis for CustomStrategy {
 
 impl Greeks for CustomStrategy {
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-        Ok(self.positions.iter().map(|position| &position.option).collect())
+        Ok(self
+            .positions
+            .iter()
+            .map(|position| &position.option)
+            .collect())
     }
 }
 

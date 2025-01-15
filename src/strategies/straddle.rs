@@ -17,6 +17,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::GreeksError;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -40,7 +41,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{info, trace};
-use crate::error::GreeksError;
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -2171,6 +2171,7 @@ mod tests_long_straddle_probability {
 
 #[cfg(test)]
 mod tests_short_straddle_delta {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2179,7 +2180,6 @@ mod tests_short_straddle_delta {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(strike: Positive) -> ShortStraddle {
         let underlying_price = pos!(7138.5);
@@ -2280,6 +2280,7 @@ mod tests_short_straddle_delta {
 
 #[cfg(test)]
 mod tests_long_straddle_delta {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2287,7 +2288,6 @@ mod tests_long_straddle_delta {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(strike: Positive) -> LongStraddle {
         let underlying_price = pos!(7138.5);
@@ -2391,6 +2391,7 @@ mod tests_long_straddle_delta {
 
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2401,7 +2402,6 @@ mod tests_short_straddle_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
-    use crate::greeks::Greeks;
 
     fn get_strategy(strike: Positive) -> ShortStraddle {
         let underlying_price = pos!(7138.5);
@@ -2508,6 +2508,7 @@ mod tests_short_straddle_delta_size {
 
 #[cfg(test)]
 mod tests_long_straddle_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2517,7 +2518,6 @@ mod tests_long_straddle_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
-    use crate::greeks::Greeks;
 
     fn get_strategy(strike: Positive) -> LongStraddle {
         let underlying_price = pos!(7138.5);

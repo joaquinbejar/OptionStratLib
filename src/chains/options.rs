@@ -3,10 +3,10 @@
    Email: jb@taunais.com
    Date: 12/12/24
 ******************************************************************************/
+use crate::greeks::Greeks;
 use crate::Options;
 use rust_decimal::Decimal;
 use std::error::Error;
-use crate::greeks::Greeks;
 
 #[derive(Debug, Clone)]
 pub struct OptionsInStrike {

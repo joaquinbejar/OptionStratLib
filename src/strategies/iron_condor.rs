@@ -2137,6 +2137,7 @@ mod tests_iron_condor_graph {
 
 #[cfg(test)]
 mod tests_iron_condor_delta {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2144,7 +2145,6 @@ mod tests_iron_condor_delta {
     use crate::{d2fu, pos, Positive};
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
-    use crate::greeks::Greeks;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(

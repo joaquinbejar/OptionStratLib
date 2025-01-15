@@ -208,12 +208,12 @@ pub trait DeltaNeutrality: Greeks {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::GreeksError;
     use crate::greeks::Greek;
+    use crate::Options;
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
-    use crate::error::GreeksError;
-    use crate::Options;
 
     // Mock struct to implement required traits for testing
     struct MockStrategy {
@@ -228,7 +228,7 @@ mod tests {
             todo!()
         }
 
-        fn greeks(&self) -> Result<Greek, GreeksError>  {
+        fn greeks(&self) -> Result<Greek, GreeksError> {
             Ok(Greek {
                 delta: self.delta,
                 gamma: Decimal::ZERO,

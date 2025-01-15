@@ -23,7 +23,7 @@ pub struct Greek {
 
 pub trait Greeks {
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError>;
-    
+
     fn greeks(&self) -> Result<Greek, GreeksError> {
         let delta = self.delta()?;
         let gamma = self.gamma()?;
@@ -51,7 +51,7 @@ pub trait Greeks {
         }
         Ok(delta_value)
     }
-    
+
     fn gamma(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut gamma_value = Decimal::ZERO;
@@ -60,7 +60,7 @@ pub trait Greeks {
         }
         Ok(gamma_value)
     }
-    
+
     fn theta(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut theta_value = Decimal::ZERO;
@@ -69,7 +69,7 @@ pub trait Greeks {
         }
         Ok(theta_value)
     }
-    
+
     fn vega(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut vega_value = Decimal::ZERO;
@@ -78,7 +78,7 @@ pub trait Greeks {
         }
         Ok(vega_value)
     }
-    
+
     fn rho(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut rho_value = Decimal::ZERO;
@@ -87,7 +87,7 @@ pub trait Greeks {
         }
         Ok(rho_value)
     }
-    
+
     fn rho_d(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut rho_d_value = Decimal::ZERO;
@@ -96,7 +96,7 @@ pub trait Greeks {
         }
         Ok(rho_d_value)
     }
-    
+
     fn alpha(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut alpha_value = Decimal::ZERO;
@@ -1656,15 +1656,15 @@ mod tests_greeks_trait {
             OptionType::European,
             side,
             "TEST".to_string(),
-            pos!(100.0),  // strike_price
+            pos!(100.0), // strike_price
             ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),    // implied_volatility
+            pos!(0.2), // implied_volatility
             quantity,
-            pos!(100.0),  // underlying_price
-            dec!(0.05),   // risk_free_rate
+            pos!(100.0), // underlying_price
+            dec!(0.05),  // risk_free_rate
             style,
-            pos!(0.01),   // dividend_yield
-            None,         // exotic_params
+            pos!(0.01), // dividend_yield
+            None,       // exotic_params
         )
     }
 
@@ -1697,12 +1697,30 @@ mod tests_greeks_trait {
         let greeks = collection.greeks().unwrap();
 
         // Test aggregated greek values
-        assert!(greeks.delta.abs() > dec!(0.0), "Delta should be non-zero for multiple options");
-        assert!(greeks.gamma.abs() > dec!(0.0), "Gamma should be non-zero for multiple options");
-        assert!(greeks.theta.abs() > dec!(0.0), "Theta should be non-zero for multiple options");
-        assert!(greeks.vega.abs() > dec!(0.0), "Vega should be non-zero for multiple options");
-        assert!(greeks.rho.abs() > dec!(0.0), "Rho should be non-zero for multiple options");
-        assert!(greeks.rho_d.abs() > dec!(0.0), "Rho_d should be non-zero for multiple options");
+        assert!(
+            greeks.delta.abs() > dec!(0.0),
+            "Delta should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.gamma.abs() > dec!(0.0),
+            "Gamma should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.theta.abs() > dec!(0.0),
+            "Theta should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.vega.abs() > dec!(0.0),
+            "Vega should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.rho.abs() > dec!(0.0),
+            "Rho should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.rho_d.abs() > dec!(0.0),
+            "Rho_d should be non-zero for multiple options"
+        );
     }
 
     #[test]
@@ -1767,9 +1785,7 @@ mod tests_greeks_trait {
 
     #[test]
     fn test_empty_option_collection() {
-        let collection = TestOptionCollection {
-            options: vec![],
-        };
+        let collection = TestOptionCollection { options: vec![] };
 
         // All greeks should be zero for empty collection
         let greeks = collection.greeks().unwrap();

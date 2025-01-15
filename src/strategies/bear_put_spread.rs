@@ -20,6 +20,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::GreeksError;
 use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
@@ -39,7 +40,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
-use crate::error::GreeksError;
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
     "A bear put spread is created by buying a put option with a higher strike price \

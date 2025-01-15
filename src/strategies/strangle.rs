@@ -17,6 +17,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::GreeksError;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -40,7 +41,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info, trace};
-use crate::error::GreeksError;
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -1101,7 +1101,7 @@ impl ProbabilityAnalysis for LongStrangle {
 }
 
 impl Greeks for LongStrangle {
-    fn get_options(&self) -> Result<Vec<&Options>, GreeksError>{
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
         Ok(vec![&self.long_call.option, &self.long_put.option])
     }
 }
@@ -2264,6 +2264,7 @@ mod tests_long_strangle_probability {
 
 #[cfg(test)]
 mod tests_short_strangle_delta {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2272,7 +2273,6 @@ mod tests_short_strangle_delta {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
         let underlying_price = pos!(7138.5);
@@ -2376,6 +2376,7 @@ mod tests_short_strangle_delta {
 
 #[cfg(test)]
 mod tests_long_strangle_delta {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2383,7 +2384,6 @@ mod tests_long_strangle_delta {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos!(7138.5);
@@ -2490,6 +2490,7 @@ mod tests_long_strangle_delta {
 
 #[cfg(test)]
 mod tests_short_strangle_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2498,7 +2499,6 @@ mod tests_short_strangle_delta_size {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
         let underlying_price = pos!(7138.5);
@@ -2608,6 +2608,7 @@ mod tests_short_strangle_delta_size {
 
 #[cfg(test)]
 mod tests_long_strangle_delta_size {
+    use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2615,7 +2616,6 @@ mod tests_long_strangle_delta_size {
     use crate::{d2fu, pos};
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos!(7138.5);

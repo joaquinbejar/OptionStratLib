@@ -62,9 +62,13 @@ pub(crate) fn benchmark_greeks(c: &mut Criterion) {
         bencher.iter(|| black_box(option.theta().unwrap()))
     });
 
-    group.bench_function("vega", |bencher| bencher.iter(|| black_box(option.vega().unwrap())));
+    group.bench_function("vega", |bencher| {
+        bencher.iter(|| black_box(option.vega().unwrap()))
+    });
 
-    group.bench_function("rho", |bencher| bencher.iter(|| black_box(option.rho().unwrap())));
+    group.bench_function("rho", |bencher| {
+        bencher.iter(|| black_box(option.rho().unwrap()))
+    });
 
     group.bench_function("all_greeks", |bencher| {
         bencher.iter(|| black_box(option.greeks().unwrap()))

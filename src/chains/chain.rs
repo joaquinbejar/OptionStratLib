@@ -2467,11 +2467,11 @@ mod tests_option_data_get_option {
 mod tests_option_data_get_options_in_strike {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
+    use crate::greeks::Greeks;
     use crate::model::types::ExpirationDate;
     use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::greeks::Greeks;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
