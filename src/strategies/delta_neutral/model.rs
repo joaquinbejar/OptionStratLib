@@ -44,8 +44,10 @@ use crate::greeks::Greeks;
 use crate::model::types::OptionStyle;
 use crate::{pos, Positive};
 use std::fmt;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
-pub const DELTA_THRESHOLD: f64 = 0.005;
+pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 
 /// Represents the possible adjustments needed to achieve delta neutrality
 #[derive(Debug, PartialEq)]
@@ -80,13 +82,13 @@ pub enum DeltaAdjustment {
 #[derive(Debug)]
 pub struct DeltaInfo {
     /// Net delta of the entire strategy
-    pub net_delta: f64,
+    pub net_delta: Decimal,
     /// Individual deltas of each component
-    pub individual_deltas: Vec<f64>,
+    pub individual_deltas: Vec<Decimal>,
     /// Whether the strategy is considered delta neutral
     pub is_neutral: bool,
     /// The threshold used to determine neutrality
-    pub neutrality_threshold: f64,
+    pub neutrality_threshold: Decimal,
     /// The current underlying price
     pub underlying_price: Positive,
 }
@@ -141,7 +143,7 @@ pub trait DeltaNeutrality: Greeks {
     /// Checks if the strategy is delta neutral within the specified threshold.
     ///
     /// # Arguments
-    /// * `threshold` - A `f64` value representing the maximum allowed deviation from ideal delta neutrality.
+    /// * `threshold` - A `Decimal` value representing the maximum allowed deviation from ideal delta neutrality.
     ///
     /// # Returns
     /// A boolean (`true` or `false`):
@@ -158,7 +160,7 @@ pub trait DeltaNeutrality: Greeks {
     /// Suggests adjustments to achieve delta neutrality.
     ///
     /// # Arguments
-    /// * `threshold` - A `f64` value defining the maximum allowable deviation for neutrality.
+    /// * `threshold` - A `Decimal` value defining the maximum allowable deviation for neutrality.
     ///
     /// # Returns
     /// * A `Vec<DeltaAdjustment>` containing potential adjustments (if needed) to bring the strategy closer to neutrality.
@@ -186,7 +188,7 @@ pub trait DeltaNeutrality: Greeks {
     /// Generates adjustments to reduce a positive delta.
     ///
     /// # Arguments
-    /// * `net_delta` - A `f64` representing the current positive net delta requiring adjustment.
+    /// * `net_delta` - A `Decimal` representing the current positive net delta requiring adjustment.
     ///
     /// # Returns
     /// * A `Vec<DeltaAdjustment>` suggesting actions to reduce delta (e.g., selling the underlying asset or buying put options).
@@ -195,16 +197,16 @@ pub trait DeltaNeutrality: Greeks {
     /// * Selling the underlying asset.
     /// * Buying puts at ATM strikes.
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
-        let net_delta = self.calculate_net_delta().net_delta;
+        let net_delta = Positive(self.calculate_net_delta().net_delta.abs());
         vec![
-            DeltaAdjustment::SellUnderlying(pos!(net_delta.abs())),
+            DeltaAdjustment::SellUnderlying(net_delta),
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(net_delta.abs() * 2.0).round_to(12),
+                quantity: (net_delta * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Put,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!(net_delta.abs() * 2.0).round_to(12),
+                quantity: (net_delta * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
@@ -214,7 +216,7 @@ pub trait DeltaNeutrality: Greeks {
     /// Generates adjustments to increase a negative delta.
     ///
     /// # Arguments
-    /// * `net_delta` - A `f64` representing the current negative net delta requiring adjustment.
+    /// * `net_delta` - A `Decimal` representing the current negative net delta requiring adjustment.
     ///
     /// # Returns
     /// * A `Vec<DeltaAdjustment>` suggesting actions to increase delta (e.g., buying the underlying asset or buying call options).
@@ -223,16 +225,16 @@ pub trait DeltaNeutrality: Greeks {
     /// * Buying the underlying asset.
     /// * Buying calls at ATM strikes.
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
-        let net_delta = self.calculate_net_delta().net_delta;
+        let net_delta = Positive(self.calculate_net_delta().net_delta.abs());
         vec![
-            DeltaAdjustment::BuyUnderlying(pos!(net_delta.abs())),
+            DeltaAdjustment::BuyUnderlying(net_delta),
             DeltaAdjustment::BuyOptions {
-                quantity: pos!(net_delta.abs() * 2.0).round_to(12),
+                quantity: (net_delta * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: pos!(net_delta.abs() * 2.0).round_to(12),
+                quantity: (net_delta * 2.0).round_to(12),
                 strike: self.get_atm_strike(),
                 option_type: OptionStyle::Put,
             },
@@ -246,7 +248,6 @@ mod tests {
     use crate::error::GreeksError;
     use crate::greeks::Greek;
     use crate::Options;
-    use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -254,13 +255,13 @@ mod tests {
     struct MockStrategy {
         delta: Decimal,
         underlying_price: Positive,
-        individual_deltas: Vec<f64>,
+        individual_deltas: Vec<Decimal>,
     }
 
     // Implement Greeks trait for MockStrategy
     impl Greeks for MockStrategy {
         fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-            todo!()
+            Ok(vec![])
         }
 
         fn greeks(&self) -> Result<Greek, GreeksError> {
@@ -280,10 +281,10 @@ mod tests {
     impl DeltaNeutrality for MockStrategy {
         fn calculate_net_delta(&self) -> DeltaInfo {
             DeltaInfo {
-                net_delta: self.delta.to_f64().unwrap(),
+                net_delta: self.delta,
                 individual_deltas: self.individual_deltas.clone(),
                 is_neutral: self.delta.abs() <= dec!(0.01),
-                neutrality_threshold: 0.01,
+                neutrality_threshold: dec!(0.01),
                 underlying_price: self.underlying_price,
             }
         }
@@ -294,29 +295,29 @@ mod tests {
     }
 
     // Helper function to create a mock strategy
-    fn create_mock_strategy(delta: Decimal, price: f64) -> MockStrategy {
+    fn create_mock_strategy(delta: Decimal, price: Positive) -> MockStrategy {
         MockStrategy {
             delta,
-            underlying_price: pos!(price),
-            individual_deltas: vec![delta.to_f64().unwrap()],
+            underlying_price: price,
+            individual_deltas: vec![delta],
         }
     }
 
     #[test]
     fn test_calculate_net_delta() {
-        let strategy = create_mock_strategy(dec!(0.5), 100.0);
+        let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
         let info = strategy.calculate_net_delta();
 
-        assert_eq!(info.net_delta, 0.5);
-        assert_eq!(info.individual_deltas, vec![0.5]);
+        assert_eq!(info.net_delta, dec!(0.5));
+        assert_eq!(info.individual_deltas, vec![dec!(0.5)]);
         assert!(!info.is_neutral);
         assert_eq!(info.underlying_price, pos!(100.0));
     }
 
     #[test]
     fn test_is_delta_neutral() {
-        let neutral_strategy = create_mock_strategy(dec!(0.005), 100.0);
-        let non_neutral_strategy = create_mock_strategy(dec!(0.5), 100.0);
+        let neutral_strategy = create_mock_strategy(dec!(0.005), pos!(100.0));
+        let non_neutral_strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
 
         assert!(neutral_strategy.is_delta_neutral());
         assert!(!non_neutral_strategy.is_delta_neutral());
@@ -324,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_suggest_delta_adjustments_neutral() {
-        let strategy = create_mock_strategy(dec!(0.005), 100.0);
+        let strategy = create_mock_strategy(dec!(0.005), pos!(100.0));
         let adjustments = strategy.suggest_delta_adjustments();
 
         assert_eq!(adjustments, vec![DeltaAdjustment::NoAdjustmentNeeded]);
@@ -332,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_suggest_delta_adjustments_positive() {
-        let strategy = create_mock_strategy(dec!(0.5), 100.0);
+        let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
         let adjustments = strategy.suggest_delta_adjustments();
 
         assert_eq!(
@@ -355,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_suggest_delta_adjustments_negative() {
-        let strategy = create_mock_strategy(dec!(-0.5), 100.0);
+        let strategy = create_mock_strategy(dec!(-0.5), pos!(100.0));
         let adjustments = strategy.suggest_delta_adjustments();
 
         assert_eq!(
@@ -378,7 +379,7 @@ mod tests {
 
     #[test]
     fn test_delta_info_display() {
-        let strategy = create_mock_strategy(dec!(0.5), 100.0);
+        let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
         let info = strategy.calculate_net_delta();
         let display_string = format!("{}", info);
 
@@ -390,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_generate_delta_reducing_adjustments() {
-        let strategy = create_mock_strategy(dec!(0.5), 100.0);
+        let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
         let adjustments = strategy.generate_delta_reducing_adjustments();
 
         assert_eq!(
@@ -413,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_generate_delta_increasing_adjustments() {
-        let strategy = create_mock_strategy(dec!(-0.5), 100.0);
+        let strategy = create_mock_strategy(dec!(-0.5), pos!(100.0));
         let adjustments = strategy.generate_delta_increasing_adjustments();
 
         assert_eq!(
