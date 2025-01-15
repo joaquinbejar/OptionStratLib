@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &[],
         GraphBackend::Bitmap {
             file_path: "Draws/Simulation/option_chain_from_random_walk.png",
-            size: (1200, 800)
+            size: (1200, 800),
         },
         20,
     );

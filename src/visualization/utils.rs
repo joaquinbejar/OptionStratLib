@@ -35,9 +35,7 @@ pub enum GraphBackend<'a> {
 
 #[cfg(target_arch = "wasm32")]
 pub enum GraphBackend {
-    Canvas {
-        canvas: web_sys::HtmlCanvasElement,
-    },
+    Canvas { canvas: web_sys::HtmlCanvasElement },
 }
 
 #[macro_export]

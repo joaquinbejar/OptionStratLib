@@ -1162,7 +1162,7 @@ pub mod tests_vega_equation {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-   fn create_test_option(
+    fn create_test_option(
         underlying_price: Positive,
         strike_price: Positive,
         implied_volatility: Positive,
@@ -1296,7 +1296,7 @@ pub mod tests_rho_equations {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-   fn create_test_option(style: OptionStyle) -> Options {
+    fn create_test_option(style: OptionStyle) -> Options {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
@@ -1385,7 +1385,7 @@ pub mod tests_theta_long_equations {
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
-   #[test]
+    #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_call_option() {
         // Create a sample call option

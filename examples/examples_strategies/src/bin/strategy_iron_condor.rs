@@ -65,7 +65,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Generate the profit/loss graph
     strategy.graph(
         &price_range,
-        GraphBackend::Bitmap { file_path: "Draws/Strategy/iron_condor_profit_loss_chart.png", size: (1400, 933) },
+        GraphBackend::Bitmap {
+            file_path: "Draws/Strategy/iron_condor_profit_loss_chart.png",
+            size: (1400, 933),
+        },
         20,
     )?;
 

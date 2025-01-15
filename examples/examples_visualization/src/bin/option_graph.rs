@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Options/intrinsic_value_chart.png",
-            size: (1400, 933)
+            size: (1400, 933),
         },
         20,
     )?;

@@ -71,7 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             &price_range,
             GraphBackend::Bitmap {
                 file_path: "Draws/Strategy/poor_mans_covered_call_profit_loss_chart_best_ratio.png",
-                size: (1400, 933)
+                size: (1400, 933),
             },
             20,
         )?;
