@@ -67,10 +67,10 @@
 //! impl DeltaNeutrality for MyStrategy {
 //!     fn calculate_net_delta(&self) -> DeltaInfo {
 //!         DeltaInfo {
-//!            net_delta: d2fu!(self.greeks().unwrap().delta).unwrap(),
+//!            net_delta: self.greeks().unwrap().delta,
 //!            individual_deltas: vec![],
 //!            is_neutral: false,
-//!            neutrality_threshold: 0.0,
+//!            neutrality_threshold: dec!(0.0),
 //!            underlying_price: Positive::ZERO,
 //!         }
 //!     }

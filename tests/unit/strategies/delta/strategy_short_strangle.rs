@@ -5,9 +5,9 @@ use optionstratlib::strategies::{ShortStrangle, DELTA_THRESHOLD};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_decimal_eq, pos};
 use optionstratlib::{ExpirationDate, Positive};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
-use rust_decimal::Decimal;
 
 #[test]
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {

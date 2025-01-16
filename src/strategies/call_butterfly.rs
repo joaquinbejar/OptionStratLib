@@ -659,7 +659,7 @@ impl DeltaNeutrality for CallButterfly {
         let threshold = DELTA_THRESHOLD;
         let l_ci_delta = long_call_itm_delta.unwrap();
         let l_co_delta = long_call_otm_delta.unwrap();
-        let s_c_delta =  short_call_delta.unwrap();
+        let s_c_delta = short_call_delta.unwrap();
 
         let delta = l_ci_delta + l_co_delta + s_c_delta;
         DeltaInfo {
@@ -677,19 +677,19 @@ impl DeltaNeutrality for CallButterfly {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-        let delta_low =  self.short_call_low.option.delta().unwrap();
+        let delta_low = self.short_call_low.option.delta().unwrap();
         let delta_high = self.short_call_high.option.delta().unwrap();
         let qty_low = Positive((net_delta.abs() / delta_low).abs());
         let qty_high = Positive((net_delta.abs() / delta_high).abs());
 
         vec![
             DeltaAdjustment::SellOptions {
-                quantity: qty_low                    * self.short_call_low.option.quantity,
+                quantity: qty_low * self.short_call_low.option.quantity,
                 strike: self.short_call_low.option.strike_price,
                 option_type: OptionStyle::Call,
             },
             DeltaAdjustment::SellOptions {
-                quantity: qty_high                    * self.short_call_high.option.quantity,
+                quantity: qty_high * self.short_call_high.option.quantity,
                 strike: self.short_call_high.option.strike_price,
                 option_type: OptionStyle::Call,
             },
@@ -712,9 +712,9 @@ impl DeltaNeutrality for CallButterfly {
 #[cfg(test)]
 mod tests_call_butterfly {
     use super::*;
+    use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::pos;
 
     fn setup() -> CallButterfly {
         CallButterfly::new(
@@ -825,8 +825,8 @@ mod tests_call_butterfly {
 #[cfg(test)]
 mod tests_call_butterfly_validation {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn setup_basic_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -876,8 +876,8 @@ mod tests_call_butterfly_validation {
 #[cfg(test)]
 mod tests_call_butterfly_pnl {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -929,9 +929,9 @@ mod tests_call_butterfly_pnl {
 mod tests_call_butterfly_graph {
     use super::*;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::pos;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -1110,12 +1110,16 @@ mod tests_iron_condor_delta {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.long_call.option.clone();
@@ -1147,21 +1151,29 @@ mod tests_iron_condor_delta {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.short_call_low.option.clone();
@@ -1239,14 +1251,18 @@ mod tests_iron_condor_delta_size {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
-        
+
         let mut option = strategy.long_call.option.clone();
         option.quantity = delta;
         let delta = option.delta().unwrap();
@@ -1276,23 +1292,30 @@ mod tests_iron_condor_delta_size {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
-
 
         let mut option = strategy.short_call_low.option.clone();
         option.quantity = delta1;
@@ -1323,9 +1346,9 @@ mod tests_iron_condor_delta_size {
 #[cfg(test)]
 mod tests_call_butterfly_optimizable {
     use super::*;
+    use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
-    use crate::pos;
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);

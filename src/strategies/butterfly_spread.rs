@@ -3458,7 +3458,7 @@ mod tests_long_butterfly_delta {
         let strategy = get_strategy(pos!(5881.88));
         let size = dec!(-0.5970615569);
         let delta1 = pos!(0.60439151471911);
-        let delta2 = pos!(175.12573934884019);
+        let delta2 = pos!(175.125_739_348_840_2);
         let k1 = pos!(5710.0);
         let k2 = pos!(6100.0);
         assert_decimal_eq!(
@@ -3471,21 +3471,29 @@ mod tests_long_butterfly_delta {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.long_call_low.option.clone();
@@ -3514,12 +3522,16 @@ mod tests_long_butterfly_delta {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.short_calls.option.clone();
@@ -3602,21 +3614,29 @@ mod tests_long_butterfly_delta_size {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.long_call_low.option.clone();
@@ -3646,12 +3666,16 @@ mod tests_long_butterfly_delta_size {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.short_calls.option.clone();
@@ -3732,14 +3756,17 @@ mod tests_short_butterfly_delta {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
-
 
         let mut option = strategy.long_calls.option.clone();
         option.quantity = delta;
@@ -3770,21 +3797,29 @@ mod tests_short_butterfly_delta {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.short_call_low.option.clone();
@@ -3863,12 +3898,16 @@ mod tests_short_butterfly_delta_size {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.long_calls.option.clone();
@@ -3900,23 +3939,30 @@ mod tests_short_butterfly_delta_size {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
-
 
         let mut option = strategy.short_call_low.option.clone();
         option.quantity = delta1;

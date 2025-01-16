@@ -1,7 +1,7 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::{ LongStrangle, DELTA_THRESHOLD};
+use optionstratlib::strategies::{LongStrangle, DELTA_THRESHOLD};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_decimal_eq, pos};
 use optionstratlib::{ExpirationDate, Positive};

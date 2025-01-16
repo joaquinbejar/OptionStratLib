@@ -2138,10 +2138,9 @@ mod tests_iron_condor_graph {
 
 #[cfg(test)]
 mod tests_iron_condor_delta {
-    use rust_decimal_macros::dec;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use super::*;
-
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
@@ -2170,7 +2169,7 @@ mod tests_iron_condor_delta {
         let strategy = get_strategy(pos!(2800.0));
         let size = dec!(-0.2124);
         let delta1 = pos!(0.4175977387296559);
-        let delta2 = pos!(10.312565341673712647728983917);
+        let delta2 = pos!(10.312_565_341_673_713);
         let k1 = pos!(2800.0);
         let k2 = pos!(2560.0);
         assert_decimal_eq!(
@@ -2183,23 +2182,30 @@ mod tests_iron_condor_delta {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Put);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
-
 
         let mut option = strategy.long_call.option.clone();
         option.quantity = delta1;
@@ -2217,7 +2223,7 @@ mod tests_iron_condor_delta {
         let strategy = get_strategy(pos!(2500.0));
         let size = dec!(0.18282752);
         let delta1 = pos!(0.3722450887122405);
-        let delta2 = pos!(6.6598726493799058);
+        let delta2 = pos!(6.659_872_649_379_905);
         let k1 = pos!(2500.0);
         let k2 = pos!(2725.0);
         assert_decimal_eq!(
@@ -2230,23 +2236,30 @@ mod tests_iron_condor_delta {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Put);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
-
 
         let mut option = strategy.long_put.option.clone();
         option.quantity = delta1;
@@ -2277,11 +2290,11 @@ mod tests_iron_condor_delta {
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
     use super::*;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_condor::IronCondor;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
@@ -2324,23 +2337,30 @@ mod tests_iron_condor_delta_size {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Put);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
-
 
         let mut option = strategy.long_call.option.clone();
         option.quantity = delta1;
@@ -2371,23 +2391,30 @@ mod tests_iron_condor_delta_size {
         let suggestion_zero = binding.first().unwrap();
         let suggestion_one = binding.last().unwrap();
         match suggestion_zero {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Put);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         match suggestion_one {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
-
 
         let mut option = strategy.long_put.option.clone();
         option.quantity = delta1;

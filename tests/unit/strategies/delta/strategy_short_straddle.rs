@@ -3,11 +3,11 @@ use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::straddle::ShortStraddle;
+use optionstratlib::strategies::DELTA_THRESHOLD;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
-use optionstratlib::strategies::DELTA_THRESHOLD;
 
 #[test]
 fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
@@ -66,12 +66,20 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     let delta = pos!(0.19396073893948335);
     let k = pos!(7140.0);
     match suggestion {
-        SellOptions { quantity, strike, option_type } => {
-            assert_pos_relative_eq!(*quantity, delta, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
+        SellOptions {
+            quantity,
+            strike,
+            option_type,
+        } => {
+            assert_pos_relative_eq!(
+                *quantity,
+                delta,
+                Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+            );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
             assert_eq!(*option_type, OptionStyle::Put);
-        },
-        _ => panic!("Invalid suggestion")
+        }
+        _ => panic!("Invalid suggestion"),
     }
 
     Ok(())

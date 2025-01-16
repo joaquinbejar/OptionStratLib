@@ -513,10 +513,7 @@ impl DeltaNeutrality for BearCallSpread {
         let threshold = DELTA_THRESHOLD;
         DeltaInfo {
             net_delta: long_call_delta + short_call_delta,
-            individual_deltas: vec![
-                long_call_delta,
-                short_call_delta,
-            ],
+            individual_deltas: vec![long_call_delta, short_call_delta],
             is_neutral: (long_call_delta + short_call_delta).abs() < threshold,
             underlying_price: self.long_call.option.underlying_price,
             neutrality_threshold: threshold,
@@ -528,7 +525,7 @@ impl DeltaNeutrality for BearCallSpread {
     }
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
-        let net_delta = self.calculate_net_delta().net_delta.abs() ;
+        let net_delta = self.calculate_net_delta().net_delta.abs();
         let delta = self.short_call.option.delta().unwrap().abs();
         vec![DeltaAdjustment::SellOptions {
             quantity: Positive(net_delta / delta) * self.short_call.option.quantity,
@@ -1372,8 +1369,8 @@ mod tests_bear_call_spread_profit {
 mod tests_bear_call_spread_optimizable {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::{pos, spos};
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+    use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1935,12 +1932,16 @@ mod tests_delta {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.short_call.option.clone();
@@ -1970,12 +1971,16 @@ mod tests_delta {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.long_call.option.clone();
@@ -2052,12 +2057,16 @@ mod tests_delta_size {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.short_call.option.clone();
@@ -2087,12 +2096,16 @@ mod tests_delta_size {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.long_call.option.clone();

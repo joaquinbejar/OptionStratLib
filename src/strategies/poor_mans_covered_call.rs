@@ -800,8 +800,8 @@ mod tests_pmcc_validation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::error::position::PositionValidationErrorKind;
-    use rust_decimal_macros::dec;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1048,9 +1048,9 @@ mod tests_pmcc_optimization {
 mod tests_pmcc_pnl {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
+    use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::pos;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1135,8 +1135,8 @@ mod tests_pmcc_pnl {
 mod tests_pmcc_graph {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use rust_decimal_macros::dec;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1218,10 +1218,10 @@ mod tests_pmcc_graph {
 mod tests_pmcc_best_area {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::pos;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1295,10 +1295,10 @@ mod tests_pmcc_best_area {
 mod tests_pmcc_best_ratio {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
+    use crate::pos;
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::pos;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1373,10 +1373,10 @@ mod tests_pmcc_best_ratio {
 mod tests_short_straddle_delta {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
@@ -1416,12 +1416,16 @@ mod tests_short_straddle_delta {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.short_call.option.clone();
@@ -1450,12 +1454,16 @@ mod tests_short_straddle_delta {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.long_call.option.clone();
@@ -1488,10 +1496,10 @@ mod tests_short_straddle_delta {
 mod tests_short_straddle_delta_size {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
@@ -1531,12 +1539,16 @@ mod tests_short_straddle_delta_size {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::SellOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.short_call.option.clone();
@@ -1565,12 +1577,16 @@ mod tests_short_straddle_delta_size {
         let binding = strategy.suggest_delta_adjustments();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions { quantity, strike, option_type } => {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_type,
+            } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_type, OptionStyle::Call);
-            },
-            _ => panic!("Invalid suggestion")
+            }
+            _ => panic!("Invalid suggestion"),
         }
 
         let mut option = strategy.long_call.option.clone();

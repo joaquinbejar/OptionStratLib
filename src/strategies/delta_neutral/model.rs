@@ -8,7 +8,7 @@
 ///
 /// This module provides tools and structures to manage and maintain delta neutrality
 /// in trading strategies. It includes enumerations, structures, and a trait to calculate
-/// net delta, check neutrality status, and suggest adjustments to achieve or maintain 
+/// net delta, check neutrality status, and suggest adjustments to achieve or maintain
 /// delta neutrality.
 ///
 /// ## Overview
@@ -43,9 +43,9 @@
 use crate::greeks::Greeks;
 use crate::model::types::OptionStyle;
 use crate::Positive;
-use std::fmt;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::fmt;
 
 pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 
