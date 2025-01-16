@@ -51,7 +51,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
-use crate::{pos, Positive};
+use crate::Positive;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
@@ -783,7 +783,7 @@ mod tests_bear_call_spread_positionable {
     use super::*;
     use crate::model::position::Position;
     use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::Options;
+    use crate::{pos, Options};
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1372,7 +1372,7 @@ mod tests_bear_call_spread_profit {
 mod tests_bear_call_spread_optimizable {
     use super::*;
     use crate::model::types::ExpirationDate;
-    use crate::spos;
+    use crate::{pos, spos};
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;

@@ -30,7 +30,7 @@ use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, Options, Positive};
+use crate::{Options, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
@@ -2138,15 +2138,10 @@ mod tests_iron_condor_graph {
 
 #[cfg(test)]
 mod tests_iron_condor_delta {
-    use super::*;
-    use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::strategies::iron_condor::IronCondor;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, Positive};
-    use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use super::*;
+
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
@@ -2282,7 +2277,7 @@ mod tests_iron_condor_delta {
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
     use super::*;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};

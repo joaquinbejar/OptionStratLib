@@ -24,7 +24,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
-use crate::{pos, spos, Positive};
+use crate::{spos, Positive};
 use chrono::Utc;
 use num_traits::ToPrimitive;
 use plotters::prelude::{ShapeStyle, RED};
@@ -714,6 +714,7 @@ mod tests_call_butterfly {
     use super::*;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn setup() -> CallButterfly {
         CallButterfly::new(
@@ -825,6 +826,7 @@ mod tests_call_butterfly {
 mod tests_call_butterfly_validation {
     use super::*;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn setup_basic_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -875,6 +877,7 @@ mod tests_call_butterfly_validation {
 mod tests_call_butterfly_pnl {
     use super::*;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -928,6 +931,7 @@ mod tests_call_butterfly_graph {
     use crate::model::types::ExpirationDate;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -1321,6 +1325,7 @@ mod tests_call_butterfly_optimizable {
     use super::*;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);

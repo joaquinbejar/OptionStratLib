@@ -42,7 +42,7 @@
 /// based on the delta exposure of the strategy.
 use crate::greeks::Greeks;
 use crate::model::types::OptionStyle;
-use crate::{pos, Positive};
+use crate::Positive;
 use std::fmt;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -247,7 +247,7 @@ mod tests {
     use super::*;
     use crate::error::GreeksError;
     use crate::greeks::Greek;
-    use crate::Options;
+    use crate::{pos, Options};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_is_delta_neutral() {
-        let neutral_strategy = create_mock_strategy(dec!(0.005), pos!(100.0));
+        let neutral_strategy = create_mock_strategy(dec!(0.00005), pos!(100.0));
         let non_neutral_strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
 
         assert!(neutral_strategy.is_delta_neutral());
