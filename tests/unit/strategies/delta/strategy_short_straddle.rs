@@ -1,13 +1,13 @@
-use approx::assert_relative_eq;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::straddle::ShortStraddle;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, pos, Positive};
+use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use optionstratlib::strategies::DELTA_THRESHOLD;
 
 #[test]
 fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
@@ -43,32 +43,36 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho, dec!(-14.2856), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(-77.8057), epsilon);
 
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,
-        -0.0884,
-        epsilon = 0.001
+        dec!(-0.0884),
+        DELTA_THRESHOLD
     );
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().individual_deltas[0],
-        -0.5442,
-        epsilon = 0.001
+        dec!(-0.5442),
+        DELTA_THRESHOLD
     );
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().individual_deltas[1],
-        0.4557,
-        epsilon = 0.001
+        dec!(0.4557),
+        DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
     assert_eq!(strategy.suggest_delta_adjustments().len(), 1);
 
-    assert_eq!(
-        strategy.suggest_delta_adjustments()[0],
-        SellOptions {
-            quantity: pos!(0.19396073893948335),
-            strike: pos!(7140.0),
-            option_type: OptionStyle::Put
-        }
-    );
+    let binding = strategy.suggest_delta_adjustments();
+    let suggestion = binding.first().unwrap();
+    let delta = pos!(0.19396073893948335);
+    let k = pos!(7140.0);
+    match suggestion {
+        SellOptions { quantity, strike, option_type } => {
+            assert_pos_relative_eq!(*quantity, delta, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
+            assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
+            assert_eq!(*option_type, OptionStyle::Put);
+        },
+        _ => panic!("Invalid suggestion")
+    }
 
     Ok(())
 }
