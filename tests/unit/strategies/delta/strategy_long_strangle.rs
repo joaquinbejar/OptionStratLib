@@ -1,9 +1,9 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::{DeltaAdjustment, LongStrangle, DELTA_THRESHOLD};
+use optionstratlib::strategies::{ LongStrangle, DELTA_THRESHOLD};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, OptionStyle};
+use optionstratlib::{assert_decimal_eq, pos};
 use optionstratlib::{ExpirationDate, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
