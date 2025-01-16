@@ -36,33 +36,41 @@
 //! ```rust
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
-//! use optionstratlib::greeks::equations::{Greek, Greeks};
-//! use optionstratlib::Positive;
+//! use optionstratlib::greeks::{Greek, Greeks};
+//! use optionstratlib::{Options, Positive};
 //! use optionstratlib::{d2fu, pos};
+//! use optionstratlib::error::GreeksError;
 //! use optionstratlib::strategies::delta_neutral::{DeltaNeutrality, DeltaAdjustment, DeltaInfo};
 //!
 //! struct MyStrategy { /* Implementation specifics */ }
 //!
 //! let strategy = MyStrategy { /* Implementation specifics */ };
 //!
-//! impl Greeks for MyStrategy {fn greeks(&self) -> Greek {
-//!     Greek { delta: dec!(0.5),
+//! impl Greeks for MyStrategy {
+//!  fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+//!       Ok(vec![])
+//!     }
+//!
+//! fn greeks(&self) -> Result<Greek, GreeksError> {
+//!     Ok(Greek {
+//!             delta: dec!(0.5),
 //!             gamma: dec!(0.2),
 //!             theta: dec!(0.1),
 //!             vega: dec!(0.3),
 //!             rho: dec!(0.4),
-//!             rho_d: dec!(0.0)
-//!           }
+//!             rho_d: dec!(0.0),
+//!             alpha: Default::default(),
+//!        })
 //!     }
 //! }
 //!
 //! impl DeltaNeutrality for MyStrategy {
 //!     fn calculate_net_delta(&self) -> DeltaInfo {
 //!         DeltaInfo {
-//!            net_delta: d2fu!(self.greeks().delta).unwrap(),
+//!            net_delta: self.greeks().unwrap().delta,
 //!            individual_deltas: vec![],
 //!            is_neutral: false,
-//!            neutrality_threshold: 0.0,
+//!            neutrality_threshold: dec!(0.0),
 //!            underlying_price: Positive::ZERO,
 //!         }
 //!     }

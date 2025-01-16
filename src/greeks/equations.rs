@@ -10,7 +10,6 @@ use crate::model::types::OptionStyle;
 use crate::{Options, Positive};
 use rust_decimal::{Decimal, MathematicalOps};
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct Greek {
     pub delta: Decimal,
@@ -19,10 +18,93 @@ pub struct Greek {
     pub vega: Decimal,
     pub rho: Decimal,
     pub rho_d: Decimal,
+    pub alpha: Decimal,
 }
 
 pub trait Greeks {
-    fn greeks(&self) -> Greek;
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError>;
+
+    fn greeks(&self) -> Result<Greek, GreeksError> {
+        let delta = self.delta()?;
+        let gamma = self.gamma()?;
+        let theta = self.theta()?;
+        let vega = self.vega()?;
+        let rho = self.rho()?;
+        let rho_d = self.rho_d()?;
+        let alpha = self.alpha()?;
+        Ok(Greek {
+            delta,
+            gamma,
+            theta,
+            vega,
+            rho,
+            rho_d,
+            alpha,
+        })
+    }
+
+    fn delta(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut delta_value = Decimal::ZERO;
+        for option in options {
+            delta_value += delta(option)?;
+        }
+        Ok(delta_value)
+    }
+
+    fn gamma(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut gamma_value = Decimal::ZERO;
+        for option in options {
+            gamma_value += gamma(option)?;
+        }
+        Ok(gamma_value)
+    }
+
+    fn theta(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut theta_value = Decimal::ZERO;
+        for option in options {
+            theta_value += theta(option)?;
+        }
+        Ok(theta_value)
+    }
+
+    fn vega(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut vega_value = Decimal::ZERO;
+        for option in options {
+            vega_value += vega(option)?;
+        }
+        Ok(vega_value)
+    }
+
+    fn rho(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut rho_value = Decimal::ZERO;
+        for option in options {
+            rho_value += rho(option)?;
+        }
+        Ok(rho_value)
+    }
+
+    fn rho_d(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut rho_d_value = Decimal::ZERO;
+        for option in options {
+            rho_d_value += rho_d(option)?;
+        }
+        Ok(rho_d_value)
+    }
+
+    fn alpha(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut alpha_value = Decimal::ZERO;
+        for option in options {
+            alpha_value += alpha(option)?;
+        }
+        Ok(alpha_value)
+    }
 }
 
 /// Calculates the delta of an option.
@@ -83,7 +165,7 @@ pub trait Greeks {
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::constants::ZERO;
-/// use optionstratlib::greeks::equations::delta;
+/// use optionstratlib::greeks::delta;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::{pos, Positive};
@@ -206,7 +288,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// ```rust
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
-/// use optionstratlib::greeks::equations::gamma;
+/// use optionstratlib::greeks::gamma;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
@@ -334,7 +416,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// ```rust
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
-/// use optionstratlib::greeks::equations::theta;
+/// use optionstratlib::greeks::theta;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
@@ -476,7 +558,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// ```rust
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
-/// use optionstratlib::greeks::equations::vega;
+/// use optionstratlib::greeks::vega;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
@@ -595,7 +677,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// ```rust
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
-/// use optionstratlib::greeks::equations::rho;
+/// use optionstratlib::greeks::rho;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
@@ -727,7 +809,7 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 /// ```rust
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
-/// use optionstratlib::greeks::equations::rho_d;
+/// use optionstratlib::greeks::rho_d;
 /// use optionstratlib::Options;
 /// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
@@ -791,6 +873,16 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
 
     let quantity: Decimal = option.quantity.into();
     Ok(rhod * quantity)
+}
+
+pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
+    let gamma = gamma(option)?;
+    let theta = theta(option)?;
+    match (gamma, theta) {
+        (val, _) if val == Decimal::ZERO => Ok(Decimal::ZERO),
+        (_, val) if val == Decimal::ZERO => Ok(Decimal::MAX),
+        _ => Ok(gamma / theta),
+    }
 }
 
 #[cfg(test)]
@@ -1542,5 +1634,221 @@ mod tests_theta_short_equations {
 
         // Assert the calculated theta is close to the expected value
         assert_relative_eq!(calculated_theta, expected_theta, epsilon = 1e-8);
+    }
+}
+
+#[cfg(test)]
+mod tests_greeks_trait {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // A simple struct for testing the Greeks trait
+    struct TestOptionCollection {
+        options: Vec<Options>,
+    }
+
+    impl Greeks for TestOptionCollection {
+        fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+            Ok(self.options.iter().collect())
+        }
+    }
+
+    // Helper function to create a test option
+    fn create_test_option(side: Side, style: OptionStyle, quantity: Positive) -> Options {
+        Options::new(
+            OptionType::European,
+            side,
+            "TEST".to_string(),
+            pos!(100.0), // strike_price
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2), // implied_volatility
+            quantity,
+            pos!(100.0), // underlying_price
+            dec!(0.05),  // risk_free_rate
+            style,
+            pos!(0.01), // dividend_yield
+            None,       // exotic_params
+        )
+    }
+
+    #[test]
+    fn test_greeks_single_option() {
+        let option = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
+        let collection = TestOptionCollection {
+            options: vec![option],
+        };
+
+        let greeks = collection.greeks().unwrap();
+
+        // Test each greek value
+        assert_decimal_eq!(greeks.delta, dec!(0.539519922), dec!(0.000001));
+        assert_decimal_eq!(greeks.gamma, dec!(0.069170764), dec!(0.000001));
+        assert_decimal_eq!(greeks.theta, dec!(-15.869781), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(15.467555), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(4.233121), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho_d, dec!(-4.434410), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_greeks_multiple_options() {
+        let option1 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
+        let option2 = create_test_option(Side::Short, OptionStyle::Put, pos!(1.0));
+        let collection = TestOptionCollection {
+            options: vec![option1, option2],
+        };
+
+        let greeks = collection.greeks().unwrap();
+
+        // Test aggregated greek values
+        assert!(
+            greeks.delta.abs() > dec!(0.0),
+            "Delta should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.gamma.abs() > dec!(0.0),
+            "Gamma should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.theta.abs() > dec!(0.0),
+            "Theta should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.vega.abs() > dec!(0.0),
+            "Vega should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.rho.abs() > dec!(0.0),
+            "Rho should be non-zero for multiple options"
+        );
+        assert!(
+            greeks.rho_d.abs() > dec!(0.0),
+            "Rho_d should be non-zero for multiple options"
+        );
+    }
+
+    #[test]
+    fn test_greeks_zero_quantity() {
+        let option = create_test_option(Side::Long, OptionStyle::Call, pos!(0.0));
+        let collection = TestOptionCollection {
+            options: vec![option],
+        };
+
+        let greeks = collection.greeks().unwrap();
+
+        // All greeks should be zero for zero quantity
+        assert_eq!(greeks.delta, dec!(0.0));
+        assert_eq!(greeks.gamma, dec!(0.0));
+        assert_eq!(greeks.theta, dec!(0.0));
+        assert_eq!(greeks.vega, dec!(0.0));
+        assert_eq!(greeks.rho, dec!(0.0));
+        assert_eq!(greeks.rho_d, dec!(0.0));
+    }
+
+    #[test]
+    fn test_greeks_opposing_positions() {
+        let option1 = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos!(50.0), // strike_price
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.2), // implied_volatility
+            Positive::ONE,
+            pos!(50.0), // underlying_price
+            dec!(0.05), // risk_free_rate
+            OptionStyle::Call,
+            pos!(0.01), // dividend_yield
+            None,       // exotic_params
+        );
+        let option2 = Options::new(
+            OptionType::European,
+            Side::Short,
+            "TEST".to_string(),
+            pos!(50.0), // strike_price
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.2), // implied_volatility
+            Positive::ONE,
+            pos!(50.0), // underlying_price
+            dec!(0.05), // risk_free_rate
+            OptionStyle::Call,
+            pos!(0.01), // dividend_yield
+            None,       // exotic_params
+        );
+        let collection = TestOptionCollection {
+            options: vec![option1, option2],
+        };
+
+        let greeks = collection.greeks().unwrap();
+
+        // Opposing positions should mostly cancel out
+        assert_decimal_eq!(greeks.delta, dec!(0.0), dec!(0.000001));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0743013), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(63.049408), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(53.232481), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_individual_greek_methods() {
+        let option1 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
+        let option2 = create_test_option(Side::Short, OptionStyle::Put, pos!(1.0));
+        let collection = TestOptionCollection {
+            options: vec![option1, option2],
+        };
+
+        // Test each individual greek method
+        let delta = collection.delta().unwrap();
+        let gamma = collection.gamma().unwrap();
+        let theta = collection.theta().unwrap();
+        let vega = collection.vega().unwrap();
+        let rho = collection.rho().unwrap();
+        let rho_d = collection.rho_d().unwrap();
+
+        // Verify each value is non-zero (actual values depend on input parameters)
+        assert!(delta.abs() > dec!(0.0), "Delta calculation failed");
+        assert!(gamma.abs() > dec!(0.0), "Gamma calculation failed");
+        assert!(theta.abs() > dec!(0.0), "Theta calculation failed");
+        assert!(vega.abs() > dec!(0.0), "Vega calculation failed");
+        assert!(rho.abs() > dec!(0.0), "Rho calculation failed");
+        assert!(rho_d.abs() > dec!(0.0), "Rho_d calculation failed");
+    }
+
+    #[test]
+    fn test_empty_option_collection() {
+        let collection = TestOptionCollection { options: vec![] };
+
+        // All greeks should be zero for empty collection
+        let greeks = collection.greeks().unwrap();
+        assert_eq!(greeks.delta, dec!(0.0));
+        assert_eq!(greeks.gamma, dec!(0.0));
+        assert_eq!(greeks.theta, dec!(0.0));
+        assert_eq!(greeks.vega, dec!(0.0));
+        assert_eq!(greeks.rho, dec!(0.0));
+        assert_eq!(greeks.rho_d, dec!(0.0));
+    }
+
+    #[test]
+    fn test_greeks_with_different_expirations() {
+        let mut option1 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
+        let mut option2 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
+
+        // Set different expiration dates
+        option1.expiration_date = ExpirationDate::Days(pos!(30.0));
+        option2.expiration_date = ExpirationDate::Days(pos!(60.0));
+
+        let collection = TestOptionCollection {
+            options: vec![option1, option2],
+        };
+
+        let greeks = collection.greeks().unwrap();
+
+        // Verify values are calculated correctly for different expirations
+        assert!(greeks.delta.abs() > dec!(0.0));
+        assert!(greeks.gamma.abs() > dec!(0.0));
+        assert!(greeks.theta.abs() > dec!(0.0));
+        assert!(greeks.vega.abs() > dec!(0.0));
+        assert!(greeks.rho.abs() > dec!(0.0));
+        assert!(greeks.rho_d.abs() > dec!(0.0));
     }
 }

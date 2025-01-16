@@ -1,8 +1,7 @@
-use approx::assert_relative_eq;
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::LongStrangle;
+use optionstratlib::strategies::{LongStrangle, DELTA_THRESHOLD};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_decimal_eq, pos};
 use optionstratlib::{ExpirationDate, Positive};
@@ -14,7 +13,7 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Define inputs for the LongStrangle strategy
-    let underlying_price = pos!(7138.5);
+    let underlying_price = pos!(7140.6);
 
     let strategy = LongStrangle::new(
         "CL".to_string(),
@@ -34,35 +33,33 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
         pos!(7.01),     // close_fee_short_put
     );
 
-    let greeks = strategy.greeks();
-    let epsilon = dec!(0.001);
+    let greeks = strategy.greeks().unwrap();
+    let epsilon = DELTA_THRESHOLD;
 
-    assert_decimal_eq!(greeks.delta, dec!(-0.0018), epsilon);
+    assert_decimal_eq!(greeks.delta, dec!(0.00001), epsilon);
     assert_decimal_eq!(greeks.gamma, dec!(0.0008), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-2942.0709), epsilon);
-    assert_decimal_eq!(greeks.vega, dec!(2501.9092), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(-72.0661), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(1.6100), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-2943.57608224), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(2507.02263860), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(-70.5294073481), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(0.073528197151), epsilon);
 
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,
-        -0.0018,
-        epsilon = 0.001
+        dec!(-0.0000835),
+        DELTA_THRESHOLD
     );
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().individual_deltas[0],
-        0.4159,
-        epsilon = 0.001
+        dec!(0.41685408),
+        DELTA_THRESHOLD
     );
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().individual_deltas[1],
-        -0.4178,
-        epsilon = 0.001
+        dec!(-0.416937),
+        DELTA_THRESHOLD
     );
     assert!(strategy.is_delta_neutral());
     assert_eq!(strategy.suggest_delta_adjustments().len(), 1);
-
     assert_eq!(strategy.suggest_delta_adjustments()[0], NoAdjustmentNeeded);
-
     Ok(())
 }

@@ -5,6 +5,7 @@
 ******************************************************************************/
 
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
+use crate::greeks::Greeks;
 use crate::utils::time::TimeFrame;
 use crate::Options;
 use crate::{d2fu, pos, Positive};

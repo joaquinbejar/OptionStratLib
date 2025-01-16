@@ -7,7 +7,7 @@
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
-use crate::greeks::utils::big_n;
+use crate::greeks::big_n;
 use crate::model::ExpirationDate;
 use crate::{f2du, pos, Positive};
 use num_traits::ToPrimitive;

@@ -1,4 +1,4 @@
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::pos;
 use optionstratlib::strategies::ShortStrangle;
 use optionstratlib::strategies::Strategies;

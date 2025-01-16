@@ -543,7 +543,7 @@
  Here are some examples of how to use the library for option pricing and analysis:
 
 ```rust
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::Options;
 use optionstratlib::Positive;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
