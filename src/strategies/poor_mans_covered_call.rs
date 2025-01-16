@@ -52,7 +52,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
-use crate::{pos, Positive};
+use crate::Positive;
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
@@ -801,6 +801,7 @@ mod tests_pmcc_validation {
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::error::position::PositionValidationErrorKind;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -912,7 +913,7 @@ mod tests_pmcc_validation {
 mod tests_pmcc_optimization {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::spos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
@@ -1049,6 +1050,7 @@ mod tests_pmcc_pnl {
     use crate::constants::DAYS_IN_A_YEAR;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1134,6 +1136,7 @@ mod tests_pmcc_graph {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1218,6 +1221,7 @@ mod tests_pmcc_best_area {
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
@@ -1294,6 +1298,7 @@ mod tests_pmcc_best_ratio {
     use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+    use crate::pos;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
