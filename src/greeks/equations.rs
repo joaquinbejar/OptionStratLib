@@ -231,6 +231,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
         OptionStyle::Call => sign * big_n(d1)? * div_date,
         OptionStyle::Put => sign * (big_n(d1)? - Decimal::ONE) * div_date,
     };
+    let delta: Decimal = delta.clamp(Decimal::ZERO, Decimal::ONE);
     let quantity: Decimal = option.quantity.into();
     Ok(delta * quantity)
 }
@@ -1223,6 +1224,84 @@ mod tests_gamma_equations {
         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.002146478293943308, epsilon = 1e-8);
     }
+}
+
+#[cfg(test)]
+mod tests_gamma_equations_values {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::{pos, OptionType};
+    use crate::utils::logger::setup_logger;
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+    use tracing::info;
+    
+    #[test]
+    fn test_50_vol_10() {
+        setup_logger();
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "XYZ".parse().unwrap(),
+            pos!(50.0),
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.10),
+            pos!(1.0),
+            pos!(50.0),
+            Decimal::ZERO,
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.0796887828189609, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_50_vol_5() {
+        setup_logger();
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "XYZ".parse().unwrap(),
+            pos!(50.0),
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.05),
+            pos!(1.0),
+            pos!(50.0),
+            Decimal::ZERO,
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.15952705216736393, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_50_vol_20() {
+        setup_logger();
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "XYZ".parse().unwrap(),
+            pos!(50.0),
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.2),
+            pos!(1.0),
+            pos!(50.0),
+            Decimal::ZERO,
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.03969525474873078, epsilon = 1e-8);
+    }
+    
 }
 
 #[cfg(test)]
