@@ -233,8 +233,7 @@ mod tests_random_walk {
     use crate::pos;
     use num_traits::ToPrimitive;
     use statrs::statistics::Statistics;
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::wasm_bindgen_test;
+    
 
     struct TestWalk {
         values: Vec<Positive>,
@@ -370,8 +369,7 @@ mod tests {
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
     use tracing::debug;
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::wasm_bindgen_test;
+    
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

@@ -225,8 +225,7 @@ mod tests_price_binomial {
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::wasm_bindgen_test;
+    
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -403,8 +402,7 @@ mod tests_generate_binomial_tree {
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen_test::wasm_bindgen_test;
+    
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

@@ -166,11 +166,10 @@ pub fn draw_binomial_tree(
 
 #[cfg(test)]
 mod tests_draw_binomial_tree {
-    use super::*;
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen::JsCast;
-    #[cfg(target_arch = "wasm32")]
-    use web_sys::{window, HtmlCanvasElement};
+    
+    #[cfg(not(target_arch = "wasm32"))]
+    use {crate::visualization::utils::GraphBackend,
+     crate::visualization::binomial_tree::draw_binomial_tree};
 
     // Common test data setup
     fn setup_test_data() -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
