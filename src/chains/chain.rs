@@ -4,8 +4,8 @@
    Date: 26/9/24
 ******************************************************************************/
 use crate::chains::utils::{
-    adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
-    OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
+    adjust_volatility, default_empty_string, generate_list_of_strikes, OptionChainBuildParams,
+    OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
 };
 use crate::chains::{DeltasInStrike, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
 use crate::curves::interpolation::LinearInterpolation;
@@ -20,7 +20,8 @@ use crate::volatility::VolatilitySmile;
 use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
 #[cfg(not(target_arch = "wasm32"))]
-use csv::WriterBuilder;
+use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File, tracing::debug};
+
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::{Deserialize, Serialize};
@@ -28,8 +29,6 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
-use std::fs::File;
-use tracing::debug;
 
 /// Struct representing a row in an option chain.
 ///
@@ -482,7 +481,7 @@ impl OptionChain {
     }
 
     pub fn set_from_title(&mut self, file: &str) {
-        let file_name = file.split('/').last().unwrap();
+        let file_name = file.split('/').next_back().unwrap();
         let file_name = file_name
             .rsplit_once('.')
             .map_or(file_name, |(name, _ext)| name);

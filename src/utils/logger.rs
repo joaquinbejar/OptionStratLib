@@ -1,8 +1,9 @@
-use std::env;
 use std::sync::Once;
-use tracing::Level;
 #[cfg(not(target_arch = "wasm32"))]
 use tracing_subscriber::FmtSubscriber;
+
+#[cfg(not(target_arch = "wasm32"))]
+use {std::env, tracing::Level};
 
 static INIT: Once = Once::new();
 
