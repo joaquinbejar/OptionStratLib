@@ -21,6 +21,7 @@ jobs:
           toolchain: nightly
           target: wasm32-unknown-unknown
           override: true
+          components: rust-src
 
       - name: Install dependencies
         run: |
