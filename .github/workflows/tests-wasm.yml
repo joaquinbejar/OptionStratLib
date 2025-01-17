@@ -18,14 +18,18 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
-          override: true
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
           target: wasm32-unknown-unknown
           override: true
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.container }}" = "archlinux:latest" ]; then
+            pacman -Syu --noconfirm make fontconfig pkgconf
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            brew install make fontconfig pkg-config
+          fi
 
       - name: Run WASM tests
         run: make wasm-test
