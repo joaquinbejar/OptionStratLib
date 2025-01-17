@@ -18,7 +18,7 @@
  [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
  [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
 
- # OptionStratLib v0.3.2: Financial Options Library
+ # OptionStratLib v0.3.3: Financial Options Library
 
  ## Table of Contents
  1. [Introduction](#introduction)
@@ -543,7 +543,7 @@
  Here are some examples of how to use the library for option pricing and analysis:
 
 ```rust
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::Options;
 use optionstratlib::Positive;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};

@@ -37,7 +37,7 @@
 //!
 //! ```rust
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::greeks::equations::{delta, gamma, rho, theta, vega};
+//! use optionstratlib::greeks::{delta, gamma, rho, theta, vega};
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 //! use optionstratlib::pos;
@@ -85,7 +85,9 @@
 //! * Adjustments for dividends
 //! * Special case handling for extreme values
 
-pub mod equations;
-pub mod utils;
+mod equations;
+mod utils;
 
-pub use utils::{d1, d2};
+pub use equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
+pub(crate) use utils::calculate_d_values;
+pub use utils::{big_n, d1, d2, n};

@@ -1,6 +1,6 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::straddle::LongStraddle;

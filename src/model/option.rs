@@ -1,7 +1,7 @@
 use crate::chains::chain::OptionData;
 use crate::constants::ZERO;
 use crate::error::{GreeksError, OptionsError, OptionsResult};
-use crate::greeks::equations::{delta, gamma, rho, rho_d, theta, vega, Greek, Greeks};
+use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::{
@@ -184,30 +184,6 @@ impl Options {
         Ok(Decimal::from_f64(iv).unwrap())
     }
 
-    pub fn delta(&self) -> Result<Decimal, GreeksError> {
-        delta(self)
-    }
-
-    pub fn gamma(&self) -> Result<Decimal, GreeksError> {
-        gamma(self)
-    }
-
-    pub fn theta(&self) -> Result<Decimal, GreeksError> {
-        theta(self)
-    }
-
-    pub fn vega(&self) -> Result<Decimal, GreeksError> {
-        vega(self)
-    }
-
-    pub fn rho(&self) -> Result<Decimal, GreeksError> {
-        rho(self)
-    }
-
-    pub fn rho_d(&self) -> Result<Decimal, GreeksError> {
-        rho_d(self)
-    }
-
     pub fn is_in_the_money(&self) -> bool {
         match self.option_style {
             OptionStyle::Call => self.underlying_price >= self.strike_price,
@@ -271,15 +247,8 @@ impl Default for Options {
 }
 
 impl Greeks for Options {
-    fn greeks(&self) -> Greek {
-        Greek {
-            delta: self.delta().unwrap(),
-            gamma: self.gamma().unwrap(),
-            theta: self.theta().unwrap(),
-            vega: self.vega().unwrap(),
-            rho: self.rho().unwrap(),
-            rho_d: self.rho_d().unwrap(),
-        }
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![self])
     }
 }
 
@@ -1221,7 +1190,7 @@ mod tests_greek_trait {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_greeks_implementation() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let greeks = option.greeks();
+        let greeks = option.greeks().unwrap();
 
         assert_decimal_eq!(greeks.delta, option.delta().unwrap(), EPSILON);
         assert_decimal_eq!(greeks.gamma, option.gamma().unwrap(), EPSILON);
@@ -1235,7 +1204,7 @@ mod tests_greek_trait {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_greeks_consistency() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let greeks = option.greeks();
+        let greeks = option.greeks().unwrap();
 
         assert!(
             greeks.delta >= Decimal::NEGATIVE_ONE && greeks.delta <= Decimal::ONE,
@@ -1255,8 +1224,8 @@ mod tests_greek_trait {
         let mut put_option = call_option.clone();
         put_option.option_style = OptionStyle::Put;
 
-        let call_greeks = call_option.greeks();
-        let put_greeks = put_option.greeks();
+        let call_greeks = call_option.greeks().unwrap();
+        let put_greeks = put_option.greeks().unwrap();
 
         // assert_decimal_eq!(call_greeks.delta + put_greeks.delta, Decimal::ZERO, EPSILON); // TODO: Fix this
         assert_decimal_eq!(call_greeks.gamma, put_greeks.gamma, EPSILON);

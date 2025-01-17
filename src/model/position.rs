@@ -5,8 +5,8 @@
 ******************************************************************************/
 use crate::chains::chain::OptionData;
 use crate::error::position::PositionValidationErrorKind;
-use crate::error::PositionError;
-use crate::greeks::equations::{Greek, Greeks};
+use crate::error::{GreeksError, PositionError};
+use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
@@ -301,8 +301,8 @@ impl Default for Position {
 }
 
 impl Greeks for Position {
-    fn greeks(&self) -> Greek {
-        self.option.greeks()
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        Ok(vec![&self.option])
     }
 }
 

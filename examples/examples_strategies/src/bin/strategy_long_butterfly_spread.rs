@@ -4,7 +4,7 @@
    Date: 25/9/24
 ******************************************************************************/
 
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::pos;
 use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::Strategies;

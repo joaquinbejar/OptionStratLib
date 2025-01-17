@@ -263,7 +263,7 @@ pub fn d2(
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use tracing::{error, info};
-/// use optionstratlib::greeks::utils::n;
+/// use optionstratlib::greeks::n;
 ///
 /// let x = Decimal::new(100, 2); // 1.00
 ///
@@ -364,9 +364,9 @@ pub(crate) fn n_prime(x: Decimal) -> Result<Decimal, GreeksError> {
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use tracing::{error, info};
-/// use optionstratlib::greeks::utils::big_n;
+/// use optionstratlib::greeks::big_n;
 ///
-/// let x = Decimal::new(100, 2); // 1.00
+/// let x = Decimal::new(100, 2);
 ///
 /// match big_n(x) {
 ///     Ok(result) => info!("N(x): {}", result),

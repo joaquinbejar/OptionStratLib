@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-use crate::greeks::utils::{big_n, calculate_d_values};
+use crate::greeks::{big_n, calculate_d_values};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::Options;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -213,7 +213,7 @@ pub trait BlackScholes {
 mod tests_black_scholes {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::greeks::utils::{d1, d2};
+    use crate::greeks::{d1, d2};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, assert_pos_relative_eq, pos, Options, Positive};
     use rust_decimal_macros::dec;

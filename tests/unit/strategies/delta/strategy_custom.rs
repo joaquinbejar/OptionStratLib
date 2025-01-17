@@ -1,5 +1,5 @@
 use chrono::Utc;
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
@@ -118,7 +118,7 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
         pos!(0.1),
     );
 
-    let greeks = strategy.greeks();
+    let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);
 
     assert_decimal_eq!(greeks.delta, dec!(-1.9757), epsilon);

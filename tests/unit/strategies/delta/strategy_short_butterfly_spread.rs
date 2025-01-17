@@ -1,15 +1,12 @@
-use approx::assert_relative_eq;
-use optionstratlib::greeks::equations::Greeks;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
 use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
-use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
+use optionstratlib::strategies::{DeltaAdjustment, DELTA_THRESHOLD};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, pos, Positive};
-use rust_decimal::Decimal;
+use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
-use std::str::FromStr;
 
 #[test]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -41,7 +38,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
     );
 
-    let greeks = strategy.greeks();
+    let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);
 
     assert_decimal_eq!(greeks.delta, dec!(-0.0593), epsilon);
@@ -51,33 +48,44 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho, dec!(197.1329), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(-199.7983), epsilon);
 
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,
-        -0.0593,
-        epsilon = 0.001
+        dec!(-0.0593),
+        DELTA_THRESHOLD
     );
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().individual_deltas[0],
-        -2.5914,
-        epsilon = 0.001
+        dec!(-2.5914),
+        DELTA_THRESHOLD
     );
-    assert_relative_eq!(
+    assert_decimal_eq!(
         strategy.calculate_net_delta().individual_deltas[1],
-        -0.5914,
-        epsilon = 0.001
+        dec!(-0.5914),
+        DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
     assert_eq!(strategy.suggest_delta_adjustments().len(), 1);
 
-    assert_eq!(
-        strategy.suggest_delta_adjustments()[0],
-        BuyOptions {
-            quantity: Positive::new_decimal(Decimal::from_str("0.11409430831966512").unwrap())
-                .unwrap(),
-            strike: pos!(5780.0),
-            option_type: OptionStyle::Call
+    let binding = strategy.suggest_delta_adjustments();
+    let suggestion = binding.first().unwrap();
+    let delta = pos!(0.11409430831966512);
+    let k = pos!(5780.0);
+    match suggestion {
+        DeltaAdjustment::BuyOptions {
+            quantity,
+            strike,
+            option_type,
+        } => {
+            assert_pos_relative_eq!(
+                *quantity,
+                delta,
+                Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+            );
+            assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
+            assert_eq!(*option_type, OptionStyle::Call);
         }
-    );
+        _ => panic!("Invalid suggestion"),
+    }
 
     Ok(())
 }
