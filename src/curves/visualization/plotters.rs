@@ -47,9 +47,10 @@
 
 use crate::curves::Curve;
 use crate::error::CurvesError;
-use num_traits::ToPrimitive;
 use plotters::prelude::*;
 use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
+use num_traits::ToPrimitive;
 
 /// Plot configuration options
 #[derive(Clone, Debug)]
@@ -74,6 +75,7 @@ pub struct PlotOptions {
     pub curve_name: Option<Vec<String>>,
 }
 
+#[allow(dead_code)]
 impl PlotOptions {
     /// Default color palette for multiple curves
     fn default_colors() -> Vec<RGBColor> {
@@ -112,6 +114,7 @@ pub trait Plottable {
 }
 
 /// Plot Builder for configurable curve visualization
+#[allow(dead_code)]
 pub struct PlotBuilder<T: Plottable> {
     /// Data to be plotted
     data: T,
@@ -270,7 +273,7 @@ pub trait PlotBuilderExt<T: Plottable> {
 /// Plotting implementation for single Curve
 impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
     #[cfg(target_arch = "wasm32")]
-    fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError> {
+    fn save(self, _path: impl AsRef<Path>) -> Result<(), CurvesError> {
         // Do nothing in wasm
         Ok(())
     }
@@ -425,7 +428,7 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
 ///   `Decimal` to `f64` when plotting.
 impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
     #[cfg(target_arch = "wasm32")]
-    fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError> {
+    fn save(self, _path: impl AsRef<Path>) -> Result<(), CurvesError> {
         // Do nothing in wasm
         Ok(())
     }

@@ -513,6 +513,7 @@ mod tests_extended {
     use plotters::style::RGBColor;
     use rust_decimal::Decimal;
 
+    #[allow(dead_code)]
     struct MockGraph;
 
     impl Profit for MockGraph {

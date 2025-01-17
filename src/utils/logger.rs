@@ -1,9 +1,11 @@
-use std::env;
 use std::sync::Once;
-use tracing::Level;
 #[cfg(not(target_arch = "wasm32"))]
 use tracing_subscriber::FmtSubscriber;
 
+#[cfg(not(target_arch = "wasm32"))]
+use {std::env, tracing::Level};
+
+#[allow(dead_code)]
 static INIT: Once = Once::new();
 
 /// Sets up the logger for the application.
@@ -39,6 +41,7 @@ pub fn setup_logger() {
 /// Sets up the logger with a specific log level.
 ///
 /// Note: This is a no-op when targeting wasm32.
+#[allow(unused_variables)]
 pub fn setup_logger_with_level(log_level: &str) {
     #[cfg(not(target_arch = "wasm32"))]
     INIT.call_once(|| {

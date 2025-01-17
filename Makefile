@@ -47,9 +47,17 @@ fmt-check:
 lint:
 	cargo clippy --all-targets --all-features -- -D warnings
 
+.PHONY: lint-wasm
+lint-wasm:
+	cargo +nightly clippy --target wasm32-unknown-unknown --release --all-features -- -D warnings
+
 .PHONY: lint-fix
-lint-fix:
+lint-fix: 
 	cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged -- -D warnings
+
+.PHONY: lint-wasm-fix
+lint-wasm-fix:
+	cargo +nightly clippy --fix --target wasm32-unknown-unknown --release --all-features --allow-dirty --allow-staged -- -D warnings
 
 # Clean the project
 .PHONY: clean

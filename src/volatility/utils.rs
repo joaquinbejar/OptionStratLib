@@ -833,10 +833,13 @@ mod tests_implied_volatility {
         assert!(low_iv > ZERO);
 
         // Test with a very high market price
-        let high_price = 10.0;
-        let high_iv = implied_volatility(high_price, &mut option, 100);
+        
         #[cfg(not(target_arch = "wasm32"))]
-        info!("{}", high_iv);
+        {
+            let high_price = 10.0;
+            let high_iv = implied_volatility(high_price, &mut option, 100);
+            info!("{}", high_iv);
+        }
     }
 }
 
