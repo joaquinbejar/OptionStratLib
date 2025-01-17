@@ -41,8 +41,8 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.gamma, dec!(0.0008), epsilon);
     assert_decimal_eq!(greeks.theta, dec!(-8.0431075), epsilon);
     assert_decimal_eq!(greeks.vega, dec!(19.626624258), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(-111.3739), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(19.8109), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(-1.113739), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(0.198109), epsilon);
 
     assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,

@@ -42,8 +42,8 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.gamma, dec!(0.0075), epsilon);
     assert_decimal_eq!(greeks.theta, dec!(-2.8601567), epsilon);
     assert_decimal_eq!(greeks.vega, dec!(15.3494934566), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(1290.9435), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(-1420.1310), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(12.909435), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-14.201310), epsilon);
 
     assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,

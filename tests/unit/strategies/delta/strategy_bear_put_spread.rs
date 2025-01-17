@@ -42,8 +42,8 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.gamma, dec!(0.0145), epsilon);
     assert_decimal_eq!(greeks.theta, dec!(-19.92252244), epsilon);
     assert_decimal_eq!(greeks.vega, dec!(4.7860164881), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(-64.5820), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(63.6651), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(-0.645820), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(0.636651), epsilon);
 
     assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,
