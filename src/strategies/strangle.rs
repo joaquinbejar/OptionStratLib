@@ -2367,7 +2367,7 @@ mod tests_short_strangle_delta {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
-        let size = dec!(0.0861);
+        let size = dec!(0.086108);
         let delta = pos!(0.207_000_884_203_610_32);
         let k = pos!(7450.0);
         assert_decimal_eq!(

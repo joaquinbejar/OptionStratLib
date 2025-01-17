@@ -231,7 +231,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
         OptionStyle::Call => sign * big_n(d1)? * div_date,
         OptionStyle::Put => sign * (big_n(d1)? - Decimal::ONE) * div_date,
     };
-    let delta: Decimal = delta.clamp(Decimal::ZERO, Decimal::ONE);
+    let delta: Decimal = delta.clamp(Decimal::NEGATIVE_ONE, Decimal::ONE);
     let quantity: Decimal = option.quantity.into();
     Ok(delta * quantity)
 }
@@ -607,7 +607,8 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     let vega: Decimal = underlying_price
         * (-expiration_date.to_dec() * dividend_yield).exp()
         * n(d1)?
-        * expiration_date.sqrt() / Decimal::ONE_HUNDRED; // percentage of change in volatility
+        * expiration_date.sqrt()
+        / Decimal::ONE_HUNDRED; // percentage of change in volatility
 
     let quantity: Decimal = option.quantity.into();
     Ok(vega * quantity)
@@ -892,12 +893,13 @@ pub mod tests_delta_equations {
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::{assert_decimal_eq, pos};
+    use crate::strategies::DELTA_THRESHOLD;
     use crate::utils::logger::setup_logger;
+    use crate::{assert_decimal_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
     use tracing::info;
-    use crate::strategies::DELTA_THRESHOLD;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1081,7 +1083,7 @@ pub mod tests_delta_equations {
         );
         let delta_value = delta(&option).unwrap();
         info!("ATM Put Delta: {}", delta_value);
-        assert_decimal_eq!(delta_value, Decimal::ZERO, DELTA_THRESHOLD);
+        assert_decimal_eq!(delta_value, dec!(-0.459658497), DELTA_THRESHOLD);
     }
 
     #[test]
@@ -1115,7 +1117,7 @@ pub mod tests_delta_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR);
         let delta_value = delta(&option).unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
-        assert_decimal_eq!(delta_value, Decimal::ZERO, DELTA_THRESHOLD);
+        assert_decimal_eq!(delta_value, dec!(-0.2882625996), DELTA_THRESHOLD);
     }
 }
 
@@ -1251,12 +1253,12 @@ pub mod tests_gamma_equations {
 mod tests_gamma_equations_values {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
-    use crate::{pos, OptionType};
     use crate::utils::logger::setup_logger;
+    use crate::{pos, OptionType};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
-    
+
     #[test]
     fn test_50_vol_10() {
         setup_logger();
@@ -1322,7 +1324,6 @@ mod tests_gamma_equations_values {
         info!("Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.03969525474873078, epsilon = 1e-8);
     }
-    
 }
 
 #[cfg(test)]
@@ -1903,7 +1904,7 @@ mod tests_greeks_trait {
         let greeks = collection.greeks().unwrap();
 
         // Opposing positions should mostly cancel out
-        assert_decimal_eq!(greeks.delta, dec!(0.630494080), dec!(0.000001));
+        assert_decimal_eq!(greeks.delta, Decimal::ZERO, dec!(0.000001));
         assert_decimal_eq!(greeks.gamma, dec!(0.0743013), dec!(0.000001));
         assert_decimal_eq!(greeks.vega, dec!(0.37150664), dec!(0.000001));
         assert_decimal_eq!(greeks.rho, dec!(53.232481), dec!(0.000001));

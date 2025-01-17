@@ -1,12 +1,12 @@
 use optionstratlib::curves::construction::CurveConstructionMethod;
 use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
+use optionstratlib::greeks::Greeks;
 use optionstratlib::utils::setup_logger;
-use std::error::Error;
+use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use optionstratlib::greeks::Greeks;
-use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use std::error::Error;
 
 fn get_option(underlying_asset: &Positive, maturity: &Positive) -> Options {
     Options::new(
@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         t_end,
         steps,
     })?;
-    
+
     let six_month_curve = Curve::construct(CurveConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(180.0));
@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         t_end,
         steps,
     })?;
-    
+
     let nine_month_curve = Curve::construct(CurveConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(270.0));
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         t_end,
         steps,
     })?;
-    
+
     let twelve_month_curve = Curve::construct(CurveConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(365.0));
@@ -91,7 +91,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         steps,
     })?;
 
-    let vector_curve = vec![one_month_curve, three_month_curve, six_month_curve, nine_month_curve, twelve_month_curve];
+    let vector_curve = vec![
+        one_month_curve,
+        three_month_curve,
+        six_month_curve,
+        nine_month_curve,
+        twelve_month_curve,
+    ];
 
     vector_curve
         .plot()

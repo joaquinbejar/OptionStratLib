@@ -1,12 +1,12 @@
 use optionstratlib::curves::construction::CurveConstructionMethod;
 use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
+use optionstratlib::greeks::Greeks;
 use optionstratlib::utils::setup_logger;
-use std::error::Error;
+use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use optionstratlib::greeks::Greeks;
-use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use std::error::Error;
 
 fn get_option(underlying_asset: &Positive) -> Options {
     Options::new(
@@ -26,7 +26,7 @@ fn get_option(underlying_asset: &Positive) -> Options {
 }
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    
+
     let parametric_curve = Curve::construct(CurveConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap());
