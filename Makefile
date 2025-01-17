@@ -22,6 +22,16 @@ release:
 test:
 	LOGLEVEL=WARN cargo test
 
+# Build wasm target
+.PHONY: wasm-build
+wasm-build:
+	cargo +nightly build --target wasm32-unknown-unknown --release
+
+# Test wasm target
+.PHONY: wasm-test
+wasm-test:
+	cargo +nightly test --target wasm32-unknown-unknown --release
+
 # Format the code
 .PHONY: fmt
 fmt:
@@ -96,7 +106,7 @@ git-log:
 	echo "Showing git log for branch $(CURRENT_BRANCH) against main:"; \
 	git log main..$(CURRENT_BRANCH) --pretty=full
 
-.PHONY: create-doc	
+.PHONY: create-doc
 create-doc:
 	cargo doc --no-deps --document-private-items
 
@@ -107,11 +117,11 @@ readme: check-cargo-readme create-doc
 .PHONY: check-cargo-readme
 check-cargo-readme:
 	@command -v cargo-readme > /dev/null || (echo "Installing cargo-readme..."; cargo install cargo-readme)
-	
+
 .PHONY: check-spanish
 check-spanish:
 	cd scripts && python3 spanish.py ../src && cd ..
-	
+
 .PHONY: zip
 zip:
 	@echo "Creating $(ZIP_NAME) without any 'target' directories, 'Cargo.lock', and hidden files..."
@@ -123,7 +133,7 @@ zip:
 		| zip -@ $(ZIP_NAME)
 	@echo "$(ZIP_NAME) created successfully."
 
-	
+
 .PHONY: check-cargo-criterion
 check-cargo-criterion:
 	@command -v cargo-criterion > /dev/null || (echo "Installing cargo-criterion..."; cargo install cargo-criterion)
@@ -151,7 +161,7 @@ bench-json: check-cargo-criterion
 .PHONY: bench-clean
 bench-clean:
 	rm -rf target/criterion
-	
+
 
 .PHONY: workflow-coverage
 workflow-coverage:
@@ -163,14 +173,14 @@ workflow-coverage:
 workflow-build:
 	DOCKER_HOST="$${DOCKER_HOST}" act push --job build \
        -P ubuntu-latest=catthehacker/ubuntu:latest
-       
+
 .PHONY: workflow-lint
 workflow-lint:
-	DOCKER_HOST="$${DOCKER_HOST}" act push --job lint 
+	DOCKER_HOST="$${DOCKER_HOST}" act push --job lint
 
 .PHONY: workflow-test
 workflow-test:
 	DOCKER_HOST="$${DOCKER_HOST}" act push --job run_tests
-       
+
 .PHONY: workflow
-workflow: workflow-build workflow-lint workflow-test workflow-coverage     
+workflow: workflow-build workflow-lint workflow-test workflow-coverage
