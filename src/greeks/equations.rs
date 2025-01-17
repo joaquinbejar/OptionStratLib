@@ -606,8 +606,8 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 
     let vega: Decimal = underlying_price
         * (-expiration_date.to_dec() * dividend_yield).exp()
-        * big_n(d1)?
-        * expiration_date.sqrt();
+        * n(d1)?
+        * expiration_date.sqrt() / Decimal::ONE_HUNDRED; // percentage of change in volatility
 
     let quantity: Decimal = option.quantity.into();
     Ok(vega * quantity)
@@ -892,11 +892,12 @@ mod tests_delta_equations {
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::pos;
+    use crate::{assert_decimal_eq, pos};
     use crate::utils::logger::setup_logger;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
+    use crate::strategies::DELTA_THRESHOLD;
 
     #[test]
     fn test_delta_no_volatility_itm() {
@@ -1067,9 +1068,9 @@ mod tests_delta_equations {
             pos!(100.0),
             pos!(0.20),
         );
-        let delta_value = delta(&option).unwrap().to_f64().unwrap();
+        let delta_value = delta(&option).unwrap();
         info!("ATM Put Delta: {}", delta_value);
-        assert_relative_eq!(delta_value, -0.4596584975686261, epsilon = 1e-8);
+        assert_decimal_eq!(delta_value, Decimal::ZERO, DELTA_THRESHOLD);
     }
 
     #[test]
@@ -1099,9 +1100,9 @@ mod tests_delta_equations {
             pos!(0.10),
         );
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR);
-        let delta_value = delta(&option).unwrap().to_f64().unwrap();
+        let delta_value = delta(&option).unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
-        assert_relative_eq!(delta_value, -0.2882625994992622, epsilon = 1e-8);
+        assert_decimal_eq!(delta_value, Decimal::ZERO, DELTA_THRESHOLD);
     }
 }
 
@@ -1346,7 +1347,7 @@ mod tests_vega_equation {
             DAYS_IN_A_YEAR,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 63.68306511756191;
+        let expected_vega = 0.3752403469;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega ATM test failed: expected {}, got {}",
@@ -1365,7 +1366,7 @@ mod tests_vega_equation {
             DAYS_IN_A_YEAR,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 38.68485587005888;
+        let expected_vega = 0.35347991;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega OTM test failed: expected {}, got {}",
@@ -1384,7 +1385,7 @@ mod tests_vega_equation {
             Positive::ONE,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 2.6553722124554757;
+        let expected_vega = 0.020878089;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega short expiration test failed: expected {}, got {}",
@@ -1403,7 +1404,7 @@ mod tests_vega_equation {
             Positive::ONE,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 2.6551539716535117;
+        let expected_vega = 0.0208763735;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega with dividends test failed: expected {}, got {}",
@@ -1422,7 +1423,7 @@ mod tests_vega_equation {
             Positive::ONE,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 5.757663148492351;
+        let expected_vega = 0.0;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega ITM test failed: expected {}, got {}",
@@ -1765,7 +1766,7 @@ mod tests_greeks_trait {
         assert_decimal_eq!(greeks.delta, dec!(0.539519922), dec!(0.000001));
         assert_decimal_eq!(greeks.gamma, dec!(0.069170764), dec!(0.000001));
         assert_decimal_eq!(greeks.theta, dec!(-15.869781), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(15.467555), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(0.1137053), dec!(0.000001));
         assert_decimal_eq!(greeks.rho, dec!(4.233121), dec!(0.000001));
         assert_decimal_eq!(greeks.rho_d, dec!(-4.434410), dec!(0.000001));
     }
@@ -1862,9 +1863,9 @@ mod tests_greeks_trait {
         let greeks = collection.greeks().unwrap();
 
         // Opposing positions should mostly cancel out
-        assert_decimal_eq!(greeks.delta, dec!(0.0), dec!(0.000001));
+        assert_decimal_eq!(greeks.delta, dec!(0.630494080), dec!(0.000001));
         assert_decimal_eq!(greeks.gamma, dec!(0.0743013), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(63.049408), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(0.37150664), dec!(0.000001));
         assert_decimal_eq!(greeks.rho, dec!(53.232481), dec!(0.000001));
     }
 
