@@ -44,7 +44,7 @@ fmt-check:
 
 # Run Clippy for linting
 .PHONY: lint
-lint: lint-wasm
+lint:
 	cargo clippy --all-targets --all-features -- -D warnings
 
 .PHONY: lint-wasm
