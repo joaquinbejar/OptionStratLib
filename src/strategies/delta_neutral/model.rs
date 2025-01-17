@@ -119,7 +119,7 @@ impl fmt::Display for DeltaInfo {
 /// It implements key concepts needed to manage the delta exposure efficiently.
 ///
 /// # Methods
-///   
+///
 /// * `calculate_net_delta`: Calculates the net delta of the trading strategy and provides detailed delta-related information.
 /// * `is_delta_neutral`: Determines if the strategy is delta-neutral within a specified threshold.
 /// * `suggest_delta_adjustments`: Suggests potential actions to achieve delta neutrality.
@@ -304,6 +304,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_net_delta() {
         let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
         let info = strategy.calculate_net_delta();
@@ -315,6 +316,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_delta_neutral() {
         let neutral_strategy = create_mock_strategy(dec!(0.00005), pos!(100.0));
         let non_neutral_strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
@@ -324,6 +326,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_suggest_delta_adjustments_neutral() {
         let strategy = create_mock_strategy(dec!(0.005), pos!(100.0));
         let adjustments = strategy.suggest_delta_adjustments();
@@ -332,6 +335,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_suggest_delta_adjustments_positive() {
         let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
         let adjustments = strategy.suggest_delta_adjustments();
@@ -355,6 +359,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_suggest_delta_adjustments_negative() {
         let strategy = create_mock_strategy(dec!(-0.5), pos!(100.0));
         let adjustments = strategy.suggest_delta_adjustments();
@@ -378,6 +383,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_info_display() {
         let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
         let info = strategy.calculate_net_delta();
@@ -390,6 +396,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_generate_delta_reducing_adjustments() {
         let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
         let adjustments = strategy.generate_delta_reducing_adjustments();
@@ -413,6 +420,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_generate_delta_increasing_adjustments() {
         let strategy = create_mock_strategy(dec!(-0.5), pos!(100.0));
         let adjustments = strategy.generate_delta_increasing_adjustments();

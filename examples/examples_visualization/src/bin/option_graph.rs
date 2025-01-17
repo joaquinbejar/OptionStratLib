@@ -7,7 +7,7 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::pos;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::Options;
 use optionstratlib::Positive;
 use rust_decimal_macros::dec;
@@ -44,9 +44,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Generate the intrinsic value graph
     option.graph(
         &price_range,
-        "Draws/Options/intrinsic_value_chart.png",
-        25,
-        (1400, 933),
+        GraphBackend::Bitmap {
+            file_path: "Draws/Options/intrinsic_value_chart.png",
+            size: (1400, 933),
+        },
+        20,
     )?;
 
     Ok(())

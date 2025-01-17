@@ -5,7 +5,7 @@ use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use rust_decimal::Decimal;
@@ -69,9 +69,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,
-            "Draws/Strategy/poor_mans_covered_call_profit_loss_chart_best_ratio.png",
+            GraphBackend::Bitmap {
+                file_path: "Draws/Strategy/poor_mans_covered_call_profit_loss_chart_best_ratio.png",
+                size: (1400, 933),
+            },
             20,
-            (1400, 933),
         )?;
     }
 

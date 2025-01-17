@@ -1,13 +1,11 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
-use optionstratlib::constants::ZERO;
-use optionstratlib::error::greeks::CalculationErrorKind::DecimalError;
 use optionstratlib::model::position::Position;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::ExpirationDate;
 use optionstratlib::{pos, Positive};
 use rust_decimal_macros::dec;
@@ -75,9 +73,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,
-            "Draws/Strategy/custom_profit_loss_chart_best_ratio.png",
+            GraphBackend::Bitmap {
+                file_path: "Draws/Strategy/custom_profit_loss_chart_best_ratio.png",
+                size: (1400, 933),
+            },
             20,
-            (1400, 933),
         )?;
     }
 

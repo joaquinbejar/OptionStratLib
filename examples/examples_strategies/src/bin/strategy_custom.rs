@@ -4,7 +4,7 @@ use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::Options;
 use optionstratlib::{pos, Positive};
 use rust_decimal_macros::dec;
@@ -196,9 +196,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Generate the profit/loss graph
     strategy.graph(
         &price_range,
-        "Draws/Strategy/custom_strategy_profit_loss_chart.png",
+        GraphBackend::Bitmap {
+            file_path: "Draws/Strategy/custom_strategy_profit_loss_chart.png",
+            size: (1400, 933),
+        },
         20,
-        (1400, 933),
     )?;
 
     Ok(())

@@ -92,11 +92,13 @@ mod tests_approx_equal {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_exact_values() {
         assert!(approx_equal(1.0, 1.0));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_within_tolerance() {
         let a = 1.00000001;
         let b = 1.0;
@@ -104,6 +106,7 @@ mod tests_approx_equal {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_outside_tolerance() {
         let a = 1.0001;
         let b = 1.0;
@@ -111,6 +114,7 @@ mod tests_approx_equal {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_negative_values() {
         let a = -1.00000001;
         let b = -1.0;
@@ -118,6 +122,7 @@ mod tests_approx_equal {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_large_values_within_tolerance() {
         let a = 1000000.000000001;
         let b = 1000000.0;
@@ -125,6 +130,7 @@ mod tests_approx_equal {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_large_values_outside_tolerance() {
         let a = 1000000.1;
         let b = 1000000.0;
@@ -132,6 +138,7 @@ mod tests_approx_equal {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_zero() {
         let a = 0.0;
         let b = 0.0;
@@ -139,6 +146,7 @@ mod tests_approx_equal {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_zero_with_small_value() {
         let a = 0.000000001;
         let b = 0.0;
@@ -146,6 +154,7 @@ mod tests_approx_equal {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_approx_equal_zero_outside_tolerance() {
         let a = 0.01;
         let b = 0.0;
@@ -161,12 +170,14 @@ mod tests_get_random_element {
     use std::collections::BTreeSet;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_random_element_empty_set() {
         let set: BTreeSet<i32> = BTreeSet::new();
         assert!(get_random_element(&set).is_none());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_random_element_single_element() {
         let mut set = BTreeSet::new();
         set.insert(42);
@@ -174,6 +185,7 @@ mod tests_get_random_element {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_random_element_multiple_elements() {
         let mut set = BTreeSet::new();
         for i in 0..5 {
@@ -185,6 +197,7 @@ mod tests_get_random_element {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_random_element_with_option_data() {
         let mut set = BTreeSet::new();
         for i in 0..5 {
@@ -210,6 +223,7 @@ mod tests_get_random_element {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_random_element_distribution() {
         // Test that the distribution is somewhat uniform
         let mut set = BTreeSet::new();
@@ -237,6 +251,7 @@ mod tests_process_n_times_iter {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_empty_vector() {
         let empty_vec: Vec<i32> = vec![];
         let result = process_n_times_iter(&empty_vec, 1, |_| vec![42]);
@@ -245,6 +260,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_single_element_single_combination() {
         let vec = vec![1];
         let result = process_n_times_iter(&vec, 1, |combination| vec![*combination[0] * 2]);
@@ -253,6 +269,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_multiple_elements_single_output() {
         let vec = vec![1, 2, 3];
         let result =
@@ -266,6 +283,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_type_conversion() {
         let vec = vec![1, 2];
         let result = process_n_times_iter(&vec, 1, |combination| vec![combination[0].to_string()]);
@@ -275,6 +293,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_multiple_outputs_per_combination() {
         let vec = vec![1, 2];
         let result = process_n_times_iter(&vec, 1, |combination| {
@@ -286,6 +305,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_empty_output() {
         let vec = vec![1, 2];
         let result = process_n_times_iter(&vec, 1, |_| Vec::<i32>::new());
@@ -294,6 +314,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_custom_struct() {
         #[derive(Clone, Debug, PartialEq)]
         struct TestStruct {
@@ -316,6 +337,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_combination_size_larger_than_input() {
         let vec = vec![1, 2];
         let result = process_n_times_iter(&vec, 3, |combination| {
@@ -334,6 +356,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_mutable_state() {
         let vec = vec![1, 2];
         let mut sum = 0;
@@ -345,6 +368,7 @@ mod tests_process_n_times_iter {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_filter_combinations() {
         let vec = vec![1, 2, 3, 4];
         let result = process_n_times_iter(&vec, 2, |combination| {

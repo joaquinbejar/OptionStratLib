@@ -118,6 +118,7 @@ mod tests_standard_payoff {
     use crate::pos;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -133,6 +134,7 @@ mod tests_standard_payoff {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -148,6 +150,7 @@ mod tests_standard_payoff {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -163,6 +166,7 @@ mod tests_standard_payoff {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -178,6 +182,7 @@ mod tests_standard_payoff {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -193,6 +198,7 @@ mod tests_standard_payoff {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {

@@ -1099,6 +1099,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_atm_strike_initialization() {
         let underlying_price = pos!(150.0);
         let strategy = ShortStraddle::new(
@@ -1125,6 +1126,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "Short Straddle");
@@ -1139,6 +1141,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strikes_are_equal() {
         let strategy = setup();
         assert_eq!(
@@ -1148,6 +1151,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate() {
         let strategy = setup();
         assert!(
@@ -1179,12 +1183,14 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let strategy = setup();
         assert_eq!(strategy.get_break_even_points().unwrap()[0], 146.9);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 150.0;
@@ -1199,6 +1205,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit() {
         let strategy = setup();
         assert_eq!(
@@ -1208,6 +1215,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss() {
         let strategy = setup();
         assert_eq!(
@@ -1217,12 +1225,14 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_total_cost() {
         let strategy = setup();
         assert_eq!(strategy.total_cost().unwrap(), 40.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received() {
         let strategy = setup();
         assert_eq!(
@@ -1233,6 +1243,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let strategy = setup();
         let expected_fees = 40.0;
@@ -1240,12 +1251,14 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_area() {
         let strategy = setup();
         assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 0.961);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_graph_methods() {
         let strategy = setup();
 
@@ -1279,6 +1292,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg() {
         let mut strategy = setup();
         let original_call = strategy.short_call.clone();
@@ -1298,6 +1312,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
@@ -1310,6 +1325,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_best_ratio() {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
@@ -1319,6 +1335,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_best_area() {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
@@ -1328,6 +1345,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_best_range_to_show() {
         let strategy = setup();
         let step = pos!(1.0);
@@ -1339,6 +1357,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_short_option() {
         let strategy = setup();
         let option_chain = create_test_option_chain();
@@ -1361,6 +1380,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_create_strategy() {
         let strategy = setup();
         let chain = create_test_option_chain();
@@ -1386,6 +1406,7 @@ mod tests_short_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_points() {
         let strategy = setup();
         let points = strategy.get_points();
@@ -1447,6 +1468,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_long_straddle_new() {
         let underlying_symbol = "AAPL".to_string();
         let underlying_price = pos!(150.0);
@@ -1489,12 +1511,14 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let long_straddle = setup_long_straddle();
         assert_eq!(long_straddle.get_break_even_points().unwrap()[0], 138.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_total_cost() {
         let long_straddle = setup_long_straddle();
         assert_eq!(
@@ -1505,6 +1529,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_profit_at() {
         let long_straddle = setup_long_straddle();
         let price = pos!(150.0);
@@ -1523,6 +1548,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new() {
         let strategy = setup_long_straddle();
         assert_eq!(strategy.name, "Long Straddle");
@@ -1531,12 +1557,14 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate() {
         let strategy = setup_long_straddle();
         assert!(strategy.validate());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit() {
         let strategy = setup_long_straddle();
         assert_eq!(
@@ -1546,6 +1574,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_loss() {
         let strategy = setup_long_straddle();
         assert_eq!(
@@ -1555,6 +1584,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let strategy = setup_long_straddle();
         let expected_fees = 20.0; // 0.5 * 4 fees * 10 qty
@@ -1562,12 +1592,14 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received() {
         let strategy = setup_long_straddle();
         assert_eq!(strategy.net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_area() {
         let strategy = setup_long_straddle();
         let area = strategy.profit_area();
@@ -1575,12 +1607,14 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_ratio() {
         let strategy = setup_long_straddle();
         assert_eq!(strategy.profit_ratio().unwrap().to_f64().unwrap(), 20.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_add_leg() {
         let mut strategy = setup_long_straddle();
         let original_call = strategy.long_call.clone();
@@ -1598,6 +1632,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_graph_methods() {
         let strategy = setup_long_straddle();
 
@@ -1633,6 +1668,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_best_ratio() {
         let mut strategy = setup_long_straddle();
         let option_chain = create_test_option_chain();
@@ -1642,6 +1678,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_best_area() {
         let mut strategy = setup_long_straddle();
         let option_chain = create_test_option_chain();
@@ -1651,6 +1688,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_best_range_to_show() {
         let strategy = setup_long_straddle();
         let step = pos!(1.0);
@@ -1662,6 +1700,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_long_option() {
         let strategy = setup_long_straddle();
         let option_chain = create_test_option_chain();
@@ -1677,6 +1716,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_are_valid_prices() {
         let strategy = setup_long_straddle();
         let option_chain = create_test_option_chain();
@@ -1700,6 +1740,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_create_strategy() {
         let strategy = setup_long_straddle();
         let chain = create_test_option_chain();
@@ -1714,6 +1755,7 @@ mod tests_long_straddle {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_points() {
         let strategy = setup_long_straddle();
         let points = strategy.get_points();
@@ -1778,6 +1820,7 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_of_profit_basic() {
         let straddle = create_test_short_straddle();
         let result = straddle.probability_of_profit(None, None);
@@ -1789,6 +1832,7 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_of_profit_with_volatility_adjustment() {
         let straddle = create_test_short_straddle();
         let vol_adj = VolatilityAdjustment {
@@ -1808,6 +1852,7 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_of_profit_with_trend() {
         let straddle = create_test_short_straddle();
         let trend = PriceTrend {
@@ -1827,6 +1872,7 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_of_profit_with_downward_trend() {
         let straddle = create_test_short_straddle();
         let trend = PriceTrend {
@@ -1846,6 +1892,7 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_reference_price() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_underlying_price();
@@ -1858,6 +1905,7 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_expiration() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_expiration();
@@ -1870,6 +1918,7 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_profit_ranges();
@@ -1916,6 +1965,7 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_expiration() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_expiration();
@@ -1927,12 +1977,14 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let straddle = create_test_short_straddle();
         assert_eq!(straddle.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_profit_ranges();
@@ -1947,6 +1999,7 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_loss_ranges();
@@ -1961,6 +2014,7 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_of_profit() {
         let straddle = create_test_short_straddle();
         let result = straddle.probability_of_profit(None, None);
@@ -1972,6 +2026,7 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_with_volatility_adjustment() {
         let straddle = create_test_short_straddle();
         let vol_adj = Some(VolatilityAdjustment {
@@ -1987,6 +2042,7 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_with_trend() {
         let straddle = create_test_short_straddle();
         let trend = Some(PriceTrend {
@@ -2002,6 +2058,7 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_analyze_probabilities() {
         let straddle = create_test_short_straddle();
         let result = straddle.analyze_probabilities(None, None);
@@ -2016,6 +2073,7 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_extreme_probabilities() {
         let straddle = create_test_short_straddle();
         let result = straddle.calculate_extreme_probabilities(None, None);
@@ -2056,6 +2114,7 @@ mod tests_long_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_expiration() {
         let straddle = create_test_long_straddle();
         let result = straddle.get_expiration();
@@ -2067,12 +2126,14 @@ mod tests_long_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let straddle = create_test_long_straddle();
         assert_eq!(straddle.get_risk_free_rate(), Some(dec!(0.05)));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let straddle = create_test_long_straddle();
         let result = straddle.get_profit_ranges();
@@ -2087,6 +2148,7 @@ mod tests_long_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let straddle = create_test_long_straddle();
         let result = straddle.get_loss_ranges();
@@ -2099,6 +2161,7 @@ mod tests_long_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_of_profit() {
         let straddle = create_test_long_straddle();
         let result = straddle.probability_of_profit(None, None);
@@ -2110,6 +2173,7 @@ mod tests_long_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_with_volatility_adjustment() {
         let straddle = create_test_long_straddle();
         let vol_adj = Some(VolatilityAdjustment {
@@ -2125,6 +2189,7 @@ mod tests_long_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_with_trend() {
         let straddle = create_test_long_straddle();
         let trend = Some(PriceTrend {
@@ -2140,6 +2205,7 @@ mod tests_long_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_expected_value_calculation() {
         let straddle = create_test_long_straddle();
         let result = straddle.expected_value(None, None);
@@ -2161,6 +2227,7 @@ mod tests_long_straddle_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_extreme_probabilities() {
         let straddle = create_test_long_straddle();
         let result = straddle.calculate_extreme_probabilities(None, None);
@@ -2206,6 +2273,7 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos!(7460.0));
         let size = dec!(0.1759865);
@@ -2244,6 +2312,7 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos!(7050.0));
         let size = dec!(-0.164378449);
@@ -2282,6 +2351,7 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos!(7245.0));
 
@@ -2328,6 +2398,7 @@ mod tests_long_straddle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_reducing_adjustments() {
         let strike = pos!(7450.0);
         let strategy = get_strategy(strike);
@@ -2367,6 +2438,7 @@ mod tests_long_straddle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0));
         let size = dec!(0.079961694);
@@ -2405,6 +2477,7 @@ mod tests_long_straddle_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos!(7245.0));
 
@@ -2454,6 +2527,7 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos!(7460.0));
         let size = dec!(0.3519);
@@ -2494,6 +2568,7 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos!(7050.0));
         let size = dec!(-0.3287);
@@ -2533,6 +2608,7 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos!(7245.0));
 
@@ -2581,6 +2657,7 @@ mod tests_long_straddle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_reducing_adjustments() {
         let strike = pos!(7450.0);
         let strategy = get_strategy(strike);
@@ -2619,6 +2696,7 @@ mod tests_long_straddle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0));
         let size = dec!(0.1599);
@@ -2658,6 +2736,7 @@ mod tests_long_straddle_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos!(7245.0));
 

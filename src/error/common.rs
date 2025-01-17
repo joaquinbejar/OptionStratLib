@@ -89,6 +89,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_operation_error_not_supported_display() {
         let error = OperationErrorKind::NotSupported {
             operation: "calculate_profit".to_string(),
@@ -102,6 +103,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_operation_error_invalid_parameters_display() {
         let error = OperationErrorKind::InvalidParameters {
             operation: "validate_strikes".to_string(),
@@ -115,6 +117,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_operation_error_debug() {
         let error = OperationErrorKind::NotSupported {
             operation: "calculate_profit".to_string(),
@@ -128,6 +131,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_operation_error_as_error() {
         let error = OperationErrorKind::InvalidParameters {
             operation: "validate_strikes".to_string(),
@@ -142,6 +146,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_operation_error_kinds_distinct() {
         let error1 = OperationErrorKind::NotSupported {
             operation: "op".to_string(),
@@ -157,6 +162,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_operation_error_empty_strings() {
         let error = OperationErrorKind::NotSupported {
             operation: "".to_string(),

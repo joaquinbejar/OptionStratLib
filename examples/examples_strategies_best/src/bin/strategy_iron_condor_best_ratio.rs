@@ -6,7 +6,7 @@ use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use rust_decimal::Decimal;
@@ -72,9 +72,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,
-            "Draws/Strategy/iron_condor_profit_loss_chart_best_ratio.png",
+            GraphBackend::Bitmap {
+                file_path: "Draws/Strategy/iron_condor_profit_loss_chart_best_ratio.png",
+                size: (1400, 933),
+            },
             20,
-            (1400, 933),
         )?;
     }
     info!("Greeks:  {:#?}", strategy.greeks());

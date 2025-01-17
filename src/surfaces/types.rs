@@ -107,6 +107,7 @@ mod tests_surfaces {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_creation() {
         let point = Point {
             strike: 100.0,
@@ -119,6 +120,7 @@ mod tests_surfaces {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_surface_creation() {
         let points = vec![
             Point {
@@ -144,12 +146,14 @@ mod tests_surfaces {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_surface_range_calculation() {
         let range = Surface::calculate_range(vec![1.0, 2.0, 3.0, 4.0, 5.0].into_iter());
         assert_eq!(range, (1.0, 5.0));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_surface_config() {
         let mut extra_params = HashMap::new();
         extra_params.insert("param1".to_string(), 1.0);
@@ -167,6 +171,7 @@ mod tests_surfaces {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_surface_analysis_result() {
         let analysis = SurfaceAnalysisResult {
             mean: 0.2,
@@ -183,6 +188,7 @@ mod tests_surfaces {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_surface_error() {
         let error = SurfaceError::InterpolationError("Test error".to_string());
         match error {
