@@ -448,62 +448,50 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// - A negative Theta is typical for long positions, as the option loses extrinsic value over time.
 /// - If the implied volatility is zero, Theta may be close to zero for far-out-of-the-money options.
 pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
+    let t = option.expiration_date.get_years()?;
+    if t == Decimal::ZERO {
+        return Ok(Decimal::ZERO);
+    }
+
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        t,
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        t,
         option.implied_volatility,
     )?;
 
-    let expiration_date: Positive = option.expiration_date.get_years()?;
-    let dividend_yield: Positive = option.dividend_yield;
-    let underlying_price: Decimal = option.underlying_price.to_dec();
-    let implied_volatility: Positive = option.implied_volatility;
+    let s = option.underlying_price.to_dec();
+    let k = option.strike_price.to_dec();
+    let r = option.risk_free_rate;
+    let q = option.dividend_yield.to_dec();
+    let sigma = option.implied_volatility.to_dec();
 
-    let common_term: Decimal = -underlying_price
-        * implied_volatility
-        * (-expiration_date.to_dec() * dividend_yield).exp()
-        * n(d1)?
-        / (Decimal::TWO * expiration_date.sqrt());
+    // Common term using n
+    let common_term = -(s * n(d1)? * sigma) / (Decimal::TWO * t.sqrt());
 
-    let strike_price: Decimal = option.strike_price.to_dec();
-    let risk_free_rate: Decimal = option.risk_free_rate;
+    // Pre-calculate discount factors
+    let exp_minus_rt = (-r * t).exp();
+    let exp_minus_qt = (-q * t).exp();
 
-    let theta: Decimal = match option.option_style {
+    let theta = match option.option_style {
         OptionStyle::Call => {
-            common_term
-                - risk_free_rate
-                    * strike_price
-                    * (-risk_free_rate * expiration_date).exp()
-                    * big_n(d2)?
-                + dividend_yield
-                    * underlying_price
-                    * (-expiration_date.to_dec() * dividend_yield).exp()
-                    * big_n(d1)?
+            common_term - r * k * exp_minus_rt * big_n(d2)? + q * s * exp_minus_qt * big_n(d1)?
         }
         OptionStyle::Put => {
-            common_term
-                + risk_free_rate
-                    * strike_price
-                    * (-risk_free_rate * expiration_date).exp()
-                    * big_n(-d2)?
-                - dividend_yield
-                    * underlying_price
-                    * (-expiration_date.to_dec() * dividend_yield).exp()
-                    * big_n(-d1)?
+            common_term + r * k * exp_minus_rt * big_n(-d2)? - q * s * exp_minus_qt * big_n(-d1)?
         }
     };
 
-    let quantity: Decimal = option.quantity.into();
-    Ok(theta * quantity)
+    // Adjust for quantity and convert to daily value
+    Ok((theta * option.quantity.to_dec()) / Decimal::from(365))
 }
 
 /// Computes the vega of an option.
@@ -1572,7 +1560,7 @@ pub mod tests_theta_long_equations {
         );
 
         // Expected theta value for a call option (precomputed or from known source)
-        let expected_theta = -20.487619692230428;
+        let expected_theta = -0.0561725050;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1595,7 +1583,7 @@ pub mod tests_theta_long_equations {
         );
 
         // Expected theta value for a put option (precomputed or from known source)
-        let expected_theta = -20.395533137333533;
+        let expected_theta = -0.055928204732;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1619,7 +1607,7 @@ pub mod tests_theta_long_equations {
         option.expiration_date = ExpirationDate::Days(pos!(1.0)); // Option close to expiry
 
         // Expected theta value for a near-expiry call option (precomputed)
-        let expected_theta = -88.75028112939226;
+        let expected_theta = -0.24315788969;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1643,7 +1631,7 @@ pub mod tests_theta_long_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
         // Expected theta value for a far-expiry put option (precomputed)
-        let expected_theta = -5.024569007193639;
+        let expected_theta = -0.0139607780805;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1677,7 +1665,7 @@ pub mod tests_theta_short_equations {
         );
 
         // Expected theta value for a short call option (precomputed or from known source)
-        let expected_theta = -20.487619692230428;
+        let expected_theta = -0.05617250509;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1700,7 +1688,7 @@ pub mod tests_theta_short_equations {
         );
 
         // Expected theta value for a short put option (precomputed or from known source)
-        let expected_theta = -20.395533137333533;
+        let expected_theta = -0.05592820473;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1724,7 +1712,7 @@ pub mod tests_theta_short_equations {
         option.expiration_date = ExpirationDate::Days(pos!(1.0)); // Option close to expiry
 
         // Expected theta value for a short near-expiry call option (precomputed)
-        let expected_theta = -88.75028112939226;
+        let expected_theta = -0.2431578896;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1748,7 +1736,7 @@ pub mod tests_theta_short_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
         // Expected theta value for a far-expiry short put option (precomputed)
-        let expected_theta = -5.024569007193639;
+        let expected_theta = -0.01396077;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1806,7 +1794,7 @@ mod tests_greeks_trait {
         // Test each greek value
         assert_decimal_eq!(greeks.delta, dec!(0.539519922), dec!(0.000001));
         assert_decimal_eq!(greeks.gamma, dec!(0.069170764), dec!(0.000001));
-        assert_decimal_eq!(greeks.theta, dec!(-15.869781), dec!(0.000001));
+        assert_decimal_eq!(greeks.theta, dec!(-0.04351001), dec!(0.000001));
         assert_decimal_eq!(greeks.vega, dec!(0.1137053), dec!(0.000001));
         assert_decimal_eq!(greeks.rho, dec!(4.233121), dec!(0.000001));
         assert_decimal_eq!(greeks.rho_d, dec!(-4.434410), dec!(0.000001));
