@@ -40,7 +40,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
 
     assert_decimal_eq!(greeks.delta, dec!(0.00001), epsilon);
     assert_decimal_eq!(greeks.gamma, dec!(0.0008), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-2943.57608), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-8.06459200), epsilon);
     assert_decimal_eq!(greeks.vega, dec!(19.569191489), epsilon);
     assert_decimal_eq!(greeks.rho, dec!(-70.52940734), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(0.07352819), epsilon);

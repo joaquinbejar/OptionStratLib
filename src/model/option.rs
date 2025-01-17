@@ -1120,7 +1120,7 @@ mod tests_greeks {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.theta().unwrap(), dec!(-15.8697818), EPSILON);
+        assert_decimal_eq!(option.theta().unwrap(), dec!(-0.043510019), EPSILON);
     }
 
     #[test]
@@ -1128,7 +1128,7 @@ mod tests_greeks {
     fn test_theta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        assert_decimal_eq!(option.theta().unwrap(), dec!(-31.739563), EPSILON);
+        assert_decimal_eq!(option.theta().unwrap(), dec!(-0.0870200), EPSILON);
     }
 
     #[test]

@@ -39,7 +39,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
 
     assert_decimal_eq!(greeks.delta, dec!(-0.0884), epsilon);
     assert_decimal_eq!(greeks.gamma, dec!(0.0008), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-3012.9912), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-8.2547704), epsilon);
     assert_decimal_eq!(greeks.vega, dec!(19.87604540), epsilon);
     assert_decimal_eq!(greeks.rho, dec!(-14.2856), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(-77.8057), epsilon);
