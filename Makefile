@@ -44,15 +44,15 @@ fmt-check:
 
 # Run Clippy for linting
 .PHONY: lint
-lint:
+lint: lint-wasm
 	cargo clippy --all-targets --all-features -- -D warnings
 
 .PHONY: lint-wasm
 lint-wasm:
-	cargo +nightly clippy --target wasm32-unknown-unknown --release --all-features --allow-dirty --allow-staged -- -D warnings
+	cargo +nightly clippy --target wasm32-unknown-unknown --release --all-features -- -D warnings
 
 .PHONY: lint-fix
-lint-fix:
+lint-fix: lint-wasm
 	cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged -- -D warnings
 
 .PHONY: lint-wasm-fix
