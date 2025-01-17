@@ -1840,6 +1840,34 @@ mod tests_greeks_trait {
     }
 
     #[test]
+    fn test_greeks_simple_validation() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "AAPL".to_string(),
+            pos!(155.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.20),
+            pos!(1.0),
+            pos!(150.0),
+            dec!(0.05),
+            OptionStyle::Call,
+            pos!(0.00),
+            None,
+        );
+
+        let greeks = option.greeks().unwrap();
+
+        // All greeks should be zero for zero quantity
+        assert_decimal_eq!(greeks.delta, dec!(0.3186329), dec!(0.000001));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0415044), dec!(0.000001));
+        assert_decimal_eq!(greeks.theta, dec!(-0.0574808), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(0.15350973), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(0.03786580), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho_d, dec!(-0.03928351), dec!(0.000001));
+    }
+
+    #[test]
     fn test_greeks_zero_quantity() {
         let option = create_test_option(Side::Long, OptionStyle::Call, pos!(0.0));
         let collection = TestOptionCollection {
