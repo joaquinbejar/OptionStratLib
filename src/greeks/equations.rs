@@ -700,43 +700,44 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// - Call options have positive rho values, as an increase in interest rates increases their value.
 /// - Put options have negative rho values, as an increase in interest rates decreases their value.
 pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
+    // Get time to expiration first and validate
+    let t = option.expiration_date.get_years()?;
+    if t == Decimal::ZERO {
+        return Ok(Decimal::ZERO);
+    }
+
+    // Use existing d2 function
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        t,
         option.implied_volatility,
     )?;
 
-    let risk_free_rate: Decimal = option.risk_free_rate;
-    let expiration_date: Positive = option.expiration_date.get_years()?;
+    let k = option.strike_price.to_dec();
+    let r = option.risk_free_rate;
 
-    let e_rt = (-risk_free_rate * expiration_date).exp();
-    if e_rt == Decimal::ZERO {
-        return Ok(Decimal::ZERO);
-    }
+    // Calculate discount factor once
+    let e_rt = (-r * t).exp();
 
-    let strike_price: Decimal = option.strike_price.to_dec();
+    // Calculate base rho without sign
+    let base_rho = k * t * e_rt;
 
+    // Calculate final rho based on option type
     let rho = match option.option_style {
         OptionStyle::Call => {
-            let big_n_d2 = big_n(d2)?;
-            if big_n_d2 == Decimal::ZERO {
-                return Ok(Decimal::ZERO);
-            }
-            strike_price * expiration_date * e_rt * big_n_d2
+            let n_d2 = big_n(d2)?;
+            base_rho * n_d2
         }
         OptionStyle::Put => {
-            let big_n_minus_d2 = big_n(-d2)?;
-            if big_n_minus_d2 == Decimal::ZERO {
-                return Ok(Decimal::ZERO);
-            }
-            Decimal::NEGATIVE_ONE * strike_price * expiration_date * e_rt * big_n_minus_d2
+            let n_minus_d2 = big_n(-d2)?;
+            -base_rho * n_minus_d2
         }
     };
 
-    let quantity: Decimal = option.quantity.into();
-    Ok(rho * quantity)
+    // Adjust for quantity and convert to basis points
+    Ok((rho * option.quantity.to_dec()) / Decimal::from(100))
 }
 
 /// Computes the sensitivity of the option price to changes in the dividend yield (Rho_d).
@@ -862,7 +863,7 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     };
 
     let quantity: Decimal = option.quantity.into();
-    Ok(rhod * quantity)
+    Ok(rhod * quantity / Decimal::from(100))
 }
 
 pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
@@ -1452,7 +1453,7 @@ pub mod tests_rho_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::pos;
+    use crate::{assert_decimal_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1479,7 +1480,7 @@ pub mod tests_rho_equations {
     fn test_rho_call_option() {
         let option = create_test_option(OptionStyle::Call);
         let result = rho(&option).unwrap().to_f64().unwrap();
-        assert_relative_eq!(result, 53.232481545376345, epsilon = 1e-8);
+        assert_relative_eq!(result, 0.532324815464, epsilon = 1e-8);
     }
 
     #[test]
@@ -1487,7 +1488,7 @@ pub mod tests_rho_equations {
     fn test_rho_put_option() {
         let option = create_test_option(OptionStyle::Put);
         let result = rho(&option).unwrap().to_f64().unwrap();
-        assert_relative_eq!(result, -41.89046090469506, epsilon = 1e-8);
+        assert_relative_eq!(result, -0.41890460905, epsilon = 1e-8);
     }
 
     #[test]
@@ -1495,8 +1496,9 @@ pub mod tests_rho_equations {
     fn test_rho_zero_time_to_expiry() {
         let mut option = create_test_option(OptionStyle::Call);
         option.expiration_date = ExpirationDate::Days(Positive::ZERO);
-        let result = rho(&option).is_err();
+        let result = rho(&option).is_ok();
         assert!(result);
+        assert_decimal_eq!(rho(&option).unwrap(), Decimal::ZERO, dec!(1e-8));
     }
 
     #[test]
@@ -1505,7 +1507,7 @@ pub mod tests_rho_equations {
         let mut option = create_test_option(OptionStyle::Call);
         option.risk_free_rate = dec!(0.0);
         let result = rho(&option).unwrap().to_f64().unwrap();
-        assert_relative_eq!(result, 46.0172162722971, epsilon = 1e-8);
+        assert_relative_eq!(result, 0.460172162, epsilon = 1e-8);
     }
 
     #[test]
@@ -1532,7 +1534,7 @@ pub mod tests_rho_equations {
         let mut option = create_test_option(OptionStyle::Call);
         option.implied_volatility = Positive::ONE;
         let result = rho(&option).unwrap().to_f64().unwrap();
-        assert_relative_eq!(result, 31.043868837728198, epsilon = 0.0001);
+        assert_relative_eq!(result, 0.3104386883, epsilon = 0.0001);
     }
 }
 
@@ -1796,8 +1798,8 @@ mod tests_greeks_trait {
         assert_decimal_eq!(greeks.gamma, dec!(0.069170764), dec!(0.000001));
         assert_decimal_eq!(greeks.theta, dec!(-0.04351001), dec!(0.000001));
         assert_decimal_eq!(greeks.vega, dec!(0.1137053), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(4.233121), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho_d, dec!(-4.434410), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(0.04233121458), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho_d, dec!(-0.04434410), dec!(0.000001));
     }
 
     #[test]
@@ -1895,7 +1897,7 @@ mod tests_greeks_trait {
         assert_decimal_eq!(greeks.delta, Decimal::ZERO, dec!(0.000001));
         assert_decimal_eq!(greeks.gamma, dec!(0.0743013), dec!(0.000001));
         assert_decimal_eq!(greeks.vega, dec!(0.37150664), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(53.232481), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(0.532324815), dec!(0.000001));
     }
 
     #[test]

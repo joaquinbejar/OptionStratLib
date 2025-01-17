@@ -1150,7 +1150,7 @@ mod tests_greeks {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.rho().unwrap(), dec!(4.23312145), EPSILON);
+        assert_decimal_eq!(option.rho().unwrap(), dec!(0.0423312145), EPSILON);
     }
 
     #[test]
@@ -1158,14 +1158,14 @@ mod tests_greeks {
     fn test_rho_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        assert_decimal_eq!(option.rho().unwrap(), dec!(8.46624291), EPSILON);
+        assert_decimal_eq!(option.rho().unwrap(), dec!(0.08466242), EPSILON);
     }
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho_d() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-4.43441032), EPSILON);
+        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-0.04434410320), EPSILON);
     }
 
     #[test]
@@ -1173,7 +1173,7 @@ mod tests_greeks {
     fn test_rho_d_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-8.86882064), EPSILON);
+        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-0.0886882064063), EPSILON);
     }
 }
 
