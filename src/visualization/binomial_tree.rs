@@ -5,6 +5,10 @@
 ******************************************************************************/
 
 use plotters::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use plotters_canvas::CanvasBackend;
+
+use super::utils::GraphBackend;
 
 /// This function draws a binomial tree of asset prices and option prices using the plotters library and saves it to a specified file.
 ///
@@ -12,7 +16,7 @@ use plotters::prelude::*;
 ///
 /// * `asset_tree` - A reference to a 2D vector containing the asset prices at each node of the binomial tree.
 /// * `option_tree` - A reference to a 2D vector containing the option prices at each node of the binomial tree.
-/// * `filename` - A string slice that represents the name of the file where the chart will be saved.
+/// * `backend` - A GraphBackend object that represents the backend where the chart will be saved.
 ///
 /// # Returns
 ///
@@ -26,6 +30,7 @@ use plotters::prelude::*;
 ///
 /// ```
 /// use optionstratlib::visualization::binomial_tree::draw_binomial_tree;
+/// use optionstratlib::visualization::utils::GraphBackend;
 /// let asset_tree = vec![
 ///     vec![100.0],
 ///     vec![105.0, 95.0],
@@ -40,16 +45,30 @@ use plotters::prelude::*;
 ///     vec![20.0, 10.0, 0.0, 0.0],
 /// ];
 ///
-/// let filename = "./Draws/Binomial Tree/binomial_tree.png";
-/// draw_binomial_tree(&asset_tree, &option_tree, filename).unwrap();
+/// let backend = GraphBackend::Bitmap { file_path: "./Draws/Binomial Tree/binomial_tree.png", size: (1200, 800) };
+/// draw_binomial_tree(&asset_tree, &option_tree, backend).unwrap();
 /// ```
 pub fn draw_binomial_tree(
     asset_tree: &[Vec<f64>],
     option_tree: &[Vec<f64>],
-    filename: &str,
+    backend: GraphBackend,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let root = BitMapBackend::new(filename, (1200, 800)).into_drawing_area();
-    root.fill(&WHITE)?;
+    let root = match backend {
+        #[cfg(not(target_arch = "wasm32"))]
+        GraphBackend::Bitmap { file_path, size } => {
+            let root = BitMapBackend::new(file_path, size).into_drawing_area();
+            root.fill(&WHITE)?;
+            root
+        }
+        #[cfg(target_arch = "wasm32")]
+        GraphBackend::Canvas { canvas } => {
+            let root = CanvasBackend::with_canvas_object(canvas)
+                .unwrap()
+                .into_drawing_area();
+            root.fill(&WHITE)?;
+            root
+        }
+    };
     let steps = asset_tree.len() - 1;
     let max_price = asset_tree
         .iter()
@@ -148,19 +167,33 @@ pub fn draw_binomial_tree(
 #[cfg(test)]
 mod tests_draw_binomial_tree {
     use super::*;
-    use std::fs;
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen::JsCast;
+    #[cfg(target_arch = "wasm32")]
+    use web_sys::{window, HtmlCanvasElement};
 
-    #[test]
-    fn test_draw_binomial_tree_success() {
+    // Common test data setup
+    fn setup_test_data() -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
         let asset_tree = vec![vec![100.0], vec![110.0, 90.0], vec![121.0, 99.0, 81.0]];
         let option_tree = vec![vec![0.0], vec![5.0, 0.0], vec![10.0, 5.0, 0.0]];
-        let filename = "./Draws/Binomial Tree/test_output.png";
+        (asset_tree, option_tree)
+    }
 
-        // Ensure the function runs without errors
-        let result = draw_binomial_tree(&asset_tree, &option_tree, filename);
+    // Native-only test
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_draw_binomial_tree_bitmap() -> Result<(), Box<dyn std::error::Error>> {
+        let (asset_tree, option_tree) = setup_test_data();
+        let backend = GraphBackend::Bitmap {
+            file_path: "./Draws/Binomial Tree/test_output.png",
+            size: (1200, 800),
+        };
+
+        let result = draw_binomial_tree(&asset_tree, &option_tree, backend);
         assert!(result.is_ok());
 
-        // Cleanup
-        let _ = fs::remove_file(filename);
+        std::fs::remove_file("./Draws/Binomial Tree/test_output.png")?;
+        Ok(())
     }
 }

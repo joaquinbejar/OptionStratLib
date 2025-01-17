@@ -413,6 +413,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_total_cost() {
         let option = setup_option(
             Side::Long,
@@ -431,6 +432,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_total_cost_size() {
         let option = setup_option(
             Side::Long,
@@ -449,6 +451,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_total_cost_short() {
         let option = setup_option(
             Side::Short,
@@ -467,6 +470,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_total_cost_short_size() {
         let option = setup_option(
             Side::Short,
@@ -485,6 +489,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_check_negative_premium() {
         let option = setup_option(
             Side::Long,
@@ -503,6 +508,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_long_call_itm() {
         let option = setup_option(
             Side::Long,
@@ -521,6 +527,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_long_call_itm_quantity() {
         let option = setup_option(
             Side::Long,
@@ -539,6 +546,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_short_call_itm() {
         let option = setup_option(
             Side::Short,
@@ -557,6 +565,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_short_call_itm_quantity() {
         let option = setup_option(
             Side::Short,
@@ -575,6 +584,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_long_put_itm() {
         let option = setup_option(
             Side::Long,
@@ -593,6 +603,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_long_put_itm_quantity() {
         let option = setup_option(
             Side::Long,
@@ -611,6 +622,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_short_put_itm() {
         let option = setup_option(
             Side::Short,
@@ -629,6 +641,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_short_put_itm_quantity() {
         let option = setup_option(
             Side::Short,
@@ -647,6 +660,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_short_put_itm_winning() {
         let option = setup_option(
             Side::Short,
@@ -665,6 +679,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_pnl_at_expiration_short_put_itm_quantity_winning() {
         let option = setup_option(
             Side::Short,
@@ -683,6 +698,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_call() {
         let option = setup_option(
             Side::Long,
@@ -701,6 +717,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_call_quantity() {
         let option = setup_option(
             Side::Long,
@@ -723,6 +740,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_call() {
         let option = setup_option(
             Side::Short,
@@ -745,6 +763,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_call_bis() {
         let option = setup_option(
             Side::Short,
@@ -767,6 +786,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_days_held() {
         let option = setup_option(
             Side::Long,
@@ -786,6 +806,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_days_to_expiration() {
         let option = setup_option(
             Side::Long,
@@ -804,6 +825,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_long_position() {
         let option = setup_option(
             Side::Long,
@@ -825,6 +847,7 @@ mod tests_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_short_position() {
         let option = setup_option(
             Side::Short,
@@ -882,12 +905,14 @@ mod tests_valid_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_valid_position() {
         let position = create_valid_position();
         assert!(position.validate());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_premium() {
         let mut position = create_valid_position();
         position.premium = Positive::ZERO;
@@ -895,6 +920,7 @@ mod tests_valid_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_option() {
         let mut position = create_valid_position();
         position.option.strike_price = Positive::ZERO; // This makes the option invalid
@@ -902,6 +928,7 @@ mod tests_valid_position {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_fees() {
         let mut position = create_valid_position();
         position.open_fee = Positive::ZERO;
@@ -942,6 +969,7 @@ mod tests_position_break_even {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_call() {
         let option = setup_option(
             Side::Long,
@@ -956,6 +984,7 @@ mod tests_position_break_even {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_call_size() {
         let option = setup_option(
             Side::Long,
@@ -970,6 +999,7 @@ mod tests_position_break_even {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_call() {
         let option = setup_option(
             Side::Short,
@@ -984,6 +1014,7 @@ mod tests_position_break_even {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_call_size() {
         let option = setup_option(
             Side::Short,
@@ -998,6 +1029,7 @@ mod tests_position_break_even {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_put() {
         let option = setup_option(
             Side::Long,
@@ -1012,6 +1044,7 @@ mod tests_position_break_even {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_put_size() {
         let option = setup_option(
             Side::Long,
@@ -1026,6 +1059,7 @@ mod tests_position_break_even {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_put() {
         let option = setup_option(
             Side::Short,
@@ -1040,6 +1074,7 @@ mod tests_position_break_even {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_put_size() {
         let option = setup_option(
             Side::Short,
@@ -1087,6 +1122,7 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_call() {
         let option = setup_option(
             Side::Long,
@@ -1102,6 +1138,7 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_call_size() {
         let option = setup_option(
             Side::Long,
@@ -1117,6 +1154,7 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_call() {
         let option = setup_option(
             Side::Short,
@@ -1136,6 +1174,7 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_call_size() {
         let option = setup_option(
             Side::Short,
@@ -1155,6 +1194,7 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_put() {
         let option = setup_option(
             Side::Long,
@@ -1170,6 +1210,7 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_long_put_size() {
         let option = setup_option(
             Side::Long,
@@ -1185,6 +1226,7 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_put() {
         let option = setup_option(
             Side::Short,
@@ -1204,6 +1246,7 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unrealized_pnl_short_put_size() {
         let option = setup_option(
             Side::Short,
@@ -1244,6 +1287,7 @@ mod tests_update_from_option_data {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_update_long_call() {
         let mut position = Position::default();
         position.option.side = Side::Long;
@@ -1258,6 +1302,7 @@ mod tests_update_from_option_data {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_update_short_call() {
         let mut position = Position::default();
         position.option.side = Side::Short;
@@ -1270,6 +1315,7 @@ mod tests_update_from_option_data {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_update_long_put() {
         let mut position = Position::default();
         position.option.side = Side::Long;
@@ -1282,6 +1328,7 @@ mod tests_update_from_option_data {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_update_short_put() {
         let mut position = Position::default();
         position.option.side = Side::Short;
@@ -1310,30 +1357,35 @@ mod tests_premium {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_premium_received_long() {
         let position = setup_basic_position(Side::Long);
         assert_eq!(position.premium_received().unwrap(), Positive::ZERO);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_premium_received_short() {
         let position = setup_basic_position(Side::Short);
         assert_eq!(position.premium_received().unwrap(), 5.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_long() {
         let position = setup_basic_position(Side::Long);
         assert_eq!(position.net_premium_received().unwrap(), 0.0);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_short() {
         let position = setup_basic_position(Side::Short);
         assert_eq!(position.net_premium_received().unwrap(), 3.0); // 5.0 - 2.0 (fees)
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_premium_received_with_quantity() {
         let side = Side::Short;
         let option = Options {
@@ -1373,6 +1425,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_long_call_no_changes() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1385,6 +1438,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_long_call_price_up() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1395,6 +1449,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_long_call_vol_down() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1405,6 +1460,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_long_call_date_closer() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1415,6 +1471,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_no_changes() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1427,6 +1484,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_price_up() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1437,6 +1495,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_price_down() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1447,6 +1506,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_vol_down() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1457,6 +1517,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_vol_up() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1467,6 +1528,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_date_closer() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1477,6 +1539,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_short_call_date_further() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1487,6 +1550,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_at_expiration_long_call() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position.calculate_pnl_at_expiration(&pos!(110.0)).unwrap();
@@ -1497,6 +1561,7 @@ mod tests_pnl_calculator {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_pnl_at_expiration_short_put() {
         let position = setup_test_position(Side::Short, OptionStyle::Put);
         let pnl = position.calculate_pnl_at_expiration(&pos!(90.0)).unwrap();
@@ -1513,12 +1578,14 @@ mod tests_graph {
     use crate::pos;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_title() {
         let position = Position::default();
         assert_eq!(position.title(), position.option.title());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_values() {
         let position = Position::default();
         let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
@@ -1529,6 +1596,7 @@ mod tests_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_vertical_lines() {
         let position = Position::default();
         let lines = position.get_vertical_lines();

@@ -134,18 +134,21 @@ mod tests_profit_range {
     use crate::pos;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_range_creation() {
         let range = ProfitLossRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5));
         assert!(range.is_ok());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_bounds() {
         let range = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(100.0)), pos!(0.5));
         assert!(range.is_err());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_infinite_bounds() {
         let range = ProfitLossRange::new(None, Some(pos!(100.0)), pos!(0.5));
         assert!(range.is_ok());
@@ -155,6 +158,7 @@ mod tests_profit_range {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_contains() {
         let range = ProfitLossRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5)).unwrap();
 
@@ -166,6 +170,7 @@ mod tests_profit_range {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_contains_infinite_bounds() {
         let lower_infinite = ProfitLossRange::new(None, Some(pos!(100.0)), pos!(0.5)).unwrap();
         assert!(lower_infinite.contains(pos!(50.0)));
@@ -189,6 +194,7 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_basic_probability_calculation() {
         let mut range = create_basic_range();
         let result = range.calculate_probability(
@@ -205,12 +211,14 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic(expected = "Lower bound must be less than upper bound")]
     fn test_invalid_bounds() {
         let _ = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(90.0)), Positive::ZERO).unwrap();
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_volatility_adjustment() {
         let mut range = create_basic_range();
         let vol_adj = Some(VolatilityAdjustment {
@@ -231,6 +239,7 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_upward_trend() {
         let mut range = create_basic_range();
         let trend = Some(PriceTrend {
@@ -251,6 +260,7 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_downward_trend() {
         let mut range = create_basic_range();
         let trend = Some(PriceTrend {
@@ -271,6 +281,7 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_infinite_lower_bound() {
         let mut range = ProfitLossRange::new(None, Some(pos!(110.0)), Positive::ZERO).unwrap();
 
@@ -287,6 +298,7 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_infinite_upper_bound() {
         let mut range = ProfitLossRange::new(Some(pos!(90.0)), None, Positive::ZERO).unwrap();
 
@@ -303,6 +315,7 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_combined_adjustments() {
         let mut range = create_basic_range();
         let vol_adj = Some(VolatilityAdjustment {
@@ -327,6 +340,7 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_different_expiration_dates() {
         let mut range = create_basic_range();
 
@@ -348,6 +362,7 @@ mod tests_calculate_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_prices() {
         let mut range = create_basic_range();
 

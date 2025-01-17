@@ -4,13 +4,12 @@
    Date: 25/9/24
 ******************************************************************************/
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::constants::ZERO;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use rust_decimal_macros::dec;
@@ -75,9 +74,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     strategy.graph(
         &price_range,
-        "Draws/Strategy/call_butterfly_profit_loss_chart_best_ratio.png",
+        GraphBackend::Bitmap {
+            file_path: "Draws/Strategy/call_butterfly_profit_loss_chart_best_ratio.png",
+            size: (1400, 933),
+        },
         20,
-        (1400, 933),
     )?;
 
     Ok(())

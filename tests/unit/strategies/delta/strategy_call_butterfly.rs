@@ -10,6 +10,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
@@ -43,10 +44,10 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
 
     assert_decimal_eq!(greeks.delta, dec!(0.0559), epsilon);
     assert_decimal_eq!(greeks.gamma, dec!(0.0133), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-7606.7078), epsilon);
-    assert_decimal_eq!(greeks.vega, dec!(550.2891), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(40.2857), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(-40.7342), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-20.840295476), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(4.40736684), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(0.402857), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-0.407342), epsilon);
 
     assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,

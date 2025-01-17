@@ -87,6 +87,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monte_carlo_option_pricing_at_the_money() {
         let option = create_test_option();
         let price = monte_carlo_option_pricing(&option, 252, 1000).unwrap();
@@ -96,6 +97,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monte_carlo_option_pricing_in_the_money() {
         let mut option = create_test_option();
         option.strike_price = pos!(80.0);
@@ -105,6 +107,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monte_carlo_option_pricing_zero_volatility() {
         let mut option = create_test_option();
         option.implied_volatility = Positive::ZERO;
@@ -117,6 +120,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monte_carlo_option_pricing_high_volatility() {
         let mut option = create_test_option();
         option.implied_volatility = pos!(0.5);
@@ -126,6 +130,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monte_carlo_option_pricing_short_expiration() {
         let mut option = create_test_option();
         option.expiration_date = ExpirationDate::Days(pos!(30.0)); // 30 days
@@ -135,6 +140,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monte_carlo_option_pricing_consistency() {
         let option = create_test_option();
         let _price1 = monte_carlo_option_pricing(&option, 100, 100).unwrap();

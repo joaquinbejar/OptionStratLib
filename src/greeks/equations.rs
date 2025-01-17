@@ -231,6 +231,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
         OptionStyle::Call => sign * big_n(d1)? * div_date,
         OptionStyle::Put => sign * (big_n(d1)? - Decimal::ONE) * div_date,
     };
+    let delta: Decimal = delta.clamp(Decimal::NEGATIVE_ONE, Decimal::ONE);
     let quantity: Decimal = option.quantity.into();
     Ok(delta * quantity)
 }
@@ -447,62 +448,50 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// - A negative Theta is typical for long positions, as the option loses extrinsic value over time.
 /// - If the implied volatility is zero, Theta may be close to zero for far-out-of-the-money options.
 pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
+    let t = option.expiration_date.get_years()?;
+    if t == Decimal::ZERO {
+        return Ok(Decimal::ZERO);
+    }
+
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        t,
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        t,
         option.implied_volatility,
     )?;
 
-    let expiration_date: Positive = option.expiration_date.get_years()?;
-    let dividend_yield: Positive = option.dividend_yield;
-    let underlying_price: Decimal = option.underlying_price.to_dec();
-    let implied_volatility: Positive = option.implied_volatility;
+    let s = option.underlying_price.to_dec();
+    let k = option.strike_price.to_dec();
+    let r = option.risk_free_rate;
+    let q = option.dividend_yield.to_dec();
+    let sigma = option.implied_volatility.to_dec();
 
-    let common_term: Decimal = -underlying_price
-        * implied_volatility
-        * (-expiration_date.to_dec() * dividend_yield).exp()
-        * n(d1)?
-        / (Decimal::TWO * expiration_date.sqrt());
+    // Common term using n
+    let common_term = -(s * n(d1)? * sigma) / (Decimal::TWO * t.sqrt());
 
-    let strike_price: Decimal = option.strike_price.to_dec();
-    let risk_free_rate: Decimal = option.risk_free_rate;
+    // Pre-calculate discount factors
+    let exp_minus_rt = (-r * t).exp();
+    let exp_minus_qt = (-q * t).exp();
 
-    let theta: Decimal = match option.option_style {
+    let theta = match option.option_style {
         OptionStyle::Call => {
-            common_term
-                - risk_free_rate
-                    * strike_price
-                    * (-risk_free_rate * expiration_date).exp()
-                    * big_n(d2)?
-                + dividend_yield
-                    * underlying_price
-                    * (-expiration_date.to_dec() * dividend_yield).exp()
-                    * big_n(d1)?
+            common_term - r * k * exp_minus_rt * big_n(d2)? + q * s * exp_minus_qt * big_n(d1)?
         }
         OptionStyle::Put => {
-            common_term
-                + risk_free_rate
-                    * strike_price
-                    * (-risk_free_rate * expiration_date).exp()
-                    * big_n(-d2)?
-                - dividend_yield
-                    * underlying_price
-                    * (-expiration_date.to_dec() * dividend_yield).exp()
-                    * big_n(-d1)?
+            common_term + r * k * exp_minus_rt * big_n(-d2)? - q * s * exp_minus_qt * big_n(-d1)?
         }
     };
 
-    let quantity: Decimal = option.quantity.into();
-    Ok(theta * quantity)
+    // Adjust for quantity and convert to daily value
+    Ok((theta * option.quantity.to_dec()) / Decimal::from(365))
 }
 
 /// Computes the vega of an option.
@@ -605,8 +594,9 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 
     let vega: Decimal = underlying_price
         * (-expiration_date.to_dec() * dividend_yield).exp()
-        * big_n(d1)?
-        * expiration_date.sqrt();
+        * n(d1)?
+        * expiration_date.sqrt()
+        / Decimal::ONE_HUNDRED; // percentage of change in volatility
 
     let quantity: Decimal = option.quantity.into();
     Ok(vega * quantity)
@@ -710,43 +700,44 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// - Call options have positive rho values, as an increase in interest rates increases their value.
 /// - Put options have negative rho values, as an increase in interest rates decreases their value.
 pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
+    // Get time to expiration first and validate
+    let t = option.expiration_date.get_years()?;
+    if t == Decimal::ZERO {
+        return Ok(Decimal::ZERO);
+    }
+
+    // Use existing d2 function
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        t,
         option.implied_volatility,
     )?;
 
-    let risk_free_rate: Decimal = option.risk_free_rate;
-    let expiration_date: Positive = option.expiration_date.get_years()?;
+    let k = option.strike_price.to_dec();
+    let r = option.risk_free_rate;
 
-    let e_rt = (-risk_free_rate * expiration_date).exp();
-    if e_rt == Decimal::ZERO {
-        return Ok(Decimal::ZERO);
-    }
+    // Calculate discount factor once
+    let e_rt = (-r * t).exp();
 
-    let strike_price: Decimal = option.strike_price.to_dec();
+    // Calculate base rho without sign
+    let base_rho = k * t * e_rt;
 
+    // Calculate final rho based on option type
     let rho = match option.option_style {
         OptionStyle::Call => {
-            let big_n_d2 = big_n(d2)?;
-            if big_n_d2 == Decimal::ZERO {
-                return Ok(Decimal::ZERO);
-            }
-            strike_price * expiration_date * e_rt * big_n_d2
+            let n_d2 = big_n(d2)?;
+            base_rho * n_d2
         }
         OptionStyle::Put => {
-            let big_n_minus_d2 = big_n(-d2)?;
-            if big_n_minus_d2 == Decimal::ZERO {
-                return Ok(Decimal::ZERO);
-            }
-            Decimal::NEGATIVE_ONE * strike_price * expiration_date * e_rt * big_n_minus_d2
+            let n_minus_d2 = big_n(-d2)?;
+            -base_rho * n_minus_d2
         }
     };
 
-    let quantity: Decimal = option.quantity.into();
-    Ok(rho * quantity)
+    // Adjust for quantity and convert to basis points
+    Ok((rho * option.quantity.to_dec()) / Decimal::from(100))
 }
 
 /// Computes the sensitivity of the option price to changes in the dividend yield (Rho_d).
@@ -872,7 +863,7 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     };
 
     let quantity: Decimal = option.quantity.into();
-    Ok(rhod * quantity)
+    Ok(rhod * quantity / Decimal::from(100))
 }
 
 pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
@@ -886,18 +877,21 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 }
 
 #[cfg(test)]
-mod tests_delta_equations {
+pub mod tests_delta_equations {
     use super::*;
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::pos;
+    use crate::strategies::DELTA_THRESHOLD;
     use crate::utils::logger::setup_logger;
+    use crate::{assert_decimal_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
     use tracing::info;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_itm() {
         setup_logger();
         let option = create_sample_option(
@@ -914,6 +908,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_otm() {
         setup_logger();
         let option = create_sample_option(
@@ -930,6 +925,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_itm_put() {
         setup_logger();
         let option = create_sample_option(
@@ -946,6 +942,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_otm_put() {
         setup_logger();
         let option = create_sample_option(
@@ -962,6 +959,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_itm_short() {
         setup_logger();
         let option = create_sample_option(
@@ -978,6 +976,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_otm_short() {
         setup_logger();
         let option = create_sample_option(
@@ -994,6 +993,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_itm_put_short() {
         setup_logger();
         let option = create_sample_option(
@@ -1010,6 +1010,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_no_volatility_otm_put_short() {
         setup_logger();
         let option = create_sample_option(
@@ -1026,6 +1027,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_deep_in_the_money_call() {
         setup_logger();
         let option = create_sample_option(
@@ -1042,6 +1044,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_deep_out_of_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1057,6 +1060,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_at_the_money_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1066,12 +1070,13 @@ mod tests_delta_equations {
             pos!(100.0),
             pos!(0.20),
         );
-        let delta_value = delta(&option).unwrap().to_f64().unwrap();
+        let delta_value = delta(&option).unwrap();
         info!("ATM Put Delta: {}", delta_value);
-        assert_relative_eq!(delta_value, -0.4596584975686261, epsilon = 1e-8);
+        assert_decimal_eq!(delta_value, dec!(-0.459658497), DELTA_THRESHOLD);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_short_term_high_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -1088,6 +1093,7 @@ mod tests_delta_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_delta_long_term_low_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1098,14 +1104,14 @@ mod tests_delta_equations {
             pos!(0.10),
         );
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR);
-        let delta_value = delta(&option).unwrap().to_f64().unwrap();
+        let delta_value = delta(&option).unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
-        assert_relative_eq!(delta_value, -0.2882625994992622, epsilon = 1e-8);
+        assert_decimal_eq!(delta_value, dec!(-0.2882625996), DELTA_THRESHOLD);
     }
 }
 
 #[cfg(test)]
-mod tests_gamma_equations {
+pub mod tests_gamma_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
@@ -1117,6 +1123,7 @@ mod tests_gamma_equations {
     use tracing::info;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_gamma_deep_in_the_money_call() {
         setup_logger();
         let option = create_sample_option(
@@ -1133,6 +1140,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_gamma_deep_out_of_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1148,6 +1156,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_gamma_at_the_money_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1163,6 +1172,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_gamma_short_term_high_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -1179,6 +1189,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_gamma_long_term_low_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1195,6 +1206,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_gamma_zero_volatility() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1210,6 +1222,7 @@ mod tests_gamma_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_gamma_extreme_high_volatility() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1226,7 +1239,84 @@ mod tests_gamma_equations {
 }
 
 #[cfg(test)]
-mod tests_vega_equation {
+mod tests_gamma_equations_values {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::utils::logger::setup_logger;
+    use crate::{pos, OptionType};
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+    use tracing::info;
+
+    #[test]
+    fn test_50_vol_10() {
+        setup_logger();
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "XYZ".parse().unwrap(),
+            pos!(50.0),
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.10),
+            pos!(1.0),
+            pos!(50.0),
+            Decimal::ZERO,
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.0796887828189609, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_50_vol_5() {
+        setup_logger();
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "XYZ".parse().unwrap(),
+            pos!(50.0),
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.05),
+            pos!(1.0),
+            pos!(50.0),
+            Decimal::ZERO,
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.15952705216736393, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_50_vol_20() {
+        setup_logger();
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "XYZ".parse().unwrap(),
+            pos!(50.0),
+            ExpirationDate::Days(pos!(365.0)),
+            pos!(0.2),
+            pos!(1.0),
+            pos!(50.0),
+            Decimal::ZERO,
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
+        info!("Gamma: {}", gamma_value);
+        assert_relative_eq!(gamma_value, 0.03969525474873078, epsilon = 1e-8);
+    }
+}
+
+#[cfg(test)]
+pub mod tests_vega_equation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, OptionType, Side};
@@ -1258,6 +1348,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vega_atm() {
         let option = create_test_option(
             pos!(100.0),
@@ -1267,7 +1358,7 @@ mod tests_vega_equation {
             DAYS_IN_A_YEAR,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 63.68306511756191;
+        let expected_vega = 0.3752403469;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega ATM test failed: expected {}, got {}",
@@ -1277,6 +1368,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vega_otm() {
         let option = create_test_option(
             pos!(90.0),
@@ -1286,7 +1378,7 @@ mod tests_vega_equation {
             DAYS_IN_A_YEAR,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 38.68485587005888;
+        let expected_vega = 0.35347991;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega OTM test failed: expected {}, got {}",
@@ -1296,6 +1388,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vega_short_expiration() {
         let option = create_test_option(
             pos!(100.0),
@@ -1305,7 +1398,7 @@ mod tests_vega_equation {
             Positive::ONE,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 2.6553722124554757;
+        let expected_vega = 0.020878089;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega short expiration test failed: expected {}, got {}",
@@ -1315,6 +1408,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vega_with_dividends() {
         let option = create_test_option(
             pos!(100.0),
@@ -1324,7 +1418,7 @@ mod tests_vega_equation {
             Positive::ONE,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 2.6551539716535117;
+        let expected_vega = 0.0208763735;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega with dividends test failed: expected {}, got {}",
@@ -1334,6 +1428,7 @@ mod tests_vega_equation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vega_itm() {
         let option = create_test_option(
             pos!(110.0),
@@ -1343,7 +1438,7 @@ mod tests_vega_equation {
             Positive::ONE,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
-        let expected_vega = 5.757663148492351;
+        let expected_vega = 0.0;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
             "Vega ITM test failed: expected {}, got {}",
@@ -1354,11 +1449,11 @@ mod tests_vega_equation {
 }
 
 #[cfg(test)]
-mod tests_rho_equations {
+pub mod tests_rho_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::pos;
+    use crate::{assert_decimal_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1381,36 +1476,42 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho_call_option() {
         let option = create_test_option(OptionStyle::Call);
         let result = rho(&option).unwrap().to_f64().unwrap();
-        assert_relative_eq!(result, 53.232481545376345, epsilon = 1e-8);
+        assert_relative_eq!(result, 0.532324815464, epsilon = 1e-8);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho_put_option() {
         let option = create_test_option(OptionStyle::Put);
         let result = rho(&option).unwrap().to_f64().unwrap();
-        assert_relative_eq!(result, -41.89046090469506, epsilon = 1e-8);
+        assert_relative_eq!(result, -0.41890460905, epsilon = 1e-8);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho_zero_time_to_expiry() {
         let mut option = create_test_option(OptionStyle::Call);
         option.expiration_date = ExpirationDate::Days(Positive::ZERO);
-        let result = rho(&option).is_err();
+        let result = rho(&option).is_ok();
         assert!(result);
+        assert_decimal_eq!(rho(&option).unwrap(), Decimal::ZERO, dec!(1e-8));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho_zero_risk_free_rate() {
         let mut option = create_test_option(OptionStyle::Call);
         option.risk_free_rate = dec!(0.0);
         let result = rho(&option).unwrap().to_f64().unwrap();
-        assert_relative_eq!(result, 46.0172162722971, epsilon = 1e-8);
+        assert_relative_eq!(result, 0.460172162, epsilon = 1e-8);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho_deep_out_of_money_call() {
         let mut option = create_test_option(OptionStyle::Call);
         option.strike_price = pos!(1000.0);
@@ -1419,6 +1520,7 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho_deep_out_of_money_put() {
         let mut option = create_test_option(OptionStyle::Put);
         option.strike_price = pos!(1.0);
@@ -1427,16 +1529,17 @@ mod tests_rho_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_rho_high_volatility() {
         let mut option = create_test_option(OptionStyle::Call);
         option.implied_volatility = Positive::ONE;
         let result = rho(&option).unwrap().to_f64().unwrap();
-        assert_relative_eq!(result, 31.043868837728198, epsilon = 0.0001);
+        assert_relative_eq!(result, 0.3104386883, epsilon = 0.0001);
     }
 }
 
 #[cfg(test)]
-mod tests_theta_long_equations {
+pub mod tests_theta_long_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, Side};
@@ -1446,6 +1549,7 @@ mod tests_theta_long_equations {
     use num_traits::ToPrimitive;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_call_option() {
         // Create a sample call option
         let option = create_sample_option(
@@ -1458,7 +1562,7 @@ mod tests_theta_long_equations {
         );
 
         // Expected theta value for a call option (precomputed or from known source)
-        let expected_theta = -20.487619692230428;
+        let expected_theta = -0.0561725050;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1468,6 +1572,7 @@ mod tests_theta_long_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_put_option() {
         // Create a sample put option
         let option = create_sample_option(
@@ -1480,7 +1585,7 @@ mod tests_theta_long_equations {
         );
 
         // Expected theta value for a put option (precomputed or from known source)
-        let expected_theta = -20.395533137333533;
+        let expected_theta = -0.055928204732;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1490,6 +1595,7 @@ mod tests_theta_long_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_call_option_near_expiry() {
         // Create a sample call option near expiry
         let mut option = create_sample_option(
@@ -1503,7 +1609,7 @@ mod tests_theta_long_equations {
         option.expiration_date = ExpirationDate::Days(pos!(1.0)); // Option close to expiry
 
         // Expected theta value for a near-expiry call option (precomputed)
-        let expected_theta = -88.75028112939226;
+        let expected_theta = -0.24315788969;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1513,6 +1619,7 @@ mod tests_theta_long_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_put_option_far_from_expiry() {
         // Create a sample put option far from expiry
         let mut option = create_sample_option(
@@ -1526,7 +1633,7 @@ mod tests_theta_long_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
         // Expected theta value for a far-expiry put option (precomputed)
-        let expected_theta = -5.024569007193639;
+        let expected_theta = -0.0139607780805;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1537,7 +1644,7 @@ mod tests_theta_long_equations {
 }
 
 #[cfg(test)]
-mod tests_theta_short_equations {
+pub mod tests_theta_short_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, Side};
@@ -1547,6 +1654,7 @@ mod tests_theta_short_equations {
     use num_traits::ToPrimitive;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_short_call_option() {
         // Create a sample short call option
         let option = create_sample_option(
@@ -1559,7 +1667,7 @@ mod tests_theta_short_equations {
         );
 
         // Expected theta value for a short call option (precomputed or from known source)
-        let expected_theta = -20.487619692230428;
+        let expected_theta = -0.05617250509;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1569,6 +1677,7 @@ mod tests_theta_short_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_short_put_option() {
         // Create a sample short put option
         let option = create_sample_option(
@@ -1581,7 +1690,7 @@ mod tests_theta_short_equations {
         );
 
         // Expected theta value for a short put option (precomputed or from known source)
-        let expected_theta = -20.395533137333533;
+        let expected_theta = -0.05592820473;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1591,6 +1700,7 @@ mod tests_theta_short_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_short_call_option_near_expiry() {
         // Create a sample short call option near expiry
         let mut option = create_sample_option(
@@ -1604,7 +1714,7 @@ mod tests_theta_short_equations {
         option.expiration_date = ExpirationDate::Days(pos!(1.0)); // Option close to expiry
 
         // Expected theta value for a short near-expiry call option (precomputed)
-        let expected_theta = -88.75028112939226;
+        let expected_theta = -0.2431578896;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1614,6 +1724,7 @@ mod tests_theta_short_equations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_theta_short_put_option_far_from_expiry() {
         // Create a sample short put option far from expiry
         let mut option = create_sample_option(
@@ -1627,7 +1738,7 @@ mod tests_theta_short_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
         // Expected theta value for a far-expiry short put option (precomputed)
-        let expected_theta = -5.024569007193639;
+        let expected_theta = -0.01396077;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -1685,10 +1796,10 @@ mod tests_greeks_trait {
         // Test each greek value
         assert_decimal_eq!(greeks.delta, dec!(0.539519922), dec!(0.000001));
         assert_decimal_eq!(greeks.gamma, dec!(0.069170764), dec!(0.000001));
-        assert_decimal_eq!(greeks.theta, dec!(-15.869781), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(15.467555), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(4.233121), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho_d, dec!(-4.434410), dec!(0.000001));
+        assert_decimal_eq!(greeks.theta, dec!(-0.04351001), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(0.1137053), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(0.04233121458), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho_d, dec!(-0.04434410), dec!(0.000001));
     }
 
     #[test]
@@ -1783,10 +1894,10 @@ mod tests_greeks_trait {
         let greeks = collection.greeks().unwrap();
 
         // Opposing positions should mostly cancel out
-        assert_decimal_eq!(greeks.delta, dec!(0.0), dec!(0.000001));
+        assert_decimal_eq!(greeks.delta, Decimal::ZERO, dec!(0.000001));
         assert_decimal_eq!(greeks.gamma, dec!(0.0743013), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(63.049408), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(53.232481), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(0.37150664), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(0.532324815), dec!(0.000001));
     }
 
     #[test]

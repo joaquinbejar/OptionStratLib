@@ -435,6 +435,7 @@ mod tests_exp {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_exp_no_panic() {
         let decimal = dec!(-11.7);
         let _ = decimal.exp();
@@ -450,6 +451,7 @@ mod tests_calculate_d_values {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_d_values() {
         let option = Options {
             option_type: OptionType::European,
@@ -491,6 +493,7 @@ mod tests_src_greeks_utils {
     use statrs::distribution::Normal;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_sigma() {
         let s = pos!(100.0);
         let k = pos!(100.0);
@@ -501,6 +504,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_t() {
         let s = pos!(100.0);
         let k = pos!(100.0);
@@ -511,6 +515,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_bis_i() {
         let s = pos!(100.0);
         let k = pos!(110.0);
@@ -524,6 +529,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_bis_ii() {
         let s = pos!(100.0);
         let k = pos!(95.0);
@@ -537,6 +543,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_sigma() {
         let s = pos!(100.0);
         let k = pos!(100.0);
@@ -547,6 +554,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_t() {
         let s = pos!(100.0);
         let k = pos!(100.0);
@@ -557,6 +565,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n() {
         let x = Decimal::ZERO;
         let expected_n = 1.0 / (2.0 * f64::PI()).sqrt();
@@ -570,6 +579,7 @@ mod tests_src_greeks_utils {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n() {
         let x = Decimal::ZERO;
         let normal_distribution = Normal::new(0.0, 1.0).unwrap();
@@ -597,6 +607,7 @@ mod calculate_d1_values {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_volatility() {
         // Case where volatility (sigma) is zero
         let underlying_price = pos!(100.0);
@@ -617,6 +628,7 @@ mod calculate_d1_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_time_to_expiry() {
         // Case where time to expiry is zero
         let underlying_price = pos!(100.0);
@@ -637,6 +649,7 @@ mod calculate_d1_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_high_volatility() {
         // Case with extremely high volatility
         let underlying_price = pos!(100.0);
@@ -665,6 +678,7 @@ mod calculate_d1_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_high_underlying_price() {
         // Case with extremely high underlying price
         let underlying_price = Positive::INFINITY; // Very high stock price
@@ -685,6 +699,7 @@ mod calculate_d1_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_low_underlying_price() {
         // Case with extremely low underlying price (near zero)
         let underlying_price = pos!(0.01); // Very low stock price
@@ -713,6 +728,7 @@ mod calculate_d1_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_strike_price() {
         // Case where strike price is zero
         let underlying_price = pos!(100.0);
@@ -733,6 +749,7 @@ mod calculate_d1_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_infinite_risk_free_rate() {
         // Case where risk-free rate is very high (infinite-like)
         let underlying_price = pos!(100.0);
@@ -767,6 +784,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_basic_calculation() {
         let result = d1(
             pos!(100.0),
@@ -782,6 +800,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_in_the_money() {
         let result = d1(
             pos!(110.0),
@@ -797,6 +816,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_out_of_the_money() {
         let result = d1(
             pos!(90.0),
@@ -812,6 +832,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_strike_error() {
         let result = d1(
             pos!(100.0),
@@ -830,6 +851,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_volatility_error() {
         let result = d1(
             pos!(100.0),
@@ -848,6 +870,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_time_error() {
         let result = d1(
             pos!(100.0),
@@ -864,6 +887,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_short_expiry() {
         let result = d1(
             pos!(100.0),
@@ -879,6 +903,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_high_volatility() {
         let result = d1(
             pos!(100.0),
@@ -894,6 +919,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_interest_rate() {
         let result = d1(
             pos!(100.0),
@@ -909,6 +935,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_negative_interest_rate() {
         let result = d1(
             pos!(100.0),
@@ -924,6 +951,7 @@ mod calculate_d1_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_negative_interest_rate_bis() {
         let result = d1(
             pos!(100.0),
@@ -946,6 +974,7 @@ mod calculate_d2_values {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_volatility() {
         // Case where volatility (implied_volatility) is zero
         let underlying_price = pos!(100.0);
@@ -966,6 +995,7 @@ mod calculate_d2_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_time_to_expiry() {
         // Case where time to expiration is zero
         let underlying_price = pos!(100.0);
@@ -986,6 +1016,7 @@ mod calculate_d2_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_high_volatility() {
         // Case with extremely high volatility
         let underlying_price = pos!(100.0);
@@ -1014,6 +1045,7 @@ mod calculate_d2_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_high_underlying_price() {
         // Case with extremely high underlying price
         let underlying_price = Positive::INFINITY;
@@ -1034,6 +1066,7 @@ mod calculate_d2_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_low_underlying_price() {
         // Case with extremely low underlying price (near zero)
         let underlying_price = pos!(0.01);
@@ -1062,6 +1095,7 @@ mod calculate_d2_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_strike_price() {
         // Case where strike price is zero
         let underlying_price = pos!(100.0);
@@ -1082,6 +1116,7 @@ mod calculate_d2_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_infinite_risk_free_rate() {
         // Case where risk-free rate is very high (infinite-like)
         let underlying_price = pos!(100.0);
@@ -1112,6 +1147,7 @@ mod calculate_d2_values_bis {
     const EPSILON: Decimal = dec!(0.0001);
     // Normal test cases
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_atm_option() {
         let result = d2(
             pos!(100.0),
@@ -1125,6 +1161,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_itm_call() {
         let result = d2(
             pos!(110.0),
@@ -1138,6 +1175,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_otm_call() {
         let result = d2(
             pos!(90.0),
@@ -1156,6 +1194,7 @@ mod calculate_d2_values_bis {
 
     // Time to expiration variations
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_short_expiry() {
         let result = d2(
             pos!(100.0),
@@ -1173,6 +1212,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_long_expiry() {
         let result = d2(
             pos!(100.0),
@@ -1191,6 +1231,7 @@ mod calculate_d2_values_bis {
 
     // Volatility variations
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_low_volatility() {
         let result = d2(
             pos!(100.0),
@@ -1204,6 +1245,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_high_volatility() {
         let result = d2(
             pos!(100.0),
@@ -1218,6 +1260,7 @@ mod calculate_d2_values_bis {
 
     // Interest rate variations
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_interest() {
         let result = d2(
             pos!(100.0),
@@ -1231,6 +1274,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_high_interest() {
         let result = d2(
             pos!(100.0),
@@ -1245,6 +1289,7 @@ mod calculate_d2_values_bis {
 
     // Extreme price differences
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_deep_itm() {
         let result = d2(
             pos!(200.0),
@@ -1262,6 +1307,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_deep_otm() {
         let result = d2(
             pos!(50.0),
@@ -1280,12 +1326,14 @@ mod calculate_d2_values_bis {
 
     // Very small values
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_small_price() {
         let result = d2(pos!(0.01), pos!(0.01), dec!(0.05), Positive::ONE, pos!(0.2)).unwrap();
         assert_relative_eq!(result.to_f64().unwrap(), 0.15, epsilon = 0.0001);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_small_time() {
         let result = d2(pos!(100.0), pos!(100.0), dec!(0.05), pos!(0.001), pos!(0.2)).unwrap();
         assert_relative_eq!(
@@ -1296,6 +1344,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_small_volatility() {
         let result = d2(
             pos!(200.0),
@@ -1314,6 +1363,7 @@ mod calculate_d2_values_bis {
 
     // Error cases
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_volatility() {
         let result = d2(
             pos!(100.0),
@@ -1331,6 +1381,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_zero_time() {
         let result = d2(
             pos!(100.0),
@@ -1347,6 +1398,7 @@ mod calculate_d2_values_bis {
 
     // Negative interest rate
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_negative_interest() {
         let result = d2(
             pos!(100.0),
@@ -1361,6 +1413,7 @@ mod calculate_d2_values_bis {
 
     // Combined extreme cases
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_combined_extremes_high() {
         let result = d2(pos!(1000.0), pos!(100.0), dec!(0.15), pos!(5.0), pos!(0.8)).unwrap();
         assert_relative_eq!(
@@ -1371,6 +1424,7 @@ mod calculate_d2_values_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_combined_extremes_low() {
         let result = d2(pos!(10.0), pos!(100.0), dec!(0.01), pos!(0.1), pos!(0.05)).unwrap();
         assert_relative_eq!(
@@ -1382,6 +1436,7 @@ mod calculate_d2_values_bis {
 
     // Edge cases with very large numbers
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_large_price_ratio() {
         let result = d2(
             pos!(1_000_000.0),
@@ -1400,6 +1455,7 @@ mod calculate_d2_values_bis {
 
     // Special case: ATM LEAPS (Long-term equity anticipation securities)
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_leaps() {
         let result = d2(
             pos!(100.0),
@@ -1418,6 +1474,7 @@ mod calculate_d2_values_bis {
 
     // Near-zero but valid cases
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_near_zero_valid_values() {
         let result = d2(
             pos!(100.0),
@@ -1432,6 +1489,7 @@ mod calculate_d2_values_bis {
 
     // Test with maximum realistic market values
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_max_realistic_values() {
         let result = d2(
             pos!(10000.0),
@@ -1457,6 +1515,7 @@ mod calculate_n_values {
     use std::f64::consts::PI;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_zero() {
         // Case where x = 0.0
         let x = Decimal::ZERO;
@@ -1472,6 +1531,7 @@ mod calculate_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_one() {
         // Case where x = 0.0
         let x = Decimal::ONE;
@@ -1487,6 +1547,7 @@ mod calculate_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_two() {
         // Case where x = 0.0
         let x = Decimal::TWO;
@@ -1502,6 +1563,7 @@ mod calculate_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_positive_small_value() {
         // Case where x is a small positive value
         let x = dec!(0.5);
@@ -1517,6 +1579,7 @@ mod calculate_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_negative_small_value() {
         // Case where x is a small negative value
         let x = dec!(-0.5);
@@ -1532,6 +1595,7 @@ mod calculate_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_large_positive_value() {
         // Case where x is a large positive value
         let x = dec!(5.0);
@@ -1544,6 +1608,7 @@ mod calculate_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_large_negative_value() {
         // Case where x is a large negative value
         let x = dec!(-5.0);
@@ -1556,6 +1621,7 @@ mod calculate_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_extreme_positive_value() {
         // Case where x is a very large positive value
         let x = dec!(100.0);
@@ -1571,6 +1637,7 @@ mod calculate_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_extreme_negative_value() {
         // Case where x is a very large negative value
         let x = dec!(-100.0);
@@ -1593,6 +1660,7 @@ mod calculate_n_prime_values {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_zero() {
         // Case where x = 0.0
         let x = dec!(0.0);
@@ -1608,6 +1676,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_one() {
         // Case where x = 0.0
         let x = Decimal::ONE;
@@ -1623,6 +1692,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_two() {
         // Case where x = 0.0
         let x = Decimal::TWO;
@@ -1638,6 +1708,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_positive_small_value() {
         // Case where x is a small positive value
         let x = dec!(0.5);
@@ -1653,6 +1724,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_negative_small_value() {
         // Case where x is a small negative value
         let x = dec!(-0.5);
@@ -1668,6 +1740,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_large_positive_value() {
         // Case where x is a large positive value
         let x = dec!(5.0);
@@ -1683,6 +1756,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_large_negative_value() {
         // Case where x is a large negative value
         let x = -dec!(5.0);
@@ -1698,6 +1772,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_extreme_positive_value() {
         // Case where x is a very large positive value
         let x = dec!(100.0);
@@ -1713,6 +1788,7 @@ mod calculate_n_prime_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_extreme_negative_value() {
         // Case where x is a very large negative value
         let x = -dec!(100.0);
@@ -1736,6 +1812,7 @@ mod calculate_big_n_values {
     use statrs::distribution::Normal;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_zero() {
         // Case where x = 0.0
         let x = Decimal::ZERO;
@@ -1751,6 +1828,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_one() {
         // Case where x = 0.0
         let x = Decimal::ONE;
@@ -1766,6 +1844,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_two() {
         // Case where x = 0.0
         let x = Decimal::TWO;
@@ -1781,6 +1860,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_positive_small_value() {
         // Case where x is a small positive value
         let x = dec!(0.5);
@@ -1797,6 +1877,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_negative_small_value() {
         // Case where x is a small negative value
         let x = -dec!(0.5);
@@ -1813,6 +1894,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_large_positive_value() {
         // Case where x is a large positive value
         let x = dec!(5.0);
@@ -1828,6 +1910,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_large_negative_value() {
         // Case where x is a large negative value
         let x = -dec!(5.0);
@@ -1843,6 +1926,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_extreme_positive_value() {
         // Case where x is an extremely large positive value
         let x = dec!(100.0);
@@ -1858,6 +1942,7 @@ mod calculate_big_n_values {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_extreme_negative_value() {
         // Case where x is an extremely large negative value
         let x = -dec!(100.0);
@@ -1880,6 +1965,7 @@ mod tests_d1_d2_edge_cases {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_zero_underlying_price() {
         let result = d1(
             Positive::ZERO,
@@ -1892,6 +1978,7 @@ mod tests_d1_d2_edge_cases {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d2_negative_rates_and_high_volatility() {
         let result = d2(
             pos!(100.0),
@@ -1905,6 +1992,7 @@ mod tests_d1_d2_edge_cases {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_d1_d2_combination_extreme_values() {
         let result_d1 = d1(
             pos!(1000.0),
@@ -1933,6 +2021,7 @@ mod tests_probability_density {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_symmetry() {
         let x = dec!(1.5);
         let n_prime_pos = n_prime(x).unwrap();
@@ -1941,6 +2030,7 @@ mod tests_probability_density {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_integration_limits() {
         let x_very_large = dec!(10.0);
         let result = n(x_very_large).unwrap();
@@ -1948,6 +2038,7 @@ mod tests_probability_density {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_n_prime_zero_crossing() {
         let result = n_prime(dec!(0.0)).unwrap();
         assert_eq!(result, dec!(0.0));
@@ -1960,6 +2051,7 @@ mod tests_cumulative_distribution {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_continuity() {
         let x1 = dec!(0.001);
         let x2 = dec!(-0.001);
@@ -1969,6 +2061,7 @@ mod tests_cumulative_distribution {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_conversion_error() {
         let x = Decimal::MAX;
         let result = big_n(x);
@@ -1976,6 +2069,7 @@ mod tests_cumulative_distribution {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_big_n_boundary_values() {
         let result_zero = big_n(dec!(0.0)).unwrap();
         assert_eq!(result_zero, dec!(0.5));
@@ -1991,6 +2085,7 @@ mod tests_calculate_d_values_bis {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_d_values_with_expiration() {
         let option = Options {
             option_type: OptionType::European,
@@ -2019,6 +2114,7 @@ mod tests_edge_cases_and_errors {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_volatility_values() {
         let result = d1(
             pos!(100.0),
@@ -2031,6 +2127,7 @@ mod tests_edge_cases_and_errors {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_precision_limits() {
         let x = dec!(15.0);
         let n_result = n(x).unwrap();

@@ -10,6 +10,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
@@ -38,10 +39,10 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
 
     assert_decimal_eq!(greeks.delta, dec!(0.7004), epsilon);
     assert_decimal_eq!(greeks.gamma, dec!(0.0186), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-10685.1215), epsilon);
-    assert_decimal_eq!(greeks.vega, dec!(848.6626), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(62.0955), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(-62.8208), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-29.2743055), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(6.16042600), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(0.620955), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-0.628208), epsilon);
 
     assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,

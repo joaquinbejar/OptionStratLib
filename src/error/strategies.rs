@@ -220,6 +220,7 @@ mod tests_from_str {
     use crate::error::ProbabilityError;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_to_probability_error_conversion() {
         let strategy_error = StrategyError::operation_not_supported("max_profit", "TestStrategy");
         let probability_error = ProbabilityError::from(strategy_error);
@@ -229,6 +230,7 @@ mod tests_from_str {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_loss_error_conversion() {
         let strategy_error = StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
             reason: "Test error".to_string(),
@@ -243,6 +245,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_error_creation() {
         let error = StrategyError::operation_not_supported("max_profit", "TestStrategy");
         assert!(matches!(
@@ -252,6 +255,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_error_messages() {
         let error = StrategyError::operation_not_supported("max_profit", "TestStrategy");
         let error_string = error.to_string();
@@ -265,6 +269,7 @@ mod tests_display {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_price_error_display() {
         let error = StrategyError::PriceError(PriceErrorKind::InvalidUnderlyingPrice {
             reason: "Price cannot be negative".to_string(),
@@ -273,6 +278,7 @@ mod tests_display {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_break_even_error_display() {
         let error = StrategyError::BreakEvenError(BreakEvenErrorKind::CalculationError {
             reason: "Invalid input parameters".to_string(),
@@ -281,6 +287,7 @@ mod tests_display {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_loss_error_display() {
         let error = StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
             reason: "Cannot calculate maximum profit".to_string(),
@@ -291,6 +298,7 @@ mod tests_display {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_operation_error_display() {
         let error = StrategyError::operation_not_supported("max_profit", "TestStrategy");
         assert!(error.to_string().contains("max_profit"));

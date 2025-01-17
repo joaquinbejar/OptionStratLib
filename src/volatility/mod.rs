@@ -60,7 +60,7 @@
 //!     None,   // Exotic parameters
 //! );
 //!
-//! let market_price = 3.0;
+//! let market_price = 30.0;
 //! let iv = implied_volatility(market_price, &mut option, 100);
 //! ```
 //!

@@ -1,14 +1,19 @@
 use std::env;
 use std::sync::Once;
 use tracing::Level;
+#[cfg(not(target_arch = "wasm32"))]
 use tracing_subscriber::FmtSubscriber;
 
 static INIT: Once = Once::new();
+
 /// Sets up the logger for the application.
 ///
 /// The logger level is determined by the `LOGLEVEL` environment variable.
 /// If the variable is not set, it defaults to `INFO`.
+///
+/// Note: This is a no-op when targeting wasm32.
 pub fn setup_logger() {
+    #[cfg(not(target_arch = "wasm32"))]
     INIT.call_once(|| {
         let log_level = env::var("LOGLEVEL")
             .unwrap_or_else(|_| "INFO".to_string())
@@ -31,7 +36,11 @@ pub fn setup_logger() {
     });
 }
 
+/// Sets up the logger with a specific log level.
+///
+/// Note: This is a no-op when targeting wasm32.
 pub fn setup_logger_with_level(log_level: &str) {
+    #[cfg(not(target_arch = "wasm32"))]
     INIT.call_once(|| {
         let log_level = log_level.to_uppercase();
 
@@ -52,7 +61,7 @@ pub fn setup_logger_with_level(log_level: &str) {
     });
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests_setup_logger {
     use super::setup_logger;
     use std::env;
@@ -60,13 +69,11 @@ mod tests_setup_logger {
     use tracing_subscriber::FmtSubscriber;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_logger_initialization_info() {
         env::set_var("LOGLEVEL", "INFO");
         setup_logger();
 
-        // After setting up the logger, you would typically assert that the logger is working
-        // However, due to the nature of logging, it's difficult to directly assert on log output.
-        // You can, however, check that set_global_default has been called successfully without panic.
         assert!(
             set_global_default(FmtSubscriber::builder().finish()).is_err(),
             "Logger should already be set"
@@ -74,11 +81,11 @@ mod tests_setup_logger {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_logger_initialization_debug() {
         env::set_var("LOGLEVEL", "DEBUG");
         setup_logger();
 
-        // Similar to the previous test, check that the global logger has been set
         assert!(
             set_global_default(FmtSubscriber::builder().finish()).is_err(),
             "Logger should already be set"
@@ -86,11 +93,11 @@ mod tests_setup_logger {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_logger_initialization_default() {
         env::remove_var("LOGLEVEL");
         setup_logger();
 
-        // Check that the global logger has been set
         assert!(
             set_global_default(FmtSubscriber::builder().finish()).is_err(),
             "Logger should already be set"
@@ -98,13 +105,13 @@ mod tests_setup_logger {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_logger_called_once() {
         env::set_var("LOGLEVEL", "INFO");
 
         setup_logger(); // First call should set up the logger
         setup_logger(); // Second call should not re-initialize
 
-        // Check that the global logger has been set only once
         assert!(
             set_global_default(FmtSubscriber::builder().finish()).is_err(),
             "Logger should already be set and should not be reset"
@@ -112,7 +119,7 @@ mod tests_setup_logger {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests_setup_logger_bis {
     use super::*;
     use std::sync::Mutex;
@@ -152,6 +159,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_default_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::remove_var("LOGLEVEL");
@@ -168,6 +176,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_debug_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "DEBUG");
@@ -186,6 +195,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_error_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "ERROR");
@@ -204,6 +214,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_warn_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "WARN");
@@ -222,6 +233,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_trace_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "TRACE");
@@ -240,6 +252,7 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         env::set_var("LOGLEVEL", "INVALID");

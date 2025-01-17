@@ -8,6 +8,7 @@ use optionstratlib::strategies::bear_put_spread::BearPutSpread;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
+use optionstratlib::visualization::utils::GraphBackend;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use rust_decimal_macros::dec;
@@ -60,9 +61,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Generate the profit/loss graph
     strategy.graph(
         &price_range,
-        "Draws/Strategy/bear_put_spread_profit_loss_chart.png",
+        GraphBackend::Bitmap {
+            file_path: "Draws/Strategy/bear_put_spread_profit_loss_chart.png",
+            size: (1400, 933),
+        },
         20,
-        (1400, 933),
     )?;
 
     Ok(())

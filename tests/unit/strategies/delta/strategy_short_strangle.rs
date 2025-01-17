@@ -10,6 +10,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
@@ -39,10 +40,10 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
 
     assert_decimal_eq!(greeks.delta, dec!(0.00001), epsilon);
     assert_decimal_eq!(greeks.gamma, dec!(0.0008), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-2943.57608), epsilon);
-    assert_decimal_eq!(greeks.vega, dec!(2507.0226386), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(-70.52940734), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(0.07352819), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-8.06459200), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(19.569191489), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(-0.7052940734), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(0.00073528), epsilon);
 
     assert_decimal_eq!(
         strategy.calculate_net_delta().net_delta,
