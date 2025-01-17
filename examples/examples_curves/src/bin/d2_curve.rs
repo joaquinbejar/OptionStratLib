@@ -1,7 +1,7 @@
 use optionstratlib::curves::construction::CurveConstructionMethod;
 use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
-use optionstratlib::greeks::d1;
+use optionstratlib::greeks::d2;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, Positive};
 use rust_decimal_macros::dec;
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let parametric_curve = Curve::construct(CurveConstructionMethod::Parametric {
         f: Box::new(|t| {
             let strike = Positive::new_decimal(t).unwrap();
-            let value = d1(pos!(50.0), strike, dec!(0.0), pos!(1.0), pos!(0.1)).unwrap();
+            let value = d2(pos!(50.0), strike, dec!(0.0), pos!(1.0), pos!(0.1)).unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
@@ -24,11 +24,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     parametric_curve
         .plot()
-        .title("d1 Curve")
+        .title("d2 Curve")
         .x_label("strike")
         .y_label("d1")
         .line_width(1)
-        .save("./Draws/Curves/d1_curve.png")?;
+        .save("./Draws/Curves/d2_curve.png")?;
 
     Ok(())
 }
