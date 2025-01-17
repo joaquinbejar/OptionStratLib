@@ -8,16 +8,16 @@ use rust_decimal_macros::dec;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
 
-fn get_option(underlying: &Positive) -> Options {
+fn get_option(strike: &Positive) -> Options {
     Options::new(
         OptionType::European,
         Side::Long,
         "XYZ".parse().unwrap(),
-        pos!(50.0),
+        *strike,
         ExpirationDate::Days(pos!(365.0)),
-        pos!(0.20),
+        pos!(0.10),
         pos!(1.0),
-        *underlying,
+        pos!(50.0),
         Decimal::ZERO,
         OptionStyle::Call,
         Positive::ZERO,
@@ -34,8 +34,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start: dec!(10.0),
-        t_end: dec!(190),
+        t_start: dec!(20.0),
+        t_end: dec!(80),
         steps: 100,
     })?;
 
