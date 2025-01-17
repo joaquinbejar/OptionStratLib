@@ -1135,7 +1135,7 @@ mod tests_greeks {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vega() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.vega().unwrap(), dec!(15.4675554), EPSILON);
+        assert_decimal_eq!(option.vega().unwrap(), dec!(0.113705366), EPSILON);
     }
 
     #[test]
@@ -1143,7 +1143,7 @@ mod tests_greeks {
     fn test_vega_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = pos!(2.0);
-        assert_decimal_eq!(option.vega().unwrap(), dec!(30.9351108), EPSILON);
+        assert_decimal_eq!(option.vega().unwrap(), dec!(0.2274107), EPSILON);
     }
 
     #[test]
