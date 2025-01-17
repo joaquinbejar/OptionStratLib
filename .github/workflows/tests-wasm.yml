@@ -14,12 +14,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
         with:
-            submodules: recursive
+          profile: minimal
+          toolchain: nightly
+          override: true
 
-      - name: Install WASM tool chain
-        run: rustup +nightly target add wasm32-unknown-unknown
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          override: true
 
       - name: Run WASM tests
         run: make wasm-test
