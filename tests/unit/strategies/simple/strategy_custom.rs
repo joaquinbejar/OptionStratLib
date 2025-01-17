@@ -13,6 +13,7 @@ use std::error::Error;
 
 #[test]
 #[ignore]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

@@ -271,6 +271,7 @@ mod tests_black_scholes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_simplest_call() {
         let mut option = mock_options_simplest_call();
         assert_pos_relative_eq!(
@@ -433,6 +434,7 @@ mod tests_black_scholes {
     // }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_call_with_explicit_time_to_expiry() {
         let option = mock_options_call();
         let price = black_scholes(&option).unwrap();
@@ -440,6 +442,7 @@ mod tests_black_scholes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_put_with_explicit_time_to_expiry() {
         let option = mock_options_put();
         let price = black_scholes(&option).unwrap();
@@ -447,6 +450,7 @@ mod tests_black_scholes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_call_without_explicit_time_to_expiry() {
         let option = mock_options_call();
         let price = black_scholes(&option).unwrap();
@@ -454,6 +458,7 @@ mod tests_black_scholes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_black_scholes_put_without_explicit_time_to_expiry() {
         let option = mock_options_put();
         let price = black_scholes(&option).unwrap();
@@ -487,6 +492,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_at_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -502,6 +508,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_in_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -517,6 +524,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_out_of_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -532,6 +540,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_at_the_money_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -547,6 +556,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_high_volatility() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -562,6 +572,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_volatility() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -577,6 +588,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_short_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -592,6 +604,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_short_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -607,6 +620,7 @@ mod tests_black_scholes_trait {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_different_quantity() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -648,6 +662,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_put_parity() {
         let call_option = create_sample_option(
             OptionStyle::Call,
@@ -684,6 +699,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_put_parity_short() {
         let call_option = create_sample_option(
             OptionStyle::Call,
@@ -720,6 +736,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monotonicity_with_strike() {
         let call1 = MockOption::new(create_sample_option(
             OptionStyle::Call,
@@ -757,6 +774,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_volatility_call() {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
@@ -771,6 +789,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_deep_itm_call() {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
@@ -792,6 +811,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_deep_otm_call() {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
@@ -807,6 +827,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monotonicity_with_volatility() {
         let call1 = MockOption::new(create_sample_option(
             OptionStyle::Call,
@@ -869,6 +890,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_at_the_money() {
         let option = create_base_option(Side::Long, OptionStyle::Call);
         let price = black_scholes(&option).unwrap();
@@ -876,6 +898,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_at_the_money() {
         let option = create_base_option(Side::Long, OptionStyle::Put);
         let price = black_scholes(&option).unwrap();
@@ -883,6 +906,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_in_the_money() {
         let mut option = create_base_option(Side::Long, OptionStyle::Call);
         option.strike_price = pos!(90.0);
@@ -891,6 +915,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_in_the_money() {
         let mut option = create_base_option(Side::Long, OptionStyle::Put);
         option.strike_price = pos!(110.0);
@@ -899,6 +924,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_call_option_out_of_money() {
         let mut option = create_base_option(Side::Long, OptionStyle::Call);
         option.strike_price = pos!(110.0);
@@ -907,6 +933,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_option_out_of_money() {
         let mut option = create_base_option(Side::Long, OptionStyle::Put);
         option.strike_price = pos!(90.0);
@@ -915,6 +942,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_short_call_option() {
         let option = create_base_option(Side::Short, OptionStyle::Call);
         let price = black_scholes(&option).unwrap();
@@ -922,6 +950,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_short_put_option() {
         let option = create_base_option(Side::Short, OptionStyle::Put);
         let price = black_scholes(&option).unwrap();
@@ -929,6 +958,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_volatility() {
         let mut option = create_base_option(Side::Long, OptionStyle::Call);
         option.implied_volatility = Positive::ZERO;
@@ -936,6 +966,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_high_volatility() {
         let mut option = create_base_option(Side::Long, OptionStyle::Call);
         option.implied_volatility = pos!(0.5);
@@ -944,6 +975,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_put_call_parity() {
         let call = create_base_option(Side::Long, OptionStyle::Call);
         let put = create_base_option(Side::Long, OptionStyle::Put);
@@ -963,6 +995,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_different_maturities() {
         let mut short_term = create_base_option(Side::Long, OptionStyle::Call);
         short_term.expiration_date = ExpirationDate::Days(pos!(7.0));
@@ -977,6 +1010,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_different_quantities() {
         let option_qty_1 = create_base_option(Side::Long, OptionStyle::Call);
         let mut option_qty_10 = create_base_option(Side::Long, OptionStyle::Call);
@@ -989,6 +1023,7 @@ mod tests_black_scholes_bis {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_dividend_yield() {
         let mut option = create_base_option(Side::Long, OptionStyle::Call);
         option.dividend_yield = pos!(0.02);

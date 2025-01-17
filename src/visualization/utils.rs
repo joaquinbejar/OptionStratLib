@@ -6,9 +6,14 @@
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::{create_drawing_area, Positive};
+use crate::Positive;
 use num_traits::ToPrimitive;
+
+#[cfg(not(target_arch = "wasm32"))]
 use plotters::backend::BitMapBackend;
+#[cfg(target_arch = "wasm32")]
+use plotters_canvas::CanvasBackend;
+
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
 use plotters::prelude::BLACK;
@@ -16,8 +21,22 @@ use plotters::prelude::{
     Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
     Ranged, WHITE,
 };
+
 use std::error::Error;
 use std::ops::Add;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub enum GraphBackend<'a> {
+    Bitmap {
+        file_path: &'a str,
+        size: (u32, u32),
+    },
+}
+
+#[cfg(target_arch = "wasm32")]
+pub enum GraphBackend {
+    Canvas { canvas: web_sys::HtmlCanvasElement },
+}
 
 #[macro_export]
 macro_rules! create_drawing_area {
@@ -84,9 +103,8 @@ pub trait Graph: Profit {
     fn graph(
         &self,
         x_axis_data: &[Positive],
-        file_path: &str,
+        backend: GraphBackend,
         title_size: u32,
-        canvas_size: (u32, u32),
     ) -> Result<(), Box<dyn Error>> {
         if x_axis_data.is_empty() {
             return Err("Cannot create graph with empty data".into());
@@ -98,12 +116,26 @@ pub trait Graph: Profit {
             return Err("No valid profit values to plot".into());
         }
 
-        // Determine the range for the X and Y axes
         let (max_x_value, min_x_value, max_y_value, min_y_value) =
             calculate_axis_range(x_axis_data, &y_axis_data);
 
-        // Set up the drawing area
-        let root = create_drawing_area!(file_path, canvas_size.0, canvas_size.1);
+        // Setup the drawing area
+        let root = match backend {
+            #[cfg(not(target_arch = "wasm32"))]
+            GraphBackend::Bitmap { file_path, size } => {
+                let root = BitMapBackend::new(file_path, size).into_drawing_area();
+                root.fill(&WHITE)?;
+                root
+            }
+            #[cfg(target_arch = "wasm32")]
+            GraphBackend::Canvas { canvas } => {
+                let root = CanvasBackend::with_canvas_object(canvas)
+                    .unwrap()
+                    .into_drawing_area();
+                root.fill(&WHITE)?;
+                root
+            }
+        };
 
         let mut chart = build_chart!(
             &root,
@@ -280,6 +312,7 @@ mod tests_calculate_axis_range {
     use crate::pos;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_axis_range() {
         let x_data = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
@@ -293,6 +326,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_axis_range_single_value() {
         let x_data = vec![pos!(1.0)];
         let y_data = vec![0.0];
@@ -306,6 +340,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_axis_range_zero_values() {
         let x_data = vec![Positive::ZERO, Positive::ZERO, Positive::ZERO];
         let y_data = vec![0.0, 0.0, 0.0];
@@ -319,6 +354,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_axis_range_large_values() {
         let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
         let y_data = vec![1e9, 2e9, 3e9];
@@ -382,15 +418,25 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
-        mock_graph.graph(&x_axis_data, "test_graph.png", 20, (800, 600))?;
+        mock_graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_graph.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_graph.png")?;
         Ok(())
     }
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_values() {
         let mock_graph = MockGraph;
         let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
@@ -398,7 +444,8 @@ mod tests {
         assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -415,7 +462,8 @@ mod tests {
         graph.get_vertical_lines();
     }
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -432,17 +480,20 @@ mod tests {
         graph.get_points();
     }
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_draw_points_on_chart() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_draw_vertical_lines_on_chart() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_axis_range_empty() {
         let x_data: Vec<Positive> = vec![];
         let y_data: Vec<f64> = vec![];
@@ -502,10 +553,18 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_graph_with_empty_data() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data: Vec<Positive> = vec![];
-        let result = mock_graph.graph(&x_axis_data, "test_empty_graph.png", 20, (800, 600));
+        let result = mock_graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_empty_graph.png",
+                size: (800, 600),
+            },
+            20,
+        );
 
         // Verificamos que recibimos un error
         assert!(result.is_err());
@@ -514,15 +573,24 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_graph_with_single_point() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![pos!(50.0)];
-        mock_graph.graph(&x_axis_data, "test_single_point.png", 20, (800, 600))?;
+        mock_graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_single_point.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_single_point.png")?;
         Ok(())
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_graph_with_negative_values() -> Result<(), Box<dyn Error>> {
         struct NegativeGraph;
 
@@ -540,12 +608,20 @@ mod tests_extended {
 
         let graph = NegativeGraph;
         let x_axis_data = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
-        graph.graph(&x_axis_data, "test_negative.png", 20, (800, 600))?;
+        graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_negative.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_negative.png")?;
         Ok(())
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_multiple_vertical_lines() -> Result<(), Box<dyn Error>> {
         struct MultiLineGraph;
 
@@ -590,12 +666,20 @@ mod tests_extended {
 
         let graph = MultiLineGraph;
         let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
-        graph.graph(&x_axis_data, "test_multi_line.png", 20, (800, 600))?;
+        graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_multi_line.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_multi_line.png")?;
         Ok(())
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_multiple_points() -> Result<(), Box<dyn Error>> {
         struct MultiPointGraph;
 
@@ -636,12 +720,20 @@ mod tests_extended {
 
         let graph = MultiPointGraph;
         let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
-        graph.graph(&x_axis_data, "test_multi_point.png", 20, (800, 600))?;
+        graph.graph(
+            &x_axis_data,
+            GraphBackend::Bitmap {
+                file_path: "test_multi_point.png",
+                size: (800, 600),
+            },
+            20,
+        )?;
         std::fs::remove_file("test_multi_point.png")?;
         Ok(())
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_values_error_handling() {
         struct ErrorGraph;
 
@@ -692,6 +784,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_custom_canvas_sizes() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![pos!(50.0)];
@@ -702,9 +795,11 @@ mod tests_extended {
         for (width, height) in sizes {
             mock_graph.graph(
                 &x_axis_data,
-                &format!("test_size_{}x{}.png", width, height),
+                GraphBackend::Bitmap {
+                    file_path: &format!("test_size_{}x{}.png", width, height),
+                    size: (width, height),
+                },
                 20,
-                (width, height),
             )?;
             std::fs::remove_file(format!("test_size_{}x{}.png", width, height))?;
         }

@@ -5,7 +5,6 @@
 ******************************************************************************/
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::Positive;
 use optionstratlib::{pos, spos};
 use rust_decimal_macros::dec;
 use tracing::info;

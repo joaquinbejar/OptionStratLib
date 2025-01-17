@@ -121,8 +121,11 @@ mod tests_span {
     use crate::utils::logger::setup_logger;
     use chrono::Utc;
     use tracing::info;
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_span_margin() {
         setup_logger();
         let option = create_sample_option(

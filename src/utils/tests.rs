@@ -40,6 +40,7 @@ mod tests_assert_positivef64_relative_eq {
     use crate::Positive;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_exact_equality() {
         let a = pos!(1.0);
         let b = pos!(1.0);
@@ -48,6 +49,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_close_values() {
         let a = pos!(1.0);
         let b = pos!(1.0001);
@@ -56,6 +58,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_values() {
         let a = Positive::ZERO;
         let b = Positive::ZERO;
@@ -64,6 +67,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_and_small_value() {
         let a = Positive::ZERO;
         let b = pos!(0.00001);
@@ -72,6 +76,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic(expected = "assertion failed")]
     fn test_values_exceeding_epsilon() {
         let a = pos!(1.0);
@@ -81,6 +86,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_large_values() {
         let a = pos!(1000000.0);
         let b = pos!(1000001.0);
@@ -89,6 +95,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_very_small_values() {
         let a = pos!(0.0000001);
         let b = pos!(0.0000001000001);
@@ -97,6 +104,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic(expected = "assertion failed")]
     fn test_significantly_different_values() {
         let a = pos!(1.0);
@@ -106,6 +114,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_equal_within_epsilon() {
         let a = pos!(100.0);
         let b = pos!(100.1);
@@ -114,6 +123,7 @@ mod tests_assert_positivef64_relative_eq {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic(expected = "assertion failed")]
     fn test_zero_and_large_value() {
         let a = Positive::ZERO;

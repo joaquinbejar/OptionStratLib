@@ -193,6 +193,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validation_error_creation() {
         let error = OptionsError::validation_error("price", "must be positive");
         match error {
@@ -205,6 +206,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_pricing_error_creation() {
         let error = OptionsError::pricing_error("black_scholes", "invalid parameters");
         match error {
@@ -217,6 +219,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_greeks_error_creation() {
         let error = OptionsError::greeks_error("delta", "calculation failed");
         match error {
@@ -229,6 +232,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_time_error_creation() {
         let error = OptionsError::time_error("expiry", "invalid date");
         match error {
@@ -241,6 +245,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_payoff_error_creation() {
         let error = OptionsError::payoff_error("invalid strike price");
         match error {
@@ -252,6 +257,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_update_error_creation() {
         let error = OptionsError::update_error("volatility", "out of bounds");
         match error {
@@ -264,6 +270,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_error_display() {
         let error = OptionsError::validation_error("price", "must be positive");
         assert_eq!(
@@ -279,6 +286,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_str_conversion() {
         let error: OptionsError = "test error".into();
         match error {
@@ -291,6 +299,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_string_conversion() {
         let error: OptionsError = String::from("test error").into();
         match error {
@@ -303,6 +312,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_box_dyn_error_conversion() {
         struct TestError(String);
 
@@ -333,6 +343,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_to_box_dyn_error_conversion() {
         let error = OptionsError::validation_error("price", "must be positive");
         let boxed: Box<dyn Error> = error.into();
@@ -343,12 +354,14 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_error_is_send_and_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<OptionsError>();
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_options_result_type() {
         let success: OptionsResult<i32> = Ok(42);
         let failure: OptionsResult<i32> = Err(OptionsError::validation_error("test", "error"));
@@ -363,6 +376,7 @@ mod tests_extended {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_error_chaining() {
         let error1 = OptionsError::validation_error("strike", "invalid value");
         let error2: OptionsError = error1.to_string().into();
@@ -389,6 +403,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_multiple_conversions() {
         let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
         let boxed: Box<dyn Error> = Box::new(io_error);
@@ -405,6 +420,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_complex_error_scenario() {
         fn nested_function() -> OptionsResult<()> {
             Err(OptionsError::validation_error("nested", "inner error"))
@@ -421,6 +437,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validation_combinations() {
         let errors = vec![
             OptionsError::validation_error("price", "negative value"),
@@ -440,6 +457,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_pricing_error_variants() {
         let methods = ["black_scholes", "binomial", "monte_carlo"];
         let reasons = ["invalid vol", "negative rate", "bad params"];
@@ -453,6 +471,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_error_conversion_preservation() {
         let original = "preserve this message";
         let error1: OptionsError = original.into();
@@ -462,6 +481,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_option_result_operations() {
         let success: OptionsResult<i32> = Ok(42);
         let failure: OptionsResult<i32> = Err(OptionsError::validation_error("test", "error"));
@@ -474,6 +494,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_nested_error_handling() {
         fn process_value(value: i32) -> OptionsResult<i32> {
             if value < 0 {

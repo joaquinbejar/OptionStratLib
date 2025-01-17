@@ -741,6 +741,7 @@ mod tests_call_butterfly {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "AAPL");
@@ -751,12 +752,14 @@ mod tests_call_butterfly {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_break_even_points() {
         let strategy = setup();
         assert_eq!(strategy.get_break_even_points().unwrap()[0], 150.1);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 172.0;
@@ -764,12 +767,14 @@ mod tests_call_butterfly {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_max_profit() {
         let strategy = setup();
         assert!(strategy.max_profit().unwrap_or(Positive::ZERO) > Positive::ZERO);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received() {
         let strategy = setup();
         assert_relative_eq!(
@@ -780,6 +785,7 @@ mod tests_call_butterfly {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees() {
         let strategy = setup();
         assert_relative_eq!(
@@ -790,6 +796,7 @@ mod tests_call_butterfly {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_graph_methods() {
         let strategy = setup();
 
@@ -853,6 +860,7 @@ mod tests_call_butterfly_validation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_empty_symbol() {
         let mut strategy = setup_basic_strategy();
         strategy.name = "".to_string();
@@ -860,6 +868,7 @@ mod tests_call_butterfly_validation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_invalid_underlying_price() {
         let mut strategy = setup_basic_strategy();
         strategy.underlying_price = Positive::ZERO;
@@ -867,6 +876,7 @@ mod tests_call_butterfly_validation {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_valid_strategy() {
         let strategy = setup_basic_strategy();
         assert!(strategy.validate());
@@ -904,6 +914,7 @@ mod tests_call_butterfly_pnl {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_below_lower_strike() {
         let strategy = setup_test_strategy();
         let profit = strategy.calculate_profit_at(pos!(140.0)).unwrap();
@@ -911,6 +922,7 @@ mod tests_call_butterfly_pnl {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_above_upper_strike() {
         let strategy = setup_test_strategy();
         let profit = strategy.calculate_profit_at(pos!(160.0)).unwrap();
@@ -918,6 +930,7 @@ mod tests_call_butterfly_pnl {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_profit_ratio() {
         let strategy = setup_test_strategy();
         let ratio = strategy.profit_ratio().unwrap();
@@ -958,6 +971,7 @@ mod tests_call_butterfly_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_vertical_lines() {
         let butterfly = setup_test_strategy();
         let lines = butterfly.get_vertical_lines();
@@ -972,6 +986,7 @@ mod tests_call_butterfly_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_points_count_and_labels() {
         let butterfly = setup_test_strategy();
         let points = butterfly.get_points();
@@ -990,6 +1005,7 @@ mod tests_call_butterfly_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_points_coordinates() {
         let butterfly = setup_test_strategy();
         let points = butterfly.get_points();
@@ -1018,6 +1034,7 @@ mod tests_call_butterfly_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_point_styling() {
         let butterfly = setup_test_strategy();
         let points = butterfly.get_points();
@@ -1038,6 +1055,7 @@ mod tests_call_butterfly_graph {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_break_even_points() {
         let butterfly = setup_test_strategy();
         let points = butterfly.get_points();
@@ -1096,6 +1114,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5901.88));
         let size = dec!(-0.687410);
@@ -1134,6 +1153,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5781.88));
         let size = dec!(0.055904);
@@ -1188,6 +1208,7 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5794.4));
 
@@ -1237,6 +1258,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5881.88));
         let size = dec!(-0.5699325);
@@ -1275,6 +1297,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5781.88));
         let size = dec!(0.05590);
@@ -1329,6 +1352,7 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5794.4));
 
@@ -1418,6 +1442,7 @@ mod tests_call_butterfly_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_ratio() {
         let mut butterfly = setup_test_butterfly();
         let chain = create_test_option_chain();
@@ -1440,6 +1465,7 @@ mod tests_call_butterfly_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_find_optimal_area() {
         let mut butterfly = setup_test_butterfly();
         let chain = create_test_option_chain();
@@ -1462,6 +1488,7 @@ mod tests_call_butterfly_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_create_strategy() {
         let butterfly = setup_test_butterfly();
         let chain = create_test_option_chain();
@@ -1484,6 +1511,7 @@ mod tests_call_butterfly_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic(expected = "Invalid number of legs for this strategy")]
     fn test_create_strategy_invalid_legs() {
         let butterfly = setup_test_butterfly();
@@ -1498,6 +1526,7 @@ mod tests_call_butterfly_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_filter_combinations_empty_chain() {
         let butterfly = setup_test_butterfly();
         let empty_chain =
@@ -1548,6 +1577,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_expiration() {
         let butterfly = create_test_butterfly();
         let result = butterfly.get_expiration();
@@ -1559,6 +1589,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_risk_free_rate() {
         let butterfly = create_test_butterfly();
         assert_eq!(
@@ -1568,6 +1599,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_profit_ranges() {
         let butterfly = create_test_butterfly();
         let result = butterfly.get_profit_ranges();
@@ -1590,6 +1622,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_loss_ranges() {
         let butterfly = create_test_butterfly();
         let result = butterfly.get_loss_ranges();
@@ -1613,6 +1646,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_probability_sum_to_one() {
         let butterfly = create_test_butterfly();
 
@@ -1627,6 +1661,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_break_even_points_validity() {
         let butterfly = create_test_butterfly();
         let break_even_points = butterfly.get_break_even_points().unwrap();
@@ -1641,6 +1676,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_volatility_adjustment() {
         let butterfly = create_test_butterfly();
         let vol_adj = Some(VolatilityAdjustment {
@@ -1656,6 +1692,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_with_price_trend() {
         let butterfly = create_test_butterfly();
         let trend = Some(PriceTrend {
@@ -1671,6 +1708,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_analyze_probabilities() {
         let butterfly = create_test_butterfly();
         let analysis = butterfly.analyze_probabilities(None, None).unwrap();
@@ -1682,6 +1720,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_near_expiration() {
         let mut butterfly = create_test_butterfly();
         butterfly.long_call.option.expiration_date = ExpirationDate::Days(pos!(0.5));
@@ -1694,6 +1733,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_high_volatility_scenario() {
         let mut butterfly = create_test_butterfly();
         butterfly.long_call.option.implied_volatility = pos!(0.5);
@@ -1706,6 +1746,7 @@ mod tests_call_butterfly_probability {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_extreme_probabilities() {
         let butterfly = create_test_butterfly();
         let result = butterfly.calculate_extreme_probabilities(None, None);

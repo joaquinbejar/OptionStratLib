@@ -423,6 +423,7 @@ mod tests_strategies {
     use rust_decimal_macros::dec;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_new() {
         let strategy = Strategy::new(
             "Test Strategy".to_string(),
@@ -492,6 +493,7 @@ mod tests_strategies {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_trait() {
         let mut mock_strategy = MockStrategy {
             legs: Vec::new(),
@@ -526,6 +528,7 @@ mod tests_strategies {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_default_methods() {
         struct DefaultStrategy;
         impl Validable for DefaultStrategy {
@@ -553,6 +556,7 @@ mod tests_strategies {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_add_leg_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
@@ -582,12 +586,14 @@ mod tests_strategies_extended {
     use crate::pos;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_enum() {
         assert_ne!(StrategyType::BullCallSpread, StrategyType::BearCallSpread);
         assert_eq!(StrategyType::Custom, StrategyType::Custom);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_new_with_legs() {
         let mut strategy = Strategy::new(
             "Test Strategy".to_string(),
@@ -609,6 +615,7 @@ mod tests_strategies_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_get_legs_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
@@ -620,6 +627,7 @@ mod tests_strategies_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_break_even_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
@@ -631,6 +639,7 @@ mod tests_strategies_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_net_premium_received_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
@@ -642,6 +651,7 @@ mod tests_strategies_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_fees_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
@@ -653,6 +663,7 @@ mod tests_strategies_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_max_profit_iter() {
         struct TestStrategy;
         impl Validable for TestStrategy {}
@@ -668,6 +679,7 @@ mod tests_strategies_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_max_loss_iter() {
         struct TestStrategy;
         impl Validable for TestStrategy {}
@@ -683,6 +695,7 @@ mod tests_strategies_extended {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategies_empty_strikes() {
         struct EmptyStrategy;
         impl Validable for EmptyStrategy {}
@@ -704,12 +717,14 @@ mod tests_strategy_type {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_type_equality() {
         assert_eq!(StrategyType::BullCallSpread, StrategyType::BullCallSpread);
         assert_ne!(StrategyType::BullCallSpread, StrategyType::BearCallSpread);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_type_clone() {
         let strategy = StrategyType::IronCondor;
         let cloned = strategy.clone();
@@ -717,6 +732,7 @@ mod tests_strategy_type {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_type_debug() {
         let strategy = StrategyType::Straddle;
         let debug_string = format!("{:?}", strategy);
@@ -724,6 +740,7 @@ mod tests_strategy_type {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_all_strategy_types() {
         let strategies = [
             StrategyType::BullCallSpread,
@@ -848,12 +865,14 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_empty_strikes() {
         let strategy = TestStrategy::new(vec![], Positive::ZERO, vec![]);
         assert!(strategy.max_min_strikes().is_err());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_single_strike() {
         let strike = pos!(100.0);
         let strategy = TestStrategy::new(vec![strike], Positive::ZERO, vec![]);
@@ -861,6 +880,7 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_multiple_strikes_no_underlying() {
         let strikes = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
         let strategy = TestStrategy::new(strikes.clone(), Positive::ZERO, vec![]);
@@ -871,6 +891,7 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_underlying_price_between_strikes() {
         let strikes = vec![pos!(90.0), pos!(110.0)];
         let underlying = pos!(100.0);
@@ -882,6 +903,7 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_underlying_price_below_min_strike() {
         let strikes = vec![pos!(100.0), pos!(110.0)];
         let underlying = pos!(90.0);
@@ -893,6 +915,7 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_underlying_price_above_max_strike() {
         let strikes = vec![pos!(90.0), pos!(100.0)];
         let underlying = pos!(110.0);
@@ -904,6 +927,7 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strikes_with_duplicates() {
         let strikes = vec![pos!(100.0), pos!(100.0), pos!(110.0)];
         let strategy = TestStrategy::new(strikes, Positive::ZERO, vec![]);
@@ -914,6 +938,7 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_underlying_equals_min_strike() {
         let strikes = vec![pos!(100.0), pos!(110.0)];
         let underlying = pos!(100.0);
@@ -925,6 +950,7 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_underlying_equals_max_strike() {
         let strikes = vec![pos!(90.0), pos!(100.0)];
         let underlying = pos!(100.0);
@@ -936,6 +962,7 @@ mod tests_max_min_strikes {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unordered_strikes() {
         let strikes = vec![pos!(110.0), pos!(90.0), pos!(100.0)];
         let strategy = TestStrategy::new(strikes, Positive::ZERO, vec![]);
@@ -990,6 +1017,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_basic_range_with_step() {
         let strategy = TestStrategy::new(
             pos!(100.0),
@@ -1002,6 +1030,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_range_with_small_step() {
         let strategy = TestStrategy::new(
             pos!(100.0),
@@ -1014,6 +1043,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_range_boundaries() {
         let strategy = TestStrategy::new(
             pos!(100.0),
@@ -1026,6 +1056,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_range_step_size() {
         let strategy = TestStrategy::new(
             pos!(100.0),
@@ -1041,6 +1072,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_range_includes_underlying() {
         let underlying_price = pos!(100.0);
         let strategy = TestStrategy::new(
@@ -1055,6 +1087,7 @@ mod tests_best_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_range_with_extreme_values() {
         let strategy = TestStrategy::new(
             pos!(100.0),
@@ -1112,6 +1145,7 @@ mod tests_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_basic_range() {
         let strategy = TestStrategy::new(
             pos!(100.0),
@@ -1124,6 +1158,7 @@ mod tests_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_range_with_far_strikes() {
         let strategy = TestStrategy::new(
             pos!(100.0),
@@ -1136,6 +1171,7 @@ mod tests_range_to_show {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_range_with_underlying_outside_strikes() {
         let strategy = TestStrategy::new(
             pos!(150.0),
@@ -1173,30 +1209,35 @@ mod tests_range_of_profit {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_no_break_even_points() {
         let strategy = TestStrategy::new(vec![]);
         assert!(strategy.range_of_profit().is_err());
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_single_break_even_point() {
         let strategy = TestStrategy::new(vec![pos!(100.0)]);
         assert_eq!(strategy.range_of_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_two_break_even_points() {
         let strategy = TestStrategy::new(vec![pos!(90.0), pos!(110.0)]);
         assert_eq!(strategy.range_of_profit().unwrap(), pos!(20.0));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_multiple_break_even_points() {
         let strategy = TestStrategy::new(vec![pos!(80.0), pos!(100.0), pos!(120.0)]);
         assert_eq!(strategy.range_of_profit().unwrap(), pos!(40.0));
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_unordered_break_even_points() {
         let strategy = TestStrategy::new(vec![pos!(120.0), pos!(80.0), pos!(100.0)]);
         assert_eq!(strategy.range_of_profit().unwrap(), pos!(40.0));
@@ -1220,6 +1261,7 @@ mod tests_strategy_methods {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_type_debug_all_variants() {
         let variants = vec![
             StrategyType::BullCallSpread,
@@ -1274,6 +1316,7 @@ mod tests_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_long_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
@@ -1331,6 +1374,7 @@ mod tests_optimizable {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_is_valid_short_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
@@ -1425,6 +1469,7 @@ mod tests_strategy_net_operations {
     impl Strategies for TestStrategy {}
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_cost_calculation() {
         let mut strategy = TestStrategy::new();
         let option_long = create_sample_option_simplest(OptionStyle::Call, Side::Long);
@@ -1453,6 +1498,7 @@ mod tests_strategy_net_operations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_net_premium_received_calculation() {
         let mut strategy = TestStrategy::new();
         let option_long = create_sample_option_simplest(OptionStyle::Call, Side::Long);
@@ -1477,6 +1523,7 @@ mod tests_strategy_net_operations {
     }
 
     #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_fees_calculation() {
         let mut strategy = TestStrategy::new();
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
