@@ -371,6 +371,7 @@ mod tests {
                 LabelOffsetType::Relative(1.0, 2.0),
                 LabelOffsetType::Relative(1.0, 2.0)
             );
+            #[cfg(not(target_arch = "wasm32"))]
             assert_eq!(LabelOffsetType::Auto, LabelOffsetType::Auto);
 
             assert_ne!(

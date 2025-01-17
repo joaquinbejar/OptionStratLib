@@ -52,7 +52,7 @@ lint-wasm:
 	cargo +nightly clippy --target wasm32-unknown-unknown --release --all-features -- -D warnings
 
 .PHONY: lint-fix
-lint-fix: lint-wasm
+lint-fix: lint-wasm-fix
 	cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged -- -D warnings
 
 .PHONY: lint-wasm-fix
