@@ -31,7 +31,7 @@
 //! ]);
 //!
 //! // Simple plot with default settings
-//! let filename = "single_curve.png";
+//! let filename = "single_curve_doc.png";
 //! curve.plot()
 //!     .title("My Curve")
 //!     .save(filename).expect("panic message");
@@ -40,12 +40,12 @@
 //! }
 //! // Customized multiple curve plot
 //! let curves = vec![curve.clone(), curve.clone()];
-//! let filename = "multiple_curves.png";
+//! let filename = "multiple_curves_doc.png";
 //! curves.plot()
 //!     .title("Curve Comparison")
 //!     .dimensions(1000, 600)
 //!     .line_width(3)
-//!     .save("multiple_curves.png").expect("panic message");
+//!     .save(filename).expect("panic message");
 //!
 //! if Path::new(filename).exists() {
 //!     fs::remove_file(filename).unwrap_or_else(|_| panic!("Failed to remove {}", filename));
