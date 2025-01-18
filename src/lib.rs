@@ -1,7 +1,6 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-
 //!
 //! <div style="text-align: center;">
 //! <img src="https://raw.githubusercontent.com/joaquinbejar/OptionStratLib/refs/heads/main/doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 200px;">

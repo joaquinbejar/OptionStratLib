@@ -19,8 +19,6 @@ use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
-#[cfg(not(target_arch = "wasm32"))]
-use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::{Deserialize, Serialize};
@@ -29,6 +27,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
 use tracing::debug;
+#[cfg(not(target_arch = "wasm32"))]
+use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
 /// Struct representing a row in an option chain.
 ///
@@ -1289,15 +1289,14 @@ impl VolatilitySmile for OptionChain {
 
 #[cfg(test)]
 mod tests_chain_base {
-    #[cfg(not(target_arch = "wasm32"))]
-    use std::fs;
     use super::*;
     use crate::model::types::ExpirationDate;
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
+    #[cfg(not(target_arch = "wasm32"))]
+    use std::fs;
     use tracing::info;
-    
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

@@ -17,7 +17,7 @@ pub(crate) const SECONDS_IN_A_DAY: i64 = 86400;
 
 pub(crate) const DAYS_IN_A_YEAR: Positive = Positive(dec!(365.0));
 
-pub(crate) const TOLERANCE: f64 = 1e-8;
+pub(crate) const TOLERANCE: Decimal = dec!(1e-8);
 
 pub const EPSILON: Decimal = dec!(1e-16);
 

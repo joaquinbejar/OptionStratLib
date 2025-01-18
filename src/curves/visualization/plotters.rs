@@ -47,10 +47,10 @@
 
 use crate::curves::Curve;
 use crate::error::CurvesError;
-use plotters::prelude::*;
-use std::path::Path;
 #[cfg(not(target_arch = "wasm32"))]
 use num_traits::ToPrimitive;
+use plotters::prelude::*;
+use std::path::Path;
 
 /// Plot configuration options
 #[derive(Clone, Debug)]
