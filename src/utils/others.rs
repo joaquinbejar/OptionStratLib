@@ -5,11 +5,12 @@
 ******************************************************************************/
 use crate::constants::TOLERANCE;
 use itertools::Itertools;
+use num_traits::ToPrimitive;
 use std::collections::BTreeSet;
 
 #[allow(dead_code)]
 pub fn approx_equal(a: f64, b: f64) -> bool {
-    (a - b).abs() < TOLERANCE
+    (a - b).abs() < TOLERANCE.to_f64().unwrap()
 }
 
 /// Gets a random element from a BTreeSet.

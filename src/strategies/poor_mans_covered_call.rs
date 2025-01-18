@@ -1255,7 +1255,6 @@ mod tests_pmcc_best_area {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
         let option_chain =

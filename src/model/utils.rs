@@ -189,7 +189,6 @@ mod tests_mean_and_std {
     use super::*;
     use crate::pos;
     use approx::assert_relative_eq;
-    
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

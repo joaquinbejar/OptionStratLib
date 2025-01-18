@@ -121,7 +121,6 @@ mod tests_span {
     use crate::utils::logger::setup_logger;
     use chrono::Utc;
     use tracing::info;
-    
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

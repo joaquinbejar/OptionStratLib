@@ -1,14 +1,14 @@
 #[cfg(not(target_arch = "wasm32"))]
 use {
-    std::error::Error,
-    optionstratlib::{pos, ExpirationDate, Positive},
-    optionstratlib::chains::chain::OptionChain,
-    optionstratlib::strategies::{FindOptimalSide, BearCallSpread, Strategies},
-    optionstratlib::strategies::base::Optimizable,
-    optionstratlib::utils::setup_logger,
     approx::assert_relative_eq,
     num_traits::ToPrimitive,
+    optionstratlib::chains::chain::OptionChain,
+    optionstratlib::strategies::base::Optimizable,
+    optionstratlib::strategies::{BearCallSpread, FindOptimalSide, Strategies},
+    optionstratlib::utils::setup_logger,
+    optionstratlib::{pos, ExpirationDate, Positive},
     rust_decimal_macros::dec,
+    std::error::Error,
 };
 
 #[test]

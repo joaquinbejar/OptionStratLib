@@ -28,10 +28,11 @@
 //! ### Basic Volatility Calculations
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::Positive;
 //! use optionstratlib::volatility::constant_volatility;
 //!
-//! let returns = vec![0.01, -0.02, 0.015, -0.01];
+//! let returns = [dec!(0.02), dec!(0.02), dec!(0.02), dec!(0.02)];
 //! let vol = constant_volatility(&returns);
 //! ```
 //!
@@ -60,16 +61,17 @@
 //!     None,   // Exotic parameters
 //! );
 //!
-//! let market_price = 30.0;
+//! let market_price = pos!(30.0);
 //! let iv = implied_volatility(market_price, &mut option, 100);
 //! ```
 //!
 //! ### Historical Volatility with Moving Window
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::volatility::historical_volatility;
 //!
-//! let returns = vec![0.01, -0.015, 0.02, -0.01, 0.03];
+//! let returns = [dec!(0.02), dec!(0.02), dec!(-0.02), dec!(0.02)];
 //! let window_size = 3;
 //! let hist_vol = historical_volatility(&returns, window_size);
 //! ```
@@ -77,33 +79,14 @@
 //! ### EWMA Volatility
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::volatility::ewma_volatility;
 //!
-//! let returns = vec![0.01, -0.02, 0.015, -0.01];
-//! let lambda = 0.94; // Standard decay factor for daily data
+//! let returns = vec![dec!(0.01), dec!(-0.02), dec!(0.015), dec!(-0.01)];
+//! let lambda = dec!(0.94); // Standard decay factor for daily data
 //! let ewma_vol = ewma_volatility(&returns, lambda);
 //! ```
 //!
-//! ### Volatility Surface Interpolation
-//!
-//! ```rust
-//! use optionstratlib::volatility::interpolate_volatility_surface;
-//!
-//! let vol_surface = vec![
-//!     (100.0, 0.5, 0.2),   // (Strike, Time to Expiry, Volatility)
-//!     (100.0, 1.0, 0.25),
-//!     (110.0, 0.5, 0.22),
-//!     (110.0, 1.0, 0.27),
-//! ];
-//!
-//! let strike = 105.0;
-//! let time_to_expiry = 0.75;
-//! let interpolated_vol = interpolate_volatility_surface(
-//!     strike,
-//!     time_to_expiry,
-//!     &vol_surface
-//! );
-//! ```
 //!
 //! ## Mathematical Models
 //!
@@ -113,12 +96,13 @@
 //! σ²(t) = ω + α * r²(t-1) + β * σ²(t-1)
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::volatility::garch_volatility;
 //!
-//! let returns = vec![0.01, -0.02, 0.015];
-//! let omega = 0.1;  // Long-term variance weight
-//! let alpha = 0.2;  // Recent shock weight
-//! let beta = 0.7;   // Previous variance weight
+//! let returns = vec![dec!(0.01), dec!(-0.02), dec!(0.015)];
+//! let omega = dec!(0.1);  // Long-term variance weight
+//! let alpha = dec!(0.2);  // Recent shock weight
+//! let beta = dec!(0.7);   // Previous variance weight
 //! let garch_vol = garch_volatility(&returns, omega, alpha, beta);
 //! ```
 //!
@@ -128,13 +112,16 @@
 //! dv(t) = κ(θ - v(t))dt + ξ√v(t)dW(t)
 //!
 //! ```rust
+//! use rust_decimal::Decimal;
+//! use rust_decimal_macros::dec;
+//! use optionstratlib::assert_decimal_eq;
 //! use optionstratlib::volatility::simulate_heston_volatility;
 //!
-//! let kappa = 2.0;      // Mean reversion speed
-//! let theta = 0.04;     // Long-term variance
-//! let xi = 0.3;         // Volatility of volatility
-//! let v0 = 0.04;        // Initial variance
-//! let dt = 1.0/252.0;   // Daily time step
+//! let kappa = dec!(2.0);      // Mean reversion speed
+//! let theta = dec!(0.04);     // Long-term variance
+//! let xi = dec!(0.3);         // Volatility of volatility
+//! let v0 = dec!(0.04);        // Initial variance
+//! let dt = Decimal::ONE / dec!(252.0);   // Daily time step
 //! let steps = 252;      // Number of steps
 //!
 //! let heston_vol = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps);
@@ -145,11 +132,12 @@
 //! The module includes utilities for converting between different time frames:
 //!
 //! ```rust
+//! use optionstratlib::pos;
 //! use optionstratlib::utils::time::TimeFrame;
 //! use optionstratlib::volatility::{annualized_volatility, de_annualized_volatility};
 //!
-//! let daily_vol = 0.01;
-//! let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day);
+//! let daily_vol = pos!(0.01);
+//! let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day).unwrap();
 //! let daily_vol_again = de_annualized_volatility(annual_vol, TimeFrame::Day);
 //! ```
 //!
@@ -182,8 +170,8 @@ mod utils;
 
 pub use utils::{
     annualized_volatility, constant_volatility, de_annualized_volatility, ewma_volatility,
-    garch_volatility, historical_volatility, implied_volatility, interpolate_volatility_surface,
-    simulate_heston_volatility, uncertain_volatility_bounds,
+    garch_volatility, historical_volatility, implied_volatility, simulate_heston_volatility,
+    uncertain_volatility_bounds,
 };
 
 pub use traits::VolatilitySmile;

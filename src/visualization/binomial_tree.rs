@@ -167,9 +167,11 @@ pub fn draw_binomial_tree(
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod tests_draw_binomial_tree {
-    
-    use {crate::visualization::utils::GraphBackend,
-     crate::visualization::binomial_tree::draw_binomial_tree};
+
+    use {
+        crate::visualization::binomial_tree::draw_binomial_tree,
+        crate::visualization::utils::GraphBackend,
+    };
 
     // Common test data setup
     fn setup_test_data() -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
