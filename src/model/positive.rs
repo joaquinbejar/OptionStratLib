@@ -203,6 +203,10 @@ impl Positive {
             *self
         }
     }
+
+    pub fn is_zero(&self) -> bool {
+        self.0.is_zero()
+    }
 }
 
 impl From<Positive> for u64 {

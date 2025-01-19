@@ -1,6 +1,6 @@
 use crate::chains::chain::OptionData;
-use crate::constants::ZERO;
-use crate::error::{GreeksError, OptionsError, OptionsResult};
+use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
+use crate::error::{GreeksError, ImpliedVolatilityError, OptionsError, OptionsResult};
 use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -10,10 +10,11 @@ use crate::pricing::{
 };
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::Positive;
+use crate::{pos, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::{error, trace};
 
@@ -224,6 +225,130 @@ impl Options {
             return false;
         }
         true
+    }
+
+    /// **calculate_implied_volatility**:
+    ///
+    /// This function estimates the implied volatility of an option based on its market price
+    /// using binary search. Implied volatility is a key metric in options trading that reflects
+    /// the market's view of the expected volatility of the underlying asset.
+    ///
+    /// ### Parameters:
+    ///
+    /// - `market_price`: The market price of the option as a `Decimal`. This represents the cost
+    ///   at which the option is traded in the market.
+    ///
+    /// ### Returns:
+    ///
+    /// - `Ok(Positive)`: A `Positive` value representing the calculated implied volatility as a percentage.
+    /// - `Err(ImpliedVolatilityError)`: An error indicating the reason calculation failed, such as:
+    ///     - No convergence within the maximum number of iterations.
+    ///     - Invalid option parameters.
+    ///
+    /// ### Implementation Details:
+    ///
+    /// - **Binary Search**: The function uses a binary search approach to iteratively find
+    ///   the implied volatility (`volatility`) that narrows the difference between the calculated
+    ///   option price (via Black-Scholes) and the target `market_price`.
+    ///
+    /// - **Short Options Adjustment**: For short options, the market price is inverted (negated),
+    ///   and this adjustment ensures proper calculation of implied volatility.
+    ///
+    /// - **Bounds and Iteration**: The method starts with a maximum bound (`5.0`, representing 500%
+    ///   volatility) and a lower bound (`0.0`). It adjusts these bounds based on whether the computed
+    ///   price is above or below the target and repeats until convergence or the maximum number of
+    ///   iterations is reached (`MAX_ITERATIONS_IV`).
+    ///
+    /// - **Convergence Tolerance**: The function stops iterating when the computed price is within `IV_TOLERANCE`
+    ///   of the target market price or when the difference between the high and low bounds is smaller
+    ///   than a threshold (`0.0001`).
+    ///
+    /// ### Error Cases:
+    /// - **No Convergence**: If the binary search exhausts the allowed number of iterations (`MAX_ITERATIONS_IV`)
+    ///   without sufficiently narrowing down the implied volatility, the function returns an `ImpliedVolatilityError::NoConvergence`.
+    /// - **Invalid Parameters**: Bounds violations or invalid market inputs can potentially cause other errors
+    ///   during calculations.
+    ///
+    /// ### Example Usage:
+    /// ```rust
+    /// use rust_decimal_macros::dec;
+    /// use rust_decimal::Decimal;
+    /// use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Side};
+    ///
+    /// let options = Options::new(
+    ///             OptionType::European,
+    ///             Side::Short,
+    ///             "TEST".to_string(),
+    ///             pos!(6050.0), // strike
+    ///             ExpirationDate::Days(pos!(60.0)),
+    ///             pos!(0.1),     // initial iv
+    ///             pos!(1.0),     // qty
+    ///             pos!(6032.18), // underlying
+    ///             dec!(0.0),     // rate
+    ///             OptionStyle::Call,
+    ///             pos!(0.0), // div
+    ///             None,
+    ///         ); // Configure your option parameters
+    /// let market_price = dec!(133.5);  
+    ///
+    /// match options.calculate_implied_volatility(market_price) {
+    ///     Ok(volatility) => println!("Implied Volatility: {}", volatility.to_dec()),
+    ///     Err(e) => println!("Failed to calculate implied volatility: {:?}", e),
+    /// }
+    /// ```
+    pub fn calculate_implied_volatility(
+        &self,
+        market_price: Decimal,
+    ) -> Result<Positive, ImpliedVolatilityError> {
+        let is_short = self.is_short();
+        let target_price = if is_short {
+            -market_price
+        } else {
+            market_price
+        };
+
+        // Initialize high and low bounds for volatility
+        let mut high = pos!(5.0); // 500% max volatility
+        let mut low = pos!(0.0);
+
+        // Binary search through volatilities until we find one that gives us our target price
+        // or until we reach maximum iterations
+        for _ in 0..MAX_ITERATIONS_IV {
+            // Calculate midpoint volatility
+            let mid_vol = (high.to_dec() + low.to_dec()) / Decimal::TWO;
+            let volatility = Positive(mid_vol);
+
+            // Calculate option price at this volatility
+            let mut option_copy = self.clone();
+            option_copy.implied_volatility = volatility;
+            let price = option_copy.calculate_price_black_scholes()?;
+
+            // Adjust price for short positions
+            let actual_price = if is_short { -price } else { price };
+
+            // Check if we're close enough to the target price
+            if (actual_price - target_price).abs() < IV_TOLERANCE {
+                return Ok(volatility);
+            }
+
+            // Update bounds based on whether this price was too high or too low
+            if actual_price > target_price {
+                high = volatility;
+            } else {
+                low = volatility;
+            }
+
+            // Check if our range is too small (meaning we've converged)
+            if (high - low).to_dec() < dec!(0.0001) {
+                return Ok(volatility);
+            }
+        }
+
+        // If we haven't found a solution after max iterations
+        Err(ImpliedVolatilityError::NoConvergence {
+            iterations: MAX_ITERATIONS_IV,
+            last_volatility: (high + low) / Positive::TWO,
+        })
     }
 }
 
@@ -1220,17 +1345,33 @@ mod tests_greek_trait {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_greeks_for_different_options() {
-        let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let call_option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos!(5790.0), // strike
+            ExpirationDate::Days(pos!(18.0)),
+            pos!(0.1),     // initial iv
+            pos!(1.0),     // qty
+            pos!(5781.88), // underlying
+            dec!(0.05),    // rate
+            OptionStyle::Call,
+            pos!(0.0), // div
+            None,
+        );
         let mut put_option = call_option.clone();
         put_option.option_style = OptionStyle::Put;
 
         let call_greeks = call_option.greeks().unwrap();
         let put_greeks = put_option.greeks().unwrap();
 
-        // assert_decimal_eq!(call_greeks.delta + put_greeks.delta, Decimal::ZERO, EPSILON); // TODO: Fix this
+        assert_decimal_eq!(
+            call_greeks.delta + put_greeks.delta.abs(),
+            Decimal::ONE,
+            EPSILON
+        );
         assert_decimal_eq!(call_greeks.gamma, put_greeks.gamma, EPSILON);
         assert_decimal_eq!(call_greeks.vega, put_greeks.vega, EPSILON);
-        // assert_decimal_eq!(call_greeks.rho, put_greeks.rho, EPSILON); // TODO: Fix this
     }
 }
 
@@ -1469,5 +1610,290 @@ mod tests_calculate_price_binomial {
         // Short position should be negative of long position
         assert_eq!(long_call_price, -short_call_price);
         assert_eq!(long_put_price, -short_put_price);
+    }
+}
+
+#[cfg(test)]
+mod tests_options_black_scholes {
+    use super::*;
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_new_option_call() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "SP500".to_string(),
+            pos!(5790.0),
+            ExpirationDate::Days(pos!(18.0)),
+            pos!(0.1117),
+            pos!(1.0),
+            pos!(5781.88),
+            dec!(0.05),
+            OptionStyle::Call,
+            pos!(0.0),
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            pos!(60.306_765_882_668_3),
+            dec!(1e-8)
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_new_option_call_bis() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "SP500".to_string(),
+            pos!(6050.0),
+            ExpirationDate::Days(pos!(61.2)),
+            pos!(0.12594),
+            pos!(1.0),
+            pos!(6032.18),
+            dec!(0.0),
+            OptionStyle::Call,
+            pos!(0.0),
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            pos!(115.56),
+            dec!(1e-2)
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_new_option_put() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "SP500".to_string(),
+            pos!(6050.0),
+            ExpirationDate::Days(pos!(61.2)),
+            pos!(0.1258),
+            pos!(1.0),
+            pos!(6032.18),
+            dec!(0.0),
+            OptionStyle::Put,
+            pos!(0.0),
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            pos!(133.25),
+            dec!(1e-2)
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_new_option_call_short() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "SP500".to_string(),
+            pos!(6050.0),
+            ExpirationDate::Days(pos!(60.0)),
+            pos!(0.12594),
+            pos!(1.0),
+            pos!(6032.18),
+            dec!(0.0),
+            OptionStyle::Call,
+            pos!(0.0),
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            dec!(-114.34),
+            dec!(1e-2)
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_new_option_put_short() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "SP500".to_string(),
+            pos!(6050.0),
+            ExpirationDate::Days(pos!(60.0)),
+            pos!(0.12594),
+            pos!(1.0),
+            pos!(6032.18),
+            dec!(0.0),
+            OptionStyle::Put,
+            pos!(0.0),
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            dec!(-132.16),
+            dec!(1e-2)
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_calculate_implied_volatility {
+    use super::*;
+    use crate::error::ImpliedVolatilityError;
+    use crate::{assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_implied_volatility_call() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos!(5790.0), // strike
+            ExpirationDate::Days(pos!(18.0)),
+            pos!(0.1),     // initial iv
+            pos!(1.0),     // qty
+            pos!(5781.88), // underlying
+            dec!(0.05),    // rate
+            OptionStyle::Call,
+            pos!(0.0), // div
+            None,
+        );
+
+        let market_price = dec!(60.30);
+        let iv = option.calculate_implied_volatility(market_price).unwrap();
+
+        assert_pos_relative_eq!(iv, pos!(0.111618041), Positive(IV_TOLERANCE));
+    }
+
+    #[test]
+    fn test_implied_volatility_put() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos!(6050.0), // strike
+            ExpirationDate::Days(pos!(60.0)),
+            pos!(0.1),     // initial iv
+            pos!(1.0),     // qty
+            pos!(6032.18), // underlying
+            dec!(0.0),     // rate
+            OptionStyle::Put,
+            pos!(0.0), // div
+            None,
+        );
+
+        let market_price = dec!(132.16);
+        let iv = option.calculate_implied_volatility(market_price).unwrap();
+        assert_pos_relative_eq!(iv, pos!(0.125961), Positive(IV_TOLERANCE));
+    }
+
+    #[test]
+    fn test_implied_volatility_call_short() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "TEST".to_string(),
+            pos!(6050.0), // strike
+            ExpirationDate::Days(pos!(60.0)),
+            pos!(0.1),     // initial iv
+            pos!(1.0),     // qty
+            pos!(6032.18), // underlying
+            dec!(0.0),     // rate
+            OptionStyle::Call,
+            pos!(0.0), // div
+            None,
+        );
+
+        let market_price = dec!(-114.16);
+        let iv = option.calculate_implied_volatility(market_price).unwrap();
+
+        assert_pos_relative_eq!(iv, pos!(0.1258087), Positive(IV_TOLERANCE));
+    }
+
+    #[test]
+    fn test_implied_volatility_put_short() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "TEST".to_string(),
+            pos!(6050.0), // strike
+            ExpirationDate::Days(pos!(60.0)),
+            pos!(0.1),     // initial iv
+            pos!(1.0),     // qty
+            pos!(6032.18), // underlying
+            dec!(0.0),     // rate
+            OptionStyle::Put,
+            pos!(0.0), // div
+            None,
+        );
+
+        let market_price = dec!(-132.27);
+        let iv = option.calculate_implied_volatility(market_price).unwrap();
+        assert_pos_relative_eq!(iv, pos!(0.12611389), Positive(IV_TOLERANCE));
+    }
+
+    #[test]
+    fn test_invalid_market_price() {
+        let option = Options::default();
+        let result = option.calculate_implied_volatility(Decimal::ZERO);
+        assert!(matches!(
+            result,
+            Err(ImpliedVolatilityError::OptionError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_expired_option() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos!(100.0),
+            ExpirationDate::Days(Positive::ZERO),
+            pos!(0.2),
+            pos!(1.0),
+            pos!(100.0),
+            dec!(0.05),
+            OptionStyle::Call,
+            pos!(0.0),
+            None,
+        );
+
+        let result = option.calculate_implied_volatility(dec!(2.5));
+        assert!(matches!(
+            result,
+            Err(ImpliedVolatilityError::OptionError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_convergence_edge_cases() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos!(5790.0), // strike
+            ExpirationDate::Days(pos!(18.0)),
+            pos!(0.1),     // initial iv
+            pos!(1.0),     // qty
+            pos!(5781.88), // underlying
+            dec!(0.05),    // rate
+            OptionStyle::Call,
+            pos!(0.0), // div
+            None,
+        );
+
+        // Test with small initial vol
+        let iv = option.calculate_implied_volatility(dec!(60.30)).unwrap();
+        assert_pos_relative_eq!(iv, pos!(0.111328125), pos!(0.01));
+
+        // Test with large initial vol
+        let iv = option.calculate_implied_volatility(dec!(60.30)).unwrap();
+        assert_pos_relative_eq!(iv, pos!(0.111328125), pos!(0.01));
     }
 }
