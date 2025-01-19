@@ -34,6 +34,7 @@
 //! * Invalid rate values
 
 use crate::error::decimal::DecimalError;
+use crate::error::ImpliedVolatilityError;
 use crate::Positive;
 use std::error::Error;
 use std::fmt;
@@ -228,6 +229,15 @@ impl GreeksError {
 impl From<DecimalError> for GreeksError {
     fn from(error: DecimalError) -> Self {
         GreeksError::CalculationError(CalculationErrorKind::DecimalError { error })
+    }
+}
+
+impl From<ImpliedVolatilityError> for GreeksError {
+    fn from(error: ImpliedVolatilityError) -> Self {
+        GreeksError::InputError(InputErrorKind::InvalidVolatility {
+            value: 0.0,
+            reason: error.to_string(),
+        })
     }
 }
 

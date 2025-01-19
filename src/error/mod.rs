@@ -78,6 +78,8 @@ pub mod position;
 pub mod probability;
 pub mod strategies;
 
+mod volatility;
+
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
 pub use curves::CurvesError;
@@ -87,3 +89,4 @@ pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
+pub use volatility::ImpliedVolatilityError;
