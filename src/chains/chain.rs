@@ -51,6 +51,8 @@ pub struct OptionData {
     pub(crate) call_ask: Option<Positive>,
     pub(crate) put_bid: Option<Positive>,
     pub(crate) put_ask: Option<Positive>,
+    pub call_middle: Option<Positive>,
+    pub put_middle: Option<Positive>,
     pub(crate) implied_volatility: Option<Positive>,
     delta: Option<Decimal>,
     volume: Option<Positive>,
@@ -76,6 +78,8 @@ impl OptionData {
             call_ask,
             put_bid,
             put_ask,
+            call_middle: None,
+            put_middle: None,
             implied_volatility,
             delta,
             volume,
@@ -191,6 +195,8 @@ impl OptionData {
         self.put_bid = Some(black_scholes(&option)?.abs().into());
         option.side = Side::Long;
         self.put_ask = Some(black_scholes(&option)?.abs().into());
+
+        self.set_mid_prices();
         Ok(())
     }
 
@@ -234,6 +240,8 @@ impl OptionData {
                 self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread);
             }
         }
+
+        self.set_mid_prices();
     }
 
     pub fn calculate_delta(&mut self, price_params: &OptionDataPriceParams) {
@@ -273,6 +281,21 @@ impl OptionData {
             }
         }
     }
+
+    pub fn set_mid_prices(&mut self) {
+        self.call_middle = match (self.call_bid, self.call_ask) {
+            (Some(bid), Some(ask)) => Some((bid + ask) / pos!(2.0)),
+            _ => None,
+        };
+        self.put_middle = match (self.put_bid, self.put_ask) {
+            (Some(bid), Some(ask)) => Some((bid + ask) / pos!(2.0)),
+            _ => None,
+        };
+    }
+
+    pub fn get_mid_prices(&self) -> (Option<Positive>, Option<Positive>) {
+        (self.call_middle, self.put_middle)
+    }
 }
 
 impl Default for OptionData {
@@ -283,6 +306,8 @@ impl Default for OptionData {
             call_ask: None,
             put_bid: None,
             put_ask: None,
+            call_middle: None,
+            put_middle: None,
             implied_volatility: None,
             delta: None,
             volume: None,
@@ -309,12 +334,14 @@ impl fmt::Display for OptionData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<8} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<8} {:<10} {:<10}",
             self.strike_price.to_string(),
             default_empty_string(self.call_bid),
             default_empty_string(self.call_ask),
+            default_empty_string(self.call_middle),
             default_empty_string(self.put_bid),
             default_empty_string(self.put_ask),
+            default_empty_string(self.put_middle),
             self.implied_volatility.unwrap_or(Positive::ZERO),
             " ".to_string(),
             self.delta.unwrap_or(Decimal::ZERO),
@@ -457,17 +484,20 @@ impl OptionChain {
         volume: Option<Positive>,
         open_interest: Option<u64>,
     ) {
-        let option_data = OptionData {
+        let mut option_data = OptionData {
             strike_price,
             call_bid,
             call_ask,
             put_bid,
             put_ask,
+            call_middle: None,
+            put_middle: None,
             implied_volatility,
             delta,
             volume,
             open_interest,
         };
+        option_data.set_mid_prices();
         self.options.insert(option_data);
     }
 
@@ -549,17 +579,20 @@ impl OptionChain {
             let record = result?;
             debug!("To CSV: {:?}", record);
 
-            let option_data = OptionData {
+            let mut option_data = OptionData {
                 strike_price: record[0].parse()?,
                 call_bid: parse(&record[1]),
                 call_ask: parse(&record[2]),
                 put_bid: parse(&record[3]),
                 put_ask: parse(&record[4]),
+                call_middle: None,
+                put_middle: None,
                 implied_volatility: parse(&record[5]),
                 delta: parse(&record[6]),
                 volume: parse(&record[7]),
                 open_interest: parse(&record[8]),
             };
+            option_data.set_mid_prices();
             options.insert(option_data);
         }
 
@@ -1229,12 +1262,14 @@ impl fmt::Display for OptionChain {
         )?;
         writeln!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<13} {:<10} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<13} {:<10} {:<10} {:<10}",
             "Strike",
             "Call Bid",
             "Call Ask",
+            "Call Mid",
             "Put Bid",
             "Put Ask",
+            "Put Mid",
             "Implied Vol.",
             "Delta",
             "Volume",
