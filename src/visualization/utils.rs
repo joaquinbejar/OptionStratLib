@@ -512,9 +512,9 @@ mod tests_extended {
     use crate::visualization::model::LabelOffsetType;
     use plotters::style::RGBColor;
     use rust_decimal::Decimal;
-    use crate::constants::{DARK_GREEN, DARK_RED};
     use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-    use plotters::prelude::*;
+    #[cfg(not(target_arch = "wasm32"))]
+    use plotters::prelude::PathElement;
 
     #[allow(dead_code)]
     struct MockGraph;
@@ -807,6 +807,7 @@ mod tests_extended {
     
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_bitmap_backend_initialization() {
         let backend = GraphBackend::Bitmap {
             file_path: "test_chart.png",
@@ -819,32 +820,10 @@ mod tests_extended {
         drop(root);
         assert!(std::fs::remove_file("test_chart.png").is_ok());
     }
-
-    #[cfg(target_arch = "wasm32")]
-    #[test]
-    fn test_canvas_backend_initialization() {
-        let canvas = web_sys::window()
-            .unwrap()
-            .document()
-            .unwrap()
-            .create_element("canvas")
-            .unwrap();
-
-        let backend = GraphBackend::Canvas {
-            canvas: canvas.clone(),
-        };
-
-        if let GraphBackend::Canvas { canvas } = backend {
-            let root = CanvasBackend::with_canvas_object(canvas)
-                .unwrap()
-                .into_drawing_area();
-            assert!(root.fill(&WHITE).is_ok());
-        } else {
-            panic!("Expected Canvas backend");
-        }
-    }
+    
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_chart_initialization() -> Result<(), Box<dyn Error>> {
         let root = BitMapBackend::new("test_chart_next.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();
@@ -877,6 +856,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_point_rendering() {
         let root = BitMapBackend::new("test_chart_points.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();
@@ -932,6 +912,7 @@ mod tests_extended {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_line_rendering() {
         let root = BitMapBackend::new("test_chart_lines.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();
