@@ -496,18 +496,22 @@ mod tests_extended {
         ));
     }
 
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_chain_error_file_error() {
-        let error = ChainError::FileError(FileErrorKind::IOError(io::Error::new(io::ErrorKind::NotFound, "File not found")));
+        let error = ChainError::FileError(FileErrorKind::IOError(io::Error::new(
+            io::ErrorKind::NotFound,
+            "File not found",
+        )));
         assert_eq!(format!("{}", error), "File error: IO error: File not found");
     }
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_chain_error_dyn_error() {
-        let error = ChainError::DynError { message: "Dynamic error occurred".to_string() };
+        let error = ChainError::DynError {
+            message: "Dynamic error occurred".to_string(),
+        };
         assert_eq!(format!("{}", error), "Error: Dynamic error occurred");
     }
 
@@ -565,11 +569,11 @@ mod tests_extended {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_file_error_io_error() {
-        let error = FileErrorKind::IOError(io::Error::new(io::ErrorKind::PermissionDenied, "Permission denied"));
-        assert_eq!(
-            format!("{}", error),
-            "IO error: Permission denied"
-        );
+        let error = FileErrorKind::IOError(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "Permission denied",
+        ));
+        assert_eq!(format!("{}", error), "IO error: Permission denied");
     }
 
     #[test]
@@ -595,4 +599,3 @@ mod tests_extended {
         );
     }
 }
-

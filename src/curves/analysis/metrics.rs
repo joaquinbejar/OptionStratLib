@@ -510,8 +510,8 @@ pub struct RiskMetrics {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::FromPrimitive;
     use super::*;
+    use num_traits::FromPrimitive;
     use rust_decimal_macros::dec;
 
     // Helper function to create a Point2D for testing
@@ -546,7 +546,7 @@ mod tests {
                 std_dev: dec!(1.2),
             };
 
-            let cloned_metrics = metrics.clone();
+            let cloned_metrics = metrics;
             assert_eq!(metrics.mean, cloned_metrics.mean);
             assert_eq!(metrics.median, cloned_metrics.median);
             assert_eq!(metrics.mode, cloned_metrics.mode);
@@ -589,7 +589,10 @@ mod tests {
             assert_eq!(metrics.kurtosis, cloned_metrics.kurtosis);
             assert_eq!(metrics.peaks.len(), cloned_metrics.peaks.len());
             assert_eq!(metrics.valleys.len(), cloned_metrics.valleys.len());
-            assert_eq!(metrics.inflection_points.len(), cloned_metrics.inflection_points.len());
+            assert_eq!(
+                metrics.inflection_points.len(),
+                cloned_metrics.inflection_points.len()
+            );
         }
     }
 
@@ -623,12 +626,15 @@ mod tests {
                 interquartile_range: dec!(6.0),
             };
 
-            let cloned_metrics = metrics.clone();
+            let cloned_metrics = metrics;
             assert_eq!(metrics.min.x, cloned_metrics.min.x);
             assert_eq!(metrics.max.x, cloned_metrics.max.x);
             assert_eq!(metrics.range, cloned_metrics.range);
             assert_eq!(metrics.quartiles.0, cloned_metrics.quartiles.0);
-            assert_eq!(metrics.interquartile_range, cloned_metrics.interquartile_range);
+            assert_eq!(
+                metrics.interquartile_range,
+                cloned_metrics.interquartile_range
+            );
         }
     }
 
@@ -641,10 +647,7 @@ mod tests {
                 slope: dec!(1.5),
                 intercept: dec!(2.0),
                 r_squared: dec!(0.95),
-                moving_average: vec![
-                    create_test_point(1.0, 3.5),
-                    create_test_point(2.0, 5.0),
-                ],
+                moving_average: vec![create_test_point(1.0, 3.5), create_test_point(2.0, 5.0)],
             };
 
             assert_eq!(metrics.slope, dec!(1.5));
@@ -659,17 +662,17 @@ mod tests {
                 slope: dec!(1.5),
                 intercept: dec!(2.0),
                 r_squared: dec!(0.95),
-                moving_average: vec![
-                    create_test_point(1.0, 3.5),
-                    create_test_point(2.0, 5.0),
-                ],
+                moving_average: vec![create_test_point(1.0, 3.5), create_test_point(2.0, 5.0)],
             };
 
             let cloned_metrics = metrics.clone();
             assert_eq!(metrics.slope, cloned_metrics.slope);
             assert_eq!(metrics.intercept, cloned_metrics.intercept);
             assert_eq!(metrics.r_squared, cloned_metrics.r_squared);
-            assert_eq!(metrics.moving_average.len(), cloned_metrics.moving_average.len());
+            assert_eq!(
+                metrics.moving_average.len(),
+                cloned_metrics.moving_average.len()
+            );
         }
     }
 
@@ -703,10 +706,13 @@ mod tests {
                 sharpe_ratio: dec!(2.5),
             };
 
-            let cloned_metrics = metrics.clone();
+            let cloned_metrics = metrics;
             assert_eq!(metrics.volatility, cloned_metrics.volatility);
             assert_eq!(metrics.value_at_risk, cloned_metrics.value_at_risk);
-            assert_eq!(metrics.expected_shortfall, cloned_metrics.expected_shortfall);
+            assert_eq!(
+                metrics.expected_shortfall,
+                cloned_metrics.expected_shortfall
+            );
             assert_eq!(metrics.beta, cloned_metrics.beta);
             assert_eq!(metrics.sharpe_ratio, cloned_metrics.sharpe_ratio);
         }
@@ -741,10 +747,7 @@ mod tests {
                     slope: dec!(1.5),
                     intercept: dec!(2.0),
                     r_squared: dec!(0.95),
-                    moving_average: vec![
-                        create_test_point(1.0, 3.5),
-                        create_test_point(2.0, 5.0),
-                    ],
+                    moving_average: vec![create_test_point(1.0, 3.5), create_test_point(2.0, 5.0)],
                 },
                 risk: RiskMetrics {
                     volatility: dec!(0.15),
@@ -820,10 +823,7 @@ mod tests {
                 slope: dec!(1.5),
                 intercept: dec!(2.0),
                 r_squared: dec!(0.95),
-                moving_average: vec![
-                    create_test_point(1.0, 3.5),
-                    create_test_point(2.0, 5.0),
-                ],
+                moving_average: vec![create_test_point(1.0, 3.5), create_test_point(2.0, 5.0)],
             };
 
             let risk = RiskMetrics {
@@ -834,13 +834,7 @@ mod tests {
                 sharpe_ratio: dec!(2.5),
             };
 
-            let metrics = CurveMetrics::new(
-                basic,
-                shape,
-                range,
-                trend,
-                risk
-            );
+            let metrics = CurveMetrics::new(basic, shape, range, trend, risk);
 
             assert_eq!(metrics.basic.mean, dec!(10.5));
             assert_eq!(metrics.shape.skewness, dec!(0.5));

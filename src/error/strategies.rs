@@ -307,7 +307,6 @@ mod tests_display {
     }
 }
 
-
 #[cfg(test)]
 mod tests_extended {
     use super::*;
@@ -336,10 +335,7 @@ mod tests_extended {
     #[test]
     fn test_break_even_error_no_points() {
         let error = BreakEvenErrorKind::NoBreakEvenPoints;
-        assert_eq!(
-            format!("{}", error),
-            "No break-even points found"
-        );
+        assert_eq!(format!("{}", error), "No break-even points found");
     }
 
     #[test]
@@ -366,10 +362,7 @@ mod tests_extended {
 
     #[test]
     fn test_strategy_error_invalid_parameters_constructor() {
-        let error = StrategyError::invalid_parameters(
-            "Open position",
-            "Margin insufficient",
-        );
+        let error = StrategyError::invalid_parameters("Open position", "Margin insufficient");
         assert_eq!(
             format!("{}", error),
             "Operation error: Invalid parameters for operation 'Open position': Margin insufficient"
@@ -383,10 +376,6 @@ mod tests_extended {
             "Underlying failure",
         ));
         let error: StrategyError = boxed_error.into();
-        assert_eq!(
-            format!("{}", error),
-            "Error: Underlying failure"
-        );
+        assert_eq!(format!("{}", error), "Error: Underlying failure");
     }
 }
-

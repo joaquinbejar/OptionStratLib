@@ -510,11 +510,11 @@ mod tests_extended {
     use super::*;
     use crate::pos;
     use crate::visualization::model::LabelOffsetType;
-    use plotters::style::RGBColor;
-    use rust_decimal::Decimal;
     use crate::visualization::model::{ChartPoint, ChartVerticalLine};
     #[cfg(not(target_arch = "wasm32"))]
     use plotters::prelude::PathElement;
+    use plotters::style::RGBColor;
+    use rust_decimal::Decimal;
 
     #[allow(dead_code)]
     struct MockGraph;
@@ -804,7 +804,6 @@ mod tests_extended {
 
         Ok(())
     }
-    
 
     #[test]
     #[cfg(not(target_arch = "wasm32"))]
@@ -820,7 +819,6 @@ mod tests_extended {
         drop(root);
         assert!(std::fs::remove_file("test_chart.png").is_ok());
     }
-    
 
     #[test]
     #[cfg(not(target_arch = "wasm32"))]
@@ -836,18 +834,18 @@ mod tests_extended {
         let max_y_value = 100.0;
 
         let chart = build_chart!(
-        &root,
-        title,
-        title_size,
-        min_x_value,
-        max_x_value,
-        min_y_value,
-        max_y_value
-    );
+            &root,
+            title,
+            title_size,
+            min_x_value,
+            max_x_value,
+            min_y_value,
+            max_y_value
+        );
 
         assert!(chart.plotting_area().dim_in_pixel().0 > 0);
         assert!(chart.plotting_area().dim_in_pixel().1 > 0);
-        
+
         drop(chart);
         drop(root);
         assert!(std::fs::remove_file("test_chart_next.png").is_ok());
@@ -902,8 +900,6 @@ mod tests_extended {
             .unwrap();
         }
 
-        assert!(true, "Points rendered successfully");
-
         drop(root);
         assert!(
             std::fs::remove_file("test_chart_points.png").is_ok(),
@@ -949,7 +945,6 @@ mod tests_extended {
             .unwrap();
         }
 
-        assert!(true, "Lines rendered successfully");
         drop(root);
         assert!(
             std::fs::remove_file("test_chart_lines.png").is_ok(),

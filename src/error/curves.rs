@@ -368,7 +368,6 @@ mod tests {
     }
 }
 
-
 #[cfg(test)]
 mod tests_extended {
     use super::*;
@@ -384,7 +383,8 @@ mod tests_extended {
 
     #[test]
     fn test_curves_error_construction_error() {
-        let error = CurvesError::ConstructionError("Invalid curve construction parameters".to_string());
+        let error =
+            CurvesError::ConstructionError("Invalid curve construction parameters".to_string());
         assert_eq!(
             format!("{}", error),
             "Construction error: Invalid curve construction parameters"
@@ -393,7 +393,8 @@ mod tests_extended {
 
     #[test]
     fn test_curves_error_analysis_error() {
-        let error = CurvesError::AnalysisError("Analysis failed due to insufficient data".to_string());
+        let error =
+            CurvesError::AnalysisError("Analysis failed due to insufficient data".to_string());
         assert_eq!(
             format!("{}", error),
             "Analysis error: Analysis failed due to insufficient data"

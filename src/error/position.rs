@@ -457,7 +457,6 @@ mod tests_extended {
         ));
     }
 
-
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_position_error_validation_error() {
@@ -545,9 +544,6 @@ mod tests_extended {
         let error = PositionValidationErrorKind::StdError {
             reason: "Unexpected null value".to_string(),
         };
-        assert_eq!(
-            format!("{}", error),
-            "Error: Unexpected null value"
-        );
+        assert_eq!(format!("{}", error), "Error: Unexpected null value");
     }
 }

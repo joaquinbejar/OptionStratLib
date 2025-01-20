@@ -781,7 +781,7 @@ mod tests_extended {
 
     #[derive(Debug, Clone)]
     struct Plot {
-        options: PlotOptions
+        options: PlotOptions,
     }
 
     impl Plottable for Plot {
@@ -846,35 +846,47 @@ mod tests_extended {
 
     #[test]
     fn test_curve_name() {
-        let options = PlotOptions { curve_name: None, ..Default::default() };
+        let options = PlotOptions {
+            curve_name: None,
+            ..Default::default()
+        };
         let plot = Plot { options }.plot();
         let result = plot.curve_name(vec!["Test Curve".to_string()]);
-        assert_eq!(result.options.curve_name, Some(vec!["Test Curve".to_string()]));
+        assert_eq!(
+            result.options.curve_name,
+            Some(vec!["Test Curve".to_string()])
+        );
     }
-    
+
     #[test]
     fn test_save_standard() {
-        let plot = Plot { options: PlotOptions::default() }.plot();
+        let plot = Plot {
+            options: PlotOptions::default(),
+        }
+        .plot();
         let result = plot.save("test_path.png");
         assert!(result.is_ok());
     }
-    
-    
+
     #[test]
     #[cfg(target_arch = "wasm32")]
     fn test_save_wasm() {
-        let plot = Plot { options: PlotOptions::default() }.plot();
+        let plot = Plot {
+            options: PlotOptions::default(),
+        }
+        .plot();
         let result = plot.save("test_path.png");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_map_err_to_std_error() {
-        let result: Result<(), CurvesError> = Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Test error",
-        ))
-            .map_err(|e| CurvesError::StdError { reason: e.to_string() });
+        let result: Result<(), CurvesError> =
+            Err(std::io::Error::new(std::io::ErrorKind::Other, "Test error")).map_err(|e| {
+                CurvesError::StdError {
+                    reason: e.to_string(),
+                }
+            });
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -889,7 +901,8 @@ mod tests_extended {
     #[test]
     fn test_configure_chart_mesh() {
         let mut chart = MockChart::new(); // Simular un gráfico
-        chart.configure_mesh()
+        chart
+            .configure_mesh()
             .x_label_formatter(&|v| format!("{:.2}", v))
             .y_label_formatter(&|v| format!("{:.2}", v))
             .x_desc("X-axis")
@@ -900,8 +913,8 @@ mod tests_extended {
 
     #[test]
     fn test_draw_series_error() {
-        let result: Result<(), CurvesError> = Err("Draw error".to_string())
-            .map_err(|e| CurvesError::StdError { reason: e });
+        let result: Result<(), CurvesError> =
+            Err("Draw error".to_string()).map_err(|e| CurvesError::StdError { reason: e });
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -912,7 +925,7 @@ mod tests_extended {
             _ => panic!("Unexpected error type"),
         }
     }
-    
+
     #[test]
     fn test_curve_label() {
         let options = PlotOptions {
@@ -921,10 +934,9 @@ mod tests_extended {
         };
         let plot = Plot { options };
         let label = match &plot.options.curve_name {
-            Some(names) => names.get(0).map(|s| s.as_str()).unwrap_or("Default"),
+            Some(names) => names.first().map(|s| s.as_str()).unwrap_or("Default"),
             None => "Default",
         };
         assert_eq!(label, "Test Curve");
     }
 }
-

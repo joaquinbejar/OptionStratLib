@@ -983,7 +983,6 @@ mod tests_custom_strategy {
         assert_eq!(strategy.break_even_points.len(), 0);
     }
 
-
     #[test]
     fn test_new_with_empty_positions() {
         let result = std::panic::catch_unwind(|| {

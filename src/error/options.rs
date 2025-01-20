@@ -513,7 +513,6 @@ mod tests_extended {
         assert!(results[2].is_ok());
     }
 
-
     #[test]
     fn test_options_error_greeks_calculation_error() {
         let error = OptionsError::GreeksCalculationError {

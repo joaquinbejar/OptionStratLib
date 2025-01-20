@@ -82,13 +82,12 @@ impl From<OptionsError> for ImpliedVolatilityError {
     }
 }
 
-
 #[cfg(test)]
 mod tests_volatility_errors {
     use super::*;
-    use crate::pos;
-    use crate::error::{GreeksError, OptionsError};
     use crate::error::greeks::InputErrorKind;
+    use crate::error::{GreeksError, OptionsError};
+    use crate::pos;
 
     #[test]
     fn test_invalid_price_error() {
@@ -97,10 +96,7 @@ mod tests_volatility_errors {
             reason: "Price cannot be zero".to_string(),
         };
 
-        assert_eq!(
-            error.to_string(),
-            "Invalid price 0: Price cannot be zero"
-        );
+        assert_eq!(error.to_string(), "Invalid price 0: Price cannot be zero");
     }
 
     #[test]
@@ -110,10 +106,7 @@ mod tests_volatility_errors {
             reason: "Time cannot be zero".to_string(),
         };
 
-        assert_eq!(
-            error.to_string(),
-            "Invalid time 0: Time cannot be zero"
-        );
+        assert_eq!(error.to_string(), "Invalid time 0: Time cannot be zero");
     }
 
     #[test]
@@ -144,10 +137,7 @@ mod tests_volatility_errors {
             reason: "Invalid option parameters".to_string(),
         };
 
-        assert_eq!(
-            error.to_string(),
-            "Option error: Invalid option parameters"
-        );
+        assert_eq!(error.to_string(), "Option error: Invalid option parameters");
     }
 
     #[test]
@@ -165,12 +155,10 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_from_greeks_error() {
-        let greeks_error = GreeksError::InputError(
-            InputErrorKind::InvalidVolatility {
-                value: 0.0,
-                reason: "Volatility cannot be zero".to_string(),
-            }
-        );
+        let greeks_error = GreeksError::InputError(InputErrorKind::InvalidVolatility {
+            value: 0.0,
+            reason: "Volatility cannot be zero".to_string(),
+        });
 
         let implied_vol_error: ImpliedVolatilityError = greeks_error.into();
 
@@ -184,7 +172,7 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_from_options_error() {
-        let greeks_error = OptionsError::OtherError{
+        let greeks_error = OptionsError::OtherError {
             reason: "Invalid option parameters".to_string(),
         };
 

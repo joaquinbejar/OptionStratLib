@@ -384,10 +384,10 @@ mod tests {
 
 #[cfg(test)]
 mod tests_extended {
+    use super::*;
     use crate::error::decimal::DecimalError::InvalidPrecision;
     use crate::error::greeks::CalculationErrorKind::DecimalError;
     use crate::pos;
-    use super::*;
 
     #[test]
     fn test_greeks_error_std_error() {
@@ -449,7 +449,10 @@ mod tests_extended {
     #[test]
     fn test_calculation_error_decimal() {
         let error = DecimalError {
-            error: InvalidPrecision{ precision: 0, reason: "Precision error".to_string()},
+            error: InvalidPrecision {
+                precision: 0,
+                reason: "Precision error".to_string(),
+            },
         };
         assert_eq!(
             format!("{}", error),
@@ -478,7 +481,7 @@ mod tests_extended {
         match error {
             GreeksError::CalculationError(DecimalError { error }) => {
                 assert!(error.to_string().contains("Precision lost"));
-            },
+            }
             _ => panic!("Wrong error variant"),
         }
     }
@@ -500,11 +503,6 @@ mod tests_extended {
             "Some IO error",
         ));
         let error: GreeksError = boxed_error.into();
-        assert_eq!(
-            format!("{}", error),
-            "Standard error: Some IO error"
-        );
+        assert_eq!(format!("{}", error), "Standard error: Some IO error");
     }
 }
-
-

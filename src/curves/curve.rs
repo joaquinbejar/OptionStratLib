@@ -2071,16 +2071,17 @@ mod tests_curve_arithmetic {
     }
 }
 
-
 #[cfg(test)]
 mod tests_extended {
+    use super::*;
     use crate::error::CurvesError::OperationError;
     use crate::error::OperationErrorKind;
-    use super::*;
-    
+
     #[test]
     fn test_construct_from_data_empty() {
-        let result = Curve::construct(CurveConstructionMethod::FromData { points: BTreeSet::new() });
+        let result = Curve::construct(CurveConstructionMethod::FromData {
+            points: BTreeSet::new(),
+        });
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
@@ -2097,7 +2098,7 @@ mod tests_extended {
     fn test_construct_parametric_valid() {
         let f = |t: Decimal| Ok(Point2D::new(t, t * dec!(2.0)));
         let result = Curve::construct(CurveConstructionMethod::Parametric {
-            f: Box::new(f), 
+            f: Box::new(f),
             t_start: dec!(0.0),
             t_end: dec!(10.0),
             steps: 10,
@@ -2107,9 +2108,13 @@ mod tests_extended {
 
     #[test]
     fn test_construct_parametric_invalid_function() {
-        let f = |_t: Decimal| Err(CurvesError::ConstructionError("Function evaluation failed".to_string()));
+        let f = |_t: Decimal| {
+            Err(CurvesError::ConstructionError(
+                "Function evaluation failed".to_string(),
+            ))
+        };
         let result = Curve::construct(CurveConstructionMethod::Parametric {
-            f: Box::new(f), 
+            f: Box::new(f),
             t_start: dec!(0.0),
             t_end: dec!(10.0),
             steps: 10,
@@ -2148,7 +2153,10 @@ mod tests_extended {
 
     #[test]
     fn test_compute_basic_metrics_placeholder() {
-        let curve = Curve { points: BTreeSet::new(), x_range: (Default::default(), Default::default()) };
+        let curve = Curve {
+            points: BTreeSet::new(),
+            x_range: (Default::default(), Default::default()),
+        };
         let metrics = curve.compute_basic_metrics();
         assert!(metrics.is_ok());
         let metrics = metrics.unwrap();
@@ -2157,11 +2165,17 @@ mod tests_extended {
 
     #[test]
     fn test_single_curve_return() {
-        let curve = Curve { points: BTreeSet::new(), x_range: (Default::default(), Default::default()) };
+        let curve = Curve {
+            points: BTreeSet::new(),
+            x_range: (Default::default(), Default::default()),
+        };
         let result = if vec![curve.clone()].len() == 1 {
             Ok(curve.clone())
         } else {
-            Err(CurvesError::invalid_parameters("merge_curves", "Invalid state"))
+            Err(CurvesError::invalid_parameters(
+                "merge_curves",
+                "Invalid state",
+            ))
         };
         assert!(result.is_ok());
     }
@@ -2184,11 +2198,10 @@ mod tests_extended {
             OperationError(OperationErrorKind::InvalidParameters { operation, reason }) => {
                 assert_eq!(operation, "merge_curves");
                 assert_eq!(reason, "Curves have incompatible x-ranges");
-            },
+            }
             _ => {
                 panic!("Unexpected error type");
             }
- 
         }
     }
 }

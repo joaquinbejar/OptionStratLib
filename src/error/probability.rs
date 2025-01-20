@@ -287,19 +287,25 @@ impl From<OperationErrorKind> for ProbabilityError {
     fn from(error: OperationErrorKind) -> Self {
         match error {
             OperationErrorKind::InvalidParameters { operation, reason } => {
-                ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
-                    reason: format!("Invalid parameters for operation '{}': {}", operation, reason),
-                })
-            },
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::ExpectedValueError {
+                        reason: format!(
+                            "Invalid parameters for operation '{}': {}",
+                            operation, reason
+                        ),
+                    },
+                )
+            }
             OperationErrorKind::NotSupported { operation, reason } => {
-                ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
-                    reason: format!("Operation '{}' not supported: {}", operation, reason),
-                })
-            },
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::ExpectedValueError {
+                        reason: format!("Operation '{}' not supported: {}", operation, reason),
+                    },
+                )
+            }
         }
     }
 }
-
 
 // Helper functions to create common errors
 impl ProbabilityError {
@@ -552,7 +558,7 @@ mod tests_extended {
         assert!(success.is_ok());
         assert!(failure.is_err());
     }
-    
+
     #[test]
     fn test_probability_error_std_error() {
         let error = ProbabilityError::StdError("Calculation failed".to_string());
@@ -596,13 +602,11 @@ mod tests_extended {
 
     #[test]
     fn test_strategy_error_price_error_invalid_price_range() {
-        let error = StrategyError::PriceError(
-            strategies::PriceErrorKind::InvalidPriceRange {
-                start: 0.0,
-                end: 100.0,
-                reason: "Out of bounds".to_string(),
-            },
-        );
+        let error = StrategyError::PriceError(strategies::PriceErrorKind::InvalidPriceRange {
+            start: 0.0,
+            end: 100.0,
+            reason: "Out of bounds".to_string(),
+        });
         assert!(matches!(error, StrategyError::PriceError(_)));
     }
 
@@ -636,9 +640,9 @@ mod tests_extended {
         let error = StrategyError::StdError {
             reason: "General strategy failure".to_string(),
         };
-        
+
         let converted_error: ProbabilityError = error.into();
-            
+
         assert_eq!(
             format!("{}", converted_error),
             "Error: General strategy failure"
@@ -721,10 +725,8 @@ mod tests_extended {
             operation: "Calculate P/L".to_string(),
             reason: "Invalid input values".to_string(),
         };
-        let converted_error: ProbabilityError = ProbabilityError::from(format!(
-            "Invalid parameters for operation {}",
-            error
-        ));
+        let converted_error: ProbabilityError =
+            ProbabilityError::from(format!("Invalid parameters for operation {}", error));
         assert_eq!(
             format!("{}", converted_error),
             "Calculation error: Expected value error: Invalid parameters for operation Invalid parameters for operation 'Calculate P/L': Invalid input values"
@@ -739,10 +741,7 @@ mod tests_extended {
         };
         let converted_error = ProbabilityError::CalculationError(
             ProbabilityCalculationErrorKind::ExpectedValueError {
-                reason: format!(
-                    "Operation {}",
-                    error
-                ),
+                reason: format!("Operation {}", error),
             },
         );
         assert_eq!(
