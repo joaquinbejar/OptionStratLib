@@ -315,3 +315,77 @@ pub struct CurveConfig {
     pub construction_method: CurveConstructionMethod,
     pub extra_params: HashMap<String, Decimal>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_is_positive_x_must_be_positive() {
+        let point = Point2D {
+            x: Decimal::ZERO,
+            y: dec!(1.0),
+        };
+
+        let result = if is_positive::<Decimal>() && point.x <= Decimal::ZERO {
+            Err(CurvesError::Point2DError {
+                reason: "x must be positive for type T",
+            })
+        } else {
+            Ok(())
+        };
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_is_positive_y_must_be_positive() {
+        let point = Point2D {
+            x: dec!(1.0),
+            y: Decimal::ZERO,
+        };
+
+        let result = if is_positive::<Decimal>() && point.y <= Decimal::ZERO {
+            Err(CurvesError::Point2DError {
+                reason: "y must be positive for type U",
+            })
+        } else {
+            Ok(())
+        };
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_to_f64_tuple_success() {
+        let point = Point2D {
+            x: dec!(1.0),
+            y: dec!(2.0),
+        };
+        let result = point.to_f64_tuple();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_from_f64_tuple_success() {
+        let result = Point2D::from_f64_tuple(1.0, 2.0);
+        assert!(result.is_ok());
+        let point = result.unwrap();
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+    }
+
+    #[test]
+    fn test_from_f64_tuple_error() {
+        let result = Point2D::from_f64_tuple(f64::INFINITY, 2.0);
+        assert!(result.is_err());
+        match result {
+            Err(CurvesError::Point2DError { reason }) => {
+                assert_eq!(reason, "Error converting f64 to Decimal");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+}
