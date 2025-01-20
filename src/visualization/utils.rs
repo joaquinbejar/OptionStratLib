@@ -567,7 +567,6 @@ mod tests_extended {
             20,
         );
 
-        // Verificamos que recibimos un error
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("empty data"));
         Ok(())
@@ -754,10 +753,8 @@ mod tests_extended {
         let x_axis_data = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let values = graph.get_values(&x_axis_data);
 
-        // Verificamos que no hay valores cuando hay errores
         assert!(values.is_empty());
 
-        // También podemos probar con una mezcla de éxitos y errores
         struct MixedErrorGraph;
 
         impl Profit for MixedErrorGraph {
@@ -779,7 +776,6 @@ mod tests_extended {
         let mixed_graph = MixedErrorGraph;
         let values = mixed_graph.get_values(&x_axis_data);
 
-        // Solo deberían estar los valores válidos
         assert_eq!(values.len(), 1);
         assert_eq!(values[0], 1.0);
     }
@@ -789,8 +785,6 @@ mod tests_extended {
     fn test_custom_canvas_sizes() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![pos!(50.0)];
-
-        // Test diferentes tamaños de canvas
         let sizes = vec![(400, 300), (1920, 1080), (300, 300)];
 
         for (width, height) in sizes {

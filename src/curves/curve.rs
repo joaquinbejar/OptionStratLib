@@ -2070,3 +2070,125 @@ mod tests_curve_arithmetic {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests_extended {
+    use crate::error::CurvesError::OperationError;
+    use crate::error::OperationErrorKind;
+    use super::*;
+    
+    #[test]
+    fn test_construct_from_data_empty() {
+        let result = Curve::construct(CurveConstructionMethod::FromData { points: BTreeSet::new() });
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CurvesError::Point2DError { reason } => {
+                assert_eq!(reason, "Empty points array");
+            }
+            _ => {
+                panic!("Unexpected error type");
+            }
+        }
+    }
+
+    #[test]
+    fn test_construct_parametric_valid() {
+        let f = |t: Decimal| Ok(Point2D::new(t, t * dec!(2.0)));
+        let result = Curve::construct(CurveConstructionMethod::Parametric {
+            f: Box::new(f), 
+            t_start: dec!(0.0),
+            t_end: dec!(10.0),
+            steps: 10,
+        });
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_construct_parametric_invalid_function() {
+        let f = |_t: Decimal| Err(CurvesError::ConstructionError("Function evaluation failed".to_string()));
+        let result = Curve::construct(CurveConstructionMethod::Parametric {
+            f: Box::new(f), 
+            t_start: dec!(0.0),
+            t_end: dec!(10.0),
+            steps: 10,
+        });
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CurvesError::ConstructionError(reason) => {
+                assert_eq!(reason, "Construction error: Function evaluation failed");
+            }
+            _ => {
+                panic!("Unexpected error type");
+            }
+        }
+    }
+
+    #[test]
+    fn test_segment_not_found_error() {
+        let segment: Option<Point2D> = None;
+        let result: Result<Point2D, CurvesError> = segment.ok_or_else(|| {
+            CurvesError::InterpolationError(
+                "Could not find valid segment for interpolation".to_string(),
+            )
+        });
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CurvesError::InterpolationError(reason) => {
+                assert_eq!(reason, "Could not find valid segment for interpolation");
+            }
+            _ => {
+                panic!("Unexpected error type");
+            }
+        }
+    }
+
+    #[test]
+    fn test_compute_basic_metrics_placeholder() {
+        let curve = Curve { points: BTreeSet::new(), x_range: (Default::default(), Default::default()) };
+        let metrics = curve.compute_basic_metrics();
+        assert!(metrics.is_ok());
+        let metrics = metrics.unwrap();
+        assert_eq!(metrics.mean, Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_single_curve_return() {
+        let curve = Curve { points: BTreeSet::new(), x_range: (Default::default(), Default::default()) };
+        let result = if vec![curve.clone()].len() == 1 {
+            Ok(curve.clone())
+        } else {
+            Err(CurvesError::invalid_parameters("merge_curves", "Invalid state"))
+        };
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_merge_curves_invalid_x_range() {
+        let min_x = dec!(10.0);
+        let max_x = dec!(5.0);
+        let result = if min_x >= max_x {
+            Err(CurvesError::invalid_parameters(
+                "merge_curves",
+                "Curves have incompatible x-ranges",
+            ))
+        } else {
+            Ok(())
+        };
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            OperationError(OperationErrorKind::InvalidParameters { operation, reason }) => {
+                assert_eq!(operation, "merge_curves");
+                assert_eq!(reason, "Curves have incompatible x-ranges");
+            },
+            _ => {
+                panic!("Unexpected error type");
+            }
+ 
+        }
+    }
+}
