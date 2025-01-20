@@ -33,7 +33,7 @@
 //! * Invalid price values
 //! * Invalid rate values
 
-use crate::error::decimal::DecimalError;
+use crate::error::decimal;
 use crate::error::ImpliedVolatilityError;
 use crate::Positive;
 use std::error::Error;
@@ -114,7 +114,7 @@ pub enum CalculationErrorKind {
         reason: String,
     },
     DecimalError {
-        error: DecimalError,
+        error: decimal::DecimalError,
     },
 }
 
@@ -226,8 +226,8 @@ impl GreeksError {
     // Add more helper methods as needed...
 }
 
-impl From<DecimalError> for GreeksError {
-    fn from(error: DecimalError) -> Self {
+impl From<decimal::DecimalError> for GreeksError {
+    fn from(error: decimal::DecimalError) -> Self {
         GreeksError::CalculationError(CalculationErrorKind::DecimalError { error })
     }
 }
@@ -381,3 +381,130 @@ mod tests {
         assert!(debug_string.contains("Test error"));
     }
 }
+
+#[cfg(test)]
+mod tests_extended {
+    use crate::error::decimal::DecimalError::InvalidPrecision;
+    use crate::error::greeks::CalculationErrorKind::DecimalError;
+    use crate::pos;
+    use super::*;
+
+    #[test]
+    fn test_greeks_error_std_error() {
+        let error = GreeksError::StdError("An error occurred".to_string());
+        assert_eq!(format!("{}", error), "Standard error: An error occurred");
+    }
+
+    #[test]
+    fn test_math_error_overflow() {
+        let error = MathErrorKind::Overflow;
+        assert_eq!(format!("{}", error), "Numerical overflow");
+    }
+
+    #[test]
+    fn test_input_error_invalid_volatility() {
+        let error = InputErrorKind::InvalidVolatility {
+            value: 0.5,
+            reason: "Out of bounds".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid volatility 0.5: Out of bounds"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_delta() {
+        let error = CalculationErrorKind::DeltaError {
+            reason: "Unable to compute delta".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Delta calculation error: Unable to compute delta"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_theta() {
+        let error = CalculationErrorKind::ThetaError {
+            reason: "Negative time decay".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Theta calculation error: Negative time decay"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_rho() {
+        let error = CalculationErrorKind::RhoError {
+            reason: "Interest rate too high".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Rho calculation error: Interest rate too high"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_decimal() {
+        let error = DecimalError {
+            error: InvalidPrecision{ precision: 0, reason: "Precision error".to_string()},
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Decimal error: Invalid decimal precision 0: Precision error"
+        );
+    }
+
+    #[test]
+    fn test_invalid_time_constructor() {
+        let error = GreeksError::invalid_time(pos!(5.0), "Time must be positive");
+        assert_eq!(
+            format!("{}", error),
+            "Input validation error: Invalid time value 5: Time must be positive"
+        );
+    }
+
+    #[test]
+    fn test_decimal_error_conversion() {
+        let decimal_error = InvalidPrecision {
+            precision: 0,
+            reason: "Precision lost".to_string(),
+        };
+
+        let error: GreeksError = decimal_error.into();
+
+        match error {
+            GreeksError::CalculationError(DecimalError { error }) => {
+                assert!(error.to_string().contains("Precision lost"));
+            },
+            _ => panic!("Wrong error variant"),
+        }
+    }
+
+    #[test]
+    fn test_implied_volatility_error_conversion() {
+        let iv_error = ImpliedVolatilityError::ZeroVega;
+        let error: GreeksError = iv_error.into();
+        assert_eq!(
+            format!("{}", error),
+            "Input validation error: Invalid volatility 0: Vega is zero, cannot calculate implied volatility"
+        );
+    }
+
+    #[test]
+    fn test_boxed_error_conversion() {
+        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Some IO error",
+        ));
+        let error: GreeksError = boxed_error.into();
+        assert_eq!(
+            format!("{}", error),
+            "Standard error: Some IO error"
+        );
+    }
+}
+
+
