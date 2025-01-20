@@ -495,4 +495,104 @@ mod tests_extended {
             ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility { .. })
         ));
     }
+
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_chain_error_file_error() {
+        let error = ChainError::FileError(FileErrorKind::IOError(io::Error::new(io::ErrorKind::NotFound, "File not found")));
+        assert_eq!(format!("{}", error), "File error: IO error: File not found");
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_chain_error_dyn_error() {
+        let error = ChainError::DynError { message: "Dynamic error occurred".to_string() };
+        assert_eq!(format!("{}", error), "Error: Dynamic error occurred");
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_option_data_error_invalid_volatility() {
+        let error = OptionDataErrorKind::InvalidVolatility {
+            volatility: Some(0.25),
+            reason: "Out of bounds".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid volatility 0.25: Out of bounds"
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_option_data_error_invalid_prices() {
+        let error = OptionDataErrorKind::InvalidPrices {
+            bid: Some(1.0),
+            ask: Some(2.0),
+            reason: "Bid-ask spread too wide".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid prices (bid: Some(1.0), ask: Some(2.0)): Bid-ask spread too wide"
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_option_data_error_price_calculation_error() {
+        let error = OptionDataErrorKind::PriceCalculationError("Division by zero".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Price calculation error: Division by zero"
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_chain_build_error_strike_generation_error() {
+        let error = ChainBuildErrorKind::StrikeGenerationError {
+            reference_price: 100.0,
+            interval: 5.0,
+            reason: "Invalid strike intervals".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Strike generation error (reference: 100, interval: 5): Invalid strike intervals"
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_file_error_io_error() {
+        let error = FileErrorKind::IOError(io::Error::new(io::ErrorKind::PermissionDenied, "Permission denied"));
+        assert_eq!(
+            format!("{}", error),
+            "IO error: Permission denied"
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_strategy_error_invalid_combination() {
+        let error = StrategyErrorKind::InvalidCombination {
+            strategy_type: "Straddle".to_string(),
+            reason: "Conflicting legs".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid combination for strategy 'Straddle': Conflicting legs"
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_chain_error_invalid_prices_constructor() {
+        let error = ChainError::invalid_prices(Some(1.0), Some(2.0), "Spread too wide");
+        assert_eq!(
+            format!("{}", error),
+            "Option data error: Invalid prices (bid: Some(1.0), ask: Some(2.0)): Spread too wide"
+        );
+    }
 }
+
