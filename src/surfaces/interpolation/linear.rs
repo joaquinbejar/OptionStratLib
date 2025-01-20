@@ -110,7 +110,7 @@ pub trait LinearInterpolation {
     ///     let x = Decimal::new(125, 2); // Example x-coordinate
     ///     let y = Decimal::new(50, 2);  // Example y-coordinate
     ///     let z = Decimal::new(75, 2);  // Example z-coordinate
-    ///     let surface = Surface::new(BTreeSet::from_iter(vec![Point3D::new(x, y, z)]), SurfaceType::Volatility); // Surface with a single point
+    ///     let surface = Surface::new(BTreeSet::from_iter(vec![Point3D::new(x, y, z)]));
     ///     let interpolated_point = surface.linear_interpolate(x, y)?;
     ///     Ok(interpolated_point)
     /// }
@@ -125,11 +125,6 @@ pub trait LinearInterpolation {
     /// # See Also
     /// Refer to other interpolation techniques like bilinear or trilinear interpolation 
     /// for more complex estimation needs.
-    fn linear_interpolate(
-        &self,
-        x: Decimal,
-        y: Decimal,
-    ) -> Result<Point3D, SurfaceError>;
     fn linear_interpolate(
         &self,
         x: Decimal,

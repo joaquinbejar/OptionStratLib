@@ -8,7 +8,6 @@ use rust_decimal::Decimal;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use rayon::iter::IntoParallelIterator;
-use crate::curves::{Curve, Point2D};
 use crate::error::{CurvesError, SurfaceError};
 use crate::model::positive::is_positive;
 use crate::surfaces::construction::SurfaceConstructionMethod;
@@ -132,7 +131,7 @@ impl Point3D {
     }
 }
 
-/// Defines different types of surfaces that can be analyzed or constructed.
+
 #[derive(Debug, Clone)]
 pub enum SurfaceType {
     /// Surface representing volatility in three dimensions
@@ -149,7 +148,7 @@ pub enum SurfaceType {
     Other(String),
 }
 
-/// Represents an interpolation method for surfaces
+
 #[derive(Debug, Clone)]
 pub enum SurfaceInterpolationType {
     /// Linear interpolation between points
@@ -164,7 +163,20 @@ pub enum SurfaceInterpolationType {
     Custom(String),
 }
 
-/// Defines methods for constructing surfaces
+/// Represents the three possible axes in a 3D space.
+///
+/// This enumeration is commonly used to define or manipulate directions
+/// or dimensions within a 3D coordinate system.
+///
+/// ## Variants
+/// - `X`: The axis representing the horizontal direction.
+/// - `Y`: The axis representing the vertical direction or elevation.
+/// - `Z`: The axis representing depth or the third dimension.
+pub enum Axis {
+    X,
+    Y,
+    Z,
+}
 
 
 /// Configuration for constructing and analyzing surfaces
@@ -180,154 +192,7 @@ pub struct SurfaceConfig {
     pub extra_params: HashMap<String, Decimal>,
 }
 
-/// Represents a mathematical surface in 3D space
-#[derive(Debug, Clone)]
-pub struct Surface {
-    /// Collection of 3D points defining the surface
-    pub points: BTreeSet<Point3D>,
-    pub x_range: (Decimal, Decimal),
-    pub y_range: (Decimal, Decimal),
 
-}
-
-impl Surface {
-    /// Creates a new surface with the given points and type
-    pub fn new(points: BTreeSet<Point3D>) -> Self {
-        let x_range = Self::calculate_range(points.iter().map(|p| p.x));
-        let y_range = Self::calculate_range(points.iter().map(|p| p.y));
-        Self {
-            points,
-            x_range,
-            y_range,
-        }
-    }
-
-    pub fn from_vector(points: Vec<Point3D>) -> Self {
-        let x_range = Self::calculate_range(points.iter().map(|p| p.x));
-        let y_range = Self::calculate_range(points.iter().map(|p| p.y));
-        let points = points.into_iter().collect();
-        Surface { points, x_range , y_range }
-    }
-
-    /// Calculates the range of x values in the curve.
-    ///
-    /// This function computes the minimum and maximum x values from an iterator of `Decimal`
-    /// inputs, representing x-coordinates of points. It returns a tuple containing the
-    /// minimum and maximum x values. The computation is efficient and involves a single
-    /// traversal of the iterator.
-    ///
-    /// # Parameters
-    ///
-    /// - `iter` (`Iterator<Item = Decimal>`): An iterator over x-coordinates of points.
-    ///
-    /// # Returns
-    ///
-    /// - `(Decimal, Decimal)`: A tuple where:
-    ///   - The first value is the minimum x-coordinate.
-    ///   - The second value is the maximum x-coordinate.
-    ///
-    /// # Behavior
-    ///
-    /// - Iterates over the input to compute the x-range in a fold operation.
-    /// - Returns `(Decimal::MAX, Decimal::MIN)` for an empty iterator (although such
-    ///   cases are expected to be handled elsewhere).
-    pub fn calculate_range<I>(iter: I) -> (Decimal, Decimal)
-    where
-        I: Iterator<Item = Decimal>,
-    {
-        iter.fold((Decimal::MAX, Decimal::MIN), |(min, max), val| {
-            (min.min(val), max.max(val))
-        })
-    }
-
-    /// Constructs a curve using the specified construction method and returns the result.
-    ///
-    /// This function supports two distinct curve construction strategies:
-    /// - **FromData**: Directly constructs a curve using pre-defined 2D points.
-    /// - **Parametric**: Algorithmically builds a curve based on a parameterized
-    ///   function over a given range and number of steps.
-    ///
-    /// # Parameters
-    ///
-    /// - `method` (`CurveConstructionMethod`): Specifies the strategy for constructing the curve.
-    ///   Options include `FromData` (explicit points) or `Parametric` (function-based).
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(Curve)`: The successfully constructed curve.
-    /// - `Err(CurvesError)`: Indicates errors during construction.
-    ///
-    /// # Behavior
-    ///
-    /// ## FromData
-    ///
-    /// - Validates that the input points vector is not empty.
-    /// - Returns an error (`CurvesError::Point2DError`) if the points vector is empty.
-    /// - Constructs the curve using the provided points.
-    ///
-    /// ## Parametric
-    ///
-    /// - Divides the range `[t_start, t_end]` into `steps` intervals.
-    /// - Computes points by evaluating a parameterized function `f` at each step using parallel
-    ///   processing (`rayon`).
-    /// - Fails gracefully with a `CurvesError` if the function `f` encounters issues.
-    ///
-    /// # Errors
-    ///
-    /// - **FromData**:
-    ///   - Returns an error if an empty set of points is provided.
-    /// - **Parametric**:
-    ///   - Generates an error if the function `f` produces invalid results.
-    ///
-    /// # Details
-    ///
-    /// - Efficiently computes points in the parametric mode using parallel processing
-    ///   provided by the `rayon` crate.
-    ///
-    /// # See Also
-    ///
-    /// - [`CurveConstructionMethod`]: Enum defining the supported construction strategies.
-    /// - [`CurvesError`]: Represents possible errors encountered during curve construction.
-    /// - [`Point2D`]: The data type representing a 2D point.
-    pub fn construct(method: SurfaceConstructionMethod) -> Result<Self, SurfaceError> {
-        match method {
-            SurfaceConstructionMethod::FromData { points } => {
-                if points.is_empty() {
-                    return Err(SurfaceError::Point3DError {
-                        reason: "Empty points array",
-                    });
-                }
-                Ok(Surface::new(points))
-            }
-
-            SurfaceConstructionMethod::Parametric {
-                f,
-                x_start,
-                x_end,
-                y_start,
-                y_end,
-                x_steps,
-                y_steps,
-            } => {
-                let step_size = (x_end - x_start) / Decimal::from(x_steps);
-                let points: Result<BTreeSet<Point3D>, SurfaceError> = (0..=x_steps)
-                    .into_par_iter()
-                    .map(|i| {
-                        let t = x_start + step_size * Decimal::from(i);
-                        f(t).map_err(|e| CurvesError::ConstructionError(e.to_string()))
-                    })
-                    .collect();
-
-                points.map(Surface::new)
-            }
-        }
-    }
-
-    pub fn vector(&self) -> Vec<&Point3D> {
-        self.points.iter().collect()
-    }
-
-}
 
 #[cfg(test)]
 mod tests {
