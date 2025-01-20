@@ -367,3 +367,36 @@ mod tests {
         assert!(format!("{:?}", error).contains("test debug"));
     }
 }
+
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_curves_error_interpolation_error() {
+        let error = CurvesError::InterpolationError("Failed to interpolate values".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Interpolation error: Failed to interpolate values"
+        );
+    }
+
+    #[test]
+    fn test_curves_error_construction_error() {
+        let error = CurvesError::ConstructionError("Invalid curve construction parameters".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Construction error: Invalid curve construction parameters"
+        );
+    }
+
+    #[test]
+    fn test_curves_error_analysis_error() {
+        let error = CurvesError::AnalysisError("Analysis failed due to insufficient data".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Analysis error: Analysis failed due to insufficient data"
+        );
+    }
+}
