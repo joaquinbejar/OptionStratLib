@@ -507,3 +507,346 @@ pub struct RiskMetrics {
     pub beta: Decimal,
     pub sharpe_ratio: Decimal,
 }
+
+#[cfg(test)]
+mod tests {
+    use num_traits::FromPrimitive;
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a Point2D for testing
+    fn create_test_point(x: f64, y: f64) -> Point2D {
+        Point2D::new(Decimal::from_f64(x).unwrap(), Decimal::from_f64(y).unwrap())
+    }
+
+    mod test_basic_metrics {
+        use super::*;
+
+        #[test]
+        fn test_basic_metrics_creation() {
+            let metrics = BasicMetrics {
+                mean: dec!(10.5),
+                median: dec!(10.0),
+                mode: dec!(9.0),
+                std_dev: dec!(1.2),
+            };
+
+            assert_eq!(metrics.mean, dec!(10.5));
+            assert_eq!(metrics.median, dec!(10.0));
+            assert_eq!(metrics.mode, dec!(9.0));
+            assert_eq!(metrics.std_dev, dec!(1.2));
+        }
+
+        #[test]
+        fn test_basic_metrics_clone() {
+            let metrics = BasicMetrics {
+                mean: dec!(10.5),
+                median: dec!(10.0),
+                mode: dec!(9.0),
+                std_dev: dec!(1.2),
+            };
+
+            let cloned_metrics = metrics.clone();
+            assert_eq!(metrics.mean, cloned_metrics.mean);
+            assert_eq!(metrics.median, cloned_metrics.median);
+            assert_eq!(metrics.mode, cloned_metrics.mode);
+            assert_eq!(metrics.std_dev, cloned_metrics.std_dev);
+        }
+    }
+
+    mod test_shape_metrics {
+        use super::*;
+
+        #[test]
+        fn test_shape_metrics_creation() {
+            let metrics = ShapeMetrics {
+                skewness: dec!(0.5),
+                kurtosis: dec!(3.0),
+                peaks: vec![create_test_point(1.0, 10.0)],
+                valleys: vec![create_test_point(2.0, 5.0)],
+                inflection_points: vec![create_test_point(1.5, 7.5)],
+            };
+
+            assert_eq!(metrics.skewness, dec!(0.5));
+            assert_eq!(metrics.kurtosis, dec!(3.0));
+            assert_eq!(metrics.peaks.len(), 1);
+            assert_eq!(metrics.valleys.len(), 1);
+            assert_eq!(metrics.inflection_points.len(), 1);
+        }
+
+        #[test]
+        fn test_shape_metrics_clone() {
+            let metrics = ShapeMetrics {
+                skewness: dec!(0.5),
+                kurtosis: dec!(3.0),
+                peaks: vec![create_test_point(1.0, 10.0)],
+                valleys: vec![create_test_point(2.0, 5.0)],
+                inflection_points: vec![create_test_point(1.5, 7.5)],
+            };
+
+            let cloned_metrics = metrics.clone();
+            assert_eq!(metrics.skewness, cloned_metrics.skewness);
+            assert_eq!(metrics.kurtosis, cloned_metrics.kurtosis);
+            assert_eq!(metrics.peaks.len(), cloned_metrics.peaks.len());
+            assert_eq!(metrics.valleys.len(), cloned_metrics.valleys.len());
+            assert_eq!(metrics.inflection_points.len(), cloned_metrics.inflection_points.len());
+        }
+    }
+
+    mod test_range_metrics {
+        use super::*;
+
+        #[test]
+        fn test_range_metrics_creation() {
+            let metrics = RangeMetrics {
+                min: create_test_point(0.0, 5.0),
+                max: create_test_point(10.0, 15.0),
+                range: dec!(10.0),
+                quartiles: (dec!(7.0), dec!(10.0), dec!(13.0)),
+                interquartile_range: dec!(6.0),
+            };
+
+            assert_eq!(metrics.min.x, dec!(0.0));
+            assert_eq!(metrics.max.x, dec!(10.0));
+            assert_eq!(metrics.range, dec!(10.0));
+            assert_eq!(metrics.quartiles.0, dec!(7.0));
+            assert_eq!(metrics.interquartile_range, dec!(6.0));
+        }
+
+        #[test]
+        fn test_range_metrics_clone() {
+            let metrics = RangeMetrics {
+                min: create_test_point(0.0, 5.0),
+                max: create_test_point(10.0, 15.0),
+                range: dec!(10.0),
+                quartiles: (dec!(7.0), dec!(10.0), dec!(13.0)),
+                interquartile_range: dec!(6.0),
+            };
+
+            let cloned_metrics = metrics.clone();
+            assert_eq!(metrics.min.x, cloned_metrics.min.x);
+            assert_eq!(metrics.max.x, cloned_metrics.max.x);
+            assert_eq!(metrics.range, cloned_metrics.range);
+            assert_eq!(metrics.quartiles.0, cloned_metrics.quartiles.0);
+            assert_eq!(metrics.interquartile_range, cloned_metrics.interquartile_range);
+        }
+    }
+
+    mod test_trend_metrics {
+        use super::*;
+
+        #[test]
+        fn test_trend_metrics_creation() {
+            let metrics = TrendMetrics {
+                slope: dec!(1.5),
+                intercept: dec!(2.0),
+                r_squared: dec!(0.95),
+                moving_average: vec![
+                    create_test_point(1.0, 3.5),
+                    create_test_point(2.0, 5.0),
+                ],
+            };
+
+            assert_eq!(metrics.slope, dec!(1.5));
+            assert_eq!(metrics.intercept, dec!(2.0));
+            assert_eq!(metrics.r_squared, dec!(0.95));
+            assert_eq!(metrics.moving_average.len(), 2);
+        }
+
+        #[test]
+        fn test_trend_metrics_clone() {
+            let metrics = TrendMetrics {
+                slope: dec!(1.5),
+                intercept: dec!(2.0),
+                r_squared: dec!(0.95),
+                moving_average: vec![
+                    create_test_point(1.0, 3.5),
+                    create_test_point(2.0, 5.0),
+                ],
+            };
+
+            let cloned_metrics = metrics.clone();
+            assert_eq!(metrics.slope, cloned_metrics.slope);
+            assert_eq!(metrics.intercept, cloned_metrics.intercept);
+            assert_eq!(metrics.r_squared, cloned_metrics.r_squared);
+            assert_eq!(metrics.moving_average.len(), cloned_metrics.moving_average.len());
+        }
+    }
+
+    mod test_risk_metrics {
+        use super::*;
+
+        #[test]
+        fn test_risk_metrics_creation() {
+            let metrics = RiskMetrics {
+                volatility: dec!(0.15),
+                value_at_risk: dec!(0.05),
+                expected_shortfall: dec!(0.07),
+                beta: dec!(1.2),
+                sharpe_ratio: dec!(2.5),
+            };
+
+            assert_eq!(metrics.volatility, dec!(0.15));
+            assert_eq!(metrics.value_at_risk, dec!(0.05));
+            assert_eq!(metrics.expected_shortfall, dec!(0.07));
+            assert_eq!(metrics.beta, dec!(1.2));
+            assert_eq!(metrics.sharpe_ratio, dec!(2.5));
+        }
+
+        #[test]
+        fn test_risk_metrics_clone() {
+            let metrics = RiskMetrics {
+                volatility: dec!(0.15),
+                value_at_risk: dec!(0.05),
+                expected_shortfall: dec!(0.07),
+                beta: dec!(1.2),
+                sharpe_ratio: dec!(2.5),
+            };
+
+            let cloned_metrics = metrics.clone();
+            assert_eq!(metrics.volatility, cloned_metrics.volatility);
+            assert_eq!(metrics.value_at_risk, cloned_metrics.value_at_risk);
+            assert_eq!(metrics.expected_shortfall, cloned_metrics.expected_shortfall);
+            assert_eq!(metrics.beta, cloned_metrics.beta);
+            assert_eq!(metrics.sharpe_ratio, cloned_metrics.sharpe_ratio);
+        }
+    }
+
+    mod test_curve_metrics {
+        use super::*;
+
+        fn create_test_curve_metrics() -> CurveMetrics {
+            CurveMetrics {
+                basic: BasicMetrics {
+                    mean: dec!(10.5),
+                    median: dec!(10.0),
+                    mode: dec!(9.0),
+                    std_dev: dec!(1.2),
+                },
+                shape: ShapeMetrics {
+                    skewness: dec!(0.5),
+                    kurtosis: dec!(3.0),
+                    peaks: vec![create_test_point(1.0, 10.0)],
+                    valleys: vec![create_test_point(2.0, 5.0)],
+                    inflection_points: vec![create_test_point(1.5, 7.5)],
+                },
+                range: RangeMetrics {
+                    min: create_test_point(0.0, 5.0),
+                    max: create_test_point(10.0, 15.0),
+                    range: dec!(10.0),
+                    quartiles: (dec!(7.0), dec!(10.0), dec!(13.0)),
+                    interquartile_range: dec!(6.0),
+                },
+                trend: TrendMetrics {
+                    slope: dec!(1.5),
+                    intercept: dec!(2.0),
+                    r_squared: dec!(0.95),
+                    moving_average: vec![
+                        create_test_point(1.0, 3.5),
+                        create_test_point(2.0, 5.0),
+                    ],
+                },
+                risk: RiskMetrics {
+                    volatility: dec!(0.15),
+                    value_at_risk: dec!(0.05),
+                    expected_shortfall: dec!(0.07),
+                    beta: dec!(1.2),
+                    sharpe_ratio: dec!(2.5),
+                },
+            }
+        }
+
+        #[test]
+        fn test_curve_metrics_creation() {
+            let metrics = create_test_curve_metrics();
+
+            assert_eq!(metrics.basic.mean, dec!(10.5));
+            assert_eq!(metrics.shape.skewness, dec!(0.5));
+            assert_eq!(metrics.range.range, dec!(10.0));
+            assert_eq!(metrics.trend.slope, dec!(1.5));
+            assert_eq!(metrics.risk.volatility, dec!(0.15));
+        }
+
+        #[test]
+        fn test_curve_metrics_clone() {
+            let metrics = create_test_curve_metrics();
+            let cloned_metrics = metrics.clone();
+
+            assert_eq!(metrics.basic.mean, cloned_metrics.basic.mean);
+            assert_eq!(metrics.shape.skewness, cloned_metrics.shape.skewness);
+            assert_eq!(metrics.range.range, cloned_metrics.range.range);
+            assert_eq!(metrics.trend.slope, cloned_metrics.trend.slope);
+            assert_eq!(metrics.risk.volatility, cloned_metrics.risk.volatility);
+        }
+
+        #[test]
+        fn test_curve_analysis_result() {
+            let metrics = create_test_curve_metrics();
+            let result = metrics.curve_analysis_result();
+
+            assert!(result.is_ok());
+            let analysis = result.unwrap();
+
+            assert_eq!(analysis.statistics.mean, metrics.basic.mean);
+            assert_eq!(analysis.shape_metrics.skewness, metrics.shape.skewness);
+        }
+
+        #[test]
+        fn test_curve_metrics_new() {
+            let basic = BasicMetrics {
+                mean: dec!(10.5),
+                median: dec!(10.0),
+                mode: dec!(9.0),
+                std_dev: dec!(1.2),
+            };
+
+            let shape = ShapeMetrics {
+                skewness: dec!(0.5),
+                kurtosis: dec!(3.0),
+                peaks: vec![create_test_point(1.0, 10.0)],
+                valleys: vec![create_test_point(2.0, 5.0)],
+                inflection_points: vec![create_test_point(1.5, 7.5)],
+            };
+
+            let range = RangeMetrics {
+                min: create_test_point(0.0, 5.0),
+                max: create_test_point(10.0, 15.0),
+                range: dec!(10.0),
+                quartiles: (dec!(7.0), dec!(10.0), dec!(13.0)),
+                interquartile_range: dec!(6.0),
+            };
+
+            let trend = TrendMetrics {
+                slope: dec!(1.5),
+                intercept: dec!(2.0),
+                r_squared: dec!(0.95),
+                moving_average: vec![
+                    create_test_point(1.0, 3.5),
+                    create_test_point(2.0, 5.0),
+                ],
+            };
+
+            let risk = RiskMetrics {
+                volatility: dec!(0.15),
+                value_at_risk: dec!(0.05),
+                expected_shortfall: dec!(0.07),
+                beta: dec!(1.2),
+                sharpe_ratio: dec!(2.5),
+            };
+
+            let metrics = CurveMetrics::new(
+                basic,
+                shape,
+                range,
+                trend,
+                risk
+            );
+
+            assert_eq!(metrics.basic.mean, dec!(10.5));
+            assert_eq!(metrics.shape.skewness, dec!(0.5));
+            assert_eq!(metrics.range.range, dec!(10.0));
+            assert_eq!(metrics.trend.slope, dec!(1.5));
+            assert_eq!(metrics.risk.volatility, dec!(0.15));
+        }
+    }
+}
