@@ -138,6 +138,7 @@ pub mod probability;
 pub mod strategies;
 
 mod volatility;
+mod surfaces;
 
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
@@ -149,3 +150,4 @@ pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
 pub use volatility::ImpliedVolatilityError;
+pub use surfaces::SurfaceError;
