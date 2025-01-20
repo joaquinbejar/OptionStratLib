@@ -512,6 +512,9 @@ mod tests_extended {
     use crate::visualization::model::LabelOffsetType;
     use plotters::style::RGBColor;
     use rust_decimal::Decimal;
+    use crate::constants::{DARK_GREEN, DARK_RED};
+    use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+    use plotters::prelude::*;
 
     #[allow(dead_code)]
     struct MockGraph;
@@ -800,5 +803,176 @@ mod tests_extended {
         }
 
         Ok(())
+    }
+    
+
+    #[test]
+    fn test_bitmap_backend_initialization() {
+        let backend = GraphBackend::Bitmap {
+            file_path: "test_chart.png",
+            size: (800, 600),
+        };
+
+        let GraphBackend::Bitmap { file_path, size } = backend;
+        let root = BitMapBackend::new(&file_path, size).into_drawing_area();
+        assert!(root.fill(&WHITE).is_ok());
+        drop(root);
+        assert!(std::fs::remove_file("test_chart.png").is_ok());
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[test]
+    fn test_canvas_backend_initialization() {
+        let canvas = web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .create_element("canvas")
+            .unwrap();
+
+        let backend = GraphBackend::Canvas {
+            canvas: canvas.clone(),
+        };
+
+        if let GraphBackend::Canvas { canvas } = backend {
+            let root = CanvasBackend::with_canvas_object(canvas)
+                .unwrap()
+                .into_drawing_area();
+            assert!(root.fill(&WHITE).is_ok());
+        } else {
+            panic!("Expected Canvas backend");
+        }
+    }
+
+    #[test]
+    fn test_chart_initialization() -> Result<(), Box<dyn Error>> {
+        let root = BitMapBackend::new("test_chart_next.png", (800, 600)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+
+        let title = "Test Chart";
+        let title_size = 20;
+        let min_x_value = 0.0;
+        let max_x_value = 100.0;
+        let min_y_value = 0.0;
+        let max_y_value = 100.0;
+
+        let chart = build_chart!(
+        &root,
+        title,
+        title_size,
+        min_x_value,
+        max_x_value,
+        min_y_value,
+        max_y_value
+    );
+
+        assert!(chart.plotting_area().dim_in_pixel().0 > 0);
+        assert!(chart.plotting_area().dim_in_pixel().1 > 0);
+        
+        drop(chart);
+        drop(root);
+        assert!(std::fs::remove_file("test_chart_next.png").is_ok());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_point_rendering() {
+        let root = BitMapBackend::new("test_chart_points.png", (800, 600)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+
+        let points = vec![ChartPoint {
+            coordinates: (10.0, 20.0),
+            point_size: 5,
+            point_color: DARK_GREEN,
+            label: "Point A".to_string(),
+            label_offset: LabelOffsetType::Relative(2.0, 2.0),
+            font_size: 12,
+            label_color: DARK_GREEN,
+        }];
+
+        for point in points {
+            // Convertir coordenadas para el círculo
+            let (x, y) = (point.coordinates.0 as i32, point.coordinates.1 as i32);
+            root.draw(&Circle::new(
+                (x, y),
+                point.point_size,
+                point.point_color.filled(),
+            ))
+            .unwrap();
+
+            // Convertir coordenadas para el texto
+            let label_pos =
+                if let LabelOffsetType::Relative(offset_x, offset_y) = point.label_offset {
+                    (
+                        (point.coordinates.0 + offset_x) as i32,
+                        (point.coordinates.1 + offset_y) as i32,
+                    )
+                } else {
+                    (x, y)
+                };
+
+            root.draw(&Text::new(
+                point.label.clone(),
+                label_pos,
+                ("sans-serif", point.font_size)
+                    .into_font()
+                    .color(&point.label_color),
+            ))
+            .unwrap();
+        }
+
+        assert!(true, "Points rendered successfully");
+
+        drop(root);
+        assert!(
+            std::fs::remove_file("test_chart_points.png").is_ok(),
+            "Failed to clean up test file"
+        );
+    }
+
+    #[test]
+    fn test_line_rendering() {
+        let root = BitMapBackend::new("test_chart_lines.png", (800, 600)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+
+        let lines = vec![ChartVerticalLine {
+            x_coordinate: 50.0,
+            y_range: (0.0, 100.0),
+            line_style: DARK_RED.stroke_width(2),
+            label: "Line A".to_string(),
+            label_offset: (5.0, 5.0),
+            font_size: 12,
+            label_color: DARK_RED,
+            line_color: Default::default(),
+        }];
+
+        for line in lines {
+            let x = line.x_coordinate as i32;
+            let y0 = line.y_range.0 as i32;
+            let y1 = line.y_range.1 as i32;
+
+            root.draw(&PathElement::new(vec![(x, y0), (x, y1)], line.line_style))
+                .unwrap();
+
+            let label_x = (line.x_coordinate + line.label_offset.0) as i32;
+            let label_y = (line.y_range.1 + line.label_offset.1) as i32;
+
+            root.draw(&Text::new(
+                line.label.clone(),
+                (label_x, label_y),
+                ("sans-serif", line.font_size)
+                    .into_font()
+                    .color(&line.label_color),
+            ))
+            .unwrap();
+        }
+
+        assert!(true, "Lines rendered successfully");
+        drop(root);
+        assert!(
+            std::fs::remove_file("test_chart_lines.png").is_ok(),
+            "Failed to clean up test file"
+        );
     }
 }
