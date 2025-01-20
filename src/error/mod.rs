@@ -6,67 +6,126 @@
 
 //! # Error Module
 //!
-//! This module provides a comprehensive error handling system for the library's various components.
-//! It includes specialized error types for different aspects of options trading and analysis.
+//! This module provides a comprehensive error handling system for options trading and financial calculations.
+//! It defines specialized error types for different aspects of the library, including options trading,
+//! pricing calculations, statistical analysis, and data management.
 //!
-//! ## Key Components
+//! ## Core Error Types
 //!
-//! * `chains` - Error types for option chain operations and validations
-//! * `position` - Error handling for position management and strategy operations
-//! * `probability` - Error types for probability analysis and calculations
-//! * `strategies` - Error handling for trading strategy operations
+//! ### Options and Pricing
+//! * `OptionsError` - Core errors for option operations and validations
+//! * `GreeksError` - Errors in Greeks calculations (delta, gamma, etc.)
+//! * `ImpliedVolatilityError` - Errors in implied volatility calculations
 //!
-//! ## Error Categories
+//! ### Trading and Analysis
+//! * `ChainError` - Option chain operations and data management
+//! * `PositionError` - Position management and trading operations
+//! * `StrategyError` - Trading strategy validation and execution
+//! * `ProbabilityError` - Statistical analysis and probability calculations
+//!
+//! ### Mathematical and Data
+//! * `CurvesError` - Curve fitting and mathematical operations
+//! * `DecimalError` - Decimal number handling and precision
+//!
+//! ## Error Categories By Module
 //!
 //! ### Chain Errors (`ChainError`)
-//! Handles errors related to:
+//! Handles:
 //! * Option data validation
-//! * Chain building operations
+//! * Chain construction
 //! * File operations (CSV/JSON)
-//! * Strategy validations
+//! * Strategy validation
 //!
 //! ### Position Errors (`PositionError`)
-//! Manages errors for:
-//! * Strategy operations
+//! Manages:
 //! * Position validation
+//! * Strategy operations
 //! * Position limits
-//! * Option style and side compatibility
+//! * Option style/side compatibility
 //!
-//! ### Probability Errors (`ProbabilityError`)
-//! Covers errors in:
-//! * Probability calculations
-//! * Profit/Loss range analysis
-//! * Expiration date handling
-//! * Price parameter validation
+//! ### Greeks Errors (`GreeksError`)
+//! Handles:
+//! * Greeks calculations
+//! * Mathematical validation
+//! * Input parameter validation
+//! * Numerical computations
 //!
 //! ### Strategy Errors (`StrategyError`)
-//! Handles errors for:
+//! Covers:
 //! * Price calculations
-//! * Break-even points
+//! * Break-even analysis
 //! * Profit/Loss calculations
-//! * Strategy operations
+//! * Operation validation
+//!
+//! ### Probability Errors (`ProbabilityError`)
+//! Manages:
+//! * Statistical calculations
+//! * Range analysis
+//! * Probability distributions
+//! * Market scenarios
+//!
+//! ### Decimal Errors (`DecimalError`)
+//! Handles:
+//! * Decimal conversions
+//! * Precision management
+//! * Arithmetic operations
+//! * Boundary validations
 //!
 //! ## Usage Example
 //!
 //! ```rust
-//! use optionstratlib::error::chains::ChainError;
-//! use optionstratlib::error::position::PositionError;
+//! use optionstratlib::error::{OptionsError, GreeksError, ChainError};
 //!
-//! // Chain error handling
-//! fn process_chain() -> Result<(), ChainError> {
+//! // Options error handling
+//! fn calculate_option_price() -> Result<f64, OptionsError> {
 //!     // Implementation
-//!     Ok(())
+//!     Ok(0.0)
 //! }
 //!
-//! // Position error handling
-//! fn validate_position() -> Result<(), PositionError> {
+//! // Greeks calculation error handling
+//! fn calculate_delta() -> Result<f64, GreeksError> {
+//!     // Implementation
+//!     Ok(0.0)
+//! }
+//!
+//! // Chain operation error handling
+//! fn process_option_chain() -> Result<(), ChainError> {
 //!     // Implementation
 //!     Ok(())
 //! }
 //! ```
 //!
-//! Each error type implements standard traits like `Error`, `Display`, and conversion traits
-//! for seamless error handling and propagation throughout the library.
+//! ## Error Design Principles
+//!
+//! * All error types implement standard traits (`Error`, `Display`, `Debug`)
+//! * Structured error hierarchies for precise error handling
+//! * Detailed error messages for debugging
+//! * Clean error propagation through type conversions
+//! * Context preservation in error chains
+//!
+//! ## Implementation Details
+//!
+//! * Each error type has specialized constructors for common cases
+//! * Error types support standard error trait implementations
+//! * Conversion traits implemented for seamless error handling
+//! * Thread-safe error types (`Send` + `Sync`)
+//! * Comprehensive string formatting for logging
+//!
+//! ## Module Structure
+//!
+//! ```text
+//! error/
+//! ├── chains.rs       - Option chain errors
+//! ├── common.rs       - Shared error types
+//! ├── curves.rs       - Mathematical curve errors
+//! ├── decimal.rs      - Decimal computation errors
+//! ├── greeks.rs       - Greeks calculation errors
+//! ├── options.rs      - Core options errors
+//! ├── position.rs     - Position management errors
+//! ├── probability.rs  - Statistical analysis errors
+//! ├── strategies.rs   - Trading strategy errors
+//! └── volatility.rs   - Volatility calculation errors
+//! ```
 
 pub mod chains;
 mod common;
