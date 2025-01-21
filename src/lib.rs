@@ -708,6 +708,7 @@ pub mod surfaces;
 pub mod utils;
 pub mod visualization;
 pub mod volatility;
+pub mod geometrics;
 
 pub use model::positive::Positive;
 pub use model::types::{ExpirationDate, OptionStyle, OptionType, Side};

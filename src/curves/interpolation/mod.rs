@@ -47,5 +47,5 @@ pub use bilinear::BiLinearInterpolation;
 pub use cubic::CubicInterpolation;
 pub use linear::LinearInterpolation;
 pub use spline::SplineInterpolation;
-pub use traits::Interpolate;
+pub use interpolation::Interpolate;
 pub use types::InterpolationType;

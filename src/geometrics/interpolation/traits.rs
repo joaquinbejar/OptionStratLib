@@ -2,8 +2,9 @@ use crate::curves::interpolation::{
     BiLinearInterpolation, CubicInterpolation, InterpolationType, LinearInterpolation,
     SplineInterpolation,
 };
-use crate::curves::Point2D;
+use crate::curves::{GeometricObject, Point2D};
 use crate::error::CurvesError;
+use crate::geometrics::{GeometricObject, LinearInterpolation};
 use rust_decimal::Decimal;
 
 /// A trait for performing various types of interpolation on a set of 2D points.
@@ -43,19 +44,15 @@ use rust_decimal::Decimal;
 /// This trait is used to define a general interface for interpolation operations, which
 /// can then be implemented by various structs managing interpolation algorithms.
 ///
-pub trait Interpolate:
-    LinearInterpolation + BiLinearInterpolation + CubicInterpolation + SplineInterpolation
+pub trait Interpolate<Point, Input>:
+    LinearInterpolation<Point, Input>
+    + BiLinearInterpolation<Point, Input>
+    + CubicInterpolation
+    + SplineInterpolation
+    + GeometricObject<Point>
 {
-    /// Retrieves the dataset of 2D points used for interpolation.
-    ///
-    /// # Returns
-    /// A slice of [`Point2D`] containing the data points used for interpolation.
-    ///
-    /// The returned points must:
-    /// - Be sorted in ascending order based on the x-coordinate.
-    /// - Contain at least two points for interpolation to be valid.
-    fn get_points(&self) -> Vec<&Point2D>;
-
+    type Error;
+    
     /// Interpolates a value at the specified x-coordinate using the given interpolation method.
     ///
     /// # Parameters
@@ -80,7 +77,7 @@ pub trait Interpolate:
         &self,
         x: Decimal,
         interpolation_type: InterpolationType,
-    ) -> Result<Point2D, CurvesError> {
+    ) -> Result<Point, Self::Error> {
         match interpolation_type {
             InterpolationType::Linear => self.linear_interpolate(x),
             InterpolationType::Cubic => self.cubic_interpolate(x),
@@ -110,7 +107,7 @@ pub trait Interpolate:
     /// - If fewer than two points are present, an error is returned.
     /// - If `x` is outside the domain of the dataset's x-coordinates (less than the minimum
     ///   x-coordinate or greater than the maximum), an error is returned.
-    fn find_bracket_points(&self, x: Decimal) -> Result<(usize, usize), CurvesError> {
+    fn find_bracket_points(&self, x: Input) -> Result<(usize, usize), Self::Error> {
         let points = self.get_points();
 
         // Edge cases
@@ -149,7 +146,9 @@ mod tests_interpolate {
         points: BTreeSet<Point2D>,
     }
 
-    impl LinearInterpolation for MockInterpolator {
+    impl LinearInterpolation<Point2D, Decimal> for MockInterpolator {
+        type Error = CurvesError;
+
         fn linear_interpolate(&self, x: Decimal) -> Result<Point2D, CurvesError> {
             // Validate points first
             if self.points.len() < 2 {
@@ -194,13 +193,31 @@ mod tests_interpolate {
         }
     }
 
-    impl Interpolate for MockInterpolator {
-        fn get_points(&self) -> Vec<&Point2D> {
-            self.points.iter().collect::<Vec<_>>()
+    impl GeometricObject<Point2D> for MockInterpolator {
+        type Error = ();
+
+        fn get_points(&self) -> &BTreeSet<Point2D> {
+            self.points.iter().collect()
+        }
+
+        fn from_vector(points: Vec<Point2D>) -> Self
+        where
+            Self: Sized,
+        {
+            unimplemented!()
+        }
+
+        fn construct<T>(method: T) -> Result<Self, Self::Error>
+        where
+            Self: Sized,
+        {
+            unimplemented!()
         }
     }
 
-    // Rest of the tests remain the same...
+    impl Interpolate<Point2D, Decimal> for MockInterpolator { type Error = CurvesError; }
+
+
 
     fn create_mock_interpolator(points: BTreeSet<Point2D>) -> MockInterpolator {
         MockInterpolator { points }
@@ -261,7 +278,7 @@ mod tests_interpolate {
         let interpolator = create_mock_interpolator(points.clone());
 
         assert_eq!(
-            interpolator.get_points(),
+            interpolator.vector(),
             points.iter().collect::<Vec<_>>().as_slice()
         );
     }

@@ -12,7 +12,7 @@ use crate::curves::interpolation::{
     SplineInterpolation,
 };
 use crate::curves::operations::CurveArithmetic;
-use crate::curves::{MergeOperation, Point2D};
+use crate::curves::{GeometricObject, MergeOperation, Point2D};
 use crate::error::CurvesError;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
@@ -20,6 +20,9 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::BTreeSet;
 use std::ops::Index;
+use crate::curves::common::Interpolate;
+use crate::geometrics::{BiLinearInterpolation, GeometricObject, Interpolate, LinearInterpolation};
+use crate::surfaces::{Point3D, Surface};
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -120,94 +123,27 @@ impl Curve {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         Curve { points, x_range }
     }
+}
 
-    pub fn from_vector(points: Vec<Point2D>) -> Self {
+impl GeometricObject<Point2D> for Curve {
+    type Error = CurvesError;
+
+    fn get_points(&self) -> &BTreeSet<Point2D> {
+        self.points.iter().collect()
+    }
+
+    fn from_vector(points: Vec<Point2D>) -> Self
+    where
+        Self: Sized
+    {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         let points = points.into_iter().collect();
         Curve { points, x_range }
     }
-
-    /// Calculates the range of x values in the curve.
-    ///
-    /// This function computes the minimum and maximum x values from an iterator of `Decimal`
-    /// inputs, representing x-coordinates of points. It returns a tuple containing the
-    /// minimum and maximum x values. The computation is efficient and involves a single
-    /// traversal of the iterator.
-    ///
-    /// # Parameters
-    ///
-    /// - `iter` (`Iterator<Item = Decimal>`): An iterator over x-coordinates of points.
-    ///
-    /// # Returns
-    ///
-    /// - `(Decimal, Decimal)`: A tuple where:
-    ///   - The first value is the minimum x-coordinate.
-    ///   - The second value is the maximum x-coordinate.
-    ///
-    /// # Behavior
-    ///
-    /// - Iterates over the input to compute the x-range in a fold operation.
-    /// - Returns `(Decimal::MAX, Decimal::MIN)` for an empty iterator (although such
-    ///   cases are expected to be handled elsewhere).
-    pub fn calculate_range<I>(iter: I) -> (Decimal, Decimal)
+    fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
-        I: Iterator<Item = Decimal>,
+        Self: Sized
     {
-        iter.fold((Decimal::MAX, Decimal::MIN), |(min, max), val| {
-            (min.min(val), max.max(val))
-        })
-    }
-
-    /// Constructs a curve using the specified construction method and returns the result.
-    ///
-    /// This function supports two distinct curve construction strategies:
-    /// - **FromData**: Directly constructs a curve using pre-defined 2D points.
-    /// - **Parametric**: Algorithmically builds a curve based on a parameterized
-    ///   function over a given range and number of steps.
-    ///
-    /// # Parameters
-    ///
-    /// - `method` (`CurveConstructionMethod`): Specifies the strategy for constructing the curve.
-    ///   Options include `FromData` (explicit points) or `Parametric` (function-based).
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(Curve)`: The successfully constructed curve.
-    /// - `Err(CurvesError)`: Indicates errors during construction.
-    ///
-    /// # Behavior
-    ///
-    /// ## FromData
-    ///
-    /// - Validates that the input points vector is not empty.
-    /// - Returns an error (`CurvesError::Point2DError`) if the points vector is empty.
-    /// - Constructs the curve using the provided points.
-    ///
-    /// ## Parametric
-    ///
-    /// - Divides the range `[t_start, t_end]` into `steps` intervals.
-    /// - Computes points by evaluating a parameterized function `f` at each step using parallel
-    ///   processing (`rayon`).
-    /// - Fails gracefully with a `CurvesError` if the function `f` encounters issues.
-    ///
-    /// # Errors
-    ///
-    /// - **FromData**:
-    ///   - Returns an error if an empty set of points is provided.
-    /// - **Parametric**:
-    ///   - Generates an error if the function `f` produces invalid results.
-    ///
-    /// # Details
-    ///
-    /// - Efficiently computes points in the parametric mode using parallel processing
-    ///   provided by the `rayon` crate.
-    ///
-    /// # See Also
-    ///
-    /// - [`CurveConstructionMethod`]: Enum defining the supported construction strategies.
-    /// - [`CurvesError`]: Represents possible errors encountered during curve construction.
-    /// - [`Point2D`]: The data type representing a 2D point.
-    pub fn construct(method: CurveConstructionMethod) -> Result<Self, CurvesError> {
         match method {
             CurveConstructionMethod::FromData { points } => {
                 if points.is_empty() {
@@ -237,10 +173,6 @@ impl Curve {
                 points.map(Curve::new)
             }
         }
-    }
-
-    pub fn vector(&self) -> Vec<&Point2D> {
-        self.points.iter().collect()
     }
 }
 
@@ -310,6 +242,35 @@ impl Index<usize> for Curve {
     }
 }
 
+/// Implementation of the `Interpolate` trait for the `Curve` struct.
+///
+/// This implementation integrates the `get_points` method for the `Curve` structure,
+/// providing access to its internal points. The `Interpolate` trait ensures compatibility
+/// with various interpolation methods such as Linear, BiLinear, Cubic, and Spline
+/// interpolations. By implementing this trait, `Curve` gains the ability to perform
+/// interpolation operations and access bracketing points.
+///
+/// # Traits Involved
+///
+/// The `Interpolate` trait is an aggregation of multiple interpolation-related traits:
+/// - [`LinearInterpolation`]
+/// - [`BiLinearInterpolation`]
+/// - [`CubicInterpolation`]
+/// - [`SplineInterpolation`]
+///
+/// These underlying traits implement specific interpolation algorithms,
+/// enabling `Curve` to support a robust set of interpolation options through the associated methods.
+/// Depending on the use case and provided parameters (e.g., interpolation type and target x-coordinate),
+/// the appropriate algorithm is invoked.
+///
+/// # See Also
+///
+/// - [`Curve`]: The underlying mathematical structure being interpolated.
+/// - [`Point2D`]: The fundamental data type for the curve's points.
+/// - [`Interpolate`]: The trait defining interpolation operations.
+///
+impl Interpolate<Point2D, Decimal> for Curve { type Error = CurvesError; }
+
 /// Implements the `LinearInterpolation` trait for the `Curve` struct.
 ///
 /// This implementation provides linear interpolation functionality for a given set
@@ -373,7 +334,8 @@ impl Index<usize> for Curve {
 /// - `find_bracket_points`: Finds two points that bracket a value.
 /// - `Point2D`: Represents points in 2D space.
 /// - `CurvesError`: Represents errors related to curve operations.
-impl LinearInterpolation for Curve {
+impl LinearInterpolation<Point2D, Decimal> for Curve {
+    type Error = CurvesError;
     /// # Method
     /// ### `linear_interpolate`
     ///
@@ -467,7 +429,9 @@ impl LinearInterpolation for Curve {
 /// - [`Point2D`]: The data type used to represent individual points on the curve.
 /// - [`find_bracket_points`](crate::curves::interpolation::Interpolate::find_bracket_points):
 ///   A helper method used to locate the two points that bracket the given x-coordinate.
-impl BiLinearInterpolation for Curve {
+impl BiLinearInterpolation<Point2D, Decimal> for Curve {
+    type Error = CurvesError;
+
     /// Performs bilinear interpolation to find the value of the curve at a given `x` coordinate.
     ///
     /// # Parameters
@@ -961,46 +925,6 @@ impl SplineInterpolation for Curve {
             + (points[segment + 1].y / h - m[segment + 1] * h / dec!(6)) * dx1;
 
         Ok(Point2D::new(x, y))
-    }
-}
-
-/// Implementation of the `Interpolate` trait for the `Curve` struct.
-///
-/// This implementation integrates the `get_points` method for the `Curve` structure,
-/// providing access to its internal points. The `Interpolate` trait ensures compatibility
-/// with various interpolation methods such as Linear, BiLinear, Cubic, and Spline
-/// interpolations. By implementing this trait, `Curve` gains the ability to perform
-/// interpolation operations and access bracketing points.
-///
-/// # Traits Involved
-///
-/// The `Interpolate` trait is an aggregation of multiple interpolation-related traits:
-/// - [`LinearInterpolation`]
-/// - [`BiLinearInterpolation`]
-/// - [`CubicInterpolation`]
-/// - [`SplineInterpolation`]
-///
-/// These underlying traits implement specific interpolation algorithms,
-/// enabling `Curve` to support a robust set of interpolation options through the associated methods.
-/// Depending on the use case and provided parameters (e.g., interpolation type and target x-coordinate),
-/// the appropriate algorithm is invoked.
-///
-/// # See Also
-///
-/// - [`Curve`]: The underlying mathematical structure being interpolated.
-/// - [`Point2D`]: The fundamental data type for the curve's points.
-/// - [`Interpolate`]: The trait defining interpolation operations.
-///
-impl Interpolate for Curve {
-    /// ## `get_points`
-    ///
-    /// - **Signature**: `fn get_points(&self) -> &[Point2D]`
-    /// - **Purpose**: Provides a reference to the collection of points that define the curve.
-    /// - **Returns**: A slice of `Point2D` instances contained in the `points` vector of the struct.
-    /// - **Usage**: This method is critical for interpolation algorithms, allowing access to the
-    ///   ordered list of points necessary for calculations.
-    fn get_points(&self) -> Vec<&Point2D> {
-        self.vector()
     }
 }
 
