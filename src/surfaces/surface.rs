@@ -130,21 +130,21 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
 
 impl BiLinearInterpolation<Point3D, Point2D> for Surface {
     type Error = SurfaceError;
-    fn bilinear_interpolate(&self, x: Decimal) -> Result<Point3D, SurfaceError> {
+    fn bilinear_interpolate(&self, x: Point2D) -> Result<Point3D, SurfaceError> {
         todo!()
     }
 }
 
 impl CubicInterpolation<Point3D, Point2D> for Surface {
     type Error = SurfaceError;
-    fn cubic_interpolate(&self, x: Decimal) -> Result<Point3D, SurfaceError> {
+    fn cubic_interpolate(&self, x: Point2D) -> Result<Point3D, SurfaceError> {
         todo!()
     }
 }
 
 impl SplineInterpolation<Point3D, Point2D> for Surface {
     type Error = SurfaceError;
-    fn spline_interpolate(&self, x: Decimal) -> Result<Point3D, SurfaceError> {
+    fn spline_interpolate(&self, x: Point2D) -> Result<Point3D, SurfaceError> {
         todo!()
     }
 }

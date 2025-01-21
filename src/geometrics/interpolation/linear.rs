@@ -1,3 +1,5 @@
+use crate::error::InterpolationError;
+
 /// A trait that provides functionality for performing linear interpolation.
 ///
 /// # Overview
@@ -72,8 +74,6 @@
 /// The `LinearInterpolation` trait is part of a modular design and is often re-exported
 /// in higher-level library components for ease of use.
 pub trait LinearInterpolation<Point, Input> {
-    /// The error type returned when interpolation fails.
-    type Error;
 
     /// Performs linear interpolation for a given input value.
     ///
@@ -83,5 +83,5 @@ pub trait LinearInterpolation<Point, Input> {
     /// # Returns
     /// - `Ok(Point)`: The calculated interpolated value of type `Point`.
     /// - `Err(Self::Error)`: An error indicating the reason why interpolation failed.
-    fn linear_interpolate(&self, x: Input) -> Result<Point, Self::Error>;
+    fn linear_interpolate(&self, x: Input) -> Result<Point, InterpolationError::Linear>;
 }

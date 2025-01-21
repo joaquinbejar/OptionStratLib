@@ -1,3 +1,5 @@
+use crate::error::InterpolationError;
+
 /// A trait for bilinear interpolation on 2D data grids.
 ///
 /// # Purpose
@@ -58,8 +60,6 @@
 /// - [`crate::curves::interpolation::LinearInterpolation`](crate::curves::interpolation::LinearInterpolation):
 ///   A simpler interpolation method for one-dimensional data.
 pub trait BiLinearInterpolation<Point, Input> {
-    /// The error type returned when interpolation fails.
-    type Error;
 
     /// Performs bilinear interpolation to compute a value for the given input.
     ///
@@ -88,5 +88,5 @@ pub trait BiLinearInterpolation<Point, Input> {
     ///     Err(e) => info!("Interpolation failed: {:?}", e),
     /// }
     /// ```
-    fn bilinear_interpolate(&self, x: Input) -> Result<Point, Self::Error>;
+    fn bilinear_interpolate(&self, x: Input) -> Result<Point, InterpolationError::Bilinear>;
 }

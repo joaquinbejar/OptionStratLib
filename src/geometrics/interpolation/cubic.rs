@@ -1,3 +1,5 @@
+use crate::error::InterpolationError;
+
 /// A trait for performing cubic interpolation on a set of data points.
 ///
 /// # Overview
@@ -72,7 +74,9 @@
 /// ```rust
 /// use rust_decimal::Decimal;///
 ///
-/// use optionstratlib::curves::Point2D;///
+/// use optionstratlib::curves::Point2D;
+/// use optionstratlib::error::InterpolationError;
+///
 ///
 /// use optionstratlib::geometrics::CubicInterpolation;
 ///
@@ -81,9 +85,8 @@
 /// }
 ///
 /// impl CubicInterpolation<Point2D, Decimal> for MyCurve {
-///     type Error = String; // Define your custom error type.
 ///
-///     fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, Self::Error> {
+///     fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError::Cubic> {
 ///         // Validate the input and calculate the interpolated point.
 ///         // Example logic here.
 ///         Ok(Point2D::new(x, x)) // Placeholder implementation.
@@ -91,8 +94,6 @@
 /// }
 /// ```
 pub trait CubicInterpolation<Point, Input> {
-    /// The associated error type for failed interpolation attempts.
-    type Error;
 
     /// Interpolates a new point on the curve for a given `x` input value
     /// using cubic interpolation.
@@ -104,5 +105,5 @@ pub trait CubicInterpolation<Point, Input> {
     /// # Returns
     /// - `Ok(Point)`: Represents the interpolated point on the curve.
     /// - `Err(Self::Error)`: Describes why the interpolation failed (e.g., invalid input).
-    fn cubic_interpolate(&self, x: Input) -> Result<Point, Self::Error>;
+    fn cubic_interpolate(&self, x: Input) -> Result<Point, InterpolationError::Cubic>;
 }

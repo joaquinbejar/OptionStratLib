@@ -12,7 +12,6 @@ pub enum SurfaceError {
     Point3DError { reason: &'static str },
     OperationError(OperationErrorKind),
     StdError { reason: String },
-    InterpolationError(String),
     ConstructionError(String),
     AnalysisError(String),
 }
@@ -72,7 +71,6 @@ impl fmt::Display for SurfaceError {
             SurfaceError::OperationError(err) => write!(f, "Operation error: {}", err),
             SurfaceError::StdError { reason } => write!(f, "Error: {}", reason),
             SurfaceError::Point3DError { reason } => write!(f, "Error: {}", reason),
-            SurfaceError::InterpolationError(reason) => write!(f, "Interpolation error: {}", reason),
             SurfaceError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
             SurfaceError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
         }
@@ -260,12 +258,6 @@ mod tests {
             reason: "Point error test",
         };
         assert_eq!(error.to_string(), "Error: Point error test");
-    }
-
-    #[test]
-    fn test_display_interpolation_error() {
-        let error = SurfaceError::InterpolationError("Interpolation failed".to_string());
-        assert_eq!(error.to_string(), "Interpolation error: Interpolation failed");
     }
 
     #[test]

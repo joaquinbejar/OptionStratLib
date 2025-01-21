@@ -198,7 +198,9 @@ pub struct SurfaceConfig {
 mod tests {
     use super::*;
     use rust_decimal_macros::dec;
+    use crate::geometrics::ConstructionMethod;
     use crate::pos;
+    use crate::surfaces::Surface;
 
     #[test]
     fn test_point3d_new() {
@@ -272,36 +274,9 @@ mod tests {
             Point3D::from_f64_tuple(0.0, 0.0, 0.0).unwrap(),
             Point3D::from_f64_tuple(1.0, 1.0, 1.0).unwrap(),
         ]);
-        let surface = Surface::new(points.clone(), SurfaceType::Volatility);
+        let surface = Surface::new(points.clone());
 
         assert_eq!(surface.points, points);
-        assert!(matches!(surface.surface_type, SurfaceType::Volatility));
-        assert!(surface.config.is_none());
-    }
-
-    #[test]
-    fn test_surface_with_config() {
-        let points = BTreeSet::from_iter(vec![
-            Point3D::from_f64_tuple(0.0, 0.0, 0.0).unwrap(),
-            Point3D::from_f64_tuple(1.0, 1.0, 1.0).unwrap(),
-        ]);
-
-        let config = SurfaceConfig {
-            surface_type: SurfaceType::Volatility,
-            interpolation: SurfaceInterpolationType::Linear,
-            construction_method: SurfaceConstructionMethod::FromData,
-            extra_params: HashMap::new(),
-        };
-
-        let surface = Surface::with_config(
-            points.clone(),
-            SurfaceType::Volatility,
-            config
-        );
-
-        assert_eq!(surface.points, points);
-        assert!(matches!(surface.surface_type, SurfaceType::Volatility));
-        assert!(surface.config.is_some());
     }
 
     #[test]

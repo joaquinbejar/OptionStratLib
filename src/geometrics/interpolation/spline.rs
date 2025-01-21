@@ -1,3 +1,5 @@
+use crate::error::InterpolationError;
+
 /// A trait defining the functionality for spline-based interpolation over a dataset.
 ///
 /// # Overview
@@ -50,16 +52,16 @@
 /// use rust_decimal::Decimal;
 /// use optionstratlib::curves::Point2D;
 /// use optionstratlib::geometrics::SplineInterpolation;
-///
+/// use optionstratlib::error::InterpolationError;
+/// 
 /// struct MySplineInterpolator {
 ///     data_points: Vec<Point2D>,
 /// }
 ///
 /// impl SplineInterpolation<Point2D, Decimal> for MySplineInterpolator {
-///     type Error = String;
 ///
-///     fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, Self::Error> {
-///          Ok(Point2D::new(x, x)) // Placeholder implementation
+///     fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError::Spline> {
+///         Ok(Point2D::new(x, x)) // Placeholder implementation
 ///     }
 /// }
 ///
@@ -83,9 +85,7 @@
 ///
 /// This trait is part of a broader framework supporting multiple interpolation techniques,
 /// allowing developers to extend and choose specific methods as per the dataset requirements.
-pub trait SplineInterpolation<Point, Input> {
-    /// The error type returned when interpolation fails.
-    type Error;
+pub trait SplineInterpolation<Point, Input> { 
 
     /// Interpolates a y-value for the provided x-coordinate using spline interpolation.
     ///
@@ -114,6 +114,6 @@ pub trait SplineInterpolation<Point, Input> {
     ///     Err(e) => info!("Interpolation failed: {:?}", e),
     /// }
     /// ```
-    fn spline_interpolate(&self, x: Input) -> Result<Point, Self::Error>;
+    fn spline_interpolate(&self, x: Input) -> Result<Point, InterpolationError::Spline>;
 }
 

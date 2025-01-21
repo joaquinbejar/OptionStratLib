@@ -87,7 +87,6 @@ pub enum CurvesError {
     Point2DError { reason: &'static str },
     OperationError(OperationErrorKind),
     StdError { reason: String },
-    InterpolationError(String),
     ConstructionError(String),
     AnalysisError(String),
 }
@@ -147,7 +146,6 @@ impl fmt::Display for CurvesError {
             CurvesError::OperationError(err) => write!(f, "Operation error: {}", err),
             CurvesError::StdError { reason } => write!(f, "Error: {}", reason),
             CurvesError::Point2DError { reason } => write!(f, "Error: {}", reason),
-            CurvesError::InterpolationError(reason) => write!(f, "Interpolation error: {}", reason),
             CurvesError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
             CurvesError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
         }
@@ -371,15 +369,6 @@ mod tests {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
-
-    #[test]
-    fn test_curves_error_interpolation_error() {
-        let error = CurvesError::InterpolationError("Failed to interpolate values".to_string());
-        assert_eq!(
-            format!("{}", error),
-            "Interpolation error: Failed to interpolate values"
-        );
-    }
 
     #[test]
     fn test_curves_error_construction_error() {
