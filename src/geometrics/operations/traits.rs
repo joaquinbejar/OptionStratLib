@@ -1,5 +1,6 @@
-use crate::curves::{Curve, MergeOperation};
+use crate::curves::Curve;
 use crate::error::CurvesError;
+use crate::geometrics::MergeOperation;
 
 /// A trait for performing arithmetic operations between curves.
 ///

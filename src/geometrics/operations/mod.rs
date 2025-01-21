@@ -19,8 +19,8 @@
 //! ## Usage
 //! ```rust
 //! use rust_decimal::Decimal;
-//! use optionstratlib::curves::{Curve, MergeOperation, Point2D};
-//! use optionstratlib::curves::operations::CurveArithmetic;
+//! use optionstratlib::geometrics::{CurveArithmetic, GeometricObject, MergeOperation};
+//! use optionstratlib::curves::{Curve, Point2D};
 //! let curve1 = Curve::from_vector(vec![
 //!            Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
 //!            Point2D::new(Decimal::ONE, Decimal::ONE),   // p12
@@ -42,3 +42,4 @@ mod traits;
 mod transformations;
 
 pub use traits::CurveArithmetic;
+pub use arithmetic::MergeOperation;

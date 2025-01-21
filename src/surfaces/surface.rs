@@ -9,8 +9,7 @@ use rayon::iter::IntoParallelIterator;
 use rust_decimal::Decimal;
 use crate::curves::{Curve, Point2D};
 use crate::error::{CurvesError, SurfaceError};
-use crate::geometrics::{BiLinearInterpolation, CubicInterpolation, GeometricObject, Interpolate, LinearInterpolation, SplineInterpolation};
-use crate::surfaces::construction::SurfaceConstructionMethod;
+use crate::geometrics::{BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, LinearInterpolation, SplineInterpolation};
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 
@@ -66,7 +65,7 @@ impl GeometricObject<Point3D> for Surface {
 
     fn construct<T>(method: T) -> Result<Self, SurfaceError> {
         match method {
-            SurfaceConstructionMethod::FromData { points } => {
+            ConstructionMethod::FromData { points } => {
                 if points.is_empty() {
                     return Err(SurfaceError::Point3DError {
                         reason: "Empty points array",
@@ -75,15 +74,26 @@ impl GeometricObject<Point3D> for Surface {
                 Ok(Surface::new(points))
             }
 
-            SurfaceConstructionMethod::Parametric {
+            ConstructionMethod::Parametric {
                 f,
-                x_start,
-                x_end,
-                y_start,
-                y_end,
-                x_steps,
-                y_steps,
+                params,
             } => {
+                let (x_start, x_end,y_start, y_end, x_steps, y_steps) = match params {
+                    ConstructionParams::D3 {
+                        x_start,
+                        x_end,
+                        y_start,
+                        y_end,
+                        x_steps,
+                        y_steps,
+                    } => (x_start, x_end,y_start, y_end, x_steps, y_steps),
+                    _ => {
+                        return Err(SurfaceError::ConstructionError(
+                            "Invalid parameters".to_string(),
+                        ))
+                    }
+                };
+                // TODO: Implement parallel computation for all axis
                 let step_size = (x_end - x_start) / Decimal::from(x_steps);
                 let points: Result<BTreeSet<Point3D>, SurfaceError> = (0..=x_steps)
                     .into_par_iter()

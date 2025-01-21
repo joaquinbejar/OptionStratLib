@@ -19,9 +19,8 @@
 //! ## Example
 //! ```rust
 //! use rust_decimal::{Decimal, MathematicalOps};
-//! use optionstratlib::curves::construction::{ConstructionMethod, ConstructionParams};
 //! use optionstratlib::curves::{Curve, Point2D};
-//! use optionstratlib::geometrics::GeometricObject;
+//! use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
 //!
 //! // Create a curve from data points
 //! let curve = Curve::from_vector(vec![

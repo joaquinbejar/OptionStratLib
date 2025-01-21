@@ -7,6 +7,8 @@ mod utils;
 mod interpolation;
 mod construction;
 
+mod operations;
+
 pub use utils::GeometricObject;
 pub use interpolation::traits::Interpolate;
 pub use interpolation::linear::LinearInterpolation;
@@ -15,3 +17,4 @@ pub use interpolation::cubic::CubicInterpolation;
 pub use interpolation::spline::SplineInterpolation;
 pub use interpolation::types::InterpolationType;
 pub use construction::{ConstructionMethod, ConstructionParams};
+pub use operations::{MergeOperation, CurveArithmetic};
