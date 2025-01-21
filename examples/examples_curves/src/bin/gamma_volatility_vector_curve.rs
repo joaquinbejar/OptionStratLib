@@ -1,6 +1,5 @@
-use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
-use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
+use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject, Plottable};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
