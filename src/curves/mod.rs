@@ -1,5 +1,4 @@
 pub mod analysis;
-pub mod construction;
 mod curve;
 mod curve_traits;
 pub mod interpolation;

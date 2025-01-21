@@ -19,7 +19,7 @@
 //! ## Example
 //! ```rust
 //! use rust_decimal::{Decimal, MathematicalOps};
-//! use optionstratlib::curves::construction::CurveConstructionMethod;
+//! use optionstratlib::curves::construction::{ConstructionMethod, ConstructionParams};
 //! use optionstratlib::curves::{Curve, Point2D};
 //! use optionstratlib::geometrics::GeometricObject;
 //!
@@ -30,18 +30,18 @@
 //!             Point2D::new(Decimal::ZERO, Decimal::ONE),  // p21
 //!             Point2D::new(Decimal::ONE, Decimal::TWO),   // p22
 //!         ]);
-//!
-//! // Generate a parametric curve
-//! let parametric_curve = Curve::construct(CurveConstructionMethod::Parametric {
-//!     f: Box::new(|t| Ok(Point2D::new(t, t.sin()))),
+//!  let params = ConstructionParams::D2 {
 //!     t_start: Decimal::ZERO,
 //!     t_end: Decimal::TWO_PI,
 //!     steps: 100
+//! };
+//! // Generate a parametric curve
+//! let parametric_curve = Curve::construct(ConstructionMethod::Parametric {
+//!     f: Box::new(|t| Ok(Point2D::new(t, t.sin()))),
+//!     params,
 //! });
 //! ```
 
-mod from_data;
-mod parametric;
 mod types;
 
-pub use types::CurveConstructionMethod;
+pub use types::{ConstructionMethod,ConstructionParams};

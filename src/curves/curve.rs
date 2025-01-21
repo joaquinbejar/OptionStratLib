@@ -6,13 +6,9 @@
 use crate::curves::analysis::{
     BasicMetrics, CurveMetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
 };
-use crate::curves::construction::CurveConstructionMethod;
-use crate::curves::interpolation::{
-    BiLinearInterpolation, CubicInterpolation, Interpolate, LinearInterpolation,
-    SplineInterpolation,
-};
+use crate::curves::construction::{ConstructionMethod, ConstructionParams};
 use crate::curves::operations::CurveArithmetic;
-use crate::curves::{GeometricObject, MergeOperation, Point2D};
+use crate::curves::{ MergeOperation, Point2D};
 use crate::error::CurvesError;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
@@ -20,9 +16,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::BTreeSet;
 use std::ops::Index;
-use crate::curves::common::Interpolate;
-use crate::geometrics::{BiLinearInterpolation, CubicInterpolation, GeometricObject, Interpolate, LinearInterpolation, SplineInterpolation};
-use crate::surfaces::{Point3D, Surface};
+use crate::geometrics::{BiLinearInterpolation, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, LinearInterpolation, SplineInterpolation};
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -145,7 +139,7 @@ impl GeometricObject<Point2D> for Curve {
         Self: Sized
     {
         match method {
-            CurveConstructionMethod::FromData { points } => {
+            ConstructionMethod::FromData { points } => {
                 if points.is_empty() {
                     return Err(CurvesError::Point2DError {
                         reason: "Empty points array",
@@ -153,13 +147,14 @@ impl GeometricObject<Point2D> for Curve {
                 }
                 Ok(Curve::new(points))
             }
-
-            CurveConstructionMethod::Parametric {
+            ConstructionMethod::Parametric {
                 f,
-                t_start,
-                t_end,
-                steps,
+                params
             } => {
+                let (t_start, t_end, steps) = match params { 
+                    ConstructionParams::D2 { t_start, t_end, steps } => (t_start, t_end, steps),
+                    _ => return Err(CurvesError::ConstructionError("Invalid parameters".to_string()))
+                } ;
                 let step_size = (t_end - t_start) / Decimal::from(steps);
 
                 let points: Result<BTreeSet<Point2D>, CurvesError> = (0..=steps)
@@ -1122,7 +1117,7 @@ impl CurveArithmetic for Curve {
                     .iter()
                     .map(|curve| {
                         curve
-                            .interpolate(x, crate::curves::interpolation::InterpolationType::Cubic)
+                            .interpolate(x, InterpolationType::Cubic)
                             .map(|point| point.y)
                     })
                     .collect();
@@ -1309,7 +1304,7 @@ mod tests_curves {
 #[cfg(test)]
 mod tests_linear_interpolate {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
+    use crate::geometrics::InterpolationType;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1422,8 +1417,8 @@ mod tests_linear_interpolate {
 #[cfg(test)]
 mod tests_bilinear_interpolate {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
     use rust_decimal_macros::dec;
+    use crate::geometrics::InterpolationType;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1553,9 +1548,9 @@ mod tests_bilinear_interpolate {
 #[cfg(test)]
 mod tests_cubic_interpolate {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
     use rust_decimal_macros::dec;
     use tracing::info;
+    use crate::geometrics::InterpolationType;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1657,8 +1652,8 @@ mod tests_cubic_interpolate {
 #[cfg(test)]
 mod tests_spline_interpolate {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
     use rust_decimal_macros::dec;
+    use crate::geometrics::InterpolationType;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1774,8 +1769,8 @@ mod tests_spline_interpolate {
 #[cfg(test)]
 mod tests_curve_arithmetic {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
     use crate::curves::utils::create_linear_curve;
+    use crate::geometrics::InterpolationType;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -2002,10 +1997,11 @@ mod tests_extended {
     use super::*;
     use crate::error::CurvesError::OperationError;
     use crate::error::OperationErrorKind;
+    use crate::geometrics::{ConstructionMethod, ConstructionParams};
 
     #[test]
     fn test_construct_from_data_empty() {
-        let result = Curve::construct(CurveConstructionMethod::FromData {
+        let result = Curve::construct(ConstructionMethod::FromData {
             points: BTreeSet::new(),
         });
         assert!(result.is_err());
@@ -2023,11 +2019,14 @@ mod tests_extended {
     #[test]
     fn test_construct_parametric_valid() {
         let f = |t: Decimal| Ok(Point2D::new(t, t * dec!(2.0)));
-        let result = Curve::construct(CurveConstructionMethod::Parametric {
-            f: Box::new(f),
-            t_start: dec!(0.0),
+         let params = ConstructionParams::D2 {
+            t_start: Decimal::ZERO,
             t_end: dec!(10.0),
-            steps: 10,
+            steps: 10
+        };
+        let result = Curve::construct(ConstructionMethod::Parametric {
+            f: Box::new(f),
+            params,
         });
         assert!(result.is_ok());
     }
@@ -2039,11 +2038,14 @@ mod tests_extended {
                 "Function evaluation failed".to_string(),
             ))
         };
-        let result = Curve::construct(CurveConstructionMethod::Parametric {
-            f: Box::new(f),
-            t_start: dec!(0.0),
+        let params = ConstructionParams::D2 {
+            t_start: Decimal::ZERO,
             t_end: dec!(10.0),
-            steps: 10,
+            steps: 10
+        };
+        let result = Curve::construct(ConstructionMethod::Parametric {
+            f: Box::new(f),
+            params,
         });
         assert!(result.is_err());
         let error = result.unwrap_err();
