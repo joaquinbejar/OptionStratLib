@@ -8,6 +8,7 @@ use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 use std::error::Error;
 
+#[derive(Debug, Clone)]
 pub enum ConstructionParams{
     D2{
         t_start: Decimal,
