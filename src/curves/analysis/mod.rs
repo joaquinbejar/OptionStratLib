@@ -25,6 +25,7 @@
 //! ```rust
 //! use rust_decimal::Decimal;
 //! use optionstratlib::curves::{Curve, Point2D};
+//! use optionstratlib::geometrics::GeometricObject;
 //! use crate::optionstratlib::curves::analysis::CurveMetricsExtractor;
 //! let curve = Curve::from_vector(vec![
 //!            Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11

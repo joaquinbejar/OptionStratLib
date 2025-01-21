@@ -23,6 +23,7 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::curves::{Curve, Point2D};
 //! use optionstratlib::curves::visualization::Plottable;
+//! use optionstratlib::geometrics::GeometricObject;
 //!
 //! let curve = Curve::from_vector(vec![
 //!     Point2D::new(Decimal::ZERO, Decimal::ZERO),

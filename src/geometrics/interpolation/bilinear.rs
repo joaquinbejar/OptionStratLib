@@ -32,15 +32,15 @@ use crate::error::InterpolationError;
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use optionstratlib::curves::Point2D;
+/// use optionstratlib::error::InterpolationError;
 /// use optionstratlib::geometrics::BiLinearInterpolation;
 /// struct GridInterpolator {
 ///     // Implementation-specific fields like the grid or data.
 /// }
 ///
 /// impl BiLinearInterpolation<Point2D, Decimal> for GridInterpolator {
-///     type Error = String; // Replace with `CurvesError` or another concrete error type.
 ///
-///     fn bilinear_interpolate(&self, x: Decimal) -> Result<Point2D, Self::Error> {
+///     fn bilinear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
 ///         Ok(Point2D::new(x, x)) // Placeholder implementation
 ///     }
 /// }
@@ -88,5 +88,5 @@ pub trait BiLinearInterpolation<Point, Input> {
     ///     Err(e) => info!("Interpolation failed: {:?}", e),
     /// }
     /// ```
-    fn bilinear_interpolate(&self, x: Input) -> Result<Point, InterpolationError::Bilinear>;
+    fn bilinear_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }

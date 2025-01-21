@@ -16,6 +16,7 @@
 //! use rust_decimal::Decimal;
 //! use optionstratlib::curves::{Curve, Point2D};
 //! use optionstratlib::curves::visualization::Plottable;
+//! use optionstratlib::geometrics::GeometricObject;
 //!
 //! let curve = Curve::from_vector(vec![
 //!             Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
@@ -552,6 +553,7 @@ mod tests {
     use crate::curves::Point2D;
     use rust_decimal_macros::dec;
     use std::fs;
+    use crate::geometrics::GeometricObject;
 
     fn cleanup_image(filename: &str) {
         if Path::new(filename).exists() {
@@ -560,35 +562,39 @@ mod tests {
     }
 
     fn create_test_curves() -> (Curve, Curve, Curve) {
-        let points1 = vec![
-            Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(1.0)),
-            Point2D::new(dec!(2.0), dec!(4.0)),
-        ];
-        let points2 = vec![
-            Point2D::new(dec!(0.0), dec!(1.0)),
-            Point2D::new(dec!(1.0), dec!(2.0)),
-            Point2D::new(dec!(2.0), dec!(5.0)),
-        ];
-        let points3 = vec![
-            Point2D::new(dec!(0.0), dec!(2.0)),
-            Point2D::new(dec!(1.0), dec!(3.0)),
-            Point2D::new(dec!(2.0), dec!(6.0)),
-        ];
+        // Create points first so they live long enough
+        let p1_1 = Point2D::new(dec!(0.0), dec!(0.0));
+        let p1_2 = Point2D::new(dec!(1.0), dec!(1.0));
+        let p1_3 = Point2D::new(dec!(2.0), dec!(4.0));
+
+        let p2_1 = Point2D::new(dec!(0.0), dec!(1.0));
+        let p2_2 = Point2D::new(dec!(1.0), dec!(2.0));
+        let p2_3 = Point2D::new(dec!(2.0), dec!(5.0));
+
+        let p3_1 = Point2D::new(dec!(0.0), dec!(2.0));
+        let p3_2 = Point2D::new(dec!(1.0), dec!(3.0));
+        let p3_3 = Point2D::new(dec!(2.0), dec!(6.0));
+
+        let points1 = vec![&p1_1, &p1_2, &p1_3];
+        let points2 = vec![&p2_1, &p2_2, &p2_3];
+        let points3 = vec![&p3_1, &p3_2, &p3_3];
 
         (
             Curve::from_vector(points1),
             Curve::from_vector(points2),
-            Curve::from_vector(points3),
+            Curve::from_vector(points3)
         )
     }
 
     #[test]
     fn test_single_curve_plot_bis() {
+        let p1 = Point2D::new(dec!(0.0), dec!(0.0));
+        let p2 = Point2D::new(dec!(1.0), dec!(1.0));
+        let p3 = Point2D::new(dec!(2.0), dec!(4.0));
         let points = vec![
-            Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(1.0)),
-            Point2D::new(dec!(2.0), dec!(4.0)),
+            &p1,
+            &p2,
+            &p3,
         ];
         let curve = Curve::from_vector(points);
 
@@ -606,16 +612,17 @@ mod tests {
 
     #[test]
     fn test_multiple_curves_plot() {
-        let points1 = vec![
-            Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(1.0)),
-            Point2D::new(dec!(2.0), dec!(4.0)),
-        ];
-        let points2 = vec![
-            Point2D::new(dec!(0.0), dec!(1.0)),
-            Point2D::new(dec!(1.0), dec!(2.0)),
-            Point2D::new(dec!(2.0), dec!(5.0)),
-        ];
+        let p1_1 = Point2D::new(dec!(0.0), dec!(0.0));
+        let p1_2 = Point2D::new(dec!(1.0), dec!(1.0));
+        let p1_3 = Point2D::new(dec!(2.0), dec!(4.0));
+
+        let p2_1 = Point2D::new(dec!(0.0), dec!(1.0));
+        let p2_2 = Point2D::new(dec!(1.0), dec!(2.0));
+        let p2_3 = Point2D::new(dec!(2.0), dec!(5.0));
+
+        let points1 = vec![&p1_1, &p1_2, &p1_3];
+        let points2 = vec![&p2_1, &p2_2, &p2_3];
+        
         let curve1 = Curve::from_vector(points1);
         let curve2 = Curve::from_vector(points2);
 
@@ -634,11 +641,11 @@ mod tests {
 
     #[test]
     fn test_single_curve_plot() {
-        let points = vec![
-            Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(1.0)),
-            Point2D::new(dec!(2.0), dec!(4.0)),
-        ];
+        let p1_1 = Point2D::new(dec!(0.0), dec!(0.0));
+        let p1_2 = Point2D::new(dec!(1.0), dec!(1.0));
+        let p1_3 = Point2D::new(dec!(2.0), dec!(4.0));
+
+        let points = vec![&p1_1, &p1_2, &p1_3];
         let curve = Curve::from_vector(points);
 
         // Plot single curve

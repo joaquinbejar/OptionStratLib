@@ -1,6 +1,8 @@
-use crate::curves::Point2D;
-use crate::error::{CurvesError, InterpolationError};
-use crate::geometrics::{BiLinearInterpolation, CubicInterpolation, GeometricObject, InterpolationType, LinearInterpolation, SplineInterpolation};
+use crate::error::InterpolationError;
+use crate::geometrics::{
+    BiLinearInterpolation, CubicInterpolation, GeometricObject, InterpolationType,
+    LinearInterpolation, SplineInterpolation,
+};
 use rust_decimal::Decimal;
 
 /// A trait for performing various types of interpolation on a set of 2D points.
@@ -45,35 +47,16 @@ pub trait Interpolate<Point, Input>:
     + BiLinearInterpolation<Point, Input>
     + CubicInterpolation<Point, Input>
     + SplineInterpolation<Point, Input>
-    + GeometricObject<Point>
+    + GeometricObject<Point,Input>
+where
+    Input: HasX,
+    Point: HasX + Clone,
 {
-    type Error;
-    
-    /// Interpolates a value at the specified x-coordinate using the given interpolation method.
-    ///
-    /// # Parameters
-    /// - `x`: The target x-coordinate where interpolation is to be performed.
-    /// - `interpolation_type`: Specifies the interpolation method to be used. This is provided
-    ///   as an [`InterpolationType`] enum, which defines supported methods such as linear,
-    ///   cubic, spline, and bilinear interpolation.
-    ///
-    /// # Returns
-    /// * On Success: Returns a [`Point2D`] containing the interpolated (x, y) values.
-    /// * On Error: Returns a `CurvesError` providing context on why the interpolation failed.
-    ///    Possible reasons include:
-    ///    - Insufficient points
-    ///    - The target `x` is outside the range of points
-    ///    - No bracketing points could be found
-    ///
-    /// # Example Behavior
-    /// The method chooses the appropriate interpolation algorithm based on the provided
-    /// `interpolation_type`. It relies on the sub-traits (`LinearInterpolation`, etc.) for
-    /// the actual interpolation calculation.
     fn interpolate(
         &self,
-        x: Decimal,
+        x: Input,
         interpolation_type: InterpolationType,
-    ) -> Result<Point, Self::Error> {
+    ) -> Result<Point, InterpolationError> {
         match interpolation_type {
             InterpolationType::Linear => self.linear_interpolate(x),
             InterpolationType::Cubic => self.cubic_interpolate(x),
@@ -82,30 +65,12 @@ pub trait Interpolate<Point, Input>:
         }
     }
 
-    /// Finds the indices of two points that bracket the target x-coordinate.
-    ///
-    /// # Parameters
-    /// - `x`: The target x-coordinate for which the bracketing points are sought.
-    ///
-    /// # Returns
-    /// * On Success: Returns a tuple `(usize, usize)` representing the indices of the
-    ///   bracketing points in the dataset.
-    /// * On Error: Returns a `CurvesError` explaining the issue, such as:
-    ///    - The dataset contains fewer than two points.
-    ///    - The target `x` is outside the range of the dataset.
-    ///    - No bracketing points could be identified.
-    ///
-    /// # Behavior
-    /// This method assumes the points are sorted by their x-coordinate. It performs
-    /// a linear search to locate the two consecutive points that enclose the target `x`.
-    ///
-    /// # Edge Cases
-    /// - If fewer than two points are present, an error is returned.
-    /// - If `x` is outside the domain of the dataset's x-coordinates (less than the minimum
-    ///   x-coordinate or greater than the maximum), an error is returned.
-    fn find_bracket_points(&self, x: Input) -> Result<(usize, usize), Self::Error> {
-        let points = self.get_points();
-
+    fn find_bracket_points(
+        &self,
+        x: Input,
+    ) -> Result<(usize, usize), InterpolationError> {
+        let points: Vec<&Point> = self.get_points().into_iter().collect() ;
+        
         // Edge cases
         if points.len() < 2 {
             return Err(InterpolationError::StdError(
@@ -113,7 +78,7 @@ pub trait Interpolate<Point, Input>:
             ));
         }
 
-        if x < points[0].x || x > points[points.len() - 1].x {
+        if x.get_x() < points[0].get_x() || x.get_x() > points[points.len() - 1].get_x() {
             return Err(InterpolationError::StdError(
                 "x is outside the range of points".to_string(),
             ));
@@ -121,7 +86,7 @@ pub trait Interpolate<Point, Input>:
 
         // Find points that bracket x
         for i in 0..points.len() - 1 {
-            if points[i].x <= x && x <= points[i + 1].x {
+            if points[i].get_x() <= x.get_x() && x.get_x() <= points[i + 1].get_x() {
                 return Ok((i, i + 1));
             }
         }
@@ -132,20 +97,24 @@ pub trait Interpolate<Point, Input>:
     }
 }
 
+pub trait HasX {
+    fn get_x(&self) -> Decimal;
+}
+
 #[cfg(test)]
 mod tests_interpolate {
     use super::*;
+    use crate::error::InterpolationError;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-    use crate::error::InterpolationError;
+    use crate::curves::Point2D;
 
     struct MockInterpolator {
         points: BTreeSet<Point2D>,
     }
 
     impl LinearInterpolation<Point2D, Decimal> for MockInterpolator {
-
-        fn linear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError::Linear> {
+        fn linear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
             // Validate points first
             if self.points.len() < 2 {
                 return Err(InterpolationError::Linear(
@@ -157,8 +126,10 @@ mod tests_interpolate {
     }
 
     impl BiLinearInterpolation<Point2D, Decimal> for MockInterpolator {
-
-        fn bilinear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError::Bilinear> {
+        fn bilinear_interpolate(
+            &self,
+            x: Decimal,
+        ) -> Result<Point2D, InterpolationError> {
             if self.points.len() < 4 {
                 return Err(InterpolationError::Bilinear(
                     "Need at least four points for bilinear interpolation".to_string(),
@@ -169,9 +140,7 @@ mod tests_interpolate {
     }
 
     impl CubicInterpolation<Point2D, Decimal> for MockInterpolator {
-
-
-        fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError::Cubic> {
+        fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
             if self.points.len() < 4 {
                 return Err(InterpolationError::Cubic(
                     "Need at least four points for cubic interpolation".to_string(),
@@ -182,8 +151,7 @@ mod tests_interpolate {
     }
 
     impl SplineInterpolation<Point2D, Decimal> for MockInterpolator {
-        
-        fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError::Spline> {
+        fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
             if self.points.len() < 3 {
                 return Err(InterpolationError::Spline(
                     "Need at least three points for spline interpolation".to_string(),
@@ -193,21 +161,22 @@ mod tests_interpolate {
         }
     }
 
-    impl GeometricObject<Point2D> for MockInterpolator {
+    impl GeometricObject<Point2D,Decimal> for MockInterpolator {
         type Error = ();
 
-        fn get_points(&self) -> &BTreeSet<Point2D> {
-            &self.points
+        fn get_points(&self) -> BTreeSet<&Point2D> {
+            self.points.iter().collect()
         }
 
-        fn from_vector(points: Vec<Point2D>) -> Self
+        fn from_vector<T>(_points: Vec<T>) -> Self
         where
             Self: Sized,
+            T: Into<Point2D> + Clone,
         {
             unimplemented!()
         }
 
-        fn construct<T>(method: T) -> Result<Self, Self::Error>
+        fn construct<T>(_method: T) -> Result<Self, Self::Error>
         where
             Self: Sized,
         {
@@ -215,9 +184,7 @@ mod tests_interpolate {
         }
     }
 
-    impl Interpolate<Point2D, Decimal> for MockInterpolator { type Error = CurvesError; }
-
-
+    impl Interpolate<Point2D, Decimal> for MockInterpolator {}
 
     fn create_mock_interpolator(points: BTreeSet<Point2D>) -> MockInterpolator {
         MockInterpolator { points }

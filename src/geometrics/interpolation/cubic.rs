@@ -86,7 +86,7 @@ use crate::error::InterpolationError;
 ///
 /// impl CubicInterpolation<Point2D, Decimal> for MyCurve {
 ///
-///     fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError::Cubic> {
+///     fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
 ///         // Validate the input and calculate the interpolated point.
 ///         // Example logic here.
 ///         Ok(Point2D::new(x, x)) // Placeholder implementation.
@@ -105,5 +105,5 @@ pub trait CubicInterpolation<Point, Input> {
     /// # Returns
     /// - `Ok(Point)`: Represents the interpolated point on the curve.
     /// - `Err(Self::Error)`: Describes why the interpolation failed (e.g., invalid input).
-    fn cubic_interpolate(&self, x: Input) -> Result<Point, InterpolationError::Cubic>;
+    fn cubic_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }

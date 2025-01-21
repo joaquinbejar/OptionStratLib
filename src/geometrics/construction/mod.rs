@@ -36,7 +36,7 @@
 //! };
 //! // Generate a parametric curve
 //! let parametric_curve = Curve::construct(ConstructionMethod::Parametric {
-//!     f: Box::new(|t| Ok(Point2D::new(t, t.sin()))),
+//!     f: Box::new(|t: Decimal| Ok(Point2D::new(t, t.sin()))),
 //!     params,
 //! });
 //! ```

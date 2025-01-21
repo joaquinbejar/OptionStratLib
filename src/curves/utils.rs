@@ -6,6 +6,7 @@
 
 use crate::curves::{Curve, Point2D};
 use rust_decimal::Decimal;
+use crate::geometrics::GeometricObject;
 
 /// Creates a linear curve defined by a starting point, an ending point, and a slope.
 ///
@@ -99,7 +100,7 @@ pub fn create_linear_curve(start: Decimal, end: Decimal, slope: Decimal) -> Curv
         })
         .collect();
 
-    Curve::from_vector(points)
+    Curve::from_vector(points.iter().collect())
 }
 
 /// Creates a constant curve with equidistant points along the x-axis and the same constant value for the y-axis.
@@ -144,12 +145,14 @@ pub fn create_constant_curve(start: Decimal, end: Decimal, value: Decimal) -> Cu
     let steps = 10;
     let step_size = (end - start) / Decimal::from(steps);
 
-    let points: Vec<Point2D> = (0..=steps)
+    let point_values: Vec<Point2D> = (0..=steps)
         .map(|i| {
             let x = start + step_size * Decimal::from(i);
             Point2D::new(x, value)
         })
         .collect();
+
+    let points: Vec<&Point2D> = point_values.iter().collect();
 
     Curve::from_vector(points)
 }

@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 use crate::error::common::OperationErrorKind;
-use crate::error::PositionError;
+use crate::error::{InterpolationError, PositionError};
 use std::error::Error;
 use std::fmt;
 
@@ -199,6 +199,14 @@ impl From<PositionError> for CurvesError {
             operation: "Position".to_string(),
             reason: err.to_string(),
         })
+    }
+}
+
+impl From<InterpolationError> for CurvesError {
+    fn from(err: InterpolationError) -> Self {
+        CurvesError::StdError {
+            reason: err.to_string(),
+        }
     }
 }
 

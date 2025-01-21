@@ -52,14 +52,14 @@ impl Surface {
 impl GeometricObject<Point3D> for Surface {
     type Error = SurfaceError;
 
-    fn get_points(&self) -> &BTreeSet<Point3D> {
+    fn get_points(&self) -> BTreeSet<&Point3D> {
         self.points.iter().collect()
     }
 
-    fn from_vector(points: Vec<Point3D>) -> Self {
+    fn from_vector(points: Vec<&Point3D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         let y_range = Self::calculate_range(points.iter().map(|p| p.y));
-        let points = points.into_iter().collect();
+        let points = points.into_iter().cloned().collect();
         Surface { points, x_range , y_range }
     }
 
@@ -112,38 +112,33 @@ impl GeometricObject<Point3D> for Surface {
 
 impl Index<usize> for Surface {
     type Output = Point3D;
-    
+
     fn index(&self, index: usize) -> &Self::Output {
         self.points.iter().nth(index).expect("Index out of bounds")
     }
 }
 
-impl Interpolate<Point3D, Point2D> for Surface { type Error = SurfaceError; }
+impl Interpolate<Point3D, Point2D> for Surface {  }
 
 impl LinearInterpolation<Point3D, Point2D> for Surface {
-    type Error = SurfaceError;
-
     fn linear_interpolate(&self, xy: Point2D) -> Result<Point3D, SurfaceError> {
         todo!()
     }
 }
 
 impl BiLinearInterpolation<Point3D, Point2D> for Surface {
-    type Error = SurfaceError;
     fn bilinear_interpolate(&self, x: Point2D) -> Result<Point3D, SurfaceError> {
         todo!()
     }
 }
 
 impl CubicInterpolation<Point3D, Point2D> for Surface {
-    type Error = SurfaceError;
     fn cubic_interpolate(&self, x: Point2D) -> Result<Point3D, SurfaceError> {
         todo!()
     }
 }
 
 impl SplineInterpolation<Point3D, Point2D> for Surface {
-    type Error = SurfaceError;
     fn spline_interpolate(&self, x: Point2D) -> Result<Point3D, SurfaceError> {
         todo!()
     }

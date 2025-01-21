@@ -10,7 +10,9 @@
 ******************************************************************************/
 
 use rust_decimal::Decimal;
-use crate::surfaces::types::{Point3D, Surface, SurfaceType};
+use crate::geometrics::GeometricObject;
+use crate::surfaces::{Point3D, Surface};
+
 
 /// Creates a planar surface defined by starting points and a normal vector.
 ///
@@ -65,7 +67,7 @@ pub fn create_planar_surface(
         }
     }
 
-    Surface::new(points, SurfaceType::Other("Planar".to_string()))
+    Surface::from_vector(points.iter().collect())
 }
 
 /// Creates a constant height surface where z is constant for all x,y points.
@@ -109,7 +111,7 @@ pub fn create_constant_surface(
         }
     }
 
-    Surface::new(points, SurfaceType::Other("Constant".to_string()))
+    Surface::from_vector(points.iter().collect())
 }
 
 /// Creates a paraboloid surface.
@@ -159,7 +161,7 @@ pub fn create_paraboloid_surface(
         }
     }
 
-    Surface::new(points, SurfaceType::Other("Paraboloid".to_string()))
+    Surface::new(points.into_iter().collect())
 }
 
 #[cfg(test)]

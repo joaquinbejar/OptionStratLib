@@ -60,7 +60,7 @@ use crate::error::InterpolationError;
 ///
 /// impl SplineInterpolation<Point2D, Decimal> for MySplineInterpolator {
 ///
-///     fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError::Spline> {
+///     fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
 ///         Ok(Point2D::new(x, x)) // Placeholder implementation
 ///     }
 /// }
@@ -114,6 +114,6 @@ pub trait SplineInterpolation<Point, Input> {
     ///     Err(e) => info!("Interpolation failed: {:?}", e),
     /// }
     /// ```
-    fn spline_interpolate(&self, x: Input) -> Result<Point, InterpolationError::Spline>;
+    fn spline_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }
 

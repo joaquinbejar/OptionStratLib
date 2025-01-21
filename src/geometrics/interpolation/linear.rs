@@ -83,5 +83,5 @@ pub trait LinearInterpolation<Point, Input> {
     /// # Returns
     /// - `Ok(Point)`: The calculated interpolated value of type `Point`.
     /// - `Err(Self::Error)`: An error indicating the reason why interpolation failed.
-    fn linear_interpolate(&self, x: Input) -> Result<Point, InterpolationError::Linear>;
+    fn linear_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }

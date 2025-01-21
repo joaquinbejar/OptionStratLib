@@ -5,11 +5,11 @@
 ******************************************************************************/
 
 use crate::curves::analysis::CurveAnalysisResult;
-use crate::curves::interpolation::InterpolationType;
 use crate::curves::types::CurveType;
-use crate::curves::{Curve, MergeOperation, Point2D};
+use crate::curves::{Curve, Point2D};
 use crate::error::CurvesError;
 use rust_decimal::Decimal;
+use crate::geometrics::{InterpolationType, MergeOperation};
 
 /// The `CurveOperations` trait defines a comprehensive set of operations for mathematical curves.
 ///

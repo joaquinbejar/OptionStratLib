@@ -8,7 +8,6 @@ use crate::chains::utils::{
     OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
 };
 use crate::chains::{DeltasInStrike, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
-use crate::curves::interpolation::LinearInterpolation;
 use crate::curves::{Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::greeks::delta;
@@ -29,6 +28,7 @@ use std::fmt;
 use tracing::debug;
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
+use crate::geometrics::LinearInterpolation;
 
 /// Struct representing a row in an option chain.
 ///

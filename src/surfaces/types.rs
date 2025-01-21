@@ -8,9 +8,11 @@ use rust_decimal::Decimal;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use rayon::iter::IntoParallelIterator;
-use crate::error::{CurvesError, SurfaceError};
+use crate::curves::Point2D;
+use crate::error::SurfaceError;
+use crate::geometrics::{ConstructionMethod, HasX};
 use crate::model::positive::is_positive;
-use crate::surfaces::construction::SurfaceConstructionMethod;
+
 
 /// Represents a point in three-dimensional space with `x`, `y` and `z` coordinates.
 ///
@@ -131,6 +133,11 @@ impl Point3D {
     }
 }
 
+impl HasX for Point3D {
+    fn get_x(&self) -> Decimal {
+        self.x
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum SurfaceType {
@@ -147,7 +154,6 @@ pub enum SurfaceType {
     /// Custom surface type with description
     Other(String),
 }
-
 
 #[derive(Debug, Clone)]
 pub enum SurfaceInterpolationType {
@@ -178,27 +184,10 @@ pub enum Axis {
     Z,
 }
 
-
-/// Configuration for constructing and analyzing surfaces
-#[derive(Debug, Clone)]
-pub struct SurfaceConfig {
-    /// Type of surface
-    pub surface_type: SurfaceType,
-    /// Interpolation method
-    pub interpolation: SurfaceInterpolationType,
-    /// Construction method
-    pub construction_method: SurfaceConstructionMethod,
-    /// Additional parameters
-    pub extra_params: HashMap<String, Decimal>,
-}
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use rust_decimal_macros::dec;
-    use crate::geometrics::ConstructionMethod;
     use crate::pos;
     use crate::surfaces::Surface;
 

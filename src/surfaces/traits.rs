@@ -5,10 +5,11 @@
 ******************************************************************************/
 
 use crate::surfaces::analysis::SurfaceAnalysisResult;
-use crate::surfaces::types::{Surface, SurfaceType, Point3D, SurfaceInterpolationType};
+use crate::surfaces::types::{SurfaceType, Point3D, SurfaceInterpolationType};
 use crate::error::SurfaceError;
 use rust_decimal::Decimal;
 use crate::curves::Curve;
+use crate::surfaces::Surface;
 
 /// The `SurfaceOperations` trait defines a comprehensive set of operations for 3D mathematical surfaces.
 ///

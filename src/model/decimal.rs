@@ -9,6 +9,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
+use crate::geometrics::HasX;
 
 pub const ONE_DAY: Decimal = dec!(0.00396825397);
 
@@ -157,6 +158,12 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
         to_type: "Decimal".to_string(),
         reason: "Failed to convert f64 to Decimal".to_string(),
     })
+}
+
+impl HasX for Decimal {
+    fn get_x(&self) -> Decimal {
+        *self
+    }
 }
 
 #[macro_export]
