@@ -180,11 +180,11 @@ impl From<Box<dyn Error>> for SurfaceError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::curves::CurvesResult;
     use crate::error::position::PositionValidationErrorKind;
+    use crate::error::CurvesError;
     use std::error::Error;
     use std::fmt;
-    use crate::error::curves::CurvesResult;
-    use crate::error::CurvesError;
 
     // Custom error type for testing From<Box<dyn Error>>
     #[derive(Debug)]
@@ -330,7 +330,7 @@ mod tests {
         match result {
             Err(e) => {
                 assert_eq!(e.to_string(), "Analysis error: Test error");
-            },
+            }
             Ok(_) => panic!("Expected an error result"),
         }
     }

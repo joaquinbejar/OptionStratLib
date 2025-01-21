@@ -435,10 +435,10 @@ impl LinearInterpolation<Point2D, Decimal> for Curve {
 /// - [`Interpolate`]: Ensures compatibility of the curve with multiple interpolation methods.
 ///
 /// # See Also
-/// 
+///
 /// - [`Curve`]: The overarching structure that represents the curve.
 /// - [`Point2D`]: The data type used to represent individual points on the curve.
-/// - [`find_bracket_points`](crate::geometrics::interpolation::traits::Interpolate::find_bracket_points):
+/// - [`find_bracket_points`](crate::geometrics::Interpolate::find_bracket_points):
 ///   A helper method used to locate the two points that bracket the given x-coordinate.
 impl BiLinearInterpolation<Point2D, Decimal> for Curve {
     /// Performs bilinear interpolation to find the value of the curve at a given `x` coordinate.
@@ -576,7 +576,7 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
 /// # See Also
 /// - [`CubicInterpolation`]: The trait defining this method.
 /// - [`Point2D`]: Represents the points used for interpolation.
-/// - [`find_bracket_points`](crate::geometrics::interpolation::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
+/// - [`find_bracket_points`](crate::geometrics::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
 impl CubicInterpolation<Point2D, Decimal> for Curve {
     /// Performs cubic interpolation on a set of points to estimate the y-coordinate
     /// for a given x value using a Catmull-Rom spline.

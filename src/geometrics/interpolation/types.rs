@@ -40,10 +40,10 @@
 /// in a context where multiple types of interpolation are supported.
 ///
 /// # See Also
-/// - [`crate::geometrics::interpolation::traits::LinearInterpolation`]: Implements linear interpolation.
-/// - [`crate::geometrics::interpolation::traits::CubicInterpolation`]: Implements cubic interpolation.
-/// - [`crate::geometrics::interpolation::traits::SplineInterpolation`]: Implements spline interpolation.
-/// - [`crate::geometrics::interpolation::traits::BiLinearInterpolation`]: Implements bilinear interpolation.
+/// - [`crate::geometrics::LinearInterpolation`]: Implements linear interpolation.
+/// - [`crate::geometrics::CubicInterpolation`]: Implements cubic interpolation.
+/// - [`crate::geometrics::SplineInterpolation`]: Implements spline interpolation.
+/// - [`crate::geometrics::BiLinearInterpolation`]: Implements bilinear interpolation.
 ///
 /// This enum is part of a modular design, with each interpolation type defined in its own
 /// module for clarity and separation of concerns.

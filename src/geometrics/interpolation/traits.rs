@@ -17,7 +17,6 @@ use rust_decimal::Decimal;
 /// find bracketing points for a given x-coordinate (`find_bracket_points`).
 ///
 /// # Associated Methods
-/// - [`get_points`](Self::get_points): Returns the collection of points for interpolation.
 /// - [`interpolate`](Self::interpolate): Interpolates a value for a given x-coordinate using
 ///   a specified interpolation method.
 /// - [`find_bracket_points`](Self::find_bracket_points): Identifies the pair of points

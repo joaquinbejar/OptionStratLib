@@ -51,13 +51,13 @@ use crate::error::InterpolationError;
 /// - The `bilinear_interpolate` method calculates the interpolated `Point2D` for a given `x` value.
 ///
 /// # Related Types
-/// - [`Point2D`](crate::curves::types::Point2D): A struct representing a 2D point with `x` and `y` coordinates.
-/// - [`CurvesError`](crate::errors::CurvesError): A recommended error type for detailed error categorization.
+/// - [`Point2D`](crate::curves::Point2D): A struct representing a 2D point with `x` and `y` coordinates.
+/// - [`CurvesError`](crate::error::CurvesError): A recommended error type for detailed error categorization.
 ///
 /// # See Also
-/// - [`crate::geometrics::interpolation::InterpolationType`](crate::curves::interpolation::traits::InterpolationType):
+/// - [`crate::geometrics::interpolation::InterpolationType`](crate::geometrics::InterpolationType):
 ///   A module defining different types of interpolation methods.
-/// - [`crate::geometrics::interpolation::LinearInterpolation`](crate::curves::interpolation::traits::LinearInterpolation):
+/// - [`crate::geometrics::interpolation::LinearInterpolation`](crate::geometrics::LinearInterpolation):
 ///   A simpler interpolation method for one-dimensional data.
 pub trait BiLinearInterpolation<Point, Input> {
     /// Performs bilinear interpolation to compute a value for the given input.
