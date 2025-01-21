@@ -21,7 +21,7 @@ use rust_decimal_macros::dec;
 use std::collections::BTreeSet;
 use std::ops::Index;
 use crate::curves::common::Interpolate;
-use crate::geometrics::{BiLinearInterpolation, GeometricObject, Interpolate, LinearInterpolation};
+use crate::geometrics::{BiLinearInterpolation, CubicInterpolation, GeometricObject, Interpolate, LinearInterpolation, SplineInterpolation};
 use crate::surfaces::{Point3D, Surface};
 
 /// Represents a mathematical curve as a collection of 2D points.
@@ -569,7 +569,8 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
 /// - [`CubicInterpolation`]: The trait defining this method.
 /// - [`Point2D`]: Represents the points used for interpolation.
 /// - [`find_bracket_points`](crate::curves::interpolation::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
-impl CubicInterpolation for Curve {
+impl CubicInterpolation<Point2D, Decimal> for Curve {
+    type Error = CurvesError;
     /// Performs cubic interpolation on a set of points to estimate the y-coordinate
     /// for a given x value using a Catmull-Rom spline.
     ///
@@ -742,7 +743,8 @@ impl CubicInterpolation for Curve {
 /// - [`Point2D`]: Represents a point in 2D space.
 /// - [`Curve`]: Represents a mathematical curve made up of points for interpolation.
 /// - [`CurvesError`]: Enumerates possible errors during curve operations.
-impl SplineInterpolation for Curve {
+impl SplineInterpolation<Point2D, Decimal> for Curve {
+    type Error = CurvesError;
     /// Performs cubic spline interpolation for a given x-coordinate and returns the interpolated
     /// `Point2D` value. This function computes the second derivatives of the curve points, solves
     /// a tridiagonal system to derive the interpolation parameters, and evaluates the spline

@@ -8,9 +8,8 @@ use std::ops::Index;
 use rayon::iter::IntoParallelIterator;
 use rust_decimal::Decimal;
 use crate::curves::{Curve, Point2D};
-use crate::curves::interpolation::{BiLinearInterpolation, CubicInterpolation, LinearInterpolation, SplineInterpolation};
 use crate::error::{CurvesError, SurfaceError};
-use crate::geometrics::{GeometricObject, Interpolate};
+use crate::geometrics::{BiLinearInterpolation, CubicInterpolation, GeometricObject, Interpolate, LinearInterpolation, SplineInterpolation};
 use crate::surfaces::construction::SurfaceConstructionMethod;
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
@@ -119,19 +118,22 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
     }
 }
 
-impl BiLinearInterpolation for Surface {
+impl BiLinearInterpolation<Point3D, Point2D> for Surface {
+    type Error = SurfaceError;
     fn bilinear_interpolate(&self, x: Decimal) -> Result<Point3D, SurfaceError> {
         todo!()
     }
 }
 
-impl CubicInterpolation for Surface {
+impl CubicInterpolation<Point3D, Point2D> for Surface {
+    type Error = SurfaceError;
     fn cubic_interpolate(&self, x: Decimal) -> Result<Point3D, SurfaceError> {
         todo!()
     }
 }
 
-impl SplineInterpolation for Surface {
+impl SplineInterpolation<Point3D, Point2D> for Surface {
+    type Error = SurfaceError;
     fn spline_interpolate(&self, x: Decimal) -> Result<Point3D, SurfaceError> {
         todo!()
     }
