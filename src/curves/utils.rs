@@ -5,8 +5,8 @@
 ******************************************************************************/
 
 use crate::curves::{Curve, Point2D};
-use rust_decimal::Decimal;
 use crate::geometrics::GeometricObject;
+use rust_decimal::Decimal;
 
 /// Creates a linear curve defined by a starting point, an ending point, and a slope.
 ///

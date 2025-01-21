@@ -137,19 +137,19 @@ pub mod position;
 pub mod probability;
 pub mod strategies;
 
-mod volatility;
-mod surfaces;
 mod interpolation;
+mod surfaces;
+mod volatility;
 
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
 pub use curves::CurvesError;
 pub use decimal::{DecimalError, DecimalResult};
 pub use greeks::GreeksError;
+pub use interpolation::InterpolationError;
 pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
-pub use volatility::ImpliedVolatilityError;
 pub use surfaces::SurfaceError;
-pub use interpolation::InterpolationError;
+pub use volatility::ImpliedVolatilityError;

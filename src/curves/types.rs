@@ -4,11 +4,11 @@
    Date: 26/8/24
 ******************************************************************************/
 use crate::error::curves::CurvesError;
+use crate::geometrics::HasX;
 use crate::model::positive::is_positive;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use std::cmp::Ordering;
-use crate::geometrics::HasX;
 
 /// Represents a point in two-dimensional space with `x` and `y` coordinates.
 ///
@@ -182,7 +182,7 @@ impl Point2D {
 
 impl From<&Point2D> for Point2D {
     fn from(point: &Point2D) -> Self {
-        point.clone()
+        *point
     }
 }
 

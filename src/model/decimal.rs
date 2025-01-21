@@ -4,12 +4,12 @@
    Date: 25/12/24
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
+use crate::geometrics::HasX;
 use crate::Positive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
-use crate::geometrics::HasX;
 
 pub const ONE_DAY: Decimal = dec!(0.00396825397);
 

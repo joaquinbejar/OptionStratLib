@@ -6,16 +6,19 @@
 use crate::curves::analysis::{
     BasicMetrics, CurveMetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
 };
+use crate::curves::Point2D;
 use crate::error::{CurvesError, InterpolationError};
-use crate::geometrics::{BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, CurveArithmetic, GeometricObject, Interpolate, InterpolationType, Len, LinearInterpolation, MergeOperation, SplineInterpolation};
+use crate::geometrics::{
+    BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation,
+    CurveArithmetic, GeometricObject, Interpolate, InterpolationType, Len, LinearInterpolation,
+    MergeOperation, SplineInterpolation,
+};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::BTreeSet;
 use std::ops::Index;
-use crate::curves::Point2D;
-
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -118,7 +121,7 @@ impl Curve {
     }
 }
 
-impl Len for Curve{
+impl Len for Curve {
     fn len(&self) -> usize {
         self.points.len()
     }
@@ -133,17 +136,14 @@ impl GeometricObject<Point2D, Decimal> for Curve {
 
     fn from_vector<T>(points: Vec<T>) -> Self
     where
-        T: Into<Point2D> + Clone
+        T: Into<Point2D> + Clone,
     {
-        let points: BTreeSet<Point2D> = points
-            .into_iter()
-            .map(|p| p.into())
-            .collect();
+        let points: BTreeSet<Point2D> = points.into_iter().map(|p| p.into()).collect();
 
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         Curve { points, x_range }
     }
-    
+
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
         Self: Sized,
@@ -435,13 +435,12 @@ impl LinearInterpolation<Point2D, Decimal> for Curve {
 /// - [`Interpolate`]: Ensures compatibility of the curve with multiple interpolation methods.
 ///
 /// # See Also
-///
+/// 
 /// - [`Curve`]: The overarching structure that represents the curve.
 /// - [`Point2D`]: The data type used to represent individual points on the curve.
-/// - [`find_bracket_points`](crate::curves::interpolation::Interpolate::find_bracket_points):
+/// - [`find_bracket_points`](crate::geometrics::interpolation::traits::Interpolate::find_bracket_points):
 ///   A helper method used to locate the two points that bracket the given x-coordinate.
 impl BiLinearInterpolation<Point2D, Decimal> for Curve {
-
     /// Performs bilinear interpolation to find the value of the curve at a given `x` coordinate.
     ///
     /// # Parameters
@@ -498,10 +497,10 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
         let (i, _j) = self.find_bracket_points(x)?;
 
         // Get four points forming a grid by using Index implementation on self
-        let p11 = &self[i];        // Bottom left
-        let p12 = &self[i + 1];    // Bottom right
-        let p21 = &self[i + 2];    // Top left
-        let p22 = &self[i + 3];    // Top right
+        let p11 = &self[i]; // Bottom left
+        let p12 = &self[i + 1]; // Bottom right
+        let p21 = &self[i + 2]; // Top left
+        let p22 = &self[i + 3]; // Top right
 
         // Normalize x to [0,1] interval
         let dx = (x - p11.x) / (p12.x - p11.x);
@@ -577,9 +576,8 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
 /// # See Also
 /// - [`CubicInterpolation`]: The trait defining this method.
 /// - [`Point2D`]: Represents the points used for interpolation.
-/// - [`find_bracket_points`](crate::curves::interpolation::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
+/// - [`find_bracket_points`](crate::geometrics::interpolation::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
 impl CubicInterpolation<Point2D, Decimal> for Curve {
-
     /// Performs cubic interpolation on a set of points to estimate the y-coordinate
     /// for a given x value using a Catmull-Rom spline.
     ///
@@ -754,7 +752,6 @@ impl CubicInterpolation<Point2D, Decimal> for Curve {
 /// - [`Curve`]: Represents a mathematical curve made up of points for interpolation.
 /// - [`CurvesError`]: Enumerates possible errors during curve operations.
 impl SplineInterpolation<Point2D, Decimal> for Curve {
-
     /// Performs cubic spline interpolation for a given x-coordinate and returns the interpolated
     /// `Point2D` value. This function computes the second derivatives of the curve points, solves
     /// a tridiagonal system to derive the interpolation parameters, and evaluates the spline
@@ -890,8 +887,7 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
             b[i] = dec!(2) * (hi + hi1);
             c[i] = hi1;
 
-            r[i] = dec!(6)
-                * ((self[i + 1].y - self[i].y) / hi1 - (self[i].y - self[i - 1].y) / hi);
+            r[i] = dec!(6) * ((self[i + 1].y - self[i].y) / hi1 - (self[i].y - self[i - 1].y) / hi);
         }
 
         // Add boundary conditions (natural spline)
@@ -922,9 +918,7 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
         }
 
         let segment = segment.ok_or_else(|| {
-            InterpolationError::Spline(
-                "Could not find valid segment for interpolation".to_string(),
-            )
+            InterpolationError::Spline("Could not find valid segment for interpolation".to_string())
         })?;
 
         // Calculate interpolated value
@@ -2011,11 +2005,11 @@ mod tests_curve_arithmetic {
 
 #[cfg(test)]
 mod tests_extended {
-    use std::error::Error;
     use super::*;
     use crate::error::CurvesError::OperationError;
     use crate::error::OperationErrorKind;
     use crate::geometrics::{ConstructionMethod, ConstructionParams};
+    use std::error::Error;
 
     #[test]
     fn test_construct_from_data_empty() {
@@ -2080,15 +2074,13 @@ mod tests_extended {
     #[test]
     fn test_segment_not_found_error() {
         let segment: Option<Point2D> = None;
-        let result: Result<Point2D, CurvesError> = segment.ok_or_else(|| {
-            CurvesError::StdError {
-                reason: "Could not find valid segment for interpolation".to_string(),
-            }
+        let result: Result<Point2D, CurvesError> = segment.ok_or_else(|| CurvesError::StdError {
+            reason: "Could not find valid segment for interpolation".to_string(),
         });
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            CurvesError::StdError{reason} => {
+            CurvesError::StdError { reason } => {
                 assert_eq!(reason, "Could not find valid segment for interpolation");
             }
             _ => {

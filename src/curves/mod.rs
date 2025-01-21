@@ -5,7 +5,6 @@ mod types;
 mod utils;
 pub mod visualization;
 
-
 pub use curve::Curve;
 pub use curve_traits::CurveOperations;
 pub use types::Point2D;

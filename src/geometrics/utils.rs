@@ -1,11 +1,11 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 21/1/25
- ******************************************************************************/
-use std::collections::BTreeSet;
-use rust_decimal::Decimal;
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 21/1/25
+******************************************************************************/
 use crate::geometrics::ConstructionMethod;
+use rust_decimal::Decimal;
+use std::collections::BTreeSet;
 
 /// Represents a geometric object composed of points
 pub trait GeometricObject<Point: Clone, Input> {
@@ -14,7 +14,7 @@ pub trait GeometricObject<Point: Clone, Input> {
 
     /// Returns a reference to the set of points that make up this object
     fn get_points(&self) -> BTreeSet<&Point>;
-    
+
     fn vector(&self) -> Vec<&Point> {
         self.get_points().into_iter().collect()
     }
@@ -49,4 +49,8 @@ pub trait GeometricObject<Point: Clone, Input> {
 
 pub trait Len {
     fn len(&self) -> usize;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }

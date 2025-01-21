@@ -41,5 +41,5 @@ pub mod arithmetic;
 mod traits;
 mod transformations;
 
-pub use traits::CurveArithmetic;
 pub use arithmetic::MergeOperation;
+pub use traits::CurveArithmetic;

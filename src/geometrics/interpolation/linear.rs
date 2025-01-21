@@ -68,13 +68,12 @@ use crate::error::InterpolationError;
 /// - Invalid data point structures or internal state errors.
 ///
 /// # See Also
-/// - [`crate::curves::interpolation::CubicInterpolation`]: An alternative interpolation method using cubic polynomials.
-/// - [`crate::types::InterpolationType`]: Enum representing supported interpolation methods in the library.
+/// - [`crate::geometrics::interpolation::traits::CubicInterpolation`]: An alternative interpolation method using cubic polynomials.
+/// - [`crate::geometrics::InterpolationType`]: Enum representing supported interpolation methods in the library.
 ///
 /// The `LinearInterpolation` trait is part of a modular design and is often re-exported
 /// in higher-level library components for ease of use.
 pub trait LinearInterpolation<Point, Input> {
-
     /// Performs linear interpolation for a given input value.
     ///
     /// # Parameters

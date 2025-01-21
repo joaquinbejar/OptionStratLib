@@ -1,11 +1,11 @@
 use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
+use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
 use optionstratlib::greeks::{d1, d2};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
-use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();

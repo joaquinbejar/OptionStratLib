@@ -1,11 +1,11 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 20/1/25
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 20/1/25
+******************************************************************************/
+use crate::error::{OperationErrorKind, PositionError};
 use std::error::Error;
 use std::fmt;
-use crate::error::{OperationErrorKind, PositionError};
 
 #[derive(Debug)]
 pub enum SurfaceError {
@@ -76,8 +76,6 @@ impl fmt::Display for SurfaceError {
         }
     }
 }
-
-pub type CurvesResult<T> = Result<T, SurfaceError>;
 
 /// Converts a `PositionError` into a `SurfaceError` by mapping it to an
 /// `OperationError` with the `InvalidParameters` variant.
@@ -179,13 +177,14 @@ impl From<Box<dyn Error>> for SurfaceError {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::position::PositionValidationErrorKind;
     use std::error::Error;
     use std::fmt;
-    use crate::error::position::PositionValidationErrorKind;
+    use crate::error::curves::CurvesResult;
+    use crate::error::CurvesError;
 
     // Custom error type for testing From<Box<dyn Error>>
     #[derive(Debug)]
@@ -209,7 +208,10 @@ mod tests {
         );
 
         match error {
-            SurfaceError::OperationError(OperationErrorKind::NotSupported { operation, reason }) => {
+            SurfaceError::OperationError(OperationErrorKind::NotSupported {
+                operation,
+                reason,
+            }) => {
                 assert_eq!(operation, "test_operation");
                 assert_eq!(reason, "Operation cannot be performed");
             }
@@ -219,13 +221,13 @@ mod tests {
 
     #[test]
     fn test_invalid_parameters() {
-        let error = SurfaceError::invalid_parameters(
-            "test_params",
-            "Invalid input parameters",
-        );
+        let error = SurfaceError::invalid_parameters("test_params", "Invalid input parameters");
 
         match error {
-            SurfaceError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }) => {
+            SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
+                operation,
+                reason,
+            }) => {
                 assert_eq!(operation, "test_params");
                 assert_eq!(reason, "Invalid input parameters");
             }
@@ -274,15 +276,17 @@ mod tests {
 
     #[test]
     fn test_from_position_error() {
-        let pos_error = PositionError::ValidationError(
-            PositionValidationErrorKind::InvalidPosition {
+        let pos_error =
+            PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
                 reason: "Test position error".to_string(),
-            }
-        );
+            });
         let surface_error = SurfaceError::from(pos_error);
 
         match surface_error {
-            SurfaceError::OperationError(OperationErrorKind::InvalidParameters { operation, .. }) => {
+            SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
+                operation,
+                ..
+            }) => {
                 assert_eq!(operation, "Position");
             }
             _ => panic!("Wrong error variant"),
@@ -306,15 +310,28 @@ mod tests {
     }
 
     #[test]
-    fn test_curves_result_ok() {
-        let result: CurvesResult<i32> = Ok(42);
-        assert_eq!(result.unwrap(), 42);
+    fn test_curves_result_err() {
+        let result: CurvesResult<i32> = Err(CurvesError::AnalysisError("Test error".to_string()));
+        assert!(result.is_err());
+        match result {
+            Err(err) => {
+                assert_eq!(err.to_string(), "Analysis error: Test error");
+            }
+            Ok(_) => panic!("Expected an error result"),
+        }
     }
 
     #[test]
-    fn test_curves_result_err() {
-        let result: CurvesResult<i32> = Err(SurfaceError::AnalysisError("Test error".to_string()));
+    fn test_curves_result_err_alternative() {
+        let err = CurvesError::AnalysisError("Test error".to_string());
+        assert_eq!(err.to_string(), "Analysis error: Test error");
+        let result: CurvesResult<i32> = Err(err);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Analysis error: Test error");
+        match result {
+            Err(e) => {
+                assert_eq!(e.to_string(), "Analysis error: Test error");
+            },
+            Ok(_) => panic!("Expected an error result"),
+        }
     }
 }

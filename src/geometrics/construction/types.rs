@@ -8,14 +8,16 @@ use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 use std::error::Error;
 
+type ResultPoint<Point> =  Result<Point, Box<dyn Error>>;
+
 #[derive(Debug, Clone)]
-pub enum ConstructionParams{
-    D2{
+pub enum ConstructionParams {
+    D2 {
         t_start: Decimal,
         t_end: Decimal,
         steps: usize,
     },
-    D3{
+    D3 {
         /// Start parameter for x
         x_start: Decimal,
         /// End parameter for x  
@@ -32,13 +34,11 @@ pub enum ConstructionParams{
 }
 
 pub enum ConstructionMethod<Point, Input> {
-
     FromData {
         points: BTreeSet<Point>,
     },
     Parametric {
-        f: Box<dyn Fn(Input) -> Result<Point, Box<dyn  Error>> + Send + Sync>,
+        f: Box<dyn Fn(Input) -> ResultPoint<Point> + Send + Sync>,
         params: ConstructionParams,
     },
 }
-

@@ -1,12 +1,12 @@
 use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
+use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
-use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
 
 fn get_option(underlying_asset: &Positive, maturity: &Positive) -> Options {
     Options::new(
@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let t_start = dec!(35.0);
     let t_end = dec!(68.0);
     let steps = 100;
-    
+
     let params = &ConstructionParams::D2 {
         t_start,
         t_end,

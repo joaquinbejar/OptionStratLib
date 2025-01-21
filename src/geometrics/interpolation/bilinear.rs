@@ -3,7 +3,7 @@ use crate::error::InterpolationError;
 /// A trait for bilinear interpolation on 2D data grids.
 ///
 /// # Purpose
-/// The `BiLinearInterpolation` trait is designed to perform bilinear interpolation 
+/// The `BiLinearInterpolation` trait is designed to perform bilinear interpolation
 /// to estimate intermediate values within a grid of 2D points. This method is often
 /// used in numerical computation tasks, such as image processing, terrain modeling,
 /// and scientific data visualization.
@@ -55,12 +55,11 @@ use crate::error::InterpolationError;
 /// - [`CurvesError`](crate::errors::CurvesError): A recommended error type for detailed error categorization.
 ///
 /// # See Also
-/// - [`crate::curves::interpolation::InterpolationType`](crate::curves::interpolation::InterpolationType):
+/// - [`crate::geometrics::interpolation::InterpolationType`](crate::curves::interpolation::traits::InterpolationType):
 ///   A module defining different types of interpolation methods.
-/// - [`crate::curves::interpolation::LinearInterpolation`](crate::curves::interpolation::LinearInterpolation):
+/// - [`crate::geometrics::interpolation::LinearInterpolation`](crate::curves::interpolation::traits::LinearInterpolation):
 ///   A simpler interpolation method for one-dimensional data.
 pub trait BiLinearInterpolation<Point, Input> {
-
     /// Performs bilinear interpolation to compute a value for the given input.
     ///
     /// # Parameters

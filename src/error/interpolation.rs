@@ -1,10 +1,10 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 21/1/25
- ******************************************************************************/
-use std::error::Error;
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 21/1/25
+******************************************************************************/
 use crate::error::{CurvesError, PositionError, SurfaceError};
+use std::error::Error;
 
 #[derive(Debug)]
 pub enum InterpolationError {
@@ -29,7 +29,6 @@ impl std::fmt::Display for InterpolationError {
     }
 }
 
-
 impl From<PositionError> for InterpolationError {
     fn from(err: PositionError) -> Self {
         InterpolationError::StdError(err.to_string())
@@ -49,7 +48,7 @@ impl From<SurfaceError> for InterpolationError {
 }
 
 impl From<Box<dyn Error>> for InterpolationError {
-    fn from(err: Box<(dyn Error )>) -> Self {
+    fn from(err: Box<(dyn Error)>) -> Self {
         InterpolationError::StdError(err.to_string())
     }
 }

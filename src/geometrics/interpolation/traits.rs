@@ -47,7 +47,7 @@ pub trait Interpolate<Point, Input>:
     + BiLinearInterpolation<Point, Input>
     + CubicInterpolation<Point, Input>
     + SplineInterpolation<Point, Input>
-    + GeometricObject<Point,Input>
+    + GeometricObject<Point, Input>
 where
     Input: HasX,
     Point: HasX + Clone,
@@ -65,12 +65,9 @@ where
         }
     }
 
-    fn find_bracket_points(
-        &self,
-        x: Input,
-    ) -> Result<(usize, usize), InterpolationError> {
-        let points: Vec<&Point> = self.get_points().into_iter().collect() ;
-        
+    fn find_bracket_points(&self, x: Input) -> Result<(usize, usize), InterpolationError> {
+        let points: Vec<&Point> = self.get_points().into_iter().collect();
+
         // Edge cases
         if points.len() < 2 {
             return Err(InterpolationError::StdError(
@@ -104,10 +101,10 @@ pub trait HasX {
 #[cfg(test)]
 mod tests_interpolate {
     use super::*;
+    use crate::curves::Point2D;
     use crate::error::InterpolationError;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-    use crate::curves::Point2D;
 
     struct MockInterpolator {
         points: BTreeSet<Point2D>,
@@ -126,10 +123,7 @@ mod tests_interpolate {
     }
 
     impl BiLinearInterpolation<Point2D, Decimal> for MockInterpolator {
-        fn bilinear_interpolate(
-            &self,
-            x: Decimal,
-        ) -> Result<Point2D, InterpolationError> {
+        fn bilinear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
             if self.points.len() < 4 {
                 return Err(InterpolationError::Bilinear(
                     "Need at least four points for bilinear interpolation".to_string(),
@@ -161,7 +155,7 @@ mod tests_interpolate {
         }
     }
 
-    impl GeometricObject<Point2D,Decimal> for MockInterpolator {
+    impl GeometricObject<Point2D, Decimal> for MockInterpolator {
         type Error = ();
 
         fn get_points(&self) -> BTreeSet<&Point2D> {

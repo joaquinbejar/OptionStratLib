@@ -10,6 +10,7 @@ use crate::chains::utils::{
 use crate::chains::{DeltasInStrike, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
 use crate::curves::{Curve, Point2D};
 use crate::error::chains::ChainError;
+use crate::geometrics::LinearInterpolation;
 use crate::greeks::delta;
 use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
 use crate::pricing::black_scholes_model::black_scholes;
@@ -28,7 +29,6 @@ use std::fmt;
 use tracing::debug;
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
-use crate::geometrics::LinearInterpolation;
 
 /// Struct representing a row in an option chain.
 ///

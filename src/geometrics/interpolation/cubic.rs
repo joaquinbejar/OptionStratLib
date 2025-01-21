@@ -94,7 +94,6 @@ use crate::error::InterpolationError;
 /// }
 /// ```
 pub trait CubicInterpolation<Point, Input> {
-
     /// Interpolates a new point on the curve for a given `x` input value
     /// using cubic interpolation.
     ///

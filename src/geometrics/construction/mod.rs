@@ -43,4 +43,4 @@
 
 mod types;
 
-pub use types::{ConstructionMethod,ConstructionParams};
+pub use types::{ConstructionMethod, ConstructionParams};

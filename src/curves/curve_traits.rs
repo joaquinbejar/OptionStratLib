@@ -8,8 +8,8 @@ use crate::curves::analysis::CurveAnalysisResult;
 use crate::curves::types::CurveType;
 use crate::curves::{Curve, Point2D};
 use crate::error::CurvesError;
-use rust_decimal::Decimal;
 use crate::geometrics::{InterpolationType, MergeOperation};
+use rust_decimal::Decimal;
 
 /// The `CurveOperations` trait defines a comprehensive set of operations for mathematical curves.
 ///
