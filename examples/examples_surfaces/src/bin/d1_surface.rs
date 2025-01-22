@@ -1,27 +1,25 @@
-use optionstratlib::surfaces::{Surface, Point3D};
 use optionstratlib::curves::Point2D;
+use optionstratlib::error::SurfaceError;
 use optionstratlib::geometrics::{
     ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
 };
-use optionstratlib::greeks::delta;
-use optionstratlib::model::types::{OptionStyle, Side};
-use optionstratlib::model::Options;
+use optionstratlib::greeks::d1;
+use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, Positive};
 use rust_decimal_macros::dec;
-use optionstratlib::error::SurfaceError;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();
 
     // Define construction parameters for the surface
     let params = ConstructionParams::D3 {
-        x_start: dec!(50.0),     // Underlying price start
-        x_end: dec!(150.0),      // Underlying price end
-        y_start: dec!(50.0),     // Strike price start
-        y_end: dec!(150.0),      // Strike price end
-        x_steps: 250,             // Number of steps in underlying price
-        y_steps: 250,             // Number of steps in strike price
+        x_start: dec!(50.0), // Underlying price start
+        x_end: dec!(150.0),  // Underlying price end
+        y_start: dec!(50.0), // Strike price start
+        y_end: dec!(150.0),  // Strike price end
+        x_steps: 250,        // Number of steps in underlying price
+        y_steps: 250,        // Number of steps in strike price
     };
 
     // Create a surface representing delta values
@@ -30,23 +28,9 @@ fn main() -> Result<(), SurfaceError> {
             // Create option with dynamic underlying and strike prices
             let strike = Positive::new_decimal(t.y).unwrap();
             let underlying = Positive::new_decimal(t.x).unwrap();
-            let option = Options::new(
-                optionstratlib::model::types::OptionType::European,
-                Side::Long,
-                "Example".to_string(),
-                strike,          // Strike price
-                optionstratlib::model::types::ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),           // Implied volatility
-                Positive::ONE,       // Quantity
-                underlying,           // Underlying price
-                dec!(0.05),          // Risk-free rate
-                OptionStyle::Call,   // Option style
-                Positive::ZERO,      // Dividend yield
-                None,                // Exotic params
-            );
 
             // Calculate delta
-            let delta_value = delta(&option)?;
+            let delta_value = d1(underlying, strike, dec!(0.05), pos!(30.0), pos!(0.2))?;
 
             // Create a 3D point with underlying price (x), strike price (y), and delta (z)
             Ok(Point3D::new(t.x, t.y, delta_value))
@@ -54,18 +38,17 @@ fn main() -> Result<(), SurfaceError> {
         params,
     })?;
 
-    
     // Plot the surface
     delta_surface
         .plot()
         .title("Option Delta Surface")
         .x_label("Underlying Price")
         .y_label("Strike Price")
-        .z_label("Delta")
+        .z_label("d1")
         .point_size(1)
         .label_size(1.8)
         .dimensions(1600, 1200)
-        .save("./Draws/Surfaces/delta_surface.png")?;
+        .save("./Draws/Surfaces/d1_surface.png")?;
 
     Ok(())
 }
