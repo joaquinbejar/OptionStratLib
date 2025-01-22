@@ -4,11 +4,11 @@
    Date: 20/1/25
 ******************************************************************************/
 
-use crate::surfaces::analysis::SurfaceAnalysisResult;
 use crate::surfaces::types::{SurfaceType, Point3D, SurfaceInterpolationType};
 use crate::error::SurfaceError;
 use rust_decimal::Decimal;
 use crate::curves::Curve;
+use crate::geometrics::AnalysisResult;
 use crate::surfaces::Surface;
 
 /// The `SurfaceOperations` trait defines a comprehensive set of operations for 3D mathematical surfaces.
@@ -76,7 +76,7 @@ pub trait SurfaceOperations {
         interpolation: SurfaceInterpolationType,
     ) -> Option<Decimal>;
 
-    fn analyze_surface(&self, surface: &Surface) -> SurfaceAnalysisResult;
+    fn analyze_surface(&self, surface: &Surface) -> AnalysisResult;
 
     fn merge_surfaces(
         &self,

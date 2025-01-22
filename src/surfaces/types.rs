@@ -6,11 +6,9 @@
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap};
-use rayon::iter::IntoParallelIterator;
-use crate::curves::Point2D;
+use std::collections::BTreeSet;
 use crate::error::SurfaceError;
-use crate::geometrics::{ConstructionMethod, HasX};
+use crate::geometrics::HasX;
 use crate::model::positive::is_positive;
 
 
@@ -130,6 +128,12 @@ impl Point3D {
                 reason: "Error converting f64 to Decimal",
             }),
         }
+    }
+}
+
+impl From<&Point3D> for Point3D {
+    fn from(point: &Point3D) -> Self {
+        *point
     }
 }
 

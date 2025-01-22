@@ -1,5 +1,3 @@
-mod analysis;
-mod operations;
 mod types;
 mod visualization;
 mod utils;
