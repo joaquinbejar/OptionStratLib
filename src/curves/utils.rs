@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 9/1/25
 ******************************************************************************/
-
+use std::collections::BTreeSet;
 use crate::curves::{Curve, Point2D};
 use crate::geometrics::GeometricObject;
 use rust_decimal::Decimal;
@@ -155,4 +155,45 @@ pub fn create_constant_curve(start: Decimal, end: Decimal, value: Decimal) -> Cu
     let points: Vec<&Point2D> = point_values.iter().collect();
 
     Curve::from_vector(points)
+}
+
+/// Detects peaks and valleys in a set of points
+///
+/// # Arguments
+///
+/// * `points` - A reference to a BTreeSet of Point2D
+///
+/// # Returns
+///
+/// A tuple containing two vectors:
+/// - The first vector contains the peaks (local maxima)
+/// - The second vector contains the valleys (local minima)
+pub fn detect_peaks_and_valleys(points: &BTreeSet<Point2D>) -> (Vec<Point2D>, Vec<Point2D>) {
+    let points_vec: Vec<Point2D> = points.iter().cloned().collect();
+
+    let mut peaks = Vec::new();
+    let mut valleys = Vec::new();
+
+    // Need at least 3 points to detect peaks and valleys
+    if points_vec.len() < 3 {
+        return (peaks, valleys);
+    }
+
+    for i in 1..points_vec.len()-1 {
+        let prev = &points_vec[i-1];
+        let current = &points_vec[i];
+        let next = &points_vec[i+1];
+
+        // Peak: y value is higher than its immediate neighbors
+        if current.y > prev.y && current.y > next.y {
+            peaks.push(current.clone());
+        }
+
+        // Valley: y value is lower than its immediate neighbors
+        if current.y < prev.y && current.y < next.y {
+            valleys.push(current.clone());
+        }
+    }
+
+    (peaks, valleys)
 }

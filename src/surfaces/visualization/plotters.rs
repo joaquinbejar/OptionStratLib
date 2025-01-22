@@ -1,7 +1,4 @@
-use std::error::Error;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
-#[cfg(not(target_arch = "wasm32"))]
-use num_traits::ToPrimitive;
 #[cfg(not(target_arch = "wasm32"))]
 use plotters::prelude::*;
 use std::path::Path;

@@ -4,12 +4,8 @@
    Date: 20/1/25
 ******************************************************************************/
 use crate::curves::{Curve, Point2D};
-use crate::error::{InterpolationError, SurfaceError};
-use crate::geometrics::{
-    Arithmetic, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation,
-    GeometricObject, Interpolate, InterpolationType, LinearInterpolation, MergeOperation,
-    SplineInterpolation,
-};
+use crate::error::{InterpolationError, MetricsError, SurfaceError};
+use crate::geometrics::{Arithmetic, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, LinearInterpolation, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
 use crate::surfaces::types::Axis;
 use crate::surfaces::Point3D;
 use num_traits::ToPrimitive;
@@ -20,6 +16,7 @@ use rust_decimal::{Decimal, MathematicalOps};
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
+use rust_decimal_macros::dec;
 
 /// Represents a mathematical surface in 3D space
 #[derive(Debug, Clone)]
@@ -530,6 +527,216 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
     }
 }
 
+impl MetricsExtractor for Surface {
+    
+    fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
+        let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
+
+        let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
+
+        let mut sorted = z_values.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let median = sorted[sorted.len()/2];
+
+        // Mode calculation using HashMap to count occurrences
+        let mode = {
+            let mut freq_map = std::collections::HashMap::new();
+            for &val in &z_values {
+                *freq_map.entry(val).or_insert(0) += 1;
+            }
+            freq_map
+                .into_iter()
+                .max_by_key(|&(_, count)| count)
+                .map(|(val, _)| val)
+                .unwrap_or(Decimal::ZERO)
+        };
+
+        let std_dev = (z_values.iter()
+            .map(|x| (*x - mean).powu(2))
+            .sum::<Decimal>() / Decimal::from(z_values.len())).sqrt()
+            .unwrap_or(Decimal::ZERO);
+
+        Ok(BasicMetrics {
+            mean,
+            median,
+            mode,
+            std_dev,
+        })
+    }
+
+    fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
+        let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
+        let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
+        let std_dev = (z_values.iter()
+            .map(|x| (*x - mean).powu(2))
+            .sum::<Decimal>() / Decimal::from(z_values.len())).sqrt()
+            .unwrap_or(Decimal::ONE);
+
+        let n = Decimal::from(z_values.len());
+
+        let skewness = z_values.iter()
+            .map(|x| (*x - mean).powu(3))
+            .sum::<Decimal>() / (n * std_dev.powu(3));
+
+        let kurtosis = z_values.iter()
+            .map(|x| (*x - mean).powu(4))
+            .sum::<Decimal>() / (n * std_dev.powu(4));
+
+        Ok(ShapeMetrics {
+            skewness,
+            kurtosis,
+            peaks: vec![],
+            valleys: vec![],
+            inflection_points: vec![],
+        })
+    }
+
+    fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
+        let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
+        let mut sorted = z_values.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        let min = sorted.first().copied().unwrap_or(Decimal::ZERO);
+        let max = sorted.last().copied().unwrap_or(Decimal::ZERO);
+
+        let len = sorted.len();
+        let q1 = sorted[len/4];
+        let q2 = sorted[len/2];
+        let q3 = sorted[3*len/4];
+
+        let range = max - min;
+        let iqr = q3 - q1;
+
+        Ok(RangeMetrics {
+            min: Point2D::new(Decimal::ZERO, min),
+            max: Point2D::new(Decimal::ZERO, max),
+            range,
+            quartiles: (q1, q2, q3),
+            interquartile_range: iqr,
+        })
+    }
+
+    fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
+        let points: Vec<Point2D> = self.points.iter()
+            .map(|p| Point2D::new(p.x, p.z))
+            .collect();
+
+        // Handle surfaces with insufficient points
+        if points.len() < 2 {
+            return Ok(TrendMetrics {
+                slope: Decimal::ZERO,
+                intercept: Decimal::ZERO,
+                r_squared: Decimal::ONE,
+                moving_average: vec![],
+            });
+        }
+
+        // Linear Regression Calculation
+        let n = Decimal::from(points.len());
+        let x_vals: Vec<Decimal> = points.iter().map(|p| p.x).collect();
+        let z_vals: Vec<Decimal> = points.iter().map(|p| p.y).collect();
+
+        let sum_x: Decimal = x_vals.iter().sum();
+        let sum_z: Decimal = z_vals.iter().sum();
+
+        // Check for identical points to avoid division by zero
+        let is_identical_points = z_vals.iter().all(|&z| z == z_vals[0]);
+
+        let (slope, intercept, r_squared) = if is_identical_points {
+            // All points are the same
+            (Decimal::ZERO, z_vals[0], Decimal::ONE)
+        } else {
+            let sum_xz: Decimal = x_vals.iter().zip(&z_vals).map(|(x,z)| *x * *z).sum();
+            let sum_xx: Decimal = x_vals.iter().map(|x| *x * *x).sum();
+
+            let slope = (n * sum_xz - sum_x * sum_z) / (n * sum_xx - sum_x * sum_x);
+            let intercept = (sum_z - slope * sum_x) / n;
+
+            // R-squared Calculation
+            let mean_z = sum_z / n;
+            let sst: Decimal = z_vals.iter()
+                .map(|z| (*z - mean_z).powu(2))
+                .sum();
+
+            let ssr: Decimal = z_vals.iter()
+                .zip(&x_vals)
+                .map(|(z, x)| {
+                    let z_predicted = slope * *x + intercept;
+                    (*z - z_predicted).powu(2)
+                })
+                .sum();
+
+            let r_squared = if sst == Decimal::ZERO {
+                Decimal::ONE
+            } else {
+                Decimal::ONE - (ssr / sst)
+            };
+
+            (slope, intercept, r_squared)
+        };
+
+        // Moving Average Calculation
+        let window_sizes = [3, 5, 7];
+        let moving_average: Vec<Point2D> = window_sizes.iter()
+            .flat_map(|&window| {
+                if window > points.len() {
+                    vec![]
+                } else {
+                    points.windows(window)
+                        .map(|window_points| {
+                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>() / Decimal::from(window_points.len());
+                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>() / Decimal::from(window_points.len());
+                            Point2D::new(avg_x, avg_y)
+                        })
+                        .collect::<Vec<Point2D>>()
+                }
+            })
+            .collect();
+
+        Ok(TrendMetrics {
+            slope,
+            intercept,
+            r_squared,
+            moving_average,
+        })
+    }
+
+    fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
+        let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
+
+        let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
+        let volatility = (z_values.iter()
+            .map(|x| (*x - mean).powu(2))
+            .sum::<Decimal>() / Decimal::from(z_values.len())).sqrt()
+            .unwrap_or(Decimal::ZERO);
+
+        // Value at Risk (95% confidence) using parametric method
+        let z_score = dec!(1.645); // 95% confidence interval
+        let var = mean - z_score * volatility;
+
+        // Expected Shortfall (Conditional VaR) calculation
+        let expected_shortfall = z_values.iter()
+            .filter(|&x| *x < var)
+            .sum::<Decimal>() / Decimal::from(
+            z_values.iter().filter(|&x| *x < var).count() as u64
+        );
+
+        // Beta calculation with optional market volatility
+        let beta = Decimal::ZERO; // TODO: Implement beta calculation
+
+        // Sharpe Ratio (assuming risk-free rate of 0)
+        let sharpe_ratio = mean / volatility;
+
+        Ok(RiskMetrics {
+            volatility,
+            value_at_risk: var,
+            expected_shortfall,
+            beta,
+            sharpe_ratio,
+        })
+    }
+}
+
 impl Arithmetic<Surface> for Surface {
     type Error = SurfaceError;
 
@@ -619,7 +826,7 @@ impl Arithmetic<Surface> for Surface {
                                     || first,
                                     |acc, &val| if val == Decimal::ZERO { acc } else { acc / val },
                                 )
-                                .reduce(|| first, |a, b| a)
+                                .reduce(|| first, |a, _b| a)
                         }
                         MergeOperation::Max => z_values
                             .par_iter()
@@ -1821,7 +2028,7 @@ mod tests_surface_arithmetic {
 
     #[test]
     fn test_merge_min() {
-        let mut surface1 = create_test_surface();
+        let surface1 = create_test_surface();
         let mut surface2 = create_test_surface();
 
         // Modify one point in surface2 to be lower
@@ -1835,5 +2042,198 @@ mod tests_surface_arithmetic {
             .interpolate(Point2D::new(dec!(0.5), dec!(0.5)), InterpolationType::Cubic)
             .unwrap();
         assert_eq!(mid_point.z, dec!(0.5));
+    }
+}
+
+#[cfg(test)]
+mod tests_metrics {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    fn create_test_surface() -> Surface {
+        let points = BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(0.5), dec!(0.0), dec!(2.0)),
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(3.0)),
+            Point3D::new(dec!(0.0), dec!(0.5), dec!(2.0)),
+            Point3D::new(dec!(0.5), dec!(0.5), dec!(3.0)),
+            Point3D::new(dec!(1.0), dec!(0.5), dec!(4.0)),
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(3.0)),
+            Point3D::new(dec!(0.5), dec!(1.0), dec!(4.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(5.0))
+        ]);
+        Surface::new(points)
+    }
+
+    #[test]
+    fn test_basic_metrics() {
+        let surface = create_test_surface();
+        let metrics = surface.compute_basic_metrics().unwrap();
+
+        assert_eq!(metrics.mean, dec!(3.0));
+        assert_eq!(metrics.median, dec!(3.0));
+        assert_eq!(metrics.std_dev, dec!(1.1547005383792515290182975610));
+    }
+
+    #[test]
+    fn test_shape_metrics() {
+        let surface = create_test_surface();
+        let metrics = surface.compute_shape_metrics().unwrap();
+
+        assert!(metrics.skewness.abs() < dec!(0.001));
+        assert!((metrics.kurtosis - dec!(2.25)).abs() < dec!(0.001));
+    }
+    
+    #[test]
+    fn test_range_metrics() {
+        let surface = create_test_surface();
+        let metrics = surface.compute_range_metrics().unwrap();
+
+        assert_eq!(metrics.min.y, dec!(1.0));
+        assert_eq!(metrics.max.y, dec!(5.0));
+        assert_eq!(metrics.range, dec!(4.0));
+
+        let (q1, q2, q3) = metrics.quartiles;
+        assert_eq!(q1, dec!(2.0));
+        assert_eq!(q2, dec!(3.0));
+        assert_eq!(q3, dec!(4.0));
+        assert_eq!(metrics.interquartile_range, dec!(2.0));
+    }
+
+    #[test]
+    fn test_trend_metrics() {
+        let surface = create_test_surface();
+        let metrics = surface.compute_trend_metrics().unwrap();
+
+        // We have a linear trend with slope 2.0
+        assert!((metrics.slope - dec!(2.0)).abs() < dec!(0.001));
+        assert!((metrics.intercept - dec!(2.0)).abs() < dec!(0.001));
+    }
+    
+}
+
+#[cfg(test)]
+mod tests_trend_metrics {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use crate::assert_decimal_eq;
+
+    // Helper function to create a test surface
+    fn create_linear_surface() -> Surface {
+        let points = BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),
+            Point3D::new(dec!(2.0), dec!(2.0), dec!(4.0)),
+            Point3D::new(dec!(3.0), dec!(3.0), dec!(6.0)),
+            Point3D::new(dec!(4.0), dec!(4.0), dec!(8.0)),
+        ]);
+        Surface::new(points)
+    }
+
+    // Helper function to create a non-linear surface
+    fn create_non_linear_surface() -> Surface {
+        let points = BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(3.0)),
+            Point3D::new(dec!(2.0), dec!(2.0), dec!(2.0)),
+            Point3D::new(dec!(3.0), dec!(3.0), dec!(5.0)),
+            Point3D::new(dec!(4.0), dec!(4.0), dec!(4.0)),
+        ]);
+        Surface::new(points)
+    }
+
+    #[test]
+    fn test_compute_trend_metrics_linear_surface() {
+        let surface = create_linear_surface();
+        let metrics = surface.compute_trend_metrics().unwrap();
+
+        // Check slope (should be 2.0 for a perfectly linear surface)
+        assert_decimal_eq!(metrics.slope, dec!(2.0), dec!(0.001));
+
+        // Check intercept (should be close to 0)
+        assert_decimal_eq!(metrics.intercept, dec!(0.0), dec!(0.001));
+
+        // R-squared should be very close to 1 for a perfect linear relationship
+        assert_decimal_eq!(metrics.r_squared, dec!(1.0), dec!(0.001));
+
+        // Check moving average points
+        assert!(metrics.moving_average.len() > 0);
+        assert_eq!(metrics.moving_average.len(), 4); 
+    }
+
+    #[test]
+    fn test_compute_trend_metrics_non_linear_surface() {
+        let surface = create_non_linear_surface();
+        let metrics = surface.compute_trend_metrics().unwrap();
+
+        // R-squared should be less than 1 for a non-perfect linear relationship
+        assert!(metrics.r_squared < dec!(1.0));
+
+        // Slope and intercept will vary based on the non-linear surface
+        assert!(metrics.slope != dec!(0.0));
+        assert!(metrics.intercept != dec!(0.0));
+
+        // Moving average points should exist
+        assert!(metrics.moving_average.len() > 0);
+    }
+
+    #[test]
+    fn test_moving_average_calculation() {
+        let surface = create_linear_surface();
+        let metrics = surface.compute_trend_metrics().unwrap();
+
+        // Verify moving average calculation
+        let window_sizes = [3, 5, 7];
+
+        // Calculate total points safely
+        let surface_points_count = surface.points.len();
+
+        let expected_total_points = window_sizes.iter()
+            .map(|&window| {
+                // Safely handle cases where window might be larger than points
+                if window > surface_points_count {
+                    0
+                } else {
+                    surface_points_count.saturating_sub(window).saturating_add(1)
+                }
+            })
+            .sum::<usize>();
+
+        // Assert with more informative message
+        assert_eq!(
+            metrics.moving_average.len(),
+            expected_total_points,
+            "Mismatch in moving average points calculation"
+        );
+
+        // Verify x and y values in moving average
+        for point in &metrics.moving_average {
+            assert!(point.x >= dec!(0.0), "x value should be non-negative");
+            assert!(point.y >= dec!(0.0), "y value should be non-negative");
+        }
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        // Surface with a single point
+        let single_point_surface = Surface::new(BTreeSet::from_iter(vec![
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0))
+        ]));
+
+        let metrics = single_point_surface.compute_trend_metrics();
+        assert!(metrics.is_ok());
+
+        // Surface with identical points
+        let identical_points_surface = Surface::new(BTreeSet::from_iter(vec![
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
+        ]));
+
+        let metrics = identical_points_surface.compute_trend_metrics().unwrap();
+
+        // For identical points, R-squared should be 1
+        assert_decimal_eq!(metrics.r_squared, dec!(1.0), dec!(0.001));
+        assert_decimal_eq!(metrics.slope, dec!(0.0), dec!(0.001));
     }
 }

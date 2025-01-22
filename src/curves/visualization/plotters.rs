@@ -45,7 +45,6 @@
 //! }
 //! ```
 
-use std::error::Error;
 use crate::curves::Curve;
 use crate::error::CurvesError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};

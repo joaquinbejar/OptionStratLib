@@ -13,10 +13,11 @@ use crate::geometrics::{
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::collections::BTreeSet;
 use std::ops::Index;
+use crate::curves::utils::detect_peaks_and_valleys;
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -224,7 +225,6 @@ impl GeometricObject<Point2D, Decimal> for Curve {
 /// Suppose you have a `Curve` instance `curve` with multiple points:
 /// ```ignore
 /// let point = curve[0]; // Access the first point
-/// println!("{:?}", point); // Print the `Point2D` representation
 /// ```
 ///
 /// # Important Notes
@@ -944,71 +944,275 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
 /// based on specific requirements or domain-specific analysis needs.
 impl MetricsExtractor for Curve {
     fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
-        // TODO: Implement actual basic metrics computation
-        // This is a placeholder implementation
+        let y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
+
+        // Handle empty curve
+        if y_values.is_empty() {
+            return Ok(BasicMetrics {
+                mean: Decimal::ZERO,
+                median: Decimal::ZERO,
+                mode: Decimal::ZERO,
+                std_dev: Decimal::ZERO,
+            });
+        }
+
+        // Mean
+        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
+
+        // Median
+        let mut sorted_values = y_values.clone();
+        sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let median = if sorted_values.len() % 2 == 0 {
+            (sorted_values[sorted_values.len() / 2 - 1] + sorted_values[sorted_values.len() / 2]) / Decimal::TWO
+        } else {
+            sorted_values[sorted_values.len() / 2]
+        };
+
+        // Mode (most frequent value)
+        let mode = {
+            let mut freq_map = std::collections::HashMap::new();
+            for &val in &y_values {
+                *freq_map.entry(val).or_insert(0) += 1;
+            }
+            freq_map
+                .into_iter()
+                .max_by_key(|&(_, count)| count)
+                .map(|(val, _)| val)
+                .unwrap_or(Decimal::ZERO)
+        };
+
+        // Standard Deviation
+        let variance = y_values.iter()
+            .map(|&x| (x - mean).powu(2))
+            .sum::<Decimal>() / Decimal::from(y_values.len());
+        let std_dev = variance.sqrt().unwrap_or(Decimal::ZERO);
+
         Ok(BasicMetrics {
-            mean: Decimal::ZERO,
-            median: Decimal::ZERO,
-            mode: Decimal::ZERO,
-            std_dev: Decimal::ZERO,
+            mean,
+            median,
+            mode,
+            std_dev,
         })
     }
 
     fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
-        // TODO: Implement actual shape metrics computation
-        // This is a placeholder implementation
+        let y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
+
+        // Handle empty or single-point curve
+        if y_values.len() < 2 {
+            return Ok(ShapeMetrics {
+                skewness: Decimal::ZERO,
+                kurtosis: Decimal::ZERO,
+                peaks: vec![],
+                valleys: vec![],
+                inflection_points: vec![],
+            });
+        }
+
+        // Mean and Standard Deviation
+        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
+
+        // Compute centered and scaled values
+        let centered_values: Vec<Decimal> = y_values.iter().map(|&x| x - mean).collect();
+
+        // Compute variance
+        let variance = centered_values.iter().map(|&x| x.powu(2)).sum::<Decimal>() / Decimal::from(y_values.len());
+        let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
+        if std_dev.is_zero() || std_dev < dec!(1e-9) {
+            panic!("The standard deviation is too small or zero.");
+        }
+
+        // Skewness calculation (Fisher-Pearson standardized moment)
+        let skewness = centered_values.iter()
+            .map(|&x| (x / std_dev).powu(3))
+            .sum::<Decimal>() / Decimal::from(y_values.len());
+
+        // Kurtosis calculation (Fisher's definition - adjust to excess kurtosis)
+        let kurtosis = centered_values.iter().map(|&x| (x / std_dev).powu(4)).sum::<Decimal>() / Decimal::from(y_values.len()) - Decimal::from(3);
+
+        // Peaks and Valleys detection
+        let (peaks, valleys) = detect_peaks_and_valleys(&self.points);
+
         Ok(ShapeMetrics {
-            skewness: Decimal::ZERO,
-            kurtosis: Decimal::ZERO,
-            peaks: vec![],
-            valleys: vec![],
+            skewness,
+            kurtosis,
+            peaks,
+            valleys,
             inflection_points: vec![],
         })
     }
 
     fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
-        // TODO: Implement actual range metrics computation
-        // This is a placeholder implementation
-        let min_point = self
-            .points
-            .first()
+        // Handle empty curve
+        if self.points.is_empty() {
+            return Ok(RangeMetrics {
+                min: Point2D::new(Decimal::ZERO, Decimal::ZERO),
+                max: Point2D::new(Decimal::ZERO, Decimal::ZERO),
+                range: Decimal::ZERO,
+                quartiles: (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
+                interquartile_range: Decimal::ZERO,
+            });
+        }
+
+        let mut y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
+        y_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        let len = y_values.len();
+        let min_point = self.points.iter()
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
             .cloned()
-            .unwrap_or(Point2D::new(Decimal::ZERO, Decimal::ZERO));
-        let max_point = self
-            .points
-            .last()
+            .unwrap();
+        let max_point = self.points.iter()
+            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
             .cloned()
-            .unwrap_or(Point2D::new(Decimal::ZERO, Decimal::ZERO));
+            .unwrap();
+
+        let range = max_point.y - min_point.y;
+
+        // Quartiles
+        let q1 = y_values[len / 4];
+        let q2 = y_values[len / 2];
+        let q3 = y_values[3 * len / 4];
+
+        let interquartile_range = q3 - q1;
 
         Ok(RangeMetrics {
             min: min_point,
             max: max_point,
-            range: Decimal::ZERO,
-            quartiles: (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
-            interquartile_range: Decimal::ZERO,
+            range,
+            quartiles: (q1, q2, q3),
+            interquartile_range,
         })
     }
 
     fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
-        // TODO: Implement actual trend metrics computation
-        // This is a placeholder implementation
+        let points: Vec<Point2D> = self.points.clone().into_iter().collect();
+
+        // Handle insufficient points
+        if points.len() < 2 {
+            return Ok(TrendMetrics {
+                slope: Decimal::ZERO,
+                intercept: Decimal::ZERO,
+                r_squared: Decimal::ZERO,
+                moving_average: vec![],
+            });
+        }
+
+        // Linear Regression Calculation
+        let n = Decimal::from(points.len());
+        let x_vals: Vec<Decimal> = points.iter().map(|p| p.x).collect();
+        let y_vals: Vec<Decimal> = points.iter().map(|p| p.y).collect();
+
+        let sum_x: Decimal = x_vals.iter().sum();
+        let sum_y: Decimal = y_vals.iter().sum();
+        let sum_xy: Decimal = x_vals.iter().zip(&y_vals).map(|(x,y)| *x * *y).sum();
+        let sum_xx: Decimal = x_vals.iter().map(|x| *x * *x).sum();
+
+        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x);
+        let intercept = (sum_y - slope * sum_x) / n;
+
+        // R-squared Calculation
+        let mean_y = sum_y / n;
+        let sst: Decimal = y_vals.iter()
+            .map(|y| (*y - mean_y).powu(2))
+            .sum();
+
+        let ssr: Decimal = y_vals.iter()
+            .zip(&x_vals)
+            .map(|(y, x)| {
+                let y_predicted = slope * *x + intercept;
+                (*y - y_predicted).powu(2)
+            })
+            .sum();
+
+        let r_squared = if sst == Decimal::ZERO {
+            Decimal::ONE
+        } else {
+            Decimal::ONE - (ssr / sst)
+        };
+
+        // Moving Average Calculation
+        let window_sizes = [3, 5, 7];
+        let moving_average: Vec<Point2D> = window_sizes.iter()
+            .flat_map(|&window| {
+                if window > points.len() {
+                    vec![]
+                } else {
+                    points.windows(window)
+                        .map(|window_points| {
+                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>() / Decimal::from(window_points.len());
+                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>() / Decimal::from(window_points.len());
+                            Point2D::new(avg_x, avg_y)
+                        })
+                        .collect::<Vec<Point2D>>()
+                }
+            })
+            .collect();
+
         Ok(TrendMetrics {
-            slope: Decimal::ZERO,
-            intercept: Decimal::ZERO,
-            r_squared: Decimal::ZERO,
-            moving_average: vec![],
+            slope,
+            intercept,
+            r_squared,
+            moving_average,
         })
     }
 
     fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
-        // TODO: Implement actual risk metrics computation
-        // This is a placeholder implementation
+        let y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
+
+        if y_values.is_empty() {
+            return Ok(RiskMetrics {
+                volatility: Decimal::ZERO,
+                value_at_risk: Decimal::ZERO,
+                expected_shortfall: Decimal::ZERO,
+                beta: Decimal::ZERO,
+                sharpe_ratio: Decimal::ZERO,
+            });
+        }
+
+        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
+        let volatility = y_values.iter()
+            .map(|&x| (x - mean).powu(2))
+            .sum::<Decimal>() / Decimal::from(y_values.len())
+            .sqrt()
+            .unwrap_or(Decimal::ZERO);
+
+        if volatility == Decimal::ZERO {
+            return Ok(RiskMetrics {
+                volatility,
+                value_at_risk: Decimal::ZERO,
+                expected_shortfall: Decimal::ZERO,
+                beta: Decimal::ZERO,
+                sharpe_ratio: Decimal::ZERO,
+            });
+        }
+
+        let z_score = dec!(1.645); 
+        let var = mean - z_score * volatility;
+
+        let below_var_count = y_values.iter().filter(|&&x| x < var).count();
+        let expected_shortfall = if below_var_count > 0 {
+            y_values.iter()
+                .filter(|&&x| x < var)
+                .sum::<Decimal>() / Decimal::from(below_var_count as u64)
+        } else {
+            Decimal::ZERO
+        };
+
+        let beta = if mean != Decimal::ZERO {
+            volatility / mean
+        } else {
+            Decimal::ZERO
+        };
+
+        let sharpe_ratio = mean / volatility;
+
         Ok(RiskMetrics {
-            volatility: Decimal::ZERO,
-            value_at_risk: Decimal::ZERO,
-            expected_shortfall: Decimal::ZERO,
-            beta: Decimal::ZERO,
-            sharpe_ratio: Decimal::ZERO,
+            volatility,
+            value_at_risk: var,
+            expected_shortfall,
+            beta,
+            sharpe_ratio,
         })
     }
 }
@@ -1654,8 +1858,6 @@ mod tests_cubic_interpolate {
 
         assert!(p1.y < p2.y);
         assert!(p2.y < p3.y);
-
-        // Print values for debugging
         info!("p1: {:?}, p2: {:?}, p3: {:?}", p1, p2, p3);
     }
 }
@@ -2140,5 +2342,202 @@ mod tests_extended {
                 panic!("Unexpected error type");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_curve_metrics {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+    use crate::assert_decimal_eq;
+
+    // Helper function to create test curves
+    fn create_linear_curve() -> Curve {
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(2.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+            Point2D::new(dec!(3.0), dec!(6.0)),
+            Point2D::new(dec!(4.0), dec!(8.0)),
+        ]);
+        Curve::new(points)
+    }
+
+    fn create_non_linear_curve() -> Curve {
+        Curve {
+            points: (0..=20)
+                .map(|x| Point2D {
+                    x: Decimal::from(x),
+                    y: Decimal::from(x * x % 7), // Ejemplo no lineal
+                })
+                .collect(),
+            x_range: (Default::default(), Default::default()),
+        }
+    }
+
+    fn create_constant_curve() -> Curve {
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(5.0)),
+            Point2D::new(dec!(1.0), dec!(5.0)),
+            Point2D::new(dec!(2.0), dec!(5.0)),
+        ]);
+        Curve::new(points)
+    }
+
+    #[test]
+    fn test_basic_metrics() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let basic_metrics = linear_curve.compute_basic_metrics().unwrap();
+
+        // Expected values for linear curve
+        assert_decimal_eq!(basic_metrics.mean, dec!(4.0), dec!(0.001));
+        assert_decimal_eq!(basic_metrics.median, dec!(4.0), dec!(0.001));
+        assert_decimal_eq!(basic_metrics.std_dev, dec!(2.82842712), dec!(0.001));
+
+        // Constant curve
+        let constant_curve = create_constant_curve();
+        let constant_metrics = constant_curve.compute_basic_metrics().unwrap();
+
+        assert_decimal_eq!(constant_metrics.mean, dec!(5.0), dec!(0.001));
+        assert_decimal_eq!(constant_metrics.median, dec!(5.0), dec!(0.001));
+        assert_decimal_eq!(constant_metrics.std_dev, dec!(0.0), dec!(0.001));
+    }
+    
+    #[test]
+    fn test_shape_metrics() {
+        
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let shape_metrics = linear_curve.compute_shape_metrics().unwrap();
+
+        // More lenient check for linear curve
+        assert!(shape_metrics.skewness.abs() < dec!(0.5),
+                "Skewness for linear curve should be very close to 0, got {}", shape_metrics.skewness);
+
+        // Allow a wider range for kurtosis of a linear curve
+        assert!(shape_metrics.kurtosis.abs() < dec!(2.0),
+                "Kurtosis for linear curve should be close to 0, got {}", shape_metrics.kurtosis);
+
+        // Non-linear curve
+        let non_linear_curve = create_non_linear_curve();
+        let non_linear_metrics = non_linear_curve.compute_shape_metrics().unwrap();
+
+        // More nuanced checks for non-linear curve
+        assert!(non_linear_metrics.skewness.abs() > dec!(0.3),
+                "Non-linear curve should have significant skewness, got {}", non_linear_metrics.skewness);
+
+        // Ensure the non-linear curve has a meaningfully different kurtosis
+        assert!(non_linear_metrics.kurtosis.abs() > dec!(1.0),
+                "Non-linear curve should have significant kurtosis, got {}", non_linear_metrics.kurtosis);
+
+        // Check peaks and valleys
+        assert!(!non_linear_metrics.peaks.is_empty(), "Peaks should be detected");
+        assert!(!non_linear_metrics.valleys.is_empty(), "Valleys should be detected");
+    }
+
+    #[test]
+    fn test_range_metrics() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let range_metrics = linear_curve.compute_range_metrics().unwrap();
+
+        assert_decimal_eq!(range_metrics.min.y, dec!(0.0), dec!(0.001));
+        assert_decimal_eq!(range_metrics.max.y, dec!(8.0), dec!(0.001));
+        assert_decimal_eq!(range_metrics.range, dec!(8.0), dec!(0.001));
+
+        // Constant curve
+        let constant_curve = create_constant_curve();
+        let constant_range_metrics = constant_curve.compute_range_metrics().unwrap();
+
+        assert_decimal_eq!(constant_range_metrics.min.y, dec!(5.0), dec!(0.001));
+        assert_decimal_eq!(constant_range_metrics.max.y, dec!(5.0), dec!(0.001));
+        assert_decimal_eq!(constant_range_metrics.range, dec!(0.0), dec!(0.001));
+    }
+
+    #[test]
+    fn test_trend_metrics() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let trend_metrics = linear_curve.compute_trend_metrics().unwrap();
+
+        // Expected values for a perfectly linear curve
+        assert_decimal_eq!(trend_metrics.slope, dec!(2.0), dec!(0.001));
+        assert_decimal_eq!(trend_metrics.intercept, dec!(0.0), dec!(0.001));
+        assert_decimal_eq!(trend_metrics.r_squared, dec!(1.0), dec!(0.001));
+
+        // Non-linear curve
+        let non_linear_curve = create_non_linear_curve();
+        let non_linear_trend_metrics = non_linear_curve.compute_trend_metrics().unwrap();
+
+        // R-squared should be less than 1
+        assert!(non_linear_trend_metrics.r_squared < dec!(1.0));
+
+        // Moving average should exist
+        assert!(!non_linear_trend_metrics.moving_average.is_empty());
+    }
+
+    #[test]
+    fn test_constant_curve_risk_metrics() {
+        let constant_curve = create_constant_curve();
+        let risk_metrics = constant_curve.compute_risk_metrics().unwrap();
+
+        assert_eq!(risk_metrics.volatility, dec!(0.0));
+        assert_eq!(risk_metrics.beta, dec!(0.0));
+        assert_eq!(risk_metrics.sharpe_ratio, dec!(0.0));
+    }
+
+    #[test]
+    fn test_risk_metrics() {
+        // Curva lineal
+        let linear_curve = create_linear_curve();
+        let risk_metrics = linear_curve.compute_risk_metrics().unwrap();
+
+        assert!(risk_metrics.volatility > dec!(0.0), "Volatility debe ser mayor a cero.");
+        assert!(risk_metrics.value_at_risk != dec!(0.0), "Value at Risk no debe ser cero.");
+        assert!(risk_metrics.beta != dec!(0.0), "Beta no debe ser cero.");
+    }
+
+    #[test]
+    fn test_risk_metrics_bis() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let risk_metrics = linear_curve.compute_risk_metrics().unwrap();
+
+        // Volatility and risk metrics should be non-zero
+        assert!(risk_metrics.volatility > dec!(0.0));
+        assert!(risk_metrics.value_at_risk != dec!(0.0));
+        assert!(risk_metrics.beta != dec!(0.0));
+
+        // Constant curve
+        let constant_curve = create_constant_curve();
+        let constant_risk_metrics = constant_curve.compute_risk_metrics().unwrap();
+
+        // Volatility should be zero for a constant curve
+        assert_decimal_eq!(constant_risk_metrics.volatility, dec!(0.0), dec!(0.001));
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        // Empty curve
+        let empty_curve = Curve::new(BTreeSet::new());
+
+        assert!(empty_curve.compute_basic_metrics().is_ok());
+        assert!(empty_curve.compute_shape_metrics().is_ok());
+        assert!(empty_curve.compute_range_metrics().is_ok());
+        assert!(empty_curve.compute_trend_metrics().is_ok());
+        assert!(empty_curve.compute_risk_metrics().is_ok());
+
+        // Single point curve
+        let single_point_curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(1.0), dec!(1.0))
+        ]));
+
+        assert!(single_point_curve.compute_basic_metrics().is_ok());
+        assert!(single_point_curve.compute_shape_metrics().is_ok());
+        assert!(single_point_curve.compute_range_metrics().is_ok());
+        assert!(single_point_curve.compute_trend_metrics().is_ok());
+        assert!(single_point_curve.compute_risk_metrics().is_ok());
     }
 }

@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 20/1/25
 ******************************************************************************/
-use crate::error::{CurvesError, InterpolationError, OperationErrorKind, PositionError};
+use crate::error::{InterpolationError, OperationErrorKind, PositionError};
 use std::error::Error;
 use std::fmt;
 
