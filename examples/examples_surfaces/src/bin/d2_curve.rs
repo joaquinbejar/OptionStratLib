@@ -3,7 +3,7 @@ use optionstratlib::error::SurfaceError;
 use optionstratlib::geometrics::{
     ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
 };
-use optionstratlib::greeks::d1;
+use optionstratlib::greeks::{d1, d2};
 use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, Positive};
@@ -30,7 +30,7 @@ fn main() -> Result<(), SurfaceError> {
             let underlying = Positive::new_decimal(t.x).unwrap();
 
             // Calculate delta
-            let delta_value = d1(underlying, strike, dec!(0.05), pos!(30.0), pos!(0.2))?;
+            let delta_value = d2(underlying, strike, dec!(0.05), pos!(30.0), pos!(0.2))?;
 
             // Create a 3D point with underlying price (x), strike price (y), and delta (z)
             Ok(Point3D::new(t.x, t.y, delta_value))
@@ -41,14 +41,14 @@ fn main() -> Result<(), SurfaceError> {
     // Plot the surface
     delta_surface
         .plot()
-        .title("D1 Surface")
+        .title("D2 Surface")
         .x_label("Underlying Price")
         .y_label("Strike Price")
         .z_label("d1")
         .point_size(1)
         .label_size(1.8)
         .dimensions(1600, 1200)
-        .save("./Draws/Surfaces/d1_surface.png")?;
+        .save("./Draws/Surfaces/d2_surface.png")?;
 
     Ok(())
 }
