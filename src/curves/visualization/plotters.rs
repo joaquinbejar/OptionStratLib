@@ -50,6 +50,7 @@ use crate::error::CurvesError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
 #[cfg(not(target_arch = "wasm32"))]
 use num_traits::ToPrimitive;
+#[cfg(not(target_arch = "wasm32"))]
 use plotters::prelude::*;
 use std::path::Path;
 
@@ -425,6 +426,7 @@ mod tests {
     use super::*;
     use crate::curves::Point2D;
     use crate::geometrics::GeometricObject;
+    use plotters::prelude::RGBColor;
     use rust_decimal_macros::dec;
     use std::fs;
 

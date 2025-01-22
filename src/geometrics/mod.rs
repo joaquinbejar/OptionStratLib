@@ -10,6 +10,12 @@ mod utils;
 mod operations;
 mod visualization;
 
+mod analysis;
+
+pub use analysis::{
+    AnalysisResult, BasicMetrics, Metrics, MetricsExtractor, RangeMetrics, RiskMetrics,
+    ShapeMetrics, TrendMetrics,
+};
 pub use construction::{ConstructionMethod, ConstructionParams};
 pub use interpolation::bilinear::BiLinearInterpolation;
 pub use interpolation::cubic::CubicInterpolation;

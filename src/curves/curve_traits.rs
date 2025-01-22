@@ -4,11 +4,10 @@
    Date: 26/8/24
 ******************************************************************************/
 
-use crate::curves::analysis::CurveAnalysisResult;
 use crate::curves::types::CurveType;
 use crate::curves::{Curve, Point2D};
 use crate::error::CurvesError;
-use crate::geometrics::{InterpolationType, MergeOperation};
+use crate::geometrics::{AnalysisResult, InterpolationType, MergeOperation};
 use rust_decimal::Decimal;
 
 /// The `CurveOperations` trait defines a comprehensive set of operations for mathematical curves.
@@ -64,7 +63,7 @@ pub trait CurveOperations {
         interpolation: InterpolationType,
     ) -> Option<T>;
 
-    fn analyze_curve(&self, curve: &Curve) -> CurveAnalysisResult;
+    fn analyze_curve(&self, curve: &Curve) -> AnalysisResult;
 
     // Combines multiple curves into a single curve using the specified operation
     fn merge_curves(

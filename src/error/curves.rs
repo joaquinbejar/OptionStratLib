@@ -5,6 +5,7 @@
 ******************************************************************************/
 
 use crate::error::common::OperationErrorKind;
+use crate::error::metrics::MetricsError;
 use crate::error::{InterpolationError, PositionError};
 use std::error::Error;
 use std::fmt;
@@ -89,6 +90,7 @@ pub enum CurvesError {
     StdError { reason: String },
     ConstructionError(String),
     AnalysisError(String),
+    MetricsError(String),
 }
 
 /// Provides helper methods for constructing specific variants of the `CurvesError` type.
@@ -148,6 +150,7 @@ impl fmt::Display for CurvesError {
             CurvesError::Point2DError { reason } => write!(f, "Error: {}", reason),
             CurvesError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
             CurvesError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
+            CurvesError::MetricsError(reason) => write!(f, "Metrics error: {}", reason),
         }
     }
 }
@@ -207,6 +210,12 @@ impl From<InterpolationError> for CurvesError {
         CurvesError::StdError {
             reason: err.to_string(),
         }
+    }
+}
+
+impl From<MetricsError> for CurvesError {
+    fn from(err: MetricsError) -> Self {
+        CurvesError::MetricsError(err.to_string())
     }
 }
 

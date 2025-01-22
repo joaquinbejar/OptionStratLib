@@ -1,8 +1,8 @@
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::geometrics::Plottable;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::volatility::VolatilitySmile;
 use std::error::Error;
-use optionstratlib::geometrics::Plottable;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();

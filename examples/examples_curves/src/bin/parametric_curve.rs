@@ -1,5 +1,7 @@
 use optionstratlib::curves::{Curve, Point2D};
-use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject, Plottable};
+use optionstratlib::geometrics::{
+    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
+};
 use optionstratlib::utils::setup_logger;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;

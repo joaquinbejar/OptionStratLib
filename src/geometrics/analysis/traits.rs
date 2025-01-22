@@ -1,7 +1,7 @@
-use crate::curves::analysis::metrics::{
-    BasicMetrics, CurveMetrics, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
+use crate::error::MetricsError;
+use crate::geometrics::{
+    BasicMetrics, Metrics, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
 };
-use crate::error::CurvesError;
 
 /// A trait for extracting comprehensive metrics from a curve.
 ///
@@ -26,55 +26,65 @@ use crate::error::CurvesError;
 /// Implement this trait for specific curve types or analysis strategies to provide
 /// custom metric computation logic tailored to different domains or requirements.
 ///
-pub trait CurveMetricsExtractor {
+pub trait MetricsExtractor {
     /// Computes basic statistical metrics for the curve.
     ///
     /// # Returns
     /// - `Ok(BasicMetrics)`: Struct containing mean, median, mode, and standard deviation.
     /// - `Err(CurvesError)`: If metrics computation fails.
-    fn compute_basic_metrics(&self) -> Result<BasicMetrics, CurvesError>;
+    fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError>;
 
     /// Computes shape-related metrics for the curve.
     ///
     /// # Returns
     /// - `Ok(ShapeMetrics)`: Struct containing skewness, kurtosis, peaks, valleys, and inflection points.
     /// - `Err(CurvesError)`: If metrics computation fails.
-    fn compute_shape_metrics(&self) -> Result<ShapeMetrics, CurvesError>;
+    fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError>;
 
     /// Computes range-related metrics for the curve.
     ///
     /// # Returns
     /// - `Ok(RangeMetrics)`: Struct containing min/max points, range, quartiles, and interquartile range.
     /// - `Err(CurvesError)`: If metrics computation fails.
-    fn compute_range_metrics(&self) -> Result<RangeMetrics, CurvesError>;
+    fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError>;
 
     /// Computes trend-related metrics for the curve.
     ///
     /// # Returns
     /// - `Ok(TrendMetrics)`: Struct containing slope, intercept, R-squared, and moving average.
     /// - `Err(CurvesError)`: If metrics computation fails.
-    fn compute_trend_metrics(&self) -> Result<TrendMetrics, CurvesError>;
+    fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError>;
 
     /// Computes risk-related metrics for the curve.
     ///
     /// # Returns
     /// - `Ok(RiskMetrics)`: Struct containing volatility, VaR, expected shortfall, beta, and Sharpe ratio.
     /// - `Err(CurvesError)`: If metrics computation fails.
-    fn compute_risk_metrics(&self) -> Result<RiskMetrics, CurvesError>;
+    fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError>;
 
     /// Computes and aggregates all curve metrics into a comprehensive `CurveMetrics` struct.
     ///
     /// # Returns
     /// - `Ok(CurveMetrics)`: A struct containing all computed metrics.
     /// - `Err(CurvesError)`: If any metrics computation fails.
-    fn compute_curve_metrics(&self) -> Result<CurveMetrics, CurvesError> {
+    fn compute_curve_metrics(&self) -> Result<Metrics, MetricsError> {
         let basic = self.compute_basic_metrics()?;
         let shape = self.compute_shape_metrics()?;
         let range = self.compute_range_metrics()?;
         let trend = self.compute_trend_metrics()?;
         let risk = self.compute_risk_metrics()?;
 
-        Ok(CurveMetrics::new(basic, shape, range, trend, risk))
+        Ok(Metrics::new(basic, shape, range, trend, risk))
+    }
+
+    fn compute_surface_metrics(&self) -> Result<Metrics, MetricsError> {
+        let basic = self.compute_basic_metrics()?;
+        let shape = self.compute_shape_metrics()?;
+        let range = self.compute_range_metrics()?;
+        let trend = self.compute_trend_metrics()?;
+        let risk = self.compute_risk_metrics()?;
+
+        Ok(Metrics::new(basic, shape, range, trend, risk))
     }
 }
 
@@ -82,7 +92,6 @@ pub trait CurveMetricsExtractor {
 mod tests {
     use super::*;
     use crate::curves::Point2D;
-    use crate::error::OperationErrorKind;
     use num_traits::FromPrimitive;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -96,8 +105,8 @@ mod tests {
     }
 
     // Implementation of CurveMetricsExtractor for our mock struct
-    impl CurveMetricsExtractor for MockCurve {
-        fn compute_basic_metrics(&self) -> Result<BasicMetrics, CurvesError> {
+    impl MetricsExtractor for MockCurve {
+        fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
             Ok(BasicMetrics {
                 mean: dec!(10.5),
                 median: dec!(10.0),
@@ -106,7 +115,7 @@ mod tests {
             })
         }
 
-        fn compute_shape_metrics(&self) -> Result<ShapeMetrics, CurvesError> {
+        fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
             Ok(ShapeMetrics {
                 skewness: dec!(0.5),
                 kurtosis: dec!(3.0),
@@ -116,7 +125,7 @@ mod tests {
             })
         }
 
-        fn compute_range_metrics(&self) -> Result<RangeMetrics, CurvesError> {
+        fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
             Ok(RangeMetrics {
                 min: create_test_point(0.0, 5.0),
                 max: create_test_point(10.0, 15.0),
@@ -126,7 +135,7 @@ mod tests {
             })
         }
 
-        fn compute_trend_metrics(&self) -> Result<TrendMetrics, CurvesError> {
+        fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
             Ok(TrendMetrics {
                 slope: dec!(1.5),
                 intercept: dec!(2.0),
@@ -135,7 +144,7 @@ mod tests {
             })
         }
 
-        fn compute_risk_metrics(&self) -> Result<RiskMetrics, CurvesError> {
+        fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
             Ok(RiskMetrics {
                 volatility: dec!(0.15),
                 value_at_risk: dec!(0.05),
@@ -149,49 +158,34 @@ mod tests {
     // Mock struct for testing error cases
     struct ErrorMockCurve;
 
-    impl CurveMetricsExtractor for ErrorMockCurve {
-        fn compute_basic_metrics(&self) -> Result<BasicMetrics, CurvesError> {
-            Err(CurvesError::OperationError(
-                OperationErrorKind::InvalidParameters {
-                    reason: "Basic metrics computation failed".to_string(),
-                    operation: "compute_basic_metrics".to_string(),
-                },
+    impl MetricsExtractor for ErrorMockCurve {
+        fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
+            Err(MetricsError::BasicError(
+                "Basic metrics computation failed".to_string(),
             ))
         }
 
-        fn compute_shape_metrics(&self) -> Result<ShapeMetrics, CurvesError> {
-            Err(CurvesError::OperationError(
-                OperationErrorKind::InvalidParameters {
-                    reason: "Shape metrics computation failed".to_string(),
-                    operation: "compute_shape_metrics".to_string(),
-                },
+        fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
+            Err(MetricsError::ShapeError(
+                "Shape metrics computation failed".to_string(),
             ))
         }
 
-        fn compute_range_metrics(&self) -> Result<RangeMetrics, CurvesError> {
-            Err(CurvesError::OperationError(
-                OperationErrorKind::InvalidParameters {
-                    reason: "Range metrics computation failed".to_string(),
-                    operation: "compute_range_metrics".to_string(),
-                },
+        fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
+            Err(MetricsError::RangeError(
+                "Range metrics computation failed".to_string(),
             ))
         }
 
-        fn compute_trend_metrics(&self) -> Result<TrendMetrics, CurvesError> {
-            Err(CurvesError::OperationError(
-                OperationErrorKind::InvalidParameters {
-                    reason: "Trend metrics computation failed".to_string(),
-                    operation: "compute_trend_metrics".to_string(),
-                },
+        fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
+            Err(MetricsError::TrendError(
+                "Trend metrics computation failed".to_string(),
             ))
         }
 
-        fn compute_risk_metrics(&self) -> Result<RiskMetrics, CurvesError> {
-            Err(CurvesError::OperationError(
-                OperationErrorKind::InvalidParameters {
-                    reason: "Risk metrics computation failed".to_string(),
-                    operation: "compute_risk_metrics".to_string(),
-                },
+        fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
+            Err(MetricsError::RiskError(
+                "Risk metrics computation failed".to_string(),
             ))
         }
     }
@@ -285,7 +279,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Operation error: Invalid parameters for operation 'compute_basic_metrics': Basic metrics computation failed"
+                "Basic Error: Basic metrics computation failed"
             );
         }
 
@@ -296,7 +290,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Operation error: Invalid parameters for operation 'compute_shape_metrics': Shape metrics computation failed"
+                "Shape Error: Shape metrics computation failed"
             );
         }
 
@@ -307,7 +301,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Operation error: Invalid parameters for operation 'compute_range_metrics': Range metrics computation failed"
+                "Range Error: Range metrics computation failed"
             );
         }
 
@@ -318,7 +312,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Operation error: Invalid parameters for operation 'compute_trend_metrics': Trend metrics computation failed"
+                "Trend Error: Trend metrics computation failed"
             );
         }
 
@@ -329,7 +323,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Operation error: Invalid parameters for operation 'compute_risk_metrics': Risk metrics computation failed"
+                "Risk Error: Risk metrics computation failed"
             );
         }
 
@@ -340,7 +334,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Operation error: Invalid parameters for operation 'compute_basic_metrics': Basic metrics computation failed"
+                "Basic Error: Basic metrics computation failed"
             );
         }
     }

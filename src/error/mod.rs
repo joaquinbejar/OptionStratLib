@@ -138,6 +138,7 @@ pub mod probability;
 pub mod strategies;
 
 mod interpolation;
+mod metrics;
 mod surfaces;
 mod volatility;
 
@@ -147,6 +148,7 @@ pub use curves::CurvesError;
 pub use decimal::{DecimalError, DecimalResult};
 pub use greeks::GreeksError;
 pub use interpolation::InterpolationError;
+pub use metrics::MetricsError;
 pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
 pub use probability::ProbabilityError;

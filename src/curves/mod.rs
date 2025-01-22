@@ -1,4 +1,3 @@
-pub mod analysis;
 mod curve;
 mod curve_traits;
 mod types;

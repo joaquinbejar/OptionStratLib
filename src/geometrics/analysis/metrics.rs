@@ -1,6 +1,6 @@
-use crate::curves::analysis::CurveAnalysisResult;
 use crate::curves::Point2D;
 use crate::error::CurvesError;
+use crate::geometrics::AnalysisResult;
 use rust_decimal::Decimal;
 
 /// Represents a comprehensive set of statistical and analytical metrics for curve data.
@@ -83,7 +83,7 @@ use rust_decimal::Decimal;
 /// The `CurveMetrics` struct is designed to be reusable across various analytical contexts,
 /// providing a versatile and standardized way to represent curve characteristics.
 #[derive(Debug, Clone)]
-pub struct CurveMetrics {
+pub struct Metrics {
     // Basic statistics
     pub basic: BasicMetrics,
     // Shape characteristics
@@ -124,9 +124,9 @@ pub struct CurveMetrics {
 /// - [`RangeMetrics`]: Assesses the range and quartile characteristics of the curve.
 /// - [`TrendMetrics`]: Analyzes trends within the data to understand directional behavior.
 /// - [`RiskMetrics`]: Highlights risk-based metrics for financial, statistical, or analytical use cases.
-/// - [`CurveAnalysisResult`]: The result type combining key metrics into a single analytic perspective.
+/// - [`AnalysisResult`]: The result type combining key metrics into a single analytic perspective.
 /// - [`CurvesError`]: Represents potential errors that may arise during curve analysis operations.
-impl CurveMetrics {
+impl Metrics {
     /// ### `new`
     /// Constructs a new instance of `CurveMetrics` and initializes all relevant fields with the provided
     /// metric structures.
@@ -162,14 +162,14 @@ impl CurveMetrics {
     ///
     /// #### Returns:
     /// - `Ok(CurveAnalysisResult)`: A result that contains analyzed data in the form of a
-    ///   [`CurveAnalysisResult`] structure with basic statistics and shape metrics.
+    ///   [`AnalysisResult`] structure with basic statistics and shape metrics.
     /// - `Err(CurvesError)`: An error of type [`CurvesError`] when analysis fails.
     ///
     /// The result provides the basic statistical measures (`BasicMetrics`) and
     /// shape metrics (`ShapeMetrics`) that were part of the `CurveMetrics` instance.
     ///
-    pub fn curve_analysis_result(&self) -> Result<CurveAnalysisResult, CurvesError> {
-        Ok(CurveAnalysisResult {
+    pub fn analysis_result(&self) -> Result<AnalysisResult, CurvesError> {
+        Ok(AnalysisResult {
             statistics: self.basic,
             shape_metrics: self.shape.clone(),
         })
@@ -219,9 +219,9 @@ impl CurveMetrics {
 ///
 /// ## Integration
 /// The `BasicMetrics` structure is often used as part of larger metric aggregations, such as:
-/// - [`crate::curves::analysis::metrics::CurveMetrics`]: Combines `BasicMetrics` with other
+/// - [`crate::geometrics::Metrics`]: Combines `BasicMetrics` with other
 ///   metrics for a detailed analysis of curve behavior.
-/// - [`CurveAnalysisResult`]: Provides a high-level
+/// - [`AnalysisResult`]: Provides a high-level
 ///   result of statistical and shape analysis for curves.
 ///
 /// ## Remarks
@@ -484,13 +484,13 @@ pub struct TrendMetrics {
 ///
 /// ## Remarks
 /// The `RiskMetrics` structure is a critical component in financial analysis and
-/// often serves as an input to higher-level structures like [`crate::curves::analysis::metrics::CurveMetrics`]. By
+/// often serves as an input to higher-level structures like [`crate::geometrics::Metrics`]. By
 /// combining these risk metrics with other statistical measures, it is possible to
 /// gain a comprehensive understanding of the risk-return characteristics of an asset
 /// or portfolio.
 ///
 /// ## Related Concepts
-/// - [`CurveMetrics`]: Aggregates risk
+/// - [`Metrics`]: Aggregates risk
 ///   alongside other statistical measures (e.g., trend, range, and shape metrics).
 /// - **Financial Risk Indicators**:
 ///   Includes measures like maximum drawdown, Treynor ratio, and Sortino ratio
@@ -721,8 +721,8 @@ mod tests {
     mod test_curve_metrics {
         use super::*;
 
-        fn create_test_curve_metrics() -> CurveMetrics {
-            CurveMetrics {
+        fn create_test_curve_metrics() -> Metrics {
+            Metrics {
                 basic: BasicMetrics {
                     mean: dec!(10.5),
                     median: dec!(10.0),
@@ -785,7 +785,7 @@ mod tests {
         #[test]
         fn test_curve_analysis_result() {
             let metrics = create_test_curve_metrics();
-            let result = metrics.curve_analysis_result();
+            let result = metrics.analysis_result();
 
             assert!(result.is_ok());
             let analysis = result.unwrap();
@@ -834,7 +834,7 @@ mod tests {
                 sharpe_ratio: dec!(2.5),
             };
 
-            let metrics = CurveMetrics::new(basic, shape, range, trend, risk);
+            let metrics = Metrics::new(basic, shape, range, trend, risk);
 
             assert_eq!(metrics.basic.mean, dec!(10.5));
             assert_eq!(metrics.shape.skewness, dec!(0.5));

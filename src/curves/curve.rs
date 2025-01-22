@@ -3,15 +3,13 @@
    Email: jb@taunais.com
    Date: 9/1/25
 ******************************************************************************/
-use crate::curves::analysis::{
-    BasicMetrics, CurveMetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
-};
 use crate::curves::Point2D;
-use crate::error::{CurvesError, InterpolationError};
+use crate::error::{CurvesError, InterpolationError, MetricsError};
 use crate::geometrics::{
-    BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation,
-    CurveArithmetic, GeometricObject, Interpolate, InterpolationType, Len, LinearInterpolation,
-    MergeOperation, SplineInterpolation,
+    BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams,
+    CubicInterpolation, CurveArithmetic, GeometricObject, Interpolate, InterpolationType, Len,
+    LinearInterpolation, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics,
+    SplineInterpolation, TrendMetrics,
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
@@ -944,8 +942,8 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
 /// # Note
 /// This is a minimal implementation that may need to be customized or enhanced
 /// based on specific requirements or domain-specific analysis needs.
-impl CurveMetricsExtractor for Curve {
-    fn compute_basic_metrics(&self) -> Result<BasicMetrics, CurvesError> {
+impl MetricsExtractor for Curve {
+    fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
         // TODO: Implement actual basic metrics computation
         // This is a placeholder implementation
         Ok(BasicMetrics {
@@ -956,7 +954,7 @@ impl CurveMetricsExtractor for Curve {
         })
     }
 
-    fn compute_shape_metrics(&self) -> Result<ShapeMetrics, CurvesError> {
+    fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
         // TODO: Implement actual shape metrics computation
         // This is a placeholder implementation
         Ok(ShapeMetrics {
@@ -968,7 +966,7 @@ impl CurveMetricsExtractor for Curve {
         })
     }
 
-    fn compute_range_metrics(&self) -> Result<RangeMetrics, CurvesError> {
+    fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
         // TODO: Implement actual range metrics computation
         // This is a placeholder implementation
         let min_point = self
@@ -991,7 +989,7 @@ impl CurveMetricsExtractor for Curve {
         })
     }
 
-    fn compute_trend_metrics(&self) -> Result<TrendMetrics, CurvesError> {
+    fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
         // TODO: Implement actual trend metrics computation
         // This is a placeholder implementation
         Ok(TrendMetrics {
@@ -1002,7 +1000,7 @@ impl CurveMetricsExtractor for Curve {
         })
     }
 
-    fn compute_risk_metrics(&self) -> Result<RiskMetrics, CurvesError> {
+    fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
         // TODO: Implement actual risk metrics computation
         // This is a placeholder implementation
         Ok(RiskMetrics {
