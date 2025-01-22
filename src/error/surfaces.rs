@@ -65,6 +65,8 @@ impl SurfaceError {
     }
 }
 
+impl Error for SurfaceError {}
+
 impl fmt::Display for SurfaceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -176,6 +178,7 @@ impl From<Box<dyn Error>> for SurfaceError {
         }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
