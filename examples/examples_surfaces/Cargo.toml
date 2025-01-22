@@ -1,0 +1,9 @@
+[package]
+name = "examples_surfaces"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+optionstratlib = { path = "../.." }
+rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
+rust_decimal_macros = "1.36.0"

@@ -3,9 +3,9 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
-use crate::error::CurvesError;
 use plotters::prelude::RGBColor;
 use std::path::Path;
+
 
 /// Plot configuration options
 #[derive(Clone, Debug)]
@@ -16,6 +16,8 @@ pub struct PlotOptions {
     pub x_label: Option<String>,
     /// Y-axis label
     pub y_label: Option<String>,
+    /// Z-axis label
+    pub z_label: Option<String>,
     /// Line colors for each curve
     pub line_colors: Option<Vec<RGBColor>>,
     /// Line width
@@ -28,6 +30,10 @@ pub struct PlotOptions {
     pub height: u32,
     /// Curve names
     pub curve_name: Option<Vec<String>>,
+    
+    pub point_size: Option<u32>,
+    
+    pub labels_size: Option<f64>,
 }
 
 #[allow(dead_code)]
@@ -50,18 +56,23 @@ impl Default for PlotOptions {
             title: None,
             x_label: None,
             y_label: None,
+            z_label: None,
             line_colors: None,
             line_width: 2,
-            background_color: RGBColor(255, 255, 255), // White
-            width: 800,                                // Dimensión por defecto
-            height: 600,                               // Dimensión por defecto
+            background_color: RGBColor(255, 255, 255),
+            width: 800,                               
+            height: 600,                              
             curve_name: None,
+            point_size: None,
+            labels_size: None,
         }
     }
 }
 
 /// Trait for plotting curves
 pub trait Plottable {
+    type Error;
+    
     /// Creates a plot builder
     fn plot(&self) -> PlotBuilder<Self>
     where
@@ -78,6 +89,7 @@ pub struct PlotBuilder<T: Plottable> {
 }
 
 impl<T: Plottable> PlotBuilder<T> {
+    
     /// Set plot title
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.options.title = Some(title.into());
@@ -93,6 +105,21 @@ impl<T: Plottable> PlotBuilder<T> {
     /// Set y-axis label
     pub fn y_label(mut self, label: impl Into<String>) -> Self {
         self.options.y_label = Some(label.into());
+        self
+    }
+
+    pub fn z_label(mut self, label: impl Into<String>) -> Self {
+        self.options.z_label = Some(label.into());
+        self
+    }
+    
+    pub fn point_size(mut self, size: u32) -> Self {
+        self.options.point_size = Some(size);
+        self
+    }
+
+    pub fn label_size(mut self, size: f64) -> Self {
+        self.options.labels_size = Some(size);
         self
     }
 
@@ -120,7 +147,7 @@ impl<T: Plottable> PlotBuilder<T> {
         self
     }
 
-    pub fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError>
+    pub fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>
     where
         Self: PlotBuilderExt<T>,
     {
@@ -130,6 +157,7 @@ impl<T: Plottable> PlotBuilder<T> {
 
 /// Plotting extension methods
 pub trait PlotBuilderExt<T: Plottable> {
+    
     /// Save plot to file
-    fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError>;
+    fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>;
 }

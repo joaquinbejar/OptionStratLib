@@ -144,22 +144,6 @@ impl HasX for Point3D {
 }
 
 #[derive(Debug, Clone)]
-pub enum SurfaceType {
-    /// Surface representing volatility in three dimensions
-    Volatility,
-    /// Surface showing delta sensitivity
-    Delta,
-    /// Surface showing gamma sensitivity
-    Gamma,
-    /// Surface showing theta decay
-    Theta,
-    /// Surface showing vega sensitivity
-    Vega,
-    /// Custom surface type with description
-    Other(String),
-}
-
-#[derive(Debug, Clone)]
 pub enum SurfaceInterpolationType {
     /// Linear interpolation between points
     Linear,

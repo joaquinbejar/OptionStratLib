@@ -8,7 +8,7 @@ use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 use std::error::Error;
 
-type ResultPoint<Point> = Result<Point, Box<dyn Error>>;
+pub type ResultPoint<Point> = Result<Point, Box<dyn Error>>;
 
 #[derive(Debug, Clone)]
 pub enum ConstructionParams {

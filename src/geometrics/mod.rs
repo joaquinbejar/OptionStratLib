@@ -16,7 +16,7 @@ pub use analysis::{
     AnalysisResult, BasicMetrics, Metrics, MetricsExtractor, RangeMetrics, RiskMetrics,
     ShapeMetrics, TrendMetrics,
 };
-pub use construction::{ConstructionMethod, ConstructionParams};
+pub use construction::{ConstructionMethod, ConstructionParams, ResultPoint};
 pub use interpolation::bilinear::BiLinearInterpolation;
 pub use interpolation::cubic::CubicInterpolation;
 pub use interpolation::linear::LinearInterpolation;

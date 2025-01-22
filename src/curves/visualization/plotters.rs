@@ -45,6 +45,7 @@
 //! }
 //! ```
 
+use std::error::Error;
 use crate::curves::Curve;
 use crate::error::CurvesError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
@@ -54,8 +55,11 @@ use num_traits::ToPrimitive;
 use plotters::prelude::*;
 use std::path::Path;
 
+
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
+    type Error = CurvesError;
+
     fn plot(&self) -> PlotBuilder<Self>
     where
         Self: Sized,
@@ -134,6 +138,8 @@ impl Plottable for Curve {
 /// `Curve` struct, `PlotBuilder`, and `PlotOptions`. These modules provide the functionality
 /// required to create, configure, and render curve plots.
 impl Plottable for Vec<Curve> {
+    type Error = CurvesError;
+
     fn plot(&self) -> PlotBuilder<Self>
     where
         Self: Sized,
@@ -663,6 +669,8 @@ mod tests_extended {
     }
 
     impl Plottable for Plot {
+        type Error = CurvesError;
+
         fn plot(&self) -> PlotBuilder<Self>
         where
             Self: Sized,

@@ -21,10 +21,28 @@ use plotters::prelude::{
     Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
     Ranged, WHITE,
 };
-
 use std::error::Error;
 use std::ops::Add;
+use plotters::prelude::RGBColor;
 
+
+/// Aplica un degradado a un color base basado en un valor normalizado.
+///
+/// # Parámetros
+/// - `base_color`: El color base del degradado.
+/// - `end_color`: El color final del degradado.
+/// - `normalized_value`: Un valor normalizado en el rango [0, 1] que determina la posición en el degradado.
+///
+/// # Retorno
+/// Un nuevo `RGBColor` interpolado entre `base_color` y `end_color`.
+pub fn apply_shade(base_color: RGBColor, normalized_value: f64) -> RGBColor {
+    let end_color = RGBColor(base_color.1, base_color.2, base_color.0);
+    let r = base_color.0 as f64 + (end_color.0 as f64 - base_color.0 as f64) * normalized_value;
+    let g = base_color.1 as f64 + (end_color.1 as f64 - base_color.1 as f64) * normalized_value;
+    let b = base_color.2 as f64 + (end_color.2 as f64 - base_color.2 as f64) * normalized_value;
+
+    RGBColor(r as u8, g as u8, b as u8)
+}
 #[cfg(not(target_arch = "wasm32"))]
 pub enum GraphBackend<'a> {
     Bitmap {
