@@ -6,10 +6,10 @@
 use crate::curves::Point2D;
 use crate::error::{CurvesError, InterpolationError, MetricsError};
 use crate::geometrics::{
-    BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams,
-    CubicInterpolation, CurveArithmetic, GeometricObject, Interpolate, InterpolationType, Len,
-    LinearInterpolation, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics,
-    SplineInterpolation, TrendMetrics,
+    Arithmetic, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams,
+    CubicInterpolation, GeometricObject, Interpolate, InterpolationType, Len, LinearInterpolation,
+    MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation,
+    TrendMetrics,
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
@@ -1016,7 +1016,9 @@ impl MetricsExtractor for Curve {
 /// Implements the `CurveArithmetic` trait for the `Curve` type, providing
 /// functionality for merging multiple curves using a specified mathematical
 /// operation and performing arithmetic operations between two curves.
-impl CurveArithmetic for Curve {
+impl Arithmetic<Curve> for Curve {
+    type Error = CurvesError;
+
     /// Merges a collection of curves into a single curve based on the specified
     /// mathematical operation.
     ///
@@ -1076,7 +1078,7 @@ impl CurveArithmetic for Curve {
     /// This function enables combining multiple curves for tasks such as:
     /// - Summing y-values across different curves to compute a composite curve.
     /// - Finding the maximum/minimum y-value at each x-point for a collection of curves.
-    fn merge_curves(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurvesError> {
+    fn merge(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurvesError> {
         if curves.is_empty() {
             return Err(CurvesError::invalid_parameters(
                 "merge_curves",
@@ -1211,7 +1213,7 @@ impl CurveArithmetic for Curve {
     /// Use this method to easily perform arithmetic operations between two curves,
     /// such as summing their y-values or finding their pointwise maximum.
     fn merge_with(&self, other: &Curve, operation: MergeOperation) -> Result<Curve, CurvesError> {
-        Self::merge_curves(&[self, other], operation)
+        Self::merge(&[self, other], operation)
     }
 }
 
@@ -1787,7 +1789,7 @@ mod tests_curve_arithmetic {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Add).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Add).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1811,7 +1813,7 @@ mod tests_curve_arithmetic {
     fn test_merge_curves_subtract() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Subtract).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Subtract).unwrap();
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
         for x in &test_points {
@@ -1835,7 +1837,7 @@ mod tests_curve_arithmetic {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Multiply).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Multiply).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1859,7 +1861,7 @@ mod tests_curve_arithmetic {
     fn test_merge_curves_divide() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(6.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Divide).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Divide).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1890,7 +1892,7 @@ mod tests_curve_arithmetic {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Max).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Max).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1916,7 +1918,7 @@ mod tests_curve_arithmetic {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Min).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Min).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1945,7 +1947,7 @@ mod tests_curve_arithmetic {
         let result = curve1.merge_with(&curve2, MergeOperation::Add).unwrap();
 
         // Verify that merge_with is equivalent to merge_curves with two curves
-        let merged_result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Add).unwrap();
+        let merged_result = Curve::merge(&[&curve1, &curve2], MergeOperation::Add).unwrap();
 
         // Compare points of both results
         assert_eq!(result.points.len(), merged_result.points.len());
@@ -1960,7 +1962,7 @@ mod tests_curve_arithmetic {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_merge_curves_error_handling() {
         // Test with empty slice
-        let result = Curve::merge_curves(&[], MergeOperation::Add);
+        let result = Curve::merge(&[], MergeOperation::Add);
         assert!(result.is_err());
 
         // Test with curves of incompatible ranges
@@ -1968,7 +1970,7 @@ mod tests_curve_arithmetic {
         let curve2 = create_linear_curve(dec!(5.0), dec!(15.0), dec!(2.0));
 
         // Verify that the merge operation works even with partially overlapping ranges
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Add);
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Add);
         assert!(result.is_ok());
     }
 
@@ -1979,8 +1981,7 @@ mod tests_curve_arithmetic {
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve3 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result =
-            Curve::merge_curves(&[&curve1, &curve2, &curve3], MergeOperation::Add).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2, &curve3], MergeOperation::Add).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];

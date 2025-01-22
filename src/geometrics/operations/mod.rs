@@ -19,7 +19,7 @@
 //! ## Usage
 //! ```rust
 //! use rust_decimal::Decimal;
-//! use optionstratlib::geometrics::{CurveArithmetic, GeometricObject, MergeOperation};
+//! use optionstratlib::geometrics::{Arithmetic, GeometricObject, MergeOperation};
 //! use optionstratlib::curves::{Curve, Point2D};
 //! let curve1 = Curve::from_vector(vec![
 //!            Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
@@ -29,7 +29,7 @@
 //!        ]);
 //! let curve2 = curve1.clone();
 //! // Merge two curves by adding their values
-//! let result_curve = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Add);
+//! let result_curve = Curve::merge(&[&curve1, &curve2], MergeOperation::Add);
 //! ```
 //!
 //! ## Design Principles
@@ -42,4 +42,4 @@ mod traits;
 mod transformations;
 
 pub use arithmetic::MergeOperation;
-pub use traits::CurveArithmetic;
+pub use traits::Arithmetic;

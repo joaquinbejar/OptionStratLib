@@ -1,55 +1,76 @@
-use crate::curves::Curve;
-use crate::error::CurvesError;
 use crate::geometrics::MergeOperation;
 
-/// A trait for performing arithmetic operations between curves.
-///
-/// # Overview
-/// The `CurveArithmetic` trait provides methods to perform various arithmetic
-/// operations between two or more curves. It supports operations like addition,
-/// subtraction, multiplication, division, finding maximum, and finding minimum
-/// values across multiple curves.
-///
-/// # Operations
-/// - `merge_curves`: Combines multiple curves using a specified arithmetic operation.
-/// - `merge_with`: Performs an arithmetic operation between two curves.
-///
-/// # Design Principles
-///
-/// ## Interpolation Handling
-/// When performing arithmetic operations, these methods may need to:
-/// 1. Interpolate points between curves with different x-coordinates
-/// 2. Handle cases where curves have different lengths or x-ranges
-///
-/// ## Interpolation Strategy
-/// The default implementation uses cubic interpolation to ensure smooth
-/// transitions and minimize artifacts when combining curves with different
-/// point distributions.
-///
-/// # Error Handling
-/// Returns `CurvesError` to provide detailed context about potential
-/// failures during curve arithmetic operations.
-///
-pub trait CurveArithmetic {
-    /// Merges multiple curves using a specified arithmetic operation.
-    ///
-    /// # Parameters
-    /// - `curves`: A slice of references to curves to be merged
-    /// - `operation`: The arithmetic operation to apply (`MergeOperation`)
-    ///
-    /// # Returns
-    /// - `Ok(Curve)`: A new curve resulting from the merge operation
-    /// - `Err(CurvesError)`: Error if merging fails
-    fn merge_curves(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurvesError>;
 
-    /// Performs an arithmetic operation between two curves.
-    ///
-    /// # Parameters
-    /// - `other`: Another curve to merge with the current curve
-    /// - `operation`: The arithmetic operation to apply (`MergeOperation`)
-    ///
-    /// # Returns
-    /// - `Ok(Curve)`: A new curve resulting from the merge operation
-    /// - `Err(CurvesError)`: Error if merging fails
-    fn merge_with(&self, other: &Curve, operation: MergeOperation) -> Result<Curve, CurvesError>;
+/// A trait that provides arithmetic operations for working with geometries, 
+/// enabling merging and combining of curve data based on different operations. 
+///
+/// # Associated Types
+/// - `Error`: Represents the type of error that may occur during curve operations.
+///
+/// # Required Methods
+///
+/// ## `merge_geometries`
+/// Combines multiple geometries into a single curve based on a specified `MergeOperation`.
+///
+/// ### Parameters
+/// - `geometries`: A slice of references to the input geometries that need to be merged.
+/// - `operation`: The operation used to combine the geometries (e.g., addition, subtraction, etc.).
+///
+/// ### Returns
+/// - `Result<Input, Self::Error>`: Returns the resulting merged curve if successful,
+/// or an error of type `Self::Error` if the merge process fails.
+///
+/// ## `merge_with`
+/// Merges the current curve with another curve based on a specified `MergeOperation`.
+///
+/// ### Parameters
+/// - `other`: A reference to another curve to be merged.
+/// - `operation`: The operation used to combine the geometries (e.g., addition, subtraction, etc.).
+///
+/// ### Returns
+/// - `Result<Input, Self::Error>`: Returns the resulting merged curve if successful,
+/// or an error of type `Self::Error` if the merge process fails.
+///
+/// # Usage Example
+/// ```rust
+/// use std::collections::BTreeSet;
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::geometrics::{Arithmetic, MergeOperation};
+/// use optionstratlib::surfaces::{Point3D, Surface};
+///
+/// // Assuming `Curve` is an implementation of `CurveArithmetic`
+/// let points1 = BTreeSet::from_iter(vec![
+///             Point3D::new(dec!(0.0), dec!(0.0), dec!(2.0)),
+///             Point3D::new(dec!(0.5), dec!(0.0), dec!(2.0)),
+///             Point3D::new(dec!(1.0), dec!(0.0), dec!(2.0)),
+///             Point3D::new(dec!(0.0), dec!(0.5), dec!(2.0)),
+///         ]);
+/// let surface1 = Surface::new(points1);
+/// let points2 = BTreeSet::from_iter(vec![
+///             Point3D::new(dec!(0.0), dec!(0.0), dec!(2.0)),
+///             Point3D::new(dec!(0.5), dec!(0.0), dec!(2.0)),
+///             Point3D::new(dec!(1.0), dec!(0.0), dec!(2.0)),
+///             Point3D::new(dec!(0.0), dec!(0.5), dec!(2.0)),
+///         ]);
+///  let surface2 = Surface::new(points2);
+///
+/// // Merge two geometries by adding values
+/// let merged_curve = Arithmetic::merge(&[&surface1, &surface2], MergeOperation::Add);
+///
+/// // Alternatively, merge using an object instance
+/// let merged_with = surface1.merge_with(&surface2, MergeOperation::Multiply);
+/// ```
+///
+/// # Notes
+/// - This trait is designed to be implemented for specific curve types which define how 
+/// the merging will occur. The associated error type should capture and communicate 
+/// any issues encountered during operations.
+pub trait Arithmetic<Input> {
+    type Error;
+
+    /// Combines multiple geometries into one using the specified merge operation.
+    fn merge(geometries: &[&Input], operation: MergeOperation) -> Result<Input, Self::Error>;
+
+    /// Merges the current curve with another curve using the specified merge operation.
+    fn merge_with(&self, other: &Input, operation: MergeOperation) -> Result<Input, Self::Error>;
 }

@@ -1,20 +1,25 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 20/1/25
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 20/1/25
+******************************************************************************/
+use crate::curves::{Curve, Point2D};
+use crate::error::{InterpolationError, SurfaceError};
+use crate::geometrics::{
+    Arithmetic, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation,
+    GeometricObject, Interpolate, InterpolationType, LinearInterpolation, MergeOperation,
+    SplineInterpolation,
+};
+use crate::surfaces::types::Axis;
+use crate::surfaces::Point3D;
+use num_traits::ToPrimitive;
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
+use rust_decimal::{Decimal, MathematicalOps};
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
-use num_traits::ToPrimitive;
-use rayon::iter::IntoParallelIterator;
-use rust_decimal::{Decimal, MathematicalOps};
-use crate::curves::{Curve, Point2D};
-use crate::error::{InterpolationError, SurfaceError};
-use crate::geometrics::{BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, LinearInterpolation, SplineInterpolation};
-use crate::surfaces::Point3D;
-use crate::surfaces::types::Axis;
-use rayon::iter::ParallelIterator;
 
 /// Represents a mathematical surface in 3D space
 #[derive(Debug, Clone)]
@@ -23,11 +28,9 @@ pub struct Surface {
     pub points: BTreeSet<Point3D>,
     pub x_range: (Decimal, Decimal),
     pub y_range: (Decimal, Decimal),
-
 }
 
 impl Surface {
-    
     pub fn new(points: BTreeSet<Point3D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         let y_range = Self::calculate_range(points.iter().map(|p| p.y));
@@ -37,29 +40,31 @@ impl Surface {
             y_range,
         }
     }
-    
+
     pub fn get_curve(&self, axis: Axis) -> Curve {
-        let points = self.points.iter().map(|p| {
-            match axis {
+        let points = self
+            .points
+            .iter()
+            .map(|p| match axis {
                 Axis::X => Point2D::new(p.y, p.z),
                 Axis::Y => Point2D::new(p.x, p.z),
                 Axis::Z => Point2D::new(p.x, p.y),
-            }
-        }).collect();
-        
+            })
+            .collect();
+
         Curve::new(points)
     }
-    
+
     // Helper method for one-dimensional cubic spline interpolation
     fn one_dimensional_spline_interpolation<T>(
         &self,
         points: &[T],
         target: Decimal,
         x_selector: fn(&T) -> Decimal,
-        z_selector: fn(&T) -> Decimal
+        z_selector: fn(&T) -> Decimal,
     ) -> Result<Decimal, InterpolationError>
     where
-        T: Clone
+        T: Clone,
     {
         // Sort points by x coordinate
         let mut sorted_points = points.to_vec();
@@ -82,9 +87,11 @@ impl Surface {
         }
 
         // Find the segment where the target falls
-        let (left_index, right_index) = match sorted_points.iter()
+        let (left_index, right_index) = match sorted_points
+            .iter()
             .enumerate()
-            .find(|(_, p)| x_selector(p) > target) {
+            .find(|(_, p)| x_selector(p) > target)
+        {
             Some((index, _)) => (index - 1, index),
             None => (sorted_points.len() - 2, sorted_points.len() - 1),
         };
@@ -100,12 +107,17 @@ impl Surface {
 
         Ok(interpolated_z)
     }
-    
+
     pub(crate) fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
-        self
-            .points
+        self.points
             .iter()
-            .map(|p| (p.x.to_f64().unwrap_or(0.0), p.z.to_f64().unwrap_or(0.0), p.y.to_f64().unwrap_or(0.0)))
+            .map(|p| {
+                (
+                    p.x.to_f64().unwrap_or(0.0),
+                    p.z.to_f64().unwrap_or(0.0),
+                    p.y.to_f64().unwrap_or(0.0),
+                )
+            })
             .collect()
     }
 }
@@ -125,10 +137,14 @@ impl GeometricObject<Point3D, Point2D> for Surface {
 
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         let y_range = Self::calculate_range(points.iter().map(|p| p.y));
-        
-        Surface { points, x_range , y_range}
+
+        Surface {
+            points,
+            x_range,
+            y_range,
+        }
     }
-    
+
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
         Self: Sized,
@@ -193,7 +209,7 @@ impl Index<usize> for Surface {
     }
 }
 
-impl Interpolate<Point3D, Point2D> for Surface { }
+impl Interpolate<Point3D, Point2D> for Surface {}
 
 impl LinearInterpolation<Point3D, Point2D> for Surface {
     fn linear_interpolate(&self, xy: Point2D) -> Result<Point3D, InterpolationError> {
@@ -208,16 +224,15 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
         if xy.x < self.x_range.0
             || xy.x > self.x_range.1
             || xy.y < self.y_range.0
-            || xy.y > self.y_range.1 {
+            || xy.y > self.y_range.1
+        {
             return Err(InterpolationError::Linear(
                 "Point is outside the surface's range".to_string(),
             ));
         }
 
         // Get all points sorted by distance
-        let mut nearest_points: Vec<&Point3D> = self.points
-            .iter()
-            .collect();
+        let mut nearest_points: Vec<&Point3D> = self.points.iter().collect();
 
         nearest_points.sort_by(|a, b| {
             let dist_a = (a.x - xy.x).powi(2) + (a.y - xy.y).powi(2);
@@ -282,14 +297,17 @@ impl BiLinearInterpolation<Point3D, Point2D> for Surface {
         if xy.x < self.x_range.0
             || xy.x > self.x_range.1
             || xy.y < self.y_range.0
-            || xy.y > self.y_range.1 {
+            || xy.y > self.y_range.1
+        {
             return Err(InterpolationError::Bilinear(
                 "Point is outside the surface's range".to_string(),
             ));
         }
 
         // Check for invalid quadrilateral: all points have the same x and y but different z
-        let xy_points: Vec<&Point3D> = self.points.iter()
+        let xy_points: Vec<&Point3D> = self
+            .points
+            .iter()
             .filter(|p| p.x == xy.x && p.y == xy.y)
             .collect();
 
@@ -338,10 +356,10 @@ impl BiLinearInterpolation<Point3D, Point2D> for Surface {
         let y_ratio = (xy.y - q11.y) / (q21.y - q11.y);
 
         // Perform bilinear interpolation
-        let z = (Decimal::ONE - x_ratio) * (Decimal::ONE - y_ratio) * q11.z +
-            x_ratio * (Decimal::ONE - y_ratio) * q12.z +
-            (Decimal::ONE - x_ratio) * y_ratio * q21.z +
-            x_ratio * y_ratio * q22.z;
+        let z = (Decimal::ONE - x_ratio) * (Decimal::ONE - y_ratio) * q11.z
+            + x_ratio * (Decimal::ONE - y_ratio) * q12.z
+            + (Decimal::ONE - x_ratio) * y_ratio * q21.z
+            + x_ratio * y_ratio * q22.z;
 
         Ok(Point3D::new(xy.x, xy.y, z))
     }
@@ -360,7 +378,8 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
         if xy.x < self.x_range.0
             || xy.x > self.x_range.1
             || xy.y < self.y_range.0
-            || xy.y > self.y_range.1 {
+            || xy.y > self.y_range.1
+        {
             return Err(InterpolationError::Cubic(
                 "Point is outside the surface's range".to_string(),
             ));
@@ -385,10 +404,15 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
         // We'll use a weighted cubic interpolation approach
 
         // Calculate weights based on distance
-        let weights: Vec<Decimal> = closest_points.iter().map(|&point| {
-            let dist = ((point.x - xy.x).powi(2) + (point.y - xy.y).powi(2)).sqrt().unwrap();
-            Decimal::ONE / (dist + Decimal::new(1, 6)) // Avoid division by zero
-        }).collect();
+        let weights: Vec<Decimal> = closest_points
+            .iter()
+            .map(|&point| {
+                let dist = ((point.x - xy.x).powi(2) + (point.y - xy.y).powi(2))
+                    .sqrt()
+                    .unwrap();
+                Decimal::ONE / (dist + Decimal::new(1, 6)) // Avoid division by zero
+            })
+            .collect();
 
         // Weighted cubic interpolation
         let mut numerator_z = Decimal::ZERO;
@@ -406,7 +430,8 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
             numerator_z / denominator
         } else {
             // Fallback to average if weights are problematic
-            closest_points.iter().map(|p| p.z).sum::<Decimal>() / Decimal::from(closest_points.len())
+            closest_points.iter().map(|p| p.z).sum::<Decimal>()
+                / Decimal::from(closest_points.len())
         };
 
         Ok(Point3D::new(xy.x, xy.y, interpolated_z))
@@ -426,7 +451,8 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
         if xy.x < self.x_range.0
             || xy.x > self.x_range.1
             || xy.y < self.y_range.0
-            || xy.y > self.y_range.1 {
+            || xy.y > self.y_range.1
+        {
             return Err(InterpolationError::Spline(
                 "Point is outside the surface's range".to_string(),
             ));
@@ -446,8 +472,10 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
         });
 
         // Group points by x and y coordinates
-        let mut x_groups: std::collections::HashMap<Decimal, Vec<&Point3D>> = std::collections::HashMap::new();
-        let mut y_groups: std::collections::HashMap<Decimal, Vec<&Point3D>> = std::collections::HashMap::new();
+        let mut x_groups: std::collections::HashMap<Decimal, Vec<&Point3D>> =
+            std::collections::HashMap::new();
+        let mut y_groups: std::collections::HashMap<Decimal, Vec<&Point3D>> =
+            std::collections::HashMap::new();
 
         for &point in &sorted_points {
             x_groups.entry(point.x).or_insert_with(Vec::new).push(point);
@@ -463,7 +491,8 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
         // Interpolate along x for each unique y value
         let mut interpolated_x_points: Vec<Point3D> = Vec::new();
         for &y in &y_values {
-            let y_points: Vec<&Point3D> = sorted_points.iter()
+            let y_points: Vec<&Point3D> = sorted_points
+                .iter()
                 .filter(|&&p| p.y == y)
                 .cloned()
                 .collect();
@@ -473,12 +502,8 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
             }
 
             // Perform cubic spline interpolation along x for this y
-            let x_interpolated = self.one_dimensional_spline_interpolation(
-                &y_points,
-                xy.x,
-                |p| p.x,
-                |p| p.z
-            );
+            let x_interpolated =
+                self.one_dimensional_spline_interpolation(&y_points, xy.x, |p| p.x, |p| p.z);
 
             if let Ok(z) = x_interpolated {
                 interpolated_x_points.push(Point3D::new(xy.x, y, z));
@@ -497,11 +522,132 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
             &interpolated_x_points,
             xy.y,
             |p| p.y,
-            |p| p.z
+            |p| p.z,
         );
 
         // Return the final interpolated point
         y_interpolated.map(|z| Point3D::new(xy.x, xy.y, z))
+    }
+}
+
+impl Arithmetic<Surface> for Surface {
+    type Error = SurfaceError;
+
+    fn merge(surfaces: &[&Surface], operation: MergeOperation) -> Result<Surface, Self::Error> {
+        if surfaces.is_empty() {
+            return Err(SurfaceError::invalid_parameters(
+                "merge_surfaces",
+                "No surfaces provided for merging",
+            ));
+        }
+
+        if surfaces.len() == 1 {
+            return Ok(surfaces[0].clone());
+        }
+
+        // Find intersection of x,y ranges
+        let min_x = surfaces
+            .iter()
+            .map(|s| s.x_range.0)
+            .max()
+            .unwrap_or(Decimal::ZERO);
+        let max_x = surfaces
+            .iter()
+            .map(|s| s.x_range.1)
+            .min()
+            .unwrap_or(Decimal::ZERO);
+        let min_y = surfaces
+            .iter()
+            .map(|s| s.y_range.0)
+            .max()
+            .unwrap_or(Decimal::ZERO);
+        let max_y = surfaces
+            .iter()
+            .map(|s| s.y_range.1)
+            .min()
+            .unwrap_or(Decimal::ZERO);
+
+        // Validate ranges
+        if min_x >= max_x || min_y >= max_y {
+            return Err(SurfaceError::invalid_parameters(
+                "merge_surfaces",
+                "Surfaces have incompatible ranges",
+            ));
+        }
+
+        // Create interpolation grid
+        let steps = 50;
+        let x_step = (max_x - min_x) / Decimal::from(steps);
+        let y_step = (max_y - min_y) / Decimal::from(steps);
+
+        let result_points: Result<Vec<Point3D>, SurfaceError> = (0..=steps)
+            .into_par_iter()
+            .flat_map(|i| {
+                let x = min_x + x_step * Decimal::from(i);
+                (0..=steps).into_par_iter().map(move |j| {
+                    let y = min_y + y_step * Decimal::from(j);
+                    let point = Point2D::new(x, y);
+
+                    // Interpolate z values
+                    let z_values: Result<Vec<Decimal>, SurfaceError> = surfaces
+                        .iter()
+                        .map(|surface| {
+                            surface
+                                .interpolate(point, InterpolationType::Cubic)
+                                .map(|point3d| point3d.z)
+                                .map_err(SurfaceError::from)
+                        })
+                        .collect();
+
+                    let z_values = z_values?;
+
+                    // Apply operation
+                    let result_z = match operation {
+                        MergeOperation::Add => z_values.par_iter().sum(),
+                        MergeOperation::Subtract => {
+                            let first = z_values.first().cloned().unwrap_or(Decimal::ZERO);
+                            let remaining_sum: Decimal = z_values.iter().skip(1).sum();
+                            first - remaining_sum
+                        }
+                        MergeOperation::Multiply => z_values.par_iter().product(),
+                        MergeOperation::Divide => {
+                            let first = z_values.first().cloned().unwrap_or(Decimal::ONE);
+                            z_values
+                                .par_iter()
+                                .skip(1)
+                                .fold(
+                                    || first,
+                                    |acc, &val| if val == Decimal::ZERO { acc } else { acc / val },
+                                )
+                                .reduce(|| first, |a, b| a)
+                        }
+                        MergeOperation::Max => z_values
+                            .par_iter()
+                            .cloned()
+                            .max_by(|a, b| a.partial_cmp(b).unwrap())
+                            .unwrap_or(Decimal::ZERO),
+                        MergeOperation::Min => z_values
+                            .par_iter()
+                            .cloned()
+                            .min_by(|a, b| a.partial_cmp(b).unwrap())
+                            .unwrap_or(Decimal::ZERO),
+                    };
+
+                    Ok(Point3D::new(x, y, result_z))
+                })
+            })
+            .collect();
+
+        let result_points = result_points?;
+        Ok(Surface::from_vector(result_points))
+    }
+
+    fn merge_with(
+        &self,
+        other: &Surface,
+        operation: MergeOperation,
+    ) -> Result<Surface, Self::Error> {
+        Self::merge(&[self, other], operation)
     }
 }
 
@@ -548,8 +694,12 @@ mod tests_surface_basic {
         let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
 
         // Verify the points are mapped correctly for X-axis curve
-        assert!(curve_points.iter().any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
-        assert!(curve_points.iter().any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0))));
+        assert!(curve_points
+            .iter()
+            .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
+        assert!(curve_points
+            .iter()
+            .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0))));
     }
 
     #[test]
@@ -562,8 +712,12 @@ mod tests_surface_basic {
         let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
 
         // Verify the points are mapped correctly for Y-axis curve
-        assert!(curve_points.iter().any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
-        assert!(curve_points.iter().any(|p| p == &Point2D::new(dec!(1.0), dec!(2.0))));
+        assert!(curve_points
+            .iter()
+            .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
+        assert!(curve_points
+            .iter()
+            .any(|p| p == &Point2D::new(dec!(1.0), dec!(2.0))));
     }
 
     #[test]
@@ -576,8 +730,12 @@ mod tests_surface_basic {
         let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
 
         // Verify the points are mapped correctly for Z-axis curve
-        assert!(curve_points.iter().any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
-        assert!(curve_points.iter().any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0))));
+        assert!(curve_points
+            .iter()
+            .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
+        assert!(curve_points
+            .iter()
+            .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0))));
     }
 
     #[test]
@@ -593,23 +751,25 @@ mod tests_surface_basic {
 
         // Test interpolation at different points
         let test_cases = vec![
-            (dec!(0.25), dec!(0.5)),   // Midpoint
-            (dec!(0.0), dec!(0.0)),    // Start point
-            (dec!(1.0), dec!(2.0)),    // End point
-            (dec!(0.75), dec!(1.5)),   // Another point
+            (dec!(0.25), dec!(0.5)), // Midpoint
+            (dec!(0.0), dec!(0.0)),  // Start point
+            (dec!(1.0), dec!(2.0)),  // End point
+            (dec!(0.75), dec!(1.5)), // Another point
         ];
 
         for (target, expected) in test_cases {
-            let result = surface.one_dimensional_spline_interpolation(
-                &test_points,
-                target,
-                |p| p.x,
-                |p| p.z
-            ).unwrap();
+            let result = surface
+                .one_dimensional_spline_interpolation(&test_points, target, |p| p.x, |p| p.z)
+                .unwrap();
 
             // Allow small deviation due to interpolation
-            assert!((result - expected).abs() < dec!(0.1),
-                    "Failed for target {}, expected {}, got {}", target, expected, result);
+            assert!(
+                (result - expected).abs() < dec!(0.1),
+                "Failed for target {}, expected {}, got {}",
+                target,
+                expected,
+                result
+            );
         }
     }
 
@@ -618,16 +778,10 @@ mod tests_surface_basic {
         let surface = Surface::new(create_test_points());
 
         // Single point is insufficient for interpolation
-        let test_points = vec![
-            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
-        ];
+        let test_points = vec![Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0))];
 
-        let result = surface.one_dimensional_spline_interpolation(
-            &test_points,
-            dec!(0.5),
-            |p| p.x,
-            |p| p.z
-        );
+        let result =
+            surface.one_dimensional_spline_interpolation(&test_points, dec!(0.5), |p| p.x, |p| p.z);
 
         assert!(matches!(
             result,
@@ -646,21 +800,21 @@ mod tests_surface_basic {
 
         // Test points outside the point range
         let out_of_range_cases = vec![
-            (dec!(-0.5), dec!(0.0)),   // Below minimum
-            (dec!(1.5), dec!(2.0)),    // Above maximum
+            (dec!(-0.5), dec!(0.0)), // Below minimum
+            (dec!(1.5), dec!(2.0)),  // Above maximum
         ];
 
         for (target, expected) in out_of_range_cases {
-            let result = surface.one_dimensional_spline_interpolation(
-                &test_points,
-                target,
-                |p| p.x,
-                |p| p.z
-            ).unwrap();
+            let result = surface
+                .one_dimensional_spline_interpolation(&test_points, target, |p| p.x, |p| p.z)
+                .unwrap();
 
             // Should return endpoints for out-of-range values
-            assert_eq!(result, expected,
-                       "Failed for out-of-range target {}", target);
+            assert_eq!(
+                result, expected,
+                "Failed for out-of-range target {}",
+                target
+            );
         }
     }
 }
@@ -668,8 +822,8 @@ mod tests_surface_basic {
 #[cfg(test)]
 mod tests_surface_geometric_object {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::geometrics::ResultPoint;
+    use rust_decimal_macros::dec;
 
     // Helper function to create test points
     fn create_test_points() -> Vec<Point3D> {
@@ -737,7 +891,7 @@ mod tests_surface_geometric_object {
                 Ok(Point3D::new(
                     t.x,
                     t.y,
-                    t.x * t.y // Simple z = x * y surface
+                    t.x * t.y, // Simple z = x * y surface
                 ))
             });
 
@@ -752,7 +906,7 @@ mod tests_surface_geometric_object {
 
         let result = Surface::construct(ConstructionMethod::Parametric {
             f: parametric_func,
-            params
+            params,
         });
 
         assert!(result.is_ok());
@@ -778,13 +932,10 @@ mod tests_surface_geometric_object {
 
         let result = Surface::construct(ConstructionMethod::Parametric {
             f: parametric_func,
-            params
+            params,
         });
 
-        assert!(matches!(
-        result,
-        Err(SurfaceError::ConstructionError(_))
-    ));
+        assert!(matches!(result, Err(SurfaceError::ConstructionError(_))));
     }
 
     #[test]
@@ -795,11 +946,7 @@ mod tests_surface_geometric_object {
                 if t.x > dec!(0.5) && t.y > dec!(0.5) {
                     Err(Box::from("Test error".to_string()))
                 } else {
-                    Ok(Point3D::new(
-                        t.x,
-                        t.y,
-                        t.x * t.y
-                    ))
+                    Ok(Point3D::new(t.x, t.y, t.x * t.y))
                 }
             });
 
@@ -814,13 +961,10 @@ mod tests_surface_geometric_object {
 
         let result = Surface::construct(ConstructionMethod::Parametric {
             f: parametric_func,
-            params
+            params,
         });
 
-        assert!(matches!(
-        result,
-        Err(SurfaceError::ConstructionError(_))
-    ));
+        assert!(matches!(result, Err(SurfaceError::ConstructionError(_))));
     }
 
     #[test]
@@ -878,21 +1022,27 @@ mod tests_surface_linear_interpolation {
     #[test]
     fn test_exact_point_match() {
         let surface = create_test_surface();
-        let result = surface.linear_interpolate(Point2D::new(dec!(0.0), dec!(0.0))).unwrap();
+        let result = surface
+            .linear_interpolate(Point2D::new(dec!(0.0), dec!(0.0)))
+            .unwrap();
         assert_eq!(result.z, dec!(0.0));
     }
 
     #[test]
     fn test_midpoint_interpolation() {
         let surface = create_test_surface();
-        let result = surface.linear_interpolate(Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+        let result = surface
+            .linear_interpolate(Point2D::new(dec!(0.5), dec!(0.5)))
+            .unwrap();
         assert_eq!(result.z, dec!(1.0));
     }
 
     #[test]
     fn test_quarter_point_interpolation() {
         let surface = create_test_surface();
-        let result = surface.linear_interpolate(Point2D::new(dec!(0.25), dec!(0.25))).unwrap();
+        let result = surface
+            .linear_interpolate(Point2D::new(dec!(0.25), dec!(0.25)))
+            .unwrap();
         // El valor debe estar entre 0.0 y 1.0
         assert!(result.z > dec!(0.0) && result.z < dec!(1.0));
     }
@@ -908,16 +1058,18 @@ mod tests_surface_linear_interpolation {
         // Probamos con un punto que está en la misma línea que los tres puntos
         let result = surface.linear_interpolate(Point2D::new(dec!(1.0), dec!(1.0)));
         assert!(matches!(
-        result,
-        Err(InterpolationError::Linear(msg)) if msg.contains("Degenerate triangle")
-    ));
+            result,
+            Err(InterpolationError::Linear(msg)) if msg.contains("Degenerate triangle")
+        ));
     }
 
     #[test]
     fn test_boundary_interpolation() {
         let surface = create_test_surface();
         // Test interpolación en el borde
-        let result = surface.linear_interpolate(Point2D::new(dec!(0.0), dec!(0.5))).unwrap();
+        let result = surface
+            .linear_interpolate(Point2D::new(dec!(0.0), dec!(0.5)))
+            .unwrap();
         assert_eq!(result.z, dec!(0.5));
     }
 
@@ -933,7 +1085,9 @@ mod tests_surface_linear_interpolation {
         let surface = Surface::new(points);
 
         // La interpolación en cualquier punto debe mantener el gradiente
-        let result = surface.linear_interpolate(Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+        let result = surface
+            .linear_interpolate(Point2D::new(dec!(0.5), dec!(0.5)))
+            .unwrap();
         assert_eq!(result.z, dec!(1.0));
     }
 
@@ -955,10 +1109,10 @@ mod tests_surface_bilinear_interpolation {
 
     fn create_test_surface() -> Surface {
         let points = BTreeSet::from_iter(vec![
-            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),  // Bottom-left
-            Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),  // Bottom-right
-            Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),  // Top-left
-            Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),  // Top-right
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)), // Bottom-left
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)), // Bottom-right
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)), // Top-left
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)), // Top-right
         ]);
         Surface::new(points)
     }
@@ -991,14 +1145,18 @@ mod tests_surface_bilinear_interpolation {
     #[test]
     fn test_exact_point_match() {
         let surface = create_test_surface();
-        let result = surface.bilinear_interpolate(Point2D::new(dec!(0.0), dec!(0.0))).unwrap();
+        let result = surface
+            .bilinear_interpolate(Point2D::new(dec!(0.0), dec!(0.0)))
+            .unwrap();
         assert_eq!(result.z, dec!(0.0));
     }
 
     #[test]
     fn test_midpoint_interpolation() {
         let surface = create_test_surface();
-        let result = surface.bilinear_interpolate(Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+        let result = surface
+            .bilinear_interpolate(Point2D::new(dec!(0.5), dec!(0.5)))
+            .unwrap();
         // At the midpoint, we expect the average of surrounding values
         assert_eq!(result.z, dec!(1.0));
     }
@@ -1006,7 +1164,9 @@ mod tests_surface_bilinear_interpolation {
     #[test]
     fn test_quarter_point_interpolation() {
         let surface = create_test_surface();
-        let result = surface.bilinear_interpolate(Point2D::new(dec!(0.25), dec!(0.25))).unwrap();
+        let result = surface
+            .bilinear_interpolate(Point2D::new(dec!(0.25), dec!(0.25)))
+            .unwrap();
         // Value should be between 0.0 and 1.0
         assert!(result.z > dec!(0.0) && result.z < dec!(1.0));
     }
@@ -1031,7 +1191,9 @@ mod tests_surface_bilinear_interpolation {
     fn test_boundary_interpolation() {
         let surface = create_test_surface();
         // Test interpolation at edge
-        let result = surface.bilinear_interpolate(Point2D::new(dec!(0.0), dec!(0.5))).unwrap();
+        let result = surface
+            .bilinear_interpolate(Point2D::new(dec!(0.0), dec!(0.5)))
+            .unwrap();
         assert_eq!(result.z, dec!(0.5));
     }
 
@@ -1045,7 +1207,9 @@ mod tests_surface_bilinear_interpolation {
             Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),
         ]);
         let surface = Surface::new(points);
-        let result = surface.bilinear_interpolate(Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+        let result = surface
+            .bilinear_interpolate(Point2D::new(dec!(0.5), dec!(0.5)))
+            .unwrap();
         assert_eq!(result.z, dec!(1.0));
     }
 
@@ -1064,10 +1228,18 @@ mod tests_surface_bilinear_interpolation {
         let surface = create_test_surface();
 
         // Test all four corners
-        let bl = surface.bilinear_interpolate(Point2D::new(dec!(0.0), dec!(0.0))).unwrap();
-        let br = surface.bilinear_interpolate(Point2D::new(dec!(1.0), dec!(0.0))).unwrap();
-        let tl = surface.bilinear_interpolate(Point2D::new(dec!(0.0), dec!(1.0))).unwrap();
-        let tr = surface.bilinear_interpolate(Point2D::new(dec!(1.0), dec!(1.0))).unwrap();
+        let bl = surface
+            .bilinear_interpolate(Point2D::new(dec!(0.0), dec!(0.0)))
+            .unwrap();
+        let br = surface
+            .bilinear_interpolate(Point2D::new(dec!(1.0), dec!(0.0)))
+            .unwrap();
+        let tl = surface
+            .bilinear_interpolate(Point2D::new(dec!(0.0), dec!(1.0)))
+            .unwrap();
+        let tr = surface
+            .bilinear_interpolate(Point2D::new(dec!(1.0), dec!(1.0)))
+            .unwrap();
 
         assert_eq!(bl.z, dec!(0.0));
         assert_eq!(br.z, dec!(1.0));
@@ -1127,7 +1299,9 @@ mod tests_surface_cubic_interpolation {
     #[test]
     fn test_exact_point_match() {
         let surface = create_test_surface();
-        let result = surface.cubic_interpolate(Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+        let result = surface
+            .cubic_interpolate(Point2D::new(dec!(0.5), dec!(0.5)))
+            .unwrap();
 
         assert_eq!(result.z, dec!(1.5));
     }
@@ -1135,7 +1309,9 @@ mod tests_surface_cubic_interpolation {
     #[test]
     fn test_midpoint_interpolation() {
         let surface = create_test_surface();
-        let result = surface.cubic_interpolate(Point2D::new(dec!(0.4), dec!(0.4))).unwrap();
+        let result = surface
+            .cubic_interpolate(Point2D::new(dec!(0.4), dec!(0.4)))
+            .unwrap();
 
         // Verify that the interpolated z is between the surrounding points
         assert!(result.z > dec!(0.3) && result.z < dec!(1.5));
@@ -1156,8 +1332,11 @@ mod tests_surface_cubic_interpolation {
             let result = surface.cubic_interpolate(point).unwrap();
 
             // Verify z is within reasonable bounds
-            assert!(result.z >= dec!(0.0) && result.z <= dec!(2.0),
-                    "Failed for point {:?}", point);
+            assert!(
+                result.z >= dec!(0.0) && result.z <= dec!(2.0),
+                "Failed for point {:?}",
+                point
+            );
 
             // Verify the interpolated point is on the surface
             assert_eq!(result.x, point.x);
@@ -1181,15 +1360,20 @@ mod tests_surface_cubic_interpolation {
             let result = surface.cubic_interpolate(point).unwrap();
 
             // Verify z is interpolated correctly
-            assert!(result.z > dec!(0.0) && result.z < dec!(2.0),
-                    "Failed for boundary point {:?}", point);
+            assert!(
+                result.z > dec!(0.0) && result.z < dec!(2.0),
+                "Failed for boundary point {:?}",
+                point
+            );
         }
     }
 
     #[test]
     fn test_interpolation_precision() {
         let surface = create_test_surface();
-        let result = surface.cubic_interpolate(Point2D::new(dec!(0.333333), dec!(0.333333))).unwrap();
+        let result = surface
+            .cubic_interpolate(Point2D::new(dec!(0.333333), dec!(0.333333)))
+            .unwrap();
 
         // Verify precision and reasonable interpolation
         assert!(result.z > dec!(0.0) && result.z < dec!(2.0));
@@ -1206,14 +1390,19 @@ mod tests_surface_cubic_interpolation {
             .collect();
 
         // Check that results are very close to each other
-        let max_diff = results.iter()
+        let max_diff = results
+            .iter()
             .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap() -
-            results.iter()
+            .unwrap()
+            - results
+                .iter()
                 .min_by(|a, b| a.partial_cmp(b).unwrap())
                 .unwrap();
 
-        assert!(max_diff < dec!(0.001), "Interpolation results should be consistent");
+        assert!(
+            max_diff < dec!(0.001),
+            "Interpolation results should be consistent"
+        );
     }
 
     #[test]
@@ -1230,8 +1419,11 @@ mod tests_surface_cubic_interpolation {
             let result = surface.cubic_interpolate(point).unwrap();
 
             // Verify z is interpolated reasonably
-            assert!(result.z >= dec!(0.0) && result.z <= dec!(2.0),
-                    "Failed for extreme point {:?}", point);
+            assert!(
+                result.z >= dec!(0.0) && result.z <= dec!(2.0),
+                "Failed for extreme point {:?}",
+                point
+            );
         }
     }
 }
@@ -1288,7 +1480,9 @@ mod tests_surface_spline_interpolation {
     #[test]
     fn test_exact_point_match() {
         let surface = create_test_surface();
-        let result = surface.spline_interpolate(Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+        let result = surface
+            .spline_interpolate(Point2D::new(dec!(0.5), dec!(0.5)))
+            .unwrap();
 
         assert_eq!(result.z, dec!(1.5));
     }
@@ -1296,7 +1490,9 @@ mod tests_surface_spline_interpolation {
     #[test]
     fn test_midpoint_interpolation() {
         let surface = create_test_surface();
-        let result = surface.spline_interpolate(Point2D::new(dec!(0.4), dec!(0.4))).unwrap();
+        let result = surface
+            .spline_interpolate(Point2D::new(dec!(0.4), dec!(0.4)))
+            .unwrap();
 
         // Verify that the interpolated z is between the surrounding points
         assert!(result.z > dec!(0.3) && result.z < dec!(1.5));
@@ -1317,8 +1513,11 @@ mod tests_surface_spline_interpolation {
             let result = surface.spline_interpolate(point).unwrap();
 
             // Verify z is within reasonable bounds
-            assert!(result.z >= dec!(0.0) && result.z <= dec!(2.0),
-                    "Failed for point {:?}", point);
+            assert!(
+                result.z >= dec!(0.0) && result.z <= dec!(2.0),
+                "Failed for point {:?}",
+                point
+            );
 
             // Verify the interpolated point is on the surface
             assert_eq!(result.x, point.x);
@@ -1342,15 +1541,20 @@ mod tests_surface_spline_interpolation {
             let result = surface.spline_interpolate(point).unwrap();
 
             // Verify z is interpolated correctly
-            assert!(result.z > dec!(0.0) && result.z < dec!(2.0),
-                    "Failed for boundary point {:?}", point);
+            assert!(
+                result.z > dec!(0.0) && result.z < dec!(2.0),
+                "Failed for boundary point {:?}",
+                point
+            );
         }
     }
 
     #[test]
     fn test_interpolation_precision() {
         let surface = create_test_surface();
-        let result = surface.spline_interpolate(Point2D::new(dec!(0.333333), dec!(0.333333))).unwrap();
+        let result = surface
+            .spline_interpolate(Point2D::new(dec!(0.333333), dec!(0.333333)))
+            .unwrap();
 
         // Verify precision and reasonable interpolation
         assert!(result.z > dec!(0.0) && result.z < dec!(2.0));
@@ -1367,14 +1571,19 @@ mod tests_surface_spline_interpolation {
             .collect();
 
         // Check that results are very close to each other
-        let max_diff = results.iter()
+        let max_diff = results
+            .iter()
             .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap() -
-            results.iter()
+            .unwrap()
+            - results
+                .iter()
                 .min_by(|a, b| a.partial_cmp(b).unwrap())
                 .unwrap();
 
-        assert!(max_diff < dec!(0.001), "Interpolation results should be consistent");
+        assert!(
+            max_diff < dec!(0.001),
+            "Interpolation results should be consistent"
+        );
     }
 
     #[test]
@@ -1391,8 +1600,11 @@ mod tests_surface_spline_interpolation {
             let result = surface.spline_interpolate(point).unwrap();
 
             // Verify z is interpolated reasonably
-            assert!(result.z >= dec!(0.0) && result.z <= dec!(2.0),
-                    "Failed for extreme point {:?}", point);
+            assert!(
+                result.z >= dec!(0.0) && result.z <= dec!(2.0),
+                "Failed for extreme point {:?}",
+                point
+            );
         }
     }
 
@@ -1409,23 +1621,25 @@ mod tests_surface_spline_interpolation {
 
         // Test interpolation at different points
         let test_points = vec![
-            (dec!(0.25), dec!(0.5)),   // Midpoint
-            (dec!(0.0), dec!(0.0)),    // Start point
-            (dec!(1.0), dec!(2.0)),    // End point
-            (dec!(0.75), dec!(1.5)),   // Another point
+            (dec!(0.25), dec!(0.5)), // Midpoint
+            (dec!(0.0), dec!(0.0)),  // Start point
+            (dec!(1.0), dec!(2.0)),  // End point
+            (dec!(0.75), dec!(1.5)), // Another point
         ];
 
         for (target, expected) in test_points {
-            let result = surface.one_dimensional_spline_interpolation(
-                &points,
-                target,
-                |p| p.x,
-                |p| p.z
-            ).unwrap();
+            let result = surface
+                .one_dimensional_spline_interpolation(&points, target, |p| p.x, |p| p.z)
+                .unwrap();
 
             // Allow small deviation due to interpolation
-            assert!((result - expected).abs() < dec!(0.1),
-                    "Failed for target {}, expected {}, got {}", target, expected, result);
+            assert!(
+                (result - expected).abs() < dec!(0.1),
+                "Failed for target {}, expected {}, got {}",
+                target,
+                expected,
+                result
+            );
         }
     }
 
@@ -1448,5 +1662,178 @@ mod tests_surface_spline_interpolation {
             assert_eq!(interpolated_point.x, point.x);
             assert_eq!(interpolated_point.y, point.y);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_surface_arithmetic {
+    use super::*;
+    use crate::error::OperationErrorKind;
+    use rust_decimal_macros::dec;
+
+    fn create_test_surface() -> Surface {
+        let points = BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(0.5), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(0.0), dec!(0.5), dec!(1.0)),
+            Point3D::new(dec!(0.5), dec!(0.5), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(0.5), dec!(1.0)),
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),
+            Point3D::new(dec!(0.5), dec!(1.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
+        ]);
+        Surface::new(points)
+    }
+
+    #[test]
+    fn test_merge_empty_surfaces() {
+        let result = Surface::merge(&[], MergeOperation::Add);
+        assert!(matches!(
+            result,
+            Err(SurfaceError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "merge_surfaces" && reason.contains("No surfaces")
+        ));
+    }
+
+    #[test]
+    fn test_merge_single_surface() {
+        let surface = create_test_surface();
+        let result = Surface::merge(&[&surface], MergeOperation::Add).unwrap();
+        assert_eq!(result.points.len(), surface.points.len());
+    }
+
+    #[test]
+    fn test_merge_add() {
+        let surface1 = create_test_surface();
+        let surface2 = create_test_surface();
+        let result = Surface::merge(&[&surface1, &surface2], MergeOperation::Add).unwrap();
+
+        let mid_point = result
+            .interpolate(Point2D::new(dec!(0.5), dec!(0.5)), InterpolationType::Cubic)
+            .unwrap();
+        assert_eq!(mid_point.z, dec!(2.0));
+    }
+
+    #[test]
+    fn test_merge_subtract() {
+        let surface1 = create_test_surface();
+        let surface2 = create_test_surface();
+        let result = Surface::merge(&[&surface1, &surface2], MergeOperation::Subtract).unwrap();
+
+        // Test point should have z-value of 0 (1.0 - 1.0)
+        let mid_point = result
+            .interpolate(Point2D::new(dec!(0.5), dec!(0.5)), InterpolationType::Cubic)
+            .unwrap();
+        assert_eq!(mid_point.z, dec!(0.0));
+    }
+
+    #[test]
+    fn test_incompatible_ranges() {
+        let surface1 = Surface::new(BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
+        ]));
+
+        let surface2 = Surface::new(BTreeSet::from_iter(vec![
+            Point3D::new(dec!(2.0), dec!(2.0), dec!(1.0)),
+            Point3D::new(dec!(3.0), dec!(3.0), dec!(1.0)),
+        ]));
+
+        let result = Surface::merge(&[&surface1, &surface2], MergeOperation::Add);
+        assert!(matches!(
+            result,
+            Err(SurfaceError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "merge_surfaces" && reason.contains("incompatible ranges")
+        ));
+    }
+
+    #[test]
+    fn test_merge_with() {
+        let surface1 = create_test_surface();
+        let surface2 = create_test_surface();
+
+        let result1 = surface1.merge_with(&surface2, MergeOperation::Add).unwrap();
+        let result2 = Surface::merge(&[&surface1, &surface2], MergeOperation::Add).unwrap();
+
+        assert_eq!(result1.points.len(), result2.points.len());
+
+        // Compare some interpolated points
+        let test_point = Point2D::new(dec!(0.5), dec!(0.5));
+        let z1 = result1
+            .interpolate(test_point.clone(), InterpolationType::Cubic)
+            .unwrap();
+        let z2 = result2
+            .interpolate(test_point, InterpolationType::Cubic)
+            .unwrap();
+        assert_eq!(z1.z, z2.z);
+    }
+
+    #[test]
+    fn test_merge_multiply() {
+        let surface1 = create_test_surface();
+        let surface2 = create_test_surface();
+        let result = Surface::merge(&[&surface1, &surface2], MergeOperation::Multiply).unwrap();
+
+        let mid_point = result
+            .interpolate(Point2D::new(dec!(0.5), dec!(0.5)), InterpolationType::Cubic)
+            .unwrap();
+        assert_eq!(mid_point.z, dec!(1.0)); // 1.0 * 1.0 = 1.0
+    }
+
+    #[test]
+    fn test_merge_divide() {
+        let surface1 = create_test_surface();
+        let surface2 = create_test_surface();
+        let result = Surface::merge(&[&surface1, &surface2], MergeOperation::Divide).unwrap();
+
+        let mid_point = result
+            .interpolate(Point2D::new(dec!(0.5), dec!(0.5)), InterpolationType::Cubic)
+            .unwrap();
+        assert_eq!(mid_point.z, dec!(1.0)); // 1.0 / 1.0 = 1.0
+    }
+
+    #[test]
+    fn test_merge_max() {
+        let surface1 = create_test_surface(); // z=1.0 everywhere
+
+        // Create surface2 with z=2.0 everywhere
+        let points2 = BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(2.0)),
+            Point3D::new(dec!(0.5), dec!(0.0), dec!(2.0)),
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(2.0)),
+            Point3D::new(dec!(0.0), dec!(0.5), dec!(2.0)),
+            Point3D::new(dec!(0.5), dec!(0.5), dec!(2.0)),
+            Point3D::new(dec!(1.0), dec!(0.5), dec!(2.0)),
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(2.0)),
+            Point3D::new(dec!(0.5), dec!(1.0), dec!(2.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),
+        ]);
+        let surface2 = Surface::new(points2);
+
+        let result = Surface::merge(&[&surface1, &surface2], MergeOperation::Max).unwrap();
+
+        let mid_point = result
+            .interpolate(Point2D::new(dec!(0.5), dec!(0.5)), InterpolationType::Cubic)
+            .unwrap();
+        assert_eq!(mid_point.z, dec!(2.0));
+    }
+
+    #[test]
+    fn test_merge_min() {
+        let mut surface1 = create_test_surface();
+        let mut surface2 = create_test_surface();
+
+        // Modify one point in surface2 to be lower
+        surface2
+            .points
+            .insert(Point3D::new(dec!(0.5), dec!(0.5), dec!(0.5)));
+
+        let result = Surface::merge(&[&surface1, &surface2], MergeOperation::Min).unwrap();
+
+        let mid_point = result
+            .interpolate(Point2D::new(dec!(0.5), dec!(0.5)), InterpolationType::Cubic)
+            .unwrap();
+        assert_eq!(mid_point.z, dec!(0.5));
     }
 }

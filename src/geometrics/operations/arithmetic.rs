@@ -9,6 +9,7 @@
 /// * `Divide` - Performs division of the values.
 /// * `Max` - Selects the maximum of the values.
 /// * `Min` - Selects the minimum of the values.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MergeOperation {
     Add,
     Subtract,
