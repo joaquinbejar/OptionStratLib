@@ -1,18 +1,22 @@
-use optionstratlib::curves::construction::CurveConstructionMethod;
-use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
+use optionstratlib::geometrics::{
+    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
+};
 use optionstratlib::utils::setup_logger;
 use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
 use std::error::Error;
-
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-
-    let parametric_curve = Curve::construct(CurveConstructionMethod::Parametric {
-        f: Box::new(|t| Ok(Point2D::new(t, t.sin()))),
+    let params = ConstructionParams::D2 {
         t_start: Decimal::ZERO,
         t_end: Decimal::TWO_PI,
         steps: 100,
+    };
+
+    let parametric_curve = Curve::construct(ConstructionMethod::Parametric {
+        f: Box::new(|t: Decimal| Ok(Point2D::new(t, t.sin()))),
+        params: params.clone(),
     })?;
 
     parametric_curve

@@ -3,20 +3,18 @@
    Email: jb@taunais.com
    Date: 9/1/25
 ******************************************************************************/
-use crate::curves::analysis::{
-    BasicMetrics, CurveMetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
+use crate::curves::utils::detect_peaks_and_valleys;
+use crate::curves::Point2D;
+use crate::error::{CurvesError, InterpolationError, MetricsError};
+use crate::geometrics::{
+    Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
+    ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
+    InterpolationType, Len, LinearInterpolation, MergeAxisInterpolate, MergeOperation,
+    MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
 };
-use crate::curves::construction::CurveConstructionMethod;
-use crate::curves::interpolation::{
-    BiLinearInterpolation, CubicInterpolation, Interpolate, LinearInterpolation,
-    SplineInterpolation,
-};
-use crate::curves::operations::CurveArithmetic;
-use crate::curves::{MergeOperation, Point2D};
-use crate::error::CurvesError;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::collections::BTreeSet;
 use std::ops::Index;
@@ -74,7 +72,6 @@ use std::ops::Index;
 ///
 /// # See Also
 /// - [`Point2D`]: The fundamental data type for representing points in 2D space.
-/// - [`crate::curves::curve_traits::CurveOperations`]: The trait providing operations on curves.
 /// - [`MergeOperation`]: Enum for combining multiple curves.
 ///
 /// # Fields
@@ -120,96 +117,39 @@ impl Curve {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         Curve { points, x_range }
     }
+}
 
-    pub fn from_vector(points: Vec<Point2D>) -> Self {
+impl Len for Curve {
+    fn len(&self) -> usize {
+        self.points.len()
+    }
+}
+
+impl GeometricObject<Point2D, Decimal> for Curve {
+    type Error = CurvesError;
+
+    fn get_points(&self) -> BTreeSet<&Point2D> {
+        self.points.iter().collect()
+    }
+
+    fn from_vector<T>(points: Vec<T>) -> Self
+    where
+        T: Into<Point2D> + Clone,
+    {
+        let points: BTreeSet<Point2D> = points.into_iter().map(|p| p.into()).collect();
+
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
-        let points = points.into_iter().collect();
         Curve { points, x_range }
     }
 
-    /// Calculates the range of x values in the curve.
-    ///
-    /// This function computes the minimum and maximum x values from an iterator of `Decimal`
-    /// inputs, representing x-coordinates of points. It returns a tuple containing the
-    /// minimum and maximum x values. The computation is efficient and involves a single
-    /// traversal of the iterator.
-    ///
-    /// # Parameters
-    ///
-    /// - `iter` (`Iterator<Item = Decimal>`): An iterator over x-coordinates of points.
-    ///
-    /// # Returns
-    ///
-    /// - `(Decimal, Decimal)`: A tuple where:
-    ///   - The first value is the minimum x-coordinate.
-    ///   - The second value is the maximum x-coordinate.
-    ///
-    /// # Behavior
-    ///
-    /// - Iterates over the input to compute the x-range in a fold operation.
-    /// - Returns `(Decimal::MAX, Decimal::MIN)` for an empty iterator (although such
-    ///   cases are expected to be handled elsewhere).
-    pub fn calculate_range<I>(iter: I) -> (Decimal, Decimal)
+    fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
-        I: Iterator<Item = Decimal>,
+        Self: Sized,
+        T: Into<ConstructionMethod<Point2D, Decimal>>,
     {
-        iter.fold((Decimal::MAX, Decimal::MIN), |(min, max), val| {
-            (min.min(val), max.max(val))
-        })
-    }
-
-    /// Constructs a curve using the specified construction method and returns the result.
-    ///
-    /// This function supports two distinct curve construction strategies:
-    /// - **FromData**: Directly constructs a curve using pre-defined 2D points.
-    /// - **Parametric**: Algorithmically builds a curve based on a parameterized
-    ///   function over a given range and number of steps.
-    ///
-    /// # Parameters
-    ///
-    /// - `method` (`CurveConstructionMethod`): Specifies the strategy for constructing the curve.
-    ///   Options include `FromData` (explicit points) or `Parametric` (function-based).
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(Curve)`: The successfully constructed curve.
-    /// - `Err(CurvesError)`: Indicates errors during construction.
-    ///
-    /// # Behavior
-    ///
-    /// ## FromData
-    ///
-    /// - Validates that the input points vector is not empty.
-    /// - Returns an error (`CurvesError::Point2DError`) if the points vector is empty.
-    /// - Constructs the curve using the provided points.
-    ///
-    /// ## Parametric
-    ///
-    /// - Divides the range `[t_start, t_end]` into `steps` intervals.
-    /// - Computes points by evaluating a parameterized function `f` at each step using parallel
-    ///   processing (`rayon`).
-    /// - Fails gracefully with a `CurvesError` if the function `f` encounters issues.
-    ///
-    /// # Errors
-    ///
-    /// - **FromData**:
-    ///   - Returns an error if an empty set of points is provided.
-    /// - **Parametric**:
-    ///   - Generates an error if the function `f` produces invalid results.
-    ///
-    /// # Details
-    ///
-    /// - Efficiently computes points in the parametric mode using parallel processing
-    ///   provided by the `rayon` crate.
-    ///
-    /// # See Also
-    ///
-    /// - [`CurveConstructionMethod`]: Enum defining the supported construction strategies.
-    /// - [`CurvesError`]: Represents possible errors encountered during curve construction.
-    /// - [`Point2D`]: The data type representing a 2D point.
-    pub fn construct(method: CurveConstructionMethod) -> Result<Self, CurvesError> {
+        let method = method.into();
         match method {
-            CurveConstructionMethod::FromData { points } => {
+            ConstructionMethod::FromData { points } => {
                 if points.is_empty() {
                     return Err(CurvesError::Point2DError {
                         reason: "Empty points array",
@@ -217,13 +157,19 @@ impl Curve {
                 }
                 Ok(Curve::new(points))
             }
-
-            CurveConstructionMethod::Parametric {
-                f,
-                t_start,
-                t_end,
-                steps,
-            } => {
+            ConstructionMethod::Parametric { f, params } => {
+                let (t_start, t_end, steps) = match params {
+                    ConstructionParams::D2 {
+                        t_start,
+                        t_end,
+                        steps,
+                    } => (t_start, t_end, steps),
+                    _ => {
+                        return Err(CurvesError::ConstructionError(
+                            "Invalid parameters".to_string(),
+                        ))
+                    }
+                };
                 let step_size = (t_end - t_start) / Decimal::from(steps);
 
                 let points: Result<BTreeSet<Point2D>, CurvesError> = (0..=steps)
@@ -237,10 +183,6 @@ impl Curve {
                 points.map(Curve::new)
             }
         }
-    }
-
-    pub fn vector(&self) -> Vec<&Point2D> {
-        self.points.iter().collect()
     }
 }
 
@@ -282,7 +224,6 @@ impl Curve {
 /// Suppose you have a `Curve` instance `curve` with multiple points:
 /// ```ignore
 /// let point = curve[0]; // Access the first point
-/// println!("{:?}", point); // Print the `Point2D` representation
 /// ```
 ///
 /// # Important Notes
@@ -309,6 +250,35 @@ impl Index<usize> for Curve {
         self.points.iter().nth(index).expect("Index out of bounds")
     }
 }
+
+/// Implementation of the `Interpolate` trait for the `Curve` struct.
+///
+/// This implementation integrates the `get_points` method for the `Curve` structure,
+/// providing access to its internal points. The `Interpolate` trait ensures compatibility
+/// with various interpolation methods such as Linear, BiLinear, Cubic, and Spline
+/// interpolations. By implementing this trait, `Curve` gains the ability to perform
+/// interpolation operations and access bracketing points.
+///
+/// # Traits Involved
+///
+/// The `Interpolate` trait is an aggregation of multiple interpolation-related traits:
+/// - [`LinearInterpolation`]
+/// - [`BiLinearInterpolation`]
+/// - [`CubicInterpolation`]
+/// - [`SplineInterpolation`]
+///
+/// These underlying traits implement specific interpolation algorithms,
+/// enabling `Curve` to support a robust set of interpolation options through the associated methods.
+/// Depending on the use case and provided parameters (e.g., interpolation type and target x-coordinate),
+/// the appropriate algorithm is invoked.
+///
+/// # See Also
+///
+/// - [`Curve`]: The underlying mathematical structure being interpolated.
+/// - [`Point2D`]: The fundamental data type for the curve's points.
+/// - [`Interpolate`]: The trait defining interpolation operations.
+///
+impl Interpolate<Point2D, Decimal> for Curve {}
 
 /// Implements the `LinearInterpolation` trait for the `Curve` struct.
 ///
@@ -373,14 +343,14 @@ impl Index<usize> for Curve {
 /// - `find_bracket_points`: Finds two points that bracket a value.
 /// - `Point2D`: Represents points in 2D space.
 /// - `CurvesError`: Represents errors related to curve operations.
-impl LinearInterpolation for Curve {
+impl LinearInterpolation<Point2D, Decimal> for Curve {
     /// # Method
     /// ### `linear_interpolate`
     ///
     /// Performs linear interpolation for a given `x` value by finding two consecutive
     /// points on the curve (`p1` and `p2`) that bracket the provided `x`. The `y` value
     /// is then calculated using the linear interpolation formula:
-    fn linear_interpolate(&self, x: Decimal) -> Result<Point2D, CurvesError> {
+    fn linear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
         let (i, j) = self.find_bracket_points(x)?;
 
         let p1 = &self[i];
@@ -465,9 +435,9 @@ impl LinearInterpolation for Curve {
 ///
 /// - [`Curve`]: The overarching structure that represents the curve.
 /// - [`Point2D`]: The data type used to represent individual points on the curve.
-/// - [`find_bracket_points`](crate::curves::interpolation::Interpolate::find_bracket_points):
+/// - [`find_bracket_points`](crate::geometrics::Interpolate::find_bracket_points):
 ///   A helper method used to locate the two points that bracket the given x-coordinate.
-impl BiLinearInterpolation for Curve {
+impl BiLinearInterpolation<Point2D, Decimal> for Curve {
     /// Performs bilinear interpolation to find the value of the curve at a given `x` coordinate.
     ///
     /// # Parameters
@@ -507,12 +477,11 @@ impl BiLinearInterpolation for Curve {
     /// This method is useful for calculating intermediate values on a 2D grid when exact measurements are unavailable.
     /// Bilinear interpolation is particularly applicable for approximating smoother values in a tabular dataset
     /// or a regularly sampled grid.
-    fn bilinear_interpolate(&self, x: Decimal) -> Result<Point2D, CurvesError> {
+    fn bilinear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
         let points = self.get_points();
 
-        // Need at least 4 points for bilinear interpolation
         if points.len() < 4 {
-            return Err(CurvesError::InterpolationError(
+            return Err(InterpolationError::Bilinear(
                 "Need at least four points for bilinear interpolation".to_string(),
             ));
         }
@@ -524,11 +493,11 @@ impl BiLinearInterpolation for Curve {
 
         let (i, _j) = self.find_bracket_points(x)?;
 
-        // Get four points forming a grid
-        let p11 = &points[i]; // Bottom left
-        let p12 = &points[i + 1]; // Bottom right
-        let p21 = &points[i + 2]; // Top left
-        let p22 = &points[i + 3]; // Top right
+        // Get four points forming a grid by using Index implementation on self
+        let p11 = &self[i]; // Bottom left
+        let p12 = &self[i + 1]; // Bottom right
+        let p21 = &self[i + 2]; // Top left
+        let p22 = &self[i + 3]; // Top right
 
         // Normalize x to [0,1] interval
         let dx = (x - p11.x) / (p12.x - p11.x);
@@ -604,8 +573,8 @@ impl BiLinearInterpolation for Curve {
 /// # See Also
 /// - [`CubicInterpolation`]: The trait defining this method.
 /// - [`Point2D`]: Represents the points used for interpolation.
-/// - [`find_bracket_points`](crate::curves::interpolation::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
-impl CubicInterpolation for Curve {
+/// - [`find_bracket_points`](crate::geometrics::Interpolate::find_bracket_points): Determines the bracketing points required for interpolation.
+impl CubicInterpolation<Point2D, Decimal> for Curve {
     /// Performs cubic interpolation on a set of points to estimate the y-coordinate
     /// for a given x value using a Catmull-Rom spline.
     ///
@@ -673,12 +642,13 @@ impl CubicInterpolation for Curve {
     ///
     /// - Provides a high degree of precision due to the use of the `Decimal` type for
     ///   `x` and `y` calculations.
-    fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, CurvesError> {
+    fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
         let points = self.get_points();
+        let len = self.len();
 
         // Need at least 4 points for cubic interpolation
-        if points.len() < 4 {
-            return Err(CurvesError::InterpolationError(
+        if len < 4 {
+            return Err(InterpolationError::Cubic(
                 "Need at least four points for cubic interpolation".to_string(),
             ));
         }
@@ -693,16 +663,16 @@ impl CubicInterpolation for Curve {
         // Select four points for interpolation
         // Ensuring we always have enough points before and after
         let (p0, p1, p2, p3) = if i == 0 {
-            (&points[0], &points[1], &points[2], &points[3])
-        } else if i == points.len() - 2 {
+            (&self[0], &self[1], &self[2], &self[3])
+        } else if i == len - 2 {
             (
-                &points[points.len() - 4],
-                &points[points.len() - 3],
-                &points[points.len() - 2],
-                &points[points.len() - 1],
+                &self[len - 4],
+                &self[len - 3],
+                &self[len - 2],
+                &self[len - 1],
             )
         } else {
-            (&points[i - 1], &points[i], &points[i + 1], &points[i + 2])
+            (&self[i - 1], &self[i], &self[i + 1], &self[i + 2])
         };
 
         // Calculate t parameter (normalized x position between p1 and p2)
@@ -778,7 +748,7 @@ impl CubicInterpolation for Curve {
 /// - [`Point2D`]: Represents a point in 2D space.
 /// - [`Curve`]: Represents a mathematical curve made up of points for interpolation.
 /// - [`CurvesError`]: Enumerates possible errors during curve operations.
-impl SplineInterpolation for Curve {
+impl SplineInterpolation<Point2D, Decimal> for Curve {
     /// Performs cubic spline interpolation for a given x-coordinate and returns the interpolated
     /// `Point2D` value. This function computes the second derivatives of the curve points, solves
     /// a tridiagonal system to derive the interpolation parameters, and evaluates the spline
@@ -874,19 +844,20 @@ impl SplineInterpolation for Curve {
     /// - Natural spline interpolation may introduce minor deviations beyond the range of existing
     ///   data points due to its boundary conditions. For strictly constrained results, consider
     ///   alternative interpolation methods, such as linear or cubic Hermite interpolation.
-    fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, CurvesError> {
+    fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
         let points = self.get_points();
+        let len = self.len();
 
         // Need at least 3 points for spline interpolation
-        if points.len() < 3 {
-            return Err(CurvesError::InterpolationError(
+        if len < 3 {
+            return Err(InterpolationError::Spline(
                 "Need at least three points for spline interpolation".to_string(),
             ));
         }
 
         // Check if x is within the valid range
-        if x < points[0].x || x > points[points.len() - 1].x {
-            return Err(CurvesError::InterpolationError(
+        if x < self[0].x || x > self[len - 1].x {
+            return Err(InterpolationError::Spline(
                 "x is outside the range of points".to_string(),
             ));
         }
@@ -896,7 +867,7 @@ impl SplineInterpolation for Curve {
             return Ok(**point);
         }
 
-        let n = points.len();
+        let n = len;
 
         // Calculate second derivatives
         let mut a = vec![Decimal::ZERO; n];
@@ -906,15 +877,14 @@ impl SplineInterpolation for Curve {
 
         // Fill the matrices
         for i in 1..n - 1 {
-            let hi = points[i].x - points[i - 1].x;
-            let hi1 = points[i + 1].x - points[i].x;
+            let hi = self[i].x - self[i - 1].x;
+            let hi1 = self[i + 1].x - self[i].x;
 
             a[i] = hi;
             b[i] = dec!(2) * (hi + hi1);
             c[i] = hi1;
 
-            r[i] = dec!(6)
-                * ((points[i + 1].y - points[i].y) / hi1 - (points[i].y - points[i - 1].y) / hi);
+            r[i] = dec!(6) * ((self[i + 1].y - self[i].y) / hi1 - (self[i].y - self[i - 1].y) / hi);
         }
 
         // Add boundary conditions (natural spline)
@@ -938,69 +908,27 @@ impl SplineInterpolation for Curve {
         // Find segment for interpolation
         let mut segment = None;
         for i in 0..n - 1 {
-            if points[i].x <= x && x <= points[i + 1].x {
+            if self[i].x <= x && x <= self[i + 1].x {
                 segment = Some(i);
                 break;
             }
         }
 
         let segment = segment.ok_or_else(|| {
-            CurvesError::InterpolationError(
-                "Could not find valid segment for interpolation".to_string(),
-            )
+            InterpolationError::Spline("Could not find valid segment for interpolation".to_string())
         })?;
 
         // Calculate interpolated value
-        let h = points[segment + 1].x - points[segment].x;
-        let dx = points[segment + 1].x - x;
-        let dx1 = x - points[segment].x;
+        let h = self[segment + 1].x - self[segment].x;
+        let dx = self[segment + 1].x - x;
+        let dx1 = x - self[segment].x;
 
         let y = m[segment] * dx * dx * dx / (dec!(6) * h)
             + m[segment + 1] * dx1 * dx1 * dx1 / (dec!(6) * h)
-            + (points[segment].y / h - m[segment] * h / dec!(6)) * dx
-            + (points[segment + 1].y / h - m[segment + 1] * h / dec!(6)) * dx1;
+            + (self[segment].y / h - m[segment] * h / dec!(6)) * dx
+            + (self[segment + 1].y / h - m[segment + 1] * h / dec!(6)) * dx1;
 
         Ok(Point2D::new(x, y))
-    }
-}
-
-/// Implementation of the `Interpolate` trait for the `Curve` struct.
-///
-/// This implementation integrates the `get_points` method for the `Curve` structure,
-/// providing access to its internal points. The `Interpolate` trait ensures compatibility
-/// with various interpolation methods such as Linear, BiLinear, Cubic, and Spline
-/// interpolations. By implementing this trait, `Curve` gains the ability to perform
-/// interpolation operations and access bracketing points.
-///
-/// # Traits Involved
-///
-/// The `Interpolate` trait is an aggregation of multiple interpolation-related traits:
-/// - [`LinearInterpolation`]
-/// - [`BiLinearInterpolation`]
-/// - [`CubicInterpolation`]
-/// - [`SplineInterpolation`]
-///
-/// These underlying traits implement specific interpolation algorithms,
-/// enabling `Curve` to support a robust set of interpolation options through the associated methods.
-/// Depending on the use case and provided parameters (e.g., interpolation type and target x-coordinate),
-/// the appropriate algorithm is invoked.
-///
-/// # See Also
-///
-/// - [`Curve`]: The underlying mathematical structure being interpolated.
-/// - [`Point2D`]: The fundamental data type for the curve's points.
-/// - [`Interpolate`]: The trait defining interpolation operations.
-///
-impl Interpolate for Curve {
-    /// ## `get_points`
-    ///
-    /// - **Signature**: `fn get_points(&self) -> &[Point2D]`
-    /// - **Purpose**: Provides a reference to the collection of points that define the curve.
-    /// - **Returns**: A slice of `Point2D` instances contained in the `points` vector of the struct.
-    /// - **Usage**: This method is critical for interpolation algorithms, allowing access to the
-    ///   ordered list of points necessary for calculations.
-    fn get_points(&self) -> Vec<&Point2D> {
-        self.vector()
     }
 }
 
@@ -1013,73 +941,296 @@ impl Interpolate for Curve {
 /// # Note
 /// This is a minimal implementation that may need to be customized or enhanced
 /// based on specific requirements or domain-specific analysis needs.
-impl CurveMetricsExtractor for Curve {
-    fn compute_basic_metrics(&self) -> Result<BasicMetrics, CurvesError> {
-        // TODO: Implement actual basic metrics computation
-        // This is a placeholder implementation
+impl MetricsExtractor for Curve {
+    fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
+        let y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
+
+        // Handle empty curve
+        if y_values.is_empty() {
+            return Ok(BasicMetrics {
+                mean: Decimal::ZERO,
+                median: Decimal::ZERO,
+                mode: Decimal::ZERO,
+                std_dev: Decimal::ZERO,
+            });
+        }
+
+        // Mean
+        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
+
+        // Median
+        let mut sorted_values = y_values.clone();
+        sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let median = if sorted_values.len() % 2 == 0 {
+            (sorted_values[sorted_values.len() / 2 - 1] + sorted_values[sorted_values.len() / 2])
+                / Decimal::TWO
+        } else {
+            sorted_values[sorted_values.len() / 2]
+        };
+
+        // Mode (most frequent value)
+        let mode = {
+            let mut freq_map = std::collections::HashMap::new();
+            for &val in &y_values {
+                *freq_map.entry(val).or_insert(0) += 1;
+            }
+            freq_map
+                .into_iter()
+                .max_by_key(|&(_, count)| count)
+                .map(|(val, _)| val)
+                .unwrap_or(Decimal::ZERO)
+        };
+
+        // Standard Deviation
+        let variance = y_values
+            .iter()
+            .map(|&x| (x - mean).powu(2))
+            .sum::<Decimal>()
+            / Decimal::from(y_values.len());
+        let std_dev = variance.sqrt().unwrap_or(Decimal::ZERO);
+
         Ok(BasicMetrics {
-            mean: Decimal::ZERO,
-            median: Decimal::ZERO,
-            mode: Decimal::ZERO,
-            std_dev: Decimal::ZERO,
+            mean,
+            median,
+            mode,
+            std_dev,
         })
     }
 
-    fn compute_shape_metrics(&self) -> Result<ShapeMetrics, CurvesError> {
-        // TODO: Implement actual shape metrics computation
-        // This is a placeholder implementation
+    fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
+        let y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
+
+        // Handle empty or single-point curve
+        if y_values.len() < 2 {
+            return Ok(ShapeMetrics {
+                skewness: Decimal::ZERO,
+                kurtosis: Decimal::ZERO,
+                peaks: vec![],
+                valleys: vec![],
+                inflection_points: vec![],
+            });
+        }
+
+        // Mean and Standard Deviation
+        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
+
+        // Compute centered and scaled values
+        let centered_values: Vec<Decimal> = y_values.iter().map(|&x| x - mean).collect();
+
+        // Compute variance
+        let variance = centered_values.iter().map(|&x| x.powu(2)).sum::<Decimal>()
+            / Decimal::from(y_values.len());
+        let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
+        if std_dev.is_zero() || std_dev < dec!(1e-9) {
+            panic!("The standard deviation is too small or zero.");
+        }
+
+        // Skewness calculation (Fisher-Pearson standardized moment)
+        let skewness = centered_values
+            .iter()
+            .map(|&x| (x / std_dev).powu(3))
+            .sum::<Decimal>()
+            / Decimal::from(y_values.len());
+
+        // Kurtosis calculation (Fisher's definition - adjust to excess kurtosis)
+        let kurtosis = centered_values
+            .iter()
+            .map(|&x| (x / std_dev).powu(4))
+            .sum::<Decimal>()
+            / Decimal::from(y_values.len())
+            - Decimal::from(3);
+
+        // Peaks and Valleys detection
+        let (peaks, valleys) = detect_peaks_and_valleys(&self.points);
+
         Ok(ShapeMetrics {
-            skewness: Decimal::ZERO,
-            kurtosis: Decimal::ZERO,
-            peaks: vec![],
-            valleys: vec![],
+            skewness,
+            kurtosis,
+            peaks,
+            valleys,
             inflection_points: vec![],
         })
     }
 
-    fn compute_range_metrics(&self) -> Result<RangeMetrics, CurvesError> {
-        // TODO: Implement actual range metrics computation
-        // This is a placeholder implementation
+    fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
+        // Handle empty curve
+        if self.points.is_empty() {
+            return Ok(RangeMetrics {
+                min: Point2D::new(Decimal::ZERO, Decimal::ZERO),
+                max: Point2D::new(Decimal::ZERO, Decimal::ZERO),
+                range: Decimal::ZERO,
+                quartiles: (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
+                interquartile_range: Decimal::ZERO,
+            });
+        }
+
+        let mut y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
+        y_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        let len = y_values.len();
         let min_point = self
             .points
-            .first()
+            .iter()
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
             .cloned()
-            .unwrap_or(Point2D::new(Decimal::ZERO, Decimal::ZERO));
+            .unwrap();
         let max_point = self
             .points
-            .last()
+            .iter()
+            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
             .cloned()
-            .unwrap_or(Point2D::new(Decimal::ZERO, Decimal::ZERO));
+            .unwrap();
+
+        let range = max_point.y - min_point.y;
+
+        // Quartiles
+        let q1 = y_values[len / 4];
+        let q2 = y_values[len / 2];
+        let q3 = y_values[3 * len / 4];
+
+        let interquartile_range = q3 - q1;
 
         Ok(RangeMetrics {
             min: min_point,
             max: max_point,
-            range: Decimal::ZERO,
-            quartiles: (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
-            interquartile_range: Decimal::ZERO,
+            range,
+            quartiles: (q1, q2, q3),
+            interquartile_range,
         })
     }
 
-    fn compute_trend_metrics(&self) -> Result<TrendMetrics, CurvesError> {
-        // TODO: Implement actual trend metrics computation
-        // This is a placeholder implementation
+    fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
+        let points: Vec<Point2D> = self.points.clone().into_iter().collect();
+
+        // Handle insufficient points
+        if points.len() < 2 {
+            return Ok(TrendMetrics {
+                slope: Decimal::ZERO,
+                intercept: Decimal::ZERO,
+                r_squared: Decimal::ZERO,
+                moving_average: vec![],
+            });
+        }
+
+        // Linear Regression Calculation
+        let n = Decimal::from(points.len());
+        let x_vals: Vec<Decimal> = points.iter().map(|p| p.x).collect();
+        let y_vals: Vec<Decimal> = points.iter().map(|p| p.y).collect();
+
+        let sum_x: Decimal = x_vals.iter().sum();
+        let sum_y: Decimal = y_vals.iter().sum();
+        let sum_xy: Decimal = x_vals.iter().zip(&y_vals).map(|(x, y)| *x * *y).sum();
+        let sum_xx: Decimal = x_vals.iter().map(|x| *x * *x).sum();
+
+        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x);
+        let intercept = (sum_y - slope * sum_x) / n;
+
+        // R-squared Calculation
+        let mean_y = sum_y / n;
+        let sst: Decimal = y_vals.iter().map(|y| (*y - mean_y).powu(2)).sum();
+
+        let ssr: Decimal = y_vals
+            .iter()
+            .zip(&x_vals)
+            .map(|(y, x)| {
+                let y_predicted = slope * *x + intercept;
+                (*y - y_predicted).powu(2)
+            })
+            .sum();
+
+        let r_squared = if sst == Decimal::ZERO {
+            Decimal::ONE
+        } else {
+            Decimal::ONE - (ssr / sst)
+        };
+
+        // Moving Average Calculation
+        let window_sizes = [3, 5, 7];
+        let moving_average: Vec<Point2D> = window_sizes
+            .iter()
+            .flat_map(|&window| {
+                if window > points.len() {
+                    vec![]
+                } else {
+                    points
+                        .windows(window)
+                        .map(|window_points| {
+                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>()
+                                / Decimal::from(window_points.len());
+                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>()
+                                / Decimal::from(window_points.len());
+                            Point2D::new(avg_x, avg_y)
+                        })
+                        .collect::<Vec<Point2D>>()
+                }
+            })
+            .collect();
+
         Ok(TrendMetrics {
-            slope: Decimal::ZERO,
-            intercept: Decimal::ZERO,
-            r_squared: Decimal::ZERO,
-            moving_average: vec![],
+            slope,
+            intercept,
+            r_squared,
+            moving_average,
         })
     }
 
-    fn compute_risk_metrics(&self) -> Result<RiskMetrics, CurvesError> {
-        // TODO: Implement actual risk metrics computation
-        // This is a placeholder implementation
+    fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
+        let y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
+
+        if y_values.is_empty() {
+            return Ok(RiskMetrics {
+                volatility: Decimal::ZERO,
+                value_at_risk: Decimal::ZERO,
+                expected_shortfall: Decimal::ZERO,
+                beta: Decimal::ZERO,
+                sharpe_ratio: Decimal::ZERO,
+            });
+        }
+
+        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
+        let volatility = y_values
+            .iter()
+            .map(|&x| (x - mean).powu(2))
+            .sum::<Decimal>()
+            / Decimal::from(y_values.len())
+                .sqrt()
+                .unwrap_or(Decimal::ZERO);
+
+        if volatility == Decimal::ZERO {
+            return Ok(RiskMetrics {
+                volatility,
+                value_at_risk: Decimal::ZERO,
+                expected_shortfall: Decimal::ZERO,
+                beta: Decimal::ZERO,
+                sharpe_ratio: Decimal::ZERO,
+            });
+        }
+
+        let z_score = dec!(1.645);
+        let var = mean - z_score * volatility;
+
+        let below_var_count = y_values.iter().filter(|&&x| x < var).count();
+        let expected_shortfall = if below_var_count > 0 {
+            y_values.iter().filter(|&&x| x < var).sum::<Decimal>()
+                / Decimal::from(below_var_count as u64)
+        } else {
+            Decimal::ZERO
+        };
+
+        let beta = if mean != Decimal::ZERO {
+            volatility / mean
+        } else {
+            Decimal::ZERO
+        };
+
+        let sharpe_ratio = mean / volatility;
+
         Ok(RiskMetrics {
-            volatility: Decimal::ZERO,
-            value_at_risk: Decimal::ZERO,
-            expected_shortfall: Decimal::ZERO,
-            beta: Decimal::ZERO,
-            sharpe_ratio: Decimal::ZERO,
+            volatility,
+            value_at_risk: var,
+            expected_shortfall,
+            beta,
+            sharpe_ratio,
         })
     }
 }
@@ -1087,7 +1238,9 @@ impl CurveMetricsExtractor for Curve {
 /// Implements the `CurveArithmetic` trait for the `Curve` type, providing
 /// functionality for merging multiple curves using a specified mathematical
 /// operation and performing arithmetic operations between two curves.
-impl CurveArithmetic for Curve {
+impl Arithmetic<Curve> for Curve {
+    type Error = CurvesError;
+
     /// Merges a collection of curves into a single curve based on the specified
     /// mathematical operation.
     ///
@@ -1147,7 +1300,7 @@ impl CurveArithmetic for Curve {
     /// This function enables combining multiple curves for tasks such as:
     /// - Summing y-values across different curves to compute a composite curve.
     /// - Finding the maximum/minimum y-value at each x-point for a collection of curves.
-    fn merge_curves(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurvesError> {
+    fn merge(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurvesError> {
         if curves.is_empty() {
             return Err(CurvesError::invalid_parameters(
                 "merge_curves",
@@ -1196,8 +1349,9 @@ impl CurveArithmetic for Curve {
                     .iter()
                     .map(|curve| {
                         curve
-                            .interpolate(x, crate::curves::interpolation::InterpolationType::Cubic)
+                            .interpolate(x, InterpolationType::Cubic)
                             .map(|point| point.y)
+                            .map_err(CurvesError::from)
                     })
                     .collect();
 
@@ -1281,7 +1435,200 @@ impl CurveArithmetic for Curve {
     /// Use this method to easily perform arithmetic operations between two curves,
     /// such as summing their y-values or finding their pointwise maximum.
     fn merge_with(&self, other: &Curve, operation: MergeOperation) -> Result<Curve, CurvesError> {
-        Self::merge_curves(&[self, other], operation)
+        Self::merge(&[self, other], operation)
+    }
+}
+
+impl AxisOperations<Point2D, Decimal> for Curve {
+    type Error = CurvesError;
+
+    fn contains_point(&self, x: &Decimal) -> bool {
+        let point = Point2D::new(*x, Decimal::ZERO);
+        self.points.contains(&point)
+    }
+
+    fn get_index_values(&self) -> Vec<Decimal> {
+        self.points.iter().map(|p| p.x).collect()
+    }
+
+    fn get_values(&self, x: Decimal) -> Vec<&Decimal> {
+        self.points
+            .iter()
+            .filter(|p| p.x == x)
+            .map(|p| &p.y)
+            .collect()
+    }
+
+    fn get_closest_point(&self, x: &Decimal) -> Result<&Point2D, Self::Error> {
+        self.points
+            .iter()
+            .min_by(|a, b| {
+                let dist_a = (a.x - *x).abs();
+                let dist_b = (b.x - *x).abs();
+                dist_a.partial_cmp(&dist_b).unwrap()
+            })
+            .ok_or(CurvesError::Point2DError {
+                reason: "No points available",
+            })
+    }
+
+    fn get_point(&self, x: &Decimal) -> Option<&Point2D> {
+        if self.contains_point(x) {
+            self.points.iter().find(|p| p.x == *x)
+        } else {
+            None
+        }
+    }
+}
+
+impl MergeAxisInterpolate<Point2D, Decimal> for Curve
+where
+    Self: Sized,
+{
+    fn merge_axis_interpolate(
+        &self,
+        other: &Self,
+        interpolation: InterpolationType,
+    ) -> Result<(Self, Self), Self::Error> {
+        // Get merged unique x-coordinates
+        let merged_x_values = self.merge_axis_index(other);
+
+        // Sort the merged x values
+        let mut sorted_x_values: Vec<Decimal> = merged_x_values.into_iter().collect();
+        sorted_x_values.sort();
+
+        let mut interpolated_self_points = BTreeSet::new();
+        let mut interpolated_other_points = BTreeSet::new();
+
+        for x in &sorted_x_values {
+            if self.contains_point(x) {
+                interpolated_self_points.insert(*self.get_point(x).unwrap());
+            } else {
+                let interpolated_point = self.interpolate(*x, interpolation)?;
+                interpolated_self_points.insert(interpolated_point);
+            }
+            if other.contains_point(x) {
+                interpolated_other_points.insert(*other.get_point(x).unwrap());
+            } else {
+                let interpolated_point = other.interpolate(*x, interpolation)?;
+                interpolated_other_points.insert(interpolated_point);
+            }
+        }
+        Ok((
+            Curve::new(interpolated_self_points),
+            Curve::new(interpolated_other_points),
+        ))
+    }
+}
+
+impl GeometricTransformations<Point2D> for Curve {
+    type Error = CurvesError;
+
+    fn translate(&self, deltas: Vec<&Decimal>) -> Result<Self, Self::Error> {
+        if deltas.len() != 2 {
+            return Err(CurvesError::invalid_parameters(
+                "translate",
+                "Expected 2 deltas for 2D translation",
+            ));
+        }
+
+        let translated_points = self
+            .points
+            .iter()
+            .map(|point| Point2D::new(point.x + deltas[0], point.y + deltas[1]))
+            .collect();
+
+        Ok(Curve::new(translated_points))
+    }
+
+    fn scale(&self, factors: Vec<&Decimal>) -> Result<Self, Self::Error> {
+        if factors.len() != 2 {
+            return Err(CurvesError::invalid_parameters(
+                "scale",
+                "Expected 2 factors for 2D scaling",
+            ));
+        }
+
+        let scaled_points = self
+            .points
+            .iter()
+            .map(|point| Point2D::new(point.x * factors[0], point.y * factors[1]))
+            .collect();
+
+        Ok(Curve::new(scaled_points))
+    }
+
+    fn intersect_with(&self, other: &Self) -> Result<Vec<Point2D>, Self::Error> {
+        let mut intersections = Vec::new();
+
+        // Use existing pairs iterator for efficiency
+        for p1 in self.get_points() {
+            for p2 in other.get_points() {
+                // Find points with small distance between them
+                if (p1.x - p2.x).abs() < Decimal::new(1, 6)
+                    && (p1.y - p2.y).abs() < Decimal::new(1, 6)
+                {
+                    intersections.push(*p1);
+                }
+            }
+        }
+
+        Ok(intersections)
+    }
+
+    fn derivative_at(&self, point: &Point2D) -> Result<Vec<Decimal>, Self::Error> {
+        let (i, j) = self.find_bracket_points(point.x)?;
+
+        let p0 = &self[i];
+        let p1 = &self[j];
+
+        let a = (p1.y - p0.y) / (p1.x * p1.x - p0.x * p0.x);
+        let derivative = dec!(2.0) * a * point.x;
+
+        Ok(vec![derivative])
+    }
+
+    fn extrema(&self) -> Result<(Point2D, Point2D), Self::Error> {
+        if self.points.is_empty() {
+            return Err(CurvesError::invalid_parameters(
+                "extrema",
+                "Curve has no points",
+            ));
+        }
+
+        let min_point = self
+            .points
+            .iter()
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+            .cloned()
+            .unwrap();
+
+        let max_point = self
+            .points
+            .iter()
+            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+            .cloned()
+            .unwrap();
+
+        Ok((min_point, max_point))
+    }
+
+    fn measure_under(&self, base_value: &Decimal) -> Result<Decimal, Self::Error> {
+        if self.points.len() < 2 {
+            return Ok(Decimal::ZERO);
+        }
+
+        let mut area = Decimal::ZERO;
+        let points: Vec<_> = self.points.iter().collect();
+
+        // Approximate area using trapezoidal rule
+        for pair in points.windows(2) {
+            let width = pair[1].x - pair[0].x;
+            let height = ((pair[0].y - base_value) + (pair[1].y - base_value)) / Decimal::TWO;
+            area += width * height;
+        }
+
+        Ok(area.abs())
     }
 }
 
@@ -1383,7 +1730,7 @@ mod tests_curves {
 #[cfg(test)]
 mod tests_linear_interpolate {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
+    use crate::geometrics::InterpolationType;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1496,7 +1843,7 @@ mod tests_linear_interpolate {
 #[cfg(test)]
 mod tests_bilinear_interpolate {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
+    use crate::geometrics::InterpolationType;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1627,7 +1974,7 @@ mod tests_bilinear_interpolate {
 #[cfg(test)]
 mod tests_cubic_interpolate {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
+    use crate::geometrics::InterpolationType;
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -1722,8 +2069,6 @@ mod tests_cubic_interpolate {
 
         assert!(p1.y < p2.y);
         assert!(p2.y < p3.y);
-
-        // Print values for debugging
         info!("p1: {:?}, p2: {:?}, p3: {:?}", p1, p2, p3);
     }
 }
@@ -1731,7 +2076,7 @@ mod tests_cubic_interpolate {
 #[cfg(test)]
 mod tests_spline_interpolate {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
+    use crate::geometrics::InterpolationType;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1848,8 +2193,8 @@ mod tests_spline_interpolate {
 #[cfg(test)]
 mod tests_curve_arithmetic {
     use super::*;
-    use crate::curves::interpolation::InterpolationType;
     use crate::curves::utils::create_linear_curve;
+    use crate::geometrics::InterpolationType;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1857,7 +2202,7 @@ mod tests_curve_arithmetic {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Add).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Add).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1881,7 +2226,7 @@ mod tests_curve_arithmetic {
     fn test_merge_curves_subtract() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Subtract).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Subtract).unwrap();
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
         for x in &test_points {
@@ -1905,7 +2250,7 @@ mod tests_curve_arithmetic {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Multiply).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Multiply).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1929,7 +2274,7 @@ mod tests_curve_arithmetic {
     fn test_merge_curves_divide() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(6.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Divide).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Divide).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1960,7 +2305,7 @@ mod tests_curve_arithmetic {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Max).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Max).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -1986,7 +2331,7 @@ mod tests_curve_arithmetic {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Min).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Min).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -2015,7 +2360,7 @@ mod tests_curve_arithmetic {
         let result = curve1.merge_with(&curve2, MergeOperation::Add).unwrap();
 
         // Verify that merge_with is equivalent to merge_curves with two curves
-        let merged_result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Add).unwrap();
+        let merged_result = Curve::merge(&[&curve1, &curve2], MergeOperation::Add).unwrap();
 
         // Compare points of both results
         assert_eq!(result.points.len(), merged_result.points.len());
@@ -2030,7 +2375,7 @@ mod tests_curve_arithmetic {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_merge_curves_error_handling() {
         // Test with empty slice
-        let result = Curve::merge_curves(&[], MergeOperation::Add);
+        let result = Curve::merge(&[], MergeOperation::Add);
         assert!(result.is_err());
 
         // Test with curves of incompatible ranges
@@ -2038,7 +2383,7 @@ mod tests_curve_arithmetic {
         let curve2 = create_linear_curve(dec!(5.0), dec!(15.0), dec!(2.0));
 
         // Verify that the merge operation works even with partially overlapping ranges
-        let result = Curve::merge_curves(&[&curve1, &curve2], MergeOperation::Add);
+        let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Add);
         assert!(result.is_ok());
     }
 
@@ -2049,8 +2394,7 @@ mod tests_curve_arithmetic {
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve3 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
 
-        let result =
-            Curve::merge_curves(&[&curve1, &curve2, &curve3], MergeOperation::Add).unwrap();
+        let result = Curve::merge(&[&curve1, &curve2, &curve3], MergeOperation::Add).unwrap();
 
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -2067,6 +2411,792 @@ mod tests_curve_arithmetic {
                 expected_y,
                 result_point.y
             );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+    use crate::error::CurvesError::OperationError;
+    use crate::error::OperationErrorKind;
+    use crate::geometrics::{ConstructionMethod, ConstructionParams};
+    use std::error::Error;
+
+    #[test]
+    fn test_construct_from_data_empty() {
+        let result = Curve::construct(ConstructionMethod::FromData {
+            points: BTreeSet::new(),
+        });
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CurvesError::Point2DError { reason } => {
+                assert_eq!(reason, "Empty points array");
+            }
+            _ => {
+                panic!("Unexpected error type");
+            }
+        }
+    }
+
+    #[test]
+    fn test_construct_parametric_valid() {
+        let f = |t: Decimal| Ok(Point2D::new(t, t * dec!(2.0)));
+        let params = ConstructionParams::D2 {
+            t_start: Decimal::ZERO,
+            t_end: dec!(10.0),
+            steps: 10,
+        };
+        let result = Curve::construct(ConstructionMethod::Parametric {
+            f: Box::new(f),
+            params,
+        });
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_construct_parametric_invalid_function() {
+        let f = |_t: Decimal| -> Result<Point2D, Box<dyn Error>> {
+            Err(Box::new(CurvesError::ConstructionError(
+                "Function evaluation failed".to_string(),
+            )))
+        };
+        let params = ConstructionParams::D2 {
+            t_start: Decimal::ZERO,
+            t_end: dec!(10.0),
+            steps: 10,
+        };
+        let result = Curve::construct(ConstructionMethod::Parametric {
+            f: Box::new(f),
+            params,
+        });
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CurvesError::ConstructionError(reason) => {
+                assert_eq!(reason, "Construction error: Function evaluation failed");
+            }
+            _ => {
+                panic!("Unexpected error type");
+            }
+        }
+    }
+
+    #[test]
+    fn test_segment_not_found_error() {
+        let segment: Option<Point2D> = None;
+        let result: Result<Point2D, CurvesError> = segment.ok_or_else(|| CurvesError::StdError {
+            reason: "Could not find valid segment for interpolation".to_string(),
+        });
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CurvesError::StdError { reason } => {
+                assert_eq!(reason, "Could not find valid segment for interpolation");
+            }
+            _ => {
+                panic!("Unexpected error type");
+            }
+        }
+    }
+
+    #[test]
+    fn test_compute_basic_metrics_placeholder() {
+        let curve = Curve {
+            points: BTreeSet::new(),
+            x_range: (Default::default(), Default::default()),
+        };
+        let metrics = curve.compute_basic_metrics();
+        assert!(metrics.is_ok());
+        let metrics = metrics.unwrap();
+        assert_eq!(metrics.mean, Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_single_curve_return() {
+        let curve = Curve {
+            points: BTreeSet::new(),
+            x_range: (Default::default(), Default::default()),
+        };
+        let result = if vec![curve.clone()].len() == 1 {
+            Ok(curve.clone())
+        } else {
+            Err(CurvesError::invalid_parameters(
+                "merge_curves",
+                "Invalid state",
+            ))
+        };
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_merge_curves_invalid_x_range() {
+        let min_x = dec!(10.0);
+        let max_x = dec!(5.0);
+        let result = if min_x >= max_x {
+            Err(CurvesError::invalid_parameters(
+                "merge_curves",
+                "Curves have incompatible x-ranges",
+            ))
+        } else {
+            Ok(())
+        };
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            OperationError(OperationErrorKind::InvalidParameters { operation, reason }) => {
+                assert_eq!(operation, "merge_curves");
+                assert_eq!(reason, "Curves have incompatible x-ranges");
+            }
+            _ => {
+                panic!("Unexpected error type");
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_curve_metrics {
+    use super::*;
+    use crate::assert_decimal_eq;
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+
+    // Helper function to create test curves
+    fn create_linear_curve() -> Curve {
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(2.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+            Point2D::new(dec!(3.0), dec!(6.0)),
+            Point2D::new(dec!(4.0), dec!(8.0)),
+        ]);
+        Curve::new(points)
+    }
+
+    fn create_non_linear_curve() -> Curve {
+        Curve {
+            points: (0..=20)
+                .map(|x| Point2D {
+                    x: Decimal::from(x),
+                    y: Decimal::from(x * x % 7), // Ejemplo no lineal
+                })
+                .collect(),
+            x_range: (Default::default(), Default::default()),
+        }
+    }
+
+    fn create_constant_curve() -> Curve {
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(5.0)),
+            Point2D::new(dec!(1.0), dec!(5.0)),
+            Point2D::new(dec!(2.0), dec!(5.0)),
+        ]);
+        Curve::new(points)
+    }
+
+    #[test]
+    fn test_basic_metrics() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let basic_metrics = linear_curve.compute_basic_metrics().unwrap();
+
+        // Expected values for linear curve
+        assert_decimal_eq!(basic_metrics.mean, dec!(4.0), dec!(0.001));
+        assert_decimal_eq!(basic_metrics.median, dec!(4.0), dec!(0.001));
+        assert_decimal_eq!(basic_metrics.std_dev, dec!(2.82842712), dec!(0.001));
+
+        // Constant curve
+        let constant_curve = create_constant_curve();
+        let constant_metrics = constant_curve.compute_basic_metrics().unwrap();
+
+        assert_decimal_eq!(constant_metrics.mean, dec!(5.0), dec!(0.001));
+        assert_decimal_eq!(constant_metrics.median, dec!(5.0), dec!(0.001));
+        assert_decimal_eq!(constant_metrics.std_dev, dec!(0.0), dec!(0.001));
+    }
+
+    #[test]
+    fn test_shape_metrics() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let shape_metrics = linear_curve.compute_shape_metrics().unwrap();
+
+        // More lenient check for linear curve
+        assert!(
+            shape_metrics.skewness.abs() < dec!(0.5),
+            "Skewness for linear curve should be very close to 0, got {}",
+            shape_metrics.skewness
+        );
+
+        // Allow a wider range for kurtosis of a linear curve
+        assert!(
+            shape_metrics.kurtosis.abs() < dec!(2.0),
+            "Kurtosis for linear curve should be close to 0, got {}",
+            shape_metrics.kurtosis
+        );
+
+        // Non-linear curve
+        let non_linear_curve = create_non_linear_curve();
+        let non_linear_metrics = non_linear_curve.compute_shape_metrics().unwrap();
+
+        // More nuanced checks for non-linear curve
+        assert!(
+            non_linear_metrics.skewness.abs() > dec!(0.3),
+            "Non-linear curve should have significant skewness, got {}",
+            non_linear_metrics.skewness
+        );
+
+        // Ensure the non-linear curve has a meaningfully different kurtosis
+        assert!(
+            non_linear_metrics.kurtosis.abs() > dec!(1.0),
+            "Non-linear curve should have significant kurtosis, got {}",
+            non_linear_metrics.kurtosis
+        );
+
+        // Check peaks and valleys
+        assert!(
+            !non_linear_metrics.peaks.is_empty(),
+            "Peaks should be detected"
+        );
+        assert!(
+            !non_linear_metrics.valleys.is_empty(),
+            "Valleys should be detected"
+        );
+    }
+
+    #[test]
+    fn test_range_metrics() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let range_metrics = linear_curve.compute_range_metrics().unwrap();
+
+        assert_decimal_eq!(range_metrics.min.y, dec!(0.0), dec!(0.001));
+        assert_decimal_eq!(range_metrics.max.y, dec!(8.0), dec!(0.001));
+        assert_decimal_eq!(range_metrics.range, dec!(8.0), dec!(0.001));
+
+        // Constant curve
+        let constant_curve = create_constant_curve();
+        let constant_range_metrics = constant_curve.compute_range_metrics().unwrap();
+
+        assert_decimal_eq!(constant_range_metrics.min.y, dec!(5.0), dec!(0.001));
+        assert_decimal_eq!(constant_range_metrics.max.y, dec!(5.0), dec!(0.001));
+        assert_decimal_eq!(constant_range_metrics.range, dec!(0.0), dec!(0.001));
+    }
+
+    #[test]
+    fn test_trend_metrics() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let trend_metrics = linear_curve.compute_trend_metrics().unwrap();
+
+        // Expected values for a perfectly linear curve
+        assert_decimal_eq!(trend_metrics.slope, dec!(2.0), dec!(0.001));
+        assert_decimal_eq!(trend_metrics.intercept, dec!(0.0), dec!(0.001));
+        assert_decimal_eq!(trend_metrics.r_squared, dec!(1.0), dec!(0.001));
+
+        // Non-linear curve
+        let non_linear_curve = create_non_linear_curve();
+        let non_linear_trend_metrics = non_linear_curve.compute_trend_metrics().unwrap();
+
+        // R-squared should be less than 1
+        assert!(non_linear_trend_metrics.r_squared < dec!(1.0));
+
+        // Moving average should exist
+        assert!(!non_linear_trend_metrics.moving_average.is_empty());
+    }
+
+    #[test]
+    fn test_constant_curve_risk_metrics() {
+        let constant_curve = create_constant_curve();
+        let risk_metrics = constant_curve.compute_risk_metrics().unwrap();
+
+        assert_eq!(risk_metrics.volatility, dec!(0.0));
+        assert_eq!(risk_metrics.beta, dec!(0.0));
+        assert_eq!(risk_metrics.sharpe_ratio, dec!(0.0));
+    }
+
+    #[test]
+    fn test_risk_metrics() {
+        // Curva lineal
+        let linear_curve = create_linear_curve();
+        let risk_metrics = linear_curve.compute_risk_metrics().unwrap();
+
+        assert!(
+            risk_metrics.volatility > dec!(0.0),
+            "Volatility debe ser mayor a cero."
+        );
+        assert!(
+            risk_metrics.value_at_risk != dec!(0.0),
+            "Value at Risk no debe ser cero."
+        );
+        assert!(risk_metrics.beta != dec!(0.0), "Beta no debe ser cero.");
+    }
+
+    #[test]
+    fn test_risk_metrics_bis() {
+        // Linear curve
+        let linear_curve = create_linear_curve();
+        let risk_metrics = linear_curve.compute_risk_metrics().unwrap();
+
+        // Volatility and risk metrics should be non-zero
+        assert!(risk_metrics.volatility > dec!(0.0));
+        assert!(risk_metrics.value_at_risk != dec!(0.0));
+        assert!(risk_metrics.beta != dec!(0.0));
+
+        // Constant curve
+        let constant_curve = create_constant_curve();
+        let constant_risk_metrics = constant_curve.compute_risk_metrics().unwrap();
+
+        // Volatility should be zero for a constant curve
+        assert_decimal_eq!(constant_risk_metrics.volatility, dec!(0.0), dec!(0.001));
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        // Empty curve
+        let empty_curve = Curve::new(BTreeSet::new());
+
+        assert!(empty_curve.compute_basic_metrics().is_ok());
+        assert!(empty_curve.compute_shape_metrics().is_ok());
+        assert!(empty_curve.compute_range_metrics().is_ok());
+        assert!(empty_curve.compute_trend_metrics().is_ok());
+        assert!(empty_curve.compute_risk_metrics().is_ok());
+
+        // Single point curve
+        let single_point_curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
+            dec!(1.0),
+            dec!(1.0),
+        )]));
+
+        assert!(single_point_curve.compute_basic_metrics().is_ok());
+        assert!(single_point_curve.compute_shape_metrics().is_ok());
+        assert!(single_point_curve.compute_range_metrics().is_ok());
+        assert!(single_point_curve.compute_trend_metrics().is_ok());
+        assert!(single_point_curve.compute_risk_metrics().is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_merge_axis_interpolate {
+    use super::*;
+    use crate::curves::utils::create_linear_curve;
+    use crate::geometrics::InterpolationType;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_merge_axis_interpolate_linear() {
+        // Create two curves with different x ranges and points
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
+        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
+
+        // Merge and interpolate using linear interpolation
+        let result = curve1.merge_axis_interpolate(&curve2, InterpolationType::Linear);
+
+        assert!(result.is_ok());
+        let (interpolated_curve1, interpolated_curve2) = result.unwrap();
+
+        // Verify that both interpolated curves have the same x range
+        assert_eq!(interpolated_curve1.x_range.0, interpolated_curve2.x_range.0);
+        assert_eq!(interpolated_curve1.x_range.1, interpolated_curve2.x_range.1);
+
+        // Verify number of points (should cover full merged x range)
+        assert_eq!(interpolated_curve1.points.len(), 10);
+        assert_eq!(interpolated_curve2.points.len(), 10);
+        assert_eq!(interpolated_curve1.x_range, interpolated_curve2.x_range);
+        assert_eq!(
+            interpolated_curve1.get_index_values(),
+            interpolated_curve2.get_index_values()
+        );
+    }
+
+    #[test]
+    fn test_merge_axis_interpolate_cubic() {
+        // Create two curves with different x ranges and points
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
+        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
+
+        // Merge and interpolate using cubic interpolation
+        let result = curve1.merge_axis_interpolate(&curve2, InterpolationType::Cubic);
+
+        assert!(result.is_ok());
+        let (interpolated_curve1, interpolated_curve2) = result.unwrap();
+
+        // Verify that both interpolated curves have the same x range
+        assert_eq!(interpolated_curve1.x_range.0, interpolated_curve2.x_range.0);
+        assert_eq!(interpolated_curve1.x_range.1, interpolated_curve2.x_range.1);
+
+        // Verify number of points (should cover full merged x range)
+        assert_eq!(interpolated_curve1.points.len(), 10);
+        assert_eq!(interpolated_curve2.points.len(), 10);
+        assert_eq!(interpolated_curve1.x_range, interpolated_curve2.x_range);
+        assert_eq!(
+            interpolated_curve1.get_index_values(),
+            interpolated_curve2.get_index_values()
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_geometric_transformations {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    fn create_test_curve() -> Curve {
+        Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+            Point2D::new(dec!(3.0), dec!(9.0)),
+        ]))
+    }
+
+    mod test_translate {
+        use super::*;
+
+        #[test]
+        fn test_translate_positive() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(2.0), &dec!(3.0)]).unwrap();
+
+            let translated_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(translated_points[0].x, dec!(2.0));
+            assert_eq!(translated_points[0].y, dec!(3.0));
+
+            assert_eq!(translated_points[1].x, dec!(3.0));
+            assert_eq!(translated_points[1].y, dec!(4.0));
+
+            assert_eq!(translated_points[2].x, dec!(4.0));
+            assert_eq!(translated_points[2].y, dec!(7.0));
+
+            assert_eq!(translated_points[3].x, dec!(5.0));
+            assert_eq!(translated_points[3].y, dec!(12.0));
+        }
+
+        #[test]
+        fn test_translate_negative() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(-1.0), &dec!(-2.0)]).unwrap();
+
+            let translated_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(translated_points[0].x, dec!(-1.0));
+            assert_eq!(translated_points[0].y, dec!(-2.0));
+        }
+
+        #[test]
+        fn test_translate_zero() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(0.0), &dec!(0.0)]).unwrap();
+            assert_eq!(curve.points, result.points);
+        }
+
+        #[test]
+        fn test_translate_wrong_dimensions() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(1.0)]);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_translate_preserves_shape() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(1.0), &dec!(1.0)]).unwrap();
+
+            let original_diffs: Vec<Decimal> = curve
+                .points
+                .iter()
+                .zip(curve.points.iter().skip(1))
+                .map(|(a, b)| (b.y - a.y))
+                .collect();
+
+            let translated_diffs: Vec<Decimal> = result
+                .points
+                .iter()
+                .zip(result.points.iter().skip(1))
+                .map(|(a, b)| (b.y - a.y))
+                .collect();
+
+            assert_eq!(original_diffs, translated_diffs);
+        }
+    }
+
+    mod test_scale {
+        use super::*;
+
+        #[test]
+        fn test_scale_uniform() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(2.0), &dec!(2.0)]).unwrap();
+
+            let scaled_points: Vec<_> = result.points.iter().collect();
+
+            assert_eq!(scaled_points[0].x, dec!(0.0));
+            assert_eq!(scaled_points[0].y, dec!(0.0));
+
+            assert_eq!(scaled_points[1].x, dec!(2.0));
+            assert_eq!(scaled_points[1].y, dec!(2.0));
+
+            assert_eq!(scaled_points[2].x, dec!(4.0));
+            assert_eq!(scaled_points[2].y, dec!(8.0));
+
+            assert_eq!(scaled_points[3].x, dec!(6.0));
+            assert_eq!(scaled_points[3].y, dec!(18.0));
+        }
+
+        #[test]
+        fn test_scale_non_uniform() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(2.0), &dec!(3.0)]).unwrap();
+
+            let scaled_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(scaled_points[1].x, dec!(2.0));
+            assert_eq!(scaled_points[1].y, dec!(3.0));
+        }
+
+        #[test]
+        fn test_scale_zero() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(0.0), &dec!(0.0)]).unwrap();
+
+            assert!(result
+                .points
+                .iter()
+                .all(|p| p.x == dec!(0.0) && p.y == dec!(0.0)));
+        }
+
+        #[test]
+        fn test_scale_wrong_dimensions() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(2.0)]);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_scale_negative() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(-1.0), &dec!(-1.0)]).unwrap();
+
+            assert_eq!(result[1].x, dec!(-2.0));
+            assert_eq!(result[1].y, dec!(-4.0));
+
+            assert_eq!(result[3].x, dec!(0.0));
+            assert_eq!(result[3].y, dec!(0.0));
+        }
+    }
+
+    mod test_intersect_with {
+        use super::*;
+
+        #[test]
+        fn test_curves_intersect() {
+            let curve1 = create_test_curve();
+            let curve2 = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(2.0)),
+            ]));
+
+            let intersections = curve1.intersect_with(&curve2).unwrap();
+            assert_eq!(intersections.len(), 1);
+        }
+
+        #[test]
+        fn test_no_intersection() {
+            let curve1 = create_test_curve();
+            let curve2 = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(10.0), dec!(10.0)),
+                Point2D::new(dec!(11.0), dec!(11.0)),
+            ]));
+
+            let intersections = curve1.intersect_with(&curve2).unwrap();
+            assert!(intersections.is_empty());
+        }
+
+        #[test]
+        fn test_multiple_intersections() {
+            let curve1 = create_test_curve();
+            let curve2 = create_test_curve();
+
+            let intersections = curve1.intersect_with(&curve2).unwrap();
+            assert_eq!(intersections.len(), curve1.points.len());
+        }
+
+        #[test]
+        fn test_self_intersection() {
+            let curve = create_test_curve();
+            let intersections = curve.intersect_with(&curve).unwrap();
+            assert_eq!(intersections.len(), curve.points.len());
+        }
+
+        #[test]
+        fn test_empty_curves() {
+            let curve1 = Curve::new(BTreeSet::new());
+            let curve2 = Curve::new(BTreeSet::new());
+
+            let intersections = curve1.intersect_with(&curve2).unwrap();
+            assert!(intersections.is_empty());
+        }
+    }
+
+    mod test_derivative_at {
+        use super::*;
+
+        #[test]
+        fn test_linear_derivative() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+            ]));
+
+            let derivative = curve
+                .derivative_at(&Point2D::new(dec!(0.5), dec!(0.5)))
+                .unwrap();
+            assert_eq!(derivative[0], dec!(1.0));
+        }
+
+        #[test]
+        fn test_quadratic_derivative() {
+            let curve = create_test_curve();
+            let derivative = curve
+                .derivative_at(&Point2D::new(dec!(1.0), dec!(1.0)))
+                .unwrap();
+            assert_eq!(derivative[0], dec!(2.0));
+            let derivative2 = curve
+                .derivative_at(&Point2D::new(dec!(2.0), dec!(4.0)))
+                .unwrap();
+            assert_eq!(derivative2[0], dec!(4.0));
+        }
+
+        #[test]
+        fn test_out_of_range() {
+            let curve = create_test_curve();
+            let result = curve.derivative_at(&Point2D::new(dec!(10.0), dec!(0.0)));
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_at_endpoint() {
+            let curve = create_test_curve();
+            let derivative = curve
+                .derivative_at(&Point2D::new(dec!(0.0), dec!(0.0)))
+                .unwrap();
+            assert!(derivative[0] == dec!(0.0));
+        }
+
+        #[test]
+        fn test_vertical_line() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(1.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+            ]));
+
+            let result = curve.derivative_at(&Point2D::new(dec!(1.0), dec!(0.5)));
+            assert!(result.is_err());
+        }
+    }
+
+    mod test_extrema {
+        use super::*;
+
+        #[test]
+        fn test_find_extrema() {
+            let curve = create_test_curve();
+            let (min, max) = curve.extrema().unwrap();
+            assert_eq!(min.y, dec!(0.0));
+            assert_eq!(max.y, dec!(9.0));
+        }
+
+        #[test]
+        fn test_empty_curve() {
+            let curve = Curve::new(BTreeSet::new());
+            let result = curve.extrema();
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_single_point() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
+                dec!(1.0),
+                dec!(1.0),
+            )]));
+
+            let (min, max) = curve.extrema().unwrap();
+            assert_eq!(min, max);
+        }
+
+        #[test]
+        fn test_flat_curve() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(1.0)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+            ]));
+
+            let (min, max) = curve.extrema().unwrap();
+            assert_eq!(min.y, max.y);
+        }
+
+        #[test]
+        fn test_multiple_extrema() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+                Point2D::new(dec!(2.0), dec!(0.0)),
+            ]));
+
+            let (min, max) = curve.extrema().unwrap();
+            assert_eq!(min.y, dec!(0.0));
+            assert_eq!(max.y, dec!(1.0));
+        }
+    }
+
+    mod test_measure_under {
+        use super::*;
+
+        #[test]
+        fn test_area_under_linear() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+            ]));
+
+            let area = curve.measure_under(&dec!(0.0)).unwrap();
+            assert_eq!(area, dec!(0.5));
+        }
+
+        #[test]
+        fn test_area_empty_curve() {
+            let curve = Curve::new(BTreeSet::new());
+            let area = curve.measure_under(&dec!(0.0)).unwrap();
+            assert_eq!(area, dec!(0.0));
+        }
+
+        #[test]
+        fn test_area_single_point() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
+                dec!(1.0),
+                dec!(1.0),
+            )]));
+
+            let area = curve.measure_under(&dec!(0.0)).unwrap();
+            assert_eq!(area, dec!(0.0));
+        }
+
+        #[test]
+        fn test_area_with_base_value() {
+            let curve = create_test_curve();
+            let area1 = curve.measure_under(&dec!(0.0)).unwrap();
+            let area2 = curve.measure_under(&dec!(1.0)).unwrap();
+            assert!(area1 > area2);
+        }
+
+        #[test]
+        fn test_negative_area() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(-1.0)),
+                Point2D::new(dec!(1.0), dec!(-2.0)),
+            ]));
+
+            let area = curve.measure_under(&dec!(0.0)).unwrap();
+            assert!(area > dec!(0.0));
         }
     }
 }

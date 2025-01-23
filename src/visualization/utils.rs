@@ -1,8 +1,3 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 20/8/24
-******************************************************************************/
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
@@ -16,15 +11,32 @@ use plotters_canvas::CanvasBackend;
 
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
+use plotters::prelude::RGBColor;
 use plotters::prelude::BLACK;
 use plotters::prelude::{
     Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
     Ranged, WHITE,
 };
-
 use std::error::Error;
 use std::ops::Add;
 
+/// Aplica un degradado a un color base basado en un valor normalizado.
+///
+/// # Parámetros
+/// - `base_color`: El color base del degradado.
+/// - `end_color`: El color final del degradado.
+/// - `normalized_value`: Un valor normalizado en el rango [0, 1] que determina la posición en el degradado.
+///
+/// # Retorno
+/// Un nuevo `RGBColor` interpolado entre `base_color` y `end_color`.
+pub fn apply_shade(base_color: RGBColor, normalized_value: f64) -> RGBColor {
+    let end_color = RGBColor(base_color.1, base_color.2, base_color.0);
+    let r = base_color.0 as f64 + (end_color.0 as f64 - base_color.0 as f64) * normalized_value;
+    let g = base_color.1 as f64 + (end_color.1 as f64 - base_color.1 as f64) * normalized_value;
+    let b = base_color.2 as f64 + (end_color.2 as f64 - base_color.2 as f64) * normalized_value;
+
+    RGBColor(r as u8, g as u8, b as u8)
+}
 #[cfg(not(target_arch = "wasm32"))]
 pub enum GraphBackend<'a> {
     Bitmap {
@@ -228,6 +240,46 @@ pub(crate) fn calculate_axis_range(
     (max_x_value, min_x_value, max_y_value, min_y_value)
 }
 
+/// Draws chart points and their associated labels on a chart context.
+///
+/// This function is responsible for rendering a list of chart points onto a given
+/// chart context. Each point is represented as a circle, styled with a specific
+/// size and color, and labeled with text positioned based on a defined offset.
+///
+/// # Type Parameters
+///
+/// - `DB`: The backend responsible for rendering the chart, implementing the `DrawingBackend` trait.
+/// - `X`: The type representing the horizontal (x-axis) range of the chart, implementing the `Ranged` trait.
+/// - `Y`: The type representing the vertical (y-axis) range of the chart, also implementing the `Ranged` trait.
+///
+/// # Arguments
+///
+/// - `ctx`: A mutable reference to a `ChartContext` object, which provides the necessary context
+///   for drawing on the chart.
+/// - `points`: A slice of `ChartPoint` objects, each representing a point to render on the chart,
+///   including its coordinates, styling, and label information.
+///
+/// # Returns
+///
+/// Returns `Ok(())` if all points and their labels are successfully drawn.
+/// If an error occurs during the rendering process (e.g., backend issues), a boxed `Error` is returned.
+///
+/// # Constraints
+///
+/// - The value type of `X` and `Y` must:
+///   - Be clonable.
+///   - Support addition with a `f64` value (`Add<f64>`).
+/// - `X::ValueType` and `Y::ValueType` must additionally be compatible with `Into<(X::ValueType, Y::ValueType)>`.
+/// - The error type of the drawing backend (`DB::ErrorType`) must be `'static`.
+///
+/// # Implementation Details
+///
+/// - For each point in the `points` slice:
+///   1. A circle is drawn according to the point's coordinates, size, and color.
+///   2. A textual label is placed near the point, with its position influenced by the specified `label_offset`.
+///
+/// - Uses the helper method `LabelOffsetType::get_offset` to determine the offset values for positioning the labels.
+///
 pub fn draw_points_on_chart<DB: DrawingBackend, X, Y>(
     ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
     points: &[ChartPoint<(X::ValueType, Y::ValueType)>],
@@ -265,6 +317,55 @@ where
     Ok(())
 }
 
+/// Draws vertical lines with labels on a given chart using the specified drawing backend.
+///
+/// This function renders a series of vertical lines on a chart, given their positions,
+/// styles, and associated labels. It utilizes a `ChartContext` for rendering the lines and
+/// the Plotters crate utilities for styling and layout. Each line is drawn between a specified
+/// range on the y-axis and features an optional label placed at a specific offset.
+///
+/// # Type Parameters
+///
+/// - `DB`: The type representing the drawing backend, which must implement the `DrawingBackend`
+///   trait. This defines how the chart elements are rendered (e.g., as an image, on a canvas, etc.).
+/// - `X`: The type representing the x-axis of the chart. It must implement the `Ranged` trait
+///   to support scaling and interpolation.
+/// - `Y`: The type representing the y-axis of the chart. Similar to `X`, it must implement
+///   the `Ranged` trait for compatibility.
+///
+/// # Function Parameters
+///
+/// - `ctx`: A mutable reference to a `ChartContext`, which handles the drawing and layout
+///   of the chart elements. It is parameterized with the drawing backend `DB` and coordinate system
+///   `Cartesian2d<X, Y>`.
+/// - `lines`: A slice of `ChartVerticalLine` structures defining the x-coordinate, y-range,
+///   style, and label for each vertical line to be drawn.
+///
+/// # Returns
+///
+/// - Returns a `Result`:
+///     - `Ok(())` on success, indicating that all vertical lines were drawn without errors.
+///     - `Err(Box<dyn Error>)` if an error occurs during the drawing operations.
+///
+/// # Constraints
+///
+/// - The `X` and `Y` types, as well as their associated value types (`X::ValueType` and `Y::ValueType`),
+///   must support cloning (`Clone`) and addition (`Add<f64>`). This enables the function to compute
+///   positions and offsets for labels.
+/// - Value types for `X` and `Y` must be displayable (`std::fmt::Display`) to render labels correctly
+///   on the chart.
+/// - Drawing backend errors must be composable as `'static` to integrate seamlessly with the function's
+///   return type.
+///
+/// # Behavior
+///
+/// 1. **Line Drawing**: For each vertical line in the input slice, a line is drawn from the bottom
+///    to the top of the specified y-range using `LineSeries`.
+/// 2. **Label Placement**: For each line, a `Text` entity displaying the label is rendered at the
+///    specified offset relative to the x-coordinate and the upper y-coordinate of the line.
+/// 3. Styling: Uses attributes from `ChartVerticalLine` (`line_style`, `font_size`, and colors)
+///    to apply custom styles to the lines and labels.
+///
 pub fn draw_vertical_lines_on_chart<DB: DrawingBackend, X, Y>(
     ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
     lines: &[ChartVerticalLine<X::ValueType, Y::ValueType>],
@@ -510,6 +611,9 @@ mod tests_extended {
     use super::*;
     use crate::pos;
     use crate::visualization::model::LabelOffsetType;
+    use crate::visualization::model::{ChartPoint, ChartVerticalLine};
+    #[cfg(not(target_arch = "wasm32"))]
+    use plotters::prelude::PathElement;
     use plotters::style::RGBColor;
     use rust_decimal::Decimal;
 
@@ -567,7 +671,6 @@ mod tests_extended {
             20,
         );
 
-        // Verificamos que recibimos un error
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("empty data"));
         Ok(())
@@ -754,10 +857,8 @@ mod tests_extended {
         let x_axis_data = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let values = graph.get_values(&x_axis_data);
 
-        // Verificamos que no hay valores cuando hay errores
         assert!(values.is_empty());
 
-        // También podemos probar con una mezcla de éxitos y errores
         struct MixedErrorGraph;
 
         impl Profit for MixedErrorGraph {
@@ -779,7 +880,6 @@ mod tests_extended {
         let mixed_graph = MixedErrorGraph;
         let values = mixed_graph.get_values(&x_axis_data);
 
-        // Solo deberían estar los valores válidos
         assert_eq!(values.len(), 1);
         assert_eq!(values[0], 1.0);
     }
@@ -789,8 +889,6 @@ mod tests_extended {
     fn test_custom_canvas_sizes() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![pos!(50.0)];
-
-        // Test diferentes tamaños de canvas
         let sizes = vec![(400, 300), (1920, 1080), (300, 300)];
 
         for (width, height) in sizes {
@@ -806,5 +904,152 @@ mod tests_extended {
         }
 
         Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_bitmap_backend_initialization() {
+        let backend = GraphBackend::Bitmap {
+            file_path: "test_chart.png",
+            size: (800, 600),
+        };
+
+        let GraphBackend::Bitmap { file_path, size } = backend;
+        let root = BitMapBackend::new(&file_path, size).into_drawing_area();
+        assert!(root.fill(&WHITE).is_ok());
+        drop(root);
+        assert!(std::fs::remove_file("test_chart.png").is_ok());
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_chart_initialization() -> Result<(), Box<dyn Error>> {
+        let root = BitMapBackend::new("test_chart_next.png", (800, 600)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+
+        let title = "Test Chart";
+        let title_size = 20;
+        let min_x_value = 0.0;
+        let max_x_value = 100.0;
+        let min_y_value = 0.0;
+        let max_y_value = 100.0;
+
+        let chart = build_chart!(
+            &root,
+            title,
+            title_size,
+            min_x_value,
+            max_x_value,
+            min_y_value,
+            max_y_value
+        );
+
+        assert!(chart.plotting_area().dim_in_pixel().0 > 0);
+        assert!(chart.plotting_area().dim_in_pixel().1 > 0);
+
+        drop(chart);
+        drop(root);
+        assert!(std::fs::remove_file("test_chart_next.png").is_ok());
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_point_rendering() {
+        let root = BitMapBackend::new("test_chart_points.png", (800, 600)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+
+        let points = vec![ChartPoint {
+            coordinates: (10.0, 20.0),
+            point_size: 5,
+            point_color: DARK_GREEN,
+            label: "Point A".to_string(),
+            label_offset: LabelOffsetType::Relative(2.0, 2.0),
+            font_size: 12,
+            label_color: DARK_GREEN,
+        }];
+
+        for point in points {
+            // Convertir coordenadas para el círculo
+            let (x, y) = (point.coordinates.0 as i32, point.coordinates.1 as i32);
+            root.draw(&Circle::new(
+                (x, y),
+                point.point_size,
+                point.point_color.filled(),
+            ))
+            .unwrap();
+
+            // Convertir coordenadas para el texto
+            let label_pos =
+                if let LabelOffsetType::Relative(offset_x, offset_y) = point.label_offset {
+                    (
+                        (point.coordinates.0 + offset_x) as i32,
+                        (point.coordinates.1 + offset_y) as i32,
+                    )
+                } else {
+                    (x, y)
+                };
+
+            root.draw(&Text::new(
+                point.label.clone(),
+                label_pos,
+                ("sans-serif", point.font_size)
+                    .into_font()
+                    .color(&point.label_color),
+            ))
+            .unwrap();
+        }
+
+        drop(root);
+        assert!(
+            std::fs::remove_file("test_chart_points.png").is_ok(),
+            "Failed to clean up test file"
+        );
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_line_rendering() {
+        let root = BitMapBackend::new("test_chart_lines.png", (800, 600)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+
+        let lines = vec![ChartVerticalLine {
+            x_coordinate: 50.0,
+            y_range: (0.0, 100.0),
+            line_style: DARK_RED.stroke_width(2),
+            label: "Line A".to_string(),
+            label_offset: (5.0, 5.0),
+            font_size: 12,
+            label_color: DARK_RED,
+            line_color: Default::default(),
+        }];
+
+        for line in lines {
+            let x = line.x_coordinate as i32;
+            let y0 = line.y_range.0 as i32;
+            let y1 = line.y_range.1 as i32;
+
+            root.draw(&PathElement::new(vec![(x, y0), (x, y1)], line.line_style))
+                .unwrap();
+
+            let label_x = (line.x_coordinate + line.label_offset.0) as i32;
+            let label_y = (line.y_range.1 + line.label_offset.1) as i32;
+
+            root.draw(&Text::new(
+                line.label.clone(),
+                (label_x, label_y),
+                ("sans-serif", line.font_size)
+                    .into_font()
+                    .color(&line.label_color),
+            ))
+            .unwrap();
+        }
+
+        drop(root);
+        assert!(
+            std::fs::remove_file("test_chart_lines.png").is_ok(),
+            "Failed to clean up test file"
+        );
     }
 }

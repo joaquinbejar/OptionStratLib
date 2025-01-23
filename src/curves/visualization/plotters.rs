@@ -15,7 +15,7 @@
 //! use std::path::Path;
 //! use rust_decimal::Decimal;
 //! use optionstratlib::curves::{Curve, Point2D};
-//! use optionstratlib::curves::visualization::Plottable;
+//! use optionstratlib::geometrics::{GeometricObject, Plottable};
 //!
 //! let curve = Curve::from_vector(vec![
 //!             Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
@@ -47,134 +47,17 @@
 
 use crate::curves::Curve;
 use crate::error::CurvesError;
+use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
 #[cfg(not(target_arch = "wasm32"))]
 use num_traits::ToPrimitive;
+#[cfg(not(target_arch = "wasm32"))]
 use plotters::prelude::*;
 use std::path::Path;
 
-/// Plot configuration options
-#[derive(Clone, Debug)]
-pub struct PlotOptions {
-    /// Plot title
-    pub title: Option<String>,
-    /// X-axis label
-    pub x_label: Option<String>,
-    /// Y-axis label
-    pub y_label: Option<String>,
-    /// Line colors for each curve
-    pub line_colors: Option<Vec<RGBColor>>,
-    /// Line width
-    pub line_width: u32,
-    /// Background color
-    pub background_color: RGBColor,
-    /// Plot width
-    pub width: u32,
-    /// Plot height
-    pub height: u32,
-    /// Curve names
-    pub curve_name: Option<Vec<String>>,
-}
-
-#[allow(dead_code)]
-impl PlotOptions {
-    /// Default color palette for multiple curves
-    fn default_colors() -> Vec<RGBColor> {
-        vec![
-            RGBColor(0, 0, 255),   // Blue
-            RGBColor(255, 0, 0),   // Red
-            RGBColor(0, 255, 0),   // Green
-            RGBColor(255, 165, 0), // Orange
-            RGBColor(128, 0, 128), // Purple
-        ]
-    }
-}
-
-impl Default for PlotOptions {
-    fn default() -> Self {
-        PlotOptions {
-            title: None,
-            x_label: None,
-            y_label: None,
-            line_colors: None,
-            line_width: 2,
-            background_color: RGBColor(255, 255, 255), // White
-            width: 800,                                // Dimensión por defecto
-            height: 600,                               // Dimensión por defecto
-            curve_name: None,
-        }
-    }
-}
-
-/// Trait for plotting curves
-pub trait Plottable {
-    /// Creates a plot builder
-    fn plot(&self) -> PlotBuilder<Self>
-    where
-        Self: Sized;
-}
-
-/// Plot Builder for configurable curve visualization
-#[allow(dead_code)]
-pub struct PlotBuilder<T: Plottable> {
-    /// Data to be plotted
-    data: T,
-    /// Plot configuration options
-    options: PlotOptions,
-}
-
-impl<T: Plottable> PlotBuilder<T> {
-    /// Set plot title
-    pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.options.title = Some(title.into());
-        self
-    }
-
-    /// Set x-axis label
-    pub fn x_label(mut self, label: impl Into<String>) -> Self {
-        self.options.x_label = Some(label.into());
-        self
-    }
-
-    /// Set y-axis label
-    pub fn y_label(mut self, label: impl Into<String>) -> Self {
-        self.options.y_label = Some(label.into());
-        self
-    }
-
-    pub fn curve_name(mut self, label: Vec<String>) -> Self {
-        self.options.curve_name = Some(label);
-        self
-    }
-
-    /// Set line colors
-    pub fn line_colors(mut self, colors: Vec<RGBColor>) -> Self {
-        self.options.line_colors = Some(colors);
-        self
-    }
-
-    /// Set line width
-    pub fn line_width(mut self, width: u32) -> Self {
-        self.options.line_width = width;
-        self
-    }
-
-    /// Set plot dimensions
-    pub fn dimensions(mut self, width: u32, height: u32) -> Self {
-        self.options.width = width;
-        self.options.height = height;
-        self
-    }
-
-    pub fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError>
-    where
-        Self: PlotBuilderExt<T>,
-    {
-        PlotBuilderExt::save(self, path)
-    }
-}
-
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
+    type Error = CurvesError;
+
     fn plot(&self) -> PlotBuilder<Self>
     where
         Self: Sized,
@@ -253,6 +136,8 @@ impl Plottable for Curve {
 /// `Curve` struct, `PlotBuilder`, and `PlotOptions`. These modules provide the functionality
 /// required to create, configure, and render curve plots.
 impl Plottable for Vec<Curve> {
+    type Error = CurvesError;
+
     fn plot(&self) -> PlotBuilder<Self>
     where
         Self: Sized,
@@ -262,12 +147,6 @@ impl Plottable for Vec<Curve> {
             options: PlotOptions::default(),
         }
     }
-}
-
-/// Plotting extension methods
-pub trait PlotBuilderExt<T: Plottable> {
-    /// Save plot to file
-    fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError>;
 }
 
 /// Plotting implementation for single Curve
@@ -550,6 +429,8 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
 mod tests {
     use super::*;
     use crate::curves::Point2D;
+    use crate::geometrics::GeometricObject;
+    use plotters::prelude::RGBColor;
     use rust_decimal_macros::dec;
     use std::fs;
 
@@ -560,21 +441,22 @@ mod tests {
     }
 
     fn create_test_curves() -> (Curve, Curve, Curve) {
-        let points1 = vec![
-            Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(1.0)),
-            Point2D::new(dec!(2.0), dec!(4.0)),
-        ];
-        let points2 = vec![
-            Point2D::new(dec!(0.0), dec!(1.0)),
-            Point2D::new(dec!(1.0), dec!(2.0)),
-            Point2D::new(dec!(2.0), dec!(5.0)),
-        ];
-        let points3 = vec![
-            Point2D::new(dec!(0.0), dec!(2.0)),
-            Point2D::new(dec!(1.0), dec!(3.0)),
-            Point2D::new(dec!(2.0), dec!(6.0)),
-        ];
+        // Create points first so they live long enough
+        let p1_1 = Point2D::new(dec!(0.0), dec!(0.0));
+        let p1_2 = Point2D::new(dec!(1.0), dec!(1.0));
+        let p1_3 = Point2D::new(dec!(2.0), dec!(4.0));
+
+        let p2_1 = Point2D::new(dec!(0.0), dec!(1.0));
+        let p2_2 = Point2D::new(dec!(1.0), dec!(2.0));
+        let p2_3 = Point2D::new(dec!(2.0), dec!(5.0));
+
+        let p3_1 = Point2D::new(dec!(0.0), dec!(2.0));
+        let p3_2 = Point2D::new(dec!(1.0), dec!(3.0));
+        let p3_3 = Point2D::new(dec!(2.0), dec!(6.0));
+
+        let points1 = vec![&p1_1, &p1_2, &p1_3];
+        let points2 = vec![&p2_1, &p2_2, &p2_3];
+        let points3 = vec![&p3_1, &p3_2, &p3_3];
 
         (
             Curve::from_vector(points1),
@@ -585,11 +467,10 @@ mod tests {
 
     #[test]
     fn test_single_curve_plot_bis() {
-        let points = vec![
-            Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(1.0)),
-            Point2D::new(dec!(2.0), dec!(4.0)),
-        ];
+        let p1 = Point2D::new(dec!(0.0), dec!(0.0));
+        let p2 = Point2D::new(dec!(1.0), dec!(1.0));
+        let p3 = Point2D::new(dec!(2.0), dec!(4.0));
+        let points = vec![&p1, &p2, &p3];
         let curve = Curve::from_vector(points);
 
         // Plot single curve
@@ -606,16 +487,17 @@ mod tests {
 
     #[test]
     fn test_multiple_curves_plot() {
-        let points1 = vec![
-            Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(1.0)),
-            Point2D::new(dec!(2.0), dec!(4.0)),
-        ];
-        let points2 = vec![
-            Point2D::new(dec!(0.0), dec!(1.0)),
-            Point2D::new(dec!(1.0), dec!(2.0)),
-            Point2D::new(dec!(2.0), dec!(5.0)),
-        ];
+        let p1_1 = Point2D::new(dec!(0.0), dec!(0.0));
+        let p1_2 = Point2D::new(dec!(1.0), dec!(1.0));
+        let p1_3 = Point2D::new(dec!(2.0), dec!(4.0));
+
+        let p2_1 = Point2D::new(dec!(0.0), dec!(1.0));
+        let p2_2 = Point2D::new(dec!(1.0), dec!(2.0));
+        let p2_3 = Point2D::new(dec!(2.0), dec!(5.0));
+
+        let points1 = vec![&p1_1, &p1_2, &p1_3];
+        let points2 = vec![&p2_1, &p2_2, &p2_3];
+
         let curve1 = Curve::from_vector(points1);
         let curve2 = Curve::from_vector(points2);
 
@@ -634,11 +516,11 @@ mod tests {
 
     #[test]
     fn test_single_curve_plot() {
-        let points = vec![
-            Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(1.0)),
-            Point2D::new(dec!(2.0), dec!(4.0)),
-        ];
+        let p1_1 = Point2D::new(dec!(0.0), dec!(0.0));
+        let p1_2 = Point2D::new(dec!(1.0), dec!(1.0));
+        let p1_3 = Point2D::new(dec!(2.0), dec!(4.0));
+
+        let points = vec![&p1_1, &p1_2, &p1_3];
         let curve = Curve::from_vector(points);
 
         // Plot single curve
@@ -772,5 +654,173 @@ mod tests {
             .expect("Few points curve plot failed");
 
         cleanup_image("few_points_curve_test.png");
+    }
+}
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    struct Plot {
+        options: PlotOptions,
+    }
+
+    impl Plottable for Plot {
+        type Error = CurvesError;
+
+        fn plot(&self) -> PlotBuilder<Self>
+        where
+            Self: Sized,
+        {
+            PlotBuilder {
+                data: self.clone(),
+                options: PlotOptions::default(),
+            }
+        }
+    }
+
+    impl PlotBuilderExt<Plot> for PlotBuilder<Plot> {
+        #[cfg(target_arch = "wasm32")]
+        fn save(self, _path: impl AsRef<Path>) -> Result<(), CurvesError> {
+            Ok(())
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        fn save(self, _path: impl AsRef<Path>) -> Result<(), CurvesError> {
+            Ok(())
+        }
+    }
+
+    struct MockChart {
+        pub x_desc: String,
+        pub y_desc: String,
+    }
+
+    impl MockChart {
+        pub fn new() -> Self {
+            MockChart {
+                x_desc: String::new(),
+                y_desc: String::new(),
+            }
+        }
+
+        pub fn configure_mesh(&mut self) -> &mut Self {
+            self
+        }
+
+        pub fn x_label_formatter(&mut self, _formatter: &dyn Fn(f64) -> String) -> &mut Self {
+            self
+        }
+
+        pub fn y_label_formatter(&mut self, _formatter: &dyn Fn(f64) -> String) -> &mut Self {
+            self
+        }
+
+        pub fn x_desc(&mut self, desc: &str) -> &mut Self {
+            self.x_desc = desc.to_string();
+            self
+        }
+
+        pub fn y_desc(&mut self, desc: &str) -> &mut Self {
+            self.y_desc = desc.to_string();
+            self
+        }
+    }
+
+    #[test]
+    fn test_curve_name() {
+        let options = PlotOptions {
+            curve_name: None,
+            ..Default::default()
+        };
+        let plot = Plot { options }.plot();
+        let result = plot.curve_name(vec!["Test Curve".to_string()]);
+        assert_eq!(
+            result.options.curve_name,
+            Some(vec!["Test Curve".to_string()])
+        );
+    }
+
+    #[test]
+    fn test_save_standard() {
+        let plot = Plot {
+            options: PlotOptions::default(),
+        }
+        .plot();
+        let result = plot.save("test_path.png");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg(target_arch = "wasm32")]
+    fn test_save_wasm() {
+        let plot = Plot {
+            options: PlotOptions::default(),
+        }
+        .plot();
+        let result = plot.save("test_path.png");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_map_err_to_std_error() {
+        let result: Result<(), CurvesError> =
+            Err(std::io::Error::new(std::io::ErrorKind::Other, "Test error")).map_err(|e| {
+                CurvesError::StdError {
+                    reason: e.to_string(),
+                }
+            });
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CurvesError::StdError { reason } => {
+                assert_eq!(reason, "Test error");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
+    fn test_configure_chart_mesh() {
+        let mut chart = MockChart::new(); // Simular un gráfico
+        chart
+            .configure_mesh()
+            .x_label_formatter(&|v| format!("{:.2}", v))
+            .y_label_formatter(&|v| format!("{:.2}", v))
+            .x_desc("X-axis")
+            .y_desc("Y-axis");
+        assert_eq!(chart.x_desc, "X-axis");
+        assert_eq!(chart.y_desc, "Y-axis");
+    }
+
+    #[test]
+    fn test_draw_series_error() {
+        let result: Result<(), CurvesError> =
+            Err("Draw error".to_string()).map_err(|e| CurvesError::StdError { reason: e });
+
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        match error {
+            CurvesError::StdError { reason } => {
+                assert_eq!(reason, "Draw error");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
+    fn test_curve_label() {
+        let options = PlotOptions {
+            curve_name: Some(vec!["Test Curve".to_string()]),
+            ..Default::default()
+        };
+        let plot = Plot { options };
+        let label = match &plot.options.curve_name {
+            Some(names) => names.first().map(|s| s.as_str()).unwrap_or("Default"),
+            None => "Default",
+        };
+        assert_eq!(label, "Test Curve");
     }
 }

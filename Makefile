@@ -83,6 +83,7 @@ pre-push: fix fmt lint-fix test readme
 .PHONY: doc
 doc:
 	cargo doc --open
+	cargo clippy -- -W missing-docs
 
 .PHONY: publish
 publish: readme coverage
@@ -104,6 +105,9 @@ coverage-html:
 	mkdir -p coverage
 	cargo tarpaulin --all-features --workspace --timeout 120 --out Html
 
+.PHONY: open-coverage
+open-coverage:
+	open tarpaulin-report.html
 
 # Rule to show git log
 git-log:

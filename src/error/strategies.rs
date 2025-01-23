@@ -240,6 +240,7 @@ mod tests_from_str {
         assert!(probability_error.to_string().contains("Test error"));
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,5 +304,78 @@ mod tests_display {
         let error = StrategyError::operation_not_supported("max_profit", "TestStrategy");
         assert!(error.to_string().contains("max_profit"));
         assert!(error.to_string().contains("TestStrategy"));
+    }
+}
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_strategy_error_std_error() {
+        let error = StrategyError::StdError {
+            reason: "General failure".to_string(),
+        };
+        assert_eq!(format!("{}", error), "Error: General failure");
+    }
+
+    #[test]
+    fn test_price_error_invalid_price_range() {
+        let error = PriceErrorKind::InvalidPriceRange {
+            start: 10.0,
+            end: 50.0,
+            reason: "Start price must be less than end price".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid price range [10, 50]: Start price must be less than end price"
+        );
+    }
+
+    #[test]
+    fn test_break_even_error_no_points() {
+        let error = BreakEvenErrorKind::NoBreakEvenPoints;
+        assert_eq!(format!("{}", error), "No break-even points found");
+    }
+
+    #[test]
+    fn test_profit_loss_error_max_loss_error() {
+        let error = ProfitLossErrorKind::MaxLossError {
+            reason: "Loss exceeds margin requirements".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Maximum loss calculation error: Loss exceeds margin requirements"
+        );
+    }
+
+    #[test]
+    fn test_profit_loss_error_profit_range_error() {
+        let error = ProfitLossErrorKind::ProfitRangeError {
+            reason: "Profit calculation failed".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Profit range calculation error: Profit calculation failed"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_invalid_parameters_constructor() {
+        let error = StrategyError::invalid_parameters("Open position", "Margin insufficient");
+        assert_eq!(
+            format!("{}", error),
+            "Operation error: Invalid parameters for operation 'Open position': Margin insufficient"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_from_boxed_error() {
+        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Underlying failure",
+        ));
+        let error: StrategyError = boxed_error.into();
+        assert_eq!(format!("{}", error), "Error: Underlying failure");
     }
 }

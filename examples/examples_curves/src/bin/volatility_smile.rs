@@ -1,5 +1,5 @@
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::curves::visualization::Plottable;
+use optionstratlib::geometrics::Plottable;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::volatility::VolatilitySmile;
 use std::error::Error;

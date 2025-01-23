@@ -22,7 +22,7 @@
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::curves::{Curve, Point2D};
-//! use optionstratlib::curves::visualization::Plottable;
+//! use optionstratlib::geometrics::{GeometricObject, Plottable};
 //!
 //! let curve = Curve::from_vector(vec![
 //!     Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -93,5 +93,3 @@
 //! - More advanced styling options
 //! - Enhanced error diagnostics
 mod plotters;
-
-pub use plotters::{PlotBuilder, PlotOptions, Plottable};

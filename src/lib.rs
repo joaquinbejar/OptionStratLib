@@ -697,6 +697,7 @@ pub mod chains;
 pub mod constants;
 pub mod curves;
 pub mod error;
+pub mod geometrics;
 pub mod greeks;
 pub mod model;
 pub mod pnl;

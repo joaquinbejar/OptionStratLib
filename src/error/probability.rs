@@ -283,6 +283,29 @@ impl From<StrategyError> for ProbabilityError {
         }
     }
 }
+impl From<OperationErrorKind> for ProbabilityError {
+    fn from(error: OperationErrorKind) -> Self {
+        match error {
+            OperationErrorKind::InvalidParameters { operation, reason } => {
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::ExpectedValueError {
+                        reason: format!(
+                            "Invalid parameters for operation '{}': {}",
+                            operation, reason
+                        ),
+                    },
+                )
+            }
+            OperationErrorKind::NotSupported { operation, reason } => {
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::ExpectedValueError {
+                        reason: format!("Operation '{}' not supported: {}", operation, reason),
+                    },
+                )
+            }
+        }
+    }
+}
 
 // Helper functions to create common errors
 impl ProbabilityError {
@@ -384,6 +407,7 @@ mod tests {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
+    use crate::error::strategies;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -533,5 +557,196 @@ mod tests_extended {
 
         assert!(success.is_ok());
         assert!(failure.is_err());
+    }
+
+    #[test]
+    fn test_probability_error_std_error() {
+        let error = ProbabilityError::StdError("Calculation failed".to_string());
+        assert_eq!(format!("{}", error), "Error: Calculation failed");
+    }
+
+    #[test]
+    fn test_price_error_invalid_price_range() {
+        let error = PriceErrorKind::InvalidPriceRange {
+            range: "0-100".to_string(),
+            reason: "Negative values are not allowed".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid price range 0-100: Negative values are not allowed"
+        );
+    }
+
+    #[test]
+    fn test_profit_loss_range_error_invalid_loss_range() {
+        let error = ProfitLossRangeErrorKind::InvalidLossRange {
+            range: "-50-0".to_string(),
+            reason: "Range must be positive".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid loss range -50-0: Range must be positive"
+        );
+    }
+
+    #[test]
+    fn test_profit_loss_error_max_loss_error() {
+        let error = ProfitLossErrorKind::MaxLossError {
+            reason: "Maximum loss exceeded".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Maximum loss calculation error: Maximum loss exceeded"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_price_error_invalid_price_range() {
+        let error = StrategyError::PriceError(strategies::PriceErrorKind::InvalidPriceRange {
+            start: 0.0,
+            end: 100.0,
+            reason: "Out of bounds".to_string(),
+        });
+        assert!(matches!(error, StrategyError::PriceError(_)));
+    }
+
+    #[test]
+    fn test_break_even_error_calculation_error() {
+        let error = StrategyError::BreakEvenError(BreakEvenErrorKind::CalculationError {
+            reason: "Failed to calculate break-even point".to_string(),
+        });
+        let converted_error: ProbabilityError = error.into();
+        assert_eq!(
+            format!("{}", converted_error),
+            "Calculation error: Expected value error: Failed to calculate break-even point"
+        );
+    }
+
+    #[test]
+    fn test_operation_error_invalid_parameters() {
+        let error = OperationErrorKind::InvalidParameters {
+            operation: "Calculate P/L".to_string(),
+            reason: "Invalid input values".to_string(),
+        };
+        let converted_error: ProbabilityError = error.into();
+        assert_eq!(
+            format!("{}", converted_error),
+            "Calculation error: Expected value error: Invalid parameters for operation 'Calculate P/L': Invalid input values"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_std_error() {
+        let error = StrategyError::StdError {
+            reason: "General strategy failure".to_string(),
+        };
+
+        let converted_error: ProbabilityError = error.into();
+
+        assert_eq!(
+            format!("{}", converted_error),
+            "Error: General strategy failure"
+        );
+    }
+
+    #[test]
+    fn test_invalid_profit_range_constructor() {
+        let error = ProbabilityError::invalid_profit_range("0-100", "Range mismatch");
+        assert_eq!(
+            format!("{}", error),
+            "Range error: Invalid profit range 0-100: Range mismatch"
+        );
+    }
+
+    #[test]
+    fn test_invalid_expiration_constructor() {
+        let error = ProbabilityError::invalid_expiration("Expiration date invalid");
+        assert_eq!(
+            format!("{}", error),
+            "Expiration error: Invalid expiration: Expiration date invalid"
+        );
+    }
+
+    #[test]
+    fn test_profit_loss_error_max_loss_error_bis() {
+        let error = ProfitLossErrorKind::MaxLossError {
+            reason: "Exceeded allowed loss".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Maximum loss calculation error: Exceeded allowed loss"
+        );
+    }
+
+    #[test]
+    fn test_profit_loss_error_profit_range_error() {
+        let error = ProfitLossErrorKind::ProfitRangeError {
+            reason: "Profit range mismatch".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Profit range calculation error: Profit range mismatch"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_price_error_invalid_underlying_price() {
+        let error = StrategyError::PriceError(
+            crate::error::strategies::PriceErrorKind::InvalidUnderlyingPrice {
+                reason: "Underlying price is negative".to_string(),
+            },
+        );
+        let converted_error: ProbabilityError = ProbabilityError::from(error);
+        assert_eq!(
+            format!("{}", converted_error),
+            "Calculation error: Expected value error: Underlying price is negative"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_price_error_invalid_price_range_bis() {
+        let error = StrategyError::PriceError(
+            crate::error::strategies::PriceErrorKind::InvalidPriceRange {
+                start: 0.0,
+                end: 50.0,
+                reason: "Start price is greater than end price".to_string(),
+            },
+        );
+        let converted_error: ProbabilityError = ProbabilityError::from(error);
+        assert_eq!(
+            format!("{}", converted_error),
+            "Calculation error: Expected value error: Start price is greater than end price"
+        );
+    }
+
+    #[test]
+    fn test_operation_error_invalid_parameters_bis() {
+        let error = OperationErrorKind::InvalidParameters {
+            operation: "Calculate P/L".to_string(),
+            reason: "Invalid input values".to_string(),
+        };
+        let converted_error: ProbabilityError =
+            ProbabilityError::from(format!("Invalid parameters for operation {}", error));
+        assert_eq!(
+            format!("{}", converted_error),
+            "Calculation error: Expected value error: Invalid parameters for operation Invalid parameters for operation 'Calculate P/L': Invalid input values"
+        );
+    }
+
+    #[test]
+    fn test_operation_error_not_supported() {
+        let error = OperationErrorKind::NotSupported {
+            operation: "Hedging".to_string(),
+            reason: "Operation not implemented".to_string(),
+        };
+        let converted_error = ProbabilityError::CalculationError(
+            ProbabilityCalculationErrorKind::ExpectedValueError {
+                reason: format!("Operation {}", error),
+            },
+        );
+        assert_eq!(
+            format!("{}", converted_error),
+            "Calculation error: Expected value error: Operation Operation 'Hedging' is not supported for strategy 'Operation not implemented'"
+        );
     }
 }

@@ -456,4 +456,94 @@ mod tests_extended {
             PositionError::StrategyError(StrategyErrorKind::UnsupportedOperation { .. })
         ));
     }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_position_error_validation_error() {
+        let error = PositionError::ValidationError(PositionValidationErrorKind::InvalidSize {
+            size: -1.0,
+            reason: "Size must be positive".to_string(),
+        });
+        assert_eq!(
+            format!("{}", error),
+            "Position validation error: Invalid position size -1: Size must be positive"
+        );
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_position_error_limit_error() {
+        let error = PositionError::LimitError(PositionLimitErrorKind::MaxPositionsReached {
+            current: 10,
+            maximum: 5,
+        });
+        assert_eq!(
+            format!("{}", error),
+            "Position limit error: Maximum number of positions reached (10/5)"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_strategy_full() {
+        let error = StrategyErrorKind::StrategyFull {
+            strategy_type: "Iron Condor".to_string(),
+            max_positions: 10,
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Strategy 'Iron Condor' is full (maximum 10 positions)"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_invalid_configuration() {
+        let error = StrategyErrorKind::InvalidConfiguration("Invalid risk parameters".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Invalid strategy configuration: Invalid risk parameters"
+        );
+    }
+
+    #[test]
+    fn test_position_validation_error_invalid_price() {
+        let error = PositionValidationErrorKind::InvalidPrice {
+            price: 105.5,
+            reason: "Outside allowable range".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid position price 105.5: Outside allowable range"
+        );
+    }
+
+    #[test]
+    fn test_position_validation_error_invalid_position() {
+        let error = PositionValidationErrorKind::InvalidPosition {
+            reason: "Position size exceeds margin".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Invalid position: Position size exceeds margin"
+        );
+    }
+
+    #[test]
+    fn test_position_validation_error_incompatible_style() {
+        let error = PositionValidationErrorKind::IncompatibleStyle {
+            style: OptionStyle::Call,
+            reason: "Unsupported for Call options".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Position style 'Call' is incompatible with strategy: Unsupported for Call options"
+        );
+    }
+
+    #[test]
+    fn test_position_validation_error_std_error() {
+        let error = PositionValidationErrorKind::StdError {
+            reason: "Unexpected null value".to_string(),
+        };
+        assert_eq!(format!("{}", error), "Error: Unexpected null value");
+    }
 }

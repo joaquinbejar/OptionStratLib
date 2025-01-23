@@ -81,3 +81,120 @@ impl From<OptionsError> for ImpliedVolatilityError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_volatility_errors {
+    use super::*;
+    use crate::error::greeks::InputErrorKind;
+    use crate::error::{GreeksError, OptionsError};
+    use crate::pos;
+
+    #[test]
+    fn test_invalid_price_error() {
+        let error = ImpliedVolatilityError::InvalidPrice {
+            price: pos!(0.0),
+            reason: "Price cannot be zero".to_string(),
+        };
+
+        assert_eq!(error.to_string(), "Invalid price 0: Price cannot be zero");
+    }
+
+    #[test]
+    fn test_invalid_time_error() {
+        let error = ImpliedVolatilityError::InvalidTime {
+            time: pos!(0.0),
+            reason: "Time cannot be zero".to_string(),
+        };
+
+        assert_eq!(error.to_string(), "Invalid time 0: Time cannot be zero");
+    }
+
+    #[test]
+    fn test_zero_vega_error() {
+        let error = ImpliedVolatilityError::ZeroVega;
+
+        assert_eq!(
+            error.to_string(),
+            "Vega is zero, cannot calculate implied volatility"
+        );
+    }
+
+    #[test]
+    fn test_vega_error() {
+        let error = ImpliedVolatilityError::VegaError {
+            reason: "Failed to calculate vega".to_string(),
+        };
+
+        assert_eq!(
+            error.to_string(),
+            "Error calculating vega: Failed to calculate vega"
+        );
+    }
+
+    #[test]
+    fn test_option_error() {
+        let error = ImpliedVolatilityError::OptionError {
+            reason: "Invalid option parameters".to_string(),
+        };
+
+        assert_eq!(error.to_string(), "Option error: Invalid option parameters");
+    }
+
+    #[test]
+    fn test_no_convergence_error() {
+        let error = ImpliedVolatilityError::NoConvergence {
+            iterations: 100,
+            last_volatility: pos!(0.5),
+        };
+
+        assert_eq!(
+            error.to_string(),
+            "No convergence after 100 iterations. Last volatility: 0.5"
+        );
+    }
+
+    #[test]
+    fn test_from_greeks_error() {
+        let greeks_error = GreeksError::InputError(InputErrorKind::InvalidVolatility {
+            value: 0.0,
+            reason: "Volatility cannot be zero".to_string(),
+        });
+
+        let implied_vol_error: ImpliedVolatilityError = greeks_error.into();
+
+        match implied_vol_error {
+            ImpliedVolatilityError::VegaError { reason } => {
+                assert!(reason.contains("Volatility cannot be zero"));
+            }
+            _ => panic!("Wrong error variant"),
+        }
+    }
+
+    #[test]
+    fn test_from_options_error() {
+        let greeks_error = OptionsError::OtherError {
+            reason: "Invalid option parameters".to_string(),
+        };
+
+        let implied_vol_error: ImpliedVolatilityError = greeks_error.into();
+
+        match implied_vol_error {
+            ImpliedVolatilityError::OptionError { reason } => {
+                assert!(reason.contains("Invalid option parameters"));
+            }
+            _ => panic!("Wrong error variant"),
+        }
+    }
+
+    #[test]
+    fn test_error_is_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<ImpliedVolatilityError>();
+    }
+
+    #[test]
+    fn test_error_is_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<ImpliedVolatilityError>();
+    }
+}

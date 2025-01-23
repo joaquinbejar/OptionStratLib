@@ -1,6 +1,7 @@
-use optionstratlib::curves::construction::CurveConstructionMethod;
-use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
+use optionstratlib::geometrics::{
+    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
+};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
@@ -27,44 +28,41 @@ fn get_option(strike: &Positive, volatility: &Positive) -> Options {
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    let t_start = dec!(25.0);
-    let t_end = dec!(78.0);
-    let steps = 100;
 
-    let vol_20_curve = Curve::construct(CurveConstructionMethod::Parametric {
+    let params = ConstructionParams::D2 {
+        t_start: dec!(25.0),
+        t_end: dec!(78),
+        steps: 100,
+    };
+
+    let vol_20_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(0.20));
             let value = option.rho().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start,
-        t_end,
-        steps,
+        params: params.clone(),
     })?;
 
-    let vol_10_curve = Curve::construct(CurveConstructionMethod::Parametric {
+    let vol_10_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(0.10));
             let value = option.rho().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start,
-        t_end,
-        steps,
+        params: params.clone(),
     })?;
 
-    let vol_5_curve = Curve::construct(CurveConstructionMethod::Parametric {
+    let vol_5_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(0.05));
             let value = option.rho().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start,
-        t_end,
-        steps,
+        params: params.clone(),
     })?;
 
     let vector_curve = vec![vol_20_curve, vol_10_curve, vol_5_curve];

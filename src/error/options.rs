@@ -512,4 +512,51 @@ mod tests_extended {
         assert!(results[1].is_ok());
         assert!(results[2].is_ok());
     }
+
+    #[test]
+    fn test_options_error_greeks_calculation_error() {
+        let error = OptionsError::GreeksCalculationError {
+            greek: "Delta".to_string(),
+            reason: "Division by zero".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Error calculating greek 'Delta': Division by zero"
+        );
+    }
+
+    #[test]
+    fn test_options_error_time_error() {
+        let error = OptionsError::TimeError {
+            operation: "Option maturity".to_string(),
+            reason: "Negative time value".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Time calculation error in 'Option maturity': Negative time value"
+        );
+    }
+
+    #[test]
+    fn test_options_error_payoff_error() {
+        let error = OptionsError::PayoffError {
+            reason: "Payoff cannot be negative".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Payoff calculation error: Payoff cannot be negative"
+        );
+    }
+
+    #[test]
+    fn test_options_error_update_error() {
+        let error = OptionsError::UpdateError {
+            field: "Volatility".to_string(),
+            reason: "Invalid update value".to_string(),
+        };
+        assert_eq!(
+            format!("{}", error),
+            "Update error for field 'Volatility': Invalid update value"
+        );
+    }
 }
