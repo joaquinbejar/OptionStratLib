@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::curves::{Curve, Point2D};
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
-use crate::geometrics::{Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, LinearInterpolation, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
+use crate::geometrics::{Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
 use crate::surfaces::types::Axis;
 use crate::surfaces::Point3D;
 use num_traits::ToPrimitive;
@@ -858,26 +858,36 @@ impl Arithmetic<Surface> for Surface {
     }
 }
 
-impl AxisOperations<Point2D, Decimal> for Surface {
-    type Error = SurfaceError;
+impl AxisOperations<Point3D, Point2D> for Surface {
+    type Error = ();
 
-    fn contains_point(&self, x: &Decimal) -> bool {
+    fn contains_point(&self, x: &Point2D) -> bool {
         todo!()
     }
 
-    fn get_index_values(&self) -> Vec<&Decimal> {
+    fn get_index_values(&self) -> Vec<&Point2D> {
         todo!()
     }
 
-    fn get_values(&self, x: Decimal) -> Vec<&Decimal> {
+    fn get_values(&self, x: Point2D) -> Vec<&Decimal> {
         todo!()
     }
 
-    fn get_closest_point(&self, x: &Decimal) -> Result<&Point2D, Self::Error> {
+    fn get_closest_point(&self, x: &Point2D) -> Result<&Point3D, Self::Error> {
         todo!()
     }
 
-    fn get_point(&self, x: &Decimal) -> Option<&Point2D> {
+    fn get_point(&self, x: &Point2D) -> Option<&Point3D> {
+        todo!()
+    }
+}
+
+impl MergeAxisInterpolate<Point3D, Point2D> for Surface
+where Self: Sized {
+    fn merge_axis_interpolate(&self, other: &Self, interpolation: InterpolationType) -> Result<(Self, Self), Self::Error>
+    where
+        Self: Sized
+    {
         todo!()
     }
 }
