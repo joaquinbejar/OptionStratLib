@@ -3,16 +3,21 @@
    Email: jb@taunais.com
    Date: 9/1/25
 ******************************************************************************/
+use crate::curves::utils::detect_peaks_and_valleys;
 use crate::curves::Point2D;
 use crate::error::{CurvesError, InterpolationError, MetricsError};
-use crate::geometrics::{Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, Len, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
+use crate::geometrics::{
+    Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
+    ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, Len,
+    LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics,
+    RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::collections::BTreeSet;
 use std::ops::Index;
-use crate::curves::utils::detect_peaks_and_valleys;
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -958,7 +963,8 @@ impl MetricsExtractor for Curve {
         let mut sorted_values = y_values.clone();
         sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let median = if sorted_values.len() % 2 == 0 {
-            (sorted_values[sorted_values.len() / 2 - 1] + sorted_values[sorted_values.len() / 2]) / Decimal::TWO
+            (sorted_values[sorted_values.len() / 2 - 1] + sorted_values[sorted_values.len() / 2])
+                / Decimal::TWO
         } else {
             sorted_values[sorted_values.len() / 2]
         };
@@ -977,9 +983,11 @@ impl MetricsExtractor for Curve {
         };
 
         // Standard Deviation
-        let variance = y_values.iter()
+        let variance = y_values
+            .iter()
             .map(|&x| (x - mean).powu(2))
-            .sum::<Decimal>() / Decimal::from(y_values.len());
+            .sum::<Decimal>()
+            / Decimal::from(y_values.len());
         let std_dev = variance.sqrt().unwrap_or(Decimal::ZERO);
 
         Ok(BasicMetrics {
@@ -1011,19 +1019,27 @@ impl MetricsExtractor for Curve {
         let centered_values: Vec<Decimal> = y_values.iter().map(|&x| x - mean).collect();
 
         // Compute variance
-        let variance = centered_values.iter().map(|&x| x.powu(2)).sum::<Decimal>() / Decimal::from(y_values.len());
+        let variance = centered_values.iter().map(|&x| x.powu(2)).sum::<Decimal>()
+            / Decimal::from(y_values.len());
         let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
         if std_dev.is_zero() || std_dev < dec!(1e-9) {
             panic!("The standard deviation is too small or zero.");
         }
 
         // Skewness calculation (Fisher-Pearson standardized moment)
-        let skewness = centered_values.iter()
+        let skewness = centered_values
+            .iter()
             .map(|&x| (x / std_dev).powu(3))
-            .sum::<Decimal>() / Decimal::from(y_values.len());
+            .sum::<Decimal>()
+            / Decimal::from(y_values.len());
 
         // Kurtosis calculation (Fisher's definition - adjust to excess kurtosis)
-        let kurtosis = centered_values.iter().map(|&x| (x / std_dev).powu(4)).sum::<Decimal>() / Decimal::from(y_values.len()) - Decimal::from(3);
+        let kurtosis = centered_values
+            .iter()
+            .map(|&x| (x / std_dev).powu(4))
+            .sum::<Decimal>()
+            / Decimal::from(y_values.len())
+            - Decimal::from(3);
 
         // Peaks and Valleys detection
         let (peaks, valleys) = detect_peaks_and_valleys(&self.points);
@@ -1053,11 +1069,15 @@ impl MetricsExtractor for Curve {
         y_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let len = y_values.len();
-        let min_point = self.points.iter()
+        let min_point = self
+            .points
+            .iter()
             .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
             .cloned()
             .unwrap();
-        let max_point = self.points.iter()
+        let max_point = self
+            .points
+            .iter()
             .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
             .cloned()
             .unwrap();
@@ -1100,7 +1120,7 @@ impl MetricsExtractor for Curve {
 
         let sum_x: Decimal = x_vals.iter().sum();
         let sum_y: Decimal = y_vals.iter().sum();
-        let sum_xy: Decimal = x_vals.iter().zip(&y_vals).map(|(x,y)| *x * *y).sum();
+        let sum_xy: Decimal = x_vals.iter().zip(&y_vals).map(|(x, y)| *x * *y).sum();
         let sum_xx: Decimal = x_vals.iter().map(|x| *x * *x).sum();
 
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x);
@@ -1108,11 +1128,10 @@ impl MetricsExtractor for Curve {
 
         // R-squared Calculation
         let mean_y = sum_y / n;
-        let sst: Decimal = y_vals.iter()
-            .map(|y| (*y - mean_y).powu(2))
-            .sum();
+        let sst: Decimal = y_vals.iter().map(|y| (*y - mean_y).powu(2)).sum();
 
-        let ssr: Decimal = y_vals.iter()
+        let ssr: Decimal = y_vals
+            .iter()
             .zip(&x_vals)
             .map(|(y, x)| {
                 let y_predicted = slope * *x + intercept;
@@ -1128,15 +1147,19 @@ impl MetricsExtractor for Curve {
 
         // Moving Average Calculation
         let window_sizes = [3, 5, 7];
-        let moving_average: Vec<Point2D> = window_sizes.iter()
+        let moving_average: Vec<Point2D> = window_sizes
+            .iter()
             .flat_map(|&window| {
                 if window > points.len() {
                     vec![]
                 } else {
-                    points.windows(window)
+                    points
+                        .windows(window)
                         .map(|window_points| {
-                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>() / Decimal::from(window_points.len());
-                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>() / Decimal::from(window_points.len());
+                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>()
+                                / Decimal::from(window_points.len());
+                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>()
+                                / Decimal::from(window_points.len());
                             Point2D::new(avg_x, avg_y)
                         })
                         .collect::<Vec<Point2D>>()
@@ -1166,11 +1189,13 @@ impl MetricsExtractor for Curve {
         }
 
         let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
-        let volatility = y_values.iter()
+        let volatility = y_values
+            .iter()
             .map(|&x| (x - mean).powu(2))
-            .sum::<Decimal>() / Decimal::from(y_values.len())
-            .sqrt()
-            .unwrap_or(Decimal::ZERO);
+            .sum::<Decimal>()
+            / Decimal::from(y_values.len())
+                .sqrt()
+                .unwrap_or(Decimal::ZERO);
 
         if volatility == Decimal::ZERO {
             return Ok(RiskMetrics {
@@ -1182,14 +1207,13 @@ impl MetricsExtractor for Curve {
             });
         }
 
-        let z_score = dec!(1.645); 
+        let z_score = dec!(1.645);
         let var = mean - z_score * volatility;
 
         let below_var_count = y_values.iter().filter(|&&x| x < var).count();
         let expected_shortfall = if below_var_count > 0 {
-            y_values.iter()
-                .filter(|&&x| x < var)
-                .sum::<Decimal>() / Decimal::from(below_var_count as u64)
+            y_values.iter().filter(|&&x| x < var).sum::<Decimal>()
+                / Decimal::from(below_var_count as u64)
         } else {
             Decimal::ZERO
         };
@@ -1448,32 +1472,30 @@ impl AxisOperations<Point2D, Decimal> for Curve {
                 reason: "No points available",
             })
     }
-    
+
     fn get_point(&self, x: &Decimal) -> Option<&Point2D> {
-        if self.contains_point(x) { 
+        if self.contains_point(x) {
             self.points.iter().find(|p| p.x == *x)
-        } else { 
+        } else {
             None
         }
-        
     }
 }
 
 impl MergeAxisInterpolate<Point2D, Decimal> for Curve
-where Self: Sized
+where
+    Self: Sized,
 {
     fn merge_axis_interpolate(
         &self,
         other: &Self,
-        interpolation: InterpolationType
+        interpolation: InterpolationType,
     ) -> Result<(Self, Self), Self::Error> {
         // Get merged unique x-coordinates
         let merged_x_values = self.merge_axis_index(other);
 
         // Sort the merged x values
-        let mut sorted_x_values: Vec<Decimal> = merged_x_values
-            .into_iter()
-            .collect();
+        let mut sorted_x_values: Vec<Decimal> = merged_x_values.into_iter().collect();
         sorted_x_values.sort();
 
         let mut interpolated_self_points = BTreeSet::new();
@@ -1485,7 +1507,7 @@ where Self: Sized
             } else {
                 let interpolated_point = self.interpolate(*x, interpolation)?;
                 interpolated_self_points.insert(interpolated_point);
-            } 
+            }
             if other.contains_point(x) {
                 interpolated_other_points.insert(*other.get_point(x).unwrap());
             } else {
@@ -1493,7 +1515,10 @@ where Self: Sized
                 interpolated_other_points.insert(interpolated_point);
             }
         }
-        Ok((Curve::new(interpolated_self_points), Curve::new(interpolated_other_points)))
+        Ok((
+            Curve::new(interpolated_self_points),
+            Curve::new(interpolated_other_points),
+        ))
     }
 }
 
@@ -2424,9 +2449,9 @@ mod tests_extended {
 #[cfg(test)]
 mod tests_curve_metrics {
     use super::*;
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-    use crate::assert_decimal_eq;
 
     // Helper function to create test curves
     fn create_linear_curve() -> Curve {
@@ -2480,37 +2505,54 @@ mod tests_curve_metrics {
         assert_decimal_eq!(constant_metrics.median, dec!(5.0), dec!(0.001));
         assert_decimal_eq!(constant_metrics.std_dev, dec!(0.0), dec!(0.001));
     }
-    
+
     #[test]
     fn test_shape_metrics() {
-        
         // Linear curve
         let linear_curve = create_linear_curve();
         let shape_metrics = linear_curve.compute_shape_metrics().unwrap();
 
         // More lenient check for linear curve
-        assert!(shape_metrics.skewness.abs() < dec!(0.5),
-                "Skewness for linear curve should be very close to 0, got {}", shape_metrics.skewness);
+        assert!(
+            shape_metrics.skewness.abs() < dec!(0.5),
+            "Skewness for linear curve should be very close to 0, got {}",
+            shape_metrics.skewness
+        );
 
         // Allow a wider range for kurtosis of a linear curve
-        assert!(shape_metrics.kurtosis.abs() < dec!(2.0),
-                "Kurtosis for linear curve should be close to 0, got {}", shape_metrics.kurtosis);
+        assert!(
+            shape_metrics.kurtosis.abs() < dec!(2.0),
+            "Kurtosis for linear curve should be close to 0, got {}",
+            shape_metrics.kurtosis
+        );
 
         // Non-linear curve
         let non_linear_curve = create_non_linear_curve();
         let non_linear_metrics = non_linear_curve.compute_shape_metrics().unwrap();
 
         // More nuanced checks for non-linear curve
-        assert!(non_linear_metrics.skewness.abs() > dec!(0.3),
-                "Non-linear curve should have significant skewness, got {}", non_linear_metrics.skewness);
+        assert!(
+            non_linear_metrics.skewness.abs() > dec!(0.3),
+            "Non-linear curve should have significant skewness, got {}",
+            non_linear_metrics.skewness
+        );
 
         // Ensure the non-linear curve has a meaningfully different kurtosis
-        assert!(non_linear_metrics.kurtosis.abs() > dec!(1.0),
-                "Non-linear curve should have significant kurtosis, got {}", non_linear_metrics.kurtosis);
+        assert!(
+            non_linear_metrics.kurtosis.abs() > dec!(1.0),
+            "Non-linear curve should have significant kurtosis, got {}",
+            non_linear_metrics.kurtosis
+        );
 
         // Check peaks and valleys
-        assert!(!non_linear_metrics.peaks.is_empty(), "Peaks should be detected");
-        assert!(!non_linear_metrics.valleys.is_empty(), "Valleys should be detected");
+        assert!(
+            !non_linear_metrics.peaks.is_empty(),
+            "Peaks should be detected"
+        );
+        assert!(
+            !non_linear_metrics.valleys.is_empty(),
+            "Valleys should be detected"
+        );
     }
 
     #[test]
@@ -2570,8 +2612,14 @@ mod tests_curve_metrics {
         let linear_curve = create_linear_curve();
         let risk_metrics = linear_curve.compute_risk_metrics().unwrap();
 
-        assert!(risk_metrics.volatility > dec!(0.0), "Volatility debe ser mayor a cero.");
-        assert!(risk_metrics.value_at_risk != dec!(0.0), "Value at Risk no debe ser cero.");
+        assert!(
+            risk_metrics.volatility > dec!(0.0),
+            "Volatility debe ser mayor a cero."
+        );
+        assert!(
+            risk_metrics.value_at_risk != dec!(0.0),
+            "Value at Risk no debe ser cero."
+        );
         assert!(risk_metrics.beta != dec!(0.0), "Beta no debe ser cero.");
     }
 
@@ -2606,9 +2654,10 @@ mod tests_curve_metrics {
         assert!(empty_curve.compute_risk_metrics().is_ok());
 
         // Single point curve
-        let single_point_curve = Curve::new(BTreeSet::from_iter(vec![
-            Point2D::new(dec!(1.0), dec!(1.0))
-        ]));
+        let single_point_curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
+            dec!(1.0),
+            dec!(1.0),
+        )]));
 
         assert!(single_point_curve.compute_basic_metrics().is_ok());
         assert!(single_point_curve.compute_shape_metrics().is_ok());
@@ -2621,41 +2670,34 @@ mod tests_curve_metrics {
 #[cfg(test)]
 mod tests_merge_axis_interpolate {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::curves::utils::create_linear_curve;
     use crate::geometrics::InterpolationType;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_merge_axis_interpolate_linear() {
         // Create two curves with different x ranges and points
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
         let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
-        
+
         // Merge and interpolate using linear interpolation
-        let result = curve1.merge_axis_interpolate(
-            &curve2,
-            InterpolationType::Linear
-        );
-        
+        let result = curve1.merge_axis_interpolate(&curve2, InterpolationType::Linear);
+
         assert!(result.is_ok());
         let (interpolated_curve1, interpolated_curve2) = result.unwrap();
 
         // Verify that both interpolated curves have the same x range
-        assert_eq!(
-            interpolated_curve1.x_range.0,
-            interpolated_curve2.x_range.0
-        );
-        assert_eq!(
-            interpolated_curve1.x_range.1,
-            interpolated_curve2.x_range.1
-        );
+        assert_eq!(interpolated_curve1.x_range.0, interpolated_curve2.x_range.0);
+        assert_eq!(interpolated_curve1.x_range.1, interpolated_curve2.x_range.1);
 
         // Verify number of points (should cover full merged x range)
         assert_eq!(interpolated_curve1.points.len(), 10);
         assert_eq!(interpolated_curve2.points.len(), 10);
         assert_eq!(interpolated_curve1.x_range, interpolated_curve2.x_range);
-        assert_eq!(interpolated_curve1.get_index_values(), interpolated_curve2.get_index_values());
-
+        assert_eq!(
+            interpolated_curve1.get_index_values(),
+            interpolated_curve2.get_index_values()
+        );
     }
 
     #[test]
@@ -2665,29 +2707,22 @@ mod tests_merge_axis_interpolate {
         let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
 
         // Merge and interpolate using cubic interpolation
-        let result = curve1.merge_axis_interpolate(
-            &curve2,
-            InterpolationType::Cubic
-        );
+        let result = curve1.merge_axis_interpolate(&curve2, InterpolationType::Cubic);
 
         assert!(result.is_ok());
         let (interpolated_curve1, interpolated_curve2) = result.unwrap();
 
         // Verify that both interpolated curves have the same x range
-        assert_eq!(
-            interpolated_curve1.x_range.0,
-            interpolated_curve2.x_range.0
-        );
-        assert_eq!(
-            interpolated_curve1.x_range.1,
-            interpolated_curve2.x_range.1
-        );
+        assert_eq!(interpolated_curve1.x_range.0, interpolated_curve2.x_range.0);
+        assert_eq!(interpolated_curve1.x_range.1, interpolated_curve2.x_range.1);
 
-        
         // Verify number of points (should cover full merged x range)
         assert_eq!(interpolated_curve1.points.len(), 10);
         assert_eq!(interpolated_curve2.points.len(), 10);
         assert_eq!(interpolated_curve1.x_range, interpolated_curve2.x_range);
-        assert_eq!(interpolated_curve1.get_index_values(), interpolated_curve2.get_index_values());
+        assert_eq!(
+            interpolated_curve1.get_index_values(),
+            interpolated_curve2.get_index_values()
+        );
     }
 }

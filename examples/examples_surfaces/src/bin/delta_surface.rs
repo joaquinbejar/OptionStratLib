@@ -1,27 +1,27 @@
-use optionstratlib::surfaces::{Surface, Point3D};
 use optionstratlib::curves::Point2D;
+use optionstratlib::error::SurfaceError;
 use optionstratlib::geometrics::{
     ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
 };
 use optionstratlib::greeks::delta;
 use optionstratlib::model::types::{OptionStyle, Side};
 use optionstratlib::model::Options;
+use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, Positive};
 use rust_decimal_macros::dec;
-use optionstratlib::error::SurfaceError;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();
 
     // Define construction parameters for the surface
     let params = ConstructionParams::D3 {
-        x_start: dec!(50.0),     // Underlying price start
-        x_end: dec!(150.0),      // Underlying price end
-        y_start: dec!(50.0),     // Strike price start
-        y_end: dec!(150.0),      // Strike price end
-        x_steps: 250,             // Number of steps in underlying price
-        y_steps: 250,             // Number of steps in strike price
+        x_start: dec!(50.0), // Underlying price start
+        x_end: dec!(150.0),  // Underlying price end
+        y_start: dec!(50.0), // Strike price start
+        y_end: dec!(150.0),  // Strike price end
+        x_steps: 250,        // Number of steps in underlying price
+        y_steps: 250,        // Number of steps in strike price
     };
 
     // Create a surface representing delta values
@@ -34,15 +34,15 @@ fn main() -> Result<(), SurfaceError> {
                 optionstratlib::model::types::OptionType::European,
                 Side::Long,
                 "Example".to_string(),
-                strike,          // Strike price
+                strike, // Strike price
                 optionstratlib::model::types::ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),           // Implied volatility
-                Positive::ONE,       // Quantity
-                underlying,           // Underlying price
-                dec!(0.05),          // Risk-free rate
-                OptionStyle::Call,   // Option style
-                Positive::ZERO,      // Dividend yield
-                None,                // Exotic params
+                pos!(0.2),         // Implied volatility
+                Positive::ONE,     // Quantity
+                underlying,        // Underlying price
+                dec!(0.05),        // Risk-free rate
+                OptionStyle::Call, // Option style
+                Positive::ZERO,    // Dividend yield
+                None,              // Exotic params
             );
 
             // Calculate delta
@@ -53,7 +53,6 @@ fn main() -> Result<(), SurfaceError> {
         }),
         params,
     })?;
-
 
     // Plot the surface
     delta_surface

@@ -1,10 +1,10 @@
+use crate::error::SurfaceError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
+use crate::surfaces::Surface;
+use crate::visualization::utils::apply_shade;
 #[cfg(not(target_arch = "wasm32"))]
 use plotters::prelude::*;
 use std::path::Path;
-use crate::error::SurfaceError;
-use crate::surfaces::Surface;
-use crate::visualization::utils::apply_shade;
 
 /// Plottable implementation for single Surface
 impl Plottable for Surface {
@@ -148,9 +148,9 @@ impl PlotBuilderExt<Surface> for PlotBuilder<Surface> {
             })?;
 
         chart.with_projection(|mut pb| {
-            pb.pitch = 0.3; 
-            pb.yaw = 0.5;   
-            pb.scale = 0.8; 
+            pb.pitch = 0.3;
+            pb.yaw = 0.5;
+            pb.scale = 0.8;
             pb.into_matrix()
         });
 
@@ -163,60 +163,64 @@ impl PlotBuilderExt<Surface> for PlotBuilder<Surface> {
                 reason: e.to_string(),
             })?;
 
-        let point_size = self.options.point_size.unwrap_or(1); 
-        
+        let point_size = self.options.point_size.unwrap_or(1);
+
         chart
-            .draw_series(
-                points.iter().map(|(x, y, z)| {
-                    // Clonar self.options.line_colors para evitar moverlo
-                    let line_colors = self.options.line_colors.clone();
+            .draw_series(points.iter().map(|(x, y, z)| {
+                // Clonar self.options.line_colors para evitar moverlo
+                let line_colors = self.options.line_colors.clone();
 
-                    // Draw the surface as points with shading
-                    let base_color = apply_shade(
-                        line_colors
-                            .unwrap_or_else(|| vec![PlotOptions::default_colors()[0]])
-                            .first()
-                            .cloned()
-                            .unwrap_or(RGBColor(0, 0, 255)),
-                        *z / z_max,
-                    );
+                // Draw the surface as points with shading
+                let base_color = apply_shade(
+                    line_colors
+                        .unwrap_or_else(|| vec![PlotOptions::default_colors()[0]])
+                        .first()
+                        .cloned()
+                        .unwrap_or(RGBColor(0, 0, 255)),
+                    *z / z_max,
+                );
 
-                    Circle::new((*x, *y, *z), point_size, base_color.filled())
-                }),
-            )
+                Circle::new((*x, *y, *z), point_size, base_color.filled())
+            }))
             .map_err(|e| SurfaceError::StdError {
                 reason: e.to_string(),
             })?;
-        
 
         root.draw(&Text::new(
             self.options.x_label.as_deref().unwrap_or("X"),
-            (self.options.width as i32 / 4, self.options.height as i32 * 15/16),
+            (
+                self.options.width as i32 / 4,
+                self.options.height as i32 * 15 / 16,
+            ),
             ("Arial", label20).into_font(),
         ))
-            .map_err(|e| SurfaceError::StdError {
-                reason: e.to_string(),
-            })?;
-
+        .map_err(|e| SurfaceError::StdError {
+            reason: e.to_string(),
+        })?;
 
         root.draw(&Text::new(
             self.options.z_label.as_deref().unwrap_or("Z"),
-            (self.options.width as i32 /10, self.options.height as i32 / 2),
+            (
+                self.options.width as i32 / 10,
+                self.options.height as i32 / 2,
+            ),
             ("Arial", label20).into_font(),
         ))
-            .map_err(|e| SurfaceError::StdError {
-                reason: e.to_string(),
-            })?;
-
+        .map_err(|e| SurfaceError::StdError {
+            reason: e.to_string(),
+        })?;
 
         root.draw(&Text::new(
             self.options.y_label.as_deref().unwrap_or("Y"),
-            (self.options.width as i32 *3/4, self.options.height as i32 * 14/16), 
+            (
+                self.options.width as i32 * 3 / 4,
+                self.options.height as i32 * 14 / 16,
+            ),
             ("Arial", label20).into_font().color(&BLACK),
         ))
-            .map_err(|e| SurfaceError::StdError {
-                reason: e.to_string(),
-            })?;
+        .map_err(|e| SurfaceError::StdError {
+            reason: e.to_string(),
+        })?;
 
         root.present().map_err(|e| SurfaceError::StdError {
             reason: e.to_string(),
@@ -226,15 +230,14 @@ impl PlotBuilderExt<Surface> for PlotBuilder<Surface> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::geometrics::GeometricObject;
+    use crate::surfaces::Point3D;
     use plotters::prelude::RGBColor;
     use rust_decimal_macros::dec;
     use std::fs;
-    use crate::surfaces::Point3D;
 
     fn cleanup_image(filename: &str) {
         if Path::new(filename).exists() {
@@ -284,7 +287,7 @@ mod tests {
             .expect("Single curve plot failed");
         cleanup_image("single_curve_test.png")
     }
-    
+
     #[test]
     fn test_single_curve_plot() {
         let p1_1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
@@ -305,7 +308,6 @@ mod tests {
             .expect("Single curve plot failed");
         cleanup_image("single_curve_test.png");
     }
-    
 
     #[test]
     fn test_plot_options_defaults() {
@@ -321,7 +323,6 @@ mod tests {
             RGBColor(255, 255, 255)
         );
     }
-    
 
     #[test]
     fn test_plot_with_extreme_points() {
@@ -453,7 +454,7 @@ mod tests_extended {
         let plot = Plot {
             options: PlotOptions::default(),
         }
-            .plot();
+        .plot();
         let result = plot.save("test_path.png");
         assert!(result.is_ok());
     }
@@ -464,7 +465,7 @@ mod tests_extended {
         let plot = Plot {
             options: PlotOptions::default(),
         }
-            .plot();
+        .plot();
         let result = plot.save("test_path.png");
         assert!(result.is_ok());
     }

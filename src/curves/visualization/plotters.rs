@@ -54,7 +54,6 @@ use num_traits::ToPrimitive;
 use plotters::prelude::*;
 use std::path::Path;
 
-
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
     type Error = CurvesError;

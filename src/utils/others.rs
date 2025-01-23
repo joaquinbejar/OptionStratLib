@@ -88,7 +88,6 @@ where
         .collect())
 }
 
-
 #[cfg(test)]
 mod tests_approx_equal {
     use super::*;

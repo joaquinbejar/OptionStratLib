@@ -6,7 +6,6 @@
 use plotters::prelude::RGBColor;
 use std::path::Path;
 
-
 /// Plot configuration options
 #[derive(Clone, Debug)]
 pub struct PlotOptions {
@@ -30,9 +29,9 @@ pub struct PlotOptions {
     pub height: u32,
     /// Curve names
     pub curve_name: Option<Vec<String>>,
-    
+
     pub point_size: Option<u32>,
-    
+
     pub labels_size: Option<f64>,
 }
 
@@ -60,8 +59,8 @@ impl Default for PlotOptions {
             line_colors: None,
             line_width: 2,
             background_color: RGBColor(255, 255, 255),
-            width: 800,                               
-            height: 600,                              
+            width: 800,
+            height: 600,
             curve_name: None,
             point_size: None,
             labels_size: None,
@@ -72,7 +71,7 @@ impl Default for PlotOptions {
 /// Trait for plotting curves
 pub trait Plottable {
     type Error;
-    
+
     /// Creates a plot builder
     fn plot(&self) -> PlotBuilder<Self>
     where
@@ -89,7 +88,6 @@ pub struct PlotBuilder<T: Plottable> {
 }
 
 impl<T: Plottable> PlotBuilder<T> {
-    
     /// Set plot title
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.options.title = Some(title.into());
@@ -112,7 +110,7 @@ impl<T: Plottable> PlotBuilder<T> {
         self.options.z_label = Some(label.into());
         self
     }
-    
+
     pub fn point_size(mut self, size: u32) -> Self {
         self.options.point_size = Some(size);
         self
@@ -157,7 +155,6 @@ impl<T: Plottable> PlotBuilder<T> {
 
 /// Plotting extension methods
 pub trait PlotBuilderExt<T: Plottable> {
-    
     /// Save plot to file
     fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>;
 }

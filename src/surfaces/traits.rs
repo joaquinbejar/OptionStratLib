@@ -1,16 +1,12 @@
-use crate::surfaces::types::{ Point3D, SurfaceInterpolationType};
-use crate::error::SurfaceError;
-use rust_decimal::Decimal;
 use crate::curves::{Curve, Point2D};
+use crate::error::SurfaceError;
 use crate::geometrics::{AnalysisResult, MergeOperation};
+use crate::surfaces::types::{Point3D, SurfaceInterpolationType};
 use crate::surfaces::Surface;
-
+use rust_decimal::Decimal;
 
 pub trait SurfaceOperations {
-    fn generate_surface(
-        &self,
-        points: Vec<Point3D>,
-    ) -> Result<Surface, SurfaceError>;
+    fn generate_surface(&self, points: Vec<Point3D>) -> Result<Surface, SurfaceError>;
 
     fn interpolate(
         &self,
@@ -19,7 +15,7 @@ pub trait SurfaceOperations {
         interpolation: SurfaceInterpolationType,
     ) -> Option<Decimal>;
 
-    fn analyze_surface(&self, surface: &Surface) -> AnalysisResult ;
+    fn analyze_surface(&self, surface: &Surface) -> AnalysisResult;
 
     fn merge_surfaces(
         &self,
@@ -64,11 +60,7 @@ pub trait SurfaceOperations {
         surface2: &Surface,
     ) -> Result<Vec<Point3D>, SurfaceError>;
 
-    fn normal_at(
-        &self,
-        surface: &Surface,
-        point: Point3D,
-    ) -> Result<Point3D, SurfaceError>;
+    fn normal_at(&self, surface: &Surface, point: Point3D) -> Result<Point3D, SurfaceError>;
 
     fn partial_derivative_x(
         &self,
@@ -82,20 +74,10 @@ pub trait SurfaceOperations {
         point: Point3D,
     ) -> Result<Decimal, SurfaceError>;
 
-    fn get_extrema(
-        &self,
-        surface: &Surface,
-    ) -> Result<(Point3D, Point3D), SurfaceError>;
+    fn get_extrema(&self, surface: &Surface) -> Result<(Point3D, Point3D), SurfaceError>;
 
-    fn surface_area(
-        &self,
-        surface: &Surface,
-    ) -> Result<Decimal, SurfaceError>;
+    fn surface_area(&self, surface: &Surface) -> Result<Decimal, SurfaceError>;
 
-    fn volume_under_surface(
-        &self,
-        surface: &Surface,
-        z0: Decimal,
-    ) -> Result<Decimal, SurfaceError>;
+    fn volume_under_surface(&self, surface: &Surface, z0: Decimal)
+        -> Result<Decimal, SurfaceError>;
 }
-

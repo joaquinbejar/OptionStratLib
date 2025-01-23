@@ -5,7 +5,12 @@
 ******************************************************************************/
 use crate::curves::{Curve, Point2D};
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
-use crate::geometrics::{Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
+use crate::geometrics::{
+    Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
+    ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType,
+    LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics,
+    RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+};
 use crate::surfaces::types::Axis;
 use crate::surfaces::Point3D;
 use num_traits::ToPrimitive;
@@ -13,10 +18,10 @@ use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
 };
 use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
-use rust_decimal_macros::dec;
 
 /// Represents a mathematical surface in 3D space
 #[derive(Debug, Clone)]
@@ -219,15 +224,20 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
             ));
         }
 
-        if xy.x < self.x_range.0 || xy.x > self.x_range.1 ||
-            xy.y < self.y_range.0 || xy.y > self.y_range.1 {
+        if xy.x < self.x_range.0
+            || xy.x > self.x_range.1
+            || xy.y < self.y_range.0
+            || xy.y > self.y_range.1
+        {
             return Err(InterpolationError::Linear(
                 "Point is outside the surface's range".to_string(),
             ));
         }
 
         // Check for degenerate triangle before exact match
-        let unique_coords = self.points.iter()
+        let unique_coords = self
+            .points
+            .iter()
             .map(|p| (p.x, p.y))
             .collect::<BTreeSet<_>>();
 
@@ -257,7 +267,7 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
         let w1 = ((p2.y - p3.y) * (xy.x - p3.x) + (p3.x - p2.x) * (xy.y - p3.y)) / denominator;
         let w2 = ((p3.y - p1.y) * (xy.x - p3.x) + (p1.x - p3.x) * (xy.y - p3.y)) / denominator;
         let w3 = Decimal::ONE - w1 - w2;
-        
+
         let z = w1 * p1.z + w2 * p2.z + w3 * p3.z;
 
         Ok(Point3D::new(xy.x, xy.y, z))
@@ -511,7 +521,6 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
 }
 
 impl MetricsExtractor for Surface {
-    
     fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
         let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
 
@@ -519,7 +528,7 @@ impl MetricsExtractor for Surface {
 
         let mut sorted = z_values.clone();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let median = sorted[sorted.len()/2];
+        let median = sorted[sorted.len() / 2];
 
         // Mode calculation using HashMap to count occurrences
         let mode = {
@@ -534,10 +543,13 @@ impl MetricsExtractor for Surface {
                 .unwrap_or(Decimal::ZERO)
         };
 
-        let std_dev = (z_values.iter()
+        let std_dev = (z_values
+            .iter()
             .map(|x| (*x - mean).powu(2))
-            .sum::<Decimal>() / Decimal::from(z_values.len())).sqrt()
-            .unwrap_or(Decimal::ZERO);
+            .sum::<Decimal>()
+            / Decimal::from(z_values.len()))
+        .sqrt()
+        .unwrap_or(Decimal::ZERO);
 
         Ok(BasicMetrics {
             mean,
@@ -550,20 +562,27 @@ impl MetricsExtractor for Surface {
     fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
         let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
         let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
-        let std_dev = (z_values.iter()
+        let std_dev = (z_values
+            .iter()
             .map(|x| (*x - mean).powu(2))
-            .sum::<Decimal>() / Decimal::from(z_values.len())).sqrt()
-            .unwrap_or(Decimal::ONE);
+            .sum::<Decimal>()
+            / Decimal::from(z_values.len()))
+        .sqrt()
+        .unwrap_or(Decimal::ONE);
 
         let n = Decimal::from(z_values.len());
 
-        let skewness = z_values.iter()
+        let skewness = z_values
+            .iter()
             .map(|x| (*x - mean).powu(3))
-            .sum::<Decimal>() / (n * std_dev.powu(3));
+            .sum::<Decimal>()
+            / (n * std_dev.powu(3));
 
-        let kurtosis = z_values.iter()
+        let kurtosis = z_values
+            .iter()
             .map(|x| (*x - mean).powu(4))
-            .sum::<Decimal>() / (n * std_dev.powu(4));
+            .sum::<Decimal>()
+            / (n * std_dev.powu(4));
 
         Ok(ShapeMetrics {
             skewness,
@@ -583,9 +602,9 @@ impl MetricsExtractor for Surface {
         let max = sorted.last().copied().unwrap_or(Decimal::ZERO);
 
         let len = sorted.len();
-        let q1 = sorted[len/4];
-        let q2 = sorted[len/2];
-        let q3 = sorted[3*len/4];
+        let q1 = sorted[len / 4];
+        let q2 = sorted[len / 2];
+        let q3 = sorted[3 * len / 4];
 
         let range = max - min;
         let iqr = q3 - q1;
@@ -600,9 +619,7 @@ impl MetricsExtractor for Surface {
     }
 
     fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
-        let points: Vec<Point2D> = self.points.iter()
-            .map(|p| Point2D::new(p.x, p.z))
-            .collect();
+        let points: Vec<Point2D> = self.points.iter().map(|p| Point2D::new(p.x, p.z)).collect();
 
         // Handle surfaces with insufficient points
         if points.len() < 2 {
@@ -629,7 +646,7 @@ impl MetricsExtractor for Surface {
             // All points are the same
             (Decimal::ZERO, z_vals[0], Decimal::ONE)
         } else {
-            let sum_xz: Decimal = x_vals.iter().zip(&z_vals).map(|(x,z)| *x * *z).sum();
+            let sum_xz: Decimal = x_vals.iter().zip(&z_vals).map(|(x, z)| *x * *z).sum();
             let sum_xx: Decimal = x_vals.iter().map(|x| *x * *x).sum();
 
             let slope = (n * sum_xz - sum_x * sum_z) / (n * sum_xx - sum_x * sum_x);
@@ -637,11 +654,10 @@ impl MetricsExtractor for Surface {
 
             // R-squared Calculation
             let mean_z = sum_z / n;
-            let sst: Decimal = z_vals.iter()
-                .map(|z| (*z - mean_z).powu(2))
-                .sum();
+            let sst: Decimal = z_vals.iter().map(|z| (*z - mean_z).powu(2)).sum();
 
-            let ssr: Decimal = z_vals.iter()
+            let ssr: Decimal = z_vals
+                .iter()
                 .zip(&x_vals)
                 .map(|(z, x)| {
                     let z_predicted = slope * *x + intercept;
@@ -660,15 +676,19 @@ impl MetricsExtractor for Surface {
 
         // Moving Average Calculation
         let window_sizes = [3, 5, 7];
-        let moving_average: Vec<Point2D> = window_sizes.iter()
+        let moving_average: Vec<Point2D> = window_sizes
+            .iter()
             .flat_map(|&window| {
                 if window > points.len() {
                     vec![]
                 } else {
-                    points.windows(window)
+                    points
+                        .windows(window)
                         .map(|window_points| {
-                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>() / Decimal::from(window_points.len());
-                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>() / Decimal::from(window_points.len());
+                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>()
+                                / Decimal::from(window_points.len());
+                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>()
+                                / Decimal::from(window_points.len());
                             Point2D::new(avg_x, avg_y)
                         })
                         .collect::<Vec<Point2D>>()
@@ -688,21 +708,21 @@ impl MetricsExtractor for Surface {
         let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
 
         let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
-        let volatility = (z_values.iter()
+        let volatility = (z_values
+            .iter()
             .map(|x| (*x - mean).powu(2))
-            .sum::<Decimal>() / Decimal::from(z_values.len())).sqrt()
-            .unwrap_or(Decimal::ZERO);
+            .sum::<Decimal>()
+            / Decimal::from(z_values.len()))
+        .sqrt()
+        .unwrap_or(Decimal::ZERO);
 
         // Value at Risk (95% confidence) using parametric method
         let z_score = dec!(1.645); // 95% confidence interval
         let var = mean - z_score * volatility;
 
         // Expected Shortfall (Conditional VaR) calculation
-        let expected_shortfall = z_values.iter()
-            .filter(|&x| *x < var)
-            .sum::<Decimal>() / Decimal::from(
-            z_values.iter().filter(|&x| *x < var).count() as u64
-        );
+        let expected_shortfall = z_values.iter().filter(|&x| *x < var).sum::<Decimal>()
+            / Decimal::from(z_values.iter().filter(|&x| *x < var).count() as u64);
 
         // Beta calculation with optional market volatility
         let beta = Decimal::ZERO; // TODO: Implement beta calculation
@@ -849,41 +869,43 @@ impl AxisOperations<Point3D, Point2D> for Surface {
     }
 
     fn get_index_values(&self) -> Vec<Point2D> {
-         self.points
-            .iter()
-            .map(|p| Point2D::new(p.x, p.y))
-            .collect()
+        self.points.iter().map(|p| Point2D::new(p.x, p.y)).collect()
     }
 
     fn get_values(&self, x: Point2D) -> Vec<&Decimal> {
-        self.points.iter()
+        self.points
+            .iter()
             .filter(|p| p.x == x.x && p.y == x.y)
             .map(|p| &p.z)
             .collect()
     }
 
     fn get_closest_point(&self, x: &Point2D) -> Result<&Point3D, Self::Error> {
-        self.points.iter()
+        self.points
+            .iter()
             .min_by(|a, b| {
                 let dist_a = ((a.x - x.x).powi(2) + (a.y - x.y).powi(2)).sqrt().unwrap();
                 let dist_b = ((b.x - x.x).powi(2) + (b.y - x.y).powi(2)).sqrt().unwrap();
                 dist_a.partial_cmp(&dist_b).unwrap()
             })
-            .ok_or(SurfaceError::Point3DError { reason: "No points found" })
+            .ok_or(SurfaceError::Point3DError {
+                reason: "No points found",
+            })
     }
 
     fn get_point(&self, x: &Point2D) -> Option<&Point3D> {
-        self.points.iter()
-            .find(|p| p.x == x.x && p.y == x.y)
+        self.points.iter().find(|p| p.x == x.x && p.y == x.y)
     }
 }
 
 impl MergeAxisInterpolate<Point3D, Point2D> for Surface
-where Self: Sized {
+where
+    Self: Sized,
+{
     fn merge_axis_interpolate(
         &self,
         other: &Self,
-        interpolation: InterpolationType
+        interpolation: InterpolationType,
     ) -> Result<(Self, Self), Self::Error> {
         // Get merged unique xy-coordinates
         let merged_xy_values = self.merge_axis_index(other);
@@ -894,7 +916,11 @@ where Self: Sized {
         for xy in &merged_xy_values {
             if self.contains_point(xy) {
                 interpolated_self_points.insert(
-                    *self.points.iter().find(|p| p.x == xy.x && p.y == xy.y).unwrap()
+                    *self
+                        .points
+                        .iter()
+                        .find(|p| p.x == xy.x && p.y == xy.y)
+                        .unwrap(),
                 );
             } else {
                 let interpolated_point = self.interpolate(*xy, interpolation)?;
@@ -903,7 +929,11 @@ where Self: Sized {
 
             if other.contains_point(xy) {
                 interpolated_other_points.insert(
-                    *other.points.iter().find(|p| p.x == xy.x && p.y == xy.y).unwrap()
+                    *other
+                        .points
+                        .iter()
+                        .find(|p| p.x == xy.x && p.y == xy.y)
+                        .unwrap(),
                 );
             } else {
                 let interpolated_point = other.interpolate(*xy, interpolation)?;
@@ -911,7 +941,10 @@ where Self: Sized {
             }
         }
 
-        Ok((Surface::new(interpolated_self_points), Surface::new(interpolated_other_points)))
+        Ok((
+            Surface::new(interpolated_self_points),
+            Surface::new(interpolated_other_points),
+        ))
     }
 }
 
@@ -1248,7 +1281,6 @@ mod tests_surface_geometric_object {
 mod tests_surface_linear_interpolation {
     use super::*;
     use rust_decimal_macros::dec;
-
 
     fn create_test_surface() -> Surface {
         let points = BTreeSet::from_iter(vec![
@@ -2012,7 +2044,7 @@ mod tests_surface_arithmetic {
         // Compare some interpolated points
         let test_point = Point2D::new(dec!(0.5), dec!(0.5));
         let z1 = result1
-            .interpolate(test_point.clone(), InterpolationType::Cubic)
+            .interpolate(test_point, InterpolationType::Cubic)
             .unwrap();
         let z2 = result2
             .interpolate(test_point, InterpolationType::Cubic)
@@ -2104,7 +2136,7 @@ mod tests_metrics {
             Point3D::new(dec!(1.0), dec!(0.5), dec!(4.0)),
             Point3D::new(dec!(0.0), dec!(1.0), dec!(3.0)),
             Point3D::new(dec!(0.5), dec!(1.0), dec!(4.0)),
-            Point3D::new(dec!(1.0), dec!(1.0), dec!(5.0))
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(5.0)),
         ]);
         Surface::new(points)
     }
@@ -2127,7 +2159,7 @@ mod tests_metrics {
         assert!(metrics.skewness.abs() < dec!(0.001));
         assert!((metrics.kurtosis - dec!(2.25)).abs() < dec!(0.001));
     }
-    
+
     #[test]
     fn test_range_metrics() {
         let surface = create_test_surface();
@@ -2153,14 +2185,13 @@ mod tests_metrics {
         assert!((metrics.slope - dec!(2.0)).abs() < dec!(0.001));
         assert!((metrics.intercept - dec!(2.0)).abs() < dec!(0.001));
     }
-    
 }
 
 #[cfg(test)]
 mod tests_trend_metrics {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::assert_decimal_eq;
+    use rust_decimal_macros::dec;
 
     // Helper function to create a test surface
     fn create_linear_surface() -> Surface {
@@ -2202,7 +2233,7 @@ mod tests_trend_metrics {
 
         // Check moving average points
         assert!(metrics.moving_average.is_empty());
-        assert_eq!(metrics.moving_average.len(), 4); 
+        assert_eq!(metrics.moving_average.len(), 4);
     }
 
     #[test]
@@ -2232,13 +2263,16 @@ mod tests_trend_metrics {
         // Calculate total points safely
         let surface_points_count = surface.points.len();
 
-        let expected_total_points = window_sizes.iter()
+        let expected_total_points = window_sizes
+            .iter()
             .map(|&window| {
                 // Safely handle cases where window might be larger than points
                 if window > surface_points_count {
                     0
                 } else {
-                    surface_points_count.saturating_sub(window).saturating_add(1)
+                    surface_points_count
+                        .saturating_sub(window)
+                        .saturating_add(1)
                 }
             })
             .sum::<usize>();
@@ -2260,9 +2294,11 @@ mod tests_trend_metrics {
     #[test]
     fn test_edge_cases() {
         // Surface with a single point
-        let single_point_surface = Surface::new(BTreeSet::from_iter(vec![
-            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0))
-        ]));
+        let single_point_surface = Surface::new(BTreeSet::from_iter(vec![Point3D::new(
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+        )]));
 
         let metrics = single_point_surface.compute_trend_metrics();
         assert!(metrics.is_ok());
@@ -2325,7 +2361,9 @@ mod tests_axis_operations {
     #[test]
     fn test_get_closest_point() {
         let surface = create_test_surface();
-        let point = surface.get_closest_point(&Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+        let point = surface
+            .get_closest_point(&Point2D::new(dec!(0.5), dec!(0.5)))
+            .unwrap();
         assert_eq!(point.x, dec!(0.0));
         assert_eq!(point.y, dec!(0.0));
         assert_eq!(point.z, dec!(1.0));
@@ -2334,12 +2372,16 @@ mod tests_axis_operations {
     #[test]
     fn test_get_point() {
         let surface = create_test_surface();
-        let point = surface.get_point(&Point2D::new(dec!(0.0), dec!(0.0))).unwrap();
+        let point = surface
+            .get_point(&Point2D::new(dec!(0.0), dec!(0.0)))
+            .unwrap();
         assert_eq!(point.x, dec!(0.0));
         assert_eq!(point.y, dec!(0.0));
         assert_eq!(point.z, dec!(1.0));
 
-        assert!(surface.get_point(&Point2D::new(dec!(2.0), dec!(2.0))).is_none());
+        assert!(surface
+            .get_point(&Point2D::new(dec!(2.0), dec!(2.0)))
+            .is_none());
     }
 
     #[test]
@@ -2347,7 +2389,7 @@ mod tests_axis_operations {
         let surface1 = create_test_surface();
         let surface2 = create_test_surface();
         let merged = surface1.merge_indexes(surface2.get_index_values());
-    
+
         assert_eq!(merged.len(), 4);
     }
 }

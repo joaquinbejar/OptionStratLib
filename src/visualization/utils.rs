@@ -16,6 +16,7 @@ use plotters_canvas::CanvasBackend;
 
 use plotters::element::{Circle, Text};
 use plotters::prelude::ChartBuilder;
+use plotters::prelude::RGBColor;
 use plotters::prelude::BLACK;
 use plotters::prelude::{
     Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
@@ -23,8 +24,6 @@ use plotters::prelude::{
 };
 use std::error::Error;
 use std::ops::Add;
-use plotters::prelude::RGBColor;
-
 
 /// Aplica un degradado a un color base basado en un valor normalizado.
 ///

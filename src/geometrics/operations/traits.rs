@@ -1,8 +1,7 @@
 use crate::geometrics::MergeOperation;
 
-
-/// A trait that provides arithmetic operations for working with geometries, 
-/// enabling merging and combining of curve data based on different operations. 
+/// A trait that provides arithmetic operations for working with geometries,
+/// enabling merging and combining of curve data based on different operations.
 ///
 /// # Associated Types
 /// - `Error`: Represents the type of error that may occur during curve operations.
@@ -62,8 +61,8 @@ use crate::geometrics::MergeOperation;
 /// ```
 ///
 /// # Notes
-/// - This trait is designed to be implemented for specific curve types which define how 
-///   the merging will occur. The associated error type should capture and communicate 
+/// - This trait is designed to be implemented for specific curve types which define how
+///   the merging will occur. The associated error type should capture and communicate
 ///   any issues encountered during operations.
 pub trait Arithmetic<Input> {
     type Error;

@@ -1,8 +1,8 @@
-mod types;
-mod visualization;
-mod utils;
-mod traits;
 mod surface;
+mod traits;
+mod types;
+mod utils;
+mod visualization;
 
-pub use types::Point3D;
 pub use surface::Surface;
+pub use types::Point3D;

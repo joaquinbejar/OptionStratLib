@@ -3,17 +3,17 @@ use optionstratlib::geometrics::{
     ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
 };
 use optionstratlib::greeks::Greeks;
+use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
-use optionstratlib::surfaces::{Point3D, Surface};
 
 fn get_option(point2d: &Point2D) -> Options {
     let strike = Positive::new_decimal(point2d.x).unwrap();
     let volatilitity = Positive::new_decimal(point2d.y).unwrap();
-    
+
     Options::new(
         OptionType::European,
         Side::Long,
@@ -31,14 +31,14 @@ fn get_option(point2d: &Point2D) -> Options {
 }
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    
+
     let params = ConstructionParams::D3 {
-        x_start: dec!(10.0),     // Underlying price start
-        x_end: dec!(90.0),      // Underlying price end
-        y_start: dec!(0.02),     // Volatility  start
-        y_end: dec!(0.5),      // Volatility price end
-        x_steps: 250,             // Number of steps in underlying price
-        y_steps: 250,             // Number of steps in strike price
+        x_start: dec!(10.0), // Underlying price start
+        x_end: dec!(90.0),   // Underlying price end
+        y_start: dec!(0.02), // Volatility  start
+        y_end: dec!(0.5),    // Volatility price end
+        x_steps: 250,        // Number of steps in underlying price
+        y_steps: 250,        // Number of steps in strike price
     };
 
     let parametric_curve = Surface::construct(ConstructionMethod::Parametric {

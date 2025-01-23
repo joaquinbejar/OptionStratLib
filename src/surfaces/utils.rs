@@ -1,17 +1,16 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 20/1/25
- ******************************************************************************/
-use rust_decimal::Decimal;
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 20/1/25
+******************************************************************************/
 use crate::geometrics::GeometricObject;
 use crate::surfaces::{Point3D, Surface};
-
+use rust_decimal::Decimal;
 
 /// Creates a planar surface defined by starting points and a normal vector.
 ///
 /// This function generates a 3-dimensional planar surface by calculating evenly spaced points
-/// in a grid pattern. The surface is defined by x and y ranges, with the z-coordinate 
+/// in a grid pattern. The surface is defined by x and y ranges, with the z-coordinate
 /// calculated based on the plane equation:
 ///
 /// ```text
@@ -22,7 +21,7 @@ use crate::surfaces::{Point3D, Surface};
 /// # Parameters
 /// - `x_start`: Starting x-coordinate (as a `Decimal`)
 /// - `x_end`: Ending x-coordinate (as a `Decimal`)
-/// - `y_start`: Starting y-coordinate (as a `Decimal`) 
+/// - `y_start`: Starting y-coordinate (as a `Decimal`)
 /// - `y_end`: Ending y-coordinate (as a `Decimal`)
 /// - `normal`: Tuple (a,b,c) representing the normal vector of the plane
 /// - `d`: The d-coefficient in the plane equation
@@ -71,7 +70,7 @@ pub fn create_planar_surface(
 ///
 /// # Parameters
 /// - `x_start`: Starting x-coordinate (as a `Decimal`)
-/// - `x_end`: Ending x-coordinate (as a `Decimal`) 
+/// - `x_end`: Ending x-coordinate (as a `Decimal`)
 /// - `y_start`: Starting y-coordinate (as a `Decimal`)
 /// - `y_end`: Ending y-coordinate (as a `Decimal`)
 /// - `height`: The constant z-value for all points (as a `Decimal`)
@@ -158,7 +157,6 @@ pub fn create_paraboloid_surface(
     Surface::new(points.into_iter().collect())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,13 +164,7 @@ mod tests {
 
     #[test]
     fn test_create_constant_surface() {
-        let surface = create_constant_surface(
-            dec!(0),
-            dec!(10),
-            dec!(0),
-            dec!(10),
-            dec!(5),
-        );
+        let surface = create_constant_surface(dec!(0), dec!(10), dec!(0), dec!(10), dec!(5));
 
         // Check if we have the correct number of points (11x11 grid)
         assert_eq!(surface.points.len(), 121);
@@ -198,7 +190,7 @@ mod tests {
             dec!(0),
             dec!(10),
             (dec!(0), dec!(0), dec!(1)), // normal vector pointing up
-            dec!(5), // d coefficient
+            dec!(5),                     // d coefficient
         );
 
         // Check if we have the correct number of points
@@ -233,19 +225,25 @@ mod tests {
 
         // Check some key points:
         // At origin (0,0), z should be 0
-        let origin = surface.points.iter()
+        let origin = surface
+            .points
+            .iter()
             .find(|p| p.x == dec!(0) && p.y == dec!(0))
             .unwrap();
         assert_eq!(origin.z, dec!(0));
 
         // At (1,1), z should be 2 (1² + 1²)
-        let corner = surface.points.iter()
+        let corner = surface
+            .points
+            .iter()
             .find(|p| p.x == dec!(1) && p.y == dec!(1))
             .unwrap();
         assert_eq!(corner.z, dec!(2));
 
         // At (-1,-1), z should also be 2 ((-1)² + (-1)²)
-        let opposite_corner = surface.points.iter()
+        let opposite_corner = surface
+            .points
+            .iter()
             .find(|p| p.x == dec!(-1) && p.y == dec!(-1))
             .unwrap();
         assert_eq!(opposite_corner.z, dec!(2));

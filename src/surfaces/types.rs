@@ -188,11 +188,11 @@ pub enum Axis {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
     use super::*;
     use crate::pos;
     use crate::surfaces::Surface;
     use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
 
     #[test]
     fn test_point3d_new() {

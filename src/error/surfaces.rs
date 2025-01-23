@@ -187,7 +187,6 @@ impl From<Box<dyn Error>> for SurfaceError {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

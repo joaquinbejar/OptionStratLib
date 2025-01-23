@@ -3,10 +3,10 @@
    Email: jb@taunais.com
    Date: 9/1/25
 ******************************************************************************/
-use std::collections::BTreeSet;
 use crate::curves::{Curve, Point2D};
 use crate::geometrics::GeometricObject;
 use rust_decimal::Decimal;
+use std::collections::BTreeSet;
 
 /// Creates a linear curve defined by a starting point, an ending point, and a slope.
 ///
@@ -179,10 +179,10 @@ pub fn detect_peaks_and_valleys(points: &BTreeSet<Point2D>) -> (Vec<Point2D>, Ve
         return (peaks, valleys);
     }
 
-    for i in 1..points_vec.len()-1 {
-        let prev = &points_vec[i-1];
+    for i in 1..points_vec.len() - 1 {
+        let prev = &points_vec[i - 1];
         let current = &points_vec[i];
-        let next = &points_vec[i+1];
+        let next = &points_vec[i + 1];
 
         // Peak: y value is higher than its immediate neighbors
         if current.y > prev.y && current.y > next.y {
