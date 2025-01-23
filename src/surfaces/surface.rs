@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::curves::{Curve, Point2D};
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
-use crate::geometrics::{Arithmetic, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, LinearInterpolation, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
+use crate::geometrics::{Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, LinearInterpolation, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
 use crate::surfaces::types::Axis;
 use crate::surfaces::Point3D;
 use num_traits::ToPrimitive;
@@ -855,6 +855,30 @@ impl Arithmetic<Surface> for Surface {
         operation: MergeOperation,
     ) -> Result<Surface, Self::Error> {
         Self::merge(&[self, other], operation)
+    }
+}
+
+impl AxisOperations<Point2D, Decimal> for Surface {
+    type Error = SurfaceError;
+
+    fn contains_point(&self, x: &Decimal) -> bool {
+        todo!()
+    }
+
+    fn get_index_values(&self) -> Vec<&Decimal> {
+        todo!()
+    }
+
+    fn get_values(&self, x: Decimal) -> Vec<&Decimal> {
+        todo!()
+    }
+
+    fn get_closest_point(&self, x: &Decimal) -> Result<&Point2D, Self::Error> {
+        todo!()
+    }
+
+    fn get_point(&self, x: &Decimal) -> Option<&Point2D> {
+        todo!()
     }
 }
 

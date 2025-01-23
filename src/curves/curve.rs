@@ -4,13 +4,8 @@
    Date: 9/1/25
 ******************************************************************************/
 use crate::curves::Point2D;
-use crate::error::{CurvesError, InterpolationError, MetricsError};
-use crate::geometrics::{
-    Arithmetic, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams,
-    CubicInterpolation, GeometricObject, Interpolate, InterpolationType, Len, LinearInterpolation,
-    MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation,
-    TrendMetrics,
-};
+use crate::error::{CurvesError, InterpolationError, MetricsError, OperationErrorKind};
+use crate::geometrics::{Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, Len, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -1421,6 +1416,88 @@ impl Arithmetic<Curve> for Curve {
     }
 }
 
+impl AxisOperations<Point2D, Decimal> for Curve {
+    type Error = CurvesError;
+
+    fn contains_point(&self, x: &Decimal) -> bool {
+        let point = Point2D::new(*x, Decimal::ZERO);
+        self.points.contains(&point)
+    }
+
+    fn get_index_values(&self) -> Vec<&Decimal> {
+        self.points.iter().map(|p| &p.x).collect()
+    }
+
+    fn get_values(&self, x: Decimal) -> Vec<&Decimal> {
+        self.points
+            .iter()
+            .filter(|p| p.x == x)
+            .map(|p| &p.y)
+            .collect()
+    }
+
+    fn get_closest_point(&self, x: &Decimal) -> Result<&Point2D, Self::Error> {
+        self.points
+            .iter()
+            .min_by(|a, b| {
+                let dist_a = (a.x - *x).abs();
+                let dist_b = (b.x - *x).abs();
+                dist_a.partial_cmp(&dist_b).unwrap()
+            })
+            .ok_or(CurvesError::Point2DError {
+                reason: "No points available",
+            })
+    }
+    
+    fn get_point(&self, x: &Decimal) -> Option<&Point2D> {
+        if self.contains_point(x) { 
+            self.points.iter().find(|p| p.x == *x)
+        } else { 
+            None
+        }
+        
+    }
+}
+
+impl MergeAxisInterpolate<Point2D, Decimal> for Curve
+where Self: Sized
+{
+    fn merge_axis_interpolate(
+        &self,
+        other: &Self,
+        interpolation: InterpolationType
+    ) -> Result<(Self, Self), Self::Error> {
+        // Get merged unique x-coordinates
+        let merged_x_values = self.merge_axis_index(other);
+
+        // Sort the merged x values
+        let mut sorted_x_values: Vec<Decimal> = merged_x_values
+            .into_iter()
+            .cloned()
+            .collect();
+        sorted_x_values.sort();
+
+        let mut interpolated_self_points = BTreeSet::new();
+        let mut interpolated_other_points = BTreeSet::new();
+
+        for x in &sorted_x_values {
+            if self.contains_point(x) {
+                interpolated_self_points.insert(self.get_point(x).unwrap().clone());
+            } else {
+                let interpolated_point = self.interpolate(*x, interpolation)?;
+                interpolated_self_points.insert(interpolated_point);
+            } 
+            if other.contains_point(x) {
+                interpolated_other_points.insert(other.get_point(x).unwrap().clone());
+            } else {
+                let interpolated_point = other.interpolate(*x, interpolation)?;
+                interpolated_other_points.insert(interpolated_point);
+            }
+        }
+        Ok((Curve::new(interpolated_self_points), Curve::new(interpolated_other_points)))
+    }
+}
+
 #[cfg(test)]
 mod tests_curves {
     use super::*;
@@ -2539,5 +2616,79 @@ mod tests_curve_metrics {
         assert!(single_point_curve.compute_range_metrics().is_ok());
         assert!(single_point_curve.compute_trend_metrics().is_ok());
         assert!(single_point_curve.compute_risk_metrics().is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_merge_axis_interpolate {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use crate::curves::utils::create_linear_curve;
+    use crate::geometrics::InterpolationType;
+
+    #[test]
+    fn test_merge_axis_interpolate_linear() {
+        // Create two curves with different x ranges and points
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
+        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
+        
+        // Merge and interpolate using linear interpolation
+        let result = curve1.merge_axis_interpolate(
+            &curve2,
+            InterpolationType::Linear
+        );
+        
+        assert!(result.is_ok());
+        let (interpolated_curve1, interpolated_curve2) = result.unwrap();
+
+        // Verify that both interpolated curves have the same x range
+        assert_eq!(
+            interpolated_curve1.x_range.0,
+            interpolated_curve2.x_range.0
+        );
+        assert_eq!(
+            interpolated_curve1.x_range.1,
+            interpolated_curve2.x_range.1
+        );
+
+        // Verify number of points (should cover full merged x range)
+        assert_eq!(interpolated_curve1.points.len(), 10);
+        assert_eq!(interpolated_curve2.points.len(), 10);
+        assert_eq!(interpolated_curve1.x_range, interpolated_curve2.x_range);
+        assert_eq!(interpolated_curve1.get_index_values(), interpolated_curve2.get_index_values());
+
+    }
+
+    #[test]
+    fn test_merge_axis_interpolate_cubic() {
+        // Create two curves with different x ranges and points
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
+        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
+
+        // Merge and interpolate using cubic interpolation
+        let result = curve1.merge_axis_interpolate(
+            &curve2,
+            InterpolationType::Cubic
+        );
+
+        assert!(result.is_ok());
+        let (interpolated_curve1, interpolated_curve2) = result.unwrap();
+
+        // Verify that both interpolated curves have the same x range
+        assert_eq!(
+            interpolated_curve1.x_range.0,
+            interpolated_curve2.x_range.0
+        );
+        assert_eq!(
+            interpolated_curve1.x_range.1,
+            interpolated_curve2.x_range.1
+        );
+
+        
+        // Verify number of points (should cover full merged x range)
+        assert_eq!(interpolated_curve1.points.len(), 10);
+        assert_eq!(interpolated_curve2.points.len(), 10);
+        assert_eq!(interpolated_curve1.x_range, interpolated_curve2.x_range);
+        assert_eq!(interpolated_curve1.get_index_values(), interpolated_curve2.get_index_values());
     }
 }

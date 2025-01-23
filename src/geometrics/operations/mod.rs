@@ -40,6 +40,8 @@
 pub mod arithmetic;
 mod traits;
 mod transformations;
+mod axis;
 
 pub use arithmetic::MergeOperation;
 pub use traits::Arithmetic;
+pub use axis::{AxisOperations, MergeAxisInterpolate};

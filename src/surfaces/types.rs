@@ -23,12 +23,22 @@ use crate::model::positive::is_positive;
 /// - **x**: The x-coordinate of the point, represented as a `Decimal`
 /// - **y**: The y-coordinate of the point, represented as a `Decimal`
 /// - **z**: The z-coordinate of the point, represented as a `Decimal`
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Point3D {
     pub x: Decimal,
     pub y: Decimal,
     pub z: Decimal,
 }
+
+
+impl PartialEq for Point3D {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y 
+    }
+}
+
+impl Eq for Point3D {}
+
 
 impl PartialOrd for Point3D {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -266,5 +276,18 @@ mod tests {
             }
             _ => panic!("Unexpected error type"),
         }
+    }
+
+    #[test]
+    fn test_equal() {
+        let p1 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
+        let p2 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
+        let p3 = Point3D::from_f64_tuple(1.0, 2.0, 4.0).unwrap();
+        let p4 = Point3D::from_f64_tuple(1.0, 3.0, 3.0).unwrap();
+        let p5 = Point3D::from_f64_tuple(2.0, 2.0, 3.0).unwrap();
+        assert_eq!(p1, p2);
+        assert_eq!(p1, p3);
+        assert_ne!(p1, p4);
+        assert_ne!(p1, p5);
     }
 }

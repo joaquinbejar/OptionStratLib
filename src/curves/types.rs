@@ -43,12 +43,19 @@ use std::cmp::Ordering;
 ///
 /// This structure enables high precision for x and y values, making it particularly
 /// well-suited for scientific applications and precise geometry.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Point2D {
     pub x: Decimal,
     pub y: Decimal,
 }
 
+impl PartialEq for Point2D {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x
+    }
+}
+
+impl Eq for Point2D {}
 impl PartialOrd for Point2D {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -330,5 +337,18 @@ mod tests {
             }
             _ => panic!("Unexpected error type"),
         }
+    }
+
+    #[test]
+    fn test_equal() {
+        let p1 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p2 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p3 = Point2D::from_f64_tuple(1.0, 3.0).unwrap();
+        let p4 = Point2D::from_f64_tuple(1.0, 4.0).unwrap();
+        let p5 = Point2D::from_f64_tuple(2.0, 2.0).unwrap();
+        assert_eq!(p1, p2);
+        assert_eq!(p1, p3);
+        assert_eq!(p1, p4);
+        assert_ne!(p1, p5);
     }
 }
