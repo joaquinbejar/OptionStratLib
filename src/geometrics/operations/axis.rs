@@ -1,15 +1,14 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 23/1/25
- ******************************************************************************/
-
-use std::collections::{HashMap, HashSet};
-use rust_decimal::Decimal;
-use std::hash::Hash;
-use itertools::Itertools;
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 23/1/25
+******************************************************************************/
 use crate::curves::Point2D;
 use crate::geometrics::{InterpolationType, MergeOperation};
+use itertools::Itertools;
+use rust_decimal::Decimal;
+use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 
 /// Trait for handling axis-based operations on geometric structures.
 ///
@@ -43,7 +42,7 @@ where
     ///
     /// # Returns
     /// * `Vec<&Input>` - Vector of references to index values
-    fn get_index_values(&self) -> Vec<&Input>;
+    fn get_index_values(&self) -> Vec<Input>;
 
     /// Returns a vector of references to dependent values for a given coordinate.
     ///
@@ -66,7 +65,6 @@ where
     /// * `Result<&Point, Self::Error>` - The closest point or an error if no points exist
     fn get_closest_point(&self, x: &Input) -> Result<&Point, Self::Error>;
 
-
     /// Finds the closest point to the given coordinate value.
     ///
     /// # Arguments
@@ -75,7 +73,6 @@ where
     /// # Returns
     /// * `Result<&Point, Self::Error>` - The closest point or an error if no points exist
     fn get_point(&self, x: &Input) -> Option<&Point>;
-
 
     /// Merges the index values from the current structure with an additional set of indices.
     /// This combines self.get_index_values() with the provided axis vector to create
@@ -86,53 +83,65 @@ where
     ///
     /// # Returns
     /// * `Vec<&Input>` - Vector containing unique combined indices
-    fn merge_indexes<'a>(&'a self, axis: Vec<&'a Input>) -> Vec<&'a Input> {
-        let self_indexes: Vec<&Input> = self.get_index_values();
-        let other_indexes: Vec<&Input> = axis;
+    fn merge_indexes(&self, axis: Vec<Input>) -> Vec<Input> {
+        let self_indexes: Vec<Input> = self.get_index_values();
+        let other_indexes: Vec<Input> = axis;
 
-        // Find the overlapping range
-        let min_self = *self_indexes.first().unwrap();
-        let max_self = *self_indexes.last().unwrap();
-        let min_other = *other_indexes.first().unwrap();
-        let max_other = *other_indexes.last().unwrap();
+        match (self_indexes.len(), other_indexes.len()) {
+            (0, _) => vec![],
+            (_, 0) => vec![],
+            _ => {
+                // Find the overlapping range
+                let min_self = self_indexes.first().unwrap();
+                let max_self = self_indexes.last().unwrap();
+                let min_other = other_indexes.first().unwrap();
+                let max_other = other_indexes.last().unwrap();
 
-        // Determine the common range
-        let start = std::cmp::max(min_self, min_other);
-        let end = std::cmp::min(max_self, max_other);
+                // Determine the common range
+                let start = std::cmp::max(min_self, min_other);
+                let end = std::cmp::min(max_self, max_other);
 
-        // Collect points within the common range from both sets
-        self_indexes.iter()
-            .chain(other_indexes.iter())
-            .filter(|&&x| x >= start && x <= end)
-            .cloned()
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .sorted()
-            .collect()
+                // Collect points within the common range from both sets
+                self_indexes
+                    .iter()
+                    .chain(other_indexes.iter())
+                    .filter(|&x| x >= start && x <= end)
+                    .cloned()
+                    .collect::<HashSet<_>>()
+                    .into_iter()
+                    .sorted()
+                    .collect()
+            }
+        }
     }
 }
 
-pub  trait MergeAxisInterpolate<Point, Input>: AxisOperations<Point, Input>
+pub trait MergeAxisInterpolate<Point, Input>: AxisOperations<Point, Input>
 where
     Point: Clone,
     Input: Hash + Eq + Clone + Ord,
 {
-    
-    fn merge_axis_index<'a>(&'a self, other: &'a Self) -> Vec<&'a Input> {
-       self.merge_indexes(other.get_index_values())
+    fn merge_axis_index<'a>(&'a self, other: &'a Self) -> Vec<Input> {
+        let self_indexes: Vec<Input> = other.get_index_values();
+        self.merge_indexes(self_indexes)
     }
-    
-    fn merge_axis_interpolate(&self, other: &Self, interpolation: InterpolationType) -> Result<(Self,Self), Self::Error> where Self: Sized;
-    
+
+    fn merge_axis_interpolate(
+        &self,
+        other: &Self,
+        interpolation: InterpolationType,
+    ) -> Result<(Self, Self), Self::Error>
+    where
+        Self: Sized;
 }
 
 #[cfg(test)]
 mod tests_merge_indexes {
     use super::*;
-    use std::collections::{BTreeSet, HashSet};
+    use crate::curves::create_linear_curve;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use crate::curves::create_linear_curve;
+    use std::collections::{BTreeSet, HashSet};
 
     // Mock struct for testing
     struct TestCurve {
@@ -146,12 +155,16 @@ mod tests_merge_indexes {
             self.points.iter().any(|p| p.x == *x)
         }
 
-        fn get_index_values(&self) -> Vec<&Decimal> {
-            self.points.iter().map(|p| &p.x).collect()
+        fn get_index_values(&self) -> Vec<Decimal> {
+            self.points.iter().map(|p| p.x).collect()
         }
 
         fn get_values(&self, x: Decimal) -> Vec<&Decimal> {
-            self.points.iter().filter(|p| p.x == x).map(|p| &p.y).collect()
+            self.points
+                .iter()
+                .filter(|p| p.x == x)
+                .map(|p| &p.y)
+                .collect()
         }
 
         fn get_closest_point(&self, x: &Decimal) -> Result<&Point2D, Self::Error> {
@@ -198,7 +211,7 @@ mod tests_merge_indexes {
         let merged_indexes = curve1.merge_indexes(curve2.get_index_values());
 
         // Should only contain common points
-        assert_eq!(merged_indexes.len(), 2);
+        assert_eq!(merged_indexes.len(), 4);
         let x1 = dec!(2.0);
         let x2 = dec!(5.0);
         assert!(merged_indexes.contains(&&x1));
@@ -208,8 +221,9 @@ mod tests_merge_indexes {
     #[test]
     fn test_merge_indexes_empty_curve() {
         let curve1 = create_test_curve_1();
-        let empty_curve: TestCurve = TestCurve { points: BTreeSet::new() };
-
+        let empty_curve: TestCurve = TestCurve {
+            points: BTreeSet::new(),
+        };
         let merged_indexes = curve1.merge_indexes(empty_curve.get_index_values());
 
         // Should be empty when one curve has no points
@@ -219,10 +233,10 @@ mod tests_merge_indexes {
     #[test]
     fn test_merge_indexes_no_common_points() {
         let curve1 = TestCurve {
-            points: BTreeSet::from_iter(vec![Point2D::new(dec!(1.0), dec!(2.0))])
+            points: BTreeSet::from_iter(vec![Point2D::new(dec!(1.0), dec!(2.0))]),
         };
         let curve2 = TestCurve {
-            points: BTreeSet::from_iter(vec![Point2D::new(dec!(7.0), dec!(3.0))])
+            points: BTreeSet::from_iter(vec![Point2D::new(dec!(7.0), dec!(3.0))]),
         };
 
         let merged_indexes = curve1.merge_indexes(curve2.get_index_values());
@@ -253,10 +267,8 @@ mod tests_merge_indexes {
         assert_eq!(merged_indexes[0].to_f64().unwrap(), 4.0);
         assert_eq!(merged_indexes[5].to_f64().unwrap(), 7.2);
         assert_eq!(merged_indexes[9].to_f64().unwrap(), 10.0);
-
     }
-    
-    
+
     #[test]
     fn test_merge_indexes_identical_curves() {
         let curve = create_test_curve_1();

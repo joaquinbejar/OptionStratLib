@@ -43,7 +43,7 @@ use std::cmp::Ordering;
 ///
 /// This structure enables high precision for x and y values, making it particularly
 /// well-suited for scientific applications and precise geometry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash)]
 pub struct Point2D {
     pub x: Decimal,
     pub y: Decimal,
@@ -56,6 +56,7 @@ impl PartialEq for Point2D {
 }
 
 impl Eq for Point2D {}
+
 impl PartialOrd for Point2D {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))

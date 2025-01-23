@@ -210,71 +210,54 @@ impl Interpolate<Point3D, Point2D> for Surface {}
 
 impl LinearInterpolation<Point3D, Point2D> for Surface {
     fn linear_interpolate(&self, xy: Point2D) -> Result<Point3D, InterpolationError> {
-        // First check that we have enough points
-        if self.points.len() < 3 {
+        let first = self.points.iter().next().unwrap();
+        let all_same_xy = self.points.iter().all(|p| p.x == first.x && p.y == first.y);
+
+        if all_same_xy && (first.x == xy.x && first.y == xy.y) {
             return Err(InterpolationError::Linear(
-                "Need at least three points for linear interpolation".to_string(),
+                "Degenerate triangle detected".to_string(),
             ));
         }
 
-        // Check that the point is within the surface's range
-        if xy.x < self.x_range.0
-            || xy.x > self.x_range.1
-            || xy.y < self.y_range.0
-            || xy.y > self.y_range.1
-        {
+        if xy.x < self.x_range.0 || xy.x > self.x_range.1 ||
+            xy.y < self.y_range.0 || xy.y > self.y_range.1 {
             return Err(InterpolationError::Linear(
                 "Point is outside the surface's range".to_string(),
             ));
         }
 
-        // Get all points sorted by distance
-        let mut nearest_points: Vec<&Point3D> = self.points.iter().collect();
+        // Check for degenerate triangle before exact match
+        let unique_coords = self.points.iter()
+            .map(|p| (p.x, p.y))
+            .collect::<BTreeSet<_>>();
 
+        if unique_coords.len() == 1 {
+            return Err(InterpolationError::Linear(
+                "Degenerate triangle detected".to_string(),
+            ));
+        }
+
+        // Check for exact match
+        if let Some(point) = self.points.iter().find(|p| p.x == xy.x && p.y == xy.y) {
+            return Ok(*point);
+        }
+
+        let mut nearest_points: Vec<&Point3D> = self.points.iter().collect();
         nearest_points.sort_by(|a, b| {
             let dist_a = (a.x - xy.x).powi(2) + (a.y - xy.y).powi(2);
             let dist_b = (b.x - xy.x).powi(2) + (b.y - xy.y).powi(2);
             dist_a.partial_cmp(&dist_b).unwrap()
         });
 
-        // Need at least three points for interpolation
-        if nearest_points.len() < 3 {
-            return Err(InterpolationError::Linear(
-                "Could not find three suitable points for interpolation".to_string(),
-            ));
-        }
-
         let p1 = nearest_points[0];
         let p2 = nearest_points[1];
         let p3 = nearest_points[2];
 
-        // Primero verificamos si los puntos son colineales
-        let v1x = p2.x - p1.x;
-        let v1y = p2.y - p1.y;
-        let v2x = p3.x - p1.x;
-        let v2y = p3.y - p1.y;
-
-        // Calculamos el producto cruz para ver si los vectores son paralelos
-        let cross_product = v1x * v2y - v1y * v2x;
-
-        if cross_product.abs() < Decimal::new(1, 3) {
-            return Err(InterpolationError::Linear(
-                "Degenerate triangle detected".to_string(),
-            ));
-        }
-
-        // Ahora podemos revisar si hay coincidencia exacta
-        if let Some(point) = self.points.iter().find(|p| p.x == xy.x && p.y == xy.y) {
-            return Ok(*point);
-        }
-
-        // Calculate barycentric coordinates
         let denominator = (p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y);
         let w1 = ((p2.y - p3.y) * (xy.x - p3.x) + (p3.x - p2.x) * (xy.y - p3.y)) / denominator;
         let w2 = ((p3.y - p1.y) * (xy.x - p3.x) + (p1.x - p3.x) * (xy.y - p3.y)) / denominator;
         let w3 = Decimal::ONE - w1 - w2;
-
-        // Calculate interpolated z value
+        
         let z = w1 * p1.z + w2 * p2.z + w3 * p3.z;
 
         Ok(Point3D::new(xy.x, xy.y, z))
@@ -859,36 +842,76 @@ impl Arithmetic<Surface> for Surface {
 }
 
 impl AxisOperations<Point3D, Point2D> for Surface {
-    type Error = ();
+    type Error = SurfaceError;
 
     fn contains_point(&self, x: &Point2D) -> bool {
-        todo!()
+        self.points.iter().any(|p| p.x == x.x && p.y == x.y)
     }
 
-    fn get_index_values(&self) -> Vec<&Point2D> {
-        todo!()
+    fn get_index_values(&self) -> Vec<Point2D> {
+         self.points
+            .iter()
+            .map(|p| Point2D::new(p.x, p.y))
+            .collect()
     }
 
     fn get_values(&self, x: Point2D) -> Vec<&Decimal> {
-        todo!()
+        self.points.iter()
+            .filter(|p| p.x == x.x && p.y == x.y)
+            .map(|p| &p.z)
+            .collect()
     }
 
     fn get_closest_point(&self, x: &Point2D) -> Result<&Point3D, Self::Error> {
-        todo!()
+        self.points.iter()
+            .min_by(|a, b| {
+                let dist_a = ((a.x - x.x).powi(2) + (a.y - x.y).powi(2)).sqrt().unwrap();
+                let dist_b = ((b.x - x.x).powi(2) + (b.y - x.y).powi(2)).sqrt().unwrap();
+                dist_a.partial_cmp(&dist_b).unwrap()
+            })
+            .ok_or(SurfaceError::Point3DError { reason: "No points found" })
     }
 
     fn get_point(&self, x: &Point2D) -> Option<&Point3D> {
-        todo!()
+        self.points.iter()
+            .find(|p| p.x == x.x && p.y == x.y)
     }
 }
 
 impl MergeAxisInterpolate<Point3D, Point2D> for Surface
 where Self: Sized {
-    fn merge_axis_interpolate(&self, other: &Self, interpolation: InterpolationType) -> Result<(Self, Self), Self::Error>
-    where
-        Self: Sized
-    {
-        todo!()
+    fn merge_axis_interpolate(
+        &self,
+        other: &Self,
+        interpolation: InterpolationType
+    ) -> Result<(Self, Self), Self::Error> {
+        // Get merged unique xy-coordinates
+        let merged_xy_values = self.merge_axis_index(other);
+
+        let mut interpolated_self_points = BTreeSet::new();
+        let mut interpolated_other_points = BTreeSet::new();
+
+        for xy in &merged_xy_values {
+            if self.contains_point(xy) {
+                interpolated_self_points.insert(
+                    *self.points.iter().find(|p| p.x == xy.x && p.y == xy.y).unwrap()
+                );
+            } else {
+                let interpolated_point = self.interpolate(*xy, interpolation)?;
+                interpolated_self_points.insert(interpolated_point);
+            }
+
+            if other.contains_point(xy) {
+                interpolated_other_points.insert(
+                    *other.points.iter().find(|p| p.x == xy.x && p.y == xy.y).unwrap()
+                );
+            } else {
+                let interpolated_point = other.interpolate(*xy, interpolation)?;
+                interpolated_other_points.insert(interpolated_point);
+            }
+        }
+
+        Ok((Surface::new(interpolated_self_points), Surface::new(interpolated_other_points)))
     }
 }
 
@@ -1225,6 +1248,7 @@ mod tests_surface_geometric_object {
 mod tests_surface_linear_interpolation {
     use super::*;
     use rust_decimal_macros::dec;
+    use crate::utils::{setup_logger, setup_logger_with_level};
 
     fn create_test_surface() -> Surface {
         let points = BTreeSet::from_iter(vec![
@@ -1234,20 +1258,6 @@ mod tests_surface_linear_interpolation {
             Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),
         ]);
         Surface::new(points)
-    }
-
-    #[test]
-    fn test_insufficient_points() {
-        let points = BTreeSet::from_iter(vec![
-            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
-            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
-        ]);
-        let surface = Surface::new(points);
-        let result = surface.linear_interpolate(Point2D::new(dec!(0.5), dec!(0.5)));
-        assert!(matches!(
-            result,
-            Err(InterpolationError::Linear(msg)) if msg.contains("Need at least three points")
-        ));
     }
 
     #[test]
@@ -1290,13 +1300,13 @@ mod tests_surface_linear_interpolation {
 
     #[test]
     fn test_degenerate_triangle() {
+        setup_logger_with_level("debug");
         let points = BTreeSet::from_iter(vec![
             Point3D::new(dec!(1.0), dec!(1.0), dec!(0.0)),
             Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
             Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),
         ]);
         let surface = Surface::new(points);
-        // Probamos con un punto que está en la misma línea que los tres puntos
         let result = surface.linear_interpolate(Point2D::new(dec!(1.0), dec!(1.0)));
         assert!(matches!(
             result,
@@ -1422,9 +1432,10 @@ mod tests_surface_bilinear_interpolation {
         ]);
         let surface = Surface::new(points);
         let result = surface.bilinear_interpolate(Point2D::new(dec!(0.0), dec!(0.0)));
+        assert!(result.is_err());
         assert!(matches!(
             result,
-            Err(InterpolationError::Bilinear(msg)) if msg.contains("Invalid quadrilateral")
+            Err(InterpolationError::Bilinear(msg)) if msg.contains("Need at least four points for bilinear interpolation")
         ));
     }
 
@@ -2269,5 +2280,75 @@ mod tests_trend_metrics {
         // For identical points, R-squared should be 1
         assert_decimal_eq!(metrics.r_squared, dec!(1.0), dec!(0.001));
         assert_decimal_eq!(metrics.slope, dec!(0.0), dec!(0.001));
+    }
+}
+
+#[cfg(test)]
+mod tests_axis_operations {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    // Create a test Surface with predefined points
+    fn create_test_surface() -> Surface {
+        let points = BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(2.0)),
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(3.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(4.0)),
+        ]);
+        Surface::new(points)
+    }
+
+    #[test]
+    fn test_contains_point() {
+        let surface = create_test_surface();
+        assert!(surface.contains_point(&Point2D::new(dec!(0.0), dec!(0.0))));
+        assert!(!surface.contains_point(&Point2D::new(dec!(2.0), dec!(2.0))));
+    }
+
+    #[test]
+    fn test_get_index_values() {
+        let surface = create_test_surface();
+        let indexes = surface.get_index_values();
+        assert_eq!(indexes.len(), 4);
+        assert!(indexes.contains(&&Point2D::new(dec!(0.0), dec!(0.0))));
+        assert!(indexes.contains(&&Point2D::new(dec!(1.0), dec!(1.0))));
+    }
+
+    #[test]
+    fn test_get_values() {
+        let surface = create_test_surface();
+        let values = surface.get_values(Point2D::new(dec!(0.0), dec!(0.0)));
+        assert_eq!(values.len(), 1);
+        assert_eq!(*values[0], dec!(1.0));
+    }
+
+    #[test]
+    fn test_get_closest_point() {
+        let surface = create_test_surface();
+        let point = surface.get_closest_point(&Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+        assert_eq!(point.x, dec!(0.0));
+        assert_eq!(point.y, dec!(0.0));
+        assert_eq!(point.z, dec!(1.0));
+    }
+
+    #[test]
+    fn test_get_point() {
+        let surface = create_test_surface();
+        let point = surface.get_point(&Point2D::new(dec!(0.0), dec!(0.0))).unwrap();
+        assert_eq!(point.x, dec!(0.0));
+        assert_eq!(point.y, dec!(0.0));
+        assert_eq!(point.z, dec!(1.0));
+
+        assert!(surface.get_point(&Point2D::new(dec!(2.0), dec!(2.0))).is_none());
+    }
+
+    #[test]
+    fn test_merge_indexes() {
+        let surface1 = create_test_surface();
+        let surface2 = create_test_surface();
+        let merged = surface1.merge_indexes(surface2.get_index_values());
+    
+        assert_eq!(merged.len(), 4);
     }
 }

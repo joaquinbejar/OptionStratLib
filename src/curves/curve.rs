@@ -4,7 +4,7 @@
    Date: 9/1/25
 ******************************************************************************/
 use crate::curves::Point2D;
-use crate::error::{CurvesError, InterpolationError, MetricsError, OperationErrorKind};
+use crate::error::{CurvesError, InterpolationError, MetricsError};
 use crate::geometrics::{Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, Len, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
@@ -1424,8 +1424,8 @@ impl AxisOperations<Point2D, Decimal> for Curve {
         self.points.contains(&point)
     }
 
-    fn get_index_values(&self) -> Vec<&Decimal> {
-        self.points.iter().map(|p| &p.x).collect()
+    fn get_index_values(&self) -> Vec<Decimal> {
+        self.points.iter().map(|p| p.x).collect()
     }
 
     fn get_values(&self, x: Decimal) -> Vec<&Decimal> {
@@ -1473,7 +1473,6 @@ where Self: Sized
         // Sort the merged x values
         let mut sorted_x_values: Vec<Decimal> = merged_x_values
             .into_iter()
-            .cloned()
             .collect();
         sorted_x_values.sort();
 

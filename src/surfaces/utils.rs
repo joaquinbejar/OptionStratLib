@@ -3,7 +3,6 @@
     Email: jb@taunais.com 
     Date: 20/1/25
  ******************************************************************************/
-
 use rust_decimal::Decimal;
 use crate::geometrics::GeometricObject;
 use crate::surfaces::{Point3D, Surface};
@@ -158,6 +157,7 @@ pub fn create_paraboloid_surface(
 
     Surface::new(points.into_iter().collect())
 }
+
 
 #[cfg(test)]
 mod tests {

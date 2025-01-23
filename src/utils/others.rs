@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 27/9/24
 ******************************************************************************/
+use std::borrow::Cow;
 use crate::constants::TOLERANCE;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
@@ -87,6 +88,7 @@ where
         })
         .collect())
 }
+
 
 #[cfg(test)]
 mod tests_approx_equal {

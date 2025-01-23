@@ -3,14 +3,14 @@
    Email: jb@taunais.com
    Date: 20/1/25
 ******************************************************************************/
+use crate::curves::Point2D;
+use crate::error::SurfaceError;
+use crate::geometrics::HasX;
+use crate::model::positive::is_positive;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
-use crate::error::SurfaceError;
-use crate::geometrics::HasX;
-use crate::model::positive::is_positive;
-
 
 /// Represents a point in three-dimensional space with `x`, `y` and `z` coordinates.
 ///
@@ -19,26 +19,24 @@ use crate::model::positive::is_positive;
 /// All coordinates (`x`, `y`, and `z`) are stored as `Decimal` values to provide high precision,
 /// making it suitable for applications requiring accurate numerical calculations.
 ///
-/// # Fields 
+/// # Fields
 /// - **x**: The x-coordinate of the point, represented as a `Decimal`
 /// - **y**: The y-coordinate of the point, represented as a `Decimal`
 /// - **z**: The z-coordinate of the point, represented as a `Decimal`
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash)]
 pub struct Point3D {
     pub x: Decimal,
     pub y: Decimal,
     pub z: Decimal,
 }
 
-
 impl PartialEq for Point3D {
     fn eq(&self, other: &Self) -> bool {
-        self.x == other.x && self.y == other.y 
+        self.x == other.x && self.y == other.y
     }
 }
 
 impl Eq for Point3D {}
-
 
 impl PartialOrd for Point3D {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -79,7 +77,11 @@ impl Point3D {
     /// - `T`: Type for x-coordinate
     /// - `U`: Type for y-coordinate
     /// - `V`: Type for z-coordinate
-    pub fn to_tuple<T: From<Decimal> + 'static, U: From<Decimal> + 'static, V: From<Decimal> + 'static>(
+    pub fn to_tuple<
+        T: From<Decimal> + 'static,
+        U: From<Decimal> + 'static,
+        V: From<Decimal> + 'static,
+    >(
         &self,
     ) -> Result<(T, U, V), SurfaceError> {
         if is_positive::<T>() && self.x <= Decimal::ZERO {
@@ -139,6 +141,10 @@ impl Point3D {
             }),
         }
     }
+
+    pub fn point2d(&self) -> Box<Point2D> {
+        Box::new(Point2D::new(self.x, self.y))
+    }
 }
 
 impl From<&Point3D> for Point3D {
@@ -185,9 +191,9 @@ pub enum Axis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::pos;
     use crate::surfaces::Surface;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_point3d_new() {
@@ -257,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_surface_new() {
-        let points = BTreeSet::from_iter( vec![
+        let points = BTreeSet::from_iter(vec![
             Point3D::from_f64_tuple(0.0, 0.0, 0.0).unwrap(),
             Point3D::from_f64_tuple(1.0, 1.0, 1.0).unwrap(),
         ]);
