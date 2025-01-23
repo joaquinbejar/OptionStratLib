@@ -158,19 +158,6 @@ impl HasX for Point3D {
     }
 }
 
-pub enum SurfaceInterpolationType {
-    /// Linear interpolation between points
-    Linear,
-    /// Bilinear interpolation
-    Bilinear,
-    /// Bicubic interpolation
-    Bicubic,
-    /// Thin plate spline interpolation
-    ThinPlateSpline,
-    /// Custom interpolation method
-    Custom(String),
-}
-
 /// Represents the three possible axes in a 3D space.
 ///
 /// This enumeration is commonly used to define or manipulate directions

@@ -6,12 +6,7 @@
 use crate::curves::utils::detect_peaks_and_valleys;
 use crate::curves::Point2D;
 use crate::error::{CurvesError, InterpolationError, MetricsError};
-use crate::geometrics::{
-    Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
-    ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType, Len,
-    LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics,
-    RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
-};
+use crate::geometrics::{Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod, ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate, InterpolationType, Len, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -1522,6 +1517,117 @@ where
     }
 }
 
+impl GeometricTransformations<Point2D> for Curve {
+    type Error = CurvesError;
+
+    fn translate(&self, deltas: Vec<&Decimal>) -> Result<Self, Self::Error> {
+        if deltas.len() != 2 {
+            return Err(CurvesError::invalid_parameters(
+                "translate",
+                "Expected 2 deltas for 2D translation",
+            ));
+        }
+
+        let translated_points = self.points.iter().map(|point| {
+            Point2D::new(
+                point.x + deltas[0],
+                point.y + deltas[1],
+            )
+        }).collect();
+
+        Ok(Curve::new(translated_points))
+    }
+
+    fn scale(&self, factors: Vec<&Decimal>) -> Result<Self, Self::Error> {
+        if factors.len() != 2 {
+            return Err(CurvesError::invalid_parameters(
+                "scale",
+                "Expected 2 factors for 2D scaling"
+            ));
+        }
+
+        let scaled_points = self.points.iter().map(|point| {
+            Point2D::new(
+                point.x * factors[0],
+                point.y * factors[1],
+            )
+        }).collect();
+
+        Ok(Curve::new(scaled_points))
+    }
+
+    fn intersect_with(&self, other: &Self) -> Result<Vec<Point2D>, Self::Error> {
+        let mut intersections = Vec::new();
+
+        // Use existing pairs iterator for efficiency
+        for p1 in self.get_points() {
+            for p2 in other.get_points() {
+                // Find points with small distance between them
+                if (p1.x - p2.x).abs() < Decimal::new(1, 6) &&
+                    (p1.y - p2.y).abs() < Decimal::new(1, 6) {
+                    intersections.push(*p1);
+                }
+            }
+        }
+
+        Ok(intersections)
+    }
+
+    fn derivative_at(&self, point: &Point2D) -> Result<Vec<Decimal>, Self::Error> {
+        let (i, j) = self.find_bracket_points(point.x)?;
+
+        let p0 = &self[i];
+        let p1 = &self[j];
+        
+        let a = (p1.y - p0.y) / (p1.x * p1.x - p0.x * p0.x);
+        let derivative = dec!(2.0) * a * point.x;
+
+        Ok(vec![derivative])
+    }
+
+    fn extrema(&self) -> Result<(Point2D, Point2D), Self::Error> {
+        if self.points.is_empty() {
+            return Err(CurvesError::invalid_parameters(
+                "extrema",
+                "Curve has no points"
+            ));
+        }
+
+        let min_point = self.points
+            .iter()
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+            .cloned()
+            .unwrap();
+
+        let max_point = self.points
+            .iter()
+            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+            .cloned()
+            .unwrap();
+
+        Ok((min_point, max_point))
+    }
+
+    fn measure_under(&self, base_value: &Decimal) -> Result<Decimal, Self::Error> {
+        if self.points.len() < 2 {
+            return Ok(Decimal::ZERO);
+        }
+
+        let mut area = Decimal::ZERO;
+        let points: Vec<_> = self.points.iter().collect();
+
+        // Approximate area using trapezoidal rule
+        for pair in points.windows(2) {
+            let width = pair[1].x - pair[0].x;
+            let height = ((pair[0].y - base_value) + (pair[1].y - base_value))/Decimal::TWO;
+            area += width * height;
+        }
+
+        Ok(area.abs())
+    }
+}
+
+
 #[cfg(test)]
 mod tests_curves {
     use super::*;
@@ -2724,5 +2830,356 @@ mod tests_merge_axis_interpolate {
             interpolated_curve1.get_index_values(),
             interpolated_curve2.get_index_values()
         );
+    }
+}
+
+
+#[cfg(test)]
+mod tests_geometric_transformations {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    fn create_test_curve() -> Curve {
+        Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+            Point2D::new(dec!(3.0), dec!(9.0)),
+        ]))
+    }
+
+    mod test_translate {
+        use super::*;
+
+        #[test]
+        fn test_translate_positive() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(2.0), &dec!(3.0)]).unwrap();
+
+            let translated_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(translated_points[0].x, dec!(2.0));
+            assert_eq!(translated_points[0].y, dec!(3.0));
+
+            assert_eq!(translated_points[1].x, dec!(3.0));
+            assert_eq!(translated_points[1].y, dec!(4.0));
+            
+            assert_eq!(translated_points[2].x, dec!(4.0));
+            assert_eq!(translated_points[2].y, dec!(7.0));
+            
+            assert_eq!(translated_points[3].x, dec!(5.0));
+            assert_eq!(translated_points[3].y, dec!(12.0));
+            
+        }
+
+        #[test]
+        fn test_translate_negative() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(-1.0), &dec!(-2.0)]).unwrap();
+
+            let translated_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(translated_points[0].x, dec!(-1.0));
+            assert_eq!(translated_points[0].y, dec!(-2.0));
+        }
+
+        #[test]
+        fn test_translate_zero() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(0.0), &dec!(0.0)]).unwrap();
+            assert_eq!(curve.points, result.points);
+        }
+
+        #[test]
+        fn test_translate_wrong_dimensions() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(1.0)]);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_translate_preserves_shape() {
+            let curve = create_test_curve();
+            let result = curve.translate(vec![&dec!(1.0), &dec!(1.0)]).unwrap();
+
+            let original_diffs: Vec<Decimal> = curve.points
+                .iter()
+                .zip(curve.points.iter().skip(1))
+                .map(|(a, b)| (b.y - a.y))
+                .collect();
+
+            let translated_diffs: Vec<Decimal> = result.points
+                .iter()
+                .zip(result.points.iter().skip(1))
+                .map(|(a, b)| (b.y - a.y))
+                .collect();
+
+            assert_eq!(original_diffs, translated_diffs);
+        }
+    }
+
+    mod test_scale {
+        use super::*;
+    
+        #[test]
+        fn test_scale_uniform() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(2.0), &dec!(2.0)]).unwrap();
+    
+            let scaled_points: Vec<_> = result.points.iter().collect();
+
+            assert_eq!(scaled_points[0].x, dec!(0.0));
+            assert_eq!(scaled_points[0].y, dec!(0.0));
+            
+            assert_eq!(scaled_points[1].x, dec!(2.0));
+            assert_eq!(scaled_points[1].y, dec!(2.0));
+
+            assert_eq!(scaled_points[2].x, dec!(4.0));
+            assert_eq!(scaled_points[2].y, dec!(8.0));
+
+            assert_eq!(scaled_points[3].x, dec!(6.0));
+            assert_eq!(scaled_points[3].y, dec!(18.0));
+        }
+    
+        #[test]
+        fn test_scale_non_uniform() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(2.0), &dec!(3.0)]).unwrap();
+    
+            let scaled_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(scaled_points[1].x, dec!(2.0));
+            assert_eq!(scaled_points[1].y, dec!(3.0));
+        }
+    
+        #[test]
+        fn test_scale_zero() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(0.0), &dec!(0.0)]).unwrap();
+    
+            assert!(result.points.iter().all(|p| p.x == dec!(0.0) && p.y == dec!(0.0)));
+        }
+    
+        #[test]
+        fn test_scale_wrong_dimensions() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(2.0)]);
+            assert!(result.is_err());
+        }
+    
+        #[test]
+        fn test_scale_negative() {
+            let curve = create_test_curve();
+            let result = curve.scale(vec![&dec!(-1.0), &dec!(-1.0)]).unwrap();
+ 
+            assert_eq!(result[1].x, dec!(-2.0));
+            assert_eq!(result[1].y, dec!(-4.0));
+
+            assert_eq!(result[3].x, dec!(0.0));
+            assert_eq!(result[3].y, dec!(0.0));
+        }
+    }
+    
+    mod test_intersect_with {
+        use super::*;
+    
+        #[test]
+        fn test_curves_intersect() {
+            let curve1 = create_test_curve();
+            let curve2 = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(2.0))
+            ]));
+    
+            let intersections = curve1.intersect_with(&curve2).unwrap();
+            assert_eq!(intersections.len(), 1);
+        }
+    
+        #[test]
+        fn test_no_intersection() {
+            let curve1 = create_test_curve();
+            let curve2 = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(10.0), dec!(10.0)),
+                Point2D::new(dec!(11.0), dec!(11.0))
+            ]));
+    
+            let intersections = curve1.intersect_with(&curve2).unwrap();
+            assert!(intersections.is_empty());
+        }
+    
+        #[test]
+        fn test_multiple_intersections() {
+            let curve1 = create_test_curve();
+            let curve2 = create_test_curve();
+    
+            let intersections = curve1.intersect_with(&curve2).unwrap();
+            assert_eq!(intersections.len(), curve1.points.len());
+        }
+    
+        #[test]
+        fn test_self_intersection() {
+            let curve = create_test_curve();
+            let intersections = curve.intersect_with(&curve).unwrap();
+            assert_eq!(intersections.len(), curve.points.len());
+        }
+    
+        #[test]
+        fn test_empty_curves() {
+            let curve1 = Curve::new(BTreeSet::new());
+            let curve2 = Curve::new(BTreeSet::new());
+    
+            let intersections = curve1.intersect_with(&curve2).unwrap();
+            assert!(intersections.is_empty());
+        }
+    }
+    
+    mod test_derivative_at {
+        use super::*;
+    
+        #[test]
+        fn test_linear_derivative() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0))
+            ]));
+    
+            let derivative = curve.derivative_at(&Point2D::new(dec!(0.5), dec!(0.5))).unwrap();
+            assert_eq!(derivative[0], dec!(1.0));
+        }
+
+        #[test]
+        fn test_quadratic_derivative() {
+            let curve = create_test_curve();
+            let derivative = curve.derivative_at(&Point2D::new(dec!(1.0), dec!(1.0))).unwrap();
+            assert_eq!(derivative[0], dec!(2.0));
+            let derivative2 = curve.derivative_at(&Point2D::new(dec!(2.0), dec!(4.0))).unwrap();
+            assert_eq!(derivative2[0], dec!(4.0));
+        }
+    
+        #[test]
+        fn test_out_of_range() {
+            let curve = create_test_curve();
+            let result = curve.derivative_at(&Point2D::new(dec!(10.0), dec!(0.0)));
+            assert!(result.is_err());
+        }
+    
+        #[test]
+        fn test_at_endpoint() {
+            let curve = create_test_curve();
+            let derivative = curve.derivative_at(&Point2D::new(dec!(0.0), dec!(0.0))).unwrap();
+            assert!(derivative[0] > dec!(0.0));
+        }
+    
+        #[test]
+        fn test_vertical_line() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(1.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0))
+            ]));
+    
+            let result = curve.derivative_at(&Point2D::new(dec!(1.0), dec!(0.5)));
+            assert!(result.is_err());
+        }
+    }
+    
+    mod test_extrema {
+        use super::*;
+    
+        #[test]
+        fn test_find_extrema() {
+            let curve = create_test_curve();
+            let (min, max) = curve.extrema().unwrap();
+            assert_eq!(min.y, dec!(0.0));
+            assert_eq!(max.y, dec!(9.0));
+        }
+    
+        #[test]
+        fn test_empty_curve() {
+            let curve = Curve::new(BTreeSet::new());
+            let result = curve.extrema();
+            assert!(result.is_err());
+        }
+    
+        #[test]
+        fn test_single_point() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(1.0), dec!(1.0))
+            ]));
+    
+            let (min, max) = curve.extrema().unwrap();
+            assert_eq!(min, max);
+        }
+    
+        #[test]
+        fn test_flat_curve() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(1.0)),
+                Point2D::new(dec!(1.0), dec!(1.0))
+            ]));
+    
+            let (min, max) = curve.extrema().unwrap();
+            assert_eq!(min.y, max.y);
+        }
+    
+        #[test]
+        fn test_multiple_extrema() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+                Point2D::new(dec!(2.0), dec!(0.0))
+            ]));
+    
+            let (min, max) = curve.extrema().unwrap();
+            assert_eq!(min.y, dec!(0.0));
+            assert_eq!(max.y, dec!(1.0));
+        }
+    }
+    
+    mod test_measure_under {
+        use super::*;
+    
+        #[test]
+        fn test_area_under_linear() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0))
+            ]));
+    
+            let area = curve.measure_under(&dec!(0.0)).unwrap();
+            assert_eq!(area, dec!(0.5));
+        }
+    
+        #[test]
+        fn test_area_empty_curve() {
+            let curve = Curve::new(BTreeSet::new());
+            let area = curve.measure_under(&dec!(0.0)).unwrap();
+            assert_eq!(area, dec!(0.0));
+        }
+    
+        #[test]
+        fn test_area_single_point() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(1.0), dec!(1.0))
+            ]));
+    
+            let area = curve.measure_under(&dec!(0.0)).unwrap();
+            assert_eq!(area, dec!(0.0));
+        }
+    
+        #[test]
+        fn test_area_with_base_value() {
+            let curve = create_test_curve();
+            let area1 = curve.measure_under(&dec!(0.0)).unwrap();
+            let area2 = curve.measure_under(&dec!(1.0)).unwrap();
+            assert!(area1 > area2);
+        }
+    
+        #[test]
+        fn test_negative_area() {
+            let curve = Curve::new(BTreeSet::from_iter(vec![
+                Point2D::new(dec!(0.0), dec!(-1.0)),
+                Point2D::new(dec!(1.0), dec!(-2.0))
+            ]));
+    
+            let area = curve.measure_under(&dec!(0.0)).unwrap();
+            assert!(area > dec!(0.0));
+        }
     }
 }

@@ -1,5 +1,4 @@
 mod surface;
-mod traits;
 mod types;
 mod utils;
 mod visualization;

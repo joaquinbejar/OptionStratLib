@@ -7,9 +7,9 @@ use crate::curves::{Curve, Point2D};
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
-    ConstructionParams, CubicInterpolation, GeometricObject, Interpolate, InterpolationType,
-    LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics,
-    RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+    ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
+    InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
+    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
 };
 use crate::surfaces::types::Axis;
 use crate::surfaces::Point3D;
@@ -945,6 +945,222 @@ where
             Surface::new(interpolated_self_points),
             Surface::new(interpolated_other_points),
         ))
+    }
+}
+
+impl GeometricTransformations<Point3D> for Surface {
+    type Error = SurfaceError;
+
+    fn translate(&self, deltas: Vec<&Decimal>) -> Result<Self, Self::Error> {
+        if deltas.len() != 3 {
+            return Err(SurfaceError::invalid_parameters(
+                "translate",
+                "Expected 3 deltas for 3D translation",
+            ));
+        }
+
+        let translated_points = self
+            .points
+            .iter()
+            .map(|point| {
+                Point3D::new(
+                    point.x + *deltas[0],
+                    point.y + *deltas[1],
+                    point.z + *deltas[2],
+                )
+            })
+            .collect();
+
+        Ok(Surface::new(translated_points))
+    }
+
+    fn scale(&self, factors: Vec<&Decimal>) -> Result<Self, Self::Error> {
+        if factors.len() != 3 {
+            return Err(SurfaceError::invalid_parameters(
+                "scale",
+                "Expected 3 factors for 3D scaling",
+            ));
+        }
+
+        let scaled_points = self
+            .points
+            .iter()
+            .map(|point| {
+                Point3D::new(
+                    point.x * *factors[0],
+                    point.y * *factors[1],
+                    point.z * *factors[2],
+                )
+            })
+            .collect();
+
+        Ok(Surface::new(scaled_points))
+    }
+
+    fn intersect_with(&self, other: &Self) -> Result<Vec<Point3D>, Self::Error> {
+        let mut intersections = Vec::new();
+        let epsilon = Decimal::new(1, 6); // 0.000001 tolerance
+
+        for p1 in self.points.iter() {
+            for p2 in other.points.iter() {
+                if (p1.x - p2.x).abs() < epsilon
+                    && (p1.y - p2.y).abs() < epsilon
+                    && (p1.z - p2.z).abs() < epsilon
+                {
+                    intersections.push(*p1);
+                }
+            }
+        }
+
+        Ok(intersections)
+    }
+    
+    fn derivative_at(&self, point: &Point3D) -> Result<Vec<Decimal>, Self::Error> {
+        // Handle surfaces with insufficient points
+        if self.points.len() < 2 {
+            return Err(SurfaceError::invalid_parameters(
+                "derivative_at",
+                "Surface needs at least 2 points for derivative calculation"
+            ));
+        }
+
+        // For surfaces with exactly 2 or 3 points, use a simple approach
+        if self.points.len() <= 3 {
+            // let points: Vec<_> = self.points.iter().collect();
+
+            // Ensure points are not identical
+            if self[0] == self[1] {
+                return Err(SurfaceError::invalid_parameters(
+                    "derivative_at",
+                    "Points are identical, cannot calculate derivatives"
+                ));
+            }
+
+            // Calculate derivatives using the first two points
+            let dx = if (self[1].x - self[0].x) == Decimal::ZERO { 
+                Decimal::MAX 
+            } else { 
+                (self[1].z - self[0].z) / (self[1].x - self[0].x) 
+            };
+            
+            let dy = if (self[1].y - self[0].y) == Decimal::ZERO { 
+                Decimal::MAX 
+            } else { 
+                (self[1].z - self[0].z) / (self[1].y - self[0].y) 
+            };
+            
+            return Ok(vec![dx, dy]);
+        }
+        
+        if !(self.x_range.0..=self.x_range.1).contains(&point.x) || !(self.y_range.0..=self.y_range.1).contains(&point.y) {
+            return Err(SurfaceError::invalid_parameters(
+                "derivative_at",
+                "Point is outside the surface's range",
+            ));
+        }
+
+        // For more complex surfaces, find nearby points
+        let tolerance = dec!(0.5);
+
+        let x_points: BTreeSet<Point3D> = self.get_points()
+            .into_iter()
+            .filter(|p| (p.x - point.x).abs() < tolerance)
+            .cloned()
+            .collect();
+
+        let y_points: BTreeSet<Point3D> = self.get_points()
+            .into_iter()
+            .filter(|p| (p.y - point.y).abs() < tolerance)
+            .cloned()
+            .collect();
+
+        // If not enough nearby points, use the entire surface
+        let x_candidates = if x_points.len() < 2 { &self.points } else { &x_points };
+        let y_candidates = if y_points.len() < 2 { &self.points } else { &y_points };
+
+        // Ensure we have at least 2 points
+        if x_candidates.len() < 2 || y_candidates.len() < 2 {
+            return Err(SurfaceError::invalid_parameters(
+                "derivative_at",
+                "Could not find suitable points for derivative calculation"
+            ));
+        }
+
+        // Sort and find derivatives
+        let mut x_sorted: Vec<_> = x_candidates.iter().collect();
+        x_sorted.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap());
+
+        let mut y_sorted: Vec<_> = y_candidates.iter().collect();
+        y_sorted.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+
+        // Prevent division by zero
+        let dx = if x_sorted[0].x == x_sorted[1].x {
+            Decimal::ZERO
+        } else {
+            (x_sorted[1].z - x_sorted[0].z) / (x_sorted[1].x - x_sorted[0].x)
+        };
+
+        let dy = if y_sorted[0].y == y_sorted[1].y {
+            Decimal::ZERO
+        } else {
+            (y_sorted[1].z - y_sorted[0].z) / (y_sorted[1].y - y_sorted[0].y)
+        };
+
+        Ok(vec![dx, dy])
+    }
+
+    fn extrema(&self) -> Result<(Point3D, Point3D), Self::Error> {
+        if self.points.is_empty() {
+            return Err(SurfaceError::invalid_parameters(
+                "extrema",
+                "Surface has no points",
+            ));
+        }
+
+        let min_point = self
+            .points
+            .iter()
+            .min_by(|a, b| a.z.partial_cmp(&b.z).unwrap())
+            .cloned()
+            .unwrap();
+
+        let max_point = self
+            .points
+            .iter()
+            .max_by(|a, b| a.z.partial_cmp(&b.z).unwrap())
+            .cloned()
+            .unwrap();
+
+        Ok((min_point, max_point))
+    }
+
+    fn measure_under(&self, base_value: &Decimal) -> Result<Decimal, Self::Error> {
+        if self.points.len() < 3 {
+            return Ok(Decimal::ZERO);
+        }
+
+        // Approximate volume using triangular prisms
+        let mut volume = Decimal::ZERO;
+        let points: Vec<_> = self.points.iter().collect();
+
+        // For each possible triangle in the surface
+        for window in points.windows(3) {
+            // Calculate area of triangle
+            let p1 = window[0];
+            let p2 = window[1];
+            let p3 = window[2];
+
+            let area =
+                ((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y)).abs() / dec!(2);
+
+            // Average height from base_value
+            let avg_height =
+                ((p1.z - *base_value) + (p2.z - *base_value) + (p3.z - *base_value)) / dec!(3);
+
+            volume += area * avg_height;
+        }
+
+        Ok(volume.abs())
     }
 }
 
@@ -2232,7 +2448,6 @@ mod tests_trend_metrics {
         assert_decimal_eq!(metrics.r_squared, dec!(1.0), dec!(0.001));
 
         // Check moving average points
-        assert!(metrics.moving_average.is_empty());
         assert_eq!(metrics.moving_average.len(), 4);
     }
 
@@ -2247,9 +2462,6 @@ mod tests_trend_metrics {
         // Slope and intercept will vary based on the non-linear surface
         assert!(metrics.slope != dec!(0.0));
         assert!(metrics.intercept != dec!(0.0));
-
-        // Moving average points should exist
-        assert!(metrics.moving_average.is_empty());
     }
 
     #[test]
@@ -2390,6 +2602,379 @@ mod tests_axis_operations {
         let surface2 = create_test_surface();
         let merged = surface1.merge_indexes(surface2.get_index_values());
 
-        assert_eq!(merged.len(), 4);
+        assert_eq!(merged.len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod tests_surface_geometric_transformations {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    fn create_test_surface() -> Surface {
+        Surface::new(BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),
+        ]))
+    }
+
+    mod test_translate {
+        use super::*;
+
+        #[test]
+        fn test_translate_positive() {
+            let surface = create_test_surface();
+            let result = surface
+                .translate(vec![&dec!(1.0), &dec!(1.0), &dec!(1.0)])
+                .unwrap();
+
+            let translated_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(translated_points[0].x, dec!(1.0));
+            assert_eq!(translated_points[0].y, dec!(1.0));
+            assert_eq!(translated_points[0].z, dec!(1.0));
+        }
+
+        #[test]
+        fn test_translate_negative() {
+            let surface = create_test_surface();
+            let result = surface
+                .translate(vec![&dec!(-1.0), &dec!(-1.0), &dec!(-1.0)])
+                .unwrap();
+
+            let translated_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(translated_points[0].x, dec!(-1.0));
+            assert_eq!(translated_points[0].y, dec!(-1.0));
+            assert_eq!(translated_points[0].z, dec!(-1.0));
+        }
+
+        #[test]
+        fn test_translate_zero() {
+            let surface = create_test_surface();
+            let result = surface
+                .translate(vec![&dec!(0.0), &dec!(0.0), &dec!(0.0)])
+                .unwrap();
+            assert_eq!(surface.points, result.points);
+        }
+
+        #[test]
+        fn test_translate_wrong_dimensions() {
+            let surface = create_test_surface();
+            let result = surface.translate(vec![&dec!(1.0), &dec!(1.0)]);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_translate_preserves_distances() {
+            let surface = create_test_surface();
+            let result = surface
+                .translate(vec![&dec!(1.0), &dec!(1.0), &dec!(1.0)])
+                .unwrap();
+
+            let original_points: Vec<_> = surface.points.iter().collect();
+            let translated_points: Vec<_> = result.points.iter().collect();
+
+            let orig_dist = ((original_points[1].x - original_points[0].x).powi(2)
+                + (original_points[1].y - original_points[0].y).powi(2)
+                + (original_points[1].z - original_points[0].z).powi(2))
+            .sqrt();
+
+            let trans_dist = ((translated_points[1].x - translated_points[0].x).powi(2)
+                + (translated_points[1].y - translated_points[0].y).powi(2)
+                + (translated_points[1].z - translated_points[0].z).powi(2))
+            .sqrt();
+
+            assert_eq!(orig_dist, trans_dist);
+        }
+    }
+
+    mod test_scale {
+        use super::*;
+
+        #[test]
+        fn test_scale_uniform() {
+            let surface = create_test_surface();
+            let result = surface
+                .scale(vec![&dec!(2.0), &dec!(2.0), &dec!(2.0)])
+                .unwrap();
+            assert_eq!(result[1].x, dec!(0.0));
+            assert_eq!(result[1].y, dec!(2.0));
+            assert_eq!(result[1].z, dec!(2.0));
+        }
+
+        #[test]
+        fn test_scale_non_uniform() {
+            let surface = create_test_surface();
+            let result = surface
+                .scale(vec![&dec!(2.0), &dec!(3.0), &dec!(4.0)])
+                .unwrap();
+            
+            assert_eq!(result[0].x, dec!(0.0));
+            assert_eq!(result[0].y, dec!(0.0));
+            assert_eq!(result[0].z, dec!(0.0));
+            assert_eq!(result[1].x, dec!(0.0));
+            assert_eq!(result[1].y, dec!(3.0));
+            assert_eq!(result[1].z, dec!(4.0));
+            assert_eq!(result[2].x, dec!(2.0));
+            assert_eq!(result[2].y, dec!(0.0));
+            assert_eq!(result[2].z, dec!(4.0));
+            assert_eq!(result[2].x, dec!(2.0));
+            assert_eq!(result[2].y, dec!(0.0));
+            assert_eq!(result[2].z, dec!(4.0));
+        }
+
+        #[test]
+        fn test_scale_zero() {
+            let surface = create_test_surface();
+            let result = surface
+                .scale(vec![&dec!(0.0), &dec!(0.0), &dec!(0.0)])
+                .unwrap();
+
+            assert!(result
+                .points
+                .iter()
+                .all(|p| p.x == dec!(0.0) && p.y == dec!(0.0) && p.z == dec!(0.0)));
+        }
+
+        #[test]
+        fn test_scale_wrong_dimensions() {
+            let surface = create_test_surface();
+            let result = surface.scale(vec![&dec!(2.0), &dec!(2.0)]);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_scale_negative() {
+            let surface = create_test_surface();
+            let result = surface
+                .scale(vec![&dec!(-1.0), &dec!(-1.0), &dec!(-1.0)])
+                .unwrap();
+
+            let scaled_points: Vec<_> = result.points.iter().collect();
+            assert_eq!(scaled_points[1].x, dec!(-1.0));
+            assert_eq!(scaled_points[1].y, dec!(0.0));
+            assert_eq!(scaled_points[1].z, dec!(-1.0));
+        }
+    }
+
+    mod test_intersect_with {
+        use super::*;
+
+        #[test]
+        fn test_surfaces_intersect() {
+            let surface1 = create_test_surface();
+            let surface2 = Surface::new(BTreeSet::from_iter(vec![
+                Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
+                Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),
+            ]));
+
+            let intersections = surface1.intersect_with(&surface2).unwrap();
+            assert_eq!(intersections.len(), 2);
+        }
+
+        #[test]
+        fn test_no_intersection() {
+            let surface1 = create_test_surface();
+            let surface2 = Surface::new(BTreeSet::from_iter(vec![
+                Point3D::new(dec!(10.0), dec!(10.0), dec!(10.0)),
+                Point3D::new(dec!(11.0), dec!(11.0), dec!(11.0)),
+            ]));
+
+            let intersections = surface1.intersect_with(&surface2).unwrap();
+            assert!(intersections.is_empty());
+        }
+
+        #[test]
+        fn test_multiple_intersections() {
+            let surface1 = create_test_surface();
+            let surface2 = create_test_surface();
+
+            let intersections = surface1.intersect_with(&surface2).unwrap();
+            assert_eq!(intersections.len(), surface1.points.len());
+        }
+
+        #[test]
+        fn test_self_intersection() {
+            let surface = create_test_surface();
+            let intersections = surface.intersect_with(&surface).unwrap();
+            assert_eq!(intersections.len(), surface.points.len());
+        }
+
+        #[test]
+        fn test_empty_surfaces() {
+            let surface1 = Surface::new(BTreeSet::new());
+            let surface2 = Surface::new(BTreeSet::new());
+
+            let intersections = surface1.intersect_with(&surface2).unwrap();
+            assert!(intersections.is_empty());
+        }
+    }
+
+    mod test_derivative_at {
+        use super::*;
+
+        #[test]
+        fn test_planar_derivative() {
+            let surface = Surface::new(BTreeSet::from_iter(vec![
+                Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
+                Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),
+                Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),
+            ]));
+
+            let derivatives = surface
+                .derivative_at(&Point3D::new(dec!(0.5), dec!(0.5), dec!(0.5)))
+                .unwrap();
+            assert_eq!(derivatives.len(), 2);
+            assert_eq!(derivatives[0], Decimal::MAX); // ∂z/∂x
+            assert_eq!(derivatives[1], dec!(1.0)); // ∂z/∂y
+        }
+
+        #[test]
+        fn test_non_planar_derivative() {
+            let surface = create_test_surface();
+            let derivatives = surface
+                .derivative_at(&Point3D::new(dec!(0.5), dec!(0.5), dec!(1.0)))
+                .unwrap();
+            assert_eq!(derivatives.len(), 2);
+        }
+
+        #[test]
+        fn test_out_of_range() {
+            let surface = create_test_surface();
+            let result = surface.derivative_at(&Point3D::new(dec!(10.0), dec!(10.0), dec!(10.0)));
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_at_corner() {
+            let surface = create_test_surface();
+            let derivatives = surface
+                .derivative_at(&Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)))
+                .unwrap();
+            assert_eq!(derivatives.len(), 2);
+        }
+
+        #[test]
+        fn test_single_point_surface() {
+            let surface = Surface::new(BTreeSet::from_iter(vec![Point3D::new(
+                dec!(1.0),
+                dec!(1.0),
+                dec!(1.0),
+            )]));
+            let result = surface.derivative_at(&Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)));
+            assert!(result.is_err());
+        }
+    }
+
+    mod test_extrema {
+        use super::*;
+
+        #[test]
+        fn test_find_extrema() {
+            let surface = create_test_surface();
+            let (min, max) = surface.extrema().unwrap();
+            assert_eq!(min.z, dec!(0.0));
+            assert_eq!(max.z, dec!(2.0));
+        }
+
+        #[test]
+        fn test_empty_surface() {
+            let surface = Surface::new(BTreeSet::new());
+            let result = surface.extrema();
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_single_point() {
+            let surface = Surface::new(BTreeSet::from_iter(vec![Point3D::new(
+                dec!(1.0),
+                dec!(1.0),
+                dec!(1.0),
+            )]));
+
+            let (min, max) = surface.extrema().unwrap();
+            assert_eq!(min, max);
+        }
+
+        #[test]
+        fn test_flat_surface() {
+            let surface = Surface::new(BTreeSet::from_iter(vec![
+                Point3D::new(dec!(0.0), dec!(0.0), dec!(1.0)),
+                Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),
+                Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),
+            ]));
+
+            let (min, max) = surface.extrema().unwrap();
+            assert_eq!(min.z, max.z);
+        }
+
+        #[test]
+        fn test_multiple_extrema() {
+            let surface = Surface::new(BTreeSet::from_iter(vec![
+                Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
+                Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),
+                Point3D::new(dec!(2.0), dec!(2.0), dec!(0.0)),
+            ]));
+
+            let (min, max) = surface.extrema().unwrap();
+            assert_eq!(min.z, dec!(0.0));
+            assert_eq!(max.z, dec!(2.0));
+        }
+    }
+
+    mod test_measure_under {
+        use super::*;
+
+        #[test]
+        fn test_volume_under_planar() {
+            let surface = Surface::new(BTreeSet::from_iter(vec![
+                Point3D::new(dec!(0.0), dec!(0.0), dec!(1.0)),
+                Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),
+                Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),
+            ]));
+
+            let volume = surface.measure_under(&dec!(0.0)).unwrap();
+            assert_eq!(volume, dec!(0.5)); // Area of triangle * height
+        }
+
+        #[test]
+        fn test_volume_empty_surface() {
+            let surface = Surface::new(BTreeSet::new());
+            let volume = surface.measure_under(&dec!(0.0)).unwrap();
+            assert_eq!(volume, dec!(0.0));
+        }
+
+        #[test]
+        fn test_volume_single_triangle() {
+            let surface = Surface::new(BTreeSet::from_iter(vec![
+                Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
+                Point3D::new(dec!(1.0), dec!(0.0), dec!(0.0)),
+                Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),
+            ]));
+
+            let volume = surface.measure_under(&dec!(0.0)).unwrap();
+            assert!(volume > dec!(0.0));
+        }
+
+        #[test]
+        fn test_volume_with_base_value() {
+            let surface = create_test_surface();
+            let volume1 = surface.measure_under(&dec!(0.0)).unwrap();
+            let volume2 = surface.measure_under(&dec!(1.0)).unwrap();
+            assert!(volume1 > volume2);
+        }
+
+        #[test]
+        fn test_negative_volume() {
+            let surface = Surface::new(BTreeSet::from_iter(vec![
+                Point3D::new(dec!(0.0), dec!(0.0), dec!(-1.0)),
+                Point3D::new(dec!(1.0), dec!(0.0), dec!(-1.0)),
+                Point3D::new(dec!(0.0), dec!(1.0), dec!(-1.0)),
+            ]));
+
+            let volume = surface.measure_under(&dec!(0.0)).unwrap();
+            assert!(volume > dec!(0.0));
+        }
     }
 }

@@ -83,6 +83,7 @@ pre-push: fix fmt lint-fix test readme
 .PHONY: doc
 doc:
 	cargo doc --open
+	cargo clippy -- -W missing-docs
 
 .PHONY: publish
 publish: readme coverage

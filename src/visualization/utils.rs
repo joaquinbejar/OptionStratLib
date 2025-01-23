@@ -1,8 +1,4 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 20/8/24
-******************************************************************************/
+
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
@@ -245,6 +241,47 @@ pub(crate) fn calculate_axis_range(
     (max_x_value, min_x_value, max_y_value, min_y_value)
 }
 
+
+/// Draws chart points and their associated labels on a chart context.
+///
+/// This function is responsible for rendering a list of chart points onto a given
+/// chart context. Each point is represented as a circle, styled with a specific
+/// size and color, and labeled with text positioned based on a defined offset.
+///
+/// # Type Parameters
+///
+/// - `DB`: The backend responsible for rendering the chart, implementing the `DrawingBackend` trait.
+/// - `X`: The type representing the horizontal (x-axis) range of the chart, implementing the `Ranged` trait.
+/// - `Y`: The type representing the vertical (y-axis) range of the chart, also implementing the `Ranged` trait.
+///
+/// # Arguments
+///
+/// - `ctx`: A mutable reference to a `ChartContext` object, which provides the necessary context
+///   for drawing on the chart.
+/// - `points`: A slice of `ChartPoint` objects, each representing a point to render on the chart,
+///   including its coordinates, styling, and label information.
+///
+/// # Returns
+///
+/// Returns `Ok(())` if all points and their labels are successfully drawn.
+/// If an error occurs during the rendering process (e.g., backend issues), a boxed `Error` is returned.
+///
+/// # Constraints
+///
+/// - The value type of `X` and `Y` must:
+///   - Be clonable.
+///   - Support addition with a `f64` value (`Add<f64>`).
+/// - `X::ValueType` and `Y::ValueType` must additionally be compatible with `Into<(X::ValueType, Y::ValueType)>`.
+/// - The error type of the drawing backend (`DB::ErrorType`) must be `'static`.
+///
+/// # Implementation Details
+///
+/// - For each point in the `points` slice:
+///   1. A circle is drawn according to the point's coordinates, size, and color.
+///   2. A textual label is placed near the point, with its position influenced by the specified `label_offset`.
+///
+/// - Uses the helper method `LabelOffsetType::get_offset` to determine the offset values for positioning the labels.
+///
 pub fn draw_points_on_chart<DB: DrawingBackend, X, Y>(
     ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
     points: &[ChartPoint<(X::ValueType, Y::ValueType)>],
@@ -282,6 +319,55 @@ where
     Ok(())
 }
 
+/// Draws vertical lines with labels on a given chart using the specified drawing backend.
+///
+/// This function renders a series of vertical lines on a chart, given their positions,
+/// styles, and associated labels. It utilizes a `ChartContext` for rendering the lines and
+/// the Plotters crate utilities for styling and layout. Each line is drawn between a specified
+/// range on the y-axis and features an optional label placed at a specific offset.
+///
+/// # Type Parameters
+///
+/// - `DB`: The type representing the drawing backend, which must implement the `DrawingBackend`
+///   trait. This defines how the chart elements are rendered (e.g., as an image, on a canvas, etc.).
+/// - `X`: The type representing the x-axis of the chart. It must implement the `Ranged` trait 
+///   to support scaling and interpolation.
+/// - `Y`: The type representing the y-axis of the chart. Similar to `X`, it must implement 
+///   the `Ranged` trait for compatibility.
+///
+/// # Function Parameters
+///
+/// - `ctx`: A mutable reference to a `ChartContext`, which handles the drawing and layout
+///   of the chart elements. It is parameterized with the drawing backend `DB` and coordinate system
+///   `Cartesian2d<X, Y>`.
+/// - `lines`: A slice of `ChartVerticalLine` structures defining the x-coordinate, y-range,
+///   style, and label for each vertical line to be drawn.
+///
+/// # Returns
+///
+/// - Returns a `Result`:
+///     - `Ok(())` on success, indicating that all vertical lines were drawn without errors.
+///     - `Err(Box<dyn Error>)` if an error occurs during the drawing operations.
+///
+/// # Constraints
+///
+/// - The `X` and `Y` types, as well as their associated value types (`X::ValueType` and `Y::ValueType`),
+///   must support cloning (`Clone`) and addition (`Add<f64>`). This enables the function to compute
+///   positions and offsets for labels.
+/// - Value types for `X` and `Y` must be displayable (`std::fmt::Display`) to render labels correctly
+///   on the chart.
+/// - Drawing backend errors must be composable as `'static` to integrate seamlessly with the function's
+///   return type.
+///
+/// # Behavior
+///
+/// 1. **Line Drawing**: For each vertical line in the input slice, a line is drawn from the bottom
+///    to the top of the specified y-range using `LineSeries`.
+/// 2. **Label Placement**: For each line, a `Text` entity displaying the label is rendered at the
+///    specified offset relative to the x-coordinate and the upper y-coordinate of the line.
+/// 3. Styling: Uses attributes from `ChartVerticalLine` (`line_style`, `font_size`, and colors)
+///    to apply custom styles to the lines and labels.
+///
 pub fn draw_vertical_lines_on_chart<DB: DrawingBackend, X, Y>(
     ctx: &mut ChartContext<DB, Cartesian2d<X, Y>>,
     lines: &[ChartVerticalLine<X::ValueType, Y::ValueType>],

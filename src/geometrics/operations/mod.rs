@@ -45,3 +45,4 @@ mod transformations;
 pub use arithmetic::MergeOperation;
 pub use axis::{AxisOperations, MergeAxisInterpolate};
 pub use traits::Arithmetic;
+pub use transformations::GeometricTransformations;

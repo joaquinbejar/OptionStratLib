@@ -24,6 +24,6 @@ pub use interpolation::spline::SplineInterpolation;
 pub use interpolation::traits::HasX;
 pub use interpolation::traits::Interpolate;
 pub use interpolation::types::InterpolationType;
-pub use operations::{Arithmetic, AxisOperations, MergeAxisInterpolate, MergeOperation};
+pub use operations::{Arithmetic, AxisOperations, MergeAxisInterpolate, MergeOperation, GeometricTransformations};
 pub use utils::{GeometricObject, Len};
 pub use visualization::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
