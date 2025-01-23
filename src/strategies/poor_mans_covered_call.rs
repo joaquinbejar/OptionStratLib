@@ -1246,6 +1246,7 @@ mod tests_pmcc_graph {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests_pmcc_best_area {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
@@ -1254,7 +1255,6 @@ mod tests_pmcc_best_area {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    #[cfg(not(target_arch = "wasm32"))]
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
         let option_chain =
@@ -1285,7 +1285,6 @@ mod tests_pmcc_best_area {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
     fn test_best_area_all() {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::All);
@@ -1300,7 +1299,6 @@ mod tests_pmcc_best_area {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
     fn test_best_area_upper() {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Upper);
@@ -1313,7 +1311,6 @@ mod tests_pmcc_best_area {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
     fn test_best_area_lower() {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_area(&option_chain, FindOptimalSide::Lower);
@@ -1327,6 +1324,7 @@ mod tests_pmcc_best_area {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests_pmcc_best_ratio {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
@@ -1335,7 +1333,6 @@ mod tests_pmcc_best_ratio {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    #[cfg(not(target_arch = "wasm32"))]
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
         setup_logger();
         let option_chain =
@@ -1366,7 +1363,6 @@ mod tests_pmcc_best_ratio {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
     fn test_best_ratio_all() {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::All);
@@ -1379,7 +1375,6 @@ mod tests_pmcc_best_ratio {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
     fn test_best_ratio_upper() {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
@@ -1392,7 +1387,6 @@ mod tests_pmcc_best_ratio {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
     fn test_best_ratio_with_range() {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.best_ratio(

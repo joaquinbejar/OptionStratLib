@@ -1,18 +1,20 @@
-use approx::assert_relative_eq;
-use chrono::Utc;
-use num_traits::ToPrimitive;
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::strategies::base::{Optimizable, Strategies};
-use optionstratlib::strategies::custom::CustomStrategy;
-use optionstratlib::strategies::utils::FindOptimalSide;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::Options;
-use optionstratlib::{pos, Positive};
-use rust_decimal_macros::dec;
-use std::error::Error;
-use tracing::info;
+#[cfg(not(target_arch = "wasm32"))]
+use {
+    approx::assert_relative_eq,
+    chrono::Utc,
+    num_traits::ToPrimitive,
+    optionstratlib::chains::chain::OptionChain,
+    optionstratlib::model::Position,
+    optionstratlib::strategies::base::Optimizable,
+    optionstratlib::strategies::CustomStrategy,
+    optionstratlib::strategies::{FindOptimalSide, Strategies},
+    optionstratlib::utils::setup_logger,
+    optionstratlib::{pos, ExpirationDate, Positive},
+    optionstratlib::{OptionStyle, OptionType, Options, Side},
+    rust_decimal_macros::dec,
+    std::error::Error,
+    tracing::info,
+};
 
 #[test]
 #[ignore]

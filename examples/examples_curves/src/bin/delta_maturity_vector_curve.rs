@@ -1,6 +1,7 @@
-use optionstratlib::curves::construction::CurveConstructionMethod;
-use optionstratlib::curves::visualization::Plottable;
 use optionstratlib::curves::{Curve, Point2D};
+use optionstratlib::geometrics::{
+    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
+};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
@@ -31,64 +32,60 @@ fn main() -> Result<(), Box<dyn Error>> {
     let t_end = dec!(68.0);
     let steps = 100;
 
-    let one_month_curve = Curve::construct(CurveConstructionMethod::Parametric {
+    let params = &ConstructionParams::D2 {
+        t_start,
+        t_end,
+        steps,
+    };
+
+    let one_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(30.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start,
-        t_end,
-        steps,
+        params: params.clone(),
     })?;
 
-    let three_month_curve = Curve::construct(CurveConstructionMethod::Parametric {
+    let three_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(90.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start,
-        t_end,
-        steps,
+        params: params.clone(),
     })?;
 
-    let six_month_curve = Curve::construct(CurveConstructionMethod::Parametric {
+    let six_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(180.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start,
-        t_end,
-        steps,
+        params: params.clone(),
     })?;
 
-    let nine_month_curve = Curve::construct(CurveConstructionMethod::Parametric {
+    let nine_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(270.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start,
-        t_end,
-        steps,
+        params: params.clone(),
     })?;
 
-    let twelve_month_curve = Curve::construct(CurveConstructionMethod::Parametric {
+    let twelve_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(365.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),
-        t_start,
-        t_end,
-        steps,
+        params: params.clone(),
     })?;
 
     let vector_curve = vec![

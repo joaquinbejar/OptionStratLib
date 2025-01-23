@@ -1,199 +1,285 @@
-use std::collections::HashMap;
+/******************************************************************************
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 20/1/25
+******************************************************************************/
+use crate::curves::Point2D;
+use crate::error::SurfaceError;
+use crate::geometrics::HasX;
+use crate::model::positive::is_positive;
+use rust_decimal::prelude::*;
+use rust_decimal::Decimal;
+use std::cmp::Ordering;
 
-#[allow(dead_code)]
+/// Represents a point in three-dimensional space with `x`, `y` and `z` coordinates.
+///
+/// # Overview
+/// The `Point3D` struct defines a point in a 3D Cartesian coordinate system.
+/// All coordinates (`x`, `y`, and `z`) are stored as `Decimal` values to provide high precision,
+/// making it suitable for applications requiring accurate numerical calculations.
+///
+/// # Fields
+/// - **x**: The x-coordinate of the point, represented as a `Decimal`
+/// - **y**: The y-coordinate of the point, represented as a `Decimal`
+/// - **z**: The z-coordinate of the point, represented as a `Decimal`
 #[derive(Debug, Clone, Copy)]
-pub struct Point {
-    pub strike: f64,
-    pub maturity: f64,
-    pub value: f64,
+pub struct Point3D {
+    pub x: Decimal,
+    pub y: Decimal,
+    pub z: Decimal,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct Surface {
-    pub points: Vec<Point>,
-    pub strike_range: (f64, f64),
-    pub maturity_range: (f64, f64),
+impl PartialEq for Point3D {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
-pub enum InterpolationType {
-    Linear,
-    Bilinear,
-    Cubic,
-    Spline,
+impl Eq for Point3D {}
+
+impl PartialOrd for Point3D {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
-pub enum SurfaceConstructionMethod {
-    FromData,
-    Parametric,
+impl Ord for Point3D {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.x.cmp(&other.x) {
+            Ordering::Equal => match self.y.cmp(&other.y) {
+                Ordering::Equal => self.z.cmp(&other.z),
+                y_ordering => y_ordering,
+            },
+            x_ordering => x_ordering,
+        }
+    }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
-pub enum SurfaceType {
-    Volatility,
-    Price,
-    Delta,
-    Gamma,
-    // Other types as needed
-}
-
-#[allow(dead_code)]
-// Configuration for surface building
-pub struct SurfaceConfig {
-    pub surface_type: SurfaceType,
-    pub interpolation: InterpolationType,
-    pub construction_method: SurfaceConstructionMethod,
-    pub extra_params: HashMap<String, f64>,
-}
-
-#[allow(dead_code)]
-impl Surface {
-    pub fn new(points: Vec<Point>) -> Self {
-        let strike_range = Surface::calculate_range(points.iter().map(|p| p.strike));
-        let maturity_range = Surface::calculate_range(points.iter().map(|p| p.maturity));
-
-        Surface {
-            points,
-            strike_range,
-            maturity_range,
+impl Point3D {
+    /// Creates a new instance of `Point3D` using the specified coordinates.
+    ///
+    /// # Parameters
+    /// - `x`: The x-coordinate, which implements `Into<Decimal>`
+    /// - `y`: The y-coordinate, which implements `Into<Decimal>`
+    /// - `z`: The z-coordinate, which implements `Into<Decimal>`
+    pub fn new<T: Into<Decimal>, U: Into<Decimal>, V: Into<Decimal>>(x: T, y: U, z: V) -> Self {
+        Self {
+            x: x.into(),
+            y: y.into(),
+            z: z.into(),
         }
     }
 
-    fn calculate_range<I>(iter: I) -> (f64, f64)
-    where
-        I: Iterator<Item = f64>,
-    {
-        iter.fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), val| {
-            (min.min(val), max.max(val))
-        })
-    }
-
-    pub fn get_value(
+    /// Converts the Point3D to a tuple of three values.
+    ///
+    /// # Type Parameters
+    /// - `T`: Type for x-coordinate
+    /// - `U`: Type for y-coordinate
+    /// - `V`: Type for z-coordinate
+    pub fn to_tuple<
+        T: From<Decimal> + 'static,
+        U: From<Decimal> + 'static,
+        V: From<Decimal> + 'static,
+    >(
         &self,
-        _strike: f64,
-        _maturity: f64,
-        _interpolation: InterpolationType,
-    ) -> Option<f64> {
-        todo!(" Implement interpolation logic here");
-        // This would be a placeholder, the actual implementation would go in the interpolation modules
+    ) -> Result<(T, U, V), SurfaceError> {
+        if is_positive::<T>() && self.x <= Decimal::ZERO {
+            return Err(SurfaceError::Point3DError {
+                reason: "x must be positive for type T",
+            });
+        }
+
+        if is_positive::<U>() && self.y <= Decimal::ZERO {
+            return Err(SurfaceError::Point3DError {
+                reason: "y must be positive for type U",
+            });
+        }
+
+        if is_positive::<V>() && self.z <= Decimal::ZERO {
+            return Err(SurfaceError::Point3DError {
+                reason: "z must be positive for type V",
+            });
+        }
+
+        Ok((T::from(self.x), U::from(self.y), V::from(self.z)))
+    }
+
+    /// Creates a Point3D from a tuple of three values.
+    pub fn from_tuple<T: Into<Decimal>, U: Into<Decimal>, V: Into<Decimal>>(
+        x: T,
+        y: U,
+        z: V,
+    ) -> Result<Self, SurfaceError> {
+        Ok(Self::new(x, y, z))
+    }
+
+    /// Converts the Point3D to a tuple of f64 values.
+    pub fn to_f64_tuple(&self) -> Result<(f64, f64, f64), SurfaceError> {
+        let x = self.x.to_f64();
+        let y = self.y.to_f64();
+        let z = self.z.to_f64();
+
+        match (x, y, z) {
+            (Some(x), Some(y), Some(z)) => Ok((x, y, z)),
+            _ => Err(SurfaceError::Point3DError {
+                reason: "Error converting Decimal to f64",
+            }),
+        }
+    }
+
+    /// Creates a Point3D from a tuple of f64 values.
+    pub fn from_f64_tuple(x: f64, y: f64, z: f64) -> Result<Self, SurfaceError> {
+        let x = Decimal::from_f64(x);
+        let y = Decimal::from_f64(y);
+        let z = Decimal::from_f64(z);
+
+        match (x, y, z) {
+            (Some(x), Some(y), Some(z)) => Ok(Self::new(x, y, z)),
+            _ => Err(SurfaceError::Point3DError {
+                reason: "Error converting f64 to Decimal",
+            }),
+        }
+    }
+
+    pub fn point2d(&self) -> Box<Point2D> {
+        Box::new(Point2D::new(self.x, self.y))
     }
 }
 
-#[allow(dead_code)]
-pub struct SurfaceAnalysisResult {
-    pub mean: f64,
-    pub median: f64,
-    pub std_dev: f64,
-    pub skew: f64,
-    pub kurtosis: f64,
+impl From<&Point3D> for Point3D {
+    fn from(point: &Point3D) -> Self {
+        *point
+    }
 }
 
-#[allow(dead_code)]
-#[allow(clippy::enum_variant_names)]
-pub enum SurfaceError {
-    InterpolationError(String),
-    ConstructionError(String),
-    AnalysisError(String),
-    // Other types of errors as needed
+impl HasX for Point3D {
+    fn get_x(&self) -> Decimal {
+        self.x
+    }
+}
+
+/// Represents the three possible axes in a 3D space.
+///
+/// This enumeration is commonly used to define or manipulate directions
+/// or dimensions within a 3D coordinate system.
+///
+/// ## Variants
+/// - `X`: The axis representing the horizontal direction.
+/// - `Y`: The axis representing the vertical direction or elevation.
+/// - `Z`: The axis representing depth or the third dimension.
+pub enum Axis {
+    X,
+    Y,
+    Z,
 }
 
 #[cfg(test)]
-mod tests_surfaces {
+mod tests {
     use super::*;
+    use crate::pos;
+    use crate::surfaces::Surface;
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_point_creation() {
-        let point = Point {
-            strike: 100.0,
-            maturity: 1.0,
-            value: 0.2,
-        };
-        assert_eq!(point.strike, 100.0);
-        assert_eq!(point.maturity, 1.0);
-        assert_eq!(point.value, 0.2);
+    fn test_point3d_new() {
+        let point = Point3D::new(dec!(1.0), dec!(2.0), dec!(3.0));
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+        assert_eq!(point.z, dec!(3.0));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_surface_creation() {
-        let points = vec![
-            Point {
-                strike: 90.0,
-                maturity: 0.5,
-                value: 0.15,
-            },
-            Point {
-                strike: 100.0,
-                maturity: 1.0,
-                value: 0.2,
-            },
-            Point {
-                strike: 110.0,
-                maturity: 1.5,
-                value: 0.25,
-            },
-        ];
-        let surface = Surface::new(points);
-        assert_eq!(surface.points.len(), 3);
-        assert_eq!(surface.strike_range, (90.0, 110.0));
-        assert_eq!(surface.maturity_range, (0.5, 1.5));
+    fn test_point3d_to_tuple() {
+        let result = Point3D::from_f64_tuple(1.0, 2.0, 3.0);
+        assert!(result.is_ok());
+        let point = result.unwrap();
+        let result: Result<(Decimal, Decimal, Decimal), _> = point.to_tuple();
+        assert!(result.is_ok());
+        let (x, y, z) = result.unwrap();
+        assert_eq!(x, dec!(1.0));
+        assert_eq!(y, dec!(2.0));
+        assert_eq!(z, dec!(3.0));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_surface_range_calculation() {
-        let range = Surface::calculate_range(vec![1.0, 2.0, 3.0, 4.0, 5.0].into_iter());
-        assert_eq!(range, (1.0, 5.0));
+    fn test_point3d_from_tuple() {
+        let result = Point3D::from_tuple(dec!(1.0), pos!(2.0), pos!(3.0));
+        assert!(result.is_ok());
+        let point = result.unwrap();
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+        assert_eq!(point.z, dec!(3.0));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_surface_config() {
-        let mut extra_params = HashMap::new();
-        extra_params.insert("param1".to_string(), 1.0);
-        extra_params.insert("param2".to_string(), 2.0);
-
-        let config = SurfaceConfig {
-            surface_type: SurfaceType::Volatility,
-            interpolation: InterpolationType::Linear,
-            construction_method: SurfaceConstructionMethod::FromData,
-            extra_params,
-        };
-
-        assert_eq!(config.extra_params.len(), 2);
-        assert_eq!(config.extra_params.get("param1"), Some(&1.0));
+    fn test_point3d_to_f64_tuple() {
+        let result = Point3D::from_f64_tuple(1.0, 2.0, 3.0);
+        assert!(result.is_ok());
+        let point = result.unwrap();
+        let result = point.to_f64_tuple();
+        assert!(result.is_ok());
+        let (x, y, z) = result.unwrap();
+        assert_eq!(x, 1.0);
+        assert_eq!(y, 2.0);
+        assert_eq!(z, 3.0);
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_surface_analysis_result() {
-        let analysis = SurfaceAnalysisResult {
-            mean: 0.2,
-            median: 0.19,
-            std_dev: 0.05,
-            skew: 0.1,
-            kurtosis: 3.0,
-        };
-        assert_eq!(analysis.mean, 0.2);
-        assert_eq!(analysis.median, 0.19);
-        assert_eq!(analysis.std_dev, 0.05);
-        assert_eq!(analysis.skew, 0.1);
-        assert_eq!(analysis.kurtosis, 3.0);
+    fn test_point3d_from_f64_tuple() {
+        let result = Point3D::from_f64_tuple(1.0, 2.0, 3.0);
+        assert!(result.is_ok());
+        let point = result.unwrap();
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+        assert_eq!(point.z, dec!(3.0));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_surface_error() {
-        let error = SurfaceError::InterpolationError("Test error".to_string());
-        match error {
-            SurfaceError::InterpolationError(msg) => assert_eq!(msg, "Test error"),
+    fn test_point3d_ordering() {
+        let p1 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
+        let p2 = Point3D::from_f64_tuple(1.0, 2.0, 4.0).unwrap();
+        let p3 = Point3D::from_f64_tuple(1.0, 3.0, 1.0).unwrap();
+        let p4 = Point3D::from_f64_tuple(2.0, 1.0, 1.0).unwrap();
+
+        assert!(p1 < p2); // Same x,y, different z
+        assert!(p1 < p3); // Same x, different y
+        assert!(p1 < p4); // Different x
+    }
+
+    #[test]
+    fn test_surface_new() {
+        let points = BTreeSet::from_iter(vec![
+            Point3D::from_f64_tuple(0.0, 0.0, 0.0).unwrap(),
+            Point3D::from_f64_tuple(1.0, 1.0, 1.0).unwrap(),
+        ]);
+        let surface = Surface::new(points.clone());
+
+        assert_eq!(surface.points, points);
+    }
+
+    #[test]
+    fn test_error_handling_invalid_f64() {
+        let result = Point3D::from_f64_tuple(f64::INFINITY, 2.0, 3.0);
+        assert!(result.is_err());
+        match result {
+            Err(SurfaceError::Point3DError { reason }) => {
+                assert_eq!(reason, "Error converting f64 to Decimal");
+            }
             _ => panic!("Unexpected error type"),
         }
+    }
+
+    #[test]
+    fn test_equal() {
+        let p1 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
+        let p2 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
+        let p3 = Point3D::from_f64_tuple(1.0, 2.0, 4.0).unwrap();
+        let p4 = Point3D::from_f64_tuple(1.0, 3.0, 3.0).unwrap();
+        let p5 = Point3D::from_f64_tuple(2.0, 2.0, 3.0).unwrap();
+        assert_eq!(p1, p2);
+        assert_eq!(p1, p3);
+        assert_ne!(p1, p4);
+        assert_ne!(p1, p5);
     }
 }

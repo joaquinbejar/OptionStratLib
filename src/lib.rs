@@ -1,14 +1,11 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 1/8/24
-******************************************************************************/
+#![allow(unknown_lints)]
+#![allow(clippy::literal_string_with_formatting_args)]
 
 //!
-//!  <div style="text-align: center;">
-//!  <img src="https://raw.githubusercontent.com/joaquinbejar/OptionStratLib/refs/heads/main/doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 200px;">
-//!  </div>
-//!  
+//! <div style="text-align: center;">
+//! <img src="https://raw.githubusercontent.com/joaquinbejar/OptionStratLib/refs/heads/main/doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 200px;">
+//! </div>
+//!
 //!  [![Dual License](https://img.shields.io/badge/license-MIT%20and%20Apache%202.0-blue)](./LICENSE)
 //!  [![Crates.io](https://img.shields.io/crates/v/optionstratlib.svg)](https://crates.io/crates/optionstratlib)
 //!  [![Downloads](https://img.shields.io/crates/d/optionstratlib.svg)](https://crates.io/crates/optionstratlib)
@@ -22,7 +19,7 @@
 //!  [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
 //!  [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
 //!  
-//!  # OptionStratLib v0.3.3: Financial Options Library
+//!  # OptionStratLib v0.3.4: Financial Options Library
 //!  
 //!  ## Table of Contents
 //!  1. [Introduction](#introduction)
@@ -700,6 +697,7 @@ pub mod chains;
 pub mod constants;
 pub mod curves;
 pub mod error;
+pub mod geometrics;
 pub mod greeks;
 pub mod model;
 pub mod pnl;

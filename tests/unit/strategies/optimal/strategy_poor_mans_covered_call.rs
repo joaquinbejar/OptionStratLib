@@ -1,14 +1,15 @@
-use approx::assert_relative_eq;
-use num_traits::ToPrimitive;
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::strategies::base::{Optimizable, Strategies};
-use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-use optionstratlib::strategies::utils::FindOptimalSide;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::ExpirationDate;
-use optionstratlib::{pos, Positive};
-use rust_decimal_macros::dec;
-use std::error::Error;
+#[cfg(not(target_arch = "wasm32"))]
+use {
+    approx::assert_relative_eq,
+    num_traits::ToPrimitive,
+    optionstratlib::chains::chain::OptionChain,
+    optionstratlib::strategies::base::Optimizable,
+    optionstratlib::strategies::{FindOptimalSide, PoorMansCoveredCall, Strategies},
+    optionstratlib::utils::setup_logger,
+    optionstratlib::{pos, ExpirationDate, Positive},
+    rust_decimal_macros::dec,
+    std::error::Error,
+};
 
 #[test]
 #[cfg(not(target_arch = "wasm32"))]

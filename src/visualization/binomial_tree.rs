@@ -165,12 +165,13 @@ pub fn draw_binomial_tree(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests_draw_binomial_tree {
-    use super::*;
-    #[cfg(target_arch = "wasm32")]
-    use wasm_bindgen::JsCast;
-    #[cfg(target_arch = "wasm32")]
-    use web_sys::{window, HtmlCanvasElement};
+
+    use {
+        crate::visualization::binomial_tree::draw_binomial_tree,
+        crate::visualization::utils::GraphBackend,
+    };
 
     // Common test data setup
     fn setup_test_data() -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
@@ -181,8 +182,8 @@ mod tests_draw_binomial_tree {
 
     // Native-only test
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[cfg(not(target_arch = "wasm32"))]
+    // #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    // #[cfg(not(target_arch = "wasm32"))]
     fn test_draw_binomial_tree_bitmap() -> Result<(), Box<dyn std::error::Error>> {
         let (asset_tree, option_tree) = setup_test_data();
         let backend = GraphBackend::Bitmap {

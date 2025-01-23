@@ -47,9 +47,17 @@ fmt-check:
 lint:
 	cargo clippy --all-targets --all-features -- -D warnings
 
+.PHONY: lint-wasm
+lint-wasm:
+	cargo +nightly clippy --target wasm32-unknown-unknown --release --all-features -- -D warnings
+
 .PHONY: lint-fix
-lint-fix:
+lint-fix: 
 	cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged -- -D warnings
+
+.PHONY: lint-wasm-fix
+lint-wasm-fix:
+	cargo +nightly clippy --fix --target wasm32-unknown-unknown --release --all-features --allow-dirty --allow-staged -- -D warnings
 
 # Clean the project
 .PHONY: clean
@@ -75,6 +83,7 @@ pre-push: fix fmt lint-fix test readme
 .PHONY: doc
 doc:
 	cargo doc --open
+	cargo clippy -- -W missing-docs
 
 .PHONY: publish
 publish: readme coverage
@@ -96,6 +105,9 @@ coverage-html:
 	mkdir -p coverage
 	cargo tarpaulin --all-features --workspace --timeout 120 --out Html
 
+.PHONY: open-coverage
+open-coverage:
+	open tarpaulin-report.html
 
 # Rule to show git log
 git-log:

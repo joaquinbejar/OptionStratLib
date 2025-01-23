@@ -4,6 +4,7 @@
    Date: 25/12/24
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
+use crate::geometrics::HasX;
 use crate::Positive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -157,6 +158,12 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
         to_type: "Decimal".to_string(),
         reason: "Failed to convert f64 to Decimal".to_string(),
     })
+}
+
+impl HasX for Decimal {
+    fn get_x(&self) -> Decimal {
+        *self
+    }
 }
 
 #[macro_export]

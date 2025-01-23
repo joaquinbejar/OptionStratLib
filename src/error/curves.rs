@@ -5,7 +5,8 @@
 ******************************************************************************/
 
 use crate::error::common::OperationErrorKind;
-use crate::error::PositionError;
+use crate::error::metrics::MetricsError;
+use crate::error::{InterpolationError, PositionError};
 use std::error::Error;
 use std::fmt;
 
@@ -87,9 +88,9 @@ pub enum CurvesError {
     Point2DError { reason: &'static str },
     OperationError(OperationErrorKind),
     StdError { reason: String },
-    InterpolationError(String),
     ConstructionError(String),
     AnalysisError(String),
+    MetricsError(String),
 }
 
 /// Provides helper methods for constructing specific variants of the `CurvesError` type.
@@ -147,9 +148,9 @@ impl fmt::Display for CurvesError {
             CurvesError::OperationError(err) => write!(f, "Operation error: {}", err),
             CurvesError::StdError { reason } => write!(f, "Error: {}", reason),
             CurvesError::Point2DError { reason } => write!(f, "Error: {}", reason),
-            CurvesError::InterpolationError(reason) => write!(f, "Interpolation error: {}", reason),
             CurvesError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
             CurvesError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
+            CurvesError::MetricsError(reason) => write!(f, "Metrics error: {}", reason),
         }
     }
 }
@@ -201,6 +202,20 @@ impl From<PositionError> for CurvesError {
             operation: "Position".to_string(),
             reason: err.to_string(),
         })
+    }
+}
+
+impl From<InterpolationError> for CurvesError {
+    fn from(err: InterpolationError) -> Self {
+        CurvesError::StdError {
+            reason: err.to_string(),
+        }
+    }
+}
+
+impl From<MetricsError> for CurvesError {
+    fn from(err: MetricsError) -> Self {
+        CurvesError::MetricsError(err.to_string())
     }
 }
 
@@ -365,5 +380,30 @@ mod tests {
             reason: "test debug".to_string(),
         };
         assert!(format!("{:?}", error).contains("test debug"));
+    }
+}
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_curves_error_construction_error() {
+        let error =
+            CurvesError::ConstructionError("Invalid curve construction parameters".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Construction error: Invalid curve construction parameters"
+        );
+    }
+
+    #[test]
+    fn test_curves_error_analysis_error() {
+        let error =
+            CurvesError::AnalysisError("Analysis failed due to insufficient data".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Analysis error: Analysis failed due to insufficient data"
+        );
     }
 }

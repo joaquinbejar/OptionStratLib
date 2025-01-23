@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -75,6 +75,7 @@ members = [
     "examples/examples_chain",
     "examples/examples_volatility",
     "examples/examples_curves",
+    "examples/examples_surfaces",
 ]
 
 [workspace.dependencies]
@@ -96,7 +97,3 @@ wasm-bindgen-test = "0.3"
 chrono = { version = ">=0.4.39", features = ["wasmbind"] }
 wasm-bindgen-rayon = "1.3"
 
-# [features]
-# default = ["native"]
-# native = ["rayon", "csv", "tracing-subscriber"]
-# wasm = ["wasm-bindgen", "chrono/wasmbind", "web-sys"]

@@ -193,6 +193,20 @@ impl Positive {
     pub fn exp(&self) -> Positive {
         Positive(self.0.exp())
     }
+
+    pub fn clamp(&self, min: Positive, max: Positive) -> Positive {
+        if self < &min {
+            min
+        } else if self > &max {
+            max
+        } else {
+            *self
+        }
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.0.is_zero()
+    }
 }
 
 impl From<Positive> for u64 {

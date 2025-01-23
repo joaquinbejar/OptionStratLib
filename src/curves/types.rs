@@ -3,14 +3,13 @@
    Email: jb@taunais.com
    Date: 26/8/24
 ******************************************************************************/
-use crate::curves::construction::CurveConstructionMethod;
-use crate::curves::interpolation::InterpolationType;
 use crate::error::curves::CurvesError;
+use crate::geometrics::HasX;
 use crate::model::positive::is_positive;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 /// Represents a point in two-dimensional space with `x` and `y` coordinates.
 ///
@@ -45,10 +44,25 @@ use std::collections::HashMap;
 ///
 /// This structure enables high precision for x and y values, making it particularly
 /// well-suited for scientific applications and precise geometry.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Point2D {
     pub x: Decimal,
     pub y: Decimal,
+}
+
+impl PartialEq for Point2D {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x
+    }
+}
+
+impl Eq for Point2D {}
+
+impl Hash for Point2D {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.x.mantissa().hash(state);
+        self.x.scale().hash(state);
+    }
 }
 
 impl PartialOrd for Point2D {
@@ -182,136 +196,101 @@ impl Point2D {
     }
 }
 
-/// Enumeration representing various types of curves that can be analyzed, constructed,
-/// or manipulated in mathematical and financial applications.
-///
-/// # Overview
-/// The `CurveType` enum defines a comprehensive set of curve categories, providing clear
-/// differentiation between different types of curves used in computations. These curves
-/// are often employed in mathematical modeling, financial analysis, data interpolation,
-/// and visualization.
-///
-/// This enum supports extensibility and can be used in conjunction with traits like
-/// `CurveOperations` for defining curve-specific methodologies, such as creating,
-/// transforming, or analyzing individual curves.
-///
-/// # Variants
-/// - **Volatility**: Represents a curve modeling volatility in financial or statistical contexts.
-/// - **Delta**: Used to describe a curve of option sensitivity with respect to the underlying price.
-/// - **Gamma**: Refers to a curve showing the rate of change in Delta with respect to the underlying price.
-/// - **Theta**: Represents a curve of options time decay, defining how an option's price changes over time.
-/// - **Rho**: Represents the sensitivity of an option's price to changes in interest rate.
-/// - **RhoD**: A more refined variant of the Rho calculation.
-/// - **Vega**: Defines the sensitivity of an option's price with respect to volatility.
-/// - **Binomial**: Refers to curves derived from binomial option pricing models.
-/// - **BlackScholes**: Curves based on the Black-Scholes model used in option pricing.
-/// - **Telegraph**: Represents special-purpose curves, e.g., telegraph-like processes in modeling.
-/// - **Payoff**: Defines a curve showing the payoff structure of an option or derivative.
-/// - **IntrinsicValue**: Represents intrinsic value curves describing the actual value of an option.
-/// - **TimeValue**: Refers to the curve denoting the time value of an option beyond its intrinsic value.
-///
-/// # Usage
-/// This enumeration is typically employed in financial modeling or mathematical computations
-/// requiring different categories of curves. It is used extensively within various `CurveOperations`
-/// to categorize and generate specific types of curves and mathematical constructs.
-///
-/// # Examples
-/// This enum can be passed as an argument to methods like:
-/// - `generate_curve`
-/// - `analyze_curve`
-///
-/// # Derivable Traits
-/// - `Debug`: Enables formatted output of the enum variant for debugging purposes.
-/// - `Clone`: Allows duplication of a `CurveType` instance.
-/// - `Copy`: Simplifies the handling of enum values by allowing implicit copying.
-///
-/// # Integrations
-/// The `CurveType` enum is used heavily across modules within the `curves` package such
-/// as `analysis`, `construction`, and `visualization`. It provides type safety and ensures
-/// domain-specific clarity for curves utilized in:
-/// - Statistical analysis
-/// - Model generation
-/// - Graphical data rendering
-#[derive(Debug, Clone, Copy)]
-pub enum CurveType {
-    Volatility,
-    Delta,
-    Gamma,
-    Theta,
-    Rho,
-    RhoD,
-    Vega,
-    Binomial,
-    BlackScholes,
-    Telegraph,
-    Payoff,
-    IntrinsicValue,
-    TimeValue,
+impl From<&Point2D> for Point2D {
+    fn from(point: &Point2D) -> Self {
+        *point
+    }
 }
 
-/// Represents the configuration for constructing or analyzing a curve.
-/// The `CurveConfig` structure encapsulates the necessary details required
-/// to define the type of curve, the interpolation method, construction methodology,
-/// and additional parameters associated with the curve.
-///
-/// # Fields
-///
-/// - `curve_type: CurveType`
-///    Specifies the type of curve that the configuration applies to.
-///    Curve types such as `Volatility`, `Delta`, `Gamma`, etc., are defined
-///    in the `CurveType` enumeration. Different curve types are typically
-///    used in mathematical modeling, financial analysis, or other specialized areas.
-///
-/// - `interpolation: InterpolationType`  
-///    Defines the method of interpolation used for estimating values between
-///    discrete points on the curve. Supported interpolation methods include `Linear`,
-///    `Cubic`, `Spline`, and others, as specified in the `InterpolationType` enum.
-///
-/// - `construction_method: CurveConstructionMethod`  
-///    Specifies how the curve is constructed. This could be based on discrete
-///    data points (`FromData`) or parametrically (`Parametric`), as defined in
-///    the `CurveConstructionMethod` enum. For instance:
-///       - `FromData`: Build the curve from a collection of data points.
-///       - `Parametric`: Construct the curve using a parametric function,
-///         defining the curve behavior over a range of input values (t_start to t_end)
-///         and the number of intermediate steps in computation.
-///
-/// - `extra_params: HashMap<String, Decimal>`  
-///    Provides additional configuration parameters associated with the curve
-///    as a key-value mapping. This field is particularly useful for passing optional
-///    metadata or specialized model parameters required during analysis or construction.
-///
-/// # Example Use Cases
-/// This configuration structure can be used in multiple scenarios:
-///
-/// 1. **Curve Construction:**  
-///    A user can specify `curve_type` and `construction_method` to create a custom
-///    curve for financial modeling. The `extra_params` can include details such as
-///    scaling factors or normalization parameters.
-///
-/// 2. **Analysis or Simulation:**  
-///    When performing operations like interpolation, slicing, or analyzing
-///    statistics of a curve, the `CurveConfig` can store relevant input parameters
-///    (e.g. interpolation type and additional processing rules via `extra_params`).
-///
-/// 3. **Visualization:**  
-///    The configuration can also help define curves for rendering graphical data
-///    with specified interpolation styles, ensuring smoother and more realistic
-///    representations of the modeled scenario.
-///
-/// # Integrations
-/// This structure integrates with the following modules and traits:
-///
-/// - **Curves Module:** Used alongside `CurveType`, `CurveConstructionMethod`,
-///   and `InterpolationType` enums.
-/// - **CurveOperations Trait:** Provides operations such as interpolation,
-///   scaling, and slicing that can utilize instances of `CurveConfig`.
-/// - **Visualization Module:** Ensures flexibility in configuring graphs
-///   and curve representation when constructing plots of specific curve types.
-#[allow(dead_code)]
-pub struct CurveConfig {
-    pub curve_type: CurveType,
-    pub interpolation: InterpolationType,
-    pub construction_method: CurveConstructionMethod,
-    pub extra_params: HashMap<String, Decimal>,
+impl HasX for Point2D {
+    fn get_x(&self) -> Decimal {
+        self.x
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_is_positive_x_must_be_positive() {
+        let point = Point2D {
+            x: Decimal::ZERO,
+            y: dec!(1.0),
+        };
+
+        let result = if is_positive::<Decimal>() && point.x <= Decimal::ZERO {
+            Err(CurvesError::Point2DError {
+                reason: "x must be positive for type T",
+            })
+        } else {
+            Ok(())
+        };
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_is_positive_y_must_be_positive() {
+        let point = Point2D {
+            x: dec!(1.0),
+            y: Decimal::ZERO,
+        };
+
+        let result = if is_positive::<Decimal>() && point.y <= Decimal::ZERO {
+            Err(CurvesError::Point2DError {
+                reason: "y must be positive for type U",
+            })
+        } else {
+            Ok(())
+        };
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_to_f64_tuple_success() {
+        let point = Point2D {
+            x: dec!(1.0),
+            y: dec!(2.0),
+        };
+        let result = point.to_f64_tuple();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_from_f64_tuple_success() {
+        let result = Point2D::from_f64_tuple(1.0, 2.0);
+        assert!(result.is_ok());
+        let point = result.unwrap();
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+    }
+
+    #[test]
+    fn test_from_f64_tuple_error() {
+        let result = Point2D::from_f64_tuple(f64::INFINITY, 2.0);
+        assert!(result.is_err());
+        match result {
+            Err(CurvesError::Point2DError { reason }) => {
+                assert_eq!(reason, "Error converting f64 to Decimal");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
+    fn test_equal() {
+        let p1 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p2 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p3 = Point2D::from_f64_tuple(1.0, 3.0).unwrap();
+        let p4 = Point2D::from_f64_tuple(1.0, 4.0).unwrap();
+        let p5 = Point2D::from_f64_tuple(2.0, 2.0).unwrap();
+        assert_eq!(p1, p2);
+        assert_eq!(p1, p3);
+        assert_eq!(p1, p4);
+        assert_ne!(p1, p5);
+    }
 }

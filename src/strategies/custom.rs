@@ -213,7 +213,6 @@ impl CustomStrategy {
             let is_profit_below = self.calculate_profit_at(test_point)? > Decimal::ZERO;
 
             if is_profit_below {
-                // Si hay beneficio por debajo del break even
                 profit_zones.push(ProfitLossRange::new(
                     None,
                     Some(break_even),
@@ -225,7 +224,6 @@ impl CustomStrategy {
                     Positive::ZERO,
                 )?);
             } else {
-                // Si hay pérdida por debajo del break even
                 loss_zones.push(ProfitLossRange::new(
                     None,
                     Some(break_even),
@@ -985,7 +983,6 @@ mod tests_custom_strategy {
         assert_eq!(strategy.break_even_points.len(), 0);
     }
 
-    // En mod tests_custom_strategy
     #[test]
     fn test_new_with_empty_positions() {
         let result = std::panic::catch_unwind(|| {
@@ -1000,7 +997,7 @@ mod tests_custom_strategy {
                 pos!(1.0),
             )
         });
-        assert!(result.is_err()); // Debería paniquear por positions vacías
+        assert!(result.is_err());
     }
 
     #[test]
@@ -1011,7 +1008,7 @@ mod tests_custom_strategy {
             create_sample_option(
                 OptionStyle::Put,
                 Side::Short,
-                pos!(0.0), // precio inválido
+                pos!(0.0),
                 pos!(1.0),
                 pos!(100.0),
                 pos!(0.2),
@@ -1867,8 +1864,6 @@ mod tests_custom_strategy_probability {
         let strategy = create_test_strategy();
         let profit_ranges = strategy.get_profit_ranges().unwrap();
         let loss_ranges = strategy.get_loss_ranges().unwrap();
-
-        // Verificar que los rangos están ordenados correctamente
         for ranges in [profit_ranges, loss_ranges] {
             for i in 0..ranges.len().saturating_sub(1) {
                 if let (Some(upper), Some(lower)) =

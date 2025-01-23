@@ -4,13 +4,13 @@
    Date: 26/9/24
 ******************************************************************************/
 use crate::chains::utils::{
-    adjust_volatility, default_empty_string, generate_list_of_strikes, parse,
-    OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
+    adjust_volatility, default_empty_string, generate_list_of_strikes, OptionChainBuildParams,
+    OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
 };
 use crate::chains::{DeltasInStrike, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
-use crate::curves::interpolation::LinearInterpolation;
 use crate::curves::{Curve, Point2D};
 use crate::error::chains::ChainError;
+use crate::geometrics::LinearInterpolation;
 use crate::greeks::delta;
 use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
 use crate::pricing::black_scholes_model::black_scholes;
@@ -19,8 +19,6 @@ use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
-#[cfg(not(target_arch = "wasm32"))]
-use csv::WriterBuilder;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::{Deserialize, Serialize};
@@ -28,8 +26,9 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
-use std::fs::File;
 use tracing::debug;
+#[cfg(not(target_arch = "wasm32"))]
+use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
 /// Struct representing a row in an option chain.
 ///
@@ -52,6 +51,8 @@ pub struct OptionData {
     pub(crate) call_ask: Option<Positive>,
     pub(crate) put_bid: Option<Positive>,
     pub(crate) put_ask: Option<Positive>,
+    pub call_middle: Option<Positive>,
+    pub put_middle: Option<Positive>,
     pub(crate) implied_volatility: Option<Positive>,
     delta: Option<Decimal>,
     volume: Option<Positive>,
@@ -77,6 +78,8 @@ impl OptionData {
             call_ask,
             put_bid,
             put_ask,
+            call_middle: None,
+            put_middle: None,
             implied_volatility,
             delta,
             volume,
@@ -192,6 +195,8 @@ impl OptionData {
         self.put_bid = Some(black_scholes(&option)?.abs().into());
         option.side = Side::Long;
         self.put_ask = Some(black_scholes(&option)?.abs().into());
+
+        self.set_mid_prices();
         Ok(())
     }
 
@@ -235,6 +240,8 @@ impl OptionData {
                 self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread);
             }
         }
+
+        self.set_mid_prices();
     }
 
     pub fn calculate_delta(&mut self, price_params: &OptionDataPriceParams) {
@@ -274,6 +281,21 @@ impl OptionData {
             }
         }
     }
+
+    pub fn set_mid_prices(&mut self) {
+        self.call_middle = match (self.call_bid, self.call_ask) {
+            (Some(bid), Some(ask)) => Some((bid + ask) / pos!(2.0)),
+            _ => None,
+        };
+        self.put_middle = match (self.put_bid, self.put_ask) {
+            (Some(bid), Some(ask)) => Some((bid + ask) / pos!(2.0)),
+            _ => None,
+        };
+    }
+
+    pub fn get_mid_prices(&self) -> (Option<Positive>, Option<Positive>) {
+        (self.call_middle, self.put_middle)
+    }
 }
 
 impl Default for OptionData {
@@ -284,6 +306,8 @@ impl Default for OptionData {
             call_ask: None,
             put_bid: None,
             put_ask: None,
+            call_middle: None,
+            put_middle: None,
             implied_volatility: None,
             delta: None,
             volume: None,
@@ -310,12 +334,14 @@ impl fmt::Display for OptionData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<8} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<8} {:<10} {:<10}",
             self.strike_price.to_string(),
             default_empty_string(self.call_bid),
             default_empty_string(self.call_ask),
+            default_empty_string(self.call_middle),
             default_empty_string(self.put_bid),
             default_empty_string(self.put_ask),
+            default_empty_string(self.put_middle),
             self.implied_volatility.unwrap_or(Positive::ZERO),
             " ".to_string(),
             self.delta.unwrap_or(Decimal::ZERO),
@@ -407,7 +433,7 @@ impl OptionChain {
 
             option_chain.options.insert(option_data);
         }
-
+        debug!("Option chain: {}", option_chain);
         option_chain
     }
 
@@ -458,17 +484,20 @@ impl OptionChain {
         volume: Option<Positive>,
         open_interest: Option<u64>,
     ) {
-        let option_data = OptionData {
+        let mut option_data = OptionData {
             strike_price,
             call_bid,
             call_ask,
             put_bid,
             put_ask,
+            call_middle: None,
+            put_middle: None,
             implied_volatility,
             delta,
             volume,
             open_interest,
         };
+        option_data.set_mid_prices();
         self.options.insert(option_data);
     }
 
@@ -482,7 +511,7 @@ impl OptionChain {
     }
 
     pub fn set_from_title(&mut self, file: &str) {
-        let file_name = file.split('/').last().unwrap();
+        let file_name = file.split('/').next_back().unwrap();
         let file_name = file_name
             .rsplit_once('.')
             .map_or(file_name, |(name, _ext)| name);
@@ -550,17 +579,20 @@ impl OptionChain {
             let record = result?;
             debug!("To CSV: {:?}", record);
 
-            let option_data = OptionData {
+            let mut option_data = OptionData {
                 strike_price: record[0].parse()?,
                 call_bid: parse(&record[1]),
                 call_ask: parse(&record[2]),
                 put_bid: parse(&record[3]),
                 put_ask: parse(&record[4]),
+                call_middle: None,
+                put_middle: None,
                 implied_volatility: parse(&record[5]),
                 delta: parse(&record[6]),
                 volume: parse(&record[7]),
                 open_interest: parse(&record[8]),
             };
+            option_data.set_mid_prices();
             options.insert(option_data);
         }
 
@@ -1230,12 +1262,14 @@ impl fmt::Display for OptionChain {
         )?;
         writeln!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<13} {:<10} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<13} {:<10} {:<10} {:<10}",
             "Strike",
             "Call Bid",
             "Call Ask",
+            "Call Mid",
             "Put Bid",
             "Put Ask",
+            "Put Mid",
             "Implied Vol.",
             "Delta",
             "Volume",
@@ -1295,6 +1329,7 @@ mod tests_chain_base {
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
+    #[cfg(not(target_arch = "wasm32"))]
     use std::fs;
     use tracing::info;
 
