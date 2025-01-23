@@ -72,7 +72,6 @@ use std::ops::Index;
 ///
 /// # See Also
 /// - [`Point2D`]: The fundamental data type for representing points in 2D space.
-/// - [`crate::curves::traits::CurveOperations`]: The trait providing operations on curves.
 /// - [`MergeOperation`]: Enum for combining multiple curves.
 ///
 /// # Fields
