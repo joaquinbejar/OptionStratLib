@@ -1,3 +1,25 @@
+//! This module provides functionality for visualizing and plotting 3D surfaces.
+//! It leverages the `plotters` crate for rendering and offers a flexible API for
+//! customizing plot appearance and saving outputs.  It supports plotting single
+//! surfaces as well as collections of surfaces.
+//!
+//! # Key Features
+//!
+//! * **Surface Representation:** The `Surface` struct represents a 3D surface
+//!   defined by a collection of 3D points.
+//! * **Plotting:** The `Plottable` trait provides a common interface for generating plots.
+//!   It's implemented for both `Surface` and `Vec<Surface>`, allowing single or multiple
+//!   surfaces to be plotted easily.
+//! * **Customization:** The `PlotBuilder` struct allows extensive customization of the plot's
+//!   appearance, including titles, labels, dimensions, colors, and more.  It provides
+//!   a builder pattern for configuring the plot.
+//! * **Platform Compatibility:** Handles platform-specific differences for saving plots.
+//!    Provides a no-op implementation for WASM targets where direct file saving is not
+//!    supported.
+//! * **Shading:** Utility functions are included to apply shading to surface points,
+//!    enhancing 3D visualization.
+//! * **Error Handling:** Uses the `SurfaceError` type for robust error management.
+//!
 
 use crate::curves::{Curve, Point2D};
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
@@ -1012,13 +1034,13 @@ impl GeometricTransformations<Point3D> for Surface {
 
         Ok(intersections)
     }
-    
+
     fn derivative_at(&self, point: &Point3D) -> Result<Vec<Decimal>, Self::Error> {
         // Handle surfaces with insufficient points
         if self.points.len() < 2 {
             return Err(SurfaceError::invalid_parameters(
                 "derivative_at",
-                "Surface needs at least 2 points for derivative calculation"
+                "Surface needs at least 2 points for derivative calculation",
             ));
         }
 
@@ -1030,27 +1052,29 @@ impl GeometricTransformations<Point3D> for Surface {
             if self[0] == self[1] {
                 return Err(SurfaceError::invalid_parameters(
                     "derivative_at",
-                    "Points are identical, cannot calculate derivatives"
+                    "Points are identical, cannot calculate derivatives",
                 ));
             }
 
             // Calculate derivatives using the first two points
-            let dx = if (self[1].x - self[0].x) == Decimal::ZERO { 
-                Decimal::MAX 
-            } else { 
-                (self[1].z - self[0].z) / (self[1].x - self[0].x) 
+            let dx = if (self[1].x - self[0].x) == Decimal::ZERO {
+                Decimal::MAX
+            } else {
+                (self[1].z - self[0].z) / (self[1].x - self[0].x)
             };
-            
-            let dy = if (self[1].y - self[0].y) == Decimal::ZERO { 
-                Decimal::MAX 
-            } else { 
-                (self[1].z - self[0].z) / (self[1].y - self[0].y) 
+
+            let dy = if (self[1].y - self[0].y) == Decimal::ZERO {
+                Decimal::MAX
+            } else {
+                (self[1].z - self[0].z) / (self[1].y - self[0].y)
             };
-            
+
             return Ok(vec![dx, dy]);
         }
-        
-        if !(self.x_range.0..=self.x_range.1).contains(&point.x) || !(self.y_range.0..=self.y_range.1).contains(&point.y) {
+
+        if !(self.x_range.0..=self.x_range.1).contains(&point.x)
+            || !(self.y_range.0..=self.y_range.1).contains(&point.y)
+        {
             return Err(SurfaceError::invalid_parameters(
                 "derivative_at",
                 "Point is outside the surface's range",
@@ -1060,27 +1084,37 @@ impl GeometricTransformations<Point3D> for Surface {
         // For more complex surfaces, find nearby points
         let tolerance = dec!(0.5);
 
-        let x_points: BTreeSet<Point3D> = self.get_points()
+        let x_points: BTreeSet<Point3D> = self
+            .get_points()
             .into_iter()
             .filter(|p| (p.x - point.x).abs() < tolerance)
             .cloned()
             .collect();
 
-        let y_points: BTreeSet<Point3D> = self.get_points()
+        let y_points: BTreeSet<Point3D> = self
+            .get_points()
             .into_iter()
             .filter(|p| (p.y - point.y).abs() < tolerance)
             .cloned()
             .collect();
 
         // If not enough nearby points, use the entire surface
-        let x_candidates = if x_points.len() < 2 { &self.points } else { &x_points };
-        let y_candidates = if y_points.len() < 2 { &self.points } else { &y_points };
+        let x_candidates = if x_points.len() < 2 {
+            &self.points
+        } else {
+            &x_points
+        };
+        let y_candidates = if y_points.len() < 2 {
+            &self.points
+        } else {
+            &y_points
+        };
 
         // Ensure we have at least 2 points
         if x_candidates.len() < 2 || y_candidates.len() < 2 {
             return Err(SurfaceError::invalid_parameters(
                 "derivative_at",
-                "Could not find suitable points for derivative calculation"
+                "Could not find suitable points for derivative calculation",
             ));
         }
 
@@ -2707,7 +2741,7 @@ mod tests_surface_geometric_transformations {
             let result = surface
                 .scale(vec![&dec!(2.0), &dec!(3.0), &dec!(4.0)])
                 .unwrap();
-            
+
             assert_eq!(result[0].x, dec!(0.0));
             assert_eq!(result[0].y, dec!(0.0));
             assert_eq!(result[0].z, dec!(0.0));

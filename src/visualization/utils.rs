@@ -1,4 +1,3 @@
-
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
@@ -241,7 +240,6 @@ pub(crate) fn calculate_axis_range(
     (max_x_value, min_x_value, max_y_value, min_y_value)
 }
 
-
 /// Draws chart points and their associated labels on a chart context.
 ///
 /// This function is responsible for rendering a list of chart points onto a given
@@ -330,9 +328,9 @@ where
 ///
 /// - `DB`: The type representing the drawing backend, which must implement the `DrawingBackend`
 ///   trait. This defines how the chart elements are rendered (e.g., as an image, on a canvas, etc.).
-/// - `X`: The type representing the x-axis of the chart. It must implement the `Ranged` trait 
+/// - `X`: The type representing the x-axis of the chart. It must implement the `Ranged` trait
 ///   to support scaling and interpolation.
-/// - `Y`: The type representing the y-axis of the chart. Similar to `X`, it must implement 
+/// - `Y`: The type representing the y-axis of the chart. Similar to `X`, it must implement
 ///   the `Ranged` trait for compatibility.
 ///
 /// # Function Parameters

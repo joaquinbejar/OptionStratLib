@@ -5,11 +5,13 @@ pub trait GeometricTransformations<Point> {
 
     // Translation in any dimension
     fn translate(&self, deltas: Vec<&Decimal>) -> Result<Self, Self::Error>
-    where Self: Sized;
+    where
+        Self: Sized;
 
     // Scaling in any dimension
     fn scale(&self, factors: Vec<&Decimal>) -> Result<Self, Self::Error>
-    where Self: Sized;
+    where
+        Self: Sized;
 
     // Find intersections with another geometric object
     fn intersect_with(&self, other: &Self) -> Result<Vec<Point>, Self::Error>;
