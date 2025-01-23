@@ -3,11 +3,10 @@
    Email: jb@taunais.com
    Date: 23/1/25
 ******************************************************************************/
-use crate::curves::Point2D;
-use crate::geometrics::{InterpolationType, MergeOperation};
+use crate::geometrics::InterpolationType;
 use itertools::Itertools;
 use rust_decimal::Decimal;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::hash::Hash;
 
 /// Trait for handling axis-based operations on geometric structures.
@@ -138,10 +137,10 @@ where
 #[cfg(test)]
 mod tests_merge_indexes {
     use super::*;
-    use crate::curves::create_linear_curve;
+    use crate::curves::{create_linear_curve, Point2D};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-    use std::collections::{BTreeSet, HashSet};
+    use std::collections::BTreeSet;
 
     // Mock struct for testing
     struct TestCurve {
@@ -178,8 +177,8 @@ mod tests_merge_indexes {
                 .ok_or_else(|| "No points available".to_string())
         }
 
-        fn get_point(&self, x: &Decimal) -> Option<&Point2D> {
-            todo!()
+        fn get_point(&self, _x: &Decimal) -> Option<&Point2D> {
+            unimplemented!("Not implemented for testing")
         }
     }
 
@@ -214,8 +213,8 @@ mod tests_merge_indexes {
         assert_eq!(merged_indexes.len(), 4);
         let x1 = dec!(2.0);
         let x2 = dec!(5.0);
-        assert!(merged_indexes.contains(&&x1));
-        assert!(merged_indexes.contains(&&x2));
+        assert!(merged_indexes.contains(&x1));
+        assert!(merged_indexes.contains(&x2));
     }
 
     #[test]

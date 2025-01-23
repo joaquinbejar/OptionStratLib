@@ -18,7 +18,7 @@ use crate::geometrics::MergeOperation;
 ///
 /// ### Returns
 /// - `Result<Input, Self::Error>`: Returns the resulting merged curve if successful,
-/// or an error of type `Self::Error` if the merge process fails.
+///   or an error of type `Self::Error` if the merge process fails.
 ///
 /// ## `merge_with`
 /// Merges the current curve with another curve based on a specified `MergeOperation`.
@@ -29,7 +29,7 @@ use crate::geometrics::MergeOperation;
 ///
 /// ### Returns
 /// - `Result<Input, Self::Error>`: Returns the resulting merged curve if successful,
-/// or an error of type `Self::Error` if the merge process fails.
+///   or an error of type `Self::Error` if the merge process fails.
 ///
 /// # Usage Example
 /// ```rust
@@ -63,8 +63,8 @@ use crate::geometrics::MergeOperation;
 ///
 /// # Notes
 /// - This trait is designed to be implemented for specific curve types which define how 
-/// the merging will occur. The associated error type should capture and communicate 
-/// any issues encountered during operations.
+///   the merging will occur. The associated error type should capture and communicate 
+///   any issues encountered during operations.
 pub trait Arithmetic<Input> {
     type Error;
 

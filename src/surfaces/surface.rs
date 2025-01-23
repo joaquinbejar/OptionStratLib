@@ -458,8 +458,8 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
             std::collections::HashMap::new();
 
         for &point in &sorted_points {
-            x_groups.entry(point.x).or_insert_with(Vec::new).push(point);
-            y_groups.entry(point.y).or_insert_with(Vec::new).push(point);
+            x_groups.entry(point.x).or_default().push(point);
+            y_groups.entry(point.y).or_default().push(point);
         }
 
         // Prepare data for interpolation
@@ -1248,7 +1248,7 @@ mod tests_surface_geometric_object {
 mod tests_surface_linear_interpolation {
     use super::*;
     use rust_decimal_macros::dec;
-    use crate::utils::{setup_logger, setup_logger_with_level};
+
 
     fn create_test_surface() -> Surface {
         let points = BTreeSet::from_iter(vec![
@@ -1300,7 +1300,6 @@ mod tests_surface_linear_interpolation {
 
     #[test]
     fn test_degenerate_triangle() {
-        setup_logger_with_level("debug");
         let points = BTreeSet::from_iter(vec![
             Point3D::new(dec!(1.0), dec!(1.0), dec!(0.0)),
             Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
@@ -2202,7 +2201,7 @@ mod tests_trend_metrics {
         assert_decimal_eq!(metrics.r_squared, dec!(1.0), dec!(0.001));
 
         // Check moving average points
-        assert!(metrics.moving_average.len() > 0);
+        assert!(metrics.moving_average.is_empty());
         assert_eq!(metrics.moving_average.len(), 4); 
     }
 
@@ -2219,7 +2218,7 @@ mod tests_trend_metrics {
         assert!(metrics.intercept != dec!(0.0));
 
         // Moving average points should exist
-        assert!(metrics.moving_average.len() > 0);
+        assert!(metrics.moving_average.is_empty());
     }
 
     #[test]
@@ -2311,8 +2310,8 @@ mod tests_axis_operations {
         let surface = create_test_surface();
         let indexes = surface.get_index_values();
         assert_eq!(indexes.len(), 4);
-        assert!(indexes.contains(&&Point2D::new(dec!(0.0), dec!(0.0))));
-        assert!(indexes.contains(&&Point2D::new(dec!(1.0), dec!(1.0))));
+        assert!(indexes.contains(&Point2D::new(dec!(0.0), dec!(0.0))));
+        assert!(indexes.contains(&Point2D::new(dec!(1.0), dec!(1.0))));
     }
 
     #[test]

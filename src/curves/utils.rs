@@ -186,12 +186,12 @@ pub fn detect_peaks_and_valleys(points: &BTreeSet<Point2D>) -> (Vec<Point2D>, Ve
 
         // Peak: y value is higher than its immediate neighbors
         if current.y > prev.y && current.y > next.y {
-            peaks.push(current.clone());
+            peaks.push(*current);
         }
 
         // Valley: y value is lower than its immediate neighbors
         if current.y < prev.y && current.y < next.y {
-            valleys.push(current.clone());
+            valleys.push(*current);
         }
     }
 

@@ -10,7 +10,6 @@ use crate::model::positive::is_positive;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
 
 /// Represents a point in three-dimensional space with `x`, `y` and `z` coordinates.
 ///
@@ -23,7 +22,7 @@ use std::collections::BTreeSet;
 /// - **x**: The x-coordinate of the point, represented as a `Decimal`
 /// - **y**: The y-coordinate of the point, represented as a `Decimal`
 /// - **z**: The z-coordinate of the point, represented as a `Decimal`
-#[derive(Debug, Clone, Copy, Hash)]
+#[derive(Debug, Clone, Copy)]
 pub struct Point3D {
     pub x: Decimal,
     pub y: Decimal,
@@ -159,7 +158,6 @@ impl HasX for Point3D {
     }
 }
 
-#[derive(Debug, Clone)]
 pub enum SurfaceInterpolationType {
     /// Linear interpolation between points
     Linear,
@@ -190,6 +188,7 @@ pub enum Axis {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
     use super::*;
     use crate::pos;
     use crate::surfaces::Surface;

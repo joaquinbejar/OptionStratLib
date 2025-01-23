@@ -1481,13 +1481,13 @@ where Self: Sized
 
         for x in &sorted_x_values {
             if self.contains_point(x) {
-                interpolated_self_points.insert(self.get_point(x).unwrap().clone());
+                interpolated_self_points.insert(*self.get_point(x).unwrap());
             } else {
                 let interpolated_point = self.interpolate(*x, interpolation)?;
                 interpolated_self_points.insert(interpolated_point);
             } 
             if other.contains_point(x) {
-                interpolated_other_points.insert(other.get_point(x).unwrap().clone());
+                interpolated_other_points.insert(*other.get_point(x).unwrap());
             } else {
                 let interpolated_point = other.interpolate(*x, interpolation)?;
                 interpolated_other_points.insert(interpolated_point);
