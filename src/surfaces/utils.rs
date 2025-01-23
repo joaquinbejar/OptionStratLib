@@ -33,6 +33,7 @@ use rust_decimal::Decimal;
 /// - Creates a 10x10 grid of points by default
 /// - Points are evenly spaced in both x and y directions
 /// - Z-coordinate is calculated using the plane equation
+#[allow(dead_code)]
 pub fn create_planar_surface(
     x_start: Decimal,
     x_end: Decimal,
@@ -82,6 +83,7 @@ pub fn create_planar_surface(
 /// - Creates a 10x10 grid of points by default
 /// - Points are evenly spaced in both x and y directions
 /// - All points have the same z-coordinate equal to height
+#[allow(dead_code)]
 pub fn create_constant_surface(
     x_start: Decimal,
     x_end: Decimal,
@@ -130,6 +132,7 @@ pub fn create_constant_surface(
 /// - Creates a 10x10 grid of points by default
 /// - Points are evenly spaced in both x and y directions
 /// - Z-coordinate is calculated using the paraboloid equation
+#[allow(dead_code)]
 pub fn create_paraboloid_surface(
     x_start: Decimal,
     x_end: Decimal,

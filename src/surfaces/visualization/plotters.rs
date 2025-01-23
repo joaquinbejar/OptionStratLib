@@ -1,6 +1,53 @@
+//! This module provides functionality for plotting surfaces using the `plotters` crate.
+//! It supports plotting single surfaces as well as collections of surfaces.
+//!
+//! The core of this module revolves around the `Plottable` trait, which is implemented for both
+//! `Surface` and `Vec<Surface>`. This trait provides a common interface for generating plots
+//! with customizable options.
+//!
+//! The `PlotBuilder` struct is used to configure and build the plots. It offers various methods
+//! to customize plot appearance, such as setting titles, labels, dimensions, and colors.
+//!
+//! The `save` method is used to save the generated plot to a file.  It handles platform-specific
+//! differences, providing a no-op implementation for WASM targets where direct file saving
+//! is not supported.
+//!
+//! The module also includes a set of utility functions for applying shading to points on a surface,
+//! aiding in the visualization of 3D surfaces.  Error handling is managed using the `SurfaceError` type.
+//!
+//! # Example Usage
+//!
+//! ```
+//! # use rust_decimal_macros::dec;
+//! use optionstratlib::geometrics::{GeometricObject, Plottable};
+//! use optionstratlib::surfaces::{Point3D, Surface};
+//!
+//! # let p1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
+//! # let p2 = Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0));
+//! # let p3 = Point3D::new(dec!(2.0), dec!(4.0), dec!(4.0));
+//! # let points = vec![&p1, &p2, &p3];
+//! # let surface = Surface::from_vector(points);
+//!
+//! // Create a surface
+//! // let surface = /* Your surface creation logic here */;
+//!
+//! // Plot the surface and save to a file
+//! surface.plot()
+//!     .title("My Surface Plot")
+//!     .x_label("X Axis")
+//!     .y_label("Y Axis")
+//!     .z_label("Z Axis") // Example of z-axis label
+//!     .save("surface_plot.png")
+//!     .expect("Failed to save plot");
+//!
+//!
+//! ```
+//!
+
 use crate::error::SurfaceError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
 use crate::surfaces::Surface;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::visualization::utils::apply_shade;
 #[cfg(not(target_arch = "wasm32"))]
 use plotters::prelude::*;

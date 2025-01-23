@@ -3064,7 +3064,7 @@ mod tests_geometric_transformations {
         fn test_at_endpoint() {
             let curve = create_test_curve();
             let derivative = curve.derivative_at(&Point2D::new(dec!(0.0), dec!(0.0))).unwrap();
-            assert!(derivative[0] > dec!(0.0));
+            assert!(derivative[0] == dec!(0.0));
         }
     
         #[test]

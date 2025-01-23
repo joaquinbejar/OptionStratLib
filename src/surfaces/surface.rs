@@ -1,8 +1,4 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 20/1/25
-******************************************************************************/
+
 use crate::curves::{Curve, Point2D};
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
 use crate::geometrics::{
@@ -13,6 +9,7 @@ use crate::geometrics::{
 };
 use crate::surfaces::types::Axis;
 use crate::surfaces::Point3D;
+#[cfg(not(target_arch = "wasm32"))]
 use num_traits::ToPrimitive;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
@@ -110,6 +107,7 @@ impl Surface {
         Ok(interpolated_z)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
         self.points
             .iter()
