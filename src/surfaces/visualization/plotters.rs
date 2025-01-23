@@ -18,7 +18,8 @@
 //! # Example Usage
 //!
 //! ```
-//! # use rust_decimal_macros::dec;
+//! # use std::fs;
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::geometrics::{GeometricObject, Plottable};
 //! use optionstratlib::surfaces::{Point3D, Surface};
 //!
@@ -39,8 +40,7 @@
 //!     .z_label("Z Axis") // Example of z-axis label
 //!     .save("surface_plot.png")
 //!     .expect("Failed to save plot");
-//!
-//!
+//!  fs::remove_file("surface_plot.png").unwrap_or_else(|_| panic!("Failed to remove surface_plot.png"));
 //! ```
 //!
 
