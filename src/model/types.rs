@@ -1,7 +1,7 @@
 use crate::constants::{DAYS_IN_A_YEAR, ZERO};
 use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use crate::{pos, Positive};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use std::error::Error;
 
@@ -39,14 +39,55 @@ impl ExpirationDate {
         Ok(date.format("%Y-%m-%d").to_string())
     }
 
+
     pub fn from_string(s: &str) -> Result<Self, Box<dyn Error>> {
+        // First try parsing as Positive (days)
         if let Ok(days) = s.parse::<Positive>() {
-            Ok(ExpirationDate::Days(days))
-        } else if let Ok(datetime) = DateTime::parse_from_rfc3339(s) {
-            Ok(ExpirationDate::DateTime(DateTime::from(datetime)))
-        } else {
-            Err("Failed to parse ExpirationDate from string".into())
+            return Ok(ExpirationDate::Days(days));
         }
+
+        // Try parsing as RFC3339
+        if let Ok(datetime) = DateTime::parse_from_rfc3339(s) {
+            return Ok(ExpirationDate::DateTime(DateTime::from(datetime)));
+        }
+
+        // Try numeric date formats first
+        if s.len() == 8 && s.chars().all(|c| c.is_ascii_digit()) {
+            // Format: YYYYMMDD
+            let year = s[0..4].parse::<i32>()?;
+            let month = s[4..6].parse::<u32>()?;
+            let day = s[6..8].parse::<u32>()?;
+
+            if let Some(naive_datetime) = NaiveDate::from_ymd_opt(year, month, day)
+                .and_then(|date| date.and_hms_opt(23, 59, 59))
+            {
+                let datetime = DateTime::<Utc>::from_naive_utc_and_offset(naive_datetime, Utc);
+                return Ok(ExpirationDate::DateTime(datetime));
+            }
+        }
+
+        // Try parsing common date formats
+        let formats = [
+            "%d-%m-%Y",     // "01-01-2025"
+            "%d %b %Y",     // "30 jan 2025"
+            "%d-%b-%Y",     // "30-jan-2025"
+            "%d %B %Y",     // "30 january 2025"
+            "%d-%B-%Y",     // "30-january-2025"
+        ];
+
+        for format in formats {
+            if let Ok(naive_date) = NaiveDate::parse_from_str(s.to_lowercase().as_str(), format) {
+                // Convert NaiveDate to DateTime<Utc> by setting time to end of day
+                let naive_datetime = naive_date.and_hms_opt(23, 59, 59)
+                    .ok_or_else(|| format!("Invalid time conversion for date: {s}"))?;
+
+                let datetime = DateTime::<Utc>::from_naive_utc_and_offset(naive_datetime, Utc);
+                return Ok(ExpirationDate::DateTime(datetime));
+            }
+        }
+
+        // If none of the above worked, return error
+        Err(format!("Failed to parse ExpirationDate from string: {s}").into())
     }
 }
 
@@ -929,6 +970,34 @@ mod test_expiration_date {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_string_valid_datetime() {
         let result = ExpirationDate::from_string("2024-12-31T00:00:00Z");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_from_string_format_one() {
+        let result = ExpirationDate::from_string("30 jan 2025");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_from_string_format_two() {
+        let result = ExpirationDate::from_string("30-jan-2025");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_from_string_format_three() {
+        let result = ExpirationDate::from_string("20250101");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn four() {
+        let result = ExpirationDate::from_string("30-01-2025");
         assert!(result.is_ok());
     }
 
