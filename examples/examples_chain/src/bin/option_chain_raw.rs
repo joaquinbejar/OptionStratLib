@@ -40,7 +40,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     );
 
     strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(21600.0), pos!(21700.0) ));
-    // strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Strategy:  {:#?}", strategy);
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
