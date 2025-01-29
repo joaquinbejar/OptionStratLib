@@ -9,7 +9,7 @@ use optionstratlib::utils::setup_logger;
 use tracing::{debug, info};
 use optionstratlib::{pos, ExpirationDate, Positive};
 use optionstratlib::greeks::Greeks;
-use optionstratlib::strategies::{FindOptimalSide, ShortStrangle, Strategies};
+use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
 use optionstratlib::strategies::base::Optimizable;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
 
@@ -65,12 +65,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     );
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
 
+    info!("Delta:  {:#?}", strategy.calculate_net_delta());
+    info!("Delta Neutral:  {}", strategy.is_delta_neutral());
+    info!(
+        "Delta Suggestions:  {:#?}",
+        strategy.suggest_delta_adjustments()
+    );
+
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             &price_range,
             GraphBackend::Bitmap {
-                file_path: "Draws/Chains/short_strangle_chain_raw_best_area.png",
+                file_path: "Draws/Chains/short_strangle_chain_raw_delta.png",
                 size: (1400, 933),
             },
             20,

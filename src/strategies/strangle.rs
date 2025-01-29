@@ -601,6 +601,14 @@ impl DeltaNeutrality for ShortStrangle {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.short_put.option.delta().unwrap();
+        println!("Delta: {}", delta);
+        if delta == Decimal::ZERO {
+            return vec![DeltaAdjustment::SellOptions {
+                quantity: self.short_put.option.quantity,
+                strike: self.short_put.option.strike_price,
+                option_type: OptionStyle::Put,
+            }];
+        }
         let qty = Positive((net_delta.abs() / delta).abs());
 
         vec![DeltaAdjustment::SellOptions {
