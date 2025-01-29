@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 23/10/24
 ******************************************************************************/
+use chrono::{Duration, Local};
 use crate::constants::*;
 
 /// Represents different timeframes for volatility calculations
@@ -42,6 +43,12 @@ impl TimeFrame {
             TimeFrame::Custom(periods) => *periods,          // Custom periods per year
         }
     }
+}
+
+
+pub fn get_tomorrow_formatted() -> String {
+    let tomorrow = Local::now().date_naive() + Duration::days(1);
+    tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
 #[cfg(test)]
