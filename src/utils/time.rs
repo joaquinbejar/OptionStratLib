@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 23/10/24
 ******************************************************************************/
-use chrono::{Duration, Local};
 use crate::constants::*;
+use chrono::{Duration, Local};
 
 /// Represents different timeframes for volatility calculations
 #[derive(Debug, Clone, Copy)]
@@ -44,7 +44,6 @@ impl TimeFrame {
         }
     }
 }
-
 
 pub fn get_tomorrow_formatted() -> String {
     let tomorrow = Local::now().date_naive() + Duration::days(1);

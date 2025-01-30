@@ -1,23 +1,24 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 29/1/25
- ******************************************************************************/
-use rust_decimal::Decimal;
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::utils::setup_logger;
-use tracing::{debug, info};
-use optionstratlib::{pos, Positive};
-use optionstratlib::ExpirationDate;
-use optionstratlib::greeks::Greeks;
-use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
-use optionstratlib::strategies::base::Optimizable;
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 29/1/25
+******************************************************************************/
 use chrono::DateTime;
+use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::greeks::Greeks;
+use optionstratlib::strategies::base::Optimizable;
+use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
+use optionstratlib::utils::setup_logger;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
+use optionstratlib::ExpirationDate;
+use optionstratlib::{pos, Positive};
+use rust_decimal::Decimal;
+use tracing::{debug, info};
 
-fn main() -> Result<(), Box<dyn std::error::Error>>{
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    let mut option_chain = OptionChain::load_from_json("examples/Chains/DAX-30-jan-2025-21637.0.json")?;
+    let mut option_chain =
+        OptionChain::load_from_json("examples/Chains/DAX-30-jan-2025-21637.0.json")?;
     info!("Chain loaded");
     option_chain.update_deltas();
     println!("{}", &option_chain);
@@ -27,19 +28,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     let mut strategy = ShortStrangle::new(
         "SP500".to_string(),
         option_chain.underlying_price, // underlying_price
-        Positive::ZERO,   // call_strike
-        Positive::ZERO,   // put_strike
+        Positive::ZERO,                // call_strike
+        Positive::ZERO,                // put_strike
         ExpirationDate::DateTime(DateTime::from(datetime)),
-        Positive::ONE, // implied_volatility
+        Positive::ONE,  // implied_volatility
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(1.0),      // quantity
         Positive::ZERO, // premium_short_call
         Positive::ZERO, // premium_short_put
-        pos!(2.2),     // open_fee_short_call
-        pos!(2.2),     // close_fee_short_call
-        pos!(1.7),     // open_fee_short_put
-        pos!(1.7),     // close_fee_short_put
+        pos!(2.2),      // open_fee_short_call
+        pos!(2.2),      // close_fee_short_call
+        pos!(1.7),      // open_fee_short_put
+        pos!(1.7),      // close_fee_short_put
     );
 
     // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(21600.0), pos!(21700.0) ));
@@ -69,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     );
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
     info!("Delta:  {:#?}", strategy.calculate_net_delta());
-    
+
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
@@ -82,6 +83,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         )?;
     }
     info!("Greeks:  {:#?}", strategy.greeks());
-    
+
     Ok(())
 }

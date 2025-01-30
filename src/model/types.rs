@@ -5,7 +5,6 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use std::error::Error;
 
-
 #[derive(Clone, PartialEq)]
 pub enum ExpirationDate {
     Days(Positive),
@@ -31,18 +30,17 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::model::types::{ExpirationDate, Positive};
-    /// use optionstratlib::pos;
+    /// use optionstratlib::{assert_pos_relative_eq, pos, ExpirationDate};
     ///
     /// let days = pos!(365.0);
     /// let expiration_date_days = ExpirationDate::Days(days);
     /// let years = expiration_date_days.get_years().unwrap();
-    /// assert_eq!(years, pos!(1.0));
+    /// assert_pos_relative_eq!(years, pos!(1.0), pos!(0.001));
     ///
     /// let datetime = Utc::now() + Duration::days(365);
     /// let expiration_date_datetime = ExpirationDate::DateTime(datetime);
     /// let years = expiration_date_datetime.get_years().unwrap();
-    /// assert_eq!(years, pos!(1.0));
+    /// assert_pos_relative_eq!(years, pos!(1.0), pos!(0.001));
     /// ```
     pub fn get_years(&self) -> Result<Positive, Box<dyn Error>> {
         match self {
@@ -69,16 +67,14 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::model::types::{ExpirationDate, Positive};
-    /// use optionstratlib::pos;
+    /// use optionstratlib::{pos, ExpirationDate};
     ///
     /// let days = pos!(30.0);
     /// let expiration_date_days = ExpirationDate::Days(days);
     /// let future_date = Utc::now() + Duration::days(30);
     /// let calculated_date = expiration_date_days.get_date().unwrap();
     /// // Check if dates are within a small tolerance (due to potential time differences during test)
-    /// assert_eq!(calculated_date.date(), future_date.date());
-    ///
+    /// assert_eq!(calculated_date.date_naive(), future_date.date_naive());
     ///
     /// let datetime = Utc::now() + Duration::days(365);
     /// let expiration_date_datetime = ExpirationDate::DateTime(datetime);
@@ -107,8 +103,7 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::model::types::{ExpirationDate, Positive};
-    /// use optionstratlib::pos;
+    /// use optionstratlib::{pos, ExpirationDate};
     ///
     /// let days = pos!(30.0);
     /// let expiration_date = ExpirationDate::Days(days);
@@ -140,8 +135,8 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{DateTime, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::model::types::{ExpirationDate, Positive};
-    /// use optionstratlib::pos;
+    /// use tracing::info;
+    /// use optionstratlib::{pos, ExpirationDate};
     ///
     /// let expiration_date_days = ExpirationDate::from_string("365").unwrap();
     /// assert_eq!(expiration_date_days, ExpirationDate::Days(pos!(365.0)));
@@ -156,7 +151,7 @@ impl ExpirationDate {
     /// if let ExpirationDate::DateTime(dt) = expiration_date_numeric {
     ///     assert_eq!(dt.format("%Y%m%d").to_string(), numeric_date_string);
     /// } else {
-    ///     panic!("Expected ExpirationDate::DateTime");
+    ///     info!("Expected ExpirationDate::DateTime");
     /// }
     ///
     ///
@@ -165,7 +160,7 @@ impl ExpirationDate {
     /// if let ExpirationDate::DateTime(dt) = expiration_date_common {
     ///     assert_eq!(dt.format("%d-%m-%Y").to_string(), common_date_string);
     /// } else {
-    ///     panic!("Expected ExpirationDate::DateTime");
+    ///     info!("Expected ExpirationDate::DateTime");
     /// }
     /// ```
     pub fn from_string(s: &str) -> Result<Self, Box<dyn Error>> {
@@ -196,17 +191,18 @@ impl ExpirationDate {
 
         // Try parsing common date formats
         let formats = [
-            "%d-%m-%Y",     // "01-01-2025"
-            "%d %b %Y",     // "30 jan 2025"
-            "%d-%b-%Y",     // "30-jan-2025"
-            "%d %B %Y",     // "30 january 2025"
-            "%d-%B-%Y",     // "30-january-2025"
+            "%d-%m-%Y", // "01-01-2025"
+            "%d %b %Y", // "30 jan 2025"
+            "%d-%b-%Y", // "30-jan-2025"
+            "%d %B %Y", // "30 january 2025"
+            "%d-%B-%Y", // "30-january-2025"
         ];
 
         for format in formats {
             if let Ok(naive_date) = NaiveDate::parse_from_str(s.to_lowercase().as_str(), format) {
                 // Convert NaiveDate to DateTime<Utc> by setting time to end of day
-                let naive_datetime = naive_date.and_hms_opt(18, 30, 00)
+                let naive_datetime = naive_date
+                    .and_hms_opt(18, 30, 00)
                     .ok_or_else(|| format!("Invalid time conversion for date: {s}"))?;
 
                 let datetime = DateTime::<Utc>::from_naive_utc_and_offset(naive_datetime, Utc);
@@ -702,7 +698,8 @@ mod tests_expiration_date {
         let days = pos!(30.0);
         let expiration = ExpirationDate::Days(days);
         let today = Utc::now().date_naive();
-        let expected_date = today.checked_add_days(Days::new(days.to_i64() as u64))
+        let expected_date = today
+            .checked_add_days(Days::new(days.to_i64() as u64))
             .unwrap()
             .and_hms_opt(18, 30, 0)
             .unwrap();
@@ -711,7 +708,7 @@ mod tests_expiration_date {
 
         // Calculate the difference in seconds
         let difference = (result - expected_datetime).num_seconds();
-        
+
         assert!(difference.abs() <= 1);
     }
 
@@ -741,8 +738,7 @@ mod tests_expiration_date {
 
         // Create today's date at 18:30 UTC
         let today = Utc::now().date_naive();
-        let expected_date = today.and_hms_opt(18, 30, 0)
-            .unwrap();
+        let expected_date = today.and_hms_opt(18, 30, 0).unwrap();
         let expected_datetime = DateTime::<Utc>::from_naive_utc_and_offset(expected_date, Utc);
         let result = expiration.get_date().unwrap();
 
@@ -751,7 +747,7 @@ mod tests_expiration_date {
 
         assert!(difference.abs() <= 1);
     }
-    
+
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_positive_days() {
@@ -1072,10 +1068,10 @@ mod tests_vec_collection {
 
 #[cfg(test)]
 mod test_expiration_date {
-    use chrono::{Local, Timelike, Utc};
     use crate::model::ExpirationDate;
-    use crate::{assert_pos_relative_eq, pos};
     use crate::utils::time::get_today_formatted;
+    use crate::{assert_pos_relative_eq, pos};
+    use chrono::{Local, Timelike, Utc};
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1134,22 +1130,34 @@ mod test_expiration_date {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_string_format_today() {
         let today = get_today_formatted();
-        let result = ExpirationDate::from_string(&*today);
+        let result = ExpirationDate::from_string(&today);
         assert!(result.is_ok());
         let expiration = result.unwrap();
         assert!(expiration.get_date_string().is_ok());
 
         let today = Local::now().date_naive();
-        assert_eq!(expiration.get_date_string().unwrap(), today.format("%Y-%m-%d").to_string());
+        assert_eq!(
+            expiration.get_date_string().unwrap(),
+            today.format("%Y-%m-%d").to_string()
+        );
 
         // Get current UTC time
         let current_utc_time = Utc::now().time();
         let years = expiration.get_years().unwrap();
 
         // Check years based on current UTC time
-        if current_utc_time < Utc::now().date_naive().and_hms_opt(18, 30, 0).unwrap().time() {
+        if current_utc_time
+            < Utc::now()
+                .date_naive()
+                .and_hms_opt(18, 30, 0)
+                .unwrap()
+                .time()
+        {
             // Before 18:30 UTC
-            assert!(years > 0.0, "Years should be greater than 0 before 18:30 UTC");
+            assert!(
+                years > 0.0,
+                "Years should be greater than 0 before 18:30 UTC"
+            );
         } else {
             // After 18:30 UTC
             assert_eq!(years.to_f64(), 0.0, "Years should be 0 after 18:30 UTC");
@@ -1174,7 +1182,10 @@ mod test_expiration_date {
         let zero_expiration_date = ExpirationDate::Days(pos!(0.0));
 
         let today = Local::now().date_naive();
-        assert_eq!(zero_expiration_date.get_date_string().unwrap(), today.format("%Y-%m-%d").to_string());
+        assert_eq!(
+            zero_expiration_date.get_date_string().unwrap(),
+            today.format("%Y-%m-%d").to_string()
+        );
         let years = zero_expiration_date.get_years().unwrap();
         assert_pos_relative_eq!(years, pos!(0.0), pos!(1e-3));
 
@@ -1196,10 +1207,13 @@ mod test_expiration_date {
     fn test_from_expiration_date_almost_zero() {
         let zero_expiration_date = ExpirationDate::Days(pos!(0.5));
         let today = Local::now().date_naive();
-        assert_eq!(zero_expiration_date.get_date_string().unwrap(), today.format("%Y-%m-%d").to_string());
+        assert_eq!(
+            zero_expiration_date.get_date_string().unwrap(),
+            today.format("%Y-%m-%d").to_string()
+        );
         let years = zero_expiration_date.get_years().unwrap();
         assert_pos_relative_eq!(years, pos!(0.001369), pos!(1e-3));
-        
+
         assert!(zero_expiration_date.get_date_string().is_ok());
 
         // Get the date

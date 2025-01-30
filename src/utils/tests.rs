@@ -1,14 +1,18 @@
 #[macro_export]
 macro_rules! assert_pos_relative_eq {
     ($left:expr, $right:expr, $epsilon:expr) => {{
-        let left: crate::Positive = $left;
-        let right: crate::Positive = $right;
-        let epsilon: crate::Positive = $epsilon;
-        let abs_diff: crate::Positive = (left.to_f64() - right.to_f64()).abs().into();
+        let left: $crate::Positive = $left;
+        let right: $crate::Positive = $right;
+        let epsilon: $crate::Positive = $epsilon;
+        let abs_diff: $crate::Positive = (left.to_f64() - right.to_f64()).abs().into();
         let max_abs = left.max(right);
 
-        if left == crate::Positive::ZERO || right == crate::Positive::ZERO {
-            let non_zero_value = if left == crate::Positive::ZERO { right } else { left };
+        if left == $crate::Positive::ZERO || right == $crate::Positive::ZERO {
+            let non_zero_value = if left == $crate::Positive::ZERO {
+                right
+            } else {
+                left
+            };
             assert!(
                 non_zero_value <= epsilon,
                 "assertion failed: `(left == right)` \
