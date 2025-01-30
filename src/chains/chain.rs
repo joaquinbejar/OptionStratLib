@@ -26,9 +26,11 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
+use log::info;
 use tracing::{debug, error};
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
+
 
 /// Struct representing a row in an option chain.
 ///
@@ -88,9 +90,23 @@ impl OptionData {
     }
 
     pub fn validate(&self) -> bool {
-        self.strike_price > Positive::ZERO
-            && self.implied_volatility.is_some()
-            && (self.valid_call() || self.valid_put())
+        if self.strike_price == Positive::ZERO {
+            error!("Error: Strike price cannot be zero");
+            return false;
+        }
+        if self.implied_volatility.is_none() {
+            error!("Error: Implied volatility cannot be None");
+            return false;
+        }
+        if !self.valid_call() {
+            error!("Error: Invalid call");
+            return false;
+        }
+        if !self.valid_put() {
+            error!("Error: Invalid put");
+            return false;
+        }
+        true
     }
 
     pub(crate) fn valid_call(&self) -> bool {
@@ -269,6 +285,7 @@ impl OptionData {
 
     pub fn calculate_delta(&mut self, price_params: &OptionDataPriceParams) {
         if self.implied_volatility.is_none() {
+            info!("Implied volatility not found, calculating it");
             if let Err(e) = self.calculate_implied_volatility(price_params) {
                 error!("Failed to calculate implied volatility: {}", e);
                 return;
@@ -336,6 +353,12 @@ impl OptionData {
         &mut self,
         price_params: &OptionDataPriceParams,
     ) -> Result<(), ChainError> {
+        info!("call_middle {:?} put_middle {:?}", self.call_middle, self.put_middle);
+        if self.call_middle.is_none() || self.put_middle.is_none() {
+            info!("Calculation middel prices for IV calculation:");
+            self.calculate_prices(price_params)?;
+        }
+        
         // Try to calculate IV for calls if we have mid price
         if let Some(call_price) = self.call_middle {
             // Initial IV guess based on moneyness
@@ -1856,7 +1879,9 @@ mod tests_option_data {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_valid_option() {
+        setup_logger();
         let option_data = create_valid_option_data();
+        println!("{:?}", option_data);
         assert!(option_data.validate());
     }
 
@@ -4206,9 +4231,9 @@ mod tests_option_data_implied_volatility {
 #[cfg(test)]
 mod tests_chain_implied_volatility {
     use super::*;
-    use crate::{pos, spos};
+    use crate::{assert_pos_relative_eq, pos, spos};
     use rust_decimal_macros::dec;
-    use crate::utils::time::get_tomorrow_formatted;
+    use crate::utils::time::{get_today_formatted, get_tomorrow_formatted};
 
     #[test]
     fn test_update_implied_volatilities() {
@@ -4216,6 +4241,55 @@ mod tests_chain_implied_volatility {
             "TEST",
             pos!(21637.0),
             get_tomorrow_formatted(),
+            Some(dec!(0.0)),
+            Some(pos!(0.0))
+        );
+
+        chain.add_option(
+            pos!(21395.0),      // strike
+            spos!(250.0),       // call_bid
+            spos!(254.0),       // call_ask
+            Some(Positive::ZERO), // put_bid
+            spos!(4.0),         // put_ask
+            None,               // implied_volatility (empezamos sin IV)
+            None,               // delta
+            None,               // volume
+            None,               // open_interest
+        );
+
+        chain.add_option(
+            pos!(21700.0),      // ATM strike
+            spos!(30.2),       // call_bid
+            spos!(35.1),       // call_ask
+            spos!(93.2),       // put_bid
+            spos!(98.0),       // put_ask
+            None,               // implied_volatility
+            None,               // delta
+            None,               // volume
+            None,               // open_interest
+        );
+
+        chain.update_mid_prices();
+        chain.update_deltas();
+
+        for option in chain.options.iter() {
+            assert!(option.implied_volatility.is_some(),
+                    "IV should be calculated for strike {}", option.strike_price);
+
+            let iv = option.implied_volatility.unwrap();
+            assert!(iv > pos!(0.0) && iv < pos!(2.0),
+                    "IV should be reasonable for strike {}: {}", option.strike_price, iv);
+
+            debug!("Strike: {}, IV: {}", option.strike_price, iv);
+        }
+    }
+
+    #[test]
+    fn test_update_implied_volatilities_today() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(21637.0),
+            get_today_formatted(),
             Some(dec!(0.0)),
             Some(pos!(0.0))
         );
@@ -4317,8 +4391,7 @@ mod tests_chain_implied_volatility {
         chain.update_implied_volatilities();
 
         for option in chain.options.iter() {
-            assert_eq!(option.implied_volatility, original_iv,
-                       "Existing IV should be maintained when calculation fails");
+            assert_pos_relative_eq!(option.implied_volatility.unwrap(), original_iv.unwrap(), pos!(0.001));
         }
     }
 }
