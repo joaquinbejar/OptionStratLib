@@ -1108,6 +1108,23 @@ pub mod tests_delta_equations {
         info!("Long-term Low Vol Put Delta: {}", delta_value);
         assert_decimal_eq!(delta_value, dec!(-0.2882625996), DELTA_THRESHOLD);
     }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_delta_long_almost_zero_time_to_maturity() {
+        let mut option = create_sample_option(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(21637.0),
+            pos!(1.0),
+            pos!(21825.0),
+            pos!(0.219),
+        );
+        option.expiration_date = ExpirationDate::Days(pos!(1.0));
+        let delta_value = delta(&option).unwrap();
+        info!("Long-term Low Vol Put Delta: {}", delta_value);
+        assert_decimal_eq!(delta_value, dec!(-0.230544), DELTA_THRESHOLD);
+    }
 }
 
 #[cfg(test)]

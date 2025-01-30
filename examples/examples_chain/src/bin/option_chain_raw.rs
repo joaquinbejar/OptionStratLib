@@ -10,7 +10,7 @@ use tracing::{debug, info};
 use optionstratlib::{pos, Positive};
 use optionstratlib::ExpirationDate;
 use optionstratlib::greeks::Greeks;
-use optionstratlib::strategies::{FindOptimalSide, ShortStrangle, Strategies};
+use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
 use optionstratlib::strategies::base::Optimizable;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use chrono::DateTime;
@@ -68,7 +68,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         (range / 2.0) / option_chain.underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
-
+    info!("Delta:  {:#?}", strategy.calculate_net_delta());
+    
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
