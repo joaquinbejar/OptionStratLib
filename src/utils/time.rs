@@ -51,6 +51,11 @@ pub fn get_tomorrow_formatted() -> String {
     tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
+pub fn get_today_formatted() -> String {
+    let today = Local::now().date_naive();
+    today.format("%d-%b-%Y").to_string().to_lowercase()
+}
+
 #[cfg(test)]
 mod tests_timeframe {
     use super::*;
