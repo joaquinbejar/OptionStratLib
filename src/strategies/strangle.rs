@@ -14,7 +14,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::PositionError;
+use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::GreeksError;
@@ -173,6 +173,88 @@ impl Positionable for ShortStrangle {
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.short_call, &self.short_put])
+    }
+
+    /// Gets mutable positions matching the specified criteria from the strategy.
+    ///
+    /// # Arguments
+    /// * `option_style` - The style of the option (Put/Call)
+    /// * `side` - The side of the position (Long/Short)
+    /// * `strike` - The strike price of the option
+    ///
+    /// # Returns
+    /// * `Ok(Vec<&mut Position>)` - A vector containing mutable references to matching positions
+    /// * `Err(PositionError)` - If there was an error retrieving positions
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        match (side, option_style, strike) {
+            (Side::Long, _, _) => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Position side is Long, it is not valid for ShortStrangle".to_string(),
+            )),
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call])
+            }
+            (Side::Short, OptionStyle::Put, strike)
+                if *strike == self.short_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_put])
+            }
+            _ => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Strike not found in positions".to_string(),
+            )),
+        }
+    }
+
+    /// Modifies an existing position in the strategy.
+    ///
+    /// # Arguments
+    /// * `position` - The new position data to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if position was successfully modified
+    /// * `Err(PositionError)` if position was not found or validation failed
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        if position.option.side == Side::Long {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Position side is Long, it is not valid for ShortStrangle".to_string(),
+            ));
+        }
+
+        if position.option.strike_price != self.short_call.option.strike_price
+            && position.option.strike_price != self.short_put.option.strike_price
+        {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Strike not found in positions".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call {
+            self.short_call = position.clone();
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            self.short_put = position.clone();
+        }
+
+        Ok(())
     }
 }
 
@@ -616,6 +698,28 @@ impl DeltaNeutrality for ShortStrangle {
             strike: self.short_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
+    }
+
+    fn adjust_option_position(
+        &mut self,
+        quantity: Positive,
+        strike: &Positive,
+        option_type: &OptionStyle,
+        side: &Side,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut binding = self.get_position(option_type, side, strike)?;
+        if let Some(current_position) = binding.first_mut() {
+            let mut updated_position = (*current_position).clone();
+            updated_position.option.quantity += quantity;
+            self.modify_position(&updated_position)?;
+        } else {
+            return Err(Box::new(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Position not found".to_string(),
+                },
+            )));
+        }
+        Ok(())
     }
 }
 

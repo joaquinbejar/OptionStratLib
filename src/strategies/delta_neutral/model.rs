@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 10/12/24
 ******************************************************************************/
-
 /// # Delta Neutrality Management Module
 ///
 /// This module provides tools and structures to manage and maintain delta neutrality
@@ -42,10 +41,13 @@
 /// based on the delta exposure of the strategy.
 use crate::greeks::Greeks;
 use crate::model::types::OptionStyle;
-use crate::Positive;
+use crate::strategies::base::Positionable;
+use crate::{Positive, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::error::Error;
 use std::fmt;
+use tracing::info;
 
 pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 
@@ -126,7 +128,7 @@ impl fmt::Display for DeltaInfo {
 /// * `generate_delta_reducing_adjustments`: Produces adjustments required to reduce a positive delta.
 /// * `generate_delta_increasing_adjustments`: Produces adjustments required to increase a negative delta.
 /// * `get_atm_strike`: Retrieves the ATM (At-The-Money) strike price closest to the current underlying asset price.
-pub trait DeltaNeutrality: Greeks {
+pub trait DeltaNeutrality: Greeks + Positionable {
     /// Calculates the net delta of the strategy and provides detailed information.
     ///
     /// # Returns
@@ -240,6 +242,89 @@ pub trait DeltaNeutrality: Greeks {
             },
         ]
     }
+
+    fn apply_delta_adjustments(
+        &mut self,
+        side: Option<Side>,
+        option_style: Option<OptionStyle>,
+    ) -> Result<(), Box<dyn Error>> {
+        let delta_info = self.calculate_net_delta();
+        if delta_info.is_neutral {
+            return Ok(());
+        }
+
+        for adjustment in self.suggest_delta_adjustments() {
+            match adjustment {
+                DeltaAdjustment::BuyUnderlying(quantity) => {
+                    if side.is_none() || side == Some(Side::Long) {
+                        self.adjust_underlying_position(quantity, Side::Long)?;
+                    }
+                }
+                DeltaAdjustment::SellUnderlying(quantity) => {
+                    if side.is_none() || side == Some(Side::Short) {
+                        self.adjust_underlying_position(quantity, Side::Short)?;
+                    }
+                }
+                DeltaAdjustment::BuyOptions {
+                    quantity,
+                    strike,
+                    option_type,
+                } => {
+                    if (side.is_none() || side == Some(Side::Long))
+                        && (option_style.is_none() || option_style == Some(option_type.clone()))
+                    {
+                        self.adjust_option_position(quantity, &strike, &option_type, &Side::Long)?;
+                    }
+                }
+                DeltaAdjustment::SellOptions {
+                    quantity,
+                    strike,
+                    option_type,
+                } => {
+                    if (side.is_none() || side == Some(Side::Short))
+                        && (option_style.is_none() || option_style == Some(option_type.clone()))
+                    {
+                        self.adjust_option_position(quantity, &strike, &option_type, &Side::Short)?;
+                    }
+                }
+                DeltaAdjustment::NoAdjustmentNeeded => {
+                    return Ok(());
+                }
+            }
+        }
+
+        // Log skipped adjustments if filters were applied
+        if side.is_some() || option_style.is_some() {
+            info!(
+                "Applied delta adjustments with filters - Side: {:?}, OptionStyle: {:?}",
+                side, option_style
+            );
+        }
+
+        Ok(())
+    }
+
+    fn adjust_underlying_position(
+        &mut self,
+        _quantity: Positive,
+        _side: Side,
+    ) -> Result<(), Box<dyn Error>> {
+        // Implementation for adjusting underlying position
+        // This would typically modify the quantity of the underlying asset
+        unimplemented!("Implement underlying position adjustment")
+    }
+
+    fn adjust_option_position(
+        &mut self,
+        _quantity: Positive,
+        _strike: &Positive,
+        _option_type: &OptionStyle,
+        _side: &Side,
+    ) -> Result<(), Box<dyn Error>> {
+        // Implementation for adjusting option position
+        // This would typically create or modify option positions
+        unimplemented!("Implement option position adjustment")
+    }
 }
 
 #[cfg(test)]
@@ -276,6 +361,8 @@ mod tests {
             })
         }
     }
+
+    impl Positionable for MockStrategy {}
 
     // Implement DeltaNeutrality trait for MockStrategy
     impl DeltaNeutrality for MockStrategy {

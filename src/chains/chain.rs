@@ -628,14 +628,14 @@ impl OptionChain {
         )
     }
 
-    pub fn set_from_title(&mut self, file: &str) {
+    pub fn set_from_title(&mut self, file: &str) -> Result<(), Box<dyn Error>> {
         let file_name = file.split('/').next_back().unwrap();
         let file_name = file_name
             .rsplit_once('.')
             .map_or(file_name, |(name, _ext)| name);
         let parts: Vec<&str> = file_name.split('-').collect();
         if parts.len() != 5 {
-            panic!("Invalid file name format: expected exactly 5 parts (symbol, day, month, year, price)");
+            return Err("Invalid file name format: expected exactly 5 parts (symbol, day, month, year, price)".to_string().into());
         }
 
         self.symbol = parts[0].to_string();
@@ -643,7 +643,10 @@ impl OptionChain {
         let underlying_price_str = parts[4].replace(",", ".");
 
         match underlying_price_str.parse::<f64>() {
-            Ok(price) => self.underlying_price = pos!(price),
+            Ok(price) => {
+                self.underlying_price = pos!(price);
+                Ok(())
+            }
             Err(_) => panic!("Invalid underlying price format in file name"),
         }
     }
@@ -771,7 +774,14 @@ impl OptionChain {
             risk_free_rate: None,
             dividend_yield: None,
         };
-        option_chain.set_from_title(file_path);
+        match option_chain.set_from_title(file_path) {
+            Ok(_) => {
+                // TODO: find other way to set symbol, underlying_price and expiration_date
+            }
+            Err(e) => {
+                debug!("Failed to set title from file name: {}", e);
+            }
+        }
         Ok(option_chain)
     }
 
@@ -779,7 +789,6 @@ impl OptionChain {
     pub fn load_from_json(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
-        option_chain.set_from_title(file_path);
         option_chain.update_mid_prices();
         Ok(option_chain)
     }
@@ -1664,7 +1673,7 @@ mod tests_chain_base {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_set_from_title_i() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
-        chain.set_from_title("SP500-18-oct-2024-5781.88.csv");
+        let _ = chain.set_from_title("SP500-18-oct-2024-5781.88.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.88);
@@ -1674,7 +1683,7 @@ mod tests_chain_base {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_set_from_title_ii() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
-        chain.set_from_title("path/SP500-18-oct-2024-5781.88.csv");
+        let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.88.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.88);
@@ -1684,7 +1693,7 @@ mod tests_chain_base {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_set_from_title_iii() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
-        chain.set_from_title("path/SP500-18-oct-2024-5781.csv");
+        let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.csv");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.0);
@@ -1694,7 +1703,7 @@ mod tests_chain_base {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_set_from_title_iv() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
-        chain.set_from_title("path/SP500-18-oct-2024-5781.88.json");
+        let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.88.json");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.88);
@@ -1704,7 +1713,7 @@ mod tests_chain_base {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_set_from_title_v() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
-        chain.set_from_title("path/SP500-18-oct-2024-5781.json");
+        let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.json");
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.0);

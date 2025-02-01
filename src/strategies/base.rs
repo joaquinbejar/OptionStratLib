@@ -12,7 +12,7 @@ use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
 use crate::error::OperationErrorKind;
 use crate::model::position::Position;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::{Positive, Side};
+use crate::{OptionStyle, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
 use std::f64;
@@ -410,6 +410,19 @@ pub trait Positionable {
             std::any::type_name::<Self>(),
             "get_positions",
         ))
+    }
+
+    fn get_position(
+        &mut self,
+        _option_style: &OptionStyle,
+        _side: &Side,
+        _strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        unimplemented!("Modify position is not implemented for this strategy")
+    }
+
+    fn modify_position(&mut self, _position: &Position) -> Result<(), PositionError> {
+        unimplemented!("Modify position is not implemented for this strategy")
     }
 }
 
