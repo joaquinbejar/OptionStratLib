@@ -20,7 +20,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::PositionError;
+use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::GreeksError;
@@ -59,8 +59,8 @@ pub struct LongButterflySpread {
     pub kind: StrategyType,
     pub description: String,
     pub break_even_points: Vec<Positive>,
+    short_call: Position,
     long_call_low: Position,
-    short_calls: Position,
     long_call_high: Position,
 }
 
@@ -93,7 +93,7 @@ impl LongButterflySpread {
             description: LONG_BUTTERFLY_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             long_call_low: Position::default(),
-            short_calls: Position::default(),
+            short_call: Position::default(),
             long_call_high: Position::default(),
         };
 
@@ -112,7 +112,7 @@ impl LongButterflySpread {
             dividend_yield,
             None,
         );
-        strategy.short_calls = Position::new(
+        strategy.short_call = Position::new(
             short_calls,
             premium_middle,
             Utc::now(),
@@ -199,7 +199,7 @@ impl Validable for LongButterflySpread {
             debug!("Long call (low strike) is invalid");
             return false;
         }
-        if !self.short_calls.validate() {
+        if !self.short_call.validate() {
             debug!("Short calls (middle strike) are invalid");
             return false;
         }
@@ -208,16 +208,16 @@ impl Validable for LongButterflySpread {
             return false;
         }
 
-        if self.long_call_low.option.strike_price >= self.short_calls.option.strike_price {
+        if self.long_call_low.option.strike_price >= self.short_call.option.strike_price {
             debug!("Low strike must be lower than middle strike");
             return false;
         }
-        if self.short_calls.option.strike_price >= self.long_call_high.option.strike_price {
+        if self.short_call.option.strike_price >= self.long_call_high.option.strike_price {
             debug!("Middle strike must be lower than high strike");
             return false;
         }
 
-        if self.short_calls.option.quantity != self.long_call_low.option.quantity * 2.0 {
+        if self.short_call.option.quantity != self.long_call_low.option.quantity * 2.0 {
             debug!("Middle strike quantity must be double the wing quantities");
             return false;
         }
@@ -235,7 +235,7 @@ impl Positionable for LongButterflySpread {
         match &position.option.side {
             Side::Long => {
                 // short_calls should be inserted first
-                if position.option.strike_price < self.short_calls.option.strike_price {
+                if position.option.strike_price < self.short_call.option.strike_price {
                     self.long_call_low = position.clone();
                     Ok(())
                 } else {
@@ -244,7 +244,7 @@ impl Positionable for LongButterflySpread {
                 }
             }
             Side::Short => {
-                self.short_calls = position.clone();
+                self.short_call = position.clone();
                 Ok(())
             }
         }
@@ -253,9 +253,108 @@ impl Positionable for LongButterflySpread {
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.long_call_low,
-            &self.short_calls,
+            &self.short_call,
             &self.long_call_high,
         ])
+    }
+
+    /// Gets mutable positions matching the specified criteria from the strategy.
+    ///
+    /// # Arguments
+    /// * `option_style` - The style of the option (Put/Call)
+    /// * `side` - The side of the position (Long/Short)
+    /// * `strike` - The strike price of the option
+    ///
+    /// # Returns
+    /// * `Ok(Vec<&mut Position>)` - A vector containing mutable references to matching positions
+    /// * `Err(PositionError)` - If there was an error retrieving positions
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        match (side, option_style, strike) {
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call])
+            }
+
+            (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Put not found in positions".to_string(),
+            )),
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call_low.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call_low])
+            }
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call_high.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call_high])
+            }
+            _ => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Strike not found in positions".to_string(),
+            )),
+        }
+    }
+
+    /// Modifies an existing position in the strategy.
+    ///
+    /// # Arguments
+    /// * `position` - The new position data to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if position was successfully modified
+    /// * `Err(PositionError)` if position was not found or validation failed
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        match (
+            &position.option.side,
+            &position.option.option_style,
+            &position.option.strike_price,
+        ) {
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call.option.strike_price =>
+            {
+                self.short_call = position.clone();
+            }
+
+            (_, OptionStyle::Put, _) => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side.clone(),
+                    "Put not found in positions".to_string(),
+                ))
+            }
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call_low.option.strike_price =>
+            {
+                self.long_call_low = position.clone();
+            }
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call_high.option.strike_price =>
+            {
+                self.long_call_high = position.clone();
+            }
+            _ => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side.clone(),
+                    "Strike not found in positions".to_string(),
+                ))
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -265,7 +364,7 @@ impl Strategies for LongButterflySpread {
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(self.short_calls.option.strike_price)?;
+        let profit = self.calculate_profit_at(self.short_call.option.strike_price)?;
         if profit > Decimal::ZERO {
             Ok(profit.into())
         } else {
@@ -301,7 +400,7 @@ impl Strategies for LongButterflySpread {
         } else {
             let break_even_point = break_even_points[0];
 
-            if break_even_point < self.short_calls.option.strike_price {
+            if break_even_point < self.short_call.option.strike_price {
                 self.calculate_profit_at(self.long_call_high.option.strike_price)?
                     .into()
             } else {
@@ -429,8 +528,8 @@ impl Optimizable for LongButterflySpread {
                 low_strike.call_ask.unwrap(),
                 middle_strike.call_bid.unwrap(),
                 high_strike.call_ask.unwrap(),
-                self.short_calls.open_fee,
-                self.short_calls.close_fee,
+                self.short_call.open_fee,
+                self.short_call.close_fee,
                 self.long_call_low.open_fee,
                 self.long_call_low.close_fee,
                 self.long_call_high.open_fee,
@@ -445,7 +544,7 @@ impl Profit for LongButterflySpread {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(&price);
         Ok(self.long_call_low.pnl_at_expiration(&price)?
-            + self.short_calls.pnl_at_expiration(&price)?
+            + self.short_call.pnl_at_expiration(&price)?
             + self.long_call_high.pnl_at_expiration(&price)?)
     }
 }
@@ -466,7 +565,7 @@ impl Graph for LongButterflySpread {
             ),
             format!(
                 "Short Calls Middle Strike: ${}",
-                self.short_calls.option.strike_price
+                self.short_call.option.strike_price
             ),
             format!(
                 "Long Call High Strike: ${}",
@@ -540,7 +639,7 @@ impl Graph for LongButterflySpread {
         // Maximum profit point (at middle strike)
         points.push(ChartPoint {
             coordinates: (
-                self.short_calls.option.strike_price.to_f64(),
+                self.short_call.option.strike_price.to_f64(),
                 max_profit.to_f64(),
             ),
             label: format!("Max Profit {:.2}", max_profit),
@@ -597,7 +696,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_call_low.option.implied_volatility,
-            self.short_calls.option.implied_volatility,
+            self.short_call.option.implied_volatility,
             self.long_call_high.option.implied_volatility,
         ]);
 
@@ -627,7 +726,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_call_low.option.implied_volatility,
-            self.short_calls.option.implied_volatility,
+            self.short_call.option.implied_volatility,
             self.long_call_high.option.implied_volatility,
         ]);
 
@@ -676,7 +775,7 @@ impl Greeks for LongButterflySpread {
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
         Ok(vec![
             &self.long_call_low.option,
-            &self.short_calls.option,
+            &self.short_call.option,
             &self.long_call_high.option,
         ])
     }
@@ -686,7 +785,7 @@ impl DeltaNeutrality for LongButterflySpread {
     fn calculate_net_delta(&self) -> DeltaInfo {
         let long_call_low_delta = self.long_call_low.option.delta();
         let long_call_high_delta = self.long_call_high.option.delta();
-        let short_calls_delta = self.short_calls.option.delta();
+        let short_calls_delta = self.short_call.option.delta();
         let threshold = DELTA_THRESHOLD;
         let l_cl_delta = long_call_low_delta.unwrap();
         let l_ch_delta = long_call_high_delta.unwrap();
@@ -708,12 +807,12 @@ impl DeltaNeutrality for LongButterflySpread {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-        let delta = self.short_calls.option.delta().unwrap();
+        let delta = self.short_call.option.delta().unwrap();
         let qty = Positive((net_delta.abs() / delta).abs());
 
         vec![DeltaAdjustment::SellOptions {
-            quantity: qty * self.short_calls.option.quantity,
-            strike: self.short_calls.option.strike_price,
+            quantity: qty * self.short_call.option.quantity,
+            strike: self.short_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
     }
@@ -770,8 +869,8 @@ pub struct ShortButterflySpread {
     pub kind: StrategyType,
     pub description: String,
     pub break_even_points: Vec<Positive>,
+    long_call: Position,
     short_call_low: Position,
-    long_calls: Position,
     short_call_high: Position,
 }
 
@@ -804,7 +903,7 @@ impl ShortButterflySpread {
             description: SHORT_BUTTERFLY_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             short_call_low: Position::default(),
-            long_calls: Position::default(),
+            long_call: Position::default(),
             short_call_high: Position::default(),
         };
 
@@ -823,7 +922,7 @@ impl ShortButterflySpread {
             dividend_yield,
             None,
         );
-        strategy.long_calls = Position::new(
+        strategy.long_call = Position::new(
             long_calls,
             premium_middle,
             Utc::now(),
@@ -910,7 +1009,7 @@ impl Validable for ShortButterflySpread {
             debug!("Short call (low strike) is invalid");
             return false;
         }
-        if !self.long_calls.validate() {
+        if !self.long_call.validate() {
             debug!("Long calls (middle strike) are invalid");
             return false;
         }
@@ -919,16 +1018,16 @@ impl Validable for ShortButterflySpread {
             return false;
         }
 
-        if self.short_call_low.option.strike_price >= self.long_calls.option.strike_price {
+        if self.short_call_low.option.strike_price >= self.long_call.option.strike_price {
             debug!("Low strike must be lower than middle strike");
             return false;
         }
-        if self.long_calls.option.strike_price >= self.short_call_high.option.strike_price {
+        if self.long_call.option.strike_price >= self.short_call_high.option.strike_price {
             debug!("Middle strike must be lower than high strike");
             return false;
         }
 
-        if self.long_calls.option.quantity != self.short_call_low.option.quantity * 2.0 {
+        if self.long_call.option.quantity != self.short_call_low.option.quantity * 2.0 {
             debug!("Middle strike quantity must be double the wing quantities");
             return false;
         }
@@ -946,7 +1045,7 @@ impl Positionable for ShortButterflySpread {
         match &position.option.side {
             Side::Short => {
                 // long_calls should be inserted first
-                if position.option.strike_price < self.long_calls.option.strike_price {
+                if position.option.strike_price < self.long_call.option.strike_price {
                     self.short_call_low = position.clone();
                     Ok(())
                 } else {
@@ -955,7 +1054,7 @@ impl Positionable for ShortButterflySpread {
                 }
             }
             Side::Long => {
-                self.long_calls = position.clone();
+                self.long_call = position.clone();
                 Ok(())
             }
         }
@@ -964,9 +1063,108 @@ impl Positionable for ShortButterflySpread {
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![
             &self.short_call_low,
-            &self.long_calls,
+            &self.long_call,
             &self.short_call_high,
         ])
+    }
+
+    /// Gets mutable positions matching the specified criteria from the strategy.
+    ///
+    /// # Arguments
+    /// * `option_style` - The style of the option (Put/Call)
+    /// * `side` - The side of the position (Long/Short)
+    /// * `strike` - The strike price of the option
+    ///
+    /// # Returns
+    /// * `Ok(Vec<&mut Position>)` - A vector containing mutable references to matching positions
+    /// * `Err(PositionError)` - If there was an error retrieving positions
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        match (side, option_style, strike) {
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call])
+            }
+
+            (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Put not found in positions".to_string(),
+            )),
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call_low.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call_low])
+            }
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call_high.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call_high])
+            }
+            _ => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Strike not found in positions".to_string(),
+            )),
+        }
+    }
+
+    /// Modifies an existing position in the strategy.
+    ///
+    /// # Arguments
+    /// * `position` - The new position data to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if position was successfully modified
+    /// * `Err(PositionError)` if position was not found or validation failed
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        match (
+            &position.option.side,
+            &position.option.option_style,
+            &position.option.strike_price,
+        ) {
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call.option.strike_price =>
+            {
+                self.long_call = position.clone();
+            }
+
+            (_, OptionStyle::Put, _) => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side.clone(),
+                    "Put not found in positions".to_string(),
+                ))
+            }
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call_low.option.strike_price =>
+            {
+                self.short_call_low = position.clone();
+            }
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call_high.option.strike_price =>
+            {
+                self.short_call_high = position.clone();
+            }
+            _ => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side.clone(),
+                    "Strike not found in positions".to_string(),
+                ))
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -991,7 +1189,7 @@ impl Strategies for ShortButterflySpread {
     }
 
     fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(self.long_calls.option.strike_price)?;
+        let loss = self.calculate_profit_at(self.long_call.option.strike_price)?;
         if loss > Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -1133,8 +1331,8 @@ impl Optimizable for ShortButterflySpread {
                 low_strike.call_bid.unwrap(),
                 middle_strike.call_ask.unwrap(),
                 high_strike.call_bid.unwrap(),
-                self.long_calls.open_fee,
-                self.long_calls.close_fee,
+                self.long_call.open_fee,
+                self.long_call.close_fee,
                 self.short_call_low.open_fee,
                 self.short_call_low.close_fee,
                 self.short_call_high.open_fee,
@@ -1149,7 +1347,7 @@ impl Profit for ShortButterflySpread {
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(&price);
         Ok(self.short_call_low.pnl_at_expiration(&price)?
-            + self.long_calls.pnl_at_expiration(&price)?
+            + self.long_call.pnl_at_expiration(&price)?
             + self.short_call_high.pnl_at_expiration(&price)?)
     }
 }
@@ -1170,7 +1368,7 @@ impl Graph for ShortButterflySpread {
             ),
             format!(
                 "Long Calls Middle Strike: ${}",
-                self.long_calls.option.strike_price
+                self.long_call.option.strike_price
             ),
             format!(
                 "Short Call High Strike: ${}",
@@ -1236,7 +1434,7 @@ impl Graph for ShortButterflySpread {
         // Maximum loss point (at middle strike)
         points.push(ChartPoint {
             coordinates: (
-                self.long_calls.option.strike_price.to_f64(),
+                self.long_call.option.strike_price.to_f64(),
                 -max_loss.to_f64(),
             ),
             label: format!("Max Loss {:.2}", -max_loss.to_f64()),
@@ -1300,7 +1498,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call_low.option.implied_volatility,
-            self.long_calls.option.implied_volatility,
+            self.long_call.option.implied_volatility,
             self.short_call_high.option.implied_volatility,
         ]);
 
@@ -1349,7 +1547,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call_low.option.implied_volatility,
-            self.long_calls.option.implied_volatility,
+            self.long_call.option.implied_volatility,
             self.short_call_high.option.implied_volatility,
         ]);
 
@@ -1378,7 +1576,7 @@ impl Greeks for ShortButterflySpread {
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
         Ok(vec![
             &self.short_call_low.option,
-            &self.long_calls.option,
+            &self.long_call.option,
             &self.short_call_high.option,
         ])
     }
@@ -1388,7 +1586,7 @@ impl DeltaNeutrality for ShortButterflySpread {
     fn calculate_net_delta(&self) -> DeltaInfo {
         let short_call_low_delta = self.short_call_low.option.delta();
         let short_call_high_delta = self.short_call_high.option.delta();
-        let long_calls_delta = self.long_calls.option.delta();
+        let long_calls_delta = self.long_call.option.delta();
         let threshold = DELTA_THRESHOLD;
         let s_cl_delta = short_call_low_delta.unwrap();
         let s_ch_delta = short_call_high_delta.unwrap();
@@ -1430,12 +1628,12 @@ impl DeltaNeutrality for ShortButterflySpread {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-        let delta = self.long_calls.option.delta().unwrap();
+        let delta = self.long_call.option.delta().unwrap();
         let qty = Positive((net_delta.abs() / delta).abs());
 
         vec![DeltaAdjustment::BuyOptions {
-            quantity: qty * self.long_calls.option.quantity,
-            strike: self.long_calls.option.strike_price,
+            quantity: qty * self.long_call.option.quantity,
+            strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
     }
@@ -1489,7 +1687,7 @@ mod tests_long_butterfly_spread {
         let butterfly = create_test_butterfly();
 
         assert_eq!(butterfly.long_call_low.option.strike_price, pos!(90.0));
-        assert_eq!(butterfly.short_calls.option.strike_price, pos!(100.0));
+        assert_eq!(butterfly.short_call.option.strike_price, pos!(100.0));
         assert_eq!(butterfly.long_call_high.option.strike_price, pos!(110.0));
     }
 
@@ -1499,7 +1697,7 @@ mod tests_long_butterfly_spread {
         let butterfly = create_test_butterfly();
 
         assert_eq!(butterfly.long_call_low.option.quantity, pos!(1.0));
-        assert_eq!(butterfly.short_calls.option.quantity, pos!(2.0)); // Double quantity
+        assert_eq!(butterfly.short_call.option.quantity, pos!(2.0)); // Double quantity
         assert_eq!(butterfly.long_call_high.option.quantity, pos!(1.0));
     }
 
@@ -1509,7 +1707,7 @@ mod tests_long_butterfly_spread {
         let butterfly = create_test_butterfly();
 
         assert_eq!(butterfly.long_call_low.option.side, Side::Long);
-        assert_eq!(butterfly.short_calls.option.side, Side::Short);
+        assert_eq!(butterfly.short_call.option.side, Side::Short);
         assert_eq!(butterfly.long_call_high.option.side, Side::Long);
     }
 
@@ -1522,7 +1720,7 @@ mod tests_long_butterfly_spread {
             butterfly.long_call_low.option.option_style,
             OptionStyle::Call
         );
-        assert_eq!(butterfly.short_calls.option.option_style, OptionStyle::Call);
+        assert_eq!(butterfly.short_call.option.option_style, OptionStyle::Call);
         assert_eq!(
             butterfly.long_call_high.option.option_style,
             OptionStyle::Call
@@ -1540,7 +1738,7 @@ mod tests_long_butterfly_spread {
             format!("{:?}", expiration)
         );
         assert_eq!(
-            format!("{:?}", butterfly.short_calls.option.expiration_date),
+            format!("{:?}", butterfly.short_call.option.expiration_date),
             format!("{:?}", expiration)
         );
         assert_eq!(
@@ -1575,7 +1773,7 @@ mod tests_long_butterfly_spread {
         );
 
         assert_eq!(butterfly.long_call_low.open_fee, 0.05); // fees / 3
-        assert_eq!(butterfly.short_calls.open_fee, 1.0); // fees / 3
+        assert_eq!(butterfly.short_call.open_fee, 1.0); // fees / 3
         assert_eq!(butterfly.long_call_high.open_fee, 1.0); // fees / 3
     }
 
@@ -1587,8 +1785,8 @@ mod tests_long_butterfly_spread {
 
         assert_eq!(break_even_points.len(), 2);
         assert!(break_even_points[0] > butterfly.long_call_low.option.strike_price);
-        assert!(break_even_points[0] < butterfly.short_calls.option.strike_price);
-        assert!(break_even_points[1] > butterfly.short_calls.option.strike_price);
+        assert!(break_even_points[0] < butterfly.short_call.option.strike_price);
+        assert!(break_even_points[1] > butterfly.short_call.option.strike_price);
         assert!(break_even_points[1] < butterfly.long_call_high.option.strike_price);
     }
 
@@ -1618,7 +1816,7 @@ mod tests_long_butterfly_spread {
         );
 
         assert_eq!(butterfly.long_call_low.option.quantity, pos!(2.0));
-        assert_eq!(butterfly.short_calls.option.quantity, pos!(4.0)); // 2 * 2
+        assert_eq!(butterfly.short_call.option.quantity, pos!(4.0)); // 2 * 2
         assert_eq!(butterfly.long_call_high.option.quantity, pos!(2.0));
     }
 
@@ -1628,9 +1826,9 @@ mod tests_long_butterfly_spread {
         let butterfly = create_test_butterfly();
 
         let lower_width =
-            butterfly.short_calls.option.strike_price - butterfly.long_call_low.option.strike_price;
-        let upper_width = butterfly.long_call_high.option.strike_price
-            - butterfly.short_calls.option.strike_price;
+            butterfly.short_call.option.strike_price - butterfly.long_call_low.option.strike_price;
+        let upper_width =
+            butterfly.long_call_high.option.strike_price - butterfly.short_call.option.strike_price;
 
         assert_eq!(lower_width, upper_width);
     }
@@ -1642,10 +1840,10 @@ mod tests_long_butterfly_spread {
 
         assert_eq!(
             butterfly.long_call_low.option.implied_volatility,
-            butterfly.short_calls.option.implied_volatility
+            butterfly.short_call.option.implied_volatility
         );
         assert_eq!(
-            butterfly.short_calls.option.implied_volatility,
+            butterfly.short_call.option.implied_volatility,
             butterfly.long_call_high.option.implied_volatility
         );
     }
@@ -1726,7 +1924,7 @@ mod tests_short_butterfly_spread {
         let butterfly = create_test_butterfly();
 
         assert_eq!(butterfly.short_call_low.option.strike_price, pos!(90.0));
-        assert_eq!(butterfly.long_calls.option.strike_price, pos!(100.0));
+        assert_eq!(butterfly.long_call.option.strike_price, pos!(100.0));
         assert_eq!(butterfly.short_call_high.option.strike_price, pos!(110.0));
     }
 
@@ -1736,7 +1934,7 @@ mod tests_short_butterfly_spread {
         let butterfly = create_test_butterfly();
 
         assert_eq!(butterfly.short_call_low.option.quantity, pos!(1.0));
-        assert_eq!(butterfly.long_calls.option.quantity, pos!(2.0)); // Double quantity
+        assert_eq!(butterfly.long_call.option.quantity, pos!(2.0)); // Double quantity
         assert_eq!(butterfly.short_call_high.option.quantity, pos!(1.0));
     }
 
@@ -1746,7 +1944,7 @@ mod tests_short_butterfly_spread {
         let butterfly = create_test_butterfly();
 
         assert_eq!(butterfly.short_call_low.option.side, Side::Short);
-        assert_eq!(butterfly.long_calls.option.side, Side::Long);
+        assert_eq!(butterfly.long_call.option.side, Side::Long);
         assert_eq!(butterfly.short_call_high.option.side, Side::Short);
     }
 
@@ -1759,7 +1957,7 @@ mod tests_short_butterfly_spread {
             butterfly.short_call_low.option.option_style,
             OptionStyle::Call
         );
-        assert_eq!(butterfly.long_calls.option.option_style, OptionStyle::Call);
+        assert_eq!(butterfly.long_call.option.option_style, OptionStyle::Call);
         assert_eq!(
             butterfly.short_call_high.option.option_style,
             OptionStyle::Call
@@ -1777,7 +1975,7 @@ mod tests_short_butterfly_spread {
             format!("{:?}", expiration)
         );
         assert_eq!(
-            format!("{:?}", butterfly.long_calls.option.expiration_date),
+            format!("{:?}", butterfly.long_call.option.expiration_date),
             format!("{:?}", expiration)
         );
         assert_eq!(
@@ -1812,7 +2010,7 @@ mod tests_short_butterfly_spread {
         );
 
         assert_eq!(butterfly.short_call_low.open_fee, 1.0); // fees / 3
-        assert_eq!(butterfly.long_calls.open_fee, 1.0); // fees / 3
+        assert_eq!(butterfly.long_call.open_fee, 1.0); // fees / 3
         assert_eq!(butterfly.short_call_high.open_fee, 1.0); // fees / 3
     }
 
@@ -1824,8 +2022,8 @@ mod tests_short_butterfly_spread {
 
         assert_eq!(break_even_points.len(), 2);
         assert!(break_even_points[0] > butterfly.short_call_low.option.strike_price);
-        assert!(break_even_points[0] < butterfly.long_calls.option.strike_price);
-        assert!(break_even_points[1] > butterfly.long_calls.option.strike_price);
+        assert!(break_even_points[0] < butterfly.long_call.option.strike_price);
+        assert!(break_even_points[1] > butterfly.long_call.option.strike_price);
         assert!(break_even_points[1] < butterfly.short_call_high.option.strike_price);
     }
 
@@ -1855,7 +2053,7 @@ mod tests_short_butterfly_spread {
         );
 
         assert_eq!(butterfly.short_call_low.option.quantity, pos!(2.0));
-        assert_eq!(butterfly.long_calls.option.quantity, pos!(4.0)); // 2 * 2
+        assert_eq!(butterfly.long_call.option.quantity, pos!(4.0)); // 2 * 2
         assert_eq!(butterfly.short_call_high.option.quantity, pos!(2.0));
     }
 
@@ -1865,9 +2063,9 @@ mod tests_short_butterfly_spread {
         let butterfly = create_test_butterfly();
 
         let lower_width =
-            butterfly.long_calls.option.strike_price - butterfly.short_call_low.option.strike_price;
-        let upper_width = butterfly.short_call_high.option.strike_price
-            - butterfly.long_calls.option.strike_price;
+            butterfly.long_call.option.strike_price - butterfly.short_call_low.option.strike_price;
+        let upper_width =
+            butterfly.short_call_high.option.strike_price - butterfly.long_call.option.strike_price;
 
         assert_eq!(lower_width, upper_width);
     }
@@ -1879,10 +2077,10 @@ mod tests_short_butterfly_spread {
 
         assert_eq!(
             butterfly.short_call_low.option.implied_volatility,
-            butterfly.long_calls.option.implied_volatility
+            butterfly.long_call.option.implied_volatility
         );
         assert_eq!(
-            butterfly.long_calls.option.implied_volatility,
+            butterfly.long_call.option.implied_volatility,
             butterfly.short_call_high.option.implied_volatility
         );
     }
@@ -1898,7 +2096,7 @@ mod tests_short_butterfly_spread {
             underlying_price
         );
         assert_eq!(
-            butterfly.long_calls.option.underlying_price,
+            butterfly.long_call.option.underlying_price,
             underlying_price
         );
         assert_eq!(
@@ -1945,7 +2143,7 @@ mod tests_short_butterfly_spread {
             butterfly.short_call_low.option.risk_free_rate,
             risk_free_rate
         );
-        assert_eq!(butterfly.long_calls.option.risk_free_rate, risk_free_rate);
+        assert_eq!(butterfly.long_call.option.risk_free_rate, risk_free_rate);
         assert_eq!(
             butterfly.short_call_high.option.risk_free_rate,
             risk_free_rate
@@ -2087,7 +2285,7 @@ mod tests_long_butterfly_validation {
             pos!(0.05), // open_fee_long_call_high
             pos!(0.05), // close_fee_long_call_high
         );
-        butterfly.short_calls = create_valid_position(Side::Short, pos!(100.0), pos!(1.0));
+        butterfly.short_call = create_valid_position(Side::Short, pos!(100.0), pos!(1.0));
         assert!(!butterfly.validate());
     }
 
@@ -2254,7 +2452,7 @@ mod tests_short_butterfly_validation {
             pos!(0.05), // open_fee_long_call_high
             pos!(0.05), // close_fee_long_call_high
         );
-        butterfly.long_calls = create_valid_position(Side::Long, pos!(100.0), pos!(1.0));
+        butterfly.long_call = create_valid_position(Side::Long, pos!(100.0), pos!(1.0));
         assert!(!butterfly.validate());
     }
 
@@ -2687,11 +2885,10 @@ mod tests_butterfly_optimizable {
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
 
         assert!(
-            butterfly.long_call_low.option.strike_price < butterfly.short_calls.option.strike_price
+            butterfly.long_call_low.option.strike_price < butterfly.short_call.option.strike_price
         );
         assert!(
-            butterfly.short_calls.option.strike_price
-                < butterfly.long_call_high.option.strike_price
+            butterfly.short_call.option.strike_price < butterfly.long_call_high.option.strike_price
         );
     }
 
@@ -2730,11 +2927,10 @@ mod tests_butterfly_optimizable {
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
 
         assert!(
-            butterfly.short_call_low.option.strike_price < butterfly.long_calls.option.strike_price
+            butterfly.short_call_low.option.strike_price < butterfly.long_call.option.strike_price
         );
         assert!(
-            butterfly.long_calls.option.strike_price
-                < butterfly.short_call_high.option.strike_price
+            butterfly.long_call.option.strike_price < butterfly.short_call_high.option.strike_price
         );
     }
 
@@ -2756,10 +2952,10 @@ mod tests_butterfly_optimizable {
             OptimizationCriteria::Ratio,
         );
 
-        assert!(long_butterfly.short_calls.option.strike_price >= pos!(95.0));
-        assert!(long_butterfly.short_calls.option.strike_price <= pos!(105.0));
-        assert!(short_butterfly.long_calls.option.strike_price >= pos!(95.0));
-        assert!(short_butterfly.long_calls.option.strike_price <= pos!(105.0));
+        assert!(long_butterfly.short_call.option.strike_price >= pos!(95.0));
+        assert!(long_butterfly.short_call.option.strike_price <= pos!(105.0));
+        assert!(short_butterfly.long_call.option.strike_price >= pos!(95.0));
+        assert!(short_butterfly.long_call.option.strike_price <= pos!(105.0));
     }
 }
 
@@ -3621,7 +3817,7 @@ mod tests_long_butterfly_delta {
             _ => panic!("Invalid suggestion"),
         }
 
-        let mut option = strategy.short_calls.option.clone();
+        let mut option = strategy.short_call.option.clone();
         option.quantity = delta;
         let delta = option.delta().unwrap();
         assert_decimal_eq!(delta, -size, DELTA_THRESHOLD);
@@ -3768,7 +3964,7 @@ mod tests_long_butterfly_delta_size {
             _ => panic!("Invalid suggestion"),
         }
 
-        let mut option = strategy.short_calls.option.clone();
+        let mut option = strategy.short_call.option.clone();
         option.quantity = delta;
         let delta = option.delta().unwrap();
         assert_decimal_eq!(delta, -size, DELTA_THRESHOLD);
@@ -3860,7 +4056,7 @@ mod tests_short_butterfly_delta {
             _ => panic!("Invalid suggestion"),
         }
 
-        let mut option = strategy.long_calls.option.clone();
+        let mut option = strategy.long_call.option.clone();
         option.quantity = delta;
         let delta = option.delta().unwrap();
         assert_decimal_eq!(delta, -size, DELTA_THRESHOLD);
@@ -4005,7 +4201,7 @@ mod tests_short_butterfly_delta_size {
             _ => panic!("Invalid suggestion"),
         }
 
-        let mut option = strategy.long_calls.option.clone();
+        let mut option = strategy.long_call.option.clone();
         option.quantity = delta;
         let delta = option.delta().unwrap();
         assert_decimal_eq!(delta, -size, DELTA_THRESHOLD);
@@ -4084,5 +4280,619 @@ mod tests_short_butterfly_delta_size {
         assert!(strategy.is_delta_neutral());
         let suggestion = strategy.suggest_delta_adjustments();
         assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_short_butterfly_position_management {
+    use super::*;
+    use crate::error::position::PositionValidationErrorKind;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    fn create_test_butterfly() -> ShortButterflySpread {
+        ShortButterflySpread::new(
+            "SP500".to_string(),
+            pos!(5781.88), // underlying_price
+            pos!(5700.0),  // short_strike_itm
+            pos!(5780.0),  // long_strike
+            pos!(5850.0),  // short_strike_otm
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // long quantity
+            pos!(119.01),   // premium_long
+            pos!(66.0),     // premium_short
+            pos!(29.85),    // open_fee_long
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+        )
+    }
+
+    #[test]
+    fn test_long_butterfly_get_position() {
+        let mut butterfly = create_test_butterfly();
+
+        // Test getting short call position
+        let call_position = butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(5780.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5780.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Long);
+
+        // Test getting short put position
+        let put_position = butterfly.get_position(&OptionStyle::Put, &Side::Short, &pos!(2560.0));
+        assert!(put_position.is_err());
+
+        // Test getting non-existent position
+        let invalid_position =
+            butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(2715.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_butterfly_get_position() {
+        let mut butterfly = create_test_butterfly();
+
+        // Test getting short call position
+        let call_position = butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5700.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5700.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting short put position
+        let put_position = butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5850.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5850.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting non-existent position
+        let invalid_position =
+            butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(2715.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_long_butterfly_modify_position() {
+        let mut butterfly = create_test_butterfly();
+
+        // Modify short call position
+        let mut modified_call = butterfly.long_call.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = butterfly.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(butterfly.long_call.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = butterfly.long_call.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = butterfly.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_short_butterfly_modify_position() {
+        let mut butterfly = create_test_butterfly();
+
+        // Modify long call position
+        let mut modified_call = butterfly.short_call_low.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = butterfly.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(butterfly.short_call_low.option.quantity, pos!(2.0));
+
+        // Modify long put position
+        let mut modified_put = butterfly.short_call_high.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = butterfly.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(butterfly.short_call_high.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = butterfly.short_call_low.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = butterfly.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_long_butterfly_position_management {
+    use super::*;
+    use crate::error::position::PositionValidationErrorKind;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    fn create_test_butterfly() -> LongButterflySpread {
+        LongButterflySpread::new(
+            "SP500".to_string(),
+            pos!(5795.88), // underlying_price
+            pos!(5710.0),  // long_strike_itm
+            pos!(5780.0),  // short_strike
+            pos!(5850.0),  // long_strike_otm
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // long quantity
+            pos!(113.3),    // premium_long_low
+            pos!(64.20),    // premium_short
+            pos!(31.65),    // premium_long_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
+        )
+    }
+
+    #[test]
+    fn test_short_butterfly_get_position() {
+        let mut butterfly = create_test_butterfly();
+
+        // Test getting short call position
+        let call_position = butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5780.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5780.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting non-existent position
+        let invalid_position =
+            butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(2715.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_long_butterfly_get_position() {
+        let mut butterfly = create_test_butterfly();
+
+        // Test getting short call position
+        let call_position = butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(5710.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5710.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Long);
+
+        // Test getting short put position
+        let put_position = butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(5850.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5850.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Long);
+
+        // Test getting non-existent position
+        let invalid_position =
+            butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(2715.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_butterfly_modify_position() {
+        let mut butterfly = create_test_butterfly();
+
+        // Modify short call position
+        let mut modified_call = butterfly.short_call.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = butterfly.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(butterfly.short_call.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = butterfly.short_call.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = butterfly.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_long_butterfly_modify_position() {
+        let mut butterfly = create_test_butterfly();
+
+        // Modify long call position
+        let mut modified_call = butterfly.long_call_low.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = butterfly.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(butterfly.long_call_low.option.quantity, pos!(2.0));
+
+        // Modify long put position
+        let mut modified_put = butterfly.long_call_high.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = butterfly.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(butterfly.long_call_high.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = butterfly.long_call_high.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = butterfly.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_adjust_option_position_short {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test strategy
+    fn create_test_strategy() -> ShortButterflySpread {
+        ShortButterflySpread::new(
+            "SP500".to_string(),
+            pos!(5781.88), // underlying_price
+            pos!(5700.0),  // short_strike_itm
+            pos!(5780.0),  // long_strike
+            pos!(5850.0),  // short_strike_otm
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // long quantity
+            pos!(119.01),   // premium_long
+            pos!(66.0),     // premium_short
+            pos!(29.85),    // open_fee_long
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call_low.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5700.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_call_low.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_long_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5780.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(5780.0),
+            &OptionStyle::Put,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Put not found in positions");
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call_high.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(5850.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.short_call_high.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_adjust_option_position_long {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test strategy
+    fn create_test_strategy() -> LongButterflySpread {
+        LongButterflySpread::new(
+            "SP500".to_string(),
+            pos!(5795.88), // underlying_price
+            pos!(5710.0),  // long_strike_itm
+            pos!(5780.0),  // short_strike
+            pos!(5850.0),  // long_strike_otm
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // long quantity
+            pos!(113.3),    // premium_long_low
+            pos!(64.20),    // premium_short
+            pos!(31.65),    // premium_long_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call_low.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5710.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_call_low.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_put_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5780.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(110.0),
+            &OptionStyle::Put,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Put not found in positions");
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call_high.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(5850.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.long_call_high.option.quantity, initial_quantity);
     }
 }

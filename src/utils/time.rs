@@ -4,6 +4,7 @@
    Date: 23/10/24
 ******************************************************************************/
 use crate::constants::*;
+use chrono::{Duration, Local, NaiveTime, Utc};
 
 /// Represents different timeframes for volatility calculations
 #[derive(Debug, Clone, Copy)]
@@ -42,6 +43,30 @@ impl TimeFrame {
             TimeFrame::Custom(periods) => *periods,          // Custom periods per year
         }
     }
+}
+
+pub fn get_tomorrow_formatted() -> String {
+    let tomorrow = Local::now().date_naive() + Duration::days(1);
+    tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
+}
+
+pub fn get_today_formatted() -> String {
+    let today = Local::now().date_naive();
+    today.format("%d-%b-%Y").to_string().to_lowercase()
+}
+
+pub fn get_today_or_tomorrow_formatted() -> String {
+    let cutoff_time = NaiveTime::from_hms_opt(18, 30, 0).unwrap();
+    let now = Utc::now();
+
+    // Get the date we should use based on current UTC time
+    let target_date = if now.time() > cutoff_time {
+        now.date_naive().succ_opt().unwrap_or(now.date_naive()) // Get next day safely
+    } else {
+        now.date_naive()
+    };
+
+    target_date.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
 #[cfg(test)]

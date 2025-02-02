@@ -14,7 +14,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::PositionError;
+use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::GreeksError;
@@ -183,6 +183,88 @@ impl Positionable for ShortStraddle {
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.short_call, &self.short_put])
+    }
+
+    /// Gets mutable positions matching the specified criteria from the strategy.
+    ///
+    /// # Arguments
+    /// * `option_style` - The style of the option (Put/Call)
+    /// * `side` - The side of the position (Long/Short)
+    /// * `strike` - The strike price of the option
+    ///
+    /// # Returns
+    /// * `Ok(Vec<&mut Position>)` - A vector containing mutable references to matching positions
+    /// * `Err(PositionError)` - If there was an error retrieving positions
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        match (side, option_style, strike) {
+            (Side::Long, _, _) => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Position side is Long, it is not valid for ShortStraddle".to_string(),
+            )),
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call])
+            }
+            (Side::Short, OptionStyle::Put, strike)
+                if *strike == self.short_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_put])
+            }
+            _ => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Strike not found in positions".to_string(),
+            )),
+        }
+    }
+
+    /// Modifies an existing position in the strategy.
+    ///
+    /// # Arguments
+    /// * `position` - The new position data to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if position was successfully modified
+    /// * `Err(PositionError)` if position was not found or validation failed
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        if position.option.side == Side::Long {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Position side is Long, it is not valid for ShortStraddle".to_string(),
+            ));
+        }
+
+        if position.option.strike_price != self.short_call.option.strike_price
+            && position.option.strike_price != self.short_put.option.strike_price
+        {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Strike not found in positions".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call {
+            self.short_call = position.clone();
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            self.short_put = position.clone();
+        }
+
+        Ok(())
     }
 }
 
@@ -711,6 +793,88 @@ impl Positionable for LongStraddle {
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_call, &self.long_put])
+    }
+
+    /// Gets mutable positions matching the specified criteria from the strategy.
+    ///
+    /// # Arguments
+    /// * `option_style` - The style of the option (Put/Call)
+    /// * `side` - The side of the position (Long/Short)
+    /// * `strike` - The strike price of the option
+    ///
+    /// # Returns
+    /// * `Ok(Vec<&mut Position>)` - A vector containing mutable references to matching positions
+    /// * `Err(PositionError)` - If there was an error retrieving positions
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        match (side, option_style, strike) {
+            (Side::Short, _, _) => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Position side is Short, it is not valid for LongStraddle".to_string(),
+            )),
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call])
+            }
+            (Side::Long, OptionStyle::Put, strike)
+                if *strike == self.long_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_put])
+            }
+            _ => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Strike not found in positions".to_string(),
+            )),
+        }
+    }
+
+    /// Modifies an existing position in the strategy.
+    ///
+    /// # Arguments
+    /// * `position` - The new position data to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if position was successfully modified
+    /// * `Err(PositionError)` if position was not found or validation failed
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        if position.option.side == Side::Short {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Position side is Short, it is not valid for LongStraddle".to_string(),
+            ));
+        }
+
+        if position.option.strike_price != self.long_call.option.strike_price
+            && position.option.strike_price != self.long_put.option.strike_price
+        {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Strike not found in positions".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call {
+            self.long_call = position.clone();
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            self.long_put = position.clone();
+        }
+
+        Ok(())
     }
 }
 
@@ -2748,5 +2912,455 @@ mod tests_long_straddle_delta_size {
         assert!(strategy.is_delta_neutral());
         let suggestion = strategy.suggest_delta_adjustments();
         assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_straddle_position_management {
+    use super::*;
+    use crate::error::position::PositionValidationErrorKind;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    fn create_test_short_straddle() -> ShortStraddle {
+        ShortStraddle::new(
+            "TEST".to_string(),
+            pos!(100.0), // underlying_price
+            pos!(110.0), // strike
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(2.0),      // premium_short_call
+            pos!(2.0),      // premium_short_put
+            pos!(0.1),      // open_fee_short_call
+            pos!(0.1),      // close_fee_short_call
+            pos!(0.1),      // open_fee_short_put
+            pos!(0.1),      // close_fee_short_put
+        )
+    }
+
+    fn create_test_long_straddle() -> LongStraddle {
+        LongStraddle::new(
+            "TEST".to_string(),
+            pos!(100.0), // underlying_price
+            pos!(110.0), // strike
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(2.0),      // premium_long_call
+            pos!(2.0),      // premium_long_put
+            pos!(0.1),      // open_fee_long_call
+            pos!(0.1),      // close_fee_long_call
+            pos!(0.1),      // open_fee_long_put
+            pos!(0.1),      // close_fee_long_put
+        )
+    }
+
+    #[test]
+    fn test_short_straddle_get_position() {
+        let mut straddle = create_test_short_straddle();
+
+        // Test getting short call position
+        let call_position = straddle.get_position(&OptionStyle::Call, &Side::Short, &pos!(110.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(110.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting short put position
+        let put_position = straddle.get_position(&OptionStyle::Put, &Side::Short, &pos!(110.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(110.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Put);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting non-existent position
+        let invalid_position =
+            straddle.get_position(&OptionStyle::Call, &Side::Short, &pos!(100.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_straddle_modify_position() {
+        let mut straddle = create_test_short_straddle();
+
+        // Modify short call position
+        let mut modified_call = straddle.short_call.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = straddle.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(straddle.short_call.option.quantity, pos!(2.0));
+
+        // Modify short put position
+        let mut modified_put = straddle.short_put.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = straddle.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(straddle.short_put.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = straddle.short_call.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = straddle.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_long_straddle_get_position() {
+        let mut straddle = create_test_long_straddle();
+
+        // Test getting long call position
+        let call_position = straddle.get_position(&OptionStyle::Call, &Side::Long, &pos!(110.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(110.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Long);
+
+        // Test getting long put position
+        let put_position = straddle.get_position(&OptionStyle::Put, &Side::Long, &pos!(110.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(110.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Put);
+        assert_eq!(positions[0].option.side, Side::Long);
+
+        // Test getting non-existent position
+        let invalid_position = straddle.get_position(&OptionStyle::Call, &Side::Long, &pos!(100.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_long_straddle_modify_position() {
+        let mut straddle = create_test_long_straddle();
+
+        // Modify long call position
+        let mut modified_call = straddle.long_call.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = straddle.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(straddle.long_call.option.quantity, pos!(2.0));
+
+        // Modify long put position
+        let mut modified_put = straddle.long_put.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = straddle.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(straddle.long_put.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = straddle.long_call.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = straddle.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_adjust_option_position {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    fn create_test_short_straddle() -> ShortStraddle {
+        ShortStraddle::new(
+            "TEST".to_string(),
+            pos!(100.0), // underlying_price
+            pos!(110.0), // strike
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(2.0),      // premium_short_call
+            pos!(2.0),      // premium_short_put
+            pos!(0.1),      // open_fee_short_call
+            pos!(0.1),      // close_fee_short_call
+            pos!(0.1),      // open_fee_short_put
+            pos!(0.1),      // close_fee_short_put
+        )
+    }
+
+    fn create_test_long_straddle() -> LongStraddle {
+        LongStraddle::new(
+            "TEST".to_string(),
+            pos!(100.0), // underlying_price
+            pos!(110.0), // strike
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(2.0),      // premium_long_call
+            pos!(2.0),      // premium_long_put
+            pos!(0.1),      // open_fee_long_call
+            pos!(0.1),      // close_fee_long_call
+            pos!(0.1),      // open_fee_long_put
+            pos!(0.1),      // close_fee_long_put
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position_short() {
+        let mut strategy = create_test_short_straddle();
+        let initial_quantity = strategy.short_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_put_position_short() {
+        let mut strategy = create_test_short_straddle();
+        let initial_quantity = strategy.short_put.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(110.0),
+            &OptionStyle::Put,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_put.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position_short() {
+        let mut strategy = create_test_short_straddle();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(
+                    reason,
+                    "Position side is Long, it is not valid for ShortStraddle"
+                );
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike_short() {
+        let mut strategy = create_test_short_straddle();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment_short() {
+        let mut strategy = create_test_short_straddle();
+        let initial_quantity = strategy.short_call.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.short_call.option.quantity, initial_quantity);
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position_long() {
+        let mut strategy = create_test_long_straddle();
+        let initial_quantity = strategy.long_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_put_position_long() {
+        let mut strategy = create_test_long_straddle();
+        let initial_quantity = strategy.long_put.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(110.0),
+            &OptionStyle::Put,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_put.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position_long() {
+        let mut strategy = create_test_long_straddle();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(
+                    reason,
+                    "Position side is Short, it is not valid for LongStraddle"
+                );
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike_long() {
+        let mut strategy = create_test_long_straddle();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment_long() {
+        let mut strategy = create_test_long_straddle();
+        let initial_quantity = strategy.long_call.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.long_call.option.quantity, initial_quantity);
     }
 }

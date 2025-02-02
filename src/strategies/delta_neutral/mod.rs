@@ -40,6 +40,7 @@
 //! use optionstratlib::{Options, Positive};
 //! use optionstratlib::{d2fu, pos};
 //! use optionstratlib::error::GreeksError;
+//! use optionstratlib::strategies::base::Positionable;
 //! use optionstratlib::strategies::delta_neutral::{DeltaNeutrality, DeltaAdjustment, DeltaInfo};
 //!
 //! struct MyStrategy { /* Implementation specifics */ }
@@ -63,6 +64,9 @@
 //!        })
 //!     }
 //! }
+//!
+//!
+//! impl Positionable for MyStrategy {}
 //!
 //! impl DeltaNeutrality for MyStrategy {
 //!     fn calculate_net_delta(&self) -> DeltaInfo {

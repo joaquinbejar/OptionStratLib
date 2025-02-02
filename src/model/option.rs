@@ -1528,7 +1528,7 @@ mod tests_calculate_price_binomial {
         assert!(result.is_ok());
         let price = result.unwrap();
         // At expiry, price should equal intrinsic value
-        assert_eq!(price, Decimal::from(5)); // 100 - 95 = 5
+        assert_eq!(price, Decimal::from(5));
     }
 
     #[test]
