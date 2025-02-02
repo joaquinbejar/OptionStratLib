@@ -2923,7 +2923,7 @@ mod tests_straddle_position_management {
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    fn create_test_short_strangle() -> ShortStraddle {
+    fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
             pos!(100.0), // underlying_price
@@ -2942,7 +2942,7 @@ mod tests_straddle_position_management {
         )
     }
 
-    fn create_test_long_strangle() -> LongStraddle {
+    fn create_test_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "TEST".to_string(),
             pos!(100.0), // underlying_price
@@ -2962,11 +2962,11 @@ mod tests_straddle_position_management {
     }
 
     #[test]
-    fn test_short_strangle_get_position() {
-        let mut strangle = create_test_short_strangle();
+    fn test_short_straddle_get_position() {
+        let mut straddle = create_test_short_straddle();
 
         // Test getting short call position
-        let call_position = strangle.get_position(&OptionStyle::Call, &Side::Short, &pos!(110.0));
+        let call_position = straddle.get_position(&OptionStyle::Call, &Side::Short, &pos!(110.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2975,7 +2975,7 @@ mod tests_straddle_position_management {
         assert_eq!(positions[0].option.side, Side::Short);
 
         // Test getting short put position
-        let put_position = strangle.get_position(&OptionStyle::Put, &Side::Short, &pos!(110.0));
+        let put_position = straddle.get_position(&OptionStyle::Put, &Side::Short, &pos!(110.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2985,7 +2985,7 @@ mod tests_straddle_position_management {
 
         // Test getting non-existent position
         let invalid_position =
-            strangle.get_position(&OptionStyle::Call, &Side::Short, &pos!(100.0));
+            straddle.get_position(&OptionStyle::Call, &Side::Short, &pos!(100.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -3004,27 +3004,27 @@ mod tests_straddle_position_management {
     }
 
     #[test]
-    fn test_short_strangle_modify_position() {
-        let mut strangle = create_test_short_strangle();
+    fn test_short_straddle_modify_position() {
+        let mut straddle = create_test_short_straddle();
 
         // Modify short call position
-        let mut modified_call = strangle.short_call.clone();
+        let mut modified_call = straddle.short_call.clone();
         modified_call.option.quantity = pos!(2.0);
-        let result = strangle.modify_position(&modified_call);
+        let result = straddle.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(strangle.short_call.option.quantity, pos!(2.0));
+        assert_eq!(straddle.short_call.option.quantity, pos!(2.0));
 
         // Modify short put position
-        let mut modified_put = strangle.short_put.clone();
+        let mut modified_put = straddle.short_put.clone();
         modified_put.option.quantity = pos!(2.0);
-        let result = strangle.modify_position(&modified_put);
+        let result = straddle.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(strangle.short_put.option.quantity, pos!(2.0));
+        assert_eq!(straddle.short_put.option.quantity, pos!(2.0));
 
         // Test modifying with invalid position
-        let mut invalid_position = strangle.short_call.clone();
+        let mut invalid_position = straddle.short_call.clone();
         invalid_position.option.strike_price = pos!(95.0);
-        let result = strangle.modify_position(&invalid_position);
+        let result = straddle.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
@@ -3038,11 +3038,11 @@ mod tests_straddle_position_management {
     }
 
     #[test]
-    fn test_long_strangle_get_position() {
-        let mut strangle = create_test_long_strangle();
+    fn test_long_straddle_get_position() {
+        let mut straddle = create_test_long_straddle();
 
         // Test getting long call position
-        let call_position = strangle.get_position(&OptionStyle::Call, &Side::Long, &pos!(110.0));
+        let call_position = straddle.get_position(&OptionStyle::Call, &Side::Long, &pos!(110.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -3051,7 +3051,7 @@ mod tests_straddle_position_management {
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting long put position
-        let put_position = strangle.get_position(&OptionStyle::Put, &Side::Long, &pos!(110.0));
+        let put_position = straddle.get_position(&OptionStyle::Put, &Side::Long, &pos!(110.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -3060,7 +3060,7 @@ mod tests_straddle_position_management {
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting non-existent position
-        let invalid_position = strangle.get_position(&OptionStyle::Call, &Side::Long, &pos!(100.0));
+        let invalid_position = straddle.get_position(&OptionStyle::Call, &Side::Long, &pos!(100.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -3079,27 +3079,27 @@ mod tests_straddle_position_management {
     }
 
     #[test]
-    fn test_long_strangle_modify_position() {
-        let mut strangle = create_test_long_strangle();
+    fn test_long_straddle_modify_position() {
+        let mut straddle = create_test_long_straddle();
 
         // Modify long call position
-        let mut modified_call = strangle.long_call.clone();
+        let mut modified_call = straddle.long_call.clone();
         modified_call.option.quantity = pos!(2.0);
-        let result = strangle.modify_position(&modified_call);
+        let result = straddle.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(strangle.long_call.option.quantity, pos!(2.0));
+        assert_eq!(straddle.long_call.option.quantity, pos!(2.0));
 
         // Modify long put position
-        let mut modified_put = strangle.long_put.clone();
+        let mut modified_put = straddle.long_put.clone();
         modified_put.option.quantity = pos!(2.0);
-        let result = strangle.modify_position(&modified_put);
+        let result = straddle.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(strangle.long_put.option.quantity, pos!(2.0));
+        assert_eq!(straddle.long_put.option.quantity, pos!(2.0));
 
         // Test modifying with invalid position
-        let mut invalid_position = strangle.long_call.clone();
+        let mut invalid_position = straddle.long_call.clone();
         invalid_position.option.strike_price = pos!(95.0);
-        let result = strangle.modify_position(&invalid_position);
+        let result = straddle.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
