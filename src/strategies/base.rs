@@ -272,13 +272,6 @@ pub trait Strategies: Validable + Positionable {
         Ok((min, max))
     }
 
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Err(StrategyError::operation_not_supported(
-            "get_break_even_points",
-            std::any::type_name::<Self>(),
-        ))
-    }
-
     /// Calculates the range of profit based on break-even points for any strategy that implements
     /// the `Strategies` trait. Break-even points are determined using the `get_break_even_points` method.
     ///
@@ -302,6 +295,19 @@ pub trait Strategies: Validable + Positionable {
                 Ok(*break_even_points.last().unwrap() - *break_even_points.first().unwrap())
             }
         }
+    }
+}
+
+pub trait BreakEvenable {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "get_break_even_points",
+            std::any::type_name::<Self>(),
+        ))
+    }
+    
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        unimplemented!("Update break even points is not implemented for this strategy")
     }
 }
 
