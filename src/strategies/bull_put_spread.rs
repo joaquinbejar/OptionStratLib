@@ -2278,15 +2278,12 @@ mod tests_adjust_option_position {
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
             Some(PositionError::ValidationError(
-                     PositionValidationErrorKind::IncompatibleSide {
-                         position_side: _,
-                         reason,
-                     },
-                 )) => {
-                assert_eq!(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
                     reason,
-                    "Call is not valid for BullPutSpread"
-                );
+                },
+            )) => {
+                assert_eq!(reason, "Call is not valid for BullPutSpread");
             }
             _ => panic!("Expected PositionError::ValidationError"),
         }

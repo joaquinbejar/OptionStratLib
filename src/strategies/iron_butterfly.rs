@@ -2821,11 +2821,11 @@ mod tests_adjust_option_position {
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
             Some(PositionError::ValidationError(
-                     PositionValidationErrorKind::IncompatibleSide {
-                         position_side: _,
-                         reason,
-                     },
-                 )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => panic!("Expected PositionError::ValidationError"),

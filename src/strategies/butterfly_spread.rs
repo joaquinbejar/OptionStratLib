@@ -4724,15 +4724,12 @@ mod tests_adjust_option_position_short {
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
             Some(PositionError::ValidationError(
-                     PositionValidationErrorKind::IncompatibleSide {
-                         position_side: _,
-                         reason,
-                     },
-                 )) => {
-                assert_eq!(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
                     reason,
-                    "Put not found in positions"
-                );
+                },
+            )) => {
+                assert_eq!(reason, "Put not found in positions");
             }
             _ => panic!("Expected PositionError::ValidationError"),
         }
@@ -4857,15 +4854,12 @@ mod tests_adjust_option_position_long {
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
             Some(PositionError::ValidationError(
-                     PositionValidationErrorKind::IncompatibleSide {
-                         position_side: _,
-                         reason,
-                     },
-                 )) => {
-                assert_eq!(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
                     reason,
-                    "Put not found in positions"
-                );
+                },
+            )) => {
+                assert_eq!(reason, "Put not found in positions");
             }
             _ => panic!("Expected PositionError::ValidationError"),
         }

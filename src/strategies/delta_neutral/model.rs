@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 10/12/24
 ******************************************************************************/
+use crate::error::position::PositionValidationErrorKind;
+use crate::error::PositionError;
 /// # Delta Neutrality Management Module
 ///
 /// This module provides tools and structures to manage and maintain delta neutrality
@@ -48,8 +50,6 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 use std::fmt;
 use tracing::info;
-use crate::error::position::PositionValidationErrorKind;
-use crate::error::PositionError;
 
 pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 

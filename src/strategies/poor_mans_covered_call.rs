@@ -2148,15 +2148,12 @@ mod tests_adjust_option_position {
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
             Some(PositionError::ValidationError(
-                     PositionValidationErrorKind::IncompatibleSide {
-                         position_side: _,
-                         reason,
-                     },
-                 )) => {
-                assert_eq!(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
                     reason,
-                    "Put is not valid for PoorMansCoveredCall"
-                );
+                },
+            )) => {
+                assert_eq!(reason, "Put is not valid for PoorMansCoveredCall");
             }
             _ => panic!("Expected PositionError::ValidationError"),
         }
@@ -2193,5 +2190,3 @@ mod tests_adjust_option_position {
         assert_eq!(strategy.short_call.option.quantity, initial_quantity);
     }
 }
-
-

@@ -3125,7 +3125,7 @@ mod tests_adjust_option_position {
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
-    
+
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
@@ -3218,8 +3218,16 @@ mod tests_adjust_option_position {
 
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
-            Some(PositionError::ValidationError(PositionValidationErrorKind::IncompatibleSide { position_side: _,reason })) => {
-                assert_eq!(reason, "Position side is Long, it is not valid for ShortStraddle");
+            Some(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(
+                    reason,
+                    "Position side is Long, it is not valid for ShortStraddle"
+                );
             }
             _ => panic!("Expected PositionError::ValidationError"),
         }
@@ -3255,7 +3263,6 @@ mod tests_adjust_option_position {
         assert!(result.is_ok());
         assert_eq!(strategy.short_call.option.quantity, initial_quantity);
     }
-
 
     #[test]
     fn test_adjust_existing_call_position_long() {
@@ -3311,8 +3318,16 @@ mod tests_adjust_option_position {
 
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
-            Some(PositionError::ValidationError(PositionValidationErrorKind::IncompatibleSide { position_side: _,reason })) => {
-                assert_eq!(reason, "Position side is Short, it is not valid for LongStraddle");
+            Some(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(
+                    reason,
+                    "Position side is Short, it is not valid for LongStraddle"
+                );
             }
             _ => panic!("Expected PositionError::ValidationError"),
         }

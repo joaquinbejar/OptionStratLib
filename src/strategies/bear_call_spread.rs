@@ -2478,15 +2478,12 @@ mod tests_adjust_option_position_short {
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
             Some(PositionError::ValidationError(
-                     PositionValidationErrorKind::IncompatibleSide {
-                         position_side: _,
-                         reason,
-                     },
-                 )) => {
-                assert_eq!(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
                     reason,
-                    "Put is not valid for BearCallSpread"
-                );
+                },
+            )) => {
+                assert_eq!(reason, "Put is not valid for BearCallSpread");
             }
             _ => panic!("Expected PositionError::ValidationError"),
         }
