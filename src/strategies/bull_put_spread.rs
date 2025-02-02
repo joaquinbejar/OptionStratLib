@@ -2194,3 +2194,132 @@ mod tests_bear_call_spread_position_management {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_adjust_option_position {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test strategy
+    fn create_test_strategy() -> BullPutSpread {
+        BullPutSpread::new(
+            "SP500".to_string(),
+            pos!(5781.88), // underlying_price
+            pos!(5850.0),  // long_strike
+            pos!(5720.0),  // short_strike
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(4.0),      // long quantity
+            pos!(85.04),    // premium_long
+            pos!(29.85),    // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // open_fee_long
+            pos!(0.73),     // close_fee_long
+            pos!(0.73),     // close_fee_short
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_put.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5720.0),
+            &OptionStyle::Put,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_put.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_put_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_put.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5850.0),
+            &OptionStyle::Put,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_put.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(5850.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                     PositionValidationErrorKind::IncompatibleSide {
+                         position_side: _,
+                         reason,
+                     },
+                 )) => {
+                assert_eq!(
+                    reason,
+                    "Call is not valid for BullPutSpread"
+                );
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_put.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(5720.0),
+            &OptionStyle::Put,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.long_put.option.quantity, initial_quantity);
+    }
+}
