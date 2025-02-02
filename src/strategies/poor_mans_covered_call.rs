@@ -2063,3 +2063,135 @@ mod tests_poor_mans_covered_call_position_management {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_adjust_option_position {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test strategy
+    fn create_test_strategy() -> PoorMansCoveredCall {
+        PoorMansCoveredCall::new(
+            "GOLD".to_string(),                // underlying_symbol
+            pos!(2703.3),                      // underlying_price
+            pos!(2600.0),                      // long_call_strike
+            pos!(2800.0),                      // short_call_strike OTM
+            ExpirationDate::Days(pos!(120.0)), // long_call_expiration
+            ExpirationDate::Days(pos!(30.0)), // short_call_expiration 30-45 days delta 0.30 or less
+            pos!(0.17),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            Positive::ZERO,                   // dividend_yield
+            pos!(2.0),                        // quantity
+            pos!(154.7),                      // premium_short_call
+            pos!(30.8),                       // premium_short_put
+            pos!(1.74),                       // open_fee_short_call
+            pos!(1.74),                       // close_fee_short_call
+            pos!(0.85),                       // open_fee_short_put
+            pos!(0.85),                       // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(2800.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_put_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(2600.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(110.0),
+            &OptionStyle::Put,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                     PositionValidationErrorKind::IncompatibleSide {
+                         position_side: _,
+                         reason,
+                     },
+                 )) => {
+                assert_eq!(
+                    reason,
+                    "Put is not valid for PoorMansCoveredCall"
+                );
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(2800.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.short_call.option.quantity, initial_quantity);
+    }
+}
+
+
