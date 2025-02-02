@@ -1954,14 +1954,14 @@ mod tests_poor_mans_covered_call_probability {
 }
 
 #[cfg(test)]
-mod tests_strangle_position_management {
+mod tests_poor_mans_covered_call_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
-    fn create_test_short_strangle() -> PoorMansCoveredCall {
+    fn create_test_short_poor_mans_covered_call() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "GOLD".to_string(),                // underlying_symbol
             pos!(2703.3),                      // underlying_price
@@ -1983,11 +1983,11 @@ mod tests_strangle_position_management {
     }
 
     #[test]
-    fn test_short_strangle_get_position() {
-        let mut strangle = create_test_short_strangle();
+    fn test_short_poor_mans_covered_call_get_position() {
+        let mut poor_mans_covered_call = create_test_short_poor_mans_covered_call();
 
         // Test getting short call position
-        let call_position = strangle.get_position(&OptionStyle::Call, &Side::Long, &pos!(2600.0));
+        let call_position = poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Long, &pos!(2600.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -1996,7 +1996,7 @@ mod tests_strangle_position_management {
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
-        let put_position = strangle.get_position(&OptionStyle::Call, &Side::Short, &pos!(2800.0));
+        let put_position = poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Short, &pos!(2800.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2006,7 +2006,7 @@ mod tests_strangle_position_management {
 
         // Test getting non-existent position
         let invalid_position =
-            strangle.get_position(&OptionStyle::Call, &Side::Short, &pos!(2801.0));
+            poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Short, &pos!(2801.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -2025,27 +2025,27 @@ mod tests_strangle_position_management {
     }
 
     #[test]
-    fn test_short_strangle_modify_position() {
-        let mut strangle = create_test_short_strangle();
+    fn test_short_poor_mans_covered_call_modify_position() {
+        let mut poor_mans_covered_call = create_test_short_poor_mans_covered_call();
 
         // Modify short call position
-        let mut modified_call = strangle.short_call.clone();
+        let mut modified_call = poor_mans_covered_call.short_call.clone();
         modified_call.option.quantity = pos!(2.0);
-        let result = strangle.modify_position(&modified_call);
+        let result = poor_mans_covered_call.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(strangle.short_call.option.quantity, pos!(2.0));
+        assert_eq!(poor_mans_covered_call.short_call.option.quantity, pos!(2.0));
 
         // Modify short put position
-        let mut modified_put = strangle.long_call.clone();
+        let mut modified_put = poor_mans_covered_call.long_call.clone();
         modified_put.option.quantity = pos!(2.0);
-        let result = strangle.modify_position(&modified_put);
+        let result = poor_mans_covered_call.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(strangle.long_call.option.quantity, pos!(2.0));
+        assert_eq!(poor_mans_covered_call.long_call.option.quantity, pos!(2.0));
 
         // Test modifying with invalid position
-        let mut invalid_position = strangle.short_call.clone();
+        let mut invalid_position = poor_mans_covered_call.short_call.clone();
         invalid_position.option.strike_price = pos!(95.0);
-        let result = strangle.modify_position(&invalid_position);
+        let result = poor_mans_covered_call.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
