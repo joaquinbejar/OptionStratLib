@@ -8,7 +8,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
-use crate::error::position::PositionError;
+use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, ProbabilityError};
 use crate::greeks::Greeks;
@@ -235,6 +235,100 @@ impl Positionable for CallButterfly {
             &self.short_call_low,
             &self.short_call_high,
         ])
+    }
+
+    /// Gets mutable positions matching the specified criteria from the strategy.
+    ///
+    /// # Arguments
+    /// * `option_style` - The style of the option (Put/Call)
+    /// * `side` - The side of the position (Long/Short)
+    /// * `strike` - The strike price of the option
+    ///
+    /// # Returns
+    /// * `Ok(Vec<&mut Position>)` - A vector containing mutable references to matching positions
+    /// * `Err(PositionError)` - If there was an error retrieving positions
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        match (side, option_style, strike) {
+            (Side::Short, OptionStyle::Call, strike)
+            if *strike == self.short_call_low.option.strike_price =>
+                {
+                    Ok(vec![&mut self.short_call_low])
+                }
+            (Side::Short, OptionStyle::Call, strike)
+            if *strike == self.short_call_high.option.strike_price =>
+                {
+                    Ok(vec![&mut self.short_call_high])
+                }
+            (Side::Long, OptionStyle::Call, strike)
+            if *strike == self.long_call.option.strike_price =>
+                {
+                    Ok(vec![&mut self.long_call])
+                }
+            (_, OptionStyle::Put, _) =>
+                Err(PositionError::invalid_position_type(
+                    side.clone(),
+                    "Put not found in positions".to_string(),
+                )),
+            _ => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Strike not found in positions".to_string(),
+            )),
+        }
+    }
+
+    /// Modifies an existing position in the strategy.
+    ///
+    /// # Arguments
+    /// * `position` - The new position data to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if position was successfully modified
+    /// * `Err(PositionError)` if position was not found or validation failed
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+        
+        if position.option.strike_price != self.long_call.option.strike_price
+            && position.option.strike_price != self.short_call_low.option.strike_price
+            && position.option.strike_price != self.short_call_high.option.strike_price
+        {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Strike not found in positions".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Put is not valid for CallButterfly".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call 
+            && position.option.side == Side::Long {
+            self.long_call = position.clone();
+        }
+        
+        if position.option.strike_price == self.short_call_low.option.strike_price {
+            self.short_call_low = position.clone();
+        }
+        if position.option.strike_price == self.short_call_high.option.strike_price {
+            self.short_call_high = position.clone();
+        }
+        
+
+        Ok(())
     }
 }
 
@@ -1080,7 +1174,7 @@ mod tests_call_butterfly_graph {
 }
 
 #[cfg(test)]
-mod tests_iron_condor_delta {
+mod tests_call_butterfly_delta {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::call_butterfly::CallButterfly;
@@ -1224,7 +1318,7 @@ mod tests_iron_condor_delta {
 }
 
 #[cfg(test)]
-mod tests_iron_condor_delta_size {
+mod tests_call_butterfly_delta_size {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::call_butterfly::CallButterfly;
@@ -1758,4 +1852,176 @@ mod tests_call_butterfly_probability {
         assert!(max_loss_prob >= Positive::ZERO);
         assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
     }
+}
+
+#[cfg(test)]
+mod tests_call_butterfly_position_management {
+    use super::*;
+    use crate::error::position::PositionValidationErrorKind;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    fn create_test_call_butterfly() -> CallButterfly {
+        CallButterfly::new(
+            "SP500".to_string(),
+            pos!(5781.88), // underlying_price
+            pos!(5750.0),     // long_call_strike
+            pos!(5800.0),     // short_call_low_strike
+            pos!(5850.0),     // short_call_high_strike
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(3.0),      // long quantity
+            pos!(85.04),    // premium_long_itm
+            pos!(53.04),    // premium_long_otm
+            pos!(28.85),    // premium_short
+            pos!(0.78),     // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // close_fee_long
+            pos!(0.73),     // close_fee_short
+            pos!(0.73),     // close_fee_short
+            pos!(0.72),     // open_fee_short
+        )
+    }
+
+    #[test]
+    fn test_short_call_butterfly_get_position() {
+        let mut call_butterfly = create_test_call_butterfly();
+
+        // Test getting short call position
+        let call_position = call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5800.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5800.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting short put position
+        let put_position = call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5850.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5850.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting non-existent position
+        let invalid_position =
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(2715.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                    PositionValidationErrorKind::IncompatibleSide {
+                        position_side: _,
+                        reason,
+                    },
+                )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_long_call_butterfly_get_position() {
+        let mut call_butterfly = create_test_call_butterfly();
+
+        // Test getting short call position
+        let call_position = call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(5750.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5750.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Long);
+        
+
+        // Test getting non-existent position
+        let invalid_position =
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(2715.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                    PositionValidationErrorKind::IncompatibleSide {
+                        position_side: _,
+                        reason,
+                    },
+                )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_call_butterfly_modify_position() {
+        let mut call_butterfly = create_test_call_butterfly();
+
+        // Modify short call position
+        let mut modified_call = call_butterfly.short_call_low.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = call_butterfly.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(call_butterfly.short_call_low.option.quantity, pos!(2.0));
+
+        // Modify short put position
+        let mut modified_put = call_butterfly.short_call_high.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = call_butterfly.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(call_butterfly.short_call_high.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = call_butterfly.short_call_high.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = call_butterfly.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_long_call_butterfly_modify_position() {
+        let mut call_butterfly = create_test_call_butterfly();
+
+        // Modify long call position
+        let mut modified_call = call_butterfly.long_call.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = call_butterfly.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(call_butterfly.long_call.option.quantity, pos!(2.0));
+
+
+        // Test modifying with invalid position
+        let mut invalid_position = call_butterfly.long_call.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = call_butterfly.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+
 }
