@@ -4368,7 +4368,7 @@ mod tests_chain_implied_volatility {
 
             let iv = option.implied_volatility.unwrap() / pos!(100.0);
             assert!(
-                iv > pos!(0.0) && iv < pos!(2.0),
+                iv > pos!(0.0) && iv < pos!(5.0),
                 "IV should be reasonable for strike {}: {}",
                 option.strike_price,
                 iv

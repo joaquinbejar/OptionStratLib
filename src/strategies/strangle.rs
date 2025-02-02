@@ -683,7 +683,6 @@ impl DeltaNeutrality for ShortStrangle {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.short_put.option.delta().unwrap();
-        println!("Delta: {}", delta);
         if delta == Decimal::ZERO {
             return vec![DeltaAdjustment::SellOptions {
                 quantity: self.short_put.option.quantity,
@@ -698,28 +697,6 @@ impl DeltaNeutrality for ShortStrangle {
             strike: self.short_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
-    }
-
-    fn adjust_option_position(
-        &mut self,
-        quantity: Positive,
-        strike: &Positive,
-        option_type: &OptionStyle,
-        side: &Side,
-    ) -> Result<(), Box<dyn Error>> {
-        let mut binding = self.get_position(option_type, side, strike)?;
-        if let Some(current_position) = binding.first_mut() {
-            let mut updated_position = (*current_position).clone();
-            updated_position.option.quantity += quantity;
-            self.modify_position(&updated_position)?;
-        } else {
-            return Err(Box::new(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition {
-                    reason: "Position not found".to_string(),
-                },
-            )));
-        }
-        Ok(())
     }
 }
 
@@ -3119,7 +3096,6 @@ mod tests_strangle_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }
@@ -3197,7 +3173,6 @@ mod tests_strangle_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }
@@ -3238,5 +3213,263 @@ mod tests_strangle_position_management {
             },
             _ => panic!("Expected ValidationError"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_adjust_option_position_short {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test strategy
+    fn create_test_strategy() -> ShortStrangle {
+        ShortStrangle::new(
+            "TEST".to_string(),
+            pos!(100.0), // underlying_price
+            pos!(110.0), // call_strike
+            pos!(90.0),  // put_strike
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(2.0),      // premium_short_call
+            pos!(2.0),      // premium_short_put
+            pos!(0.1),      // open_fee_short_call
+            pos!(0.1),      // close_fee_short_call
+            pos!(0.1),      // open_fee_short_put
+            pos!(0.1),      // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_put_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_put.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(90.0),
+            &OptionStyle::Put,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_put.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(
+                    reason,
+                    "Position side is Long, it is not valid for ShortStrangle"
+                );
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.short_call.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_adjust_option_position_long {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test strategy
+    fn create_test_strategy() -> LongStrangle {
+        LongStrangle::new(
+            "TEST".to_string(),
+            pos!(100.0), // underlying_price
+            pos!(110.0), // call_strike
+            pos!(90.0),  // put_strike
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),      // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(2.0),      // premium_short_call
+            pos!(2.0),      // premium_short_put
+            pos!(0.1),      // open_fee_short_call
+            pos!(0.1),      // close_fee_short_call
+            pos!(0.1),      // open_fee_short_put
+            pos!(0.1),      // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_put_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_put.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(90.0),
+            &OptionStyle::Put,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_put.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(
+                    reason,
+                    "Position side is Short, it is not valid for LongStrangle"
+                );
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(110.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.long_call.option.quantity, initial_quantity);
     }
 }

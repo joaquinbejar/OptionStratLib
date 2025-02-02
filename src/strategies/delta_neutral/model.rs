@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 10/12/24
 ******************************************************************************/
+use crate::error::position::PositionValidationErrorKind;
+use crate::error::PositionError;
 /// # Delta Neutrality Management Module
 ///
 /// This module provides tools and structures to manage and maintain delta neutrality
@@ -316,14 +318,24 @@ pub trait DeltaNeutrality: Greeks + Positionable {
 
     fn adjust_option_position(
         &mut self,
-        _quantity: Positive,
-        _strike: &Positive,
-        _option_type: &OptionStyle,
-        _side: &Side,
+        quantity: Positive,
+        strike: &Positive,
+        option_type: &OptionStyle,
+        side: &Side,
     ) -> Result<(), Box<dyn Error>> {
-        // Implementation for adjusting option position
-        // This would typically create or modify option positions
-        unimplemented!("Implement option position adjustment")
+        let mut binding = self.get_position(option_type, side, strike)?;
+        if let Some(current_position) = binding.first_mut() {
+            let mut updated_position = (*current_position).clone();
+            updated_position.option.quantity += quantity;
+            self.modify_position(&updated_position)?;
+        } else {
+            return Err(Box::new(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Position not found".to_string(),
+                },
+            )));
+        }
+        Ok(())
     }
 }
 
