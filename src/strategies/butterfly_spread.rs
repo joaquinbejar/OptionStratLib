@@ -4284,7 +4284,7 @@ mod tests_short_butterfly_delta_size {
 }
 
 #[cfg(test)]
-mod tests_long_butterfly_position_management {
+mod tests_short_butterfly_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
@@ -4463,7 +4463,7 @@ mod tests_long_butterfly_position_management {
 }
 
 #[cfg(test)]
-mod tests_short_butterfly_position_management {
+mod tests_long_butterfly_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
@@ -4634,5 +4634,271 @@ mod tests_short_butterfly_position_management {
             },
             _ => panic!("Expected ValidationError"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_adjust_option_position_short {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test strategy
+    fn create_test_strategy() -> ShortButterflySpread {
+        ShortButterflySpread::new(
+            "SP500".to_string(),
+            pos!(5781.88), // underlying_price
+            pos!(5700.0),  // short_strike_itm
+            pos!(5780.0),  // long_strike
+            pos!(5850.0),  // short_strike_otm
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // long quantity
+            pos!(119.01),   // premium_long
+            pos!(66.0),     // premium_short
+            pos!(29.85),    // open_fee_long
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+            pos!(0.05),
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call_low.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5700.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_call_low.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_long_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5780.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(5780.0),
+            &OptionStyle::Put,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                     PositionValidationErrorKind::IncompatibleSide {
+                         position_side: _,
+                         reason,
+                     },
+                 )) => {
+                assert_eq!(
+                    reason,
+                    "Put not found in positions"
+                );
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call_high.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(5850.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.short_call_high.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_adjust_option_position_long {
+    use super::*;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test strategy
+    fn create_test_strategy() -> LongButterflySpread {
+        LongButterflySpread::new(
+            "SP500".to_string(),
+            pos!(5795.88), // underlying_price
+            pos!(5710.0),  // long_strike_itm
+            pos!(5780.0),  // short_strike
+            pos!(5850.0),  // long_strike_otm
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // long quantity
+            pos!(113.3),    // premium_long_low
+            pos!(64.20),    // premium_short
+            pos!(31.65),    // premium_long_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
+        )
+    }
+
+    #[test]
+    fn test_adjust_existing_call_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call_low.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5710.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.long_call_low.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_existing_put_position() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.short_call.option.quantity;
+        let adjustment = pos!(1.0);
+
+        let result = strategy.adjust_option_position(
+            adjustment,
+            &pos!(5780.0),
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            strategy.short_call.option.quantity,
+            initial_quantity + adjustment
+        );
+    }
+
+    #[test]
+    fn test_adjust_nonexistent_position() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust a non-existent long call position
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(110.0),
+            &OptionStyle::Put,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+        match result.unwrap_err().downcast_ref::<PositionError>() {
+            Some(PositionError::ValidationError(
+                     PositionValidationErrorKind::IncompatibleSide {
+                         position_side: _,
+                         reason,
+                     },
+                 )) => {
+                assert_eq!(
+                    reason,
+                    "Put not found in positions"
+                );
+            }
+            _ => panic!("Expected PositionError::ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_adjust_with_invalid_strike() {
+        let mut strategy = create_test_strategy();
+
+        // Try to adjust position with wrong strike price
+        let result = strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0), // Invalid strike price
+            &OptionStyle::Call,
+            &Side::Short,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_quantity_adjustment() {
+        let mut strategy = create_test_strategy();
+        let initial_quantity = strategy.long_call_high.option.quantity;
+
+        let result = strategy.adjust_option_position(
+            Positive::ZERO,
+            &pos!(5850.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(strategy.long_call_high.option.quantity, initial_quantity);
     }
 }
