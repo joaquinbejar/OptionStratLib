@@ -530,3 +530,391 @@ mod tests {
         );
     }
 }
+
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use std::cell::RefCell;
+    use crate::{pos, Options};
+    use crate::error::GreeksError;
+    use crate::greeks::Greek;
+
+    // Enhanced mock to track adjustments
+    struct MockStrategyWithAdjustments {
+        delta: Decimal,
+        underlying_price: Positive,
+        individual_deltas: Vec<Decimal>,
+        underlying_adjustments: RefCell<Vec<(Positive, Side)>>,
+        option_adjustments: RefCell<Vec<(Positive, Positive, OptionStyle, Side)>>,
+    }
+
+    impl Greeks for MockStrategyWithAdjustments {
+        fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+            Ok(vec![])
+        }
+
+        fn greeks(&self) -> Result<Greek, GreeksError> {
+            Ok(Greek {
+                delta: self.delta,
+                gamma: Decimal::ZERO,
+                theta: Decimal::ZERO,
+                vega: Decimal::ZERO,
+                rho: Decimal::ZERO,
+                rho_d: Decimal::ZERO,
+                alpha: Decimal::ZERO,
+            })
+        }
+    }
+
+    impl Positionable for MockStrategyWithAdjustments {}
+
+    impl DeltaNeutrality for MockStrategyWithAdjustments {
+        fn calculate_net_delta(&self) -> DeltaInfo {
+            DeltaInfo {
+                net_delta: self.delta,
+                individual_deltas: self.individual_deltas.clone(),
+                is_neutral: self.delta.abs() <= dec!(0.01),
+                neutrality_threshold: dec!(0.01),
+                underlying_price: self.underlying_price,
+            }
+        }
+
+        fn get_atm_strike(&self) -> Positive {
+            self.underlying_price
+        }
+
+        fn adjust_underlying_position(&mut self, quantity: Positive, side: Side) -> Result<(), Box<dyn Error>> {
+            self.underlying_adjustments.borrow_mut().push((quantity, side));
+            Ok(())
+        }
+
+        fn adjust_option_position(
+            &mut self,
+            quantity: Positive,
+            strike: &Positive,
+            option_type: &OptionStyle,
+            side: &Side,
+        ) -> Result<(), Box<dyn Error>> {
+            self.option_adjustments
+                .borrow_mut()
+                .push((quantity, *strike, option_type.clone(), side.clone()));
+            Ok(())
+        }
+    }
+
+    impl MockStrategyWithAdjustments {
+        fn new(delta: Decimal, price: Positive) -> Self {
+            Self {
+                delta,
+                underlying_price: price,
+                individual_deltas: vec![delta],
+                underlying_adjustments: RefCell::new(vec![]),
+                option_adjustments: RefCell::new(vec![]),
+            }
+        }
+    }
+
+    #[test]
+    fn test_get_atm_strike() {
+        let strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
+        assert_eq!(strategy.get_atm_strike(), pos!(100.0));
+    }
+
+    #[test]
+    fn test_no_adjustment_needed() {
+        let strategy = MockStrategyWithAdjustments::new(dec!(0.0001), pos!(100.0));
+        let adjustments = strategy.suggest_delta_adjustments();
+        assert_eq!(adjustments, vec![DeltaAdjustment::NoAdjustmentNeeded]);
+    }
+
+    #[test]
+    fn test_apply_delta_adjustments_neutral() -> Result<(), Box<dyn Error>> {
+        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.0001), pos!(100.0));
+        strategy.apply_delta_adjustments(None, None)?;
+
+        assert!(strategy.underlying_adjustments.borrow().is_empty());
+        assert!(strategy.option_adjustments.borrow().is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_apply_delta_adjustments_with_filters() -> Result<(), Box<dyn Error>> {
+        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
+
+        // Test with Side filter
+        strategy.apply_delta_adjustments(Some(Side::Long), None)?;
+
+        // Only Long adjustments should be applied
+        let option_adjustments = strategy.option_adjustments.borrow();
+        assert!(option_adjustments.iter().all(|(_, _, _, side)| matches!(side, Side::Long)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_adjust_underlying_position() -> Result<(), Box<dyn Error>> {
+        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
+
+        strategy.adjust_underlying_position(pos!(1.0), Side::Long)?;
+
+        let adjustments = strategy.underlying_adjustments.borrow();
+        assert_eq!(adjustments.len(), 1);
+        assert_eq!(adjustments[0], (pos!(1.0), Side::Long));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_adjust_option_position() -> Result<(), Box<dyn Error>> {
+        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
+
+        strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        )?;
+
+        let adjustments = strategy.option_adjustments.borrow();
+        assert_eq!(adjustments.len(), 1);
+        assert_eq!(
+            adjustments[0],
+            (pos!(1.0), pos!(100.0), OptionStyle::Call, Side::Long)
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_apply_delta_adjustments_with_option_style_filter() -> Result<(), Box<dyn Error>> {
+        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
+
+        // Test with OptionStyle filter
+        strategy.apply_delta_adjustments(None, Some(OptionStyle::Call))?;
+
+        // Only Call options should be adjusted
+        let option_adjustments = strategy.option_adjustments.borrow();
+        assert!(option_adjustments
+            .iter()
+            .all(|(_, _, style, _)| matches!(style, OptionStyle::Call)));
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod delta_adjustment_tests {
+    use super::*;
+    use std::cell::RefCell;
+    use crate::error::GreeksError;
+    use crate::greeks::Greek;
+    use crate::{pos, Options};
+
+    // Enhanced mock strategy for testing specific adjustment scenarios
+    struct TestMockStrategy {
+        delta: Decimal,
+        underlying_price: Positive,
+        underlying_adjustments: RefCell<Vec<(Positive, Side)>>,
+        option_adjustments: RefCell<Vec<(Positive, Positive, OptionStyle, Side)>>,
+    }
+
+    impl Greeks for TestMockStrategy {
+        fn greeks(&self) -> Result<Greek, GreeksError> {
+            Ok(Greek {
+                delta: self.delta,
+                gamma: Decimal::ZERO,
+                theta: Decimal::ZERO,
+                vega: Decimal::ZERO,
+                rho: Decimal::ZERO,
+                rho_d: Decimal::ZERO,
+                alpha: Decimal::ZERO,
+            })
+        }
+
+        fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+            Ok(vec![])
+        }
+    }
+
+    impl Positionable for TestMockStrategy {}
+
+    impl DeltaNeutrality for TestMockStrategy {
+        fn calculate_net_delta(&self) -> DeltaInfo {
+            DeltaInfo {
+                net_delta: self.delta,
+                individual_deltas: vec![self.delta],
+                is_neutral: self.delta.abs() <= DELTA_THRESHOLD,
+                neutrality_threshold: DELTA_THRESHOLD,
+                underlying_price: self.underlying_price,
+            }
+        }
+
+        fn get_atm_strike(&self) -> Positive {
+            self.underlying_price
+        }
+
+        fn adjust_underlying_position(&mut self, quantity: Positive, side: Side) -> Result<(), Box<dyn Error>> {
+            self.underlying_adjustments.borrow_mut().push((quantity, side));
+            Ok(())
+        }
+
+        fn adjust_option_position(
+            &mut self,
+            quantity: Positive,
+            strike: &Positive,
+            option_type: &OptionStyle,
+            side: &Side,
+        ) -> Result<(), Box<dyn Error>> {
+            self.option_adjustments.borrow_mut().push((quantity, *strike, option_type.clone(), side.clone()));
+            Ok(())
+        }
+    }
+
+    impl TestMockStrategy {
+        fn new(delta: Decimal, price: Positive) -> Self {
+            Self {
+                delta,
+                underlying_price: price,
+                underlying_adjustments: RefCell::new(vec![]),
+                option_adjustments: RefCell::new(vec![]),
+            }
+        }
+    }
+
+    #[test]
+    fn test_apply_buy_underlying_adjustment() -> Result<(), Box<dyn Error>> {
+        let mut strategy = TestMockStrategy::new(dec!(-0.5), pos!(100.0));
+
+        // Test BuyUnderlying with no side filter
+        strategy.apply_delta_adjustments(None, None)?;
+
+        let adjustments = strategy.underlying_adjustments.borrow();
+        assert!(adjustments.iter().any(|(_, side)| matches!(side, Side::Long)));
+        assert!(adjustments.iter().any(|(qty, _)| *qty == pos!(0.5)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_apply_buy_options_adjustment() -> Result<(), Box<dyn Error>> {
+        let mut strategy = TestMockStrategy::new(dec!(-0.5), pos!(100.0));
+
+        // Test BuyOptions with call option
+        strategy.apply_delta_adjustments(Some(Side::Long), Some(OptionStyle::Call))?;
+
+        let adjustments = strategy.option_adjustments.borrow();
+        let call_adjustments: Vec<_> = adjustments
+            .iter()
+            .filter(|(_, _, style, side)|
+                matches!(style, OptionStyle::Call) && matches!(side, Side::Long))
+            .collect();
+
+        assert!(!call_adjustments.is_empty());
+        assert_eq!(call_adjustments[0].0, pos!(1.0)); // Quantity
+        assert_eq!(call_adjustments[0].1, pos!(100.0)); // Strike
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_apply_sell_options_adjustment() -> Result<(), Box<dyn Error>> {
+        let mut strategy = TestMockStrategy::new(dec!(0.5), pos!(100.0));
+
+        // Test SellOptions with call option
+        strategy.apply_delta_adjustments(Some(Side::Short), Some(OptionStyle::Call))?;
+
+        let adjustments = strategy.option_adjustments.borrow();
+        let call_adjustments: Vec<_> = adjustments
+            .iter()
+            .filter(|(_, _, style, side)|
+                matches!(style, OptionStyle::Call) && matches!(side, Side::Short))
+            .collect();
+
+        assert!(!call_adjustments.is_empty());
+        assert_eq!(call_adjustments[0].0, pos!(1.0)); // Quantity
+        assert_eq!(call_adjustments[0].1, pos!(100.0)); // Strike
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_adjustment_needed_early_return() -> Result<(), Box<dyn Error>> {
+        let mut strategy = TestMockStrategy::new(dec!(0.00005), pos!(100.0));
+
+        // Execute adjustment when strategy is already neutral
+        strategy.apply_delta_adjustments(None, None)?;
+
+        // Verify no adjustments were made
+        assert!(strategy.underlying_adjustments.borrow().is_empty());
+        assert!(strategy.option_adjustments.borrow().is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_adjust_underlying_position_direct() -> Result<(), Box<dyn Error>> {
+        let mut strategy = TestMockStrategy::new(dec!(0.5), pos!(100.0));
+
+        // Test direct adjustment of underlying position
+        strategy.adjust_underlying_position(pos!(1.0), Side::Long)?;
+
+        {
+            let adjustments = strategy.underlying_adjustments.borrow();
+            assert_eq!(adjustments.len(), 1);
+            assert_eq!(adjustments[0], (pos!(1.0), Side::Long));
+        }  // préstamo inmutable termina aquí
+
+        // Test with short side
+        strategy.adjust_underlying_position(pos!(2.0), Side::Short)?;
+
+        {
+            let adjustments = strategy.underlying_adjustments.borrow();
+            assert_eq!(adjustments.len(), 2);
+            assert_eq!(adjustments[1], (pos!(2.0), Side::Short));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_adjust_option_position_direct() -> Result<(), Box<dyn Error>> {
+        let mut strategy = TestMockStrategy::new(dec!(0.5), pos!(100.0));
+
+        // Test calls
+        strategy.adjust_option_position(
+            pos!(1.0),
+            &pos!(100.0),
+            &OptionStyle::Call,
+            &Side::Long,
+        )?;
+
+        {
+            let adjustments = strategy.option_adjustments.borrow();
+            assert_eq!(adjustments.len(), 1);
+            assert_eq!(
+                adjustments[0],
+                (pos!(1.0), pos!(100.0), OptionStyle::Call, Side::Long)
+            );
+        } // préstamo inmutable termina aquí
+
+        // Test puts
+        strategy.adjust_option_position(
+            pos!(2.0),
+            &pos!(110.0),
+            &OptionStyle::Put,
+            &Side::Short,
+        )?;
+
+        {
+            let adjustments = strategy.option_adjustments.borrow();
+            assert_eq!(adjustments.len(), 2);
+            assert_eq!(
+                adjustments[1],
+                (pos!(2.0), pos!(110.0), OptionStyle::Put, Side::Short)
+            );
+        }
+
+        Ok(())
+    }
+}
