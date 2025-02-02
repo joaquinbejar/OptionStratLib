@@ -14,7 +14,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
-use crate::error::position::PositionError;
+use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, ProbabilityError};
 use crate::greeks::Greeks;
@@ -258,6 +258,96 @@ impl Positionable for IronCondor {
             &self.long_call,
             &self.long_put,
         ])
+    }
+
+    /// Gets mutable positions matching the specified criteria from the strategy.
+    ///
+    /// # Arguments
+    /// * `option_style` - The style of the option (Put/Call)
+    /// * `side` - The side of the position (Long/Short)
+    /// * `strike` - The strike price of the option
+    ///
+    /// # Returns
+    /// * `Ok(Vec<&mut Position>)` - A vector containing mutable references to matching positions
+    /// * `Err(PositionError)` - If there was an error retrieving positions
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        match (side, option_style, strike) {
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call])
+            }
+            (Side::Short, OptionStyle::Put, strike)
+                if *strike == self.short_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_put])
+            }
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call])
+            }
+            (Side::Long, OptionStyle::Put, strike)
+                if *strike == self.long_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_put])
+            }
+            _ => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Strike not found in positions".to_string(),
+            )),
+        }
+    }
+
+    /// Modifies an existing position in the strategy.
+    ///
+    /// # Arguments
+    /// * `position` - The new position data to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if position was successfully modified
+    /// * `Err(PositionError)` if position was not found or validation failed
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        if position.option.strike_price != self.long_call.option.strike_price
+            && position.option.strike_price != self.long_put.option.strike_price
+            && position.option.strike_price != self.short_call.option.strike_price
+            && position.option.strike_price != self.short_put.option.strike_price
+        {
+            return Err(PositionError::invalid_position_type(
+                position.option.side.clone(),
+                "Strike not found in positions".to_string(),
+            ));
+        }
+
+        match (&position.option.option_style, &position.option.side) {
+            (OptionStyle::Call, Side::Short) => {
+                self.short_call = position.clone();
+            }
+            (OptionStyle::Put, Side::Short) => {
+                self.short_put = position.clone();
+            }
+            (OptionStyle::Call, Side::Long) => {
+                self.long_call = position.clone();
+            }
+            (OptionStyle::Put, Side::Long) => {
+                self.long_put = position.clone();
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -2716,5 +2806,196 @@ mod tests_iron_condor_probability {
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
         assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_iron_condor_position_management {
+    use super::*;
+    use crate::error::position::PositionValidationErrorKind;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    fn create_test_iron_condor() -> IronCondor {
+        IronCondor::new(
+            "GOLD".to_string(),
+            pos!(2646.9), // underlying_price
+            pos!(2725.0), // short_call_strike
+            pos!(2560.0), // short_put_strike
+            pos!(2800.0), // long_call_strike
+            pos!(2500.0), // long_put_strike
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.1548),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(38.8),     // premium_short_call
+            pos!(30.4),     // premium_short_put
+            pos!(23.3),     // premium_long_call
+            pos!(16.8),     // premium_long_put
+            pos!(0.96),     // open_fee
+            pos!(0.96),     // close_fee
+        )
+    }
+
+    #[test]
+    fn test_short_iron_condor_get_position() {
+        let mut iron_condor = create_test_iron_condor();
+
+        // Test getting short call position
+        let call_position =
+            iron_condor.get_position(&OptionStyle::Call, &Side::Short, &pos!(2725.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(2725.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting short put position
+        let put_position = iron_condor.get_position(&OptionStyle::Put, &Side::Short, &pos!(2560.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(2560.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Put);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting non-existent position
+        let invalid_position =
+            iron_condor.get_position(&OptionStyle::Call, &Side::Short, &pos!(2715.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_long_iron_condor_get_position() {
+        let mut iron_condor = create_test_iron_condor();
+
+        // Test getting short call position
+        let call_position =
+            iron_condor.get_position(&OptionStyle::Call, &Side::Long, &pos!(2800.0));
+        assert!(call_position.is_ok());
+        let positions = call_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(2800.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Call);
+        assert_eq!(positions[0].option.side, Side::Long);
+
+        // Test getting short put position
+        let put_position = iron_condor.get_position(&OptionStyle::Put, &Side::Long, &pos!(2500.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(2500.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Put);
+        assert_eq!(positions[0].option.side, Side::Long);
+
+        // Test getting non-existent position
+        let invalid_position =
+            iron_condor.get_position(&OptionStyle::Call, &Side::Long, &pos!(2715.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Strike not found in positions");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_iron_condor_modify_position() {
+        let mut iron_condor = create_test_iron_condor();
+
+        // Modify short call position
+        let mut modified_call = iron_condor.short_call.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = iron_condor.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(iron_condor.short_call.option.quantity, pos!(2.0));
+
+        // Modify short put position
+        let mut modified_put = iron_condor.short_put.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = iron_condor.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(iron_condor.short_put.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = iron_condor.short_call.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = iron_condor.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+    }
+
+    #[test]
+    fn test_long_iron_condor_modify_position() {
+        let mut iron_condor = create_test_iron_condor();
+
+        // Modify long call position
+        let mut modified_call = iron_condor.long_call.clone();
+        modified_call.option.quantity = pos!(2.0);
+        let result = iron_condor.modify_position(&modified_call);
+        assert!(result.is_ok());
+        assert_eq!(iron_condor.long_call.option.quantity, pos!(2.0));
+
+        // Modify long put position
+        let mut modified_put = iron_condor.long_put.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = iron_condor.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(iron_condor.long_put.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = iron_condor.long_call.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = iron_condor.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
     }
 }

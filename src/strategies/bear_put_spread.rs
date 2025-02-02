@@ -17,7 +17,7 @@ use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
-use crate::error::position::PositionError;
+use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::GreeksError;
@@ -170,6 +170,93 @@ impl Positionable for BearPutSpread {
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_put, &self.short_put])
+    }
+
+    /// Gets mutable positions matching the specified criteria from the strategy.
+    ///
+    /// # Arguments
+    /// * `option_style` - The style of the option (Put/Call)
+    /// * `side` - The side of the position (Long/Short)
+    /// * `strike` - The strike price of the option
+    ///
+    /// # Returns
+    /// * `Ok(Vec<&mut Position>)` - A vector containing mutable references to matching positions
+    /// * `Err(PositionError)` - If there was an error retrieving positions
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        match (side, option_style, strike) {
+            (_, OptionStyle::Call, _) => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Call is not valid for BearPutSpread".to_string(),
+            )),
+            (Side::Long, OptionStyle::Put, strike)
+                if *strike == self.long_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_put])
+            }
+            (Side::Short, OptionStyle::Put, strike)
+                if *strike == self.short_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_put])
+            }
+            _ => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Strike not found in positions".to_string(),
+            )),
+        }
+    }
+
+    /// Modifies an existing position in the strategy.
+    ///
+    /// # Arguments
+    /// * `position` - The new position data to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if position was successfully modified
+    /// * `Err(PositionError)` if position was not found or validation failed
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        match (
+            &position.option.side,
+            &position.option.option_style,
+            &position.option.strike_price,
+        ) {
+            (_, OptionStyle::Call, _) => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side.clone(),
+                    "Call is not valid for BearPutSpread".to_string(),
+                ))
+            }
+            (Side::Long, OptionStyle::Put, strike)
+                if *strike == self.long_put.option.strike_price =>
+            {
+                self.long_put = position.clone();
+            }
+            (Side::Short, OptionStyle::Put, strike)
+                if *strike == self.short_put.option.strike_price =>
+            {
+                self.short_put = position.clone();
+            }
+            _ => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side.clone(),
+                    "Strike not found in positions".to_string(),
+                ))
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -2236,5 +2323,115 @@ mod tests_delta_size {
         assert!(strategy.is_delta_neutral());
         let suggestion = strategy.suggest_delta_adjustments();
         assert_eq!(suggestion[0], DeltaAdjustment::NoAdjustmentNeeded);
+    }
+}
+
+#[cfg(test)]
+mod tests_bear_call_spread_position_management {
+    use super::*;
+    use crate::error::position::PositionValidationErrorKind;
+    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    fn create_test_short_bear_put_spread() -> BearPutSpread {
+        BearPutSpread::new(
+            "SP500".to_string(),
+            pos!(5781.88), // underlying_price
+            pos!(5850.0),  // long_strike
+            pos!(5720.0),  // short_strike
+            ExpirationDate::Days(pos!(2.0)),
+            pos!(0.18),     // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(4.0),      // long quantity
+            pos!(85.04),    // premium_long
+            pos!(29.85),    // premium_short
+            pos!(0.78),     // open_fee_long
+            pos!(0.78),     // open_fee_long
+            pos!(0.73),     // close_fee_long
+            pos!(0.73),     // close_fee_short
+        )
+    }
+
+    #[test]
+    fn test_short_bear_put_spread_get_position() {
+        let mut bear_put_spread = create_test_short_bear_put_spread();
+
+        // Test getting short put position
+        let put_position =
+            bear_put_spread.get_position(&OptionStyle::Put, &Side::Long, &pos!(5850.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5850.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Put);
+        assert_eq!(positions[0].option.side, Side::Long);
+
+        // Test getting short put position
+        let put_position =
+            bear_put_spread.get_position(&OptionStyle::Put, &Side::Short, &pos!(5720.0));
+        assert!(put_position.is_ok());
+        let positions = put_position.unwrap();
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].option.strike_price, pos!(5720.0));
+        assert_eq!(positions[0].option.option_style, OptionStyle::Put);
+        assert_eq!(positions[0].option.side, Side::Short);
+
+        // Test getting non-existent position
+        let invalid_position =
+            bear_put_spread.get_position(&OptionStyle::Call, &Side::Short, &pos!(5821.0));
+        assert!(invalid_position.is_err());
+        match invalid_position {
+            Err(PositionError::ValidationError(
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
+                assert_eq!(reason, "Call is not valid for BearPutSpread");
+            }
+            _ => {
+                println!("Unexpected error: {:?}", invalid_position);
+                panic!()
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_bear_put_spread_modify_position() {
+        let mut bear_put_spread = create_test_short_bear_put_spread();
+
+        // Modify short put position
+        let mut modified_put = bear_put_spread.short_put.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = bear_put_spread.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(bear_put_spread.short_put.option.quantity, pos!(2.0));
+
+        // Modify short put position
+        let mut modified_put = bear_put_spread.long_put.clone();
+        modified_put.option.quantity = pos!(2.0);
+        let result = bear_put_spread.modify_position(&modified_put);
+        assert!(result.is_ok());
+        assert_eq!(bear_put_spread.long_put.option.quantity, pos!(2.0));
+
+        // Test modifying with invalid position
+        let mut invalid_position = bear_put_spread.short_put.clone();
+        invalid_position.option.strike_price = pos!(95.0);
+        let result = bear_put_spread.modify_position(&invalid_position);
+        assert!(result.is_err());
+        match result {
+            Err(PositionError::ValidationError(kind)) => match kind {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
+                    assert_eq!(reason, "Strike not found in positions");
+                }
+                _ => panic!("Expected ValidationError::InvalidPosition"),
+            },
+            _ => panic!("Expected ValidationError"),
+        }
     }
 }
