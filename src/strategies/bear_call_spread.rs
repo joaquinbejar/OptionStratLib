@@ -209,7 +209,7 @@ impl Positionable for BearCallSpread {
         match (side, option_style, strike) {
             (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
                 side.clone(),
-                "Put is not valid for PoorMansCoveredCall".to_string(),
+                "Put is not valid for BearCallSpread".to_string(),
             )),
             (Side::Long, OptionStyle::Call, strike)
             if *strike == self.long_call.option.strike_price =>
