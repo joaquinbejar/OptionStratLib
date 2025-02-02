@@ -255,25 +255,24 @@ impl Positionable for CallButterfly {
     ) -> Result<Vec<&mut Position>, PositionError> {
         match (side, option_style, strike) {
             (Side::Short, OptionStyle::Call, strike)
-            if *strike == self.short_call_low.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_call_low])
-                }
+                if *strike == self.short_call_low.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call_low])
+            }
             (Side::Short, OptionStyle::Call, strike)
-            if *strike == self.short_call_high.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_call_high])
-                }
+                if *strike == self.short_call_high.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call_high])
+            }
             (Side::Long, OptionStyle::Call, strike)
-            if *strike == self.long_call.option.strike_price =>
-                {
-                    Ok(vec![&mut self.long_call])
-                }
-            (_, OptionStyle::Put, _) =>
-                Err(PositionError::invalid_position_type(
-                    side.clone(),
-                    "Put not found in positions".to_string(),
-                )),
+                if *strike == self.long_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call])
+            }
+            (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
+                side.clone(),
+                "Put not found in positions".to_string(),
+            )),
             _ => Err(PositionError::invalid_position_type(
                 side.clone(),
                 "Strike not found in positions".to_string(),
@@ -297,7 +296,7 @@ impl Positionable for CallButterfly {
                 },
             ));
         }
-        
+
         if position.option.strike_price != self.long_call.option.strike_price
             && position.option.strike_price != self.short_call_low.option.strike_price
             && position.option.strike_price != self.short_call_high.option.strike_price
@@ -315,18 +314,16 @@ impl Positionable for CallButterfly {
             ));
         }
 
-        if position.option.option_style == OptionStyle::Call 
-            && position.option.side == Side::Long {
+        if position.option.option_style == OptionStyle::Call && position.option.side == Side::Long {
             self.long_call = position.clone();
         }
-        
+
         if position.option.strike_price == self.short_call_low.option.strike_price {
             self.short_call_low = position.clone();
         }
         if position.option.strike_price == self.short_call_high.option.strike_price {
             self.short_call_high = position.clone();
         }
-        
 
         Ok(())
     }
@@ -1866,9 +1863,9 @@ mod tests_call_butterfly_position_management {
         CallButterfly::new(
             "SP500".to_string(),
             pos!(5781.88), // underlying_price
-            pos!(5750.0),     // long_call_strike
-            pos!(5800.0),     // short_call_low_strike
-            pos!(5850.0),     // short_call_high_strike
+            pos!(5750.0),  // long_call_strike
+            pos!(5800.0),  // short_call_low_strike
+            pos!(5850.0),  // short_call_high_strike
             ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
@@ -1891,7 +1888,8 @@ mod tests_call_butterfly_position_management {
         let mut call_butterfly = create_test_call_butterfly();
 
         // Test getting short call position
-        let call_position = call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5800.0));
+        let call_position =
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5800.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -1900,7 +1898,8 @@ mod tests_call_butterfly_position_management {
         assert_eq!(positions[0].option.side, Side::Short);
 
         // Test getting short put position
-        let put_position = call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5850.0));
+        let put_position =
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5850.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -1914,11 +1913,11 @@ mod tests_call_butterfly_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
@@ -1933,14 +1932,14 @@ mod tests_call_butterfly_position_management {
         let mut call_butterfly = create_test_call_butterfly();
 
         // Test getting short call position
-        let call_position = call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(5750.0));
+        let call_position =
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(5750.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
         assert_eq!(positions[0].option.strike_price, pos!(5750.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Long);
-        
 
         // Test getting non-existent position
         let invalid_position =
@@ -1948,11 +1947,11 @@ mod tests_call_butterfly_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
@@ -1987,7 +1986,10 @@ mod tests_call_butterfly_position_management {
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
-                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
                     assert_eq!(reason, "Strike not found in positions");
                 }
                 _ => panic!("Expected ValidationError::InvalidPosition"),
@@ -2007,7 +2009,6 @@ mod tests_call_butterfly_position_management {
         assert!(result.is_ok());
         assert_eq!(call_butterfly.long_call.option.quantity, pos!(2.0));
 
-
         // Test modifying with invalid position
         let mut invalid_position = call_butterfly.long_call.clone();
         invalid_position.option.strike_price = pos!(95.0);
@@ -2015,7 +2016,10 @@ mod tests_call_butterfly_position_management {
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
-                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
                     assert_eq!(reason, "Strike not found in positions");
                 }
                 _ => panic!("Expected ValidationError::InvalidPosition"),
@@ -2023,5 +2027,4 @@ mod tests_call_butterfly_position_management {
             _ => panic!("Expected ValidationError"),
         }
     }
-
 }

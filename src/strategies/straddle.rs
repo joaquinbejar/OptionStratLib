@@ -207,15 +207,15 @@ impl Positionable for ShortStraddle {
                 "Position side is Long, it is not valid for ShortStraddle".to_string(),
             )),
             (Side::Short, OptionStyle::Call, strike)
-            if *strike == self.short_call.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_call])
-                }
+                if *strike == self.short_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call])
+            }
             (Side::Short, OptionStyle::Put, strike)
-            if *strike == self.short_put.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_put])
-                }
+                if *strike == self.short_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_put])
+            }
             _ => Err(PositionError::invalid_position_type(
                 side.clone(),
                 "Strike not found in positions".to_string(),
@@ -817,15 +817,15 @@ impl Positionable for LongStraddle {
                 "Position side is Short, it is not valid for LongStraddle".to_string(),
             )),
             (Side::Long, OptionStyle::Call, strike)
-            if *strike == self.long_call.option.strike_price =>
-                {
-                    Ok(vec![&mut self.long_call])
-                }
+                if *strike == self.long_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call])
+            }
             (Side::Long, OptionStyle::Put, strike)
-            if *strike == self.long_put.option.strike_price =>
-                {
-                    Ok(vec![&mut self.long_put])
-                }
+                if *strike == self.long_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_put])
+            }
             _ => Err(PositionError::invalid_position_type(
                 side.clone(),
                 "Strike not found in positions".to_string(),
@@ -2989,11 +2989,11 @@ mod tests_straddle_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
@@ -3028,7 +3028,10 @@ mod tests_straddle_position_management {
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
-                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
                     assert_eq!(reason, "Strike not found in positions");
                 }
                 _ => panic!("Expected ValidationError::InvalidPosition"),
@@ -3064,11 +3067,11 @@ mod tests_straddle_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
@@ -3103,7 +3106,10 @@ mod tests_straddle_position_management {
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
-                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
                     assert_eq!(reason, "Strike not found in positions");
                 }
                 _ => panic!("Expected ValidationError::InvalidPosition"),

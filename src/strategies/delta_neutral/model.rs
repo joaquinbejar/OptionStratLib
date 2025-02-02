@@ -531,14 +531,13 @@ mod tests {
     }
 }
 
-
 #[cfg(test)]
 mod additional_tests {
     use super::*;
-    use std::cell::RefCell;
-    use crate::{pos, Options};
     use crate::error::GreeksError;
     use crate::greeks::Greek;
+    use crate::{pos, Options};
+    use std::cell::RefCell;
 
     // Enhanced mock to track adjustments
     struct MockStrategyWithAdjustments {
@@ -584,8 +583,14 @@ mod additional_tests {
             self.underlying_price
         }
 
-        fn adjust_underlying_position(&mut self, quantity: Positive, side: Side) -> Result<(), Box<dyn Error>> {
-            self.underlying_adjustments.borrow_mut().push((quantity, side));
+        fn adjust_underlying_position(
+            &mut self,
+            quantity: Positive,
+            side: Side,
+        ) -> Result<(), Box<dyn Error>> {
+            self.underlying_adjustments
+                .borrow_mut()
+                .push((quantity, side));
             Ok(())
         }
 
@@ -596,9 +601,12 @@ mod additional_tests {
             option_type: &OptionStyle,
             side: &Side,
         ) -> Result<(), Box<dyn Error>> {
-            self.option_adjustments
-                .borrow_mut()
-                .push((quantity, *strike, option_type.clone(), side.clone()));
+            self.option_adjustments.borrow_mut().push((
+                quantity,
+                *strike,
+                option_type.clone(),
+                side.clone(),
+            ));
             Ok(())
         }
     }
@@ -647,7 +655,9 @@ mod additional_tests {
 
         // Only Long adjustments should be applied
         let option_adjustments = strategy.option_adjustments.borrow();
-        assert!(option_adjustments.iter().all(|(_, _, _, side)| matches!(side, Side::Long)));
+        assert!(option_adjustments
+            .iter()
+            .all(|(_, _, _, side)| matches!(side, Side::Long)));
 
         Ok(())
     }
@@ -706,10 +716,10 @@ mod additional_tests {
 #[cfg(test)]
 mod delta_adjustment_tests {
     use super::*;
-    use std::cell::RefCell;
     use crate::error::GreeksError;
     use crate::greeks::Greek;
     use crate::{pos, Options};
+    use std::cell::RefCell;
 
     // Enhanced mock strategy for testing specific adjustment scenarios
     struct TestMockStrategy {
@@ -754,8 +764,14 @@ mod delta_adjustment_tests {
             self.underlying_price
         }
 
-        fn adjust_underlying_position(&mut self, quantity: Positive, side: Side) -> Result<(), Box<dyn Error>> {
-            self.underlying_adjustments.borrow_mut().push((quantity, side));
+        fn adjust_underlying_position(
+            &mut self,
+            quantity: Positive,
+            side: Side,
+        ) -> Result<(), Box<dyn Error>> {
+            self.underlying_adjustments
+                .borrow_mut()
+                .push((quantity, side));
             Ok(())
         }
 
@@ -766,7 +782,12 @@ mod delta_adjustment_tests {
             option_type: &OptionStyle,
             side: &Side,
         ) -> Result<(), Box<dyn Error>> {
-            self.option_adjustments.borrow_mut().push((quantity, *strike, option_type.clone(), side.clone()));
+            self.option_adjustments.borrow_mut().push((
+                quantity,
+                *strike,
+                option_type.clone(),
+                side.clone(),
+            ));
             Ok(())
         }
     }
@@ -790,7 +811,9 @@ mod delta_adjustment_tests {
         strategy.apply_delta_adjustments(None, None)?;
 
         let adjustments = strategy.underlying_adjustments.borrow();
-        assert!(adjustments.iter().any(|(_, side)| matches!(side, Side::Long)));
+        assert!(adjustments
+            .iter()
+            .any(|(_, side)| matches!(side, Side::Long)));
         assert!(adjustments.iter().any(|(qty, _)| *qty == pos!(0.5)));
 
         Ok(())
@@ -806,8 +829,9 @@ mod delta_adjustment_tests {
         let adjustments = strategy.option_adjustments.borrow();
         let call_adjustments: Vec<_> = adjustments
             .iter()
-            .filter(|(_, _, style, side)|
-                matches!(style, OptionStyle::Call) && matches!(side, Side::Long))
+            .filter(|(_, _, style, side)| {
+                matches!(style, OptionStyle::Call) && matches!(side, Side::Long)
+            })
             .collect();
 
         assert!(!call_adjustments.is_empty());
@@ -827,8 +851,9 @@ mod delta_adjustment_tests {
         let adjustments = strategy.option_adjustments.borrow();
         let call_adjustments: Vec<_> = adjustments
             .iter()
-            .filter(|(_, _, style, side)|
-                matches!(style, OptionStyle::Call) && matches!(side, Side::Short))
+            .filter(|(_, _, style, side)| {
+                matches!(style, OptionStyle::Call) && matches!(side, Side::Short)
+            })
             .collect();
 
         assert!(!call_adjustments.is_empty());
@@ -863,7 +888,7 @@ mod delta_adjustment_tests {
             let adjustments = strategy.underlying_adjustments.borrow();
             assert_eq!(adjustments.len(), 1);
             assert_eq!(adjustments[0], (pos!(1.0), Side::Long));
-        }  // préstamo inmutable termina aquí
+        } // préstamo inmutable termina aquí
 
         // Test with short side
         strategy.adjust_underlying_position(pos!(2.0), Side::Short)?;

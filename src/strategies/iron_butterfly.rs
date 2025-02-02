@@ -279,25 +279,23 @@ impl Positionable for IronButterfly {
     ) -> Result<Vec<&mut Position>, PositionError> {
         match (side, option_style, strike) {
             (Side::Short, OptionStyle::Call, strike)
-            if *strike == self.short_call.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_call])
-                }
+                if *strike == self.short_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call])
+            }
             (Side::Short, OptionStyle::Put, strike)
-            if *strike == self.short_put.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_put])
-                }
+                if *strike == self.short_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_put])
+            }
             (Side::Long, OptionStyle::Call, strike)
-            if *strike == self.long_call.option.strike_price =>
-                {
-                    Ok(vec![&mut self.long_call])
-                }
-            (Side::Long, OptionStyle::Put, _)
-            if *strike == self.long_put.option.strike_price =>
-                {
-                    Ok(vec![&mut self.long_put])
-                }
+                if *strike == self.long_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call])
+            }
+            (Side::Long, OptionStyle::Put, _) if *strike == self.long_put.option.strike_price => {
+                Ok(vec![&mut self.long_put])
+            }
             _ => Err(PositionError::invalid_position_type(
                 side.clone(),
                 "Strike not found in positions".to_string(),
@@ -321,7 +319,6 @@ impl Positionable for IronButterfly {
                 },
             ));
         }
-
 
         if position.option.strike_price != self.long_call.option.strike_price
             && position.option.strike_price != self.long_put.option.strike_price
@@ -2560,9 +2557,9 @@ mod tests_iron_butterfly_position_management {
         IronButterfly::new(
             "GOLD".to_string(),
             pos!(2646.9), // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
+            pos!(2725.0), // short_call_strike
+            pos!(2800.0), // long_call_strike
+            pos!(2500.0), // long_put_strike
             ExpirationDate::Days(pos!(30.0)),
             pos!(0.1548),   // implied_volatility
             dec!(0.05),     // risk_free_rate
@@ -2582,7 +2579,8 @@ mod tests_iron_butterfly_position_management {
         let mut iron_butterfly = create_test_iron_butterfly();
 
         // Test getting short call position
-        let call_position = iron_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(2725.0));
+        let call_position =
+            iron_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(2725.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2591,7 +2589,8 @@ mod tests_iron_butterfly_position_management {
         assert_eq!(positions[0].option.side, Side::Short);
 
         // Test getting short put position
-        let put_position = iron_butterfly.get_position(&OptionStyle::Put, &Side::Short, &pos!(2725.0));
+        let put_position =
+            iron_butterfly.get_position(&OptionStyle::Put, &Side::Short, &pos!(2725.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2605,11 +2604,11 @@ mod tests_iron_butterfly_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
@@ -2624,7 +2623,8 @@ mod tests_iron_butterfly_position_management {
         let mut iron_butterfly = create_test_iron_butterfly();
 
         // Test getting short call position
-        let call_position = iron_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(2800.0));
+        let call_position =
+            iron_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(2800.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2633,7 +2633,8 @@ mod tests_iron_butterfly_position_management {
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
-        let put_position = iron_butterfly.get_position(&OptionStyle::Put, &Side::Long, &pos!(2500.0));
+        let put_position =
+            iron_butterfly.get_position(&OptionStyle::Put, &Side::Long, &pos!(2500.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2647,11 +2648,11 @@ mod tests_iron_butterfly_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
@@ -2686,7 +2687,10 @@ mod tests_iron_butterfly_position_management {
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
-                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
                     assert_eq!(reason, "Strike not found in positions");
                 }
                 _ => panic!("Expected ValidationError::InvalidPosition"),
@@ -2720,7 +2724,10 @@ mod tests_iron_butterfly_position_management {
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
-                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
                     assert_eq!(reason, "Strike not found in positions");
                 }
                 _ => panic!("Expected ValidationError::InvalidPosition"),
@@ -2728,5 +2735,4 @@ mod tests_iron_butterfly_position_management {
             _ => panic!("Expected ValidationError"),
         }
     }
-
 }

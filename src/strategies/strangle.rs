@@ -3150,7 +3150,10 @@ mod tests_strangle_position_management {
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
-                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
                     assert_eq!(reason, "Strike not found in positions");
                 }
                 _ => panic!("Expected ValidationError::InvalidPosition"),
@@ -3186,11 +3189,11 @@ mod tests_strangle_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
@@ -3225,7 +3228,10 @@ mod tests_strangle_position_management {
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
-                PositionValidationErrorKind::IncompatibleSide { position_side:_,reason } => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                } => {
                     assert_eq!(reason, "Strike not found in positions");
                 }
                 _ => panic!("Expected ValidationError::InvalidPosition"),

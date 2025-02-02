@@ -194,15 +194,15 @@ impl Positionable for BearPutSpread {
                 "Call is not valid for BearPutSpread".to_string(),
             )),
             (Side::Long, OptionStyle::Put, strike)
-            if *strike == self.long_put.option.strike_price =>
-                {
-                    Ok(vec![&mut self.long_put])
-                }
+                if *strike == self.long_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_put])
+            }
             (Side::Short, OptionStyle::Put, strike)
-            if *strike == self.short_put.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_put])
-                }
+                if *strike == self.short_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_put])
+            }
             _ => Err(PositionError::invalid_position_type(
                 side.clone(),
                 "Strike not found in positions".to_string(),
@@ -239,15 +239,15 @@ impl Positionable for BearPutSpread {
                 ))
             }
             (Side::Long, OptionStyle::Put, strike)
-            if *strike == self.long_put.option.strike_price =>
-                {
-                    self.long_put = position.clone();
-                }
+                if *strike == self.long_put.option.strike_price =>
+            {
+                self.long_put = position.clone();
+            }
             (Side::Short, OptionStyle::Put, strike)
-            if *strike == self.short_put.option.strike_price =>
-                {
-                    self.short_put = position.clone();
-                }
+                if *strike == self.short_put.option.strike_price =>
+            {
+                self.short_put = position.clone();
+            }
             _ => {
                 return Err(PositionError::invalid_position_type(
                     position.option.side.clone(),
@@ -2338,8 +2338,8 @@ mod tests_bear_call_spread_position_management {
         BearPutSpread::new(
             "SP500".to_string(),
             pos!(5781.88), // underlying_price
-            pos!(5850.0),     // long_strike
-            pos!(5720.0),     // short_strike
+            pos!(5850.0),  // long_strike
+            pos!(5720.0),  // short_strike
             ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
@@ -2359,7 +2359,8 @@ mod tests_bear_call_spread_position_management {
         let mut bear_put_spread = create_test_short_bear_put_spread();
 
         // Test getting short put position
-        let put_position = bear_put_spread.get_position(&OptionStyle::Put, &Side::Long, &pos!(5850.0));
+        let put_position =
+            bear_put_spread.get_position(&OptionStyle::Put, &Side::Long, &pos!(5850.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2368,7 +2369,8 @@ mod tests_bear_call_spread_position_management {
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
-        let put_position = bear_put_spread.get_position(&OptionStyle::Put, &Side::Short, &pos!(5720.0));
+        let put_position =
+            bear_put_spread.get_position(&OptionStyle::Put, &Side::Short, &pos!(5720.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2382,11 +2384,11 @@ mod tests_bear_call_spread_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Call is not valid for BearPutSpread");
             }
             _ => {
@@ -2433,4 +2435,3 @@ mod tests_bear_call_spread_position_management {
         }
     }
 }
-

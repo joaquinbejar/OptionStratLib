@@ -1987,7 +1987,8 @@ mod tests_poor_mans_covered_call_position_management {
         let mut poor_mans_covered_call = create_test_short_poor_mans_covered_call();
 
         // Test getting short call position
-        let call_position = poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Long, &pos!(2600.0));
+        let call_position =
+            poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Long, &pos!(2600.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -1996,7 +1997,8 @@ mod tests_poor_mans_covered_call_position_management {
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
-        let put_position = poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Short, &pos!(2800.0));
+        let put_position =
+            poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Short, &pos!(2800.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);

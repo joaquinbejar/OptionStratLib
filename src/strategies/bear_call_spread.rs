@@ -212,15 +212,15 @@ impl Positionable for BearCallSpread {
                 "Put is not valid for BearCallSpread".to_string(),
             )),
             (Side::Long, OptionStyle::Call, strike)
-            if *strike == self.long_call.option.strike_price =>
-                {
-                    Ok(vec![&mut self.long_call])
-                }
+                if *strike == self.long_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.long_call])
+            }
             (Side::Short, OptionStyle::Call, strike)
-            if *strike == self.short_call.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_call])
-                }
+                if *strike == self.short_call.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_call])
+            }
             _ => Err(PositionError::invalid_position_type(
                 side.clone(),
                 "Strike not found in positions".to_string(),
@@ -257,15 +257,15 @@ impl Positionable for BearCallSpread {
                 ))
             }
             (Side::Long, OptionStyle::Call, strike)
-            if *strike == self.long_call.option.strike_price =>
-                {
-                    self.long_call = position.clone();
-                }
+                if *strike == self.long_call.option.strike_price =>
+            {
+                self.long_call = position.clone();
+            }
             (Side::Short, OptionStyle::Call, strike)
-            if *strike == self.short_call.option.strike_price =>
-                {
-                    self.short_call = position.clone();
-                }
+                if *strike == self.short_call.option.strike_price =>
+            {
+                self.short_call = position.clone();
+            }
             _ => {
                 return Err(PositionError::invalid_position_type(
                     position.option.side.clone(),
@@ -2297,8 +2297,8 @@ mod tests_bear_call_spread_position_management {
         BearCallSpread::new(
             "SP500".to_string(),
             pos!(5781.88), // underlying_price
-            pos!(5750.0),     // short_call_strike
-            pos!(5820.0),     // long_call_strike
+            pos!(5750.0),  // short_call_strike
+            pos!(5820.0),  // long_call_strike
             ExpirationDate::Days(pos!(2.0)),
             pos!(0.18),     // implied_volatility
             dec!(0.05),     // risk_free_rate
@@ -2318,7 +2318,8 @@ mod tests_bear_call_spread_position_management {
         let mut bear_call_spread = create_test_short_bear_call_spread();
 
         // Test getting short call position
-        let call_position = bear_call_spread.get_position(&OptionStyle::Call, &Side::Long, &pos!(5820.0));
+        let call_position =
+            bear_call_spread.get_position(&OptionStyle::Call, &Side::Long, &pos!(5820.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2327,7 +2328,8 @@ mod tests_bear_call_spread_position_management {
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
-        let put_position = bear_call_spread.get_position(&OptionStyle::Call, &Side::Short, &pos!(5750.0));
+        let put_position =
+            bear_call_spread.get_position(&OptionStyle::Call, &Side::Short, &pos!(5750.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2341,11 +2343,11 @@ mod tests_bear_call_spread_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
