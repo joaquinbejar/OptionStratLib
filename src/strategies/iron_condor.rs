@@ -2841,7 +2841,7 @@ mod tests_iron_condor_position_management {
     }
     
     #[test]
-    fn test_short_iron_condor_get_position_short() {
+    fn test_short_iron_condor_get_position() {
         let mut iron_condor = create_test_iron_condor();
 
         // Test getting short call position
@@ -2883,7 +2883,7 @@ mod tests_iron_condor_position_management {
     }
 
     #[test]
-    fn test_short_iron_condor_get_position_long() {
+    fn test_long_iron_condor_get_position() {
         let mut iron_condor = create_test_iron_condor();
 
         // Test getting short call position
