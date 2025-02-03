@@ -9,7 +9,7 @@ Key characteristics:
 - Limited risk
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -38,6 +38,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
+use crate::strategies::IronButterfly;
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -207,6 +208,13 @@ impl IronCondor {
         strategy
     }
 }
+
+impl BreakEvenable for IronCondor {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+}
+
 
 impl Validable for IronCondor {
     fn validate(&self) -> bool {
@@ -410,10 +418,7 @@ impl Strategies for IronCondor {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Optimizable for IronCondor {
