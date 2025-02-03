@@ -7,6 +7,7 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::{pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use optionstratlib::strategies::base::BreakEvenable;
 
 #[test]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

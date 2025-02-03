@@ -10,6 +10,7 @@ use optionstratlib::Positive;
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use optionstratlib::strategies::base::BreakEvenable;
 
 #[test]
 fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {

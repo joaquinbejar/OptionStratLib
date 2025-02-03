@@ -46,7 +46,6 @@ use std::error::Error;
 
 use crate::error::GreeksError;
 use tracing::debug;
-use crate::strategies::BullCallSpread;
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =
     "A bull put spread is created by buying a put option with a lower strike price \

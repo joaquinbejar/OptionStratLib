@@ -40,7 +40,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
-use crate::strategies::CustomStrategy;
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \

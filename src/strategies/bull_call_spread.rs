@@ -44,7 +44,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info};
-use crate::strategies::BearPutSpread;
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \

@@ -25,7 +25,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
-use crate::strategies::CallButterfly;
 
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
