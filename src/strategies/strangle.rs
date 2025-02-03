@@ -40,6 +40,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info, trace};
+use crate::strategies::ShortStraddle;
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -830,6 +831,12 @@ impl LongStrangle {
     }
 }
 
+impl BreakEvenable for LongStrangle {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+}
+
 impl Positionable for LongStrangle {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (&position.option.option_style, &position.option.side) {
@@ -989,10 +996,7 @@ impl Strategies for LongStrangle {
         debug!("End price: {}", end_price);
         Ok(calculate_price_range(start_price, end_price, step))
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Validable for LongStrangle {
