@@ -79,7 +79,7 @@ impl Strategy {
     }
 }
 
-pub trait Strategies: Validable + Positionable {
+pub trait Strategies: Validable + Positionable + BreakEvenable {
     fn get_underlying_price(&self) -> Positive {
         panic!("Underlying price is not applicable for this strategy");
     }
@@ -272,13 +272,6 @@ pub trait Strategies: Validable + Positionable {
         Ok((min, max))
     }
 
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Err(StrategyError::operation_not_supported(
-            "get_break_even_points",
-            std::any::type_name::<Self>(),
-        ))
-    }
-
     /// Calculates the range of profit based on break-even points for any strategy that implements
     /// the `Strategies` trait. Break-even points are determined using the `get_break_even_points` method.
     ///
@@ -302,6 +295,19 @@ pub trait Strategies: Validable + Positionable {
                 Ok(*break_even_points.last().unwrap() - *break_even_points.first().unwrap())
             }
         }
+    }
+}
+
+pub trait BreakEvenable {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "get_break_even_points",
+            std::any::type_name::<Self>(),
+        ))
+    }
+    
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        unimplemented!("Update break even points is not implemented for this strategy")
     }
 }
 
@@ -471,11 +477,14 @@ mod tests_strategies {
         }
     }
 
-    impl Strategies for MockStrategy {
+    impl BreakEvenable for MockStrategy {
         fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
             Ok(&self.break_even_points)
         }
+    }
 
+    impl Strategies for MockStrategy {
+        
         fn max_profit(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::THOUSAND)
         }
@@ -550,6 +559,7 @@ mod tests_strategies {
             }
         }
         impl Positionable for DefaultStrategy {}
+        impl BreakEvenable for DefaultStrategy {}
         impl Strategies for DefaultStrategy {}
 
         let strategy = DefaultStrategy;
@@ -574,6 +584,7 @@ mod tests_strategies {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let mut strategy = PanicStrategy;
@@ -633,6 +644,7 @@ mod tests_strategies_extended {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -645,6 +657,7 @@ mod tests_strategies_extended {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -657,6 +670,7 @@ mod tests_strategies_extended {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -669,6 +683,7 @@ mod tests_strategies_extended {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -681,6 +696,7 @@ mod tests_strategies_extended {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
+        impl BreakEvenable for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_profit(&self) -> Result<Positive, StrategyError> {
                 Ok(pos!(100.0))
@@ -697,6 +713,7 @@ mod tests_strategies_extended {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
+        impl BreakEvenable for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_loss(&self) -> Result<Positive, StrategyError> {
                 Ok(pos!(50.0))
@@ -717,6 +734,7 @@ mod tests_strategies_extended {
                 Ok(vec![])
             }
         }
+        impl BreakEvenable for EmptyStrategy {}
         impl Strategies for EmptyStrategy {}
 
         let strategy = EmptyStrategy;
@@ -820,13 +838,17 @@ mod tests_max_min_strikes {
 
     impl Positionable for TestStrategy {}
 
+    impl BreakEvenable for TestStrategy {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+            Ok(&self.break_even_points)
+        }
+    }
+
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
         }
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            Ok(&self.break_even_points)
-        }
+
         fn max_profit(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::ZERO)
         }
@@ -1015,13 +1037,15 @@ mod tests_best_range_to_show {
 
     impl Positionable for TestStrategy {}
 
+    impl BreakEvenable for TestStrategy {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+            Ok(&self.break_even_points)
+        }
+    }
+
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
-        }
-
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            Ok(&self.break_even_points)
         }
 
         fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
@@ -1143,15 +1167,17 @@ mod tests_range_to_show {
 
     impl Positionable for TestStrategy {}
 
+    impl BreakEvenable for TestStrategy {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+            Ok(&self.break_even_points)
+        }
+    }
+
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
         }
-
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            Ok(&self.break_even_points)
-        }
-
+        
         fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
             Ok(self.strikes.clone())
         }
@@ -1215,11 +1241,13 @@ mod tests_range_of_profit {
 
     impl Positionable for TestStrategy {}
 
-    impl Strategies for TestStrategy {
+    impl BreakEvenable for TestStrategy {
         fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
             Ok(&self.break_even_points)
         }
     }
+
+    impl Strategies for TestStrategy {    }
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1263,9 +1291,11 @@ mod tests_strategy_methods {
 
     #[test]
     fn test_get_underlying_price_panic() {
+
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
+        impl BreakEvenable for TestStrategy {}
         impl Strategies for TestStrategy {}
 
         let strategy = TestStrategy;
@@ -1321,6 +1351,8 @@ mod tests_optimizable {
     }
 
     impl Positionable for TestOptimizableStrategy {}
+
+    impl BreakEvenable for TestOptimizableStrategy {}
 
     impl Strategies for TestOptimizableStrategy {}
 
@@ -1478,6 +1510,8 @@ mod tests_strategy_net_operations {
             Ok(self.positions.iter().collect())
         }
     }
+
+    impl BreakEvenable for TestStrategy {}
 
     impl Strategies for TestStrategy {}
 

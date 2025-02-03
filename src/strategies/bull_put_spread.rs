@@ -14,7 +14,7 @@ Key characteristics:
 - Maximum profit achieved when price stays above higher strike
 - Also known as a vertical put credit spread
 */
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -157,6 +157,12 @@ impl BullPutSpread {
             .push(short_strike + strategy.net_cost().unwrap() / quantity);
 
         strategy
+    }
+}
+
+impl BreakEvenable for BullPutSpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -317,10 +323,7 @@ impl Strategies for BullPutSpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Validable for BullPutSpread {

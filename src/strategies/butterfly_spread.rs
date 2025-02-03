@@ -15,7 +15,7 @@ Key characteristics:
 - Maximum loss is limited to the net premium paid
 - All options must have same expiration date
 */
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -193,6 +193,11 @@ impl LongButterflySpread {
     }
 }
 
+impl BreakEvenable for LongButterflySpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+}
 impl Validable for LongButterflySpread {
     fn validate(&self) -> bool {
         if !self.long_call_low.validate() {
@@ -421,9 +426,6 @@ impl Strategies for LongButterflySpread {
         }
     }
 
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
 }
 
 impl Optimizable for LongButterflySpread {
@@ -1003,6 +1005,12 @@ impl ShortButterflySpread {
     }
 }
 
+impl BreakEvenable for ShortButterflySpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+}
+
 impl Validable for ShortButterflySpread {
     fn validate(&self) -> bool {
         if !self.short_call_low.validate() {
@@ -1223,10 +1231,7 @@ impl Strategies for ShortButterflySpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Optimizable for ShortButterflySpread {

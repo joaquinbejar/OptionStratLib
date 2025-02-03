@@ -25,12 +25,10 @@ use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pricing::Profit;
-use crate::strategies::base::{Optimizable, Positionable, StrategyType, Validable};
+use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyType, Validable};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{
-    DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD,
-};
+use crate::strategies::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
@@ -56,6 +54,12 @@ pub struct BearPutSpread {
     pub break_even_points: Vec<Positive>,
     long_put: Position,
     short_put: Position,
+}
+
+impl BreakEvenable for BearPutSpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
 }
 
 impl BearPutSpread {
@@ -307,9 +311,7 @@ impl Strategies for BearPutSpread {
         }
     }
 
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+
 }
 
 impl Validable for BearPutSpread {

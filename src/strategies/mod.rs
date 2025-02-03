@@ -119,7 +119,7 @@
 //! use optionstratlib::error::position::PositionError;
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::Positive;
-//! use optionstratlib::strategies::base::{Positionable, Strategies, Validable};
+//! use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
 //!
 //! struct MyStrategy {
 //!     legs: Vec<Position>,
@@ -142,6 +142,9 @@
 //!         Ok(self.legs.iter().collect())
 //!     }
 //! }
+//!
+//!
+//! impl BreakEvenable for MyStrategy {}
 //!
 //! impl Strategies for MyStrategy {}
 //! ```

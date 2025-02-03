@@ -1,6 +1,6 @@
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
-use optionstratlib::strategies::base::{Strategies, Validable};
+use optionstratlib::strategies::base::{BreakEvenable, Strategies, Validable};
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::ExpirationDate;

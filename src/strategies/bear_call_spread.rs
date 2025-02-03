@@ -27,7 +27,7 @@ Key characteristics:
 - Bearish strategy that profits from price decline
 - Both options have same expiration date
 */
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -74,6 +74,12 @@ pub struct BearCallSpread {
     pub break_even_points: Vec<Positive>,
     short_call: Position,
     long_call: Position,
+}
+
+impl BreakEvenable for BearCallSpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
 }
 
 impl BearCallSpread {
@@ -279,6 +285,7 @@ impl Positionable for BearCallSpread {
 }
 
 impl Strategies for BearCallSpread {
+    
     fn get_underlying_price(&self) -> Positive {
         self.short_call.option.underlying_price
     }
@@ -325,10 +332,6 @@ impl Strategies for BearCallSpread {
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
-    }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
     }
 }
 

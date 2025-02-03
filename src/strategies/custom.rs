@@ -12,7 +12,7 @@ use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pricing::payoff::Profit;
-use crate::strategies::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
@@ -266,6 +266,12 @@ impl CustomStrategy {
     }
 }
 
+impl BreakEvenable for CustomStrategy {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+}
+
 impl Positionable for CustomStrategy {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         self.positions.push(position.clone());
@@ -389,10 +395,7 @@ impl Strategies for CustomStrategy {
             }
         }
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Validable for CustomStrategy {

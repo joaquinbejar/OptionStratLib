@@ -14,6 +14,7 @@ use optionstratlib::Positive;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
+use optionstratlib::strategies::base::BreakEvenable;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
