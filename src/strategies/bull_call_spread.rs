@@ -316,7 +316,6 @@ impl Strategies for BullCallSpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 }
 
 impl Validable for BullCallSpread {

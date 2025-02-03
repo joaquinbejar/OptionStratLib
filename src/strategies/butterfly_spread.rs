@@ -425,7 +425,6 @@ impl Strategies for LongButterflySpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-
 }
 
 impl Optimizable for LongButterflySpread {
@@ -1231,7 +1230,6 @@ impl Strategies for ShortButterflySpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 }
 
 impl Optimizable for ShortButterflySpread {

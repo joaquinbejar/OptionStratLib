@@ -323,7 +323,6 @@ impl Strategies for BullPutSpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 }
 
 impl Validable for BullPutSpread {

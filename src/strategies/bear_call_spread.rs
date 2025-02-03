@@ -285,7 +285,6 @@ impl Positionable for BearCallSpread {
 }
 
 impl Strategies for BearCallSpread {
-    
     fn get_underlying_price(&self) -> Positive {
         self.short_call.option.underlying_price
     }

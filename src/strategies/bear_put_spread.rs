@@ -28,7 +28,9 @@ use crate::pricing::Profit;
 use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyType, Validable};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD};
+use crate::strategies::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD,
+};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
@@ -310,8 +312,6 @@ impl Strategies for BearPutSpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-
-
 }
 
 impl Validable for BearPutSpread {

@@ -1,6 +1,7 @@
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::constants::ZERO;
+use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::straddle::LongStraddle;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
@@ -10,7 +11,6 @@ use optionstratlib::Positive;
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
-use optionstratlib::strategies::base::BreakEvenable;
 
 #[test]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

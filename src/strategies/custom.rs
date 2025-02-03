@@ -12,7 +12,9 @@ use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pricing::payoff::Profit;
-use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use crate::strategies::base::{
+    BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable,
+};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::utils::others::process_n_times_iter;
@@ -395,7 +397,6 @@ impl Strategies for CustomStrategy {
             }
         }
     }
-    
 }
 
 impl Validable for CustomStrategy {

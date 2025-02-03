@@ -339,7 +339,6 @@ impl Strategies for PoorMansCoveredCall {
         };
         Ok(Decimal::from_f64(result).unwrap())
     }
-    
 }
 
 impl Optimizable for PoorMansCoveredCall {

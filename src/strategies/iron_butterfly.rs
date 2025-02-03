@@ -215,7 +215,6 @@ impl BreakEvenable for IronButterfly {
     }
 }
 
-
 impl Validable for IronButterfly {
     fn validate(&self) -> bool {
         let order = self.long_put.option.strike_price < self.short_put.option.strike_price
@@ -415,7 +414,6 @@ impl Strategies for IronButterfly {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 }
 
 impl Optimizable for IronButterfly {

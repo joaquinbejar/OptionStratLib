@@ -383,7 +383,6 @@ impl Strategies for CallButterfly {
             _ => Ok(Decimal::ZERO),
         }
     }
-    
 }
 
 impl Validable for CallButterfly {

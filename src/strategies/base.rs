@@ -305,7 +305,7 @@ pub trait BreakEvenable {
             std::any::type_name::<Self>(),
         ))
     }
-    
+
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         unimplemented!("Update break even points is not implemented for this strategy")
     }
@@ -484,7 +484,6 @@ mod tests_strategies {
     }
 
     impl Strategies for MockStrategy {
-        
         fn max_profit(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::THOUSAND)
         }
@@ -1177,7 +1176,7 @@ mod tests_range_to_show {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
         }
-        
+
         fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
             Ok(self.strikes.clone())
         }
@@ -1247,7 +1246,7 @@ mod tests_range_of_profit {
         }
     }
 
-    impl Strategies for TestStrategy {    }
+    impl Strategies for TestStrategy {}
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1291,7 +1290,6 @@ mod tests_strategy_methods {
 
     #[test]
     fn test_get_underlying_price_panic() {
-
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}

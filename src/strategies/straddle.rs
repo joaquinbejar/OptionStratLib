@@ -308,7 +308,6 @@ impl Strategies for ShortStraddle {
         let result = self.max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
         Ok(Decimal::from_f64(result).unwrap())
     }
-    
 }
 
 impl Validable for ShortStraddle {
@@ -915,7 +914,6 @@ impl Strategies for LongStraddle {
         };
         Ok(Decimal::from_f64(result).unwrap())
     }
-    
 }
 
 impl Validable for LongStraddle {

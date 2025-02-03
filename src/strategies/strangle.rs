@@ -139,8 +139,10 @@ impl ShortStrangle {
         strategy
             .add_position(&short_put.clone())
             .expect("Invalid position");
-        
-        strategy.update_break_even_points().expect("Unable to update break even points");
+
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -149,20 +151,21 @@ impl BreakEvenable for ShortStrangle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
     }
-    
+
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
         let total_premium = self.net_premium_received()?;
-        
+
         self.break_even_points.push(
-            (self.short_put.option.strike_price -
-                (total_premium / self.short_put.option.quantity)).round_to(2)
+            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity))
+                .round_to(2),
         );
-        
+
         self.break_even_points.push(
-            (self.short_call.option.strike_price +
-                (total_premium / self.short_call.option.quantity)).round_to(2)
+            (self.short_call.option.strike_price
+                + (total_premium / self.short_call.option.quantity))
+                .round_to(2),
         );
 
         self.break_even_points.sort();
@@ -328,7 +331,6 @@ impl Strategies for ShortStrangle {
         let end_price = last_option + max_profit;
         Ok(calculate_price_range(start_price, end_price, step))
     }
-    
 }
 
 impl Validable for ShortStrangle {
@@ -995,7 +997,6 @@ impl Strategies for LongStrangle {
         debug!("End price: {}", end_price);
         Ok(calculate_price_range(start_price, end_price, step))
     }
-    
 }
 
 impl Validable for LongStrangle {

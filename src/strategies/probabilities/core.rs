@@ -287,7 +287,6 @@ mod tests_probability_analysis {
                 pos!(110.0),
             ])
         }
-        
     }
 
     impl Profit for MockStrategy {
