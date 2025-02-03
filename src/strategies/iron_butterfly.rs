@@ -11,7 +11,7 @@ Key characteristics:
 - High probability of small profit
 - Requires very low volatility
 */
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -40,6 +40,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
+use crate::strategies::CustomStrategy;
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
@@ -208,6 +209,13 @@ impl IronButterfly {
         strategy
     }
 }
+
+impl BreakEvenable for IronButterfly {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+}
+
 
 impl Validable for IronButterfly {
     fn validate(&self) -> bool {
@@ -408,10 +416,7 @@ impl Strategies for IronButterfly {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Optimizable for IronButterfly {
