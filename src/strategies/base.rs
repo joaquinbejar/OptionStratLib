@@ -79,7 +79,7 @@ impl Strategy {
     }
 }
 
-pub trait Strategies: Validable + Positionable {
+pub trait Strategies: Validable + Positionable + BreakEvenable {
     fn get_underlying_price(&self) -> Positive {
         panic!("Underlying price is not applicable for this strategy");
     }
