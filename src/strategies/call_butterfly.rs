@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -32,6 +32,7 @@ use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
+use crate::strategies::LongButterflySpread;
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -181,6 +182,12 @@ impl CallButterfly {
         );
 
         strategy
+    }
+}
+
+impl BreakEvenable for CallButterfly {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -377,10 +384,7 @@ impl Strategies for CallButterfly {
             _ => Ok(Decimal::ZERO),
         }
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Validable for CallButterfly {
