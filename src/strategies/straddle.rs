@@ -9,7 +9,7 @@ Key characteristics:
 - High cost due to purchasing both a call and a put
 - Profitable only with a large move in either direction
 */
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -40,6 +40,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{info, trace};
+use crate::strategies::PoorMansCoveredCall;
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -164,6 +165,12 @@ impl ShortStraddle {
 
         strategy.break_even_points.sort();
         strategy
+    }
+}
+
+impl BreakEvenable for ShortStraddle {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -302,10 +309,7 @@ impl Strategies for ShortStraddle {
         let result = self.max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
         Ok(Decimal::from_f64(result).unwrap())
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Validable for ShortStraddle {
@@ -777,6 +781,11 @@ impl LongStraddle {
     }
 }
 
+impl BreakEvenable for LongStraddle {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+}
 impl Positionable for LongStraddle {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.option_style {
@@ -907,10 +916,7 @@ impl Strategies for LongStraddle {
         };
         Ok(Decimal::from_f64(result).unwrap())
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Validable for LongStraddle {
