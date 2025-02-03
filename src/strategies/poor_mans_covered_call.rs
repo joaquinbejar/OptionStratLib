@@ -31,7 +31,7 @@
 //! and risk associated with traditional covered call strategies.
 //!
 
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -60,6 +60,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
+use crate::strategies::IronCondor;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -164,6 +165,12 @@ impl PoorMansCoveredCall {
             .break_even_points
             .push(long_call_strike + net_debit);
         strategy
+    }
+}
+
+impl BreakEvenable for PoorMansCoveredCall {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
     }
 }
 
@@ -333,10 +340,7 @@ impl Strategies for PoorMansCoveredCall {
         };
         Ok(Decimal::from_f64(result).unwrap())
     }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
+    
 }
 
 impl Optimizable for PoorMansCoveredCall {
