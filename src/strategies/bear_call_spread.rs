@@ -27,7 +27,7 @@ Key characteristics:
 - Bearish strategy that profits from price decline
 - Both options have same expiration date
 */
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -58,6 +58,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::debug;
+use crate::strategies::ShortStrangle;
 
 const BEAR_CALL_SPREAD_DESCRIPTION: &str =
     "A bear call spread is created by selling a call option with a lower strike price \
@@ -74,6 +75,12 @@ pub struct BearCallSpread {
     pub break_even_points: Vec<Positive>,
     short_call: Position,
     long_call: Position,
+}
+
+impl BreakEvenable for BearCallSpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
 }
 
 impl BearCallSpread {
@@ -326,10 +333,6 @@ impl Strategies for BearCallSpread {
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
-    }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
     }
 }
 
