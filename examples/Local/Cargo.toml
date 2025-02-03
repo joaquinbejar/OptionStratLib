@@ -1,0 +1,9 @@
+[package]
+name = "Local"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+optionstratlib = { path = "../.." }
+tracing = "0.1.41"
+rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
