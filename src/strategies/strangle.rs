@@ -515,7 +515,7 @@ impl Graph for ShortStrangle {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: LabelOffsetType::Relative(coordinates.0 * 130.0, -coordinates.1),
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -531,7 +531,7 @@ impl Graph for ShortStrangle {
                 "Max Profit ${:.2} at {:.0}",
                 max_profit, self.short_call.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
+            label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -547,7 +547,7 @@ impl Graph for ShortStrangle {
                 "Max Profit ${:.2} at {:.0}",
                 max_profit, self.short_put.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(coordinates.0 * 130.0, coordinates.1),
+            label_offset: LabelOffsetType::Relative(coordinates.0 , coordinates.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -567,7 +567,7 @@ impl Graph for ShortStrangle {
                 self.calculate_profit_at(self.short_put.option.underlying_price)
                     .unwrap(),
             ),
-            label_offset: LabelOffsetType::Relative(-coordinates.0 * 10.0, -coordinates.1),
+            label_offset: LabelOffsetType::Relative(-coordinates.0, coordinates.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -1151,25 +1151,27 @@ impl Graph for LongStrangle {
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+        let coordinates: (f64, f64) = (-3.0, 150.0);
+        let font_size = 24;
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Low Break Even {}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(10.0, -10.0),
+            label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
+            label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
-            font_size: 18,
+            font_size,
         });
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].to_f64(), 0.0),
-            label: format!("High Break Even {}", self.break_even_points[1]),
-            label_offset: LabelOffsetType::Relative(-60.0, -10.0),
+            label: format!("High Break Even\n\n{}", self.break_even_points[1]),
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
-            font_size: 18,
+            font_size,
         });
 
         points.push(ChartPoint {
@@ -1178,14 +1180,14 @@ impl Graph for LongStrangle {
                 -max_loss.to_f64(),
             ),
             label: format!(
-                "Max Loss {:.2} at {:.0}",
+                "Max Loss high ${:.2} at {:.0}",
                 max_loss, self.long_call.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(0.0, -20.0),
+            label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
             point_color: RED,
             label_color: RED,
             point_size: 5,
-            font_size: 18,
+            font_size,
         });
 
         points.push(ChartPoint {
@@ -1194,17 +1196,35 @@ impl Graph for LongStrangle {
                 -max_loss.to_f64(),
             ),
             label: format!(
-                "Max Loss {:.2} at {:.0}",
+                "Max Loss low ${:.2} at {:.0}",
                 max_loss, self.long_put.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(-500.0, -20.0),
+            label_offset: LabelOffsetType::Relative(coordinates.0 , coordinates.1),
             point_color: RED,
             label_color: RED,
             point_size: 5,
-            font_size: 18,
+            font_size,
         });
 
-        points.push(self.get_point_at_price(self.long_call.option.underlying_price));
+        points.push(ChartPoint {
+            coordinates: (
+                self.long_put.option.underlying_price.to_f64(),
+                self.calculate_profit_at(self.long_put.option.underlying_price)
+                    .unwrap()
+                    .to_f64()
+                    .unwrap(),
+            ),
+            label: format!(
+                "${:.2}",
+                self.calculate_profit_at(self.long_put.option.underlying_price)
+                    .unwrap(),
+            ),
+            label_offset: LabelOffsetType::Relative(-coordinates.0, coordinates.1),
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size,
+        });
 
         points
     }
