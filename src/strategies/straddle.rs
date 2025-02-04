@@ -153,16 +153,20 @@ impl ShortStraddle {
         strategy
             .add_position(&short_put.clone())
             .expect("Invalid short put");
+        // 
+        // let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
+        // strategy
+        //     .break_even_points
+        //     .push((strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
+        // strategy
+        //     .break_even_points
+        //     .push((strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
+        // 
+        // strategy.break_even_points.sort();
 
-        let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
         strategy
-            .break_even_points
-            .push((strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
-        strategy
-            .break_even_points
-            .push((strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
-
-        strategy.break_even_points.sort();
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -170,6 +174,26 @@ impl ShortStraddle {
 impl BreakEvenable for ShortStraddle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let total_premium = self.net_premium_received()?;
+
+        self.break_even_points.push(
+            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.push(
+            (self.short_call.option.strike_price
+                + (total_premium / self.short_call.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.sort();
+        Ok(())
     }
 }
 
@@ -640,6 +664,13 @@ impl DeltaNeutrality for ShortStraddle {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.short_put.option.delta().unwrap();
+        if delta == Decimal::ZERO {
+            return vec![DeltaAdjustment::SellOptions {
+                quantity: self.short_put.option.quantity,
+                strike: self.short_put.option.strike_price,
+                option_type: OptionStyle::Put,
+            }];
+        }
         let qty = Positive((net_delta.abs() / delta).abs());
 
         vec![DeltaAdjustment::SellOptions {
@@ -784,6 +815,7 @@ impl BreakEvenable for LongStraddle {
         Ok(&self.break_even_points)
     }
 }
+
 impl Positionable for LongStraddle {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.option_style {
