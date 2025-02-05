@@ -32,7 +32,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, Options, Positive};
+use crate::{Options, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
@@ -816,17 +816,9 @@ impl LongStrangle {
             .add_position(&long_put.clone())
             .expect("Invalid position");
 
-        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
-
         strategy
-            .break_even_points
-            .push((put_strike - strategy.total_cost().unwrap() / net_quantity).round_to(2));
-
-        strategy
-            .break_even_points
-            .push((call_strike + strategy.total_cost().unwrap() / net_quantity).round_to(2));
-
-        strategy.break_even_points.sort();
+            .update_break_even_points()
+            .expect("Unable to update break even points");
 
         strategy
     }
@@ -835,6 +827,26 @@ impl LongStrangle {
 impl BreakEvenable for LongStrangle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let total_premium = self.net_cost()?;
+
+        self.break_even_points.push(
+            (self.long_put.option.strike_price - (total_premium / self.long_put.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.push(
+            (self.long_call.option.strike_price
+                + (total_premium / self.long_call.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.sort();
+        Ok(())
     }
 }
 
@@ -2548,7 +2560,7 @@ mod tests_short_strangle_delta {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
     use crate::strategies::strangle::ShortStrangle;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
@@ -2675,7 +2687,7 @@ mod tests_long_strangle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
@@ -2804,7 +2816,7 @@ mod tests_short_strangle_delta_size {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
     use crate::strategies::strangle::ShortStrangle;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
@@ -2931,7 +2943,7 @@ mod tests_long_strangle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
