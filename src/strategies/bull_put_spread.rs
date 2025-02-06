@@ -168,9 +168,9 @@ impl BreakEvenable for BullPutSpread {
         self.break_even_points = Vec::new();
 
         self.break_even_points.push(
-            (self.short_put.option.strike_price +
-                self.net_cost()? / self.short_put.option.quantity)
-                .round_to(2)
+            (self.short_put.option.strike_price
+                + self.net_cost()? / self.short_put.option.quantity)
+                .round_to(2),
         );
 
         Ok(())

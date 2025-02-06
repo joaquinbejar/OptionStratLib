@@ -175,9 +175,8 @@ impl BreakEvenable for PoorMansCoveredCall {
 
         let net_debit = self.net_cost()? / self.long_call.option.quantity;
 
-        self.break_even_points.push(
-            (self.long_call.option.strike_price + net_debit).round_to(2)
-        );
+        self.break_even_points
+            .push((self.long_call.option.strike_price + net_debit).round_to(2));
 
         Ok(())
     }

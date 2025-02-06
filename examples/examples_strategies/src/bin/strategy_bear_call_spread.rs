@@ -3,14 +3,13 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::pos;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
-use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use optionstratlib::{pos, ExpirationDate};
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
@@ -29,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.18),     // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(3.1),      // long quantity
+        pos!(3.2),      // long quantity
         pos!(85.04),    // premium_long
         pos!(29.85),    // premium_short
         pos!(0.78),     // open_fee_long

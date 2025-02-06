@@ -179,9 +179,9 @@ impl BreakEvenable for BearCallSpread {
         self.break_even_points = Vec::new();
 
         self.break_even_points.push(
-            (self.short_call.option.strike_price +
-                self.net_premium_received()? / self.short_call.option.quantity)
-                .round_to(2)
+            (self.short_call.option.strike_price
+                + self.net_premium_received()? / self.short_call.option.quantity)
+                .round_to(2),
         );
 
         Ok(())

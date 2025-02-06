@@ -148,7 +148,7 @@ impl BullCallSpread {
             .expect("Failed to add short call");
 
         strategy.validate();
-        
+
         strategy
             .update_break_even_points()
             .expect("Unable to update break even points");
@@ -165,9 +165,9 @@ impl BreakEvenable for BullCallSpread {
         self.break_even_points = Vec::new();
 
         self.break_even_points.push(
-            (self.long_call.option.strike_price +
-                self.net_cost()? / self.long_call.option.quantity)
-                .round_to(2)
+            (self.long_call.option.strike_price
+                + self.net_cost()? / self.long_call.option.quantity)
+                .round_to(2),
         );
 
         Ok(())

@@ -547,7 +547,7 @@ impl Graph for ShortStrangle {
                 "Max Profit ${:.2} at {:.0}",
                 max_profit, self.short_put.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(coordinates.0 , coordinates.1),
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -840,8 +840,7 @@ impl BreakEvenable for LongStrangle {
         );
 
         self.break_even_points.push(
-            (self.long_call.option.strike_price
-                + (total_premium / self.long_call.option.quantity))
+            (self.long_call.option.strike_price + (total_premium / self.long_call.option.quantity))
                 .round_to(2),
         );
 
@@ -1211,7 +1210,7 @@ impl Graph for LongStrangle {
                 "Max Loss low ${:.2} at {:.0}",
                 max_loss, self.long_put.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(coordinates.0 , coordinates.1),
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: RED,
             label_color: RED,
             point_size: 5,

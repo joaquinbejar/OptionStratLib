@@ -210,13 +210,11 @@ impl BreakEvenable for IronCondor {
 
         let net_credit = self.net_premium_received()? / self.short_call.option.quantity;
 
-        self.break_even_points.push(
-            (self.short_call.option.strike_price + net_credit).round_to(2)
-        );
+        self.break_even_points
+            .push((self.short_call.option.strike_price + net_credit).round_to(2));
 
-        self.break_even_points.push(
-            (self.short_put.option.strike_price - net_credit).round_to(2)
-        );
+        self.break_even_points
+            .push((self.short_put.option.strike_price - net_credit).round_to(2));
 
         self.break_even_points.sort();
         Ok(())

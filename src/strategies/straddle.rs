@@ -153,7 +153,7 @@ impl ShortStraddle {
         strategy
             .add_position(&short_put.clone())
             .expect("Invalid short put");
-        
+
         strategy
             .update_break_even_points()
             .expect("Unable to update break even points");
@@ -177,7 +177,8 @@ impl BreakEvenable for ShortStraddle {
         );
 
         self.break_even_points.push(
-            (self.short_call.option.strike_price + (total_premium / self.short_call.option.quantity))
+            (self.short_call.option.strike_price
+                + (total_premium / self.short_call.option.quantity))
                 .round_to(2),
         );
 

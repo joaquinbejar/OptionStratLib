@@ -144,7 +144,7 @@ impl BearPutSpread {
             .expect("Error adding short put");
 
         strategy.validate();
-        
+
         strategy
             .update_break_even_points()
             .expect("Unable to update break even points");
@@ -162,7 +162,7 @@ impl BreakEvenable for BearPutSpread {
 
         self.break_even_points.push(
             (self.long_put.option.strike_price - self.net_cost()? / self.long_put.option.quantity)
-                .round_to(2)
+                .round_to(2),
         );
 
         Ok(())
