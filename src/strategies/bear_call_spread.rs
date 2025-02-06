@@ -76,12 +76,6 @@ pub struct BearCallSpread {
     long_call: Position,
 }
 
-impl BreakEvenable for BearCallSpread {
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
-}
-
 impl BearCallSpread {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -169,12 +163,28 @@ impl BearCallSpread {
 
         strategy.validate();
 
-        // Calculate break-even point
         strategy
-            .break_even_points
-            .push(short_strike + strategy.net_premium_received().unwrap() / quantity);
+            .update_break_even_points()
+            .expect("Unable to update break even points");
+        strategy
+    }
+}
 
-        strategy
+impl BreakEvenable for BearCallSpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        self.break_even_points.push(
+            (self.short_call.option.strike_price +
+                self.net_premium_received()? / self.short_call.option.quantity)
+                .round_to(2)
+        );
+
+        Ok(())
     }
 }
 
