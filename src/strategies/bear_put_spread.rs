@@ -58,12 +58,6 @@ pub struct BearPutSpread {
     short_put: Position,
 }
 
-impl BreakEvenable for BearPutSpread {
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
-}
-
 impl BearPutSpread {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -150,13 +144,28 @@ impl BearPutSpread {
             .expect("Error adding short put");
 
         strategy.validate();
-
-        // Calculate break-even point
+        
         strategy
-            .break_even_points
-            .push(long_strike - strategy.net_cost().unwrap() / quantity);
-
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl BreakEvenable for BearPutSpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        self.break_even_points.push(
+            (self.long_put.option.strike_price - self.net_cost()? / self.long_put.option.quantity)
+                .round_to(2)
+        );
+
+        Ok(())
     }
 }
 
