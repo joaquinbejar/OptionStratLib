@@ -642,8 +642,11 @@ impl DeltaNeutrality for ShortStraddle {
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.short_call.option.delta().unwrap();
-        let qty = Positive((net_delta.abs() / delta).abs());
-
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
         vec![DeltaAdjustment::SellOptions {
             quantity: qty * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
@@ -654,14 +657,12 @@ impl DeltaNeutrality for ShortStraddle {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.short_put.option.delta().unwrap();
-        if delta == Decimal::ZERO {
-            return vec![DeltaAdjustment::SellOptions {
-                quantity: self.short_put.option.quantity,
-                strike: self.short_put.option.strike_price,
-                option_type: OptionStyle::Put,
-            }];
-        }
-        let qty = Positive((net_delta.abs() / delta).abs());
+
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
 
         vec![DeltaAdjustment::SellOptions {
             quantity: qty * self.short_put.option.quantity,
@@ -1249,7 +1250,11 @@ impl DeltaNeutrality for LongStraddle {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.long_put.option.delta().unwrap();
 
-        let qty = Positive((net_delta.abs() / delta).abs());
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
 
         vec![DeltaAdjustment::BuyOptions {
             quantity: qty * self.long_put.option.quantity,
@@ -1261,8 +1266,11 @@ impl DeltaNeutrality for LongStraddle {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.long_call.option.delta().unwrap();
-        let qty = Positive((net_delta.abs() / delta).abs());
-
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
         vec![DeltaAdjustment::BuyOptions {
             quantity: qty * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,

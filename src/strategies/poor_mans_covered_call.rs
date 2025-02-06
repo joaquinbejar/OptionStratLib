@@ -725,8 +725,13 @@ impl DeltaNeutrality for PoorMansCoveredCall {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-        let l_c_delta = self.short_call.option.delta().unwrap();
-        let qty = Positive((net_delta.abs() / l_c_delta).abs());
+        let delta = self.short_call.option.delta().unwrap();
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
+
         vec![DeltaAdjustment::SellOptions {
             quantity: qty * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
@@ -736,8 +741,12 @@ impl DeltaNeutrality for PoorMansCoveredCall {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-        let l_c_delta = self.long_call.option.delta().unwrap();
-        let qty = Positive((net_delta.abs() / l_c_delta).abs());
+        let delta = self.long_call.option.delta().unwrap();
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
         vec![DeltaAdjustment::BuyOptions {
             quantity: qty * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
