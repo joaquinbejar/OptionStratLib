@@ -161,25 +161,9 @@ impl CallButterfly {
             .expect("Invalid long call otm");
         strategy.short_call_high = short_call_high;
 
-        // Calculate break-even points
-        strategy.break_even_points.push(
-            (strategy.long_call.option.strike_price
-                - strategy
-                    .calculate_profit_at(strategy.long_call.option.strike_price)
-                    .unwrap()
-                    / quantity)
-                .round_to(2),
-        );
-
-        strategy.break_even_points.push(
-            (strategy.short_call_high.option.strike_price
-                + strategy
-                    .calculate_profit_at(strategy.short_call_high.option.strike_price)
-                    .unwrap()
-                    / quantity)
-                .round_to(2),
-        );
-
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -187,6 +171,27 @@ impl CallButterfly {
 impl BreakEvenable for CallButterfly {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        self.break_even_points.push(
+            (self.long_call.option.strike_price
+                - self.calculate_profit_at(self.long_call.option.strike_price)?
+                    / self.long_call.option.quantity)
+                .round_to(2),
+        );
+
+        self.break_even_points.push(
+            (self.short_call_high.option.strike_price
+                + self.calculate_profit_at(self.short_call_high.option.strike_price)?
+                    / self.short_call_high.option.quantity)
+                .round_to(2),
+        );
+
+        self.break_even_points.sort();
+        Ok(())
     }
 }
 
@@ -383,7 +388,6 @@ impl Strategies for CallButterfly {
             _ => Ok(Decimal::ZERO),
         }
     }
-    
 }
 
 impl Validable for CallButterfly {

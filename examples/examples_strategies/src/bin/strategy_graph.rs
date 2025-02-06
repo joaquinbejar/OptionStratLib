@@ -4,6 +4,7 @@
    Date: 20/8/24
 ******************************************************************************/
 use optionstratlib::pos;
+use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
@@ -14,7 +15,6 @@ use optionstratlib::Positive;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
-use optionstratlib::strategies::base::BreakEvenable;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();

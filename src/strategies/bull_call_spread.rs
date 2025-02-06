@@ -149,11 +149,9 @@ impl BullCallSpread {
 
         strategy.validate();
 
-        // Calculate break-even point
         strategy
-            .break_even_points
-            .push(long_strike + strategy.net_cost().unwrap() / quantity);
-
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -161,6 +159,18 @@ impl BullCallSpread {
 impl BreakEvenable for BullCallSpread {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        self.break_even_points.push(
+            (self.long_call.option.strike_price
+                + self.net_cost()? / self.long_call.option.quantity)
+                .round_to(2),
+        );
+
+        Ok(())
     }
 }
 
@@ -316,7 +326,6 @@ impl Strategies for BullCallSpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 }
 
 impl Validable for BullCallSpread {

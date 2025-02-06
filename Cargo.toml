@@ -76,6 +76,7 @@ members = [
     "examples/examples_volatility",
     "examples/examples_curves",
     "examples/examples_surfaces",
+    "examples/Local",
 ]
 
 [workspace.dependencies]

@@ -32,7 +32,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, Options, Positive};
+use crate::{Options, Positive};
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
@@ -154,15 +154,9 @@ impl ShortStraddle {
             .add_position(&short_put.clone())
             .expect("Invalid short put");
 
-        let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
         strategy
-            .break_even_points
-            .push((strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
-        strategy
-            .break_even_points
-            .push((strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
-
-        strategy.break_even_points.sort();
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -170,6 +164,26 @@ impl ShortStraddle {
 impl BreakEvenable for ShortStraddle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let total_premium = self.net_premium_received()?;
+
+        self.break_even_points.push(
+            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.push(
+            (self.short_call.option.strike_price
+                + (total_premium / self.short_call.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.sort();
+        Ok(())
     }
 }
 
@@ -308,7 +322,6 @@ impl Strategies for ShortStraddle {
         let result = self.max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
         Ok(Decimal::from_f64(result).unwrap())
     }
-    
 }
 
 impl Validable for ShortStraddle {
@@ -641,6 +654,13 @@ impl DeltaNeutrality for ShortStraddle {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.short_put.option.delta().unwrap();
+        if delta == Decimal::ZERO {
+            return vec![DeltaAdjustment::SellOptions {
+                quantity: self.short_put.option.quantity,
+                strike: self.short_put.option.strike_price,
+                option_type: OptionStyle::Put,
+            }];
+        }
         let qty = Positive((net_delta.abs() / delta).abs());
 
         vec![DeltaAdjustment::SellOptions {
@@ -765,17 +785,9 @@ impl LongStraddle {
             .add_position(&long_put.clone())
             .expect("Invalid long put");
 
-        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
-
         strategy
-            .break_even_points
-            .push((strike - strategy.total_cost().unwrap() / net_quantity).round_to(2));
-
-        strategy
-            .break_even_points
-            .push((strike + strategy.total_cost().unwrap() / net_quantity).round_to(2));
-
-        strategy.break_even_points.sort();
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -784,7 +796,27 @@ impl BreakEvenable for LongStraddle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
     }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let total_cost = self.total_cost()?;
+
+        self.break_even_points.push(
+            (self.long_put.option.strike_price - (total_cost / self.long_put.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.push(
+            (self.long_call.option.strike_price + (total_cost / self.long_call.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.sort();
+        Ok(())
+    }
 }
+
 impl Positionable for LongStraddle {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.option_style {
@@ -915,7 +947,6 @@ impl Strategies for LongStraddle {
         };
         Ok(Decimal::from_f64(result).unwrap())
     }
-    
 }
 
 impl Validable for LongStraddle {
@@ -2418,7 +2449,7 @@ mod tests_short_straddle_delta {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::Positive;
     use crate::strategies::straddle::ShortStraddle;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(strike: Positive) -> ShortStraddle {
@@ -2543,7 +2574,7 @@ mod tests_long_straddle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::{LongStraddle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(strike: Positive) -> LongStraddle {
@@ -2663,14 +2694,13 @@ mod tests_long_straddle_delta {
 
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
-    use super::*;
     use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::Positive;
     use crate::strategies::straddle::ShortStraddle;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -2794,13 +2824,12 @@ mod tests_short_straddle_delta_size {
 
 #[cfg(test)]
 mod tests_long_straddle_delta_size {
-    use super::*;
     use crate::greeks::Greeks;
     use crate::model::types::{ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::{LongStraddle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;

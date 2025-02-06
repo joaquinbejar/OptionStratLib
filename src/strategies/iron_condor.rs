@@ -193,17 +193,9 @@ impl IronCondor {
             .add_position(&long_put.clone())
             .expect("Invalid long put");
 
-        // Calculate break-even points
-        let net_credit = (strategy.net_premium_received().unwrap() / quantity).round_to(2);
-
         strategy
-            .break_even_points
-            .push(short_call_strike + net_credit);
-        strategy
-            .break_even_points
-            .push(short_put_strike - net_credit);
-
-        strategy.break_even_points.sort();
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -212,8 +204,22 @@ impl BreakEvenable for IronCondor {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
     }
-}
 
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let net_credit = self.net_premium_received()? / self.short_call.option.quantity;
+
+        self.break_even_points
+            .push((self.short_call.option.strike_price + net_credit).round_to(2));
+
+        self.break_even_points
+            .push((self.short_put.option.strike_price - net_credit).round_to(2));
+
+        self.break_even_points.sort();
+        Ok(())
+    }
+}
 
 impl Validable for IronCondor {
     fn validate(&self) -> bool {
@@ -417,7 +423,6 @@ impl Strategies for IronCondor {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 }
 
 impl Optimizable for IronCondor {

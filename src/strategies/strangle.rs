@@ -32,7 +32,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, Options, Positive};
+use crate::{Options, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
@@ -139,8 +139,10 @@ impl ShortStrangle {
         strategy
             .add_position(&short_put.clone())
             .expect("Invalid position");
-        
-        strategy.update_break_even_points().expect("Unable to update break even points");
+
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -149,20 +151,21 @@ impl BreakEvenable for ShortStrangle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
     }
-    
+
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
         let total_premium = self.net_premium_received()?;
-        
+
         self.break_even_points.push(
-            (self.short_put.option.strike_price -
-                (total_premium / self.short_put.option.quantity)).round_to(2)
+            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity))
+                .round_to(2),
         );
-        
+
         self.break_even_points.push(
-            (self.short_call.option.strike_price +
-                (total_premium / self.short_call.option.quantity)).round_to(2)
+            (self.short_call.option.strike_price
+                + (total_premium / self.short_call.option.quantity))
+                .round_to(2),
         );
 
         self.break_even_points.sort();
@@ -328,7 +331,6 @@ impl Strategies for ShortStrangle {
         let end_price = last_option + max_profit;
         Ok(calculate_price_range(start_price, end_price, step))
     }
-    
 }
 
 impl Validable for ShortStrangle {
@@ -513,7 +515,7 @@ impl Graph for ShortStrangle {
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].to_f64(), 0.0),
             label: format!("High Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: LabelOffsetType::Relative(coordinates.0 * 130.0, -coordinates.1),
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
@@ -529,7 +531,7 @@ impl Graph for ShortStrangle {
                 "Max Profit ${:.2} at {:.0}",
                 max_profit, self.short_call.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
+            label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -545,7 +547,7 @@ impl Graph for ShortStrangle {
                 "Max Profit ${:.2} at {:.0}",
                 max_profit, self.short_put.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(coordinates.0 * 130.0, coordinates.1),
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -565,7 +567,7 @@ impl Graph for ShortStrangle {
                 self.calculate_profit_at(self.short_put.option.underlying_price)
                     .unwrap(),
             ),
-            label_offset: LabelOffsetType::Relative(-coordinates.0 * 10.0, -coordinates.1),
+            label_offset: LabelOffsetType::Relative(-coordinates.0, coordinates.1),
             point_color: DARK_GREEN,
             label_color: DARK_GREEN,
             point_size: 5,
@@ -814,17 +816,9 @@ impl LongStrangle {
             .add_position(&long_put.clone())
             .expect("Invalid position");
 
-        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
-
         strategy
-            .break_even_points
-            .push((put_strike - strategy.total_cost().unwrap() / net_quantity).round_to(2));
-
-        strategy
-            .break_even_points
-            .push((call_strike + strategy.total_cost().unwrap() / net_quantity).round_to(2));
-
-        strategy.break_even_points.sort();
+            .update_break_even_points()
+            .expect("Unable to update break even points");
 
         strategy
     }
@@ -833,6 +827,25 @@ impl LongStrangle {
 impl BreakEvenable for LongStrangle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let total_premium = self.net_cost()?;
+
+        self.break_even_points.push(
+            (self.long_put.option.strike_price - (total_premium / self.long_put.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.push(
+            (self.long_call.option.strike_price + (total_premium / self.long_call.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.sort();
+        Ok(())
     }
 }
 
@@ -995,7 +1008,6 @@ impl Strategies for LongStrangle {
         debug!("End price: {}", end_price);
         Ok(calculate_price_range(start_price, end_price, step))
     }
-    
 }
 
 impl Validable for LongStrangle {
@@ -1150,25 +1162,27 @@ impl Graph for LongStrangle {
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
         let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+        let coordinates: (f64, f64) = (-3.0, 150.0);
+        let font_size = 24;
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Low Break Even {}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(10.0, -10.0),
+            label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
+            label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
-            font_size: 18,
+            font_size,
         });
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[1].to_f64(), 0.0),
-            label: format!("High Break Even {}", self.break_even_points[1]),
-            label_offset: LabelOffsetType::Relative(-60.0, -10.0),
+            label: format!("High Break Even\n\n{}", self.break_even_points[1]),
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: DARK_BLUE,
             label_color: DARK_BLUE,
             point_size: 5,
-            font_size: 18,
+            font_size,
         });
 
         points.push(ChartPoint {
@@ -1177,14 +1191,14 @@ impl Graph for LongStrangle {
                 -max_loss.to_f64(),
             ),
             label: format!(
-                "Max Loss {:.2} at {:.0}",
+                "Max Loss high ${:.2} at {:.0}",
                 max_loss, self.long_call.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(0.0, -20.0),
+            label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
             point_color: RED,
             label_color: RED,
             point_size: 5,
-            font_size: 18,
+            font_size,
         });
 
         points.push(ChartPoint {
@@ -1193,17 +1207,35 @@ impl Graph for LongStrangle {
                 -max_loss.to_f64(),
             ),
             label: format!(
-                "Max Loss {:.2} at {:.0}",
+                "Max Loss low ${:.2} at {:.0}",
                 max_loss, self.long_put.option.strike_price
             ),
-            label_offset: LabelOffsetType::Relative(-500.0, -20.0),
+            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
             point_color: RED,
             label_color: RED,
             point_size: 5,
-            font_size: 18,
+            font_size,
         });
 
-        points.push(self.get_point_at_price(self.long_call.option.underlying_price));
+        points.push(ChartPoint {
+            coordinates: (
+                self.long_put.option.underlying_price.to_f64(),
+                self.calculate_profit_at(self.long_put.option.underlying_price)
+                    .unwrap()
+                    .to_f64()
+                    .unwrap(),
+            ),
+            label: format!(
+                "${:.2}",
+                self.calculate_profit_at(self.long_put.option.underlying_price)
+                    .unwrap(),
+            ),
+            label_offset: LabelOffsetType::Relative(-coordinates.0, coordinates.1),
+            point_color: RED,
+            label_color: RED,
+            point_size: 5,
+            font_size,
+        });
 
         points
     }
@@ -2527,7 +2559,7 @@ mod tests_short_strangle_delta {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
     use crate::strategies::strangle::ShortStrangle;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
@@ -2654,7 +2686,7 @@ mod tests_long_strangle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
@@ -2783,7 +2815,7 @@ mod tests_short_strangle_delta_size {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
     use crate::strategies::strangle::ShortStrangle;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
@@ -2910,7 +2942,7 @@ mod tests_long_strangle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {

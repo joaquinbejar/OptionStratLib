@@ -194,17 +194,9 @@ impl IronButterfly {
             .add_position(&long_put.clone())
             .expect("Invalid long put");
 
-        // Calculate break-even points
-        let net_credit = strategy.net_premium_received().unwrap() / quantity;
-
         strategy
-            .break_even_points
-            .push((short_strike + net_credit).round_to(2));
-        strategy
-            .break_even_points
-            .push((short_strike - net_credit).round_to(2));
-
-        strategy.break_even_points.sort();
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -213,8 +205,22 @@ impl BreakEvenable for IronButterfly {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
     }
-}
 
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let net_credit = self.net_premium_received()? / self.short_call.option.quantity;
+
+        self.break_even_points
+            .push((self.short_call.option.strike_price + net_credit).round_to(2));
+
+        self.break_even_points
+            .push((self.short_call.option.strike_price - net_credit).round_to(2));
+
+        self.break_even_points.sort();
+        Ok(())
+    }
+}
 
 impl Validable for IronButterfly {
     fn validate(&self) -> bool {
@@ -415,7 +421,6 @@ impl Strategies for IronButterfly {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 }
 
 impl Optimizable for IronButterfly {

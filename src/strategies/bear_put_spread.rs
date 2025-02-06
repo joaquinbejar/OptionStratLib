@@ -28,7 +28,9 @@ use crate::pricing::Profit;
 use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyType, Validable};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD};
+use crate::strategies::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD,
+};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
@@ -54,12 +56,6 @@ pub struct BearPutSpread {
     pub break_even_points: Vec<Positive>,
     long_put: Position,
     short_put: Position,
-}
-
-impl BreakEvenable for BearPutSpread {
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
-    }
 }
 
 impl BearPutSpread {
@@ -149,12 +145,27 @@ impl BearPutSpread {
 
         strategy.validate();
 
-        // Calculate break-even point
         strategy
-            .break_even_points
-            .push(long_strike - strategy.net_cost().unwrap() / quantity);
+            .update_break_even_points()
+            .expect("Unable to update break even points");
+        strategy
+    }
+}
 
-        strategy
+impl BreakEvenable for BearPutSpread {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        self.break_even_points.push(
+            (self.long_put.option.strike_price - self.net_cost()? / self.long_put.option.quantity)
+                .round_to(2),
+        );
+
+        Ok(())
     }
 }
 
@@ -310,8 +321,6 @@ impl Strategies for BearPutSpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-
-
 }
 
 impl Validable for BearPutSpread {

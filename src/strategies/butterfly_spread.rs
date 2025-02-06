@@ -168,26 +168,9 @@ impl LongButterflySpread {
 
         strategy.validate();
 
-        let left_net_value = strategy
-            .calculate_profit_at(strategy.long_call_low.option.strike_price)
-            .unwrap()
-            / quantity;
-        let right_net_value = strategy
-            .calculate_profit_at(strategy.long_call_high.option.strike_price)
-            .unwrap()
-            / quantity;
-
-        if left_net_value <= Decimal::ZERO {
-            strategy
-                .break_even_points
-                .push((strategy.long_call_low.option.strike_price - left_net_value).round_to(2));
-        }
-
-        if right_net_value <= Decimal::ZERO {
-            strategy
-                .break_even_points
-                .push((strategy.long_call_high.option.strike_price + right_net_value).round_to(2));
-        }
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
 
         strategy
     }
@@ -197,7 +180,31 @@ impl BreakEvenable for LongButterflySpread {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
     }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let left_net_value = self.calculate_profit_at(self.long_call_low.option.strike_price)?
+            / self.long_call_low.option.quantity;
+
+        let right_net_value = self.calculate_profit_at(self.long_call_high.option.strike_price)?
+            / self.long_call_high.option.quantity;
+
+        if left_net_value <= Decimal::ZERO {
+            self.break_even_points
+                .push((self.long_call_low.option.strike_price - left_net_value).round_to(2));
+        }
+
+        if right_net_value <= Decimal::ZERO {
+            self.break_even_points
+                .push((self.long_call_high.option.strike_price + right_net_value).round_to(2));
+        }
+
+        self.break_even_points.sort();
+        Ok(())
+    }
 }
+
 impl Validable for LongButterflySpread {
     fn validate(&self) -> bool {
         if !self.long_call_low.validate() {
@@ -425,7 +432,6 @@ impl Strategies for LongButterflySpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-
 }
 
 impl Optimizable for LongButterflySpread {
@@ -980,27 +986,9 @@ impl ShortButterflySpread {
 
         strategy.validate();
 
-        let left_net_value = strategy
-            .calculate_profit_at(strategy.short_call_low.option.strike_price)
-            .unwrap()
-            / quantity;
-        let right_net_value = strategy
-            .calculate_profit_at(strategy.short_call_high.option.strike_price)
-            .unwrap()
-            / quantity;
-
-        if left_net_value >= Decimal::ZERO {
-            strategy
-                .break_even_points
-                .push((strategy.short_call_low.option.strike_price + left_net_value).round_to(2));
-        }
-
-        if right_net_value >= Decimal::ZERO {
-            strategy
-                .break_even_points
-                .push((strategy.short_call_high.option.strike_price - right_net_value).round_to(2));
-        }
-
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -1008,6 +996,29 @@ impl ShortButterflySpread {
 impl BreakEvenable for ShortButterflySpread {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let left_net_value = self.calculate_profit_at(self.short_call_low.option.strike_price)?
+            / self.short_call_low.option.quantity;
+
+        let right_net_value = self.calculate_profit_at(self.short_call_high.option.strike_price)?
+            / self.short_call_high.option.quantity;
+
+        if left_net_value >= Decimal::ZERO {
+            self.break_even_points
+                .push((self.short_call_low.option.strike_price + left_net_value).round_to(2));
+        }
+
+        if right_net_value >= Decimal::ZERO {
+            self.break_even_points
+                .push((self.short_call_high.option.strike_price - right_net_value).round_to(2));
+        }
+
+        self.break_even_points.sort();
+        Ok(())
     }
 }
 
@@ -1231,7 +1242,6 @@ impl Strategies for ShortButterflySpread {
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
     }
-    
 }
 
 impl Optimizable for ShortButterflySpread {
