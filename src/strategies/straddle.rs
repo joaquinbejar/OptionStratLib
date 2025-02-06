@@ -153,17 +153,7 @@ impl ShortStraddle {
         strategy
             .add_position(&short_put.clone())
             .expect("Invalid short put");
-        // 
-        // let net_quantity = (short_call.option.quantity + short_put.option.quantity) / 2.0;
-        // strategy
-        //     .break_even_points
-        //     .push((strike - strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
-        // strategy
-        //     .break_even_points
-        //     .push((strike + strategy.net_premium_received().unwrap() / net_quantity).round_to(2));
-        // 
-        // strategy.break_even_points.sort();
-
+        
         strategy
             .update_break_even_points()
             .expect("Unable to update break even points");
@@ -187,8 +177,7 @@ impl BreakEvenable for ShortStraddle {
         );
 
         self.break_even_points.push(
-            (self.short_call.option.strike_price
-                + (total_premium / self.short_call.option.quantity))
+            (self.short_call.option.strike_price + (total_premium / self.short_call.option.quantity))
                 .round_to(2),
         );
 
@@ -795,17 +784,9 @@ impl LongStraddle {
             .add_position(&long_put.clone())
             .expect("Invalid long put");
 
-        let net_quantity = (long_call.option.quantity + long_put.option.quantity) / pos!(2.0);
-
         strategy
-            .break_even_points
-            .push((strike - strategy.total_cost().unwrap() / net_quantity).round_to(2));
-
-        strategy
-            .break_even_points
-            .push((strike + strategy.total_cost().unwrap() / net_quantity).round_to(2));
-
-        strategy.break_even_points.sort();
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -813,6 +794,25 @@ impl LongStraddle {
 impl BreakEvenable for LongStraddle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let total_cost = self.total_cost()?;
+
+        self.break_even_points.push(
+            (self.long_put.option.strike_price - (total_cost / self.long_put.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.push(
+            (self.long_call.option.strike_price + (total_cost / self.long_call.option.quantity))
+                .round_to(2),
+        );
+
+        self.break_even_points.sort();
+        Ok(())
     }
 }
 
