@@ -626,8 +626,13 @@ impl DeltaNeutrality for BearCallSpread {
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta.abs();
         let delta = self.short_call.option.delta().unwrap().abs();
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
         vec![DeltaAdjustment::SellOptions {
-            quantity: Positive(net_delta / delta) * self.short_call.option.quantity,
+            quantity: qty * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
@@ -636,8 +641,13 @@ impl DeltaNeutrality for BearCallSpread {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta.abs();
         let delta = self.long_call.option.delta().unwrap().abs();
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
         vec![DeltaAdjustment::BuyOptions {
-            quantity: Positive(net_delta.abs() / delta) * self.long_call.option.quantity,
+            quantity: qty * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]

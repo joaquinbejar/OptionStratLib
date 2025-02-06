@@ -816,7 +816,11 @@ impl DeltaNeutrality for LongButterflySpread {
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.short_call.option.delta().unwrap();
-        let qty = Positive((net_delta.abs() / delta).abs());
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
 
         vec![DeltaAdjustment::SellOptions {
             quantity: qty * self.short_call.option.quantity,
@@ -829,8 +833,18 @@ impl DeltaNeutrality for LongButterflySpread {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta_low = self.long_call_low.option.delta().unwrap();
         let delta_high = self.long_call_high.option.delta().unwrap();
-        let qty_low = Positive((net_delta.abs() / delta_low).abs());
-        let qty_high = Positive((net_delta.abs() / delta_high).abs());
+
+        let qty_low = if delta_low == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta_low).abs())
+        };
+
+        let qty_high = if delta_high == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta_high).abs())
+        };
 
         vec![
             DeltaAdjustment::BuyOptions {
@@ -1625,8 +1639,17 @@ impl DeltaNeutrality for ShortButterflySpread {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta_low = self.short_call_low.option.delta().unwrap();
         let delta_high = self.short_call_high.option.delta().unwrap();
-        let qty_low = Positive((net_delta.abs() / delta_low).abs());
-        let qty_high = Positive((net_delta.abs() / delta_high).abs());
+        let qty_low = if delta_low == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta_low).abs())
+        };
+        let qty_high = if delta_high == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta_high).abs())
+        };
+
         vec![
             DeltaAdjustment::SellOptions {
                 quantity: qty_low * self.short_call_low.option.quantity,
@@ -1644,8 +1667,11 @@ impl DeltaNeutrality for ShortButterflySpread {
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
         let delta = self.long_call.option.delta().unwrap();
-        let qty = Positive((net_delta.abs() / delta).abs());
-
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
         vec![DeltaAdjustment::BuyOptions {
             quantity: qty * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,

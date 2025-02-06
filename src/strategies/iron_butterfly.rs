@@ -797,8 +797,17 @@ impl DeltaNeutrality for IronButterfly {
         let net_delta = self.calculate_net_delta().net_delta;
         let l_p_delta = self.long_put.option.delta().unwrap();
         let s_c_delta = self.short_call.option.delta().unwrap();
-        let qty_p = Positive((net_delta.abs() / l_p_delta).abs());
-        let qty_c = Positive((net_delta.abs() / s_c_delta).abs());
+        let qty_p = if l_p_delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / l_p_delta).abs())
+        };
+        let qty_c = if s_c_delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / s_c_delta).abs())
+        };
+
         vec![
             DeltaAdjustment::BuyOptions {
                 quantity: qty_p * self.long_put.option.quantity,
@@ -817,9 +826,17 @@ impl DeltaNeutrality for IronButterfly {
         let net_delta = self.calculate_net_delta().net_delta;
         let s_p_delta = self.short_put.option.delta().unwrap();
         let l_c_delta = self.long_call.option.delta().unwrap();
-        let qty_p = Positive((net_delta.abs() / s_p_delta).abs());
-        let qty_c = Positive((net_delta.abs() / l_c_delta).abs());
 
+        let qty_p = if s_p_delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / s_p_delta).abs())
+        };
+        let qty_c = if l_c_delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / l_c_delta).abs())
+        };
         vec![
             DeltaAdjustment::BuyOptions {
                 quantity: qty_c * self.long_call.option.quantity,
