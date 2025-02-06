@@ -158,11 +158,9 @@ impl PoorMansCoveredCall {
             .add_position(&short_call.clone())
             .expect("Invalid short call option");
 
-        let net_debit = strategy.net_cost().unwrap() / quantity;
-
         strategy
-            .break_even_points
-            .push(long_call_strike + net_debit);
+            .update_break_even_points()
+            .expect("Unable to update break even points");
         strategy
     }
 }
@@ -170,6 +168,18 @@ impl PoorMansCoveredCall {
 impl BreakEvenable for PoorMansCoveredCall {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let net_debit = self.net_cost()? / self.long_call.option.quantity;
+
+        self.break_even_points.push(
+            (self.long_call.option.strike_price + net_debit).round_to(2)
+        );
+
+        Ok(())
     }
 }
 
