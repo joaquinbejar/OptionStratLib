@@ -74,7 +74,10 @@ impl CustomStrategy {
         if !strategy.validate() {
             panic!("Invalid strategy");
         }
-        strategy.calculate_break_even_points();
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
+        
         let _ = strategy.max_profit_iter();
         strategy
     }
@@ -271,6 +274,10 @@ impl CustomStrategy {
 impl BreakEvenable for CustomStrategy {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
+    }
+    
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        Ok(self.calculate_break_even_points())
     }
 }
 
