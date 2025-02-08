@@ -1066,6 +1066,8 @@ mod tests_bear_put_spread_optimization {
             spos!(8.2),       // put_ask
             spos!(0.2),       // implied_volatility
             Some(dec!(-0.8)), // delta
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),     // volume
             Some(50),         // open_interest
         );
@@ -1078,6 +1080,8 @@ mod tests_bear_put_spread_optimization {
             spos!(6.2),
             spos!(0.2),
             Some(dec!(-0.7)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
         );
@@ -1090,6 +1094,8 @@ mod tests_bear_put_spread_optimization {
             spos!(4.2),
             spos!(0.2),
             Some(dec!(-0.6)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
         );
@@ -1102,6 +1108,8 @@ mod tests_bear_put_spread_optimization {
             spos!(2.7),
             spos!(0.2),
             Some(dec!(-0.5)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(250.0),
             Some(125),
         );
@@ -1114,6 +1122,8 @@ mod tests_bear_put_spread_optimization {
             spos!(1.7),
             spos!(0.2),
             Some(dec!(-0.4)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
         );
@@ -1126,6 +1136,8 @@ mod tests_bear_put_spread_optimization {
             spos!(1.0),
             spos!(0.2),
             Some(dec!(-0.3)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
         );
@@ -1138,6 +1150,8 @@ mod tests_bear_put_spread_optimization {
             spos!(0.6),
             spos!(0.2),
             Some(dec!(-0.2)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
         );
@@ -1278,6 +1292,8 @@ mod tests_bear_put_spread_optimization {
             None, // Invalid: no put_ask
             spos!(0.2),
             Some(dec!(-0.1)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
         );
@@ -1340,6 +1356,8 @@ mod tests_bear_put_spread_optimizable {
             spos!(2.2),       // put_ask
             spos!(0.2),       // implied_vol
             Some(dec!(-0.3)), // delta
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),     // volume
             Some(50),         // open_interest
         );
@@ -1353,6 +1371,8 @@ mod tests_bear_put_spread_optimizable {
             spos!(5.0),
             spos!(0.2),
             Some(dec!(-0.5)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
         );
@@ -1365,6 +1385,8 @@ mod tests_bear_put_spread_optimizable {
             spos!(9.0), // put_ask
             spos!(0.2),
             Some(dec!(-0.7)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
         );
@@ -1463,6 +1485,8 @@ mod tests_bear_put_spread_optimizable {
             None, // Invalid: no put_ask
             spos!(0.2),
             Some(dec!(-0.4)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
         );
@@ -1539,6 +1563,8 @@ mod tests_bear_put_spread_optimizable {
             spos!(3.2),
             spos!(0.2),
             Some(dec!(-0.5)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
         );

@@ -431,6 +431,8 @@ mod tests {
                 spos!(5.5),
                 spos!(0.2),
                 Some(dec!(-0.3)),
+                Some(dec!(-0.3)),
+                Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
             );
@@ -683,6 +685,8 @@ mod tests {
                 spos!(15.5),
                 None, // No implied volatility
                 Some(dec!(0.3)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
             );
@@ -764,6 +768,8 @@ mod tests {
                 spos!(0.2),
                 spos!(0.8), // High volatility
                 Some(dec!(-0.99)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
                 spos!(10.0),
                 Some(5),
             );
@@ -776,6 +782,8 @@ mod tests {
                 spos!(51.0),
                 spos!(0.8), // High volatility
                 Some(dec!(0.99)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
                 spos!(10.0),
                 Some(5),
             );
@@ -880,6 +888,8 @@ mod additional_tests {
                     spos!(5.5),
                     spos!(0.2),
                     Some(dec!(-0.3)),
+                    Some(dec!(0.3)),
+                    Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
                 );
@@ -901,6 +911,8 @@ mod additional_tests {
                     spos!(5.5),
                     spos!(0.2),
                     Some(dec!(-0.3)),
+                    Some(dec!(0.3)),
+                    Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
                 );
@@ -922,6 +934,8 @@ mod additional_tests {
                     spos!(5.5),
                     spos!(0.5), // Alta volatilidad
                     Some(dec!(-0.3)),
+                    Some(dec!(0.3)),
+                    Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
                 );
@@ -1008,6 +1022,8 @@ mod additional_tests {
                 spos!(0.002),
                 spos!(0.1),
                 Some(dec!(-0.3)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
             );
@@ -1036,6 +1052,8 @@ mod additional_tests {
                 spos!(1001.0),
                 spos!(0.1),
                 Some(dec!(-0.3)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
             );

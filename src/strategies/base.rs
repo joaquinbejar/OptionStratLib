@@ -1370,6 +1370,8 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
             spos!(1000.0),   // volume
             Some(100),       // open_interest
         );
@@ -1392,6 +1394,8 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
             spos!(1000.0),   // volume
             Some(100),       // open_interest
         );
@@ -1410,6 +1414,8 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
             spos!(1000.0),   // volume
             Some(100),       // open_interest
         );
@@ -1428,6 +1434,8 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
             spos!(1000.0),   // volume
             Some(100),       // open_interest
         );
@@ -1450,6 +1458,8 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
             spos!(1000.0),   // volume
             Some(100),       // open_interest
         );
@@ -1468,6 +1478,8 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
             spos!(1000.0),   // volume
             Some(100),       // open_interest
         );

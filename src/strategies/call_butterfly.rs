@@ -1495,6 +1495,8 @@ mod tests_call_butterfly_optimizable {
             spos!(1.2),      // put_ask
             spos!(0.2),      // iv
             Some(dec!(0.4)), // delta
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),    // volume
             Some(50),        // open interest
         );
@@ -1507,6 +1509,8 @@ mod tests_call_butterfly_optimizable {
             spos!(3.2),
             spos!(0.2),
             Some(dec!(0.5)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
         );
@@ -1519,6 +1523,8 @@ mod tests_call_butterfly_optimizable {
             spos!(6.2),
             spos!(0.2),
             Some(dec!(0.6)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
         );

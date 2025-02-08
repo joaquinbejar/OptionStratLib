@@ -1281,6 +1281,8 @@ mod tests_update_from_option_data {
             spos!(9.0),
             spos!(0.25),
             Some(dec!(-0.3)),
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
             None,
             None,
         )

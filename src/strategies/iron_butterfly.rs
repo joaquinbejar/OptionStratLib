@@ -1484,6 +1484,8 @@ mod tests_iron_butterfly_optimizable {
                 spos!(5.2),   // put_ask
                 spos!(0.2),   // implied_volatility
                 None,         // delta
+                None,
+                None,
                 spos!(100.0), // volume
                 Some(50),     // open_interest
             );
@@ -1563,6 +1565,8 @@ mod tests_iron_butterfly_optimizable {
             spos!(5.2),
             spos!(0.2),
             None,
+            None,
+            None,
             spos!(100.0),
             Some(50),
         );
@@ -1584,6 +1588,8 @@ mod tests_iron_butterfly_optimizable {
             spos!(5.0),
             spos!(5.2),
             spos!(0.2),
+            None,
+            None,
             None,
             spos!(100.0),
             Some(50),

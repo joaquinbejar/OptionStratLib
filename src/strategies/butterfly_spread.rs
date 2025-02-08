@@ -2849,6 +2849,8 @@ mod tests_butterfly_optimizable {
                 spos!(5.2),      // put_ask
                 spos!(0.2),      // implied_volatility
                 Some(dec!(0.5)), // delta
+                Some(dec!(0.2)),
+                Some(dec!(0.2)),
                 spos!(100.0),    // volume
                 Some(50),        // open_interest
             );
