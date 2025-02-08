@@ -10,6 +10,7 @@ use crate::Positive;
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 use std::fmt::Display;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub enum OptionDataGroup<'a> {
@@ -60,7 +61,7 @@ impl OptionChainBuildParams {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionDataPriceParams {
     pub(crate) underlying_price: Positive,
     pub(crate) expiration_date: ExpirationDate,
