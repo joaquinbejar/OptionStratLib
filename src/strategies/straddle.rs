@@ -1633,6 +1633,7 @@ mod tests_short_straddle {
             spos!(0.2),
             dec!(0.01),
             pos!(0.02),
+            None,
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
@@ -1983,6 +1984,7 @@ mod tests_long_straddle {
             spos!(0.65),
             dec!(0.01),
             pos!(0.02),
+            None,
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),

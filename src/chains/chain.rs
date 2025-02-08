@@ -7,7 +7,7 @@ use crate::chains::utils::{
     adjust_volatility, default_empty_string, generate_list_of_strikes, OptionChainBuildParams,
     OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
 };
-use crate::chains::{DeltasInStrike, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
+use crate::chains::{DeltasInStrike, FourOptions, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
 use crate::curves::{Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::geometrics::LinearInterpolation;
@@ -57,6 +57,8 @@ pub struct OptionData {
     delta: Option<Decimal>,
     volume: Option<Positive>,
     open_interest: Option<u64>,
+    #[serde(skip)]
+    pub options: Option<Box<FourOptions>>,
 }
 
 impl OptionData {
@@ -84,6 +86,7 @@ impl OptionData {
             delta,
             volume,
             open_interest,
+            options: None,
         }
     }
 
@@ -430,6 +433,7 @@ impl Default for OptionData {
             delta: None,
             volume: None,
             open_interest: None,
+            options: None,
         }
     }
 }
@@ -543,6 +547,7 @@ impl OptionChain {
                 adjusted_volatility,
                 params.price_params.risk_free_rate,
                 params.price_params.dividend_yield,
+                params.price_params.underlying_symbol.clone(),
             );
             if option_data.calculate_prices(&price_params).is_ok() {
                 option_data.apply_spread(params.spread, params.decimal_places);
@@ -614,6 +619,7 @@ impl OptionChain {
             delta,
             volume,
             open_interest,
+            options: None,
         };
         option_data.set_mid_prices();
         self.options.insert(option_data);
@@ -761,6 +767,7 @@ impl OptionChain {
                 delta: parse(&record[6]),
                 volume: parse(&record[7]),
                 open_interest: parse(&record[8]),
+                options: None,
             };
             option_data.set_mid_prices();
             options.insert(option_data);
@@ -1270,6 +1277,7 @@ impl OptionChainParams for OptionChain {
             option.unwrap().implied_volatility,
             self.risk_free_rate.unwrap_or(Decimal::ZERO),
             self.dividend_yield.unwrap_or(Positive::ZERO),
+            Some(self.symbol.clone())
         ))
     }
 }
@@ -1555,6 +1563,7 @@ mod tests_chain_base {
                 spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
+                Some("SP500".to_string()),
             ),
         );
 
@@ -1594,6 +1603,7 @@ mod tests_chain_base {
                 spos!(0.03),
                 Decimal::ZERO,
                 pos!(0.05),
+                Some("SP500".to_string()),
             ),
         );
         let chain = OptionChain::build_chain(&params);
@@ -1992,6 +2002,7 @@ mod tests_option_data {
             spos!(0.2),
             Decimal::ZERO,
             Positive::ZERO,
+            None,
         );
 
         let result = option_data.calculate_prices(&price_params);
@@ -2016,6 +2027,7 @@ mod tests_option_data {
             None,
             Decimal::ZERO,
             Positive::ZERO,
+            None,
         );
         let _ = option_data.calculate_prices(&price_params);
 
@@ -2051,6 +2063,7 @@ mod tests_option_data {
             spos!(0.12),
             dec!(0.05),
             pos!(0.01),
+            None,
         );
         let result = option_data.calculate_prices(&price_params);
 
@@ -2088,6 +2101,7 @@ mod tests_option_data {
             spos!(0.2),
             dec!(0.05),
             pos!(0.01),
+            None,
         );
 
         let result = option_data.calculate_prices(&price_params);
@@ -2682,6 +2696,7 @@ mod tests_option_data_get_option {
             spos!(0.25),
             dec!(0.05),
             pos!(0.02),
+            None
         );
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
@@ -2707,6 +2722,7 @@ mod tests_option_data_get_option {
             None, // No IV provided in params
             dec!(0.05),
             pos!(0.02),
+            None
         );
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
@@ -2728,6 +2744,7 @@ mod tests_option_data_get_option {
             None,
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
@@ -2781,6 +2798,7 @@ mod tests_option_data_get_options_in_strike {
             spos!(0.25),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result =
@@ -2820,6 +2838,7 @@ mod tests_option_data_get_options_in_strike {
             None,
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result =
@@ -2845,6 +2864,7 @@ mod tests_option_data_get_options_in_strike {
             None,
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result =
@@ -2873,6 +2893,7 @@ mod tests_option_data_get_options_in_strike {
             spos!(0.3),
             dec!(0.06),
             pos!(0.03),
+            None,
         );
 
         let result =
@@ -2908,6 +2929,7 @@ mod tests_option_data_get_options_in_strike {
             spos!(0.3),
             dec!(0.06),
             pos!(0.03),
+            None,
         );
 
         let result =
@@ -2978,6 +3000,7 @@ mod tests_filter_options_in_strike {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::Upper);
@@ -3006,6 +3029,7 @@ mod tests_filter_options_in_strike {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::Lower);
@@ -3029,6 +3053,7 @@ mod tests_filter_options_in_strike {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
@@ -3048,6 +3073,7 @@ mod tests_filter_options_in_strike {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result = chain.filter_options_in_strike(
@@ -3075,6 +3101,7 @@ mod tests_filter_options_in_strike {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
@@ -3094,6 +3121,7 @@ mod tests_filter_options_in_strike {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result = chain.filter_options_in_strike(
@@ -3116,6 +3144,7 @@ mod tests_filter_options_in_strike {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
@@ -4130,6 +4159,7 @@ mod tests_option_data_implied_volatility {
             None,                            // IV (will be calculated)
             dec!(0.05),                      // risk-free rate
             pos!(0.0),                       // dividend yield
+            None,
         );
 
         let result = option_data.calculate_implied_volatility(&params);
@@ -4164,6 +4194,7 @@ mod tests_option_data_implied_volatility {
             None,                            // IV (will be calculated)
             dec!(0.0),                       // risk-free rate
             pos!(0.0),                       // dividend yield
+            None,
         );
 
         let result = option_data.calculate_implied_volatility(&params);
@@ -4191,6 +4222,7 @@ mod tests_option_data_implied_volatility {
             None,
             dec!(0.05),
             pos!(0.0),
+            None,
         );
 
         let result = option_data.calculate_implied_volatility(&params);
@@ -4220,6 +4252,7 @@ mod tests_option_data_implied_volatility {
             None,                            // IV (will be calculated)
             dec!(0.0),                       // risk-free rate
             pos!(0.0),                       // dividend yield
+            None,
         );
 
         let result = option_data.calculate_implied_volatility(&params);
@@ -4463,6 +4496,7 @@ mod tests_option_data_delta {
             spos!(0.2),                       // implied_volatility
             dec!(0.05),                       // risk_free_rate
             pos!(0.02),                       // dividend_yield
+            None,
         )
     }
 

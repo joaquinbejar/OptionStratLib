@@ -229,6 +229,7 @@ mod datetime_format {
     use super::*;
     use serde::{self, Deserialize, Deserializer, Serializer};
 
+    #[allow(dead_code)]
     pub fn serialize<S>(date: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -237,6 +238,7 @@ mod datetime_format {
         serializer.serialize_str(&s)
     }
 
+    #[allow(dead_code)]
     pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
     where
         D: Deserializer<'de>,

@@ -40,6 +40,7 @@
 //!                 spos!(0.17),
 //!                 dec!(0.0),
 //!                 pos!(0.05),
+//!                 Some("SP500".to_string()),
 //!             ),
 //!         );
 //!
@@ -128,6 +129,7 @@
 //!     Some(Positive::new(0.01).unwrap()),
 //!     dec!(0.01),
 //!     Positive::ZERO,
+//!     None,
 //! );
 //!
 //! let option_chain_params = OptionChainBuildParams::new(
@@ -204,9 +206,9 @@ pub mod utils;
 mod options;
 
 mod rnd;
+mod four;
 
 pub use legs::StrategyLegs;
-
 pub use options::{DeltasInStrike, OptionsInStrike};
-
 pub use rnd::{RNDAnalysis, RNDParameters, RNDResult};
+pub use four::FourOptions;

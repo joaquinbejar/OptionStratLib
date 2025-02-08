@@ -60,6 +60,7 @@
 //!                 spos!(0.17),
 //!                 Decimal::ZERO,
 //!                 pos!(0.05),
+//!                 None,
 //!             ),
 //!         );
 //!
@@ -1464,6 +1465,7 @@ mod chain_test {
                 spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
+                None,
             ),
         );
 
@@ -1486,6 +1488,7 @@ mod chain_test {
                 spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
+                None,
             ),
         );
 
@@ -1531,6 +1534,7 @@ mod chain_test {
                 spos!(0.17),
                 Decimal::ZERO,
                 pos!(0.05),
+                None,
             ),
         );
 

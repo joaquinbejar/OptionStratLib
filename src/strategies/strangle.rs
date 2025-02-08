@@ -1695,6 +1695,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
             spos!(0.2),
             dec!(0.01),
             pos!(0.02),
+            None,
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
@@ -2085,6 +2086,7 @@ mod tests_long_strangle {
             spos!(0.65),
             dec!(0.01),
             pos!(0.02),
+            None,
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
