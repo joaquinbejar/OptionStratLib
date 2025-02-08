@@ -515,7 +515,7 @@ impl fmt::Display for OptionData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<4} {:.3}{:<5} {:.3}{:<8} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<4} {:.3}{:<5} {:.2}{:<8} {:<10} {:<10}",
             self.strike_price.to_string(),
             default_empty_string(self.call_bid),
             default_empty_string(self.call_ask),
@@ -529,7 +529,7 @@ impl fmt::Display for OptionData {
             " ".to_string(),
             self.delta_put.unwrap_or(Decimal::ZERO),
             " ".to_string(),
-            self.gamma.unwrap_or(Decimal::ZERO),
+            self.gamma.unwrap_or(Decimal::ZERO) * Decimal::ONE_HUNDRED,
             " ".to_string(),
             default_empty_string(self.volume),
             default_empty_string(self.open_interest),
@@ -1077,6 +1077,9 @@ impl OptionChain {
     ///
     pub fn get_single_iter(&self) -> impl Iterator<Item = &OptionData> {
         self.options.iter()
+            .filter(|option| {
+                option.implied_volatility.is_some()
+            })
     }
 
     /// Returns an iterator that generates pairs of distinct option combinations from the `OptionChain`.
@@ -1101,9 +1104,14 @@ impl OptionChain {
     /// }
     /// ```
     pub fn get_double_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
-        self.options.iter().enumerate().flat_map(|(i, item1)| {
+        self.options.iter()
+            .filter(|option| option.implied_volatility.is_some())
+            .filter(|option| option.implied_volatility.unwrap() > Positive::ZERO)
+            .enumerate().flat_map(|(i, item1)| {
             self.options
                 .iter()
+                .filter(|option| option.implied_volatility.is_some())
+                .filter(|option| option.implied_volatility.unwrap() > Positive::ZERO)
                 .skip(i + 1)
                 .map(move |item2| (item1, item2))
         })
