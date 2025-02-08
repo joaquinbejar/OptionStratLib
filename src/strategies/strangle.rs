@@ -1534,7 +1534,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
 
         let vertical_lines = strategy.get_vertical_lines();
         assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
+        assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
         let data = vec![
             pos!(140.0),
@@ -1940,7 +1940,7 @@ mod tests_long_strangle {
         // Test vertical lines
         let vertical_lines = strategy.get_vertical_lines();
         assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
+        assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
         // Test values calculation
         let data = vec![

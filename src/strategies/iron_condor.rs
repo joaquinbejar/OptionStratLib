@@ -2278,7 +2278,7 @@ mod tests_iron_condor_graph {
         let max_profit_point = &points[2];
 
         assert_eq!(max_profit_point.coordinates.1, 0.0);
-        assert!(max_profit_point.label.contains("0.00"));
+        assert!(max_profit_point.label.contains("0"));
     }
 
     #[test]

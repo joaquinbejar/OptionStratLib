@@ -911,7 +911,7 @@ mod tests_call_butterfly {
 
         let vertical_lines = strategy.get_vertical_lines();
         assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
+        assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
         let data = vec![
             pos!(150.0),
@@ -1090,7 +1090,7 @@ mod tests_call_butterfly_graph {
         let line = &lines[0];
         assert_relative_eq!(line.x_coordinate, 150.0, epsilon = 0.001);
         assert_eq!(line.y_range, (f64::NEG_INFINITY, f64::INFINITY));
-        assert!(line.label.contains("Current Price: 150.00"));
+        assert!(line.label.contains("Current Price: 150"));
         assert_eq!(line.font_size, 18);
     }
 

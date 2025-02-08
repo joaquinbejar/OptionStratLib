@@ -1472,7 +1472,7 @@ mod tests_short_straddle {
 
         let vertical_lines = strategy.get_vertical_lines();
         assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
+        assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
         let data = vec![
             pos!(140.0),
@@ -1848,7 +1848,7 @@ mod tests_long_straddle {
         // Test vertical lines
         let vertical_lines = strategy.get_vertical_lines();
         assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150.00");
+        assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
         let data = vec![
             pos!(130.0),

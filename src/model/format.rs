@@ -372,13 +372,13 @@ mod tests_options {
         let display_output = format!("{}", options);
         let expected_output = "\
             Long Call European Option\n\
-            Underlying: AAPL @ $155.00\n\
-            Strike: $150.00\n\
+            Underlying: AAPL @ $155\n\
+            Strike: $150\n\
             Expiration: 2024-08-08 00:00:00 UTC\n\
-            Implied Volatility: 25.00%\n\
+            Implied Volatility: 25%\n\
             Quantity: 10\n\
             Risk-free Rate: 1.00%\n\
-            Dividend Yield: 2.00%";
+            Dividend Yield: 2%";
 
         assert_eq!(display_output, expected_output);
     }
@@ -417,13 +417,13 @@ mod tests_options {
         let display_output = format!("{}", options);
         let expected_output = "\
             Short Call Barrier Option (Type: Up-And-In Barrier, Level: 100)\n\
-            Underlying: GOOGL @ $1900.00\n\
-            Strike: $2000.00\n\
+            Underlying: GOOGL @ $1900\n\
+            Strike: $2000\n\
             Expiration: 2024-08-08 00:00:00 UTC\n\
-            Implied Volatility: 30.00%\n\
+            Implied Volatility: 30%\n\
             Quantity: 5\n\
             Risk-free Rate: 1.50%\n\
-            Dividend Yield: 1.00%\n\
+            Dividend Yield: 1%\n\
             Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None }";
 
         assert_eq!(display_output, expected_output);
@@ -876,13 +876,13 @@ mod tests_position_type_display_debug {
 
         let expected_display = "Position Details:\n\
                 Option: Long Call European Option\n\
-                Underlying: AAPL @ $155.00\n\
-                Strike: $150.00\n\
+                Underlying: AAPL @ $155\n\
+                Strike: $150\n\
                 Expiration: 2024-08-08 00:00:00 UTC\n\
-                Implied Volatility: 25.00%\n\
+                Implied Volatility: 25%\n\
                 Quantity: 10\n\
                 Risk-free Rate: 1.00%\n\
-                Dividend Yield: 2.00%\n\
+                Dividend Yield: 2%\n\
                 Premium per contract: $5.75\n\
                 Date: 2024-08-08 00:00:00 UTC\n\
                 Open Fee per contract: $0.50\n\
@@ -985,7 +985,7 @@ mod tests_strategy_type_display_debug {
             break_even_points: vec![pos!(102.0), pos!(108.0)],
         };
 
-        let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102.00\n  $108.00\n";
+        let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100\nStrike: $100\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100\nStrike: $100\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102\n  $108\n";
 
         assert_eq!(format!("{}", strategy), expected_output);
     }

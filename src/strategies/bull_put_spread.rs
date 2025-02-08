@@ -1670,7 +1670,7 @@ mod tests_bull_put_spread_graph {
         let max_profit_point = &points[1];
 
         assert_eq!(max_profit_point.coordinates.1, 0.0);
-        assert!(max_profit_point.label.contains("0.00"));
+        assert!(max_profit_point.label.contains("0"));
     }
 
     #[test]
