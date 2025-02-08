@@ -380,20 +380,27 @@ impl PartialEq<f64> for Positive {
 
 impl fmt::Display for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(precision) = f.precision() {
-            write!(f, "{:.1$}", self.0, precision)
+        if self.0.scale() == 0 {
+            write!(f, "{}", self.0.to_i64().unwrap())
         } else {
-            write!(f, "{}", self.0)
+            if let Some(precision) = f.precision() {
+                write!(f, "{:.1$}", self.0, precision)
+            } else {
+                let s = self.0.to_string();
+                let trimmed = s.trim_end_matches('0').trim_end_matches('.');
+                write!(f, "{}", trimmed)
+            }
         }
     }
 }
 
 impl fmt::Debug for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(precision) = f.precision() {
-            write!(f, "{:.1$}", self.0, precision)
+        // Mismo comportamiento que Display
+        if self.0.scale() == 0 {
+            write!(f, "{}", self.0.to_i64().unwrap())
         } else {
-            write!(f, "{:?}", self.0)
+            write!(f, "{}", self.0)
         }
     }
 }
