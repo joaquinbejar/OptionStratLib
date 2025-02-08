@@ -14,6 +14,7 @@ use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
+use serde::de::Visitor;
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct Positive(pub(crate) Decimal);
@@ -397,18 +398,25 @@ impl fmt::Debug for Positive {
     }
 }
 
+impl PartialEq<Decimal> for Positive {
+    fn eq(&self, other: &Decimal) -> bool {
+        (self.0 - *other).abs() <= EPSILON * Decimal::from(100)
+    }
+}
+
 impl Serialize for Positive {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_f64(self.into())
-    }
-}
-
-impl PartialEq<Decimal> for Positive {
-    fn eq(&self, other: &Decimal) -> bool {
-        (self.0 - *other).abs() <= EPSILON * Decimal::from(100)
+        let value = self.0;
+        if value.scale() == 0 {
+            // Si es un número entero, serializa sin decimales
+            serializer.serialize_i64(value.to_i64().unwrap())
+        } else {
+            // Si tiene decimales, serializa como f64
+            serializer.serialize_f64(value.to_f64().unwrap())
+        }
     }
 }
 
@@ -417,10 +425,52 @@ impl<'de> Deserialize<'de> for Positive {
     where
         D: Deserializer<'de>,
     {
-        let value = f64::deserialize(deserializer)?;
-        let decimal = Decimal::from_f64(value)
-            .ok_or_else(|| serde::de::Error::custom("Failed to convert f64 to Decimal"))?;
-        Positive::new_decimal(decimal).map_err(serde::de::Error::custom)
+        struct PositiveVisitor;
+
+        impl<'de> Visitor<'de> for PositiveVisitor {
+            type Value = Positive;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a positive number")
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if value < 0 {
+                    Err(serde::de::Error::custom("value must be non-negative"))
+                } else {
+                    Positive::new_decimal(Decimal::from(value))
+                        .map_err(serde::de::Error::custom)
+                }
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Positive::new_decimal(Decimal::from(value))
+                    .map_err(serde::de::Error::custom)
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let decimal = Decimal::from_f64(value)
+                    .ok_or_else(|| serde::de::Error::custom("Failed to convert f64 to Decimal"))?;
+
+                if value < 0.0 {
+                    Err(serde::de::Error::custom("value must be non-negative"))
+                } else {
+                    Positive::new_decimal(decimal)
+                        .map_err(serde::de::Error::custom)
+                }
+            }
+        }
+
+        deserializer.deserialize_any(PositiveVisitor)
     }
 }
 
@@ -951,5 +1001,72 @@ mod tests_macros {
 
         // Test float literals
         assert_eq!(pos!(5.0).value(), Decimal::new(5, 0));
+    }
+}
+
+#[cfg(test)]
+mod tests_serialization {
+    use super::*;
+    use rust_decimal_macros::dec; // Para crear Decimals de forma más legible
+    use serde_json; // Para las pruebas de serialización
+
+    #[test]
+    fn test_positive_serialization() {
+        let value = Positive(dec!(42.5));
+        let serialized = serde_json::to_string(&value).unwrap();
+        assert_eq!(serialized, "42.5");
+    }
+
+    #[test]
+    fn test_positive_deserialization() {
+        let json = "42.5";
+        let deserialized: Positive = serde_json::from_str(json).unwrap();
+        assert_eq!(deserialized, Positive(dec!(42.5)));
+    }
+
+    #[test]
+    fn test_positive_serialization_whole_number() {
+        let value = Positive(dec!(100));
+        let serialized = serde_json::to_string(&value).unwrap();
+        assert_eq!(serialized, "100");
+    }
+
+    #[test]
+    fn test_positive_deserialization_whole_number() {
+        let json = "100";
+        let deserialized: Positive = serde_json::from_str(json).unwrap();
+        assert_eq!(deserialized, Positive(dec!(100)));
+    }
+
+    #[test]
+    fn test_positive_roundtrip() {
+        let original = Positive(dec!(123.456));
+        let serialized = serde_json::to_string(&original).unwrap();
+        let deserialized: Positive = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_positive_high_precision() {
+        let value = Positive(dec!(12345.6789));
+        let serialized = serde_json::to_string(&value).unwrap();
+        let deserialized: Positive = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(value, deserialized);
+    }
+
+
+    #[test]
+    fn test_positive_zero_deserialization() {
+        let json = "0";
+        let result = serde_json::from_str::<Positive>(json);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Positive::ZERO);
+    }
+
+    #[test]
+    fn test_positive_negative_deserialization() {
+        let json = "-42.5";
+        let result = serde_json::from_str::<Positive>(json);
+        assert!(result.is_err());
     }
 }
