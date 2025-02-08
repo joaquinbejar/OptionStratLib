@@ -381,7 +381,11 @@ impl PartialEq<f64> for Positive {
 impl fmt::Display for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.0.scale() == 0 {
-            write!(f, "{}", self.0.to_i64().unwrap())
+            // Si el valor es demasiado grande para i64, usamos to_string
+            match self.0.to_i64() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "{}", self.0)
+            }
         } else {
             if let Some(precision) = f.precision() {
                 write!(f, "{:.1$}", self.0, precision)

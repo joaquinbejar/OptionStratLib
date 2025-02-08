@@ -39,7 +39,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
-use tracing::{debug, info, trace};
+use tracing::{debug, error, info, trace};
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -370,6 +370,7 @@ impl Optimizable for ShortStrangle {
                     first: short_put,
                     second: short_call,
                 };
+                println!("Legs: {:?}", legs);
                 let strategy = strategy.create_strategy(option_chain, &legs);
                 strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
             })
@@ -666,11 +667,18 @@ impl Greeks for ShortStrangle {
 
 impl DeltaNeutrality for ShortStrangle {
     fn calculate_net_delta(&self) -> DeltaInfo {
-        let call_delta = self.short_call.option.delta();
-        let put_delta = self.short_put.option.delta();
+        let call_delta = self.short_call.option.delta().unwrap_or_else(|e| {
+            error!("Failed to calculate CALL delta: {}", e);
+            Decimal::ZERO
+        });
+        
+        let put_delta = self.short_put.option.delta().unwrap_or_else(|e| {
+            error!("Failed to calculate PUT delta: {}", e);
+            Decimal::ZERO
+        });
         let threshold = DELTA_THRESHOLD;
-        let c_delta = call_delta.unwrap();
-        let p_delta = put_delta.unwrap();
+        let c_delta = call_delta;
+        let p_delta = put_delta;
         DeltaInfo {
             net_delta: c_delta + p_delta,
             individual_deltas: vec![c_delta, p_delta],
