@@ -13,7 +13,6 @@ use crate::error::chains::ChainError;
 use crate::geometrics::LinearInterpolation;
 use crate::greeks::delta;
 use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
-use crate::pricing::black_scholes_model::black_scholes;
 use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
@@ -226,16 +225,24 @@ impl OptionData {
         &mut self,
         price_params: &OptionDataPriceParams,
     ) -> Result<(), ChainError> {
-        let mut option: Options = self.get_option(price_params, Side::Long, OptionStyle::Call)?;
-
-        self.call_ask = Some(black_scholes(&option)?.abs().into());
-        option.side = Side::Short;
-        self.call_bid = Some(black_scholes(&option)?.abs().into());
-        option.option_style = OptionStyle::Put;
-        self.put_bid = Some(black_scholes(&option)?.abs().into());
-        option.side = Side::Long;
-        self.put_ask = Some(black_scholes(&option)?.abs().into());
-
+        if self.options.is_none() {
+            self.create_options(price_params)?;
+        }
+        
+        let options = self.options.as_ref().unwrap();
+        
+        let call_ask = options.long_call.calculate_price_black_scholes()?;
+        self.call_ask = Some(Positive(call_ask.abs()));
+        
+        let call_bid = options.short_call.calculate_price_black_scholes()?;
+        self.call_bid = Some(Positive(call_bid.abs()));
+        
+        let put_ask = options.long_put.calculate_price_black_scholes()?;
+        self.put_ask = Some(Positive(put_ask.abs()));
+        
+        let put_bid = options.short_put.calculate_price_black_scholes()?;
+        self.put_bid = Some(Positive(put_bid.abs()));
+        
         self.set_mid_prices();
         Ok(())
     }
@@ -622,6 +629,30 @@ impl OptionChain {
             options: None,
         };
         option_data.set_mid_prices();
+        
+        let expiration_date = match ExpirationDate::from_string(&self.expiration_date) { 
+            Ok(date) => date,
+            Err(e) => {
+                panic!("Failed to parse expiration date: {}", e);
+            }
+        };
+        
+        let params = OptionDataPriceParams::new(
+            self.underlying_price,
+            expiration_date,
+            implied_volatility,
+            self.risk_free_rate.unwrap_or(Decimal::ZERO),
+            self.dividend_yield.unwrap_or(Positive::ZERO),
+            Some(self.symbol.clone())
+        );
+        
+        match option_data.create_options(&params) {
+            Err(e) => {
+                error!("Failed to create options for strike {}: {}", strike_price, e);
+                println!("Failed to create options for strike {}: {}", strike_price, e);
+            },
+            Ok(_) => {}
+        }
         self.options.insert(option_data);
     }
 
@@ -2069,16 +2100,16 @@ mod tests_option_data {
 
         assert!(result.is_ok());
         info!("{}", option_data);
-        assert_pos_relative_eq!(option_data.call_ask.unwrap(), pos!(10.4121), pos!(0.0001));
-        assert_pos_relative_eq!(option_data.call_bid.unwrap(), pos!(10.4121), pos!(0.0001));
-        assert_pos_relative_eq!(option_data.put_ask.unwrap(), pos!(0.0020194), pos!(0.0001));
-        assert_pos_relative_eq!(option_data.put_bid.unwrap(), pos!(0.0020194), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.call_ask.unwrap(), pos!(10.51108), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.call_bid.unwrap(), pos!(10.51108), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.put_ask.unwrap(), pos!(0.100966), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.put_bid.unwrap(), pos!(0.100966), pos!(0.0001));
         option_data.apply_spread(pos!(0.02), 2);
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.42));
-        assert_eq!(option_data.call_bid, spos!(10.4));
-        assert_eq!(option_data.put_ask, None);
-        assert_eq!(option_data.put_bid, None);
+        assert_eq!(option_data.call_ask, spos!(10.52));
+        assert_eq!(option_data.call_bid, spos!(10.50));
+        assert_eq!(option_data.put_ask, spos!(0.11));
+        assert_eq!(option_data.put_bid, spos!(0.09));
     }
 
     #[test]
@@ -3176,7 +3207,13 @@ mod tests_chain_iterators {
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new(
+            "TEST", 
+            pos!(100.0), 
+            "2024-01-01".to_string(), 
+            None, 
+            None
+        );
 
         // Add three options with different strikes
         chain.add_option(

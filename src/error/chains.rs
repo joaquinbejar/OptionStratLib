@@ -57,6 +57,7 @@
 use std::error::Error;
 use std::fmt;
 use std::io;
+use crate::error::OptionsError;
 
 #[derive(Debug)]
 pub enum ChainError {
@@ -271,6 +272,14 @@ impl Error for ChainError {}
 impl From<io::Error> for ChainError {
     fn from(error: io::Error) -> Self {
         ChainError::FileError(FileErrorKind::IOError(error))
+    }
+}
+
+impl From<OptionsError> for ChainError {
+    fn from(error: OptionsError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(
+            error.to_string(),
+        ))
     }
 }
 

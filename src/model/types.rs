@@ -193,8 +193,9 @@ impl ExpirationDate {
             }
         }
 
-        // Try parsing common date formats
+        // Try parsing common date formats, including ISO format
         let formats = [
+            "%Y-%m-%d", // "2024-01-01"
             "%d-%m-%Y", // "01-01-2025"
             "%d %b %Y", // "30 jan 2025"
             "%d-%b-%Y", // "30-jan-2025"
@@ -249,8 +250,6 @@ mod datetime_format {
             .map_err(serde::de::Error::custom)
     }
 }
-
-
 
 impl Serialize for ExpirationDate {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -1545,7 +1544,6 @@ mod tests_serialization {
         let days = pos!(30.0);
         let expiration = ExpirationDate::Days(days);
         let serialized = serde_json::to_string(&expiration).unwrap();
-        println!("Days serialized: {}", serialized);
         assert_eq!(serialized, r#"{"days":30.0}"#);
     }
 
@@ -1564,7 +1562,6 @@ mod tests_serialization {
         let dt = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
         let expiration = ExpirationDate::DateTime(dt);
         let serialized = serde_json::to_string(&expiration).unwrap();
-        println!("DateTime serialized: {}", serialized);
         assert_eq!(serialized, r#"{"datetime":"2025-01-01T00:00:00Z"}"#);
     }
 
@@ -1585,7 +1582,6 @@ mod tests_serialization {
         let original = ExpirationDate::Days(pos!(365.0));
         let serialized = serde_json::to_string(&original).unwrap();
         let modified_serialized = serialized.replace("Days", "days"); 
-        println!("Days roundtrip serialized: {}", modified_serialized);
         let deserialized: ExpirationDate = serde_json::from_str(&modified_serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -1596,7 +1592,6 @@ mod tests_serialization {
         let original = ExpirationDate::DateTime(dt);
         let serialized = serde_json::to_string(&original).unwrap();
         let modified_serialized = serialized.replace("DateTime", "datetime"); 
-        println!("DateTime roundtrip serialized: {}", modified_serialized);
         let deserialized: ExpirationDate = serde_json::from_str(&modified_serialized).unwrap();
         assert_eq!(original, deserialized);
     }
