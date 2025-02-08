@@ -1,14 +1,14 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 8/2/25
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 8/2/25
+******************************************************************************/
 
-use std::sync::Arc;
-use crate::{OptionStyle, OptionType, Options, Positive, Side};
 use crate::chains::chain::OptionData;
 use crate::chains::utils::OptionDataPriceParams;
 use crate::error::ChainError;
+use crate::{OptionStyle, OptionType, Options, Positive, Side};
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct FourOptions {
@@ -17,7 +17,6 @@ pub struct FourOptions {
     pub long_put: Arc<Options>,
     pub short_put: Arc<Options>,
 }
-
 
 impl PartialEq for FourOptions {
     fn eq(&self, other: &Self) -> bool {
@@ -29,11 +28,14 @@ impl PartialEq for FourOptions {
 }
 
 impl OptionData {
-    pub fn create_options(&mut self, price_params: &OptionDataPriceParams) -> Result<(), ChainError> {
+    pub fn create_options(
+        &mut self,
+        price_params: &OptionDataPriceParams,
+    ) -> Result<(), ChainError> {
         let symbol = if let Some(underlying_symbol) = price_params.underlying_symbol.clone() {
             underlying_symbol
-        } else { 
-          "NA".to_string()
+        } else {
+            "NA".to_string()
         };
         let long_call = Arc::new(Options::new(
             OptionType::European,

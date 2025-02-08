@@ -3,11 +3,11 @@ use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
 use crate::{pos, Positive};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use rust_decimal::Decimal;
-use std::error::Error;
-use std::fmt;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeMap;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::error::Error;
+use std::fmt;
 
 #[derive(Clone, PartialEq)]
 pub enum ExpirationDate {
@@ -277,14 +277,19 @@ impl<'de> Deserialize<'de> for ExpirationDate {
         D: Deserializer<'de>,
     {
         #[allow(non_camel_case_types)]
-        enum Field { days, datetime }
+        enum Field {
+            days,
+            datetime,
+        }
 
         impl<'de> Deserialize<'de> for Field {
             fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
-            where D: Deserializer<'de> {
+            where
+                D: Deserializer<'de>,
+            {
                 struct FieldVisitor;
 
-                impl<'de> Visitor<'de> for FieldVisitor {
+                impl Visitor<'_> for FieldVisitor {
                     type Value = Field;
 
                     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -292,11 +297,16 @@ impl<'de> Deserialize<'de> for ExpirationDate {
                     }
 
                     fn visit_str<E>(self, value: &str) -> Result<Field, E>
-                    where E: serde::de::Error {
+                    where
+                        E: serde::de::Error,
+                    {
                         match value {
                             "days" => Ok(Field::days),
                             "datetime" => Ok(Field::datetime),
-                            _ => Err(serde::de::Error::unknown_field(value, &["days", "datetime"])),
+                            _ => Err(serde::de::Error::unknown_field(
+                                value,
+                                &["days", "datetime"],
+                            )),
                         }
                     }
                 }
@@ -315,7 +325,9 @@ impl<'de> Deserialize<'de> for ExpirationDate {
             }
 
             fn visit_map<V>(self, mut map: V) -> Result<ExpirationDate, V::Error>
-            where V: MapAccess<'de> {
+            where
+                V: MapAccess<'de>,
+            {
                 let mut days: Option<Positive> = None;
                 let mut datetime: Option<DateTime<Utc>> = None;
 
@@ -333,9 +345,11 @@ impl<'de> Deserialize<'de> for ExpirationDate {
                                 return Err(serde::de::Error::duplicate_field("datetime"));
                             }
                             let value: String = map.next_value()?;
-                            datetime = Some(DateTime::parse_from_rfc3339(&value)
-                                .map_err(serde::de::Error::custom)?
-                                .with_timezone(&Utc));
+                            datetime = Some(
+                                DateTime::parse_from_rfc3339(&value)
+                                    .map_err(serde::de::Error::custom)?
+                                    .with_timezone(&Utc),
+                            );
                         }
                     }
                 }
@@ -1538,7 +1552,6 @@ mod tests_serialization {
     use super::*;
     use chrono::{TimeZone, Utc};
 
-
     #[test]
     fn test_expiration_date_days_serialization() {
         let days = pos!(30.0);
@@ -1549,7 +1562,7 @@ mod tests_serialization {
 
     #[test]
     fn test_expiration_date_days_deserialization() {
-        let json = r#"{"days": 30.0}"#;  
+        let json = r#"{"days": 30.0}"#;
         let deserialized: ExpirationDate = serde_json::from_str(json).unwrap();
         match deserialized {
             ExpirationDate::Days(days) => assert_eq!(days, pos!(30.0)),
@@ -1567,7 +1580,7 @@ mod tests_serialization {
 
     #[test]
     fn test_expiration_date_datetime_deserialization() {
-        let json = r#"{"datetime": "2025-01-01T00:00:00Z"}"#; 
+        let json = r#"{"datetime": "2025-01-01T00:00:00Z"}"#;
         let deserialized: ExpirationDate = serde_json::from_str(json).unwrap();
         match deserialized {
             ExpirationDate::DateTime(dt) => {
@@ -1581,7 +1594,7 @@ mod tests_serialization {
     fn test_expiration_date_roundtrip_days() {
         let original = ExpirationDate::Days(pos!(365.0));
         let serialized = serde_json::to_string(&original).unwrap();
-        let modified_serialized = serialized.replace("Days", "days"); 
+        let modified_serialized = serialized.replace("Days", "days");
         let deserialized: ExpirationDate = serde_json::from_str(&modified_serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -1591,7 +1604,7 @@ mod tests_serialization {
         let dt = Utc.with_ymd_and_hms(2025, 12, 31, 23, 59, 59).unwrap();
         let original = ExpirationDate::DateTime(dt);
         let serialized = serde_json::to_string(&original).unwrap();
-        let modified_serialized = serialized.replace("DateTime", "datetime"); 
+        let modified_serialized = serialized.replace("DateTime", "datetime");
         let deserialized: ExpirationDate = serde_json::from_str(&modified_serialized).unwrap();
         assert_eq!(original, deserialized);
     }

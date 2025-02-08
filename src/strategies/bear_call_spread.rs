@@ -1535,8 +1535,8 @@ mod tests_bear_call_spread_optimizable {
             Some(dec!(0.7)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            spos!(100.0),    // volume
-            Some(50),        // open_interest
+            spos!(100.0), // volume
+            Some(50),     // open_interest
         );
 
         chain.add_option(
@@ -1739,7 +1739,19 @@ mod tests_bear_call_spread_optimizable {
         let mut empty_chain =
             OptionChain::new("TEST", pos!(100.0), "2024-03-15".to_string(), None, None);
         // Add invalid options
-        empty_chain.add_option(pos!(95.0), None, None, None, None, None, None, None, None, None, None);
+        empty_chain.add_option(
+            pos!(95.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
 
         // Should not panic when no valid combinations exist
         strategy.find_optimal(

@@ -191,29 +191,34 @@ pub trait Greeks {
 /// ```
 pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date = option.expiration_date.get_years()?;
-    
-    // For an option when the time to expiration is zero (i.e., at the moment of expiration), 
-    // the delta takes discrete values based solely on whether the option is In-The-Money (ITM) or 
+
+    // For an option when the time to expiration is zero (i.e., at the moment of expiration),
+    // the delta takes discrete values based solely on whether the option is In-The-Money (ITM) or
     // Out-of-The-Money (OTM):
-    // 
+    //
     // For a Call option:
-    // 
-    // - **Delta = 1.0** if ITM (underlying price > strike price)  
-    // - **Delta = 0.0** if OTM (underlying price < strike price)  
-    // 
+    //
+    // - **Delta = 1.0** if ITM (underlying price > strike price)
+    // - **Delta = 0.0** if OTM (underlying price < strike price)
+    //
     // For a Put option:
-    // 
-    // - **Delta = -1.0** if ITM (underlying price < strike price)  
-    // - **Delta = 0.0** if OTM (underlying price > strike price)  
-    // 
-    // In both cases, when the underlying price is exactly equal to the strike price (At-The-Money, 
-    // ATM), technically, the delta would be **0.5 for Calls** and **-0.5 for Puts**, although this 
-    // scenario is less common in practice.  
-    // 
-    // This happens because at expiration, the option effectively becomes a direct position in the 
+    //
+    // - **Delta = -1.0** if ITM (underlying price < strike price)
+    // - **Delta = 0.0** if OTM (underlying price > strike price)
+    //
+    // In both cases, when the underlying price is exactly equal to the strike price (At-The-Money,
+    // ATM), technically, the delta would be **0.5 for Calls** and **-0.5 for Puts**, although this
+    // scenario is less common in practice.
+    //
+    // This happens because at expiration, the option effectively becomes a direct position in the
     // underlying asset (**delta = 1 or -1**) if it is ITM, or has no value (**delta = 0**) if it is OTM.
     if expiration_date == Decimal::ZERO {
-        return match (&option.option_style, &option.side, &option.strike_price, &option.underlying_price) {
+        return match (
+            &option.option_style,
+            &option.side,
+            &option.strike_price,
+            &option.underlying_price,
+        ) {
             // Call Options
             (OptionStyle::Call, Side::Long, strike, price) if price > strike => Ok(Decimal::ONE),
             (OptionStyle::Call, Side::Long, _, _) => Ok(Decimal::ZERO),
@@ -225,9 +230,9 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
             (OptionStyle::Put, Side::Long, _, _) => Ok(Decimal::ZERO),
             (OptionStyle::Put, Side::Short, strike, price) if price < strike => Ok(Decimal::ONE),
             (OptionStyle::Put, Side::Short, _, _) => Ok(Decimal::ZERO),
-        }
+        };
     }
-    
+
     let dividend_yield: Positive = option.dividend_yield;
 
     let sign = if option.is_long() {
@@ -262,7 +267,6 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    
     let div_date = (-expiration_date.to_dec() * dividend_yield).exp();
     let delta = match option.option_style {
         OptionStyle::Call => sign * big_n(d1)? * div_date,
@@ -375,7 +379,6 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    
     let dividend_yield: Decimal = option.dividend_yield.into();
     let underlying_price: Decimal = option.underlying_price.into();
     let implied_volatility: Positive = option.implied_volatility;
@@ -635,7 +638,6 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    
     let dividend_yield: Positive = option.dividend_yield;
     let underlying_price: Decimal = option.underlying_price.to_dec();
 

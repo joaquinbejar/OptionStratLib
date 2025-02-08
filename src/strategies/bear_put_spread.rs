@@ -1068,8 +1068,8 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(-0.8)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            spos!(100.0),     // volume
-            Some(50),         // open_interest
+            spos!(100.0), // volume
+            Some(50),     // open_interest
         );
 
         chain.add_option(
@@ -1358,8 +1358,8 @@ mod tests_bear_put_spread_optimizable {
             Some(dec!(-0.3)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            spos!(100.0),     // volume
-            Some(50),         // open_interest
+            spos!(100.0), // volume
+            Some(50),     // open_interest
         );
 
         // Strike ATM (100)

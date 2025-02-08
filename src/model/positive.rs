@@ -8,13 +8,13 @@ use crate::constants::EPSILON;
 use approx::{AbsDiffEq, RelativeEq};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
+use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
-use serde::de::Visitor;
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct Positive(pub(crate) Decimal);
@@ -384,16 +384,14 @@ impl fmt::Display for Positive {
             // Si el valor es demasiado grande para i64, usamos to_string
             match self.0.to_i64() {
                 Some(val) => write!(f, "{}", val),
-                None => write!(f, "{}", self.0)
+                None => write!(f, "{}", self.0),
             }
+        } else if let Some(precision) = f.precision() {
+            write!(f, "{:.1$}", self.0, precision)
         } else {
-            if let Some(precision) = f.precision() {
-                write!(f, "{:.1$}", self.0, precision)
-            } else {
-                let s = self.0.to_string();
-                let trimmed = s.trim_end_matches('0').trim_end_matches('.');
-                write!(f, "{}", trimmed)
-            }
+            let s = self.0.to_string();
+            let trimmed = s.trim_end_matches('0').trim_end_matches('.');
+            write!(f, "{}", trimmed)
         }
     }
 }
@@ -438,7 +436,7 @@ impl<'de> Deserialize<'de> for Positive {
     {
         struct PositiveVisitor;
 
-        impl<'de> Visitor<'de> for PositiveVisitor {
+        impl Visitor<'_> for PositiveVisitor {
             type Value = Positive;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -452,8 +450,7 @@ impl<'de> Deserialize<'de> for Positive {
                 if value < 0 {
                     Err(serde::de::Error::custom("value must be non-negative"))
                 } else {
-                    Positive::new_decimal(Decimal::from(value))
-                        .map_err(serde::de::Error::custom)
+                    Positive::new_decimal(Decimal::from(value)).map_err(serde::de::Error::custom)
                 }
             }
 
@@ -461,8 +458,7 @@ impl<'de> Deserialize<'de> for Positive {
             where
                 E: serde::de::Error,
             {
-                Positive::new_decimal(Decimal::from(value))
-                    .map_err(serde::de::Error::custom)
+                Positive::new_decimal(Decimal::from(value)).map_err(serde::de::Error::custom)
             }
 
             fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
@@ -475,8 +471,7 @@ impl<'de> Deserialize<'de> for Positive {
                 if value < 0.0 {
                     Err(serde::de::Error::custom("value must be non-negative"))
                 } else {
-                    Positive::new_decimal(decimal)
-                        .map_err(serde::de::Error::custom)
+                    Positive::new_decimal(decimal).map_err(serde::de::Error::custom)
                 }
             }
         }
@@ -1064,7 +1059,6 @@ mod tests_serialization {
         let deserialized: Positive = serde_json::from_str(&serialized).unwrap();
         assert_eq!(value, deserialized);
     }
-
 
     #[test]
     fn test_positive_zero_deserialization() {

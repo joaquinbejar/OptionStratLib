@@ -1497,8 +1497,8 @@ mod tests_call_butterfly_optimizable {
             Some(dec!(0.4)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            spos!(100.0),    // volume
-            Some(50),        // open interest
+            spos!(100.0), // volume
+            Some(50),     // open interest
         );
 
         chain.add_option(

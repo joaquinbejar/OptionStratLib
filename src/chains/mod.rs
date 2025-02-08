@@ -205,10 +205,10 @@ pub mod utils;
 
 mod options;
 
-mod rnd;
 mod four;
+mod rnd;
 
+pub use four::FourOptions;
 pub use legs::StrategyLegs;
 pub use options::{DeltasInStrike, OptionsInStrike};
 pub use rnd::{RNDAnalysis, RNDParameters, RNDResult};
-pub use four::FourOptions;

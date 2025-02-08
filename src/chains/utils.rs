@@ -8,9 +8,9 @@ use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
 use crate::Positive;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fmt::Display;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub enum OptionDataGroup<'a> {
@@ -613,7 +613,7 @@ mod tests_option_data_price_params {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
-            None
+            None,
         );
 
         assert_eq!(params.underlying_price, pos!(100.0));

@@ -671,7 +671,7 @@ impl DeltaNeutrality for ShortStrangle {
             error!("Failed to calculate CALL delta: {}", e);
             Decimal::ZERO
         });
-        
+
         let put_delta = self.short_put.option.delta().unwrap_or_else(|e| {
             error!("Failed to calculate PUT delta: {}", e);
             Decimal::ZERO

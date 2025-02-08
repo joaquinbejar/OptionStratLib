@@ -35,6 +35,8 @@ fn benchmark_basic_operations(
                 None,
                 None,
                 None,
+                None,
+                None,
             );
             black_box(option_data)
         })
@@ -50,6 +52,8 @@ fn benchmark_basic_operations(
                 Some(Positive::new(9.0).unwrap()),
                 Some(Positive::new(10.0).unwrap()),
                 Some(Positive::new(0.2).unwrap()),
+                Some(dec!(0.5)),
+                Some(dec!(0.5)),
                 Some(dec!(0.5)),
                 Some(Positive::new(1000.0).unwrap()),
                 Some(100),
@@ -117,6 +121,8 @@ fn create_test_option_data() -> OptionData {
         Some(dec!(0.5)),
         None,
         None,
+        None,
+        None,
     )
 }
 
@@ -127,6 +133,7 @@ fn create_standard_price_params() -> OptionDataPriceParams {
         Some(Positive::new(0.2).unwrap()),
         dec!(0.05),
         pos!(0.01),
+        None,
     )
 }
 
@@ -137,5 +144,6 @@ fn create_price_params_with_volatility(volatility: f64) -> OptionDataPriceParams
         Some(Positive::new(volatility).unwrap()),
         dec!(0.05),
         pos!(0.01),
+        None,
     )
 }

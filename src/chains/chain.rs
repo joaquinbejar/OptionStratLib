@@ -7,7 +7,9 @@ use crate::chains::utils::{
     adjust_volatility, default_empty_string, generate_list_of_strikes, OptionChainBuildParams,
     OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
 };
-use crate::chains::{DeltasInStrike, FourOptions, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
+use crate::chains::{
+    DeltasInStrike, FourOptions, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult,
+};
 use crate::curves::{Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::geometrics::LinearInterpolation;
@@ -234,21 +236,21 @@ impl OptionData {
         if self.options.is_none() {
             self.create_options(price_params)?;
         }
-        
+
         let options = self.options.as_ref().unwrap();
-        
+
         let call_ask = options.long_call.calculate_price_black_scholes()?;
         self.call_ask = Some(Positive(call_ask.abs()));
-        
+
         let call_bid = options.short_call.calculate_price_black_scholes()?;
         self.call_bid = Some(Positive(call_bid.abs()));
-        
+
         let put_ask = options.long_put.calculate_price_black_scholes()?;
         self.put_ask = Some(Positive(put_ask.abs()));
-        
+
         let put_bid = options.short_put.calculate_price_black_scholes()?;
         self.put_bid = Some(Positive(put_bid.abs()));
-        
+
         self.set_mid_prices();
         Ok(())
     }
@@ -365,7 +367,6 @@ impl OptionData {
                 self.gamma = None;
             }
         }
-
     }
 
     pub fn get_deltas(
@@ -692,29 +693,32 @@ impl OptionChain {
             options: None,
         };
         option_data.set_mid_prices();
-        
-        let expiration_date = match ExpirationDate::from_string(&self.expiration_date) { 
+
+        let expiration_date = match ExpirationDate::from_string(&self.expiration_date) {
             Ok(date) => date,
             Err(e) => {
                 panic!("Failed to parse expiration date: {}", e);
             }
         };
-        
+
         let params = OptionDataPriceParams::new(
             self.underlying_price,
             expiration_date,
             implied_volatility,
             self.risk_free_rate.unwrap_or(Decimal::ZERO),
             self.dividend_yield.unwrap_or(Positive::ZERO),
-            Some(self.symbol.clone())
+            Some(self.symbol.clone()),
         );
-        
-        match option_data.create_options(&params) {
-            Err(e) => {
-                error!("Failed to create options for strike {}: {}", strike_price, e);
-                println!("Failed to create options for strike {}: {}", strike_price, e);
-            },
-            Ok(_) => {}
+
+        if let Err(e) = option_data.create_options(&params) {
+            error!(
+                "Failed to create options for strike {}: {}",
+                strike_price, e
+            );
+            println!(
+                "Failed to create options for strike {}: {}",
+                strike_price, e
+            );
         }
         self.options.insert(option_data);
     }
@@ -1076,10 +1080,9 @@ impl OptionChain {
     /// in ascending order based on the sorting rules of `BTreeSet` (typically defined by `Ord` implementation).
     ///
     pub fn get_single_iter(&self) -> impl Iterator<Item = &OptionData> {
-        self.options.iter()
-            .filter(|option| {
-                option.implied_volatility.is_some()
-            })
+        self.options
+            .iter()
+            .filter(|option| option.implied_volatility.is_some())
     }
 
     /// Returns an iterator that generates pairs of distinct option combinations from the `OptionChain`.
@@ -1104,17 +1107,19 @@ impl OptionChain {
     /// }
     /// ```
     pub fn get_double_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
-        self.options.iter()
+        self.options
+            .iter()
             .filter(|option| option.implied_volatility.is_some())
             .filter(|option| option.implied_volatility.unwrap() > Positive::ZERO)
-            .enumerate().flat_map(|(i, item1)| {
-            self.options
-                .iter()
-                .filter(|option| option.implied_volatility.is_some())
-                .filter(|option| option.implied_volatility.unwrap() > Positive::ZERO)
-                .skip(i + 1)
-                .map(move |item2| (item1, item2))
-        })
+            .enumerate()
+            .flat_map(|(i, item1)| {
+                self.options
+                    .iter()
+                    .filter(|option| option.implied_volatility.is_some())
+                    .filter(|option| option.implied_volatility.unwrap() > Positive::ZERO)
+                    .skip(i + 1)
+                    .map(move |item2| (item1, item2))
+            })
     }
 
     /// Returns an iterator that generates inclusive pairs of option combinations from the `OptionChain`.
@@ -1386,7 +1391,7 @@ impl OptionChainParams for OptionChain {
             option.unwrap().implied_volatility,
             self.risk_free_rate.unwrap_or(Decimal::ZERO),
             self.dividend_yield.unwrap_or(Positive::ZERO),
-            Some(self.symbol.clone())
+            Some(self.symbol.clone()),
         ))
     }
 }
@@ -1998,8 +2003,8 @@ mod tests_option_data {
             Some(dec!(-0.3)), // delta
             Some(dec!(0.7)),
             Some(dec!(0.5)),
-            spos!(1000.0),    // volume
-            Some(500),        // open_interest
+            spos!(1000.0), // volume
+            Some(500),     // open_interest
         )
     }
 
@@ -2145,8 +2150,19 @@ mod tests_option_data {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_calculate_prices_missing_volatility() {
         setup_logger();
-        let mut option_data =
-            OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None, None, None);
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
 
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
@@ -2269,8 +2285,8 @@ mod tests_get_random_positions {
             Some(dec!(0.5)), // delta
             Some(dec!(0.5)),
             Some(dec!(0.5)),
-            spos!(100.0),    // volume
-            Some(50),        // open_interest
+            spos!(100.0), // volume
+            Some(50),     // open_interest
         );
 
         chain.add_option(
@@ -2832,8 +2848,8 @@ mod tests_option_data_get_option {
             spos!(9.0),       // put_ask
             spos!(0.2),       // implied_volatility
             Some(dec!(-0.3)), // delta
-            Some(dec!(0.7)), // delta
-            Some(dec!(0.3)), // gamma
+            Some(dec!(0.7)),  // delta
+            Some(dec!(0.3)),  // gamma
             spos!(1000.0),    // volume
             Some(500),        // open_interest
         )
@@ -2849,7 +2865,7 @@ mod tests_option_data_get_option {
             spos!(0.25),
             dec!(0.05),
             pos!(0.02),
-            None
+            None,
         );
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
@@ -2875,7 +2891,7 @@ mod tests_option_data_get_option {
             None, // No IV provided in params
             dec!(0.05),
             pos!(0.02),
-            None
+            None,
         );
 
         let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
@@ -2938,8 +2954,8 @@ mod tests_option_data_get_options_in_strike {
             Some(dec!(-0.3)), // delta
             Some(dec!(-0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0),    // volume
-            Some(500),        // open_interest
+            spos!(1000.0), // volume
+            Some(500),     // open_interest
         )
     }
 
@@ -3140,8 +3156,8 @@ mod tests_filter_options_in_strike {
                 Some(dec!(-0.3)), // delta
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
-                spos!(1000.0),    // volume
-                Some(500),        // open_interest
+                spos!(1000.0), // volume
+                Some(500),     // open_interest
             );
         }
         chain
@@ -3333,13 +3349,7 @@ mod tests_chain_iterators {
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new(
-            "TEST", 
-            pos!(100.0), 
-            "2024-01-01".to_string(), 
-            None, 
-            None
-        );
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
 
         // Add three options with different strikes
         chain.add_option(
@@ -3352,8 +3362,8 @@ mod tests_chain_iterators {
             Some(dec!(0.6)), // delta
             Some(dec!(0.5)),
             Some(dec!(0.5)),
-            spos!(100.0),    // volume
-            Some(50),        // open_interest
+            spos!(100.0), // volume
+            Some(50),     // open_interest
         );
 
         chain.add_option(
@@ -3518,8 +3528,8 @@ mod tests_chain_iterators_bis {
             Some(dec!(0.6)), // delta
             Some(dec!(0.5)),
             Some(dec!(0.5)),
-            spos!(100.0),    // volume
-            Some(50),        // open_interest
+            spos!(100.0), // volume
+            Some(50),     // open_interest
         );
 
         chain.add_option(
@@ -3581,8 +3591,32 @@ mod tests_chain_iterators_bis {
     fn test_get_triple_iter_two_elements() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         // Add two options
-        chain.add_option(pos!(90.0), None, None, None, None, None, None, None, None, None, None);
-        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None, None, None);
+        chain.add_option(
+            pos!(90.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        chain.add_option(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
 
         let triples: Vec<_> = chain.get_triple_iter().collect();
         assert!(triples.is_empty()); // Not enough elements for a triple
@@ -3621,7 +3655,19 @@ mod tests_chain_iterators_bis {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_triple_inclusive_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
-        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None, None, None);
+        chain.add_option(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
 
         let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
         assert_eq!(triples.len(), 1);
@@ -3658,9 +3704,45 @@ mod tests_chain_iterators_bis {
     fn test_get_quad_iter_three_elements() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         // Add three options
-        chain.add_option(pos!(90.0), None, None, None, None, None, None, None, None, None, None);
-        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None, None, None);
-        chain.add_option(pos!(110.0), None, None, None, None, None, None, None, None, None, None);
+        chain.add_option(
+            pos!(90.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        chain.add_option(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        chain.add_option(
+            pos!(110.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
 
         let quads: Vec<_> = chain.get_quad_iter().collect();
         assert!(quads.is_empty()); // Not enough elements for a quad
@@ -3695,7 +3777,19 @@ mod tests_chain_iterators_bis {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_get_quad_inclusive_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
-        chain.add_option(pos!(100.0), None, None, None, None, None, None, None, None, None, None);
+        chain.add_option(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
 
         let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
         assert_eq!(quads.len(), 1);
@@ -3818,9 +3912,19 @@ mod tests_is_valid_optimal_side {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_all_side() {
-        let option_data =
-            OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None ,           None,
-                            None);
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
         let underlying_price = pos!(100.0);
 
         assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::All));
@@ -4359,8 +4463,8 @@ mod tests_option_data_implied_volatility {
             None,                 // delta
             None,
             None,
-            None,                 // volume
-            None,                 // open_interest
+            None, // volume
+            None, // open_interest
         );
 
         option_data.set_mid_prices();
@@ -4427,9 +4531,19 @@ mod tests_option_data_implied_volatility {
 
     #[test]
     fn test_calculate_iv_no_prices() {
-        let mut option_data =
-            OptionData::new(pos!(100.0), None, None, None, None, None, None, None, None,            None,
-                            None);
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
 
         let params = OptionDataPriceParams::new(
             pos!(100.0),
@@ -4732,13 +4846,13 @@ mod tests_option_data_delta {
     // Helper function to create standard OptionData
     fn create_standard_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),   // strike_price
-            spos!(5.0),    // call_bid
-            spos!(5.5),    // call_ask
-            spos!(4.5),    // put_bid
-            spos!(5.0),    // put_ask
-            spos!(0.2),    // implied_volatility
-            None,          // delta
+            pos!(100.0), // strike_price
+            spos!(5.0),  // call_bid
+            spos!(5.5),  // call_ask
+            spos!(4.5),  // put_bid
+            spos!(5.0),  // put_ask
+            spos!(0.2),  // implied_volatility
+            None,        // delta
             None,
             None,
             spos!(1000.0), // volume

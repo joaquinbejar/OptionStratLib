@@ -54,10 +54,10 @@
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper error
 //! handling and formatting.
 
+use crate::error::OptionsError;
 use std::error::Error;
 use std::fmt;
 use std::io;
-use crate::error::OptionsError;
 
 #[derive(Debug)]
 pub enum ChainError {

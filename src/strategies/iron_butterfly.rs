@@ -1478,12 +1478,12 @@ mod tests_iron_butterfly_optimizable {
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
             chain.add_option(
                 pos!(strike),
-                spos!(5.0),   // call_bid
-                spos!(5.2),   // call_ask
-                spos!(5.0),   // put_bid
-                spos!(5.2),   // put_ask
-                spos!(0.2),   // implied_volatility
-                None,         // delta
+                spos!(5.0), // call_bid
+                spos!(5.2), // call_ask
+                spos!(5.0), // put_bid
+                spos!(5.2), // put_ask
+                spos!(0.2), // implied_volatility
+                None,       // delta
                 None,
                 None,
                 spos!(100.0), // volume
