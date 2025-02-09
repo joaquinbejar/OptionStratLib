@@ -65,29 +65,29 @@ pub trait BasicCurves {
                 Ok((option.delta()?, option.implied_volatility.to_dec()))
             },
             (BasicAxisTypes::Delta, BasicAxisTypes::Strike) | (BasicAxisTypes::Strike, BasicAxisTypes::Delta) => {
-                Ok()
+                todo!("Delta and Strike")
             },
             (BasicAxisTypes::Delta, BasicAxisTypes::UnderlyingPrice) | (BasicAxisTypes::UnderlyingPrice, BasicAxisTypes::Delta) => {
-                Ok()
+                todo!("Delta and UnderlyingPrice")
             },
             (BasicAxisTypes::Delta, BasicAxisTypes::Expiration) | (BasicAxisTypes::Expiration, BasicAxisTypes::Delta) => {
-                Ok()
+                todo!("Delta and Expiration")
             },
 
 
 
             // Gamma combinations
             (BasicAxisTypes::Gamma, BasicAxisTypes::Price) | (BasicAxisTypes::Price, BasicAxisTypes::Gamma) => {
-                Ok((option.delta()?, option.calculate_price_black_scholes()?))
+                todo!("Gamma and Price")
             },
             (BasicAxisTypes::Gamma, BasicAxisTypes::Theta) | (BasicAxisTypes::Theta, BasicAxisTypes::Gamma) => {
-                Ok((option.delta()?, option.theta()?))
+                todo!("Gamma and Theta")
             },
             (BasicAxisTypes::Gamma, BasicAxisTypes::Vega) | (BasicAxisTypes::Vega, BasicAxisTypes::Gamma) => {
-                Ok((option.delta()?, option.vega()?))
+                todo!("Gamma and Vega")
             },
             (BasicAxisTypes::Gamma, BasicAxisTypes::Volatility) | (BasicAxisTypes::Volatility, BasicAxisTypes::Gamma) => {
-                Ok((option.delta()?, option.implied_volatility.to_dec()))
+                todo!("Gamma and Volatility")
             },
             (BasicAxisTypes::Gamma, BasicAxisTypes::Strike) | (BasicAxisTypes::Strike, BasicAxisTypes::Gamma) => {
                 todo!("Gamma and Strike")
