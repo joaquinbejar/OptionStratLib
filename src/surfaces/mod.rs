@@ -13,6 +13,8 @@ mod surface;
 mod types;
 mod utils;
 mod visualization;
+mod basic;
 
 pub use surface::Surface;
 pub use types::Point3D;
+pub use basic::BasicSurfaces;
