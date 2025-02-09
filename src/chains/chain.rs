@@ -1107,19 +1107,11 @@ impl OptionChain {
     /// }
     /// ```
     pub fn get_double_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
-        self.options
-            .iter()
-            .filter(|option| option.implied_volatility.is_some())
-            .filter(|option| option.implied_volatility.unwrap() > Positive::ZERO)
-            .enumerate()
-            .flat_map(|(i, item1)| {
-                self.options
-                    .iter()
-                    .filter(|option| option.implied_volatility.is_some())
-                    .filter(|option| option.implied_volatility.unwrap() > Positive::ZERO)
-                    .skip(i + 1)
-                    .map(move |item2| (item1, item2))
-            })
+        self.get_single_iter().enumerate().flat_map(|(i, item1)| {
+            self.get_single_iter()
+                .skip(i + 1)
+                .map(move |item2| (item1, item2))
+        })
     }
 
     /// Returns an iterator that generates inclusive pairs of option combinations from the `OptionChain`.
@@ -1145,10 +1137,12 @@ impl OptionChain {
     /// }
     /// ```
     pub fn get_double_inclusive_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
-        self.options
-            .iter()
+        self.get_single_iter()
             .enumerate()
-            .flat_map(|(i, item1)| self.options.iter().skip(i).map(move |item2| (item1, item2)))
+            .flat_map(|(i, item1)| 
+                self.get_single_iter()
+                    .skip(i)
+                    .map(move |item2| (item1, item2)))
     }
 
     /// Returns an iterator that generates unique triplets of distinct option combinations from the `OptionChain`.
@@ -1173,14 +1167,12 @@ impl OptionChain {
     /// }
     /// ```
     pub fn get_triple_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData)> {
-        self.options.iter().enumerate().flat_map(move |(i, item1)| {
-            self.options
-                .iter()
+        self.get_single_iter().enumerate().flat_map(move |(i, item1)| {
+            self.get_single_iter()
                 .skip(i + 1)
                 .enumerate()
                 .flat_map(move |(j, item2)| {
-                    self.options
-                        .iter()
+                    self.get_single_iter()
                         .skip(i + j + 2)
                         .map(move |item3| (item1, item2, item3))
                 })
@@ -1212,14 +1204,12 @@ impl OptionChain {
     pub fn get_triple_inclusive_iter(
         &self,
     ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData)> {
-        self.options.iter().enumerate().flat_map(move |(i, item1)| {
-            self.options
-                .iter()
+        self.get_single_iter().enumerate().flat_map(move |(i, item1)| {
+            self.get_single_iter()
                 .skip(i)
                 .enumerate()
                 .flat_map(move |(j, item2)| {
-                    self.options
-                        .iter()
+                    self.get_single_iter()
                         .skip(i + j)
                         .map(move |item3| (item1, item2, item3))
                 })
@@ -1250,19 +1240,16 @@ impl OptionChain {
     pub fn get_quad_iter(
         &self,
     ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData, &OptionData)> {
-        self.options.iter().enumerate().flat_map(move |(i, item1)| {
-            self.options
-                .iter()
+        self.get_single_iter().enumerate().flat_map(move |(i, item1)| {
+            self.get_single_iter()
                 .skip(i + 1)
                 .enumerate()
                 .flat_map(move |(j, item2)| {
-                    self.options
-                        .iter()
+                    self.get_single_iter()
                         .skip(i + j + 2)
                         .enumerate()
                         .flat_map(move |(k, item3)| {
-                            self.options
-                                .iter()
+                            self.get_single_iter()
                                 .skip(i + j + k + 3)
                                 .map(move |item4| (item1, item2, item3, item4))
                         })
@@ -1295,19 +1282,16 @@ impl OptionChain {
     pub fn get_quad_inclusive_iter(
         &self,
     ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData, &OptionData)> {
-        self.options.iter().enumerate().flat_map(move |(i, item1)| {
-            self.options
-                .iter()
+        self.get_single_iter().enumerate().flat_map(move |(i, item1)| {
+            self.get_single_iter()
                 .skip(i)
                 .enumerate()
                 .flat_map(move |(j, item2)| {
-                    self.options
-                        .iter()
+                    self.get_single_iter()
                         .skip(i + j)
                         .enumerate()
                         .flat_map(move |(k, item3)| {
-                            self.options
-                                .iter()
+                            self.get_single_iter()
                                 .skip(i + j + k)
                                 .map(move |item4| (item1, item2, item3, item4))
                         })
@@ -3661,7 +3645,7 @@ mod tests_chain_iterators_bis {
             None,
             None,
             None,
-            None,
+            spos!(0.5),
             None,
             None,
             None,
@@ -3783,7 +3767,7 @@ mod tests_chain_iterators_bis {
             None,
             None,
             None,
-            None,
+            spos!(0.5),
             None,
             None,
             None,
