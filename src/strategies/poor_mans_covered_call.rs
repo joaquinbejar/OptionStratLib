@@ -1053,6 +1053,8 @@ mod tests_pmcc_optimization {
                 spos!(5.0),
                 spos!(0.2),
                 Some(dec!(0.5)),
+                None,
+                None,
                 spos!(100.0),
                 Some(50),
             );
@@ -1095,6 +1097,8 @@ mod tests_pmcc_optimization {
             None,
             None,
             None,
+            None,
+            None,
         );
         assert!(strategy.is_valid_short_option(&option, &FindOptimalSide::Upper));
     }
@@ -1110,6 +1114,8 @@ mod tests_pmcc_optimization {
             spos!(4.8),
             spos!(5.0),
             spos!(0.2),
+            None,
+            None,
             None,
             None,
             None,
@@ -1150,6 +1156,8 @@ mod tests_pmcc_optimization {
             None,
             None,
             None,
+            None,
+            None,
         );
         assert!(!strategy.is_valid_short_option(&option, &FindOptimalSide::Upper));
     }
@@ -1166,6 +1174,8 @@ mod tests_pmcc_optimization {
             spos!(4.8),
             spos!(5.0),
             spos!(0.2),
+            None,
+            None,
             None,
             None,
             None,

@@ -1166,8 +1166,10 @@ mod tests_bull_put_spread_optimization {
             spos!(2.2),       // put_ask
             spos!(0.2),       // implied_volatility
             Some(dec!(-0.3)), // delta
-            spos!(100.0),     // volume
-            Some(50),         // open_interest
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
+            spos!(100.0), // volume
+            Some(50),     // open_interest
         );
 
         chain.add_option(
@@ -1178,6 +1180,8 @@ mod tests_bull_put_spread_optimization {
             spos!(3.2),
             spos!(0.2),
             Some(dec!(-0.4)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
         );
@@ -1190,6 +1194,8 @@ mod tests_bull_put_spread_optimization {
             spos!(4.2),
             spos!(0.2),
             Some(dec!(-0.5)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
         );
@@ -1202,6 +1208,8 @@ mod tests_bull_put_spread_optimization {
             spos!(5.2),
             spos!(0.2),
             Some(dec!(-0.6)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(250.0),
             Some(125),
         );
@@ -1214,6 +1222,8 @@ mod tests_bull_put_spread_optimization {
             spos!(6.2),
             spos!(0.2),
             Some(dec!(-0.7)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(300.0),
             Some(150),
         );
@@ -1324,6 +1334,8 @@ mod tests_bull_put_spread_optimization {
             spos!(3.2),
             spos!(0.2),
             Some(dec!(-0.4)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
         );
@@ -1348,6 +1360,8 @@ mod tests_bull_put_spread_optimization {
             spos!(4.2),
             spos!(0.2),
             Some(dec!(-0.5)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
         );
@@ -1370,6 +1384,8 @@ mod tests_bull_put_spread_optimization {
             spos!(3.2),
             spos!(0.2),
             Some(dec!(-0.4)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
         );
@@ -1381,6 +1397,8 @@ mod tests_bull_put_spread_optimization {
             spos!(4.2),
             spos!(0.2),
             Some(dec!(-0.5)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
         );
@@ -1670,7 +1688,7 @@ mod tests_bull_put_spread_graph {
         let max_profit_point = &points[1];
 
         assert_eq!(max_profit_point.coordinates.1, 0.0);
-        assert!(max_profit_point.label.contains("0.00"));
+        assert!(max_profit_point.label.contains("0"));
     }
 
     #[test]

@@ -192,7 +192,7 @@ mod tests {
     use super::*;
     use crate::error::curves::CurvesResult;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::error::CurvesError;
+    use crate::error::CurveError;
     use std::error::Error;
     use std::fmt;
 
@@ -321,7 +321,7 @@ mod tests {
 
     #[test]
     fn test_curves_result_err() {
-        let result: CurvesResult<i32> = Err(CurvesError::AnalysisError("Test error".to_string()));
+        let result: CurvesResult<i32> = Err(CurveError::AnalysisError("Test error".to_string()));
         assert!(result.is_err());
         match result {
             Err(err) => {
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_curves_result_err_alternative() {
-        let err = CurvesError::AnalysisError("Test error".to_string());
+        let err = CurveError::AnalysisError("Test error".to_string());
         assert_eq!(err.to_string(), "Analysis error: Test error");
         let result: CurvesResult<i32> = Err(err);
         assert!(result.is_err());

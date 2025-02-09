@@ -8,6 +8,7 @@ use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
 use crate::Positive;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fmt::Display;
 
@@ -60,13 +61,14 @@ impl OptionChainBuildParams {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionDataPriceParams {
     pub(crate) underlying_price: Positive,
     pub(crate) expiration_date: ExpirationDate,
     pub(crate) implied_volatility: Option<Positive>,
     pub(crate) risk_free_rate: Decimal,
     pub(crate) dividend_yield: Positive,
+    pub(crate) underlying_symbol: Option<String>,
 }
 
 impl OptionDataPriceParams {
@@ -76,6 +78,7 @@ impl OptionDataPriceParams {
         implied_volatility: Option<Positive>,
         risk_free_rate: Decimal,
         dividend_yield: Positive,
+        underlying_symbol: Option<String>,
     ) -> Self {
         Self {
             underlying_price,
@@ -83,6 +86,7 @@ impl OptionDataPriceParams {
             implied_volatility,
             risk_free_rate,
             dividend_yield,
+            underlying_symbol,
         }
     }
 
@@ -115,6 +119,7 @@ impl Default for OptionDataPriceParams {
             implied_volatility: None,
             risk_free_rate: Decimal::ZERO,
             dividend_yield: Positive::ZERO,
+            underlying_symbol: None,
         }
     }
 }
@@ -608,6 +613,7 @@ mod tests_option_data_price_params {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         assert_eq!(params.underlying_price, pos!(100.0));
@@ -635,9 +641,10 @@ mod tests_option_data_price_params {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
         let display_string = format!("{}", params);
-        assert!(display_string.contains("Underlying Price: 100.000"));
+        assert!(display_string.contains("Underlying Price: 100"));
         assert!(display_string.contains("Implied Volatility: 0.200"));
         assert!(display_string.contains("Risk-Free Rate: 0.05"));
         assert!(display_string.contains("Dividend Yield: 0.02"));
@@ -652,6 +659,7 @@ mod tests_option_data_price_params {
             None,
             dec!(0.05),
             pos!(0.02),
+            None,
         );
         let display_string = format!("{}", params);
         assert!(display_string.contains("Implied Volatility: 0.000"));
@@ -673,6 +681,7 @@ mod tests_option_chain_build_params {
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),
+            None,
         );
 
         let params = OptionChainBuildParams::new(
@@ -808,6 +817,7 @@ mod tests_sample {
             Some(Positive::new(0.01).unwrap()),
             dec!(0.01),
             Positive::ZERO,
+            None,
         );
 
         let params = OptionChainBuildParams::new(

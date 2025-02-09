@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
-use crate::error::{CurvesError, PositionError, SurfaceError};
+use crate::error::{CurveError, PositionError, SurfaceError};
 use std::error::Error;
 
 #[derive(Debug)]
@@ -35,8 +35,8 @@ impl From<PositionError> for InterpolationError {
     }
 }
 
-impl From<CurvesError> for InterpolationError {
-    fn from(err: CurvesError) -> Self {
+impl From<CurveError> for InterpolationError {
+    fn from(err: CurveError) -> Self {
         InterpolationError::StdError(err.to_string())
     }
 }

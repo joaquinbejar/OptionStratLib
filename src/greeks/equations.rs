@@ -7,7 +7,7 @@ use crate::constants::ZERO;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::types::OptionStyle;
-use crate::{Options, Positive};
+use crate::{Options, Positive, Side};
 use rust_decimal::{Decimal, MathematicalOps};
 
 #[derive(Debug, PartialEq)]
@@ -190,6 +190,49 @@ pub trait Greeks {
 /// }
 /// ```
 pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
+    let expiration_date = option.expiration_date.get_years()?;
+
+    // For an option when the time to expiration is zero (i.e., at the moment of expiration),
+    // the delta takes discrete values based solely on whether the option is In-The-Money (ITM) or
+    // Out-of-The-Money (OTM):
+    //
+    // For a Call option:
+    //
+    // - **Delta = 1.0** if ITM (underlying price > strike price)
+    // - **Delta = 0.0** if OTM (underlying price < strike price)
+    //
+    // For a Put option:
+    //
+    // - **Delta = -1.0** if ITM (underlying price < strike price)
+    // - **Delta = 0.0** if OTM (underlying price > strike price)
+    //
+    // In both cases, when the underlying price is exactly equal to the strike price (At-The-Money,
+    // ATM), technically, the delta would be **0.5 for Calls** and **-0.5 for Puts**, although this
+    // scenario is less common in practice.
+    //
+    // This happens because at expiration, the option effectively becomes a direct position in the
+    // underlying asset (**delta = 1 or -1**) if it is ITM, or has no value (**delta = 0**) if it is OTM.
+    if expiration_date == Decimal::ZERO {
+        return match (
+            &option.option_style,
+            &option.side,
+            &option.strike_price,
+            &option.underlying_price,
+        ) {
+            // Call Options
+            (OptionStyle::Call, Side::Long, strike, price) if price > strike => Ok(Decimal::ONE),
+            (OptionStyle::Call, Side::Long, _, _) => Ok(Decimal::ZERO),
+            (OptionStyle::Call, Side::Short, strike, price) if price > strike => Ok(-Decimal::ONE),
+            (OptionStyle::Call, Side::Short, _, _) => Ok(Decimal::ZERO),
+
+            // Put Options
+            (OptionStyle::Put, Side::Long, strike, price) if price < strike => Ok(-Decimal::ONE),
+            (OptionStyle::Put, Side::Long, _, _) => Ok(Decimal::ZERO),
+            (OptionStyle::Put, Side::Short, strike, price) if price < strike => Ok(Decimal::ONE),
+            (OptionStyle::Put, Side::Short, _, _) => Ok(Decimal::ZERO),
+        };
+    }
+
     let dividend_yield: Positive = option.dividend_yield;
 
     let sign = if option.is_long() {
@@ -224,9 +267,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date = option.expiration_date.get_years()?;
     let div_date = (-expiration_date.to_dec() * dividend_yield).exp();
-
     let delta = match option.option_style {
         OptionStyle::Call => sign * big_n(d1)? * div_date,
         OptionStyle::Put => sign * (big_n(d1)? - Decimal::ONE) * div_date,
@@ -324,6 +365,11 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     if option.implied_volatility == ZERO {
         return Ok(Decimal::ZERO);
     }
+    let expiration_date: Positive = option.expiration_date.get_years()?;
+    if expiration_date == Decimal::ZERO {
+        // At expiration, gamma is 0 for all cases
+        return Ok(Decimal::ZERO);
+    }
 
     let d1 = d1(
         option.underlying_price,
@@ -333,7 +379,6 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date: Positive = option.expiration_date.get_years()?;
     let dividend_yield: Decimal = option.dividend_yield.into();
     let underlying_price: Decimal = option.underlying_price.into();
     let implied_volatility: Positive = option.implied_volatility;
@@ -580,6 +625,11 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// - For shorter time to expiration, Vega is smaller as the sensitivity to volatility diminishes.
 /// - A positive Vega indicates that an increase in implied volatility will increase the option's value.
 pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
+    let expiration_date: Positive = option.expiration_date.get_years()?;
+    if expiration_date == Decimal::ZERO {
+        // At expiration, volatility has no impact on option price
+        return Ok(Decimal::ZERO);
+    }
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
@@ -588,7 +638,6 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
         option.implied_volatility,
     )?;
 
-    let expiration_date: Positive = option.expiration_date.get_years()?;
     let dividend_yield: Positive = option.dividend_yield;
     let underlying_price: Decimal = option.underlying_price.to_dec();
 

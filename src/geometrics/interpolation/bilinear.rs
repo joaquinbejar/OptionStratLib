@@ -52,7 +52,7 @@ use crate::error::InterpolationError;
 ///
 /// # Related Types
 /// - [`Point2D`](crate::curves::Point2D): A struct representing a 2D point with `x` and `y` coordinates.
-/// - [`CurvesError`](crate::error::CurvesError): A recommended error type for detailed error categorization.
+/// - [`CurvesError`](crate::error::CurveError): A recommended error type for detailed error categorization.
 ///
 /// # See Also
 /// - [`crate::geometrics::interpolation::InterpolationType`](crate::geometrics::InterpolationType):

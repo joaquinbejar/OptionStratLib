@@ -223,6 +223,7 @@ impl Iterator for RandomWalkGraph {
             implied_volatility,
             risk_free_rate,
             dividend_yield,
+            underlying_symbol: None,
         })
     }
 }

@@ -1370,8 +1370,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::All));
         assert!(strategy.is_valid_long_option(
@@ -1392,8 +1394,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Upper));
     }
@@ -1410,8 +1414,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Lower));
     }
@@ -1428,8 +1434,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::All));
         assert!(strategy.is_valid_short_option(
@@ -1450,8 +1458,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Upper));
     }
@@ -1468,8 +1478,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Lower));
     }

@@ -54,6 +54,7 @@
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper error
 //! handling and formatting.
 
+use crate::error::OptionsError;
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -271,6 +272,14 @@ impl Error for ChainError {}
 impl From<io::Error> for ChainError {
     fn from(error: io::Error) -> Self {
         ChainError::FileError(FileErrorKind::IOError(error))
+    }
+}
+
+impl From<OptionsError> for ChainError {
+    fn from(error: OptionsError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(
+            error.to_string(),
+        ))
     }
 }
 

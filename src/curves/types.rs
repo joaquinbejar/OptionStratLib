@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 26/8/24
 ******************************************************************************/
-use crate::error::curves::CurvesError;
+use crate::error::curves::CurveError;
 use crate::geometrics::HasX;
 use crate::model::positive::is_positive;
 use rust_decimal::prelude::*;
@@ -117,15 +117,15 @@ impl Point2D {
     /// conversions fail due to invalid type requirements.
     pub fn to_tuple<T: From<Decimal> + 'static, U: From<Decimal> + 'static>(
         &self,
-    ) -> Result<(T, U), CurvesError> {
+    ) -> Result<(T, U), CurveError> {
         if is_positive::<T>() && self.x <= Decimal::ZERO {
-            return Err(CurvesError::Point2DError {
+            return Err(CurveError::Point2DError {
                 reason: "x must be positive for type T",
             });
         }
 
         if is_positive::<U>() && self.y <= Decimal::ZERO {
-            return Err(CurvesError::Point2DError {
+            return Err(CurveError::Point2DError {
                 reason: "y must be positive for type U",
             });
         }
@@ -145,7 +145,7 @@ impl Point2D {
     ///
     /// # Usage
     /// This function allows constructing a `Point2D` directly from a tuple representation.
-    pub fn from_tuple<T: Into<Decimal>, U: Into<Decimal>>(x: T, y: U) -> Result<Self, CurvesError> {
+    pub fn from_tuple<T: Into<Decimal>, U: Into<Decimal>>(x: T, y: U) -> Result<Self, CurveError> {
         Ok(Self::new(x, y))
     }
 
@@ -158,13 +158,13 @@ impl Point2D {
     ///
     /// # Errors
     /// Returns a `CurvesError::Point2DError` with a reason explaining the failure.
-    pub fn to_f64_tuple(&self) -> Result<(f64, f64), CurvesError> {
+    pub fn to_f64_tuple(&self) -> Result<(f64, f64), CurveError> {
         let x = self.x.to_f64();
         let y = self.y.to_f64();
 
         match (x, y) {
             (Some(x), Some(y)) => Ok((x, y)),
-            _ => Err(CurvesError::Point2DError {
+            _ => Err(CurveError::Point2DError {
                 reason: "Error converting Decimal to f64",
             }),
         }
@@ -184,12 +184,12 @@ impl Point2D {
     /// # Errors
     /// Returns a `CurvesError::Point2DError` with a reason if either `x` or `y` could not be
     /// converted from `f64`.
-    pub fn from_f64_tuple(x: f64, y: f64) -> Result<Self, CurvesError> {
+    pub fn from_f64_tuple(x: f64, y: f64) -> Result<Self, CurveError> {
         let x = Decimal::from_f64(x);
         let y = Decimal::from_f64(y);
         match (x, y) {
             (Some(x), Some(y)) => Ok(Self::new(x, y)),
-            _ => Err(CurvesError::Point2DError {
+            _ => Err(CurveError::Point2DError {
                 reason: "Error converting f64 to Decimal",
             }),
         }
@@ -222,7 +222,7 @@ mod tests {
         };
 
         let result = if is_positive::<Decimal>() && point.x <= Decimal::ZERO {
-            Err(CurvesError::Point2DError {
+            Err(CurveError::Point2DError {
                 reason: "x must be positive for type T",
             })
         } else {
@@ -240,7 +240,7 @@ mod tests {
         };
 
         let result = if is_positive::<Decimal>() && point.y <= Decimal::ZERO {
-            Err(CurvesError::Point2DError {
+            Err(CurveError::Point2DError {
                 reason: "y must be positive for type U",
             })
         } else {
@@ -274,7 +274,7 @@ mod tests {
         let result = Point2D::from_f64_tuple(f64::INFINITY, 2.0);
         assert!(result.is_err());
         match result {
-            Err(CurvesError::Point2DError { reason }) => {
+            Err(CurveError::Point2DError { reason }) => {
                 assert_eq!(reason, "Error converting f64 to Decimal");
             }
             _ => panic!("Unexpected error type"),

@@ -1,5 +1,5 @@
 use crate::curves::Point2D;
-use crate::error::CurvesError;
+use crate::error::CurveError;
 use crate::geometrics::AnalysisResult;
 use rust_decimal::Decimal;
 
@@ -125,7 +125,7 @@ pub struct Metrics {
 /// - [`TrendMetrics`]: Analyzes trends within the data to understand directional behavior.
 /// - [`RiskMetrics`]: Highlights risk-based metrics for financial, statistical, or analytical use cases.
 /// - [`AnalysisResult`]: The result type combining key metrics into a single analytic perspective.
-/// - [`CurvesError`]: Represents potential errors that may arise during curve analysis operations.
+/// - [`CurveError`]: Represents potential errors that may arise during curve analysis operations.
 impl Metrics {
     /// ### `new`
     /// Constructs a new instance of `CurveMetrics` and initializes all relevant fields with the provided
@@ -163,12 +163,12 @@ impl Metrics {
     /// #### Returns:
     /// - `Ok(CurveAnalysisResult)`: A result that contains analyzed data in the form of a
     ///   [`AnalysisResult`] structure with basic statistics and shape metrics.
-    /// - `Err(CurvesError)`: An error of type [`CurvesError`] when analysis fails.
+    /// - `Err(CurvesError)`: An error of type [`CurveError`] when analysis fails.
     ///
     /// The result provides the basic statistical measures (`BasicMetrics`) and
     /// shape metrics (`ShapeMetrics`) that were part of the `CurveMetrics` instance.
     ///
-    pub fn analysis_result(&self) -> Result<AnalysisResult, CurvesError> {
+    pub fn analysis_result(&self) -> Result<AnalysisResult, CurveError> {
         Ok(AnalysisResult {
             statistics: self.basic,
             shape_metrics: self.shape.clone(),
