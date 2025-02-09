@@ -12,9 +12,12 @@ use crate::chains::{
 };
 use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::ChainError;
+use crate::error::CurveError;
 use crate::geometrics::LinearInterpolation;
 use crate::greeks::{delta, gamma};
-use crate::model::{BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
+use crate::model::{
+    BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
+};
 use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
@@ -27,11 +30,9 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
-use std::ops::Deref;
 use tracing::{debug, error, info, trace};
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
-use crate::error::CurveError;
 
 /// Struct representing a row in an option chain.
 ///
@@ -715,10 +716,6 @@ impl OptionChain {
 
         if let Err(e) = option_data.create_options(&params) {
             error!(
-                "Failed to create options for strike {}: {}",
-                strike_price, e
-            );
-            println!(
                 "Failed to create options for strike {}: {}",
                 strike_price, e
             );
@@ -1629,17 +1626,19 @@ impl VolatilitySmile for OptionChain {
 impl BasicCurves for OptionChain {
     fn curve(
         &self,
-        axis: (&BasicAxisTypes, &BasicAxisTypes),
+        axis: &BasicAxisTypes,
         option_style: &OptionStyle,
         side: &Side,
     ) -> Result<Curve, CurveError> {
-        let points: Result<Vec<Point2D>, CurveError> = self
+        
+        if axis == &BasicAxisTypes::UnderlyingPrice || 
+            axis == &BasicAxisTypes::Strike  ||  axis == &BasicAxisTypes::Expiration {
+            return Err(CurveError::ConstructionError("Axis not valid".to_string()));
+        }
+        let points = self
             .get_single_iter()
-            .enumerate()
-            .map(|(i,opt)| {
-                let four = opt.options.as_ref().ok_or_else(|| {
-                    CurveError::ConstructionError("Options data not available".to_string())
-                })?;
+            .filter_map(|opt| {
+                let four = opt.options.as_ref()?;
 
                 // Select the appropriate option based on style and side
                 let option = match (option_style, side) {
@@ -1650,18 +1649,16 @@ impl BasicCurves for OptionChain {
                 };
 
                 // Get x and y values based on the axis types
-                let (x,y) = self.get_axis_value(i, axis, option)?;
-
-                Ok(Point2D::new(x, y))
+                match self.get_strike_versus(axis, option) {
+                    Ok(point) => Some(Point2D::new(point.0, point.1)),
+                    Err(_) => None,
+                }
             })
             .collect();
 
-        match points {
-            Ok(points) if !points.is_empty() => Ok(Curve::new(points.into_iter().collect())),
-            Ok(_) => Err(CurveError::ConstructionError("No valid points generated".to_string())),
-            Err(e) => Err(e),
-        }
+        Ok(Curve::new(points))
     }
+
     fn len(&self) -> usize {
         self.options.len()
     }
@@ -4992,5 +4989,184 @@ mod tests_option_data_delta {
 
         // Delta should still be reasonable with longer expiration
         assert!(delta > Decimal::ZERO && delta <= dec!(1.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_basic_curves {
+    use super::*;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+    use crate::utils::time::get_tomorrow_formatted;
+
+    // Helper function to create a sample OptionChain for testing
+    fn create_test_option_chain() -> OptionChain {
+        let tomorrow_date = get_tomorrow_formatted();
+        let mut chain = OptionChain::new("TEST", pos!(100.0), tomorrow_date, None, None);
+
+        // Add some test options
+        chain.add_option(
+            pos!(90.0),        // strike_price
+            spos!(5.0),        // call_bid
+            spos!(5.5),        // call_ask
+            spos!(1.0),        // put_bid
+            spos!(1.5),        // put_ask
+            spos!(0.2),        // implied_volatility
+            Some(dec!(0.6)),   // delta
+            Some(dec!(100.0)), // volume
+            Some(dec!(50.0)),  // open_interest
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(0.25),
+            Some(dec!(0.5)),
+            Some(dec!(150.0)),
+            Some(dec!(75)),
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(110.0),
+            spos!(1.0),
+            spos!(1.5),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(0.3),
+            Some(dec!(0.4)),
+            Some(dec!(80.0)),
+            Some(dec!(40)),
+            None,
+            None,
+        );
+        chain.update_greeks();
+        chain
+    }
+
+    #[test]
+    fn test_curve_delta_long_call() {
+        let chain = create_test_option_chain();
+
+        let curve = chain.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long);
+
+        assert!(curve.is_ok());
+        let curve = curve.unwrap();
+
+        // Check that we have the expected number of points
+        assert_eq!(curve.points.len(), 3);
+
+        // Verify points are in reasonable ranges
+        for point in &curve.points {
+            assert!(
+                point.x >= dec!(90.0) && point.x <= dec!(110.0),
+                "Delta out of expected range"
+            );
+        }
+    }
+
+    #[test]
+    fn test_curve_delta_short_put() {
+        let chain = create_test_option_chain();
+
+        let curve = chain.curve(&BasicAxisTypes::Delta, &OptionStyle::Put, &Side::Short);
+
+        assert!(curve.is_ok());
+        let curve = curve.unwrap();
+
+        // Check that we have the expected number of points
+        assert!(curve.points.len() > 0);
+
+        // Verify points are in reasonable ranges
+        for point in &curve.points {
+            assert!(point.x > dec!(0.0), "Price should be positive");
+        }
+    }
+
+    #[test]
+    fn test_curve_price_short_put() {
+        let chain = create_test_option_chain();
+
+        let curve = chain.curve(&BasicAxisTypes::Price, &OptionStyle::Put, &Side::Short);
+
+        assert!(curve.is_ok());
+        let curve = curve.unwrap();
+
+        // Check that we have the expected number of points
+        assert!(curve.points.len() > 0);
+
+        // Verify points are in reasonable ranges
+        for point in &curve.points {
+            assert!(point.x > dec!(0.0), "Price should be positive");
+        }
+    }
+
+    #[test]
+    fn test_curve_length() {
+        let chain = create_test_option_chain();
+
+        assert_eq!(chain.len(), 3);
+    }
+
+    #[test]
+    fn test_curve_with_empty_chain() {
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let curve = chain.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long);
+
+        assert!(curve.is_ok());
+        let curve = curve.unwrap();
+
+        // Curve should be empty
+        assert_eq!(curve.points.len(), 0);
+    }
+
+    #[test]
+    fn test_curve_multiple_axes() {
+        let chain = create_test_option_chain();
+
+        // Test various axis combinations
+        let axes = vec![
+            BasicAxisTypes::Delta,
+            BasicAxisTypes::Price,
+            BasicAxisTypes::Volatility,
+            BasicAxisTypes::Gamma,
+            BasicAxisTypes::Theta,
+            BasicAxisTypes::Vega,
+        ];
+
+        for axis in axes {
+            let curve = chain.curve(&axis, &OptionStyle::Call, &Side::Long);
+
+            assert!(curve.is_ok(), "Failed to create curve for axis: {:?}", axis);
+            let curve = curve.unwrap();
+
+            // Each curve should have at least one point
+            assert!(curve.points.len() > 0, "Curve for axis {:?} is empty", axis);
+        }
+    }
+
+    #[test]
+    fn test_curve_point_order() {
+        let chain = create_test_option_chain();
+
+        let curve = chain.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long);
+
+        assert!(curve.is_ok());
+        let curve = curve.unwrap();
+
+        // Verify points are in order (sorted by x-coordinate)
+        let mut prev_x = Decimal::MIN;
+        for point in &curve.points {
+            assert!(point.x >= prev_x, "Points are not in ascending order");
+            prev_x = point.x;
+        }
     }
 }

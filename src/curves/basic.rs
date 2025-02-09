@@ -1,293 +1,210 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 9/2/25
- ******************************************************************************/
-use std::collections::HashMap;
-use std::sync::Arc;
-use chrono::Month::March;
-use rust_decimal::Decimal;
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 9/2/25
+******************************************************************************/
 use crate::curves::Curve;
 use crate::error::CurveError;
-use crate::model::BasicAxisTypes;
-use crate::{OptionStyle, Options, Positive, Side};
-use crate::chains::chain::OptionData;
 use crate::greeks::Greeks;
+use crate::model::BasicAxisTypes;
+use crate::{OptionStyle, Options, Side};
+use rust_decimal::Decimal;
+use std::sync::Arc;
 
 pub trait BasicCurves {
     fn curve(
         &self,
-        axis: (&BasicAxisTypes, &BasicAxisTypes),
+        axis: &BasicAxisTypes,
         option_style: &OptionStyle,
         side: &Side,
     ) -> Result<Curve, CurveError>;
 
-    fn curve_combinations(
+    fn get_strike_versus(
         &self,
-        axis: (&BasicAxisTypes, &BasicAxisTypes),
-    ) -> Result<HashMap<(OptionStyle, Side), Curve>, CurveError> {
-        let mut results = HashMap::new();
-
-        let styles = [OptionStyle::Call, OptionStyle::Put];
-        let sides = [Side::Long, Side::Short];
-
-        for style in &styles {
-            for side in &sides {
-                let key = (style.clone(), side.clone());
-                let curve = self.curve(axis, style, side)?;
-                results.insert(key, curve);
-            }
-        }
-        Ok(results)
-    }
-
-    fn get_axis_value(
-        &self,
-        item: usize,
-        axis: (&BasicAxisTypes, &BasicAxisTypes),
+        axis: &BasicAxisTypes,
         option: &Arc<Options>,
     ) -> Result<(Decimal, Decimal), CurveError> {
-        match (axis.0, axis.1) {
-            // Delta combinations
-            (BasicAxisTypes::Delta, BasicAxisTypes::Price) | (BasicAxisTypes::Price, BasicAxisTypes::Delta) => {
-                Ok((option.delta()?, option.calculate_price_black_scholes()?))
-            },
-            (BasicAxisTypes::Delta, BasicAxisTypes::Gamma) | (BasicAxisTypes::Gamma, BasicAxisTypes::Delta) => {
-                Ok((option.gamma()?, option.delta()?))
-            },
-            (BasicAxisTypes::Delta, BasicAxisTypes::Theta) | (BasicAxisTypes::Theta, BasicAxisTypes::Delta) => {
-                Ok((option.delta()?, option.theta()?))
-            },
-            (BasicAxisTypes::Delta, BasicAxisTypes::Vega) | (BasicAxisTypes::Vega, BasicAxisTypes::Delta) => {
-                Ok((option.delta()?, option.vega()?))
-            },
-            (BasicAxisTypes::Delta, BasicAxisTypes::Volatility) | (BasicAxisTypes::Volatility, BasicAxisTypes::Delta) => {
-                Ok((option.delta()?, option.implied_volatility.to_dec()))
-            },
-            (BasicAxisTypes::Delta, BasicAxisTypes::Strike) | (BasicAxisTypes::Strike, BasicAxisTypes::Delta) => {
-                todo!("Delta and Strike")
-            },
-            (BasicAxisTypes::Delta, BasicAxisTypes::UnderlyingPrice) | (BasicAxisTypes::UnderlyingPrice, BasicAxisTypes::Delta) => {
-                todo!("Delta and UnderlyingPrice")
-            },
-            (BasicAxisTypes::Delta, BasicAxisTypes::Expiration) | (BasicAxisTypes::Expiration, BasicAxisTypes::Delta) => {
-                todo!("Delta and Expiration")
-            },
-
-
-
-            // Gamma combinations
-            (BasicAxisTypes::Gamma, BasicAxisTypes::Price) | (BasicAxisTypes::Price, BasicAxisTypes::Gamma) => {
-                todo!("Gamma and Price")
-            },
-            (BasicAxisTypes::Gamma, BasicAxisTypes::Theta) | (BasicAxisTypes::Theta, BasicAxisTypes::Gamma) => {
-                todo!("Gamma and Theta")
-            },
-            (BasicAxisTypes::Gamma, BasicAxisTypes::Vega) | (BasicAxisTypes::Vega, BasicAxisTypes::Gamma) => {
-                todo!("Gamma and Vega")
-            },
-            (BasicAxisTypes::Gamma, BasicAxisTypes::Volatility) | (BasicAxisTypes::Volatility, BasicAxisTypes::Gamma) => {
-                todo!("Gamma and Volatility")
-            },
-            (BasicAxisTypes::Gamma, BasicAxisTypes::Strike) | (BasicAxisTypes::Strike, BasicAxisTypes::Gamma) => {
-                todo!("Gamma and Strike")
-            },
-            (BasicAxisTypes::Gamma, BasicAxisTypes::UnderlyingPrice) | (BasicAxisTypes::UnderlyingPrice, BasicAxisTypes::Gamma) => {
-                todo!("Gamma and UnderlyingPrice")
-            },
-            (BasicAxisTypes::Gamma, BasicAxisTypes::Expiration) | (BasicAxisTypes::Expiration, BasicAxisTypes::Gamma) => {
-                todo!("Gamma and Expiration")
-            },
-            
-            
-            
-            // Theta combinations
-            (BasicAxisTypes::Theta, BasicAxisTypes::Price) | (BasicAxisTypes::Price, BasicAxisTypes::Theta) => {
-                todo!("Theta and Price")
-            },
-            (BasicAxisTypes::Theta, BasicAxisTypes::Vega) | (BasicAxisTypes::Vega, BasicAxisTypes::Theta) => {
-                todo!("Theta and Vega")
-            },
-            (BasicAxisTypes::Theta, BasicAxisTypes::Volatility) | (BasicAxisTypes::Volatility, BasicAxisTypes::Theta) => {
-                todo!("Theta and Volatility")
-            },
-            (BasicAxisTypes::Theta, BasicAxisTypes::Strike) | (BasicAxisTypes::Strike, BasicAxisTypes::Theta) => {
-                todo!("Theta and Strike")
-            },
-            (BasicAxisTypes::Theta, BasicAxisTypes::UnderlyingPrice) | (BasicAxisTypes::UnderlyingPrice, BasicAxisTypes::Theta) => {
-                todo!("Theta and UnderlyingPrice")
-            },
-            (BasicAxisTypes::Theta, BasicAxisTypes::Expiration) | (BasicAxisTypes::Expiration, BasicAxisTypes::Theta) => {
-                todo!("Theta and Expiration")
-            },
-            
-            
-            
-            // Vega combinations
-            (BasicAxisTypes::Vega, BasicAxisTypes::Price) | (BasicAxisTypes::Price, BasicAxisTypes::Vega) => {
-                todo!("Vega and Price")
-            },
-            (BasicAxisTypes::Vega, BasicAxisTypes::Volatility) | (BasicAxisTypes::Volatility, BasicAxisTypes::Vega) => {
-                todo!("Vega and Volatility")
-            },
-            (BasicAxisTypes::Vega, BasicAxisTypes::Strike) | (BasicAxisTypes::Strike, BasicAxisTypes::Vega) => {
-                todo!("Vega and Strike")
-            },
-            (BasicAxisTypes::Vega, BasicAxisTypes::UnderlyingPrice) | (BasicAxisTypes::UnderlyingPrice, BasicAxisTypes::Vega) => {
-                todo!("Vega and UnderlyingPrice")
-            },
-            (BasicAxisTypes::Vega, BasicAxisTypes::Expiration) | (BasicAxisTypes::Expiration, BasicAxisTypes::Vega) => {
-                todo!("Vega and Expiration")
-            },
-            
-            
-            
-            // Volatility combinations
-            (BasicAxisTypes::Volatility, BasicAxisTypes::Price) | (BasicAxisTypes::Price, BasicAxisTypes::Volatility) => {
-                todo!("Volatility and Price")
-            },
-            (BasicAxisTypes::Volatility, BasicAxisTypes::Strike) | (BasicAxisTypes::Strike, BasicAxisTypes::Volatility) => {
-                todo!("Volatility and Strike")
-            },
-            (BasicAxisTypes::Volatility, BasicAxisTypes::UnderlyingPrice) | (BasicAxisTypes::UnderlyingPrice, BasicAxisTypes::Volatility) => {
-                todo!("Volatility and UnderlyingPrice")
-            },
-            (BasicAxisTypes::Volatility, BasicAxisTypes::Expiration) | (BasicAxisTypes::Expiration, BasicAxisTypes::Volatility) => {
-                todo!("Volatility and Expiration")
-            },
-            
-            
-            // Price combinations
-            (BasicAxisTypes::Price, BasicAxisTypes::Strike) | (BasicAxisTypes::Strike, BasicAxisTypes::Price) => {
-                todo!("Price and Strike")
-            },
-            (BasicAxisTypes::Price, BasicAxisTypes::UnderlyingPrice) | (BasicAxisTypes::UnderlyingPrice, BasicAxisTypes::Price) => {
-                todo!("Price and UnderlyingPrice")
-            },
-            (BasicAxisTypes::Price, BasicAxisTypes::Expiration) | (BasicAxisTypes::Expiration, BasicAxisTypes::Price) => {
-                todo!("Price and Expiration")
-            },
-            
-
+        match axis {
+            BasicAxisTypes::Delta => Ok((option.strike_price.to_dec(), option.delta()?)),
+            BasicAxisTypes::Gamma => Ok((option.strike_price.to_dec(), option.gamma()?)),
+            BasicAxisTypes::Theta => Ok((option.strike_price.to_dec(), option.theta()?)),
+            BasicAxisTypes::Vega => Ok((option.strike_price.to_dec(), option.vega()?)),
+            BasicAxisTypes::Volatility => Ok((
+                option.strike_price.to_dec(),
+                option.implied_volatility.to_dec(),
+            )),
+            BasicAxisTypes::Price => Ok((
+                option.strike_price.to_dec(),
+                option.calculate_price_black_scholes()?,
+            )),
 
             // Catch-all for unsupported combinations
-            _ => Err(CurveError::OperationError(crate::error::OperationErrorKind::InvalidParameters {
-                operation: "get_axis_value".to_string(),
-                reason: format!("Invalid axis combination: {:?} - {:?}", axis.0, axis.1),
-            }))
+            _ => Err(CurveError::OperationError(
+                crate::error::OperationErrorKind::InvalidParameters {
+                    operation: "get_axis_value".to_string(),
+                    reason: format!("Axis: {:?} not supported", axis),
+                },
+            )),
         }
     }
-    
+
     fn len(&self) -> usize;
-    
 }
 
-
 #[cfg(test)]
-mod tests {
-    use crate::error::OperationErrorKind;
+mod tests_basic_curves_trait {
+    use std::collections::BTreeSet;
     use super::*;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::{pos, ExpirationDate, OptionType, Positive};
+    use rust_decimal_macros::dec;
+    use std::sync::Arc;
+    use crate::curves::Point2D;
 
-    // Mock implementation for testing
-    struct MockCurveGenerator;
+    // Helper function to create a sample Options for testing
+    fn create_test_option() -> Arc<Options> {
+        Arc::new(Options::new(
+            OptionType::European,
+            Side::Long,
+            "AAPL".to_string(),
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),
+            Positive::ONE,
+            pos!(105.0),
+            dec!(0.05),
+            OptionStyle::Call,
+            pos!(0.01),
+            None,
+        ))
+    }
 
-    impl BasicCurves for MockCurveGenerator {
+    // Mock implementation of BasicCurves for testing
+    struct TestBasicCurves;
+
+    impl BasicCurves for TestBasicCurves {
         fn curve(
             &self,
-            axis: (&BasicAxisTypes, &BasicAxisTypes),
+            axis: &BasicAxisTypes,
             _option_style: &OptionStyle,
             _side: &Side,
         ) -> Result<Curve, CurveError> {
-            if axis.0 == axis.1 {
-                return Err(CurveError::OperationError(OperationErrorKind::InvalidParameters {
-                    operation: "curve".to_string(),
-                    reason: format!("Cannot use same axis: {:?}",  axis.0)
-                }));
-            }
-            Ok(Curve::default())
+            // Simplified implementation for testing
+            let option = create_test_option();
+            let point = self.get_strike_versus(axis, &option)?;
+            Ok(Curve::new(BTreeSet::from([Point2D::new(point.0, point.1)])))
+        }
+
+        fn len(&self) -> usize {
+            1
         }
     }
 
     #[test]
-    fn test_single_curve_generation() {
-        let generator = MockCurveGenerator;
-        let result = generator.curve(
-            (&BasicAxisTypes::Delta, &BasicAxisTypes::Price),
-            &OptionStyle::Call,
-            &Side::Long,
-        );
+    fn test_get_strike_versus_delta() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+
+        let result = test_curves.get_strike_versus(&BasicAxisTypes::Delta, &option);
+
         assert!(result.is_ok());
+        let (x, y) = result.unwrap();
+
+        assert_eq!(x, option.strike_price.to_dec());
+        assert!(y.abs() <= dec!(1.0)); // Delta should be between -1 and 1
     }
 
     #[test]
-    fn test_invalid_axis_combination() {
-        let generator = MockCurveGenerator;
-        let result = generator.curve(
-            (&BasicAxisTypes::Delta, &BasicAxisTypes::Delta),
-            &OptionStyle::Call,
-            &Side::Long,
-        );
-        assert!(result.is_err());
-    }
+    fn test_get_strike_versus_gamma() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
 
-    #[test]
-    fn test_curve_all_combinations() {
-        let generator = MockCurveGenerator;
-        let result = generator.curve_combinations(
-            (&BasicAxisTypes::Delta, &BasicAxisTypes::Price),
-        );
+        let result = test_curves.get_strike_versus(&BasicAxisTypes::Gamma, &option);
+
         assert!(result.is_ok());
+        let (x, y) = result.unwrap();
 
-        let curves = result.unwrap();
-        assert_eq!(curves.len(), 4); // 2 styles * 2 sides = 4 combinations
-
-        // Check all combinations exist
-        assert!(curves.contains_key(&(OptionStyle::Call, Side::Long)));
-        assert!(curves.contains_key(&(OptionStyle::Call, Side::Short)));
-        assert!(curves.contains_key(&(OptionStyle::Put, Side::Long)));
-        assert!(curves.contains_key(&(OptionStyle::Put, Side::Short)));
+        assert_eq!(x, option.strike_price.to_dec());
+        assert!(y >= Decimal::ZERO); // Gamma is always non-negative
     }
 
     #[test]
-    fn test_hashmap_access() {
-        let generator = MockCurveGenerator;
-        let result = generator.curve_combinations(
-            (&BasicAxisTypes::Delta, &BasicAxisTypes::Price),
-        ).unwrap();
+    fn test_get_strike_versus_theta() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
 
-        // Test direct access to specific configurations
-        let call_long = result.get(&(OptionStyle::Call, Side::Long));
-        assert!(call_long.is_some());
+        let result = test_curves.get_strike_versus(&BasicAxisTypes::Theta, &option);
 
-        let put_short = result.get(&(OptionStyle::Put, Side::Short));
-        assert!(put_short.is_some());
+        assert!(result.is_ok());
+        let (x, _y) = result.unwrap();
+
+        assert_eq!(x, option.strike_price.to_dec());
+        // Theta can be positive or negative
     }
 
     #[test]
-    fn test_hashmap_iteration() {
-        let generator = MockCurveGenerator;
-        let curves = generator.curve_combinations(
-            (&BasicAxisTypes::Delta, &BasicAxisTypes::Price),
-        ).unwrap();
+    fn test_get_strike_versus_vega() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
 
-        let mut count = 0;
-        for ((style, side), _curve) in curves.iter() {
-            match (style, side) {
-                (OptionStyle::Call, Side::Long) |
-                (OptionStyle::Call, Side::Short) |
-                (OptionStyle::Put, Side::Long) |
-                (OptionStyle::Put, Side::Short) => count += 1,
-            }
-        }
-        assert_eq!(count, 4);
+        let result = test_curves.get_strike_versus(&BasicAxisTypes::Vega, &option);
+
+        assert!(result.is_ok());
+        let (x, y) = result.unwrap();
+
+        assert_eq!(x, option.strike_price.to_dec());
+        assert!(y >= Decimal::ZERO); // Vega is always non-negative
     }
 
     #[test]
-    fn test_invalid_axis_all_combinations() {
-        let generator = MockCurveGenerator;
-        let result = generator.curve_combinations(
-            (&BasicAxisTypes::Delta, &BasicAxisTypes::Delta),
+    fn test_get_strike_versus_volatility() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+
+        let result = test_curves.get_strike_versus(&BasicAxisTypes::Volatility, &option);
+
+        assert!(result.is_ok());
+        let (x, y) = result.unwrap();
+
+        assert_eq!(x, option.strike_price.to_dec());
+        assert_eq!(y, option.implied_volatility.to_dec());
+    }
+
+    #[test]
+    fn test_get_strike_versus_price() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+
+        let result = test_curves.get_strike_versus(&BasicAxisTypes::Price, &option);
+
+        assert!(result.is_ok());
+        let (x, y) = result.unwrap();
+
+        assert_eq!(x, option.strike_price.to_dec());
+        assert!(y > Decimal::ZERO); // Price should be positive
+    }
+    
+
+    #[test]
+    fn test_curve_method() {
+        let test_curves = TestBasicCurves;
+
+        let curve_result = test_curves.curve(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            &Side::Long
         );
-        assert!(result.is_err());
+
+        assert!(curve_result.is_ok());
+        let curve = curve_result.unwrap();
+
+        assert_eq!(curve.points.len(), 1);
+    }
+
+    #[test]
+    fn test_len_method() {
+        let test_curves = TestBasicCurves;
+
+        assert_eq!(test_curves.len(), 1);
     }
 }
