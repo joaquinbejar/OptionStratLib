@@ -5082,7 +5082,7 @@ mod tests_basic_curves {
         let curve = curve.unwrap();
 
         // Check that we have the expected number of points
-        assert!(curve.points.len() > 0);
+        assert!(!curve.points.is_empty());
 
         // Verify points are in reasonable ranges
         for point in &curve.points {
@@ -5100,7 +5100,7 @@ mod tests_basic_curves {
         let curve = curve.unwrap();
 
         // Check that we have the expected number of points
-        assert!(curve.points.len() > 0);
+        assert!(!curve.points.is_empty());
 
         // Verify points are in reasonable ranges
         for point in &curve.points {
@@ -5149,7 +5149,7 @@ mod tests_basic_curves {
             let curve = curve.unwrap();
 
             // Each curve should have at least one point
-            assert!(curve.points.len() > 0, "Curve for axis {:?} is empty", axis);
+            assert!(!curve.points.is_empty(), "Curve for axis {:?} is empty", axis);
         }
     }
 

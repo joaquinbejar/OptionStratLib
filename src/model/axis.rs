@@ -76,7 +76,7 @@ mod tests_basic_axis_types {
     #[test]
     fn test_clone_implementation() {
         let axis_type = BasicAxisTypes::Delta;
-        let cloned = axis_type.clone();
+        let cloned = axis_type;
         assert_eq!(axis_type, cloned);
     }
 

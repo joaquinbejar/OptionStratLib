@@ -78,7 +78,7 @@ fn benchmark_price_calculations(
     group.bench_function("calculate standard prices", |b| {
         b.iter(|| {
             let mut data = option_data.clone();
-            black_box(data.calculate_prices(&standard_params))
+            black_box(data.calculate_prices(&standard_params, false))
         })
     });
 
@@ -87,7 +87,7 @@ fn benchmark_price_calculations(
     group.bench_function("calculate high volatility prices", |b| {
         b.iter(|| {
             let mut data = option_data.clone();
-            black_box(data.calculate_prices(&high_vol_params))
+            black_box(data.calculate_prices(&high_vol_params, false))
         })
     });
 }
@@ -103,7 +103,7 @@ fn benchmark_complex_operations(
         b.iter(|| {
             let mut data = option_data.clone();
             black_box(data.validate());
-            let _ = black_box(data.calculate_prices(&params));
+            let _ = black_box(data.calculate_prices(&params, false));
             black_box(data)
         })
     });
