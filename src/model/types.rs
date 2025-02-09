@@ -370,14 +370,14 @@ impl<'de> Deserialize<'de> for ExpirationDate {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Side {
     Long,
     Short,
 }
 
 #[allow(dead_code)]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum OptionStyle {
     Call,
     Put,

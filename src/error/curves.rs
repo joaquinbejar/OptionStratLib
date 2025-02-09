@@ -6,11 +6,11 @@
 
 use crate::error::common::OperationErrorKind;
 use crate::error::metrics::MetricsError;
-use crate::error::{InterpolationError, PositionError};
+use crate::error::{GreeksError, InterpolationError, OptionsError, PositionError};
 use std::error::Error;
 use std::fmt;
 
-impl Error for CurvesError {}
+impl Error for CurveError {}
 
 /// Represents different types of errors that can occur in the `curves` module.
 ///
@@ -84,7 +84,7 @@ impl Error for CurvesError {}
 /// development and testing processes. This ensures detailed debug output for better traceability.
 ///
 #[derive(Debug)]
-pub enum CurvesError {
+pub enum CurveError {
     Point2DError { reason: &'static str },
     OperationError(OperationErrorKind),
     StdError { reason: String },
@@ -104,7 +104,7 @@ pub enum CurvesError {
 ///   and maintainability of the code using the `CurvesError` type.
 /// - The constructed errors leverage the [`OperationErrorKind`]
 ///   to ensure structured and detailed error categorization.
-impl CurvesError {
+impl CurveError {
     /// ### `operation_not_supported`
     /// Constructs a `CurvesError::OperationError` with an [`OperationErrorKind::NotSupported`] variant.
     /// - **Parameters:**
@@ -117,7 +117,7 @@ impl CurvesError {
     ///   - For example, attempting an unsupported computation method on a specific curve type.
     ///
     pub fn operation_not_supported(operation: &str, reason: &str) -> Self {
-        CurvesError::OperationError(OperationErrorKind::NotSupported {
+        CurveError::OperationError(OperationErrorKind::NotSupported {
             operation: operation.to_string(),
             reason: reason.to_string(),
         })
@@ -135,27 +135,27 @@ impl CurvesError {
     ///   - For example, providing malformed or missing parameters for interpolation or curve construction.
     ///
     pub fn invalid_parameters(operation: &str, reason: &str) -> Self {
-        CurvesError::OperationError(OperationErrorKind::InvalidParameters {
+        CurveError::OperationError(OperationErrorKind::InvalidParameters {
             operation: operation.to_string(),
             reason: reason.to_string(),
         })
     }
 }
 
-impl fmt::Display for CurvesError {
+impl fmt::Display for CurveError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CurvesError::OperationError(err) => write!(f, "Operation error: {}", err),
-            CurvesError::StdError { reason } => write!(f, "Error: {}", reason),
-            CurvesError::Point2DError { reason } => write!(f, "Error: {}", reason),
-            CurvesError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
-            CurvesError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
-            CurvesError::MetricsError(reason) => write!(f, "Metrics error: {}", reason),
+            CurveError::OperationError(err) => write!(f, "Operation error: {}", err),
+            CurveError::StdError { reason } => write!(f, "Error: {}", reason),
+            CurveError::Point2DError { reason } => write!(f, "Error: {}", reason),
+            CurveError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
+            CurveError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
+            CurveError::MetricsError(reason) => write!(f, "Metrics error: {}", reason),
         }
     }
 }
 
-pub type CurvesResult<T> = Result<T, CurvesError>;
+pub type CurvesResult<T> = Result<T, CurveError>;
 
 /// Converts a `PositionError` into a `CurvesError` by mapping it to an
 /// `OperationError` with the `InvalidParameters` variant.
@@ -196,26 +196,44 @@ pub type CurvesResult<T> = Result<T, CurvesError>;
 /// ## Debugging:
 /// The resulting `CurvesError` will include contextual details, making it
 /// straightforward to trace and debug the underlying issue.
-impl From<PositionError> for CurvesError {
+impl From<PositionError> for CurveError {
     fn from(err: PositionError) -> Self {
-        CurvesError::OperationError(OperationErrorKind::InvalidParameters {
+        CurveError::OperationError(OperationErrorKind::InvalidParameters {
             operation: "Position".to_string(),
             reason: err.to_string(),
         })
     }
 }
 
-impl From<InterpolationError> for CurvesError {
+impl From<OptionsError> for CurveError {
+    fn from(err: OptionsError) -> Self {
+        CurveError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Option".to_string(),
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<GreeksError> for CurveError {
+    fn from(err: GreeksError) -> Self {
+        CurveError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Greeks".to_string(),
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<InterpolationError> for CurveError {
     fn from(err: InterpolationError) -> Self {
-        CurvesError::StdError {
+        CurveError::StdError {
             reason: err.to_string(),
         }
     }
 }
 
-impl From<MetricsError> for CurvesError {
+impl From<MetricsError> for CurveError {
     fn from(err: MetricsError) -> Self {
-        CurvesError::MetricsError(err.to_string())
+        CurveError::MetricsError(err.to_string())
     }
 }
 
@@ -263,9 +281,9 @@ impl From<MetricsError> for CurvesError {
 ///
 /// This conversion is provided in the `crate::error::curves` module, which defines
 /// the `CurvesError` enum encompassing multiple errors related to curve operations.
-impl From<Box<dyn Error>> for CurvesError {
+impl From<Box<dyn Error>> for CurveError {
     fn from(err: Box<dyn Error>) -> Self {
-        CurvesError::StdError {
+        CurveError::StdError {
             reason: err.to_string(),
         }
     }
@@ -279,17 +297,17 @@ mod tests {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_curves_error_display() {
-        let error = CurvesError::Point2DError {
+        let error = CurveError::Point2DError {
             reason: "Invalid coordinates",
         };
         assert_eq!(error.to_string(), "Error: Invalid coordinates");
 
-        let error = CurvesError::StdError {
+        let error = CurveError::StdError {
             reason: "Standard error".to_string(),
         };
         assert_eq!(error.to_string(), "Error: Standard error");
 
-        let error = CurvesError::operation_not_supported("calculate", "Strategy");
+        let error = CurveError::operation_not_supported("calculate", "Strategy");
         assert_eq!(
             error.to_string(),
             "Operation error: Operation 'calculate' is not supported for strategy 'Strategy'"
@@ -299,9 +317,9 @@ mod tests {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_operation_not_supported() {
-        let error = CurvesError::operation_not_supported("test_op", "TestStrat");
+        let error = CurveError::operation_not_supported("test_op", "TestStrat");
         match error {
-            CurvesError::OperationError(OperationErrorKind::NotSupported {
+            CurveError::OperationError(OperationErrorKind::NotSupported {
                 operation,
                 reason: strategy_type,
             }) => {
@@ -315,9 +333,9 @@ mod tests {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_parameters() {
-        let error = CurvesError::invalid_parameters("test_op", "invalid input");
+        let error = CurveError::invalid_parameters("test_op", "invalid input");
         match error {
-            CurvesError::OperationError(OperationErrorKind::InvalidParameters {
+            CurveError::OperationError(OperationErrorKind::InvalidParameters {
                 operation,
                 reason,
             }) => {
@@ -331,7 +349,7 @@ mod tests {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_error_trait_implementation() {
-        let error = CurvesError::Point2DError {
+        let error = CurveError::Point2DError {
             reason: "test error",
         };
         let error_ref: &dyn Error = &error;
@@ -343,9 +361,9 @@ mod tests {
     fn test_from_box_dyn_error() {
         let boxed_error: Box<dyn Error> =
             Box::new(std::io::Error::new(std::io::ErrorKind::Other, "io error"));
-        let curves_error = CurvesError::from(boxed_error);
+        let curves_error = CurveError::from(boxed_error);
         match curves_error {
-            CurvesError::StdError { reason } => assert_eq!(reason, "io error"),
+            CurveError::StdError { reason } => assert_eq!(reason, "io error"),
             _ => panic!("Wrong error variant"),
         }
     }
@@ -354,10 +372,10 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_from_position_error() {
         let position_error = PositionError::unsupported_operation("TestStruct", "test_op");
-        let curves_error = CurvesError::from(position_error);
+        let curves_error = CurveError::from(position_error);
 
         match curves_error {
-            CurvesError::OperationError(OperationErrorKind::InvalidParameters {
+            CurveError::OperationError(OperationErrorKind::InvalidParameters {
                 operation,
                 reason,
             }) => {
@@ -371,12 +389,12 @@ mod tests {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_debug_implementation() {
-        let error = CurvesError::Point2DError {
+        let error = CurveError::Point2DError {
             reason: "test debug",
         };
         assert!(format!("{:?}", error).contains("test debug"));
 
-        let error = CurvesError::StdError {
+        let error = CurveError::StdError {
             reason: "test debug".to_string(),
         };
         assert!(format!("{:?}", error).contains("test debug"));
@@ -390,7 +408,7 @@ mod tests_extended {
     #[test]
     fn test_curves_error_construction_error() {
         let error =
-            CurvesError::ConstructionError("Invalid curve construction parameters".to_string());
+            CurveError::ConstructionError("Invalid curve construction parameters".to_string());
         assert_eq!(
             format!("{}", error),
             "Construction error: Invalid curve construction parameters"
@@ -400,7 +418,7 @@ mod tests_extended {
     #[test]
     fn test_curves_error_analysis_error() {
         let error =
-            CurvesError::AnalysisError("Analysis failed due to insufficient data".to_string());
+            CurveError::AnalysisError("Analysis failed due to insufficient data".to_string());
         assert_eq!(
             format!("{}", error),
             "Analysis error: Analysis failed due to insufficient data"

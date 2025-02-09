@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 22/1/25
 ******************************************************************************/
-use crate::error::{CurvesError, SurfaceError};
+use crate::error::{CurveError, SurfaceError};
 use std::error::Error;
 use std::fmt;
 
@@ -36,8 +36,8 @@ impl fmt::Display for MetricsError {
     }
 }
 
-impl From<CurvesError> for MetricsError {
-    fn from(err: CurvesError) -> Self {
+impl From<CurveError> for MetricsError {
+    fn from(err: CurveError) -> Self {
         MetricsError::CurveError(err.to_string())
     }
 }

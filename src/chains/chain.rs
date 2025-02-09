@@ -10,11 +10,11 @@ use crate::chains::utils::{
 use crate::chains::{
     DeltasInStrike, FourOptions, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult,
 };
-use crate::curves::{Curve, Point2D};
+use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::geometrics::LinearInterpolation;
 use crate::greeks::{delta, gamma};
-use crate::model::{ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
+use crate::model::{BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side};
 use crate::strategies::utils::FindOptimalSide;
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
@@ -27,9 +27,11 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
+use std::ops::Deref;
 use tracing::{debug, error, info, trace};
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
+use crate::error::CurveError;
 
 /// Struct representing a row in an option chain.
 ///
@@ -232,8 +234,9 @@ impl OptionData {
     pub fn calculate_prices(
         &mut self,
         price_params: &OptionDataPriceParams,
+        refresh: bool,
     ) -> Result<(), ChainError> {
-        if self.options.is_none() {
+        if self.options.is_none() || refresh {
             self.create_options(price_params)?;
         }
 
@@ -419,7 +422,7 @@ impl OptionData {
         );
         if self.call_middle.is_none() || self.put_middle.is_none() {
             info!("Calculation middel prices for IV calculation:");
-            self.calculate_prices(price_params)?;
+            self.calculate_prices(price_params, false)?;
         }
 
         // Try to calculate IV for calls if we have mid price
@@ -615,7 +618,7 @@ impl OptionChain {
                 params.price_params.dividend_yield,
                 params.price_params.underlying_symbol.clone(),
             );
-            if option_data.calculate_prices(&price_params).is_ok() {
+            if option_data.calculate_prices(&price_params, false).is_ok() {
                 option_data.apply_spread(params.spread, params.decimal_places);
                 option_data.calculate_delta(&price_params);
                 option_data.calculate_gamma(&price_params);
@@ -1137,12 +1140,11 @@ impl OptionChain {
     /// }
     /// ```
     pub fn get_double_inclusive_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
-        self.get_single_iter()
-            .enumerate()
-            .flat_map(|(i, item1)| 
-                self.get_single_iter()
-                    .skip(i)
-                    .map(move |item2| (item1, item2)))
+        self.get_single_iter().enumerate().flat_map(|(i, item1)| {
+            self.get_single_iter()
+                .skip(i)
+                .map(move |item2| (item1, item2))
+        })
     }
 
     /// Returns an iterator that generates unique triplets of distinct option combinations from the `OptionChain`.
@@ -1167,16 +1169,18 @@ impl OptionChain {
     /// }
     /// ```
     pub fn get_triple_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData)> {
-        self.get_single_iter().enumerate().flat_map(move |(i, item1)| {
-            self.get_single_iter()
-                .skip(i + 1)
-                .enumerate()
-                .flat_map(move |(j, item2)| {
-                    self.get_single_iter()
-                        .skip(i + j + 2)
-                        .map(move |item3| (item1, item2, item3))
-                })
-        })
+        self.get_single_iter()
+            .enumerate()
+            .flat_map(move |(i, item1)| {
+                self.get_single_iter()
+                    .skip(i + 1)
+                    .enumerate()
+                    .flat_map(move |(j, item2)| {
+                        self.get_single_iter()
+                            .skip(i + j + 2)
+                            .map(move |item3| (item1, item2, item3))
+                    })
+            })
     }
 
     /// Returns an iterator that generates inclusive triplets of option combinations from the `OptionChain`.
@@ -1204,16 +1208,18 @@ impl OptionChain {
     pub fn get_triple_inclusive_iter(
         &self,
     ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData)> {
-        self.get_single_iter().enumerate().flat_map(move |(i, item1)| {
-            self.get_single_iter()
-                .skip(i)
-                .enumerate()
-                .flat_map(move |(j, item2)| {
-                    self.get_single_iter()
-                        .skip(i + j)
-                        .map(move |item3| (item1, item2, item3))
-                })
-        })
+        self.get_single_iter()
+            .enumerate()
+            .flat_map(move |(i, item1)| {
+                self.get_single_iter()
+                    .skip(i)
+                    .enumerate()
+                    .flat_map(move |(j, item2)| {
+                        self.get_single_iter()
+                            .skip(i + j)
+                            .map(move |item3| (item1, item2, item3))
+                    })
+            })
     }
 
     /// Returns an iterator that generates unique quadruples of distinct option combinations from the `OptionChain`.
@@ -1240,21 +1246,22 @@ impl OptionChain {
     pub fn get_quad_iter(
         &self,
     ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData, &OptionData)> {
-        self.get_single_iter().enumerate().flat_map(move |(i, item1)| {
-            self.get_single_iter()
-                .skip(i + 1)
-                .enumerate()
-                .flat_map(move |(j, item2)| {
-                    self.get_single_iter()
-                        .skip(i + j + 2)
-                        .enumerate()
-                        .flat_map(move |(k, item3)| {
-                            self.get_single_iter()
-                                .skip(i + j + k + 3)
-                                .map(move |item4| (item1, item2, item3, item4))
-                        })
-                })
-        })
+        self.get_single_iter()
+            .enumerate()
+            .flat_map(move |(i, item1)| {
+                self.get_single_iter()
+                    .skip(i + 1)
+                    .enumerate()
+                    .flat_map(move |(j, item2)| {
+                        self.get_single_iter().skip(i + j + 2).enumerate().flat_map(
+                            move |(k, item3)| {
+                                self.get_single_iter()
+                                    .skip(i + j + k + 3)
+                                    .map(move |item4| (item1, item2, item3, item4))
+                            },
+                        )
+                    })
+            })
     }
 
     /// Returns an iterator that generates inclusive quadruples of option combinations from the `OptionChain`.
@@ -1282,21 +1289,22 @@ impl OptionChain {
     pub fn get_quad_inclusive_iter(
         &self,
     ) -> impl Iterator<Item = (&OptionData, &OptionData, &OptionData, &OptionData)> {
-        self.get_single_iter().enumerate().flat_map(move |(i, item1)| {
-            self.get_single_iter()
-                .skip(i)
-                .enumerate()
-                .flat_map(move |(j, item2)| {
-                    self.get_single_iter()
-                        .skip(i + j)
-                        .enumerate()
-                        .flat_map(move |(k, item3)| {
-                            self.get_single_iter()
-                                .skip(i + j + k)
-                                .map(move |item4| (item1, item2, item3, item4))
-                        })
-                })
-        })
+        self.get_single_iter()
+            .enumerate()
+            .flat_map(move |(i, item1)| {
+                self.get_single_iter()
+                    .skip(i)
+                    .enumerate()
+                    .flat_map(move |(j, item2)| {
+                        self.get_single_iter().skip(i + j).enumerate().flat_map(
+                            move |(k, item3)| {
+                                self.get_single_iter()
+                                    .skip(i + j + k)
+                                    .map(move |item4| (item1, item2, item3, item4))
+                            },
+                        )
+                    })
+            })
     }
 
     /// Retrieves the call option price for a specific strike price
@@ -1615,6 +1623,47 @@ impl VolatilitySmile for OptionChain {
 
         // Return the final Curve with all points, including interpolated ones
         Curve::new(bt_points)
+    }
+}
+
+impl BasicCurves for OptionChain {
+    fn curve(
+        &self,
+        axis: (&BasicAxisTypes, &BasicAxisTypes),
+        option_style: &OptionStyle,
+        side: &Side,
+    ) -> Result<Curve, CurveError> {
+        let points: Result<Vec<Point2D>, CurveError> = self
+            .get_single_iter()
+            .enumerate()
+            .map(|(i,opt)| {
+                let four = opt.options.as_ref().ok_or_else(|| {
+                    CurveError::ConstructionError("Options data not available".to_string())
+                })?;
+
+                // Select the appropriate option based on style and side
+                let option = match (option_style, side) {
+                    (OptionStyle::Call, Side::Long) => &four.long_call,
+                    (OptionStyle::Call, Side::Short) => &four.short_call,
+                    (OptionStyle::Put, Side::Long) => &four.long_put,
+                    (OptionStyle::Put, Side::Short) => &four.short_put,
+                };
+
+                // Get x and y values based on the axis types
+                let (x,y) = self.get_axis_value(i, axis, option)?;
+
+                Ok(Point2D::new(x, y))
+            })
+            .collect();
+
+        match points {
+            Ok(points) if !points.is_empty() => Ok(Curve::new(points.into_iter().collect())),
+            Ok(_) => Err(CurveError::ConstructionError("No valid points generated".to_string())),
+            Err(e) => Err(e),
+        }
+    }
+    fn len(&self) -> usize {
+        self.options.len()
     }
 }
 
@@ -2121,7 +2170,7 @@ mod tests_option_data {
             None,
         );
 
-        let result = option_data.calculate_prices(&price_params);
+        let result = option_data.calculate_prices(&price_params, false);
 
         assert!(result.is_ok());
         assert!(option_data.call_ask.is_some());
@@ -2156,7 +2205,7 @@ mod tests_option_data {
             Positive::ZERO,
             None,
         );
-        let _ = option_data.calculate_prices(&price_params);
+        let _ = option_data.calculate_prices(&price_params, false);
 
         info!("{}", option_data);
         assert_eq!(option_data.call_ask, None);
@@ -2194,7 +2243,7 @@ mod tests_option_data {
             pos!(0.01),
             None,
         );
-        let result = option_data.calculate_prices(&price_params);
+        let result = option_data.calculate_prices(&price_params, false);
 
         assert!(result.is_ok());
         info!("{}", option_data);
@@ -2235,7 +2284,7 @@ mod tests_option_data {
             None,
         );
 
-        let result = option_data.calculate_prices(&price_params);
+        let result = option_data.calculate_prices(&price_params, false);
 
         assert!(result.is_ok());
         assert!(option_data.call_ask.is_some());
