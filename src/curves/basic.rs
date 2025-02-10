@@ -19,7 +19,7 @@ pub trait BasicCurves {
         side: &Side,
     ) -> Result<Curve, CurveError>;
 
-    fn get_strike_versus(
+    fn get_curve_strike_versus(
         &self,
         axis: &BasicAxisTypes,
         option: &Arc<Options>,
@@ -47,23 +47,17 @@ pub trait BasicCurves {
             )),
         }
     }
-
-    fn len(&self) -> usize;
-    
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
 }
 
 #[cfg(test)]
 mod tests_basic_curves_trait {
-    use std::collections::BTreeSet;
     use super::*;
+    use crate::curves::Point2D;
     use crate::model::types::{OptionStyle, Side};
     use crate::{pos, ExpirationDate, OptionType, Positive};
     use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
     use std::sync::Arc;
-    use crate::curves::Point2D;
 
     // Helper function to create a sample Options for testing
     fn create_test_option() -> Arc<Options> {
@@ -95,12 +89,8 @@ mod tests_basic_curves_trait {
         ) -> Result<Curve, CurveError> {
             // Simplified implementation for testing
             let option = create_test_option();
-            let point = self.get_strike_versus(axis, &option)?;
+            let point = self.get_curve_strike_versus(axis, &option)?;
             Ok(Curve::new(BTreeSet::from([Point2D::new(point.0, point.1)])))
-        }
-
-        fn len(&self) -> usize {
-            1
         }
     }
 
@@ -109,7 +99,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Delta, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Delta, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -123,7 +113,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Gamma, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Gamma, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -137,7 +127,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Theta, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Theta, &option);
 
         assert!(result.is_ok());
         let (x, _y) = result.unwrap();
@@ -151,7 +141,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Vega, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Vega, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -165,7 +155,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Volatility, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Volatility, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -179,7 +169,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Price, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Price, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -187,28 +177,17 @@ mod tests_basic_curves_trait {
         assert_eq!(x, option.strike_price.to_dec());
         assert!(y > Decimal::ZERO); // Price should be positive
     }
-    
 
     #[test]
     fn test_curve_method() {
         let test_curves = TestBasicCurves;
 
-        let curve_result = test_curves.curve(
-            &BasicAxisTypes::Delta,
-            &OptionStyle::Call,
-            &Side::Long
-        );
+        let curve_result =
+            test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long);
 
         assert!(curve_result.is_ok());
         let curve = curve_result.unwrap();
 
         assert_eq!(curve.points.len(), 1);
-    }
-
-    #[test]
-    fn test_len_method() {
-        let test_curves = TestBasicCurves;
-
-        assert_eq!(test_curves.len(), 1);
     }
 }

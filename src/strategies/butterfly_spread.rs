@@ -4333,6 +4333,7 @@ mod tests_short_butterfly_position_management {
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
+    use tracing::error;
 
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
@@ -4389,7 +4390,7 @@ mod tests_short_butterfly_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }
@@ -4431,7 +4432,7 @@ mod tests_short_butterfly_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }
@@ -4512,6 +4513,7 @@ mod tests_long_butterfly_position_management {
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
+    use tracing::error;
 
     fn create_test_butterfly() -> LongButterflySpread {
         LongButterflySpread::new(
@@ -4564,7 +4566,7 @@ mod tests_long_butterfly_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }
@@ -4606,7 +4608,7 @@ mod tests_long_butterfly_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }

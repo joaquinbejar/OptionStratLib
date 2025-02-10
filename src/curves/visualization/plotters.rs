@@ -167,6 +167,12 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
             .map(|p| (p.x.to_f64().unwrap_or(0.0), p.y.to_f64().unwrap_or(0.0)))
             .collect();
 
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No points to plot".to_string(),
+            ));
+        }
+
         // Determine plot range
         let x_min = points.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
         let x_max = points.iter().map(|p| p.0).fold(f64::NEG_INFINITY, f64::max);

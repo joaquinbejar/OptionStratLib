@@ -51,7 +51,9 @@ use crate::error::InterpolationError;
 /// use optionstratlib::geometrics::SplineInterpolation;
 /// use optionstratlib::error::InterpolationError;
 /// use optionstratlib::curves::Point2D;
-/// use rust_decimal::Decimal;
+/// use rust_decimal::Decimal;///
+///
+/// use tracing::{error, info};
 ///
 /// struct MySplineInterpolator {
 ///     data_points: Vec<Point2D>,
@@ -70,8 +72,8 @@ use crate::error::InterpolationError;
 ///     };
 ///
 ///     match interpolator.spline_interpolate(Decimal::new(10, 1)) {
-///         Ok(point) => println!("Interpolated Point: {:?}", point),
-///         Err(err) => eprintln!("Interpolation failed: {:?}", err),
+///         Ok(point) => info!("Interpolated Point: {:?}", point),
+///         Err(err) => error!("Interpolation failed: {:?}", err),
 ///     }
 /// }
 /// ```

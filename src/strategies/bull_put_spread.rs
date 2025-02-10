@@ -2131,6 +2131,7 @@ mod tests_bear_call_spread_position_management {
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
+    use tracing::error;
 
     fn create_test_short_bull_put_spread() -> BullPutSpread {
         BullPutSpread::new(
@@ -2190,7 +2191,7 @@ mod tests_bear_call_spread_position_management {
                 assert_eq!(reason, "Call is not valid for BullPutSpread");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }

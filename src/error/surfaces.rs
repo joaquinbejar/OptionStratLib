@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 20/1/25
 ******************************************************************************/
-use crate::error::{InterpolationError, OperationErrorKind, PositionError};
+use crate::error::{
+    GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
+};
 use std::error::Error;
 use std::fmt;
 
@@ -132,6 +134,24 @@ impl From<InterpolationError> for SurfaceError {
         SurfaceError::StdError {
             reason: err.to_string(),
         }
+    }
+}
+
+impl From<OptionsError> for SurfaceError {
+    fn from(err: OptionsError) -> Self {
+        SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Option".to_string(),
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<GreeksError> for SurfaceError {
+    fn from(err: GreeksError) -> Self {
+        SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Greek".to_string(),
+            reason: err.to_string(),
+        })
     }
 }
 

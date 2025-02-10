@@ -37,7 +37,7 @@ impl OptionData {
         } else {
             "NA".to_string()
         };
-        
+
         let long_call = Arc::new(Options::new(
             OptionType::European,
             Side::Long,

@@ -144,6 +144,16 @@ impl Surface {
     }
 }
 
+impl Default for Surface {
+    fn default() -> Self {
+        Self {
+            points: BTreeSet::new(),
+            x_range: (Decimal::ZERO, Decimal::ZERO),
+            y_range: (Decimal::ZERO, Decimal::ZERO),
+        }
+    }
+}
+
 impl GeometricObject<Point3D, Point2D> for Surface {
     type Error = SurfaceError;
 

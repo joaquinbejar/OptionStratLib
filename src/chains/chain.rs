@@ -12,13 +12,14 @@ use crate::chains::{
 };
 use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::ChainError;
-use crate::error::CurveError;
-use crate::geometrics::LinearInterpolation;
+use crate::error::{CurveError, SurfaceError};
+use crate::geometrics::{Len, LinearInterpolation};
 use crate::greeks::{delta, gamma};
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
 use crate::strategies::utils::FindOptimalSide;
+use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use crate::{pos, Positive};
@@ -312,6 +313,10 @@ impl OptionData {
             }
         }
 
+        if self.options.is_none() && self.implied_volatility.is_some() {
+            let _ = self.create_options(price_params);
+        }
+
         // Now proceed with delta calculation
         let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
             Ok(option) => option,
@@ -354,7 +359,9 @@ impl OptionData {
                 return;
             }
         }
-
+        if self.options.is_none() && self.implied_volatility.is_some() {
+            let _ = self.create_options(price_params);
+        }
         // Now proceed with delta calculation
         let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
             Ok(option) => option,
@@ -472,6 +479,10 @@ impl OptionData {
                     debug!("Failed to calculate put IV: {}", e);
                 }
             }
+        }
+
+        if self.options.is_none() && self.implied_volatility.is_some() {
+            self.create_options(price_params)?;
         }
 
         Err(ChainError::invalid_volatility(
@@ -1364,6 +1375,12 @@ impl OptionChain {
     }
 }
 
+impl Len for OptionChain {
+    fn len(&self) -> usize {
+        self.options.len()
+    }
+}
+
 impl OptionChainParams for OptionChain {
     fn get_params(&self, strike_price: Positive) -> Result<OptionDataPriceParams, ChainError> {
         let option = self
@@ -1630,9 +1647,10 @@ impl BasicCurves for OptionChain {
         option_style: &OptionStyle,
         side: &Side,
     ) -> Result<Curve, CurveError> {
-        
-        if axis == &BasicAxisTypes::UnderlyingPrice || 
-            axis == &BasicAxisTypes::Strike  ||  axis == &BasicAxisTypes::Expiration {
+        if axis == &BasicAxisTypes::UnderlyingPrice
+            || axis == &BasicAxisTypes::Strike
+            || axis == &BasicAxisTypes::Expiration
+        {
             return Err(CurveError::ConstructionError("Axis not valid".to_string()));
         }
         let points = self
@@ -1649,7 +1667,7 @@ impl BasicCurves for OptionChain {
                 };
 
                 // Get x and y values based on the axis types
-                match self.get_strike_versus(axis, option) {
+                match self.get_curve_strike_versus(axis, option) {
                     Ok(point) => Some(Point2D::new(point.0, point.1)),
                     Err(_) => None,
                 }
@@ -1658,9 +1676,70 @@ impl BasicCurves for OptionChain {
 
         Ok(Curve::new(points))
     }
+}
 
-    fn len(&self) -> usize {
-        self.options.len()
+impl BasicSurfaces for OptionChain {
+    fn surface(
+        &self,
+        axis: &BasicAxisTypes,
+        option_style: &OptionStyle,
+        volatility: Option<Vec<Positive>>,
+        side: &Side,
+    ) -> Result<Surface, SurfaceError> {
+        if axis == &BasicAxisTypes::UnderlyingPrice
+            || axis == &BasicAxisTypes::Strike
+            || axis == &BasicAxisTypes::Expiration
+        {
+            return Err(SurfaceError::ConstructionError(
+                "Axis not valid".to_string(),
+            ));
+        }
+
+        let mut points = BTreeSet::new();
+
+        for opt in self.get_single_iter() {
+            let four = match opt.options.as_ref() {
+                Some(four) => four,
+                None => continue,
+            };
+
+            // Select the appropriate option based on style and side
+            let option = match (option_style, side) {
+                (OptionStyle::Call, Side::Long) => &four.long_call,
+                (OptionStyle::Call, Side::Short) => &four.short_call,
+                (OptionStyle::Put, Side::Long) => &four.long_put,
+                (OptionStyle::Put, Side::Short) => &four.short_put,
+            };
+
+            match &volatility {
+                // If volatility vector is provided, use get_volatility_versus for each volatility
+                Some(vols) => {
+                    for vol in vols {
+                        match self.get_surface_volatility_versus(axis, option, *vol) {
+                            Ok((x, y, z)) => {
+                                points.insert(Point3D::new(x, y, z));
+                            }
+                            Err(_) => continue,
+                        }
+                    }
+                }
+                // If no volatility vector is provided, use get_strike_versus with original volatility
+                None => match self.get_surface_strike_versus(axis, option) {
+                    Ok((x, y, z)) => {
+                        points.insert(Point3D::new(x, y, z));
+                    }
+                    Err(_) => continue,
+                },
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points generated for surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
     }
 }
 
@@ -4996,9 +5075,9 @@ mod tests_option_data_delta {
 mod tests_basic_curves {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
+    use crate::utils::time::get_tomorrow_formatted;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
-    use crate::utils::time::get_tomorrow_formatted;
 
     // Helper function to create a sample OptionChain for testing
     fn create_test_option_chain() -> OptionChain {
@@ -5149,7 +5228,11 @@ mod tests_basic_curves {
             let curve = curve.unwrap();
 
             // Each curve should have at least one point
-            assert!(!curve.points.is_empty(), "Curve for axis {:?} is empty", axis);
+            assert!(
+                !curve.points.is_empty(),
+                "Curve for axis {:?} is empty",
+                axis
+            );
         }
     }
 
@@ -5167,6 +5250,225 @@ mod tests_basic_curves {
         for point in &curve.points {
             assert!(point.x >= prev_x, "Points are not in ascending order");
             prev_x = point.x;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_option_chain_surfaces {
+    use super::*;
+    use crate::utils::time::get_tomorrow_formatted;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_option_chain() -> OptionChain {
+        let tomorrow_date = get_tomorrow_formatted();
+        let mut chain = OptionChain::new("TEST", pos!(100.0), tomorrow_date, None, None);
+
+        // Add some test options
+        chain.add_option(
+            pos!(90.0),        // strike_price
+            spos!(5.0),        // call_bid
+            spos!(5.5),        // call_ask
+            spos!(1.0),        // put_bid
+            spos!(1.5),        // put_ask
+            spos!(0.2),        // implied_volatility
+            Some(dec!(0.6)),   // delta
+            Some(dec!(100.0)), // volume
+            Some(dec!(50.0)),  // open_interest
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(0.25),
+            Some(dec!(0.5)),
+            Some(dec!(150.0)),
+            Some(dec!(75)),
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(110.0),
+            spos!(1.0),
+            spos!(1.5),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(0.3),
+            Some(dec!(0.4)),
+            Some(dec!(80.0)),
+            Some(dec!(40)),
+            None,
+            None,
+        );
+        chain.update_greeks();
+        chain
+    }
+
+    #[test]
+    fn test_surface_invalid_axis() {
+        let chain = create_test_option_chain();
+        let result = chain.surface(
+            &BasicAxisTypes::Strike,
+            &OptionStyle::Call,
+            None,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result {
+            Err(SurfaceError::ConstructionError(msg)) => {
+                assert_eq!(msg, "Axis not valid");
+            }
+            _ => panic!("Expected ConstructionError"),
+        }
+    }
+
+    #[test]
+    fn test_surface_with_no_volatility() {
+        let chain = create_test_option_chain();
+        let result = chain.surface(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            None,
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        let surface = result.unwrap();
+        assert!(!surface.points.is_empty());
+
+        // Should have one point per strike
+        assert_eq!(surface.points.len(), 3);
+    }
+
+    #[test]
+    fn test_surface_with_custom_volatilities() {
+        let chain = create_test_option_chain();
+        let volatilities = vec![pos!(0.15), pos!(0.20), pos!(0.25)];
+
+        let result = chain.surface(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            Some(volatilities),
+            &Side::Long,
+        );
+
+        assert!(result.is_ok());
+        let surface = result.unwrap();
+        assert!(!surface.points.is_empty());
+        assert_eq!(surface.points.len(), 9);
+    }
+
+    #[test]
+    fn test_surface_empty_volatility_vector() {
+        let chain = create_test_option_chain();
+        let empty_vols: Vec<Positive> = vec![];
+
+        let result = chain.surface(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            Some(empty_vols),
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result {
+            Err(SurfaceError::ConstructionError(msg)) => {
+                assert_eq!(msg, "No valid points generated for surface");
+            }
+            _ => panic!("Expected ConstructionError"),
+        }
+    }
+
+    #[test]
+    fn test_surface_different_option_styles() {
+        let chain = create_test_option_chain();
+
+        // Test for calls
+        let call_result = chain.surface(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            None,
+            &Side::Long,
+        );
+        assert!(call_result.is_ok());
+
+        // Test for puts
+        let put_result =
+            chain.surface(&BasicAxisTypes::Delta, &OptionStyle::Put, None, &Side::Long);
+        assert!(put_result.is_ok());
+    }
+
+    #[test]
+    fn test_surface_different_sides() {
+        let chain = create_test_option_chain();
+
+        // Test for long position
+        let long_result = chain.surface(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            None,
+            &Side::Long,
+        );
+        assert!(long_result.is_ok());
+
+        // Test for short position
+        let short_result = chain.surface(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            None,
+            &Side::Short,
+        );
+        assert!(short_result.is_ok());
+    }
+
+    #[test]
+    fn test_surface_different_greeks() {
+        let chain = create_test_option_chain();
+        let axes = vec![
+            BasicAxisTypes::Delta,
+            BasicAxisTypes::Gamma,
+            BasicAxisTypes::Theta,
+            BasicAxisTypes::Vega,
+            BasicAxisTypes::Price,
+        ];
+
+        for axis in axes {
+            let result = chain.surface(&axis, &OptionStyle::Call, None, &Side::Long);
+            assert!(result.is_ok(), "Failed for axis: {:?}", axis);
+        }
+    }
+
+    #[test]
+    fn test_surface_with_empty_chain() {
+        let empty_chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-12-31".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.01)),
+        );
+
+        let result = empty_chain.surface(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            None,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result {
+            Err(SurfaceError::ConstructionError(msg)) => {
+                assert_eq!(msg, "No valid points generated for surface");
+            }
+            _ => panic!("Expected ConstructionError"),
         }
     }
 }

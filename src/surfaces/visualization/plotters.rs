@@ -160,6 +160,12 @@ impl PlotBuilderExt<Surface> for PlotBuilder<Surface> {
     fn save(self, path: impl AsRef<Path>) -> Result<(), SurfaceError> {
         // Convert points to f64
         let points: Vec<(f64, f64, f64)> = self.data.get_f64_points();
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No points to plot".to_string(),
+            ));
+        }
+
         let label30: u32 = (self.options.labels_size.unwrap_or(1.0) * 30.0) as u32;
         let label20: u32 = (self.options.labels_size.unwrap_or(1.0) * 20.0) as u32;
         let label10: u32 = (self.options.labels_size.unwrap_or(1.0) * 10.0) as u32;
