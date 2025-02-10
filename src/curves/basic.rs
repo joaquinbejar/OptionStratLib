@@ -19,7 +19,7 @@ pub trait BasicCurves {
         side: &Side,
     ) -> Result<Curve, CurveError>;
 
-    fn get_strike_versus(
+    fn get_curve_strike_versus(
         &self,
         axis: &BasicAxisTypes,
         option: &Arc<Options>,
@@ -46,12 +46,6 @@ pub trait BasicCurves {
                 },
             )),
         }
-    }
-
-    fn len(&self) -> usize;
-    
-    fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 }
 
@@ -95,13 +89,10 @@ mod tests_basic_curves_trait {
         ) -> Result<Curve, CurveError> {
             // Simplified implementation for testing
             let option = create_test_option();
-            let point = self.get_strike_versus(axis, &option)?;
+            let point = self.get_curve_strike_versus(axis, &option)?;
             Ok(Curve::new(BTreeSet::from([Point2D::new(point.0, point.1)])))
         }
-
-        fn len(&self) -> usize {
-            1
-        }
+        
     }
 
     #[test]
@@ -109,7 +100,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Delta, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Delta, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -123,7 +114,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Gamma, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Gamma, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -137,7 +128,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Theta, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Theta, &option);
 
         assert!(result.is_ok());
         let (x, _y) = result.unwrap();
@@ -151,7 +142,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Vega, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Vega, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -165,7 +156,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Volatility, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Volatility, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -179,7 +170,7 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        let result = test_curves.get_strike_versus(&BasicAxisTypes::Price, &option);
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Price, &option);
 
         assert!(result.is_ok());
         let (x, y) = result.unwrap();
@@ -204,11 +195,5 @@ mod tests_basic_curves_trait {
 
         assert_eq!(curve.points.len(), 1);
     }
-
-    #[test]
-    fn test_len_method() {
-        let test_curves = TestBasicCurves;
-
-        assert_eq!(test_curves.len(), 1);
-    }
+    
 }
