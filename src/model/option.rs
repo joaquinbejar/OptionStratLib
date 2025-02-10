@@ -273,6 +273,7 @@ impl Options {
     /// ```rust
     /// use rust_decimal_macros::dec;
     /// use rust_decimal::Decimal;
+    /// use tracing::{error, info};
     /// use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Side};
     ///
     /// let options = Options::new(
@@ -292,8 +293,8 @@ impl Options {
     /// let market_price = dec!(133.5);  
     ///
     /// match options.calculate_implied_volatility(market_price) {
-    ///     Ok(volatility) => println!("Implied Volatility: {}", volatility.to_dec()),
-    ///     Err(e) => println!("Failed to calculate implied volatility: {:?}", e),
+    ///     Ok(volatility) => info!("Implied Volatility: {}", volatility.to_dec()),
+    ///     Err(e) => error!("Failed to calculate implied volatility: {:?}", e),
     /// }
     /// ```
     pub fn calculate_implied_volatility(

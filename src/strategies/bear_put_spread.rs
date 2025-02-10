@@ -2376,6 +2376,7 @@ mod tests_bear_call_spread_position_management {
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
+    use tracing::error;
 
     fn create_test_short_bear_put_spread() -> BearPutSpread {
         BearPutSpread::new(
@@ -2435,7 +2436,7 @@ mod tests_bear_call_spread_position_management {
                 assert_eq!(reason, "Call is not valid for BearPutSpread");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }

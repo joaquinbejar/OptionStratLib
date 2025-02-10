@@ -370,7 +370,7 @@ impl Optimizable for ShortStrangle {
                     first: short_put,
                     second: short_call,
                 };
-                println!("Legs: {:?}", legs);
+                debug!("Legs: {:?}", legs);
                 let strategy = strategy.create_strategy(option_chain, &legs);
                 strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
             })
