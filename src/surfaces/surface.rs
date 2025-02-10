@@ -152,7 +152,6 @@ impl Default for Surface {
             y_range: (Decimal::ZERO, Decimal::ZERO),
         }
     }
-    
 }
 
 impl GeometricObject<Point3D, Point2D> for Surface {

@@ -3,14 +3,14 @@
    Email: jb@taunais.com
    Date: 29/1/25
 ******************************************************************************/
-use tracing::info;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::curves::BasicCurves;
-use optionstratlib::model::BasicAxisTypes;
-use optionstratlib::{OptionStyle, Side};
 use optionstratlib::geometrics::Plottable;
+use optionstratlib::model::BasicAxisTypes;
 use optionstratlib::surfaces::BasicSurfaces;
 use optionstratlib::utils::setup_logger;
+use optionstratlib::{OptionStyle, Side};
+use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
@@ -18,14 +18,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     info!("Chain loaded");
     option_chain.update_greeks();
-    
-    let curve = option_chain.curve(
-        &BasicAxisTypes::Volatility,
-        &OptionStyle::Call,
-        &Side::Long,
-    )?;
 
-    curve.plot()
+    let curve = option_chain.curve(&BasicAxisTypes::Volatility, &OptionStyle::Call, &Side::Long)?;
+
+    curve
+        .plot()
         .title("Volatility Curve")
         .x_label("strike")
         .y_label("Volatility")
@@ -40,8 +37,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
         &Side::Long,
     )?;
-    
-    surface.plot()
+
+    surface
+        .plot()
         .title("Volatility Surface")
         .x_label("strike")
         .y_label("Volatility")

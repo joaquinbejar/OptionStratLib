@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 20/1/25
 ******************************************************************************/
-use crate::error::{GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError};
+use crate::error::{
+    GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
+};
 use std::error::Error;
 use std::fmt;
 

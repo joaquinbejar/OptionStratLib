@@ -106,8 +106,8 @@ pub mod utils;
 
 mod axis;
 
+pub use axis::BasicAxisTypes;
 pub use option::Options;
 pub use position::Position;
 pub use profit_range::ProfitLossRange;
 pub use types::{ExpirationDate, OptionStyle, OptionType, Side};
-pub use axis::BasicAxisTypes;

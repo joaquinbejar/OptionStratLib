@@ -1656,9 +1656,8 @@ impl BasicCurves for OptionChain {
         let points = self
             .get_single_iter()
             .filter_map(|opt| {
-                
                 let four = opt.options.as_ref()?;
-                
+
                 // Select the appropriate option based on style and side
                 let option = match (option_style, side) {
                     (OptionStyle::Call, Side::Long) => &four.long_call,
@@ -1691,7 +1690,9 @@ impl BasicSurfaces for OptionChain {
             || axis == &BasicAxisTypes::Strike
             || axis == &BasicAxisTypes::Expiration
         {
-            return Err(SurfaceError::ConstructionError("Axis not valid".to_string()));
+            return Err(SurfaceError::ConstructionError(
+                "Axis not valid".to_string(),
+            ));
         }
 
         let mut points = BTreeSet::new();
@@ -1717,20 +1718,18 @@ impl BasicSurfaces for OptionChain {
                         match self.get_surface_volatility_versus(axis, option, *vol) {
                             Ok((x, y, z)) => {
                                 points.insert(Point3D::new(x, y, z));
-                            },
+                            }
                             Err(_) => continue,
                         }
                     }
-                },
-                // If no volatility vector is provided, use get_strike_versus with original volatility
-                None => {
-                    match self.get_surface_strike_versus(axis, option) {
-                        Ok((x, y, z)) => {
-                            points.insert(Point3D::new(x, y, z));
-                        },
-                        Err(_) => continue,
-                    }
                 }
+                // If no volatility vector is provided, use get_strike_versus with original volatility
+                None => match self.get_surface_strike_versus(axis, option) {
+                    Ok((x, y, z)) => {
+                        points.insert(Point3D::new(x, y, z));
+                    }
+                    Err(_) => continue,
+                },
             }
         }
 
@@ -5258,10 +5257,9 @@ mod tests_basic_curves {
 #[cfg(test)]
 mod tests_option_chain_surfaces {
     use super::*;
+    use crate::utils::time::get_tomorrow_formatted;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
-    use crate::utils::time::get_tomorrow_formatted;
-
 
     fn create_test_option_chain() -> OptionChain {
         let tomorrow_date = get_tomorrow_formatted();
@@ -5365,7 +5363,7 @@ mod tests_option_chain_surfaces {
         assert!(result.is_ok());
         let surface = result.unwrap();
         assert!(!surface.points.is_empty());
-        assert_eq!(surface.points.len(), 9); 
+        assert_eq!(surface.points.len(), 9);
     }
 
     #[test]
@@ -5403,12 +5401,8 @@ mod tests_option_chain_surfaces {
         assert!(call_result.is_ok());
 
         // Test for puts
-        let put_result = chain.surface(
-            &BasicAxisTypes::Delta,
-            &OptionStyle::Put,
-            None,
-            &Side::Long,
-        );
+        let put_result =
+            chain.surface(&BasicAxisTypes::Delta, &OptionStyle::Put, None, &Side::Long);
         assert!(put_result.is_ok());
     }
 
@@ -5447,16 +5441,10 @@ mod tests_option_chain_surfaces {
         ];
 
         for axis in axes {
-            let result = chain.surface(
-                &axis,
-                &OptionStyle::Call,
-                None,
-                &Side::Long,
-            );
+            let result = chain.surface(&axis, &OptionStyle::Call, None, &Side::Long);
             assert!(result.is_ok(), "Failed for axis: {:?}", axis);
         }
     }
-    
 
     #[test]
     fn test_surface_with_empty_chain() {

@@ -28,7 +28,7 @@ pub trait BasicSurfaces {
     ) -> Result<(Decimal, Decimal, Decimal), SurfaceError> {
         // Create a modified copy of the option with the specified volatility
         let option_with_vol = (**option).clone();
-        
+
         match axis {
             BasicAxisTypes::Delta => Ok((
                 option_with_vol.strike_price.to_dec(),
@@ -228,7 +228,6 @@ mod tests_basic_surfaces {
         assert_eq!(vol, dec!(0.25));
         assert!(price > dec!(0.0));
     }
-    
 
     #[test]
     fn test_get_volatility_versus_theta() {

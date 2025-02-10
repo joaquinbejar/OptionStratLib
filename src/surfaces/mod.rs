@@ -9,12 +9,12 @@
 //! * `visualization`: Provides tools for visualizing surfaces.  See the `visualization` module for more details.
 //!
 
+mod basic;
 mod surface;
 mod types;
 mod utils;
 mod visualization;
-mod basic;
 
+pub use basic::BasicSurfaces;
 pub use surface::Surface;
 pub use types::Point3D;
-pub use basic::BasicSurfaces;

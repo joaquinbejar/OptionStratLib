@@ -1,8 +1,8 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 9/2/25
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 9/2/25
+******************************************************************************/
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
@@ -53,8 +53,6 @@ impl Iterator for BasicAxisTypesIter {
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests_basic_axis_types {
@@ -110,7 +108,8 @@ mod tests_basic_axis_types {
 
         for variant in variants {
             let serialized = serde_json::to_string(&variant).expect("Failed to serialize");
-            let deserialized: BasicAxisTypes = serde_json::from_str(&serialized).expect("Failed to deserialize");
+            let deserialized: BasicAxisTypes =
+                serde_json::from_str(&serialized).expect("Failed to deserialize");
             assert_eq!(variant, deserialized);
         }
     }
@@ -147,7 +146,10 @@ mod tests_basic_axis_types {
         assert!(matches!(BasicAxisTypes::Gamma, BasicAxisTypes::Gamma));
         assert!(matches!(BasicAxisTypes::Theta, BasicAxisTypes::Theta));
         assert!(matches!(BasicAxisTypes::Vega, BasicAxisTypes::Vega));
-        assert!(matches!(BasicAxisTypes::Volatility, BasicAxisTypes::Volatility));
+        assert!(matches!(
+            BasicAxisTypes::Volatility,
+            BasicAxisTypes::Volatility
+        ));
         assert!(matches!(BasicAxisTypes::Price, BasicAxisTypes::Price));
         assert!(matches!(BasicAxisTypes::Strike, BasicAxisTypes::Strike));
     }
