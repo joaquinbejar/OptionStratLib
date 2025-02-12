@@ -427,14 +427,18 @@ impl Serialize for Positive {
         }
 
         if value.scale() == 0 {
-            serializer.serialize_i64(value.to_i64().ok_or_else(||
-                serde::ser::Error::custom("Failed to convert Decimal to i64")
-            )?)
+            serializer.serialize_i64(
+                value
+                    .to_i64()
+                    .ok_or_else(|| serde::ser::Error::custom("Failed to convert Decimal to i64"))?,
+            )
         } else {
             // Si tiene decimales, serializa como f64
-            serializer.serialize_f64(value.to_f64().ok_or_else(||
-                serde::ser::Error::custom("Failed to convert Decimal to f64")
-            )?)
+            serializer.serialize_f64(
+                value
+                    .to_f64()
+                    .ok_or_else(|| serde::ser::Error::custom("Failed to convert Decimal to f64"))?,
+            )
         }
     }
 }
@@ -446,7 +450,7 @@ impl<'de> Deserialize<'de> for Positive {
     {
         struct PositiveVisitor;
 
-        impl<'de> Visitor<'de> for PositiveVisitor {
+        impl Visitor<'_> for PositiveVisitor {
             type Value = Positive;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -460,7 +464,10 @@ impl<'de> Deserialize<'de> for Positive {
                 if value.eq_ignore_ascii_case("infinity") {
                     return Ok(Positive::INFINITY);
                 }
-                Err(serde::de::Error::custom(format!("Invalid string: '{}'. Expected \"infinity\".", value)))
+                Err(serde::de::Error::custom(format!(
+                    "Invalid string: '{}'. Expected \"infinity\".",
+                    value
+                )))
             }
 
             fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
@@ -984,7 +991,6 @@ mod tests_macros {
         let expected = Decimal::from_str("0.1234567890123456").unwrap();
         assert_eq!(pos!(val).value(), expected);
     }
-    
 
     #[test]
     #[should_panic(expected = "Value must be positive, got -1")]
@@ -1098,7 +1104,7 @@ mod tests_serialization {
         let serialized = serde_json::to_string(&value).unwrap();
         assert_eq!(serialized, r#""infinity""#);
     }
-    
+
     #[test]
     fn test_positive_infinity_deserialization() {
         let json = r#""infinity""#;
