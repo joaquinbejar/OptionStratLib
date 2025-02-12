@@ -380,8 +380,9 @@ impl PartialEq<f64> for Positive {
 
 impl fmt::Display for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.0.scale() == 0 {
-            // Si el valor es demasiado grande para i64, usamos to_string
+        if *self == Positive::INFINITY {
+            write!(f, r#""infinity""#)
+        } else if self.0.scale() == 0 {
             match self.0.to_i64() {
                 Some(val) => write!(f, "{}", val),
                 None => write!(f, "{}", self.0),
@@ -398,8 +399,9 @@ impl fmt::Display for Positive {
 
 impl fmt::Debug for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Mismo comportamiento que Display
-        if self.0.scale() == 0 {
+        if *self == Positive::INFINITY {
+            write!(f, r#""infinity""#)
+        } else if self.0.scale() == 0 {
             write!(f, "{}", self.0.to_i64().unwrap())
         } else {
             write!(f, "{}", self.0)
@@ -419,12 +421,24 @@ impl Serialize for Positive {
         S: Serializer,
     {
         let value = self.0;
+
+        if *self == Positive::INFINITY {
+            return serializer.serialize_str("infinity");
+        }
+
         if value.scale() == 0 {
-            // Si es un número entero, serializa sin decimales
-            serializer.serialize_i64(value.to_i64().unwrap())
+            serializer.serialize_i64(
+                value
+                    .to_i64()
+                    .ok_or_else(|| serde::ser::Error::custom("Failed to convert Decimal to i64"))?,
+            )
         } else {
             // Si tiene decimales, serializa como f64
-            serializer.serialize_f64(value.to_f64().unwrap())
+            serializer.serialize_f64(
+                value
+                    .to_f64()
+                    .ok_or_else(|| serde::ser::Error::custom("Failed to convert Decimal to f64"))?,
+            )
         }
     }
 }
@@ -439,8 +453,21 @@ impl<'de> Deserialize<'de> for Positive {
         impl Visitor<'_> for PositiveVisitor {
             type Value = Positive;
 
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a positive number")
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a positive number or the string \"infinity\"")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if value.eq_ignore_ascii_case("infinity") {
+                    return Ok(Positive::INFINITY);
+                }
+                Err(serde::de::Error::custom(format!(
+                    "Invalid string: '{}'. Expected \"infinity\".",
+                    value
+                )))
             }
 
             fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
@@ -448,7 +475,7 @@ impl<'de> Deserialize<'de> for Positive {
                 E: serde::de::Error,
             {
                 if value < 0 {
-                    Err(serde::de::Error::custom("value must be non-negative"))
+                    Err(serde::de::Error::custom("Expected a non-negative integer"))
                 } else {
                     Positive::new_decimal(Decimal::from(value)).map_err(serde::de::Error::custom)
                 }
@@ -465,11 +492,15 @@ impl<'de> Deserialize<'de> for Positive {
             where
                 E: serde::de::Error,
             {
+                if value.is_infinite() && value.is_sign_positive() {
+                    return Ok(Positive::INFINITY);
+                }
+
                 let decimal = Decimal::from_f64(value)
                     .ok_or_else(|| serde::de::Error::custom("Failed to convert f64 to Decimal"))?;
 
                 if value < 0.0 {
-                    Err(serde::de::Error::custom("value must be non-negative"))
+                    Err(serde::de::Error::custom("Expected a non-negative float"))
                 } else {
                     Positive::new_decimal(decimal).map_err(serde::de::Error::custom)
                 }
@@ -962,14 +993,6 @@ mod tests_macros {
     }
 
     #[test]
-    #[ignore = "This test is failing because of the precision limit"]
-    fn test_pos_precision_limits_bis() {
-        let val = ((987_654_321.123_456_8_f64 * 1e16) as u64) as f64 / 1e16; // More than 16 decimal places
-        let expected = Decimal::from_str("987654321.1234567890123456").unwrap();
-        assert_eq!(pos!(val).value(), expected);
-    }
-
-    #[test]
     #[should_panic(expected = "Value must be positive, got -1")]
     fn test_pos_negative_values() {
         // Negative values should return ZERO
@@ -1073,5 +1096,20 @@ mod tests_serialization {
         let json = "-42.5";
         let result = serde_json::from_str::<Positive>(json);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_positive_infinity_serialization() {
+        let value = Positive::INFINITY;
+        let serialized = serde_json::to_string(&value).unwrap();
+        assert_eq!(serialized, r#""infinity""#);
+    }
+
+    #[test]
+    fn test_positive_infinity_deserialization() {
+        let json = r#""infinity""#;
+        let result = serde_json::from_str::<Positive>(json);
+
+        assert!(result.is_ok());
     }
 }

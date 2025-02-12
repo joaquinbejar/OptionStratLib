@@ -26,7 +26,8 @@ use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
-use serde::{Deserialize, Serialize};
+use serde::de::{MapAccess, Visitor};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
@@ -51,19 +52,46 @@ use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 ///
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionData {
+    #[serde(rename = "strike_price")]
     pub(crate) strike_price: Positive,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) call_bid: Option<Positive>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) call_ask: Option<Positive>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) put_bid: Option<Positive>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) put_ask: Option<Positive>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub call_middle: Option<Positive>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub put_middle: Option<Positive>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) implied_volatility: Option<Positive>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     delta_call: Option<Decimal>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     delta_put: Option<Decimal>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     gamma: Option<Decimal>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     volume: Option<Positive>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     open_interest: Option<u64>,
+
+    // Skip this field during serialization and deserialization
     #[serde(skip)]
     pub options: Option<Box<FourOptions>>,
 }
@@ -554,7 +582,7 @@ impl fmt::Display for OptionData {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct OptionChain {
     pub symbol: String,
     pub underlying_price: Positive,
@@ -562,6 +590,140 @@ pub struct OptionChain {
     pub(crate) options: BTreeSet<OptionData>,
     pub(crate) risk_free_rate: Option<Decimal>,
     pub(crate) dividend_yield: Option<Positive>,
+}
+
+impl Serialize for OptionChain {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("OptionChain", 6)?;
+
+        state.serialize_field("symbol", &self.symbol)?;
+        state.serialize_field("underlying_price", &self.underlying_price)?;
+        state.serialize_field("expiration_date", &self.expiration_date)?;
+        state.serialize_field("options", &self.options)?;
+
+        if let Some(rate) = &self.risk_free_rate {
+            state.serialize_field("risk_free_rate", rate)?;
+        }
+
+        if let Some(yield_val) = &self.dividend_yield {
+            state.serialize_field("dividend_yield", yield_val)?;
+        }
+
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for OptionChain {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "snake_case")]
+        enum Field {
+            Symbol,
+            #[serde(rename = "underlying_price")]
+            UnderlyingPrice,
+            #[serde(rename = "expiration_date")]
+            ExpirationDate,
+            Options,
+            RiskFreeRate,
+            DividendYield,
+        }
+
+        struct OptionChainVisitor;
+
+        impl<'de> Visitor<'de> for OptionChainVisitor {
+            type Value = OptionChain;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct OptionChain")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<OptionChain, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut symbol = None;
+                let mut underlying_price = None;
+                let mut expiration_date = None;
+                let mut options = None;
+                let mut risk_free_rate = None;
+                let mut dividend_yield = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Symbol => {
+                            if symbol.is_some() {
+                                return Err(de::Error::duplicate_field("symbol"));
+                            }
+                            symbol = Some(map.next_value()?);
+                        }
+                        Field::UnderlyingPrice => {
+                            if underlying_price.is_some() {
+                                return Err(de::Error::duplicate_field("underlying"));
+                            }
+                            underlying_price = Some(map.next_value()?);
+                        }
+                        Field::ExpirationDate => {
+                            if expiration_date.is_some() {
+                                return Err(de::Error::duplicate_field("expiration"));
+                            }
+                            expiration_date = Some(map.next_value()?);
+                        }
+                        Field::Options => {
+                            if options.is_some() {
+                                return Err(de::Error::duplicate_field("options"));
+                            }
+                            options = Some(map.next_value()?);
+                        }
+                        Field::RiskFreeRate => {
+                            if risk_free_rate.is_some() {
+                                return Err(de::Error::duplicate_field("risk_free_rate"));
+                            }
+                            risk_free_rate = map.next_value().ok();
+                        }
+                        Field::DividendYield => {
+                            if dividend_yield.is_some() {
+                                return Err(de::Error::duplicate_field("dividend_yield"));
+                            }
+                            dividend_yield = map.next_value().ok();
+                        }
+                    }
+                }
+
+                let symbol = symbol.ok_or_else(|| de::Error::missing_field("symbol"))?;
+                let underlying_price =
+                    underlying_price.ok_or_else(|| de::Error::missing_field("underlying"))?;
+                let expiration_date =
+                    expiration_date.ok_or_else(|| de::Error::missing_field("expiration"))?;
+                let options = options.unwrap_or_default();
+
+                Ok(OptionChain {
+                    symbol,
+                    underlying_price,
+                    expiration_date,
+                    options,
+                    risk_free_rate,
+                    dividend_yield,
+                })
+            }
+        }
+
+        const FIELDS: &[&str] = &[
+            "symbol",
+            "underlying_price",
+            "expiration_date",
+            "options",
+            "risk_free_rate",
+            "dividend_yield",
+        ];
+        deserializer.deserialize_struct("OptionChain", FIELDS, OptionChainVisitor)
+    }
 }
 
 impl OptionChain {
@@ -5470,5 +5632,434 @@ mod tests_option_chain_surfaces {
             }
             _ => panic!("Expected ConstructionError"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_serialization {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_optiondata_serialization() {
+        let option_data = OptionData {
+            strike_price: pos!(100.0),
+            call_bid: Some(pos!(9.5)),
+            call_ask: Some(pos!(10.0)),
+            put_bid: Some(pos!(8.5)),
+            put_ask: Some(pos!(9.0)),
+            call_middle: Some(pos!(9.75)),
+            put_middle: Some(pos!(8.75)),
+            implied_volatility: Some(pos!(0.2)),
+            delta_call: Some(dec!(0.5)),
+            delta_put: Some(dec!(-0.5)),
+            gamma: Some(dec!(0.1)),
+            volume: Some(pos!(1000.0)),
+            open_interest: Some(500),
+            options: None,
+        };
+
+        let serialized = serde_json::to_string(&option_data).unwrap();
+        let deserialized: OptionData = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(option_data, deserialized);
+    }
+
+    #[test]
+    fn test_optionchain_serialization() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-01-01".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Add some test options
+        chain.add_option(
+            pos!(95.0),
+            Some(pos!(6.0)),
+            Some(pos!(6.5)),
+            Some(pos!(1.5)),
+            Some(pos!(2.0)),
+            Some(pos!(0.2)),
+            Some(dec!(0.7)),
+            Some(dec!(-0.3)),
+            Some(dec!(0.1)),
+            Some(pos!(1000.0)),
+            Some(500),
+        );
+
+        let serialized = serde_json::to_string(&chain).unwrap();
+        let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(chain.symbol, deserialized.symbol);
+        assert_eq!(chain.underlying_price, deserialized.underlying_price);
+        assert_eq!(chain.expiration_date, deserialized.expiration_date);
+        assert_eq!(chain.risk_free_rate, deserialized.risk_free_rate);
+        assert_eq!(chain.dividend_yield, deserialized.dividend_yield);
+    }
+
+    #[test]
+    fn test_optiondata_empty_fields() {
+        let option_data = OptionData {
+            strike_price: pos!(100.0),
+            call_bid: None,
+            call_ask: None,
+            put_bid: None,
+            put_ask: None,
+            call_middle: None,
+            put_middle: None,
+            implied_volatility: None,
+            delta_call: None,
+            delta_put: None,
+            gamma: None,
+            volume: None,
+            open_interest: None,
+            options: None,
+        };
+
+        let serialized = serde_json::to_string(&option_data).unwrap();
+        let deserialized: OptionData = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(option_data, deserialized);
+    }
+}
+
+#[cfg(test)]
+mod tests_option_data_serde {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use serde_json;
+
+    // Helper function to create a sample OptionData
+    fn create_sample_option_data() -> OptionData {
+        OptionData {
+            strike_price: pos!(100.0),
+            call_bid: Some(pos!(9.5)),
+            call_ask: Some(pos!(10.0)),
+            put_bid: Some(pos!(8.5)),
+            put_ask: Some(pos!(9.0)),
+            call_middle: Some(pos!(9.75)),
+            put_middle: Some(pos!(8.75)),
+            implied_volatility: Some(pos!(0.2)),
+            delta_call: Some(dec!(0.5)),
+            delta_put: Some(dec!(-0.5)),
+            gamma: Some(dec!(0.1)),
+            volume: Some(pos!(1000.0)),
+            open_interest: Some(500),
+            options: None,
+        }
+    }
+
+    #[test]
+    fn test_optiondata_complete_serialization() {
+        let option_data = create_sample_option_data();
+        let serialized = serde_json::to_string(&option_data).unwrap();
+        let deserialized: OptionData = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(option_data, deserialized);
+        // Verify specific fields
+        assert_eq!(deserialized.strike_price, pos!(100.0));
+        assert_eq!(deserialized.delta_call, Some(dec!(0.5)));
+    }
+
+    #[test]
+    fn test_optiondata_minimal_serialization() {
+        // Test with minimal required fields
+        let option_data = OptionData {
+            strike_price: pos!(100.0),
+            call_bid: None,
+            call_ask: None,
+            put_bid: None,
+            put_ask: None,
+            call_middle: None,
+            put_middle: None,
+            implied_volatility: None,
+            delta_call: None,
+            delta_put: None,
+            gamma: None,
+            volume: None,
+            open_interest: None,
+            options: None,
+        };
+
+        let serialized = serde_json::to_string(&option_data).unwrap();
+        let deserialized: OptionData = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(option_data, deserialized);
+        assert!(deserialized.call_bid.is_none());
+    }
+
+    #[test]
+    fn test_optiondata_large_numbers() {
+        // Test with large numbers to verify precision
+        let option_data = OptionData {
+            strike_price: pos!(999999.99),
+            call_bid: Some(pos!(99999.99)),
+            call_ask: Some(pos!(99999.99)),
+            implied_volatility: Some(pos!(1.0)),
+            ..Default::default()
+        };
+
+        let serialized = serde_json::to_string(&option_data).unwrap();
+        let deserialized: OptionData = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(option_data, deserialized);
+        assert_eq!(deserialized.strike_price, pos!(999999.99));
+    }
+
+    #[test]
+    fn test_optiondata_small_numbers() {
+        // Test with very small numbers to verify precision
+        let option_data = OptionData {
+            strike_price: pos!(0.0001),
+            call_bid: Some(pos!(0.0001)),
+            implied_volatility: Some(pos!(0.0001)),
+            delta_call: Some(dec!(0.0001)),
+            ..Default::default()
+        };
+
+        let serialized = serde_json::to_string(&option_data).unwrap();
+        let deserialized: OptionData = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(option_data, deserialized);
+        assert_eq!(deserialized.delta_call, Some(dec!(0.0001)));
+    }
+
+    #[test]
+    fn test_optiondata_special_cases() {
+        // Test with edge cases and special values
+        let option_data = OptionData {
+            strike_price: Positive::ONE,
+            call_bid: Some(Positive::ZERO),
+            implied_volatility: Some(pos!(1.0)),
+            delta_call: Some(Decimal::ONE),
+            delta_put: Some(Decimal::NEGATIVE_ONE),
+            gamma: Some(Decimal::ZERO),
+            open_interest: Some(u64::MAX),
+            ..Default::default()
+        };
+
+        let serialized = serde_json::to_string(&option_data).unwrap();
+        let deserialized: OptionData = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(option_data, deserialized);
+        assert_eq!(deserialized.open_interest, Some(u64::MAX));
+    }
+
+    #[test]
+    fn test_optiondata_json_structure() {
+        let option_data = create_sample_option_data();
+        let serialized = serde_json::to_string_pretty(&option_data).unwrap();
+
+        // Verify JSON structure
+        let json_value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+        assert!(json_value.is_object());
+        assert!(json_value.get("strike_price").is_some());
+        assert_eq!(
+            json_value.get("strike_price").unwrap().as_f64().unwrap(),
+            100.0
+        );
+    }
+
+    #[test]
+    fn test_optiondata_deserialization_error_handling() {
+        // Test invalid JSON
+        let invalid_json = r#"{"strike": "invalid"}"#;
+        let result: Result<OptionData, _> = serde_json::from_str(invalid_json);
+        assert!(result.is_err());
+
+        // Test missing required field
+        let missing_strike = r#"{"call_bid": 1.0}"#;
+        let result: Result<OptionData, _> = serde_json::from_str(missing_strike);
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests_option_chain_serde {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    fn create_sample_chain() -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-01-01".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Add some test options
+        chain.add_option(
+            pos!(95.0),
+            Some(pos!(6.0)),
+            Some(pos!(6.5)),
+            Some(pos!(1.5)),
+            Some(pos!(2.0)),
+            Some(pos!(0.2)),
+            Some(dec!(0.7)),
+            Some(dec!(-0.3)),
+            Some(dec!(0.1)),
+            Some(pos!(1000.0)),
+            Some(500),
+        );
+
+        chain
+    }
+
+    #[test]
+    fn test_optionchain_complete_serialization() {
+        let chain = create_sample_chain();
+        let serialized = serde_json::to_string(&chain).unwrap();
+        let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(chain.symbol, deserialized.symbol);
+        assert_eq!(chain.underlying_price, deserialized.underlying_price);
+        assert_eq!(chain.options.len(), deserialized.options.len());
+    }
+
+    #[test]
+    fn test_optionchain_empty_chain() {
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        let serialized = serde_json::to_string(&chain).unwrap();
+        let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(chain.symbol, deserialized.symbol);
+        assert!(deserialized.options.is_empty());
+        assert!(deserialized.risk_free_rate.is_none());
+    }
+
+    #[test]
+    fn test_optionchain_multiple_options() {
+        let mut chain = create_sample_chain();
+
+        // Add more options
+        chain.add_option(
+            pos!(100.0),
+            Some(pos!(5.0)),
+            Some(pos!(5.5)),
+            Some(pos!(5.0)),
+            Some(pos!(5.5)),
+            Some(pos!(0.2)),
+            Some(dec!(0.5)),
+            Some(dec!(-0.5)),
+            Some(dec!(0.1)),
+            Some(pos!(1000.0)),
+            Some(500),
+        );
+
+        chain.add_option(
+            pos!(105.0),
+            Some(pos!(4.0)),
+            Some(pos!(4.5)),
+            Some(pos!(8.0)),
+            Some(pos!(8.5)),
+            Some(pos!(0.2)),
+            Some(dec!(0.3)),
+            Some(dec!(-0.7)),
+            Some(dec!(0.1)),
+            Some(pos!(1000.0)),
+            Some(500),
+        );
+
+        let serialized = serde_json::to_string(&chain).unwrap();
+        let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(chain.options.len(), deserialized.options.len());
+        assert_eq!(deserialized.options.len(), 3);
+    }
+
+    #[test]
+    fn test_optionchain_special_values() {
+        let mut chain = OptionChain::new(
+            "SPECIAL",
+            Positive::INFINITY,
+            "2024-01-01".to_string(),
+            Some(Decimal::MAX),
+            Some(Positive::INFINITY),
+        );
+
+        chain.add_option(
+            Positive::ONE,
+            Some(Positive::ONE),
+            Some(Positive::ONE),
+            Some(Positive::ONE),
+            Some(Positive::ONE),
+            Some(Positive::ONE),
+            Some(Decimal::ONE),
+            Some(Decimal::ONE),
+            Some(Decimal::ONE),
+            Some(Positive::ONE),
+            Some(1),
+        );
+
+        let serialized = serde_json::to_string(&chain).unwrap();
+        let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(chain.underlying_price, deserialized.underlying_price);
+        assert_eq!(chain.risk_free_rate, deserialized.risk_free_rate);
+    }
+
+    #[test]
+    fn test_optionchain_json_structure() {
+        let chain = create_sample_chain();
+        let serialized = serde_json::to_string_pretty(&chain).unwrap();
+
+        // Verify JSON structure
+        let json_value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+        assert!(json_value.is_object());
+        assert!(json_value.get("symbol").is_some());
+        assert!(json_value.get("underlying_price").is_some());
+        assert!(json_value.get("options").is_some());
+        assert!(json_value.get("options").unwrap().is_array());
+    }
+
+    #[test]
+    fn test_optionchain_deserialization_error_handling() {
+        // Test invalid JSON
+        let invalid_json = r#"{"symbol": 123}"#;
+        let result: Result<OptionChain, _> = serde_json::from_str(invalid_json);
+        assert!(result.is_err());
+
+        // Test missing required fields
+        let missing_fields = r#"{"symbol": "TEST"}"#;
+        let result: Result<OptionChain, _> = serde_json::from_str(missing_fields);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_optionchain_options_validation() {
+        let mut chain = create_sample_chain();
+
+        // Add an option with all None values except strike
+        chain.add_option(
+            pos!(110.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let serialized = serde_json::to_string(&chain).unwrap();
+        let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
+
+        // Find the option with strike 110.0
+        let option = deserialized
+            .options
+            .iter()
+            .find(|opt| opt.strike_price == pos!(110.0))
+            .unwrap();
+
+        assert!(option.call_bid.is_none());
+        assert!(option.implied_volatility.is_none());
     }
 }
