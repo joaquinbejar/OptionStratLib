@@ -26,12 +26,12 @@ use crate::{pos, Positive};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
+use serde::de::{MapAccess, Visitor};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
-use serde::de::{MapAccess, Visitor};
 use tracing::{debug, error, info, trace};
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
@@ -52,7 +52,7 @@ use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 ///
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionData {
-    #[serde(rename = "strike")]
+    #[serde(rename = "strike_price")]
     pub(crate) strike_price: Positive,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -582,7 +582,6 @@ impl fmt::Display for OptionData {
     }
 }
 
-
 #[derive(Debug)]
 pub struct OptionChain {
     pub symbol: String,
@@ -602,8 +601,8 @@ impl Serialize for OptionChain {
         let mut state = serializer.serialize_struct("OptionChain", 6)?;
 
         state.serialize_field("symbol", &self.symbol)?;
-        state.serialize_field("underlying", &self.underlying_price)?;
-        state.serialize_field("expiration", &self.expiration_date)?;
+        state.serialize_field("underlying_price", &self.underlying_price)?;
+        state.serialize_field("expiration_date", &self.expiration_date)?;
         state.serialize_field("options", &self.options)?;
 
         if let Some(rate) = &self.risk_free_rate {
@@ -627,9 +626,9 @@ impl<'de> Deserialize<'de> for OptionChain {
         #[serde(field_identifier, rename_all = "snake_case")]
         enum Field {
             Symbol,
-            #[serde(rename = "underlying")]
+            #[serde(rename = "underlying_price")]
             UnderlyingPrice,
-            #[serde(rename = "expiration")]
+            #[serde(rename = "expiration_date")]
             ExpirationDate,
             Options,
             RiskFreeRate,
@@ -686,22 +685,22 @@ impl<'de> Deserialize<'de> for OptionChain {
                             if risk_free_rate.is_some() {
                                 return Err(de::Error::duplicate_field("risk_free_rate"));
                             }
-                            risk_free_rate = Some(map.next_value()?);
+                            risk_free_rate = map.next_value().ok();
                         }
                         Field::DividendYield => {
                             if dividend_yield.is_some() {
                                 return Err(de::Error::duplicate_field("dividend_yield"));
                             }
-                            dividend_yield = Some(map.next_value()?);
+                            dividend_yield = map.next_value().ok();
                         }
                     }
                 }
 
                 let symbol = symbol.ok_or_else(|| de::Error::missing_field("symbol"))?;
-                let underlying_price = underlying_price
-                    .ok_or_else(|| de::Error::missing_field("underlying"))?;
-                let expiration_date = expiration_date
-                    .ok_or_else(|| de::Error::missing_field("expiration"))?;
+                let underlying_price =
+                    underlying_price.ok_or_else(|| de::Error::missing_field("underlying"))?;
+                let expiration_date =
+                    expiration_date.ok_or_else(|| de::Error::missing_field("expiration"))?;
                 let options = options.unwrap_or_default();
 
                 Ok(OptionChain {
@@ -717,8 +716,8 @@ impl<'de> Deserialize<'de> for OptionChain {
 
         const FIELDS: &[&str] = &[
             "symbol",
-            "underlying",
-            "expiration",
+            "underlying_price",
+            "expiration_date",
             "options",
             "risk_free_rate",
             "dividend_yield",
@@ -5857,8 +5856,11 @@ mod tests_option_data_serde {
         // Verify JSON structure
         let json_value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
         assert!(json_value.is_object());
-        assert!(json_value.get("strike").is_some());
-        assert_eq!(json_value.get("strike").unwrap().as_f64().unwrap(), 100.0);
+        assert!(json_value.get("strike_price").is_some());
+        assert_eq!(
+            json_value.get("strike_price").unwrap().as_f64().unwrap(),
+            100.0
+        );
     }
 
     #[test]
@@ -5880,7 +5882,6 @@ mod tests_option_chain_serde {
     use super::*;
     use rust_decimal_macros::dec;
 
-    // Helper function to create a sample OptionChain
     fn create_sample_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
@@ -5921,13 +5922,7 @@ mod tests_option_chain_serde {
 
     #[test]
     fn test_optionchain_empty_chain() {
-        let chain = OptionChain::new(
-            "EMPTY",
-            pos!(100.0),
-            "2024-01-01".to_string(),
-            None,
-            None,
-        );
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
 
         let serialized = serde_json::to_string(&chain).unwrap();
         let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
@@ -6017,7 +6012,7 @@ mod tests_option_chain_serde {
         let json_value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
         assert!(json_value.is_object());
         assert!(json_value.get("symbol").is_some());
-        assert!(json_value.get("underlying").is_some());
+        assert!(json_value.get("underlying_price").is_some());
         assert!(json_value.get("options").is_some());
         assert!(json_value.get("options").unwrap().is_array());
     }
@@ -6058,7 +6053,9 @@ mod tests_option_chain_serde {
         let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
 
         // Find the option with strike 110.0
-        let option = deserialized.options.iter()
+        let option = deserialized
+            .options
+            .iter()
             .find(|opt| opt.strike_price == pos!(110.0))
             .unwrap();
 
@@ -6066,4 +6063,3 @@ mod tests_option_chain_serde {
         assert!(option.implied_volatility.is_none());
     }
 }
-
