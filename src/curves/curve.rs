@@ -16,6 +16,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ops::Index;
 
@@ -80,7 +81,7 @@ use std::ops::Index;
 /// - **x_range**:
 ///   - A tuple `(Decimal, Decimal)` that specifies the minimum and maximum x-coordinate values
 ///     for the curve. Operations performed on the curve should ensure they fall within this range.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Curve {
     pub points: BTreeSet<Point2D>,
     pub x_range: (Decimal, Decimal),
@@ -3206,5 +3207,209 @@ mod tests_geometric_transformations {
             let area = curve.measure_under(&dec!(0.0)).unwrap();
             assert!(area > dec!(0.0));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_curve_serde {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test curve
+    fn create_test_curve() -> Curve {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D {
+            x: dec!(1.0),
+            y: dec!(2.0),
+        });
+        points.insert(Point2D {
+            x: dec!(3.0),
+            y: dec!(4.0),
+        });
+        points.insert(Point2D {
+            x: dec!(5.0),
+            y: dec!(6.0),
+        });
+
+        Curve {
+            points,
+            x_range: (dec!(1.0), dec!(5.0)),
+        }
+    }
+
+    #[test]
+    fn test_basic_serialization() {
+        let curve = create_test_curve();
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curve.points, deserialized.points);
+        assert_eq!(curve.x_range, deserialized.x_range);
+    }
+
+    #[test]
+    fn test_pretty_print() {
+        let curve = create_test_curve();
+        let serialized = serde_json::to_string_pretty(&curve).unwrap();
+
+        // Verify pretty print format
+        assert!(serialized.contains('\n'));
+        assert!(serialized.contains("  "));
+
+        // Verify deserialization still works
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(curve.points, deserialized.points);
+    }
+
+    #[test]
+    fn test_empty_curve() {
+        let curve = Curve {
+            points: BTreeSet::new(),
+            x_range: (dec!(0.0), dec!(0.0)),
+        };
+
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert!(deserialized.points.is_empty());
+        assert_eq!(deserialized.x_range, (dec!(0.0), dec!(0.0)));
+    }
+
+    #[test]
+    fn test_curve_with_negative_values() {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D {
+            x: dec!(-1.0),
+            y: dec!(-2.0),
+        });
+        points.insert(Point2D {
+            x: dec!(-3.0),
+            y: dec!(-4.0),
+        });
+
+        let curve = Curve {
+            points,
+            x_range: (dec!(-3.0), dec!(-1.0)),
+        };
+
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curve.points, deserialized.points);
+        assert_eq!(curve.x_range, deserialized.x_range);
+    }
+
+    #[test]
+    fn test_curve_with_high_precision() {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D {
+            x: dec!(1.12345678901234567890),
+            y: dec!(2.12345678901234567890),
+        });
+        points.insert(Point2D {
+            x: dec!(3.12345678901234567890),
+            y: dec!(4.12345678901234567890),
+        });
+
+        let curve = Curve {
+            points,
+            x_range: (dec!(1.12345678901234567890), dec!(3.12345678901234567890)),
+        };
+
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curve.points, deserialized.points);
+        assert_eq!(curve.x_range, deserialized.x_range);
+    }
+
+    #[test]
+    fn test_invalid_json() {
+        // Missing required fields
+        let json_str = r#"{"points": []}"#;
+        let result = serde_json::from_str::<Curve>(json_str);
+        assert!(result.is_err());
+
+        // Invalid points format
+        let json_str = r#"{"points": [1, 2, 3], "x_range": [0, 1]}"#;
+        let result = serde_json::from_str::<Curve>(json_str);
+        assert!(result.is_err());
+
+        // Invalid x_range format
+        let json_str = r#"{"points": [], "x_range": "invalid"}"#;
+        let result = serde_json::from_str::<Curve>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_json_structure() {
+        let curve = create_test_curve();
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+
+        // Check structure
+        assert!(json.is_object());
+        assert!(json.get("points").is_some());
+        assert!(json.get("x_range").is_some());
+
+        // Check points is an array
+        assert!(json.get("points").unwrap().is_array());
+
+        // Check x_range is an array of 2 elements
+        let x_range = json.get("x_range").unwrap().as_array().unwrap();
+        assert_eq!(x_range.len(), 2);
+    }
+
+    #[test]
+    fn test_multiple_curves() {
+        let curve1 = create_test_curve();
+        let mut curve2 = create_test_curve();
+        curve2.x_range = (dec!(6.0), dec!(10.0));
+
+        let curves = vec![curve1, curve2];
+        let serialized = serde_json::to_string(&curves).unwrap();
+        let deserialized: Vec<Curve> = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curves.len(), deserialized.len());
+        assert_eq!(curves[0].points, deserialized[0].points);
+        assert_eq!(curves[1].points, deserialized[1].points);
+    }
+
+    #[test]
+    fn test_ordering_preservation() {
+        let curve = create_test_curve();
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        // Convert points to vectors to check ordering
+        let original_points: Vec<_> = curve.points.into_iter().collect();
+        let deserialized_points: Vec<_> = deserialized.points.into_iter().collect();
+
+        // Check if points maintain their order
+        assert_eq!(original_points, deserialized_points);
+    }
+
+    #[test]
+    fn test_curve_with_extremes() {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D {
+            x: Decimal::MAX,
+            y: Decimal::MAX,
+        });
+        points.insert(Point2D {
+            x: Decimal::MIN,
+            y: Decimal::MIN,
+        });
+
+        let curve = Curve {
+            points,
+            x_range: (Decimal::MIN, Decimal::MAX),
+        };
+
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curve.points, deserialized.points);
+        assert_eq!(curve.x_range, deserialized.x_range);
     }
 }
