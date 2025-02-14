@@ -338,4 +338,58 @@ mod tests {
             );
         }
     }
+
+    mod test_surface_metrics {
+        use super::*;
+
+        #[test]
+        fn test_compute_surface_metrics_success() {
+            let curve = MockCurve;
+            let result = curve.compute_surface_metrics();
+            assert!(result.is_ok());
+
+            let metrics = result.unwrap();
+            assert_eq!(metrics.basic.mean, dec!(10.5));
+            assert_eq!(metrics.basic.median, dec!(10.0));
+            assert_eq!(metrics.basic.std_dev, dec!(1.2));
+
+            assert_eq!(metrics.shape.skewness, dec!(0.5));
+            assert_eq!(metrics.shape.kurtosis, dec!(3.0));
+            assert!(!metrics.shape.peaks.is_empty());
+
+            assert_eq!(metrics.range.range, dec!(10.0));
+            assert_eq!(metrics.range.interquartile_range, dec!(6.0));
+
+            assert_eq!(metrics.trend.slope, dec!(1.5));
+            assert_eq!(metrics.trend.r_squared, dec!(0.95));
+
+            assert_eq!(metrics.risk.volatility, dec!(0.15));
+            assert_eq!(metrics.risk.sharpe_ratio, dec!(2.5));
+        }
+
+        #[test]
+        fn test_compute_surface_metrics_error() {
+            let curve = ErrorMockCurve;
+            let result = curve.compute_surface_metrics();
+
+            assert!(result.is_err());
+            assert_eq!(
+                result.unwrap_err().to_string(),
+                "Basic Error: Basic metrics computation failed"
+            );
+        }
+
+        #[test]
+        fn test_surface_metrics_matches_curve_metrics() {
+            let curve = MockCurve;
+            let surface_metrics = curve.compute_surface_metrics().unwrap();
+            let curve_metrics = curve.compute_curve_metrics().unwrap();
+
+            assert_eq!(surface_metrics.basic.mean, curve_metrics.basic.mean);
+            assert_eq!(surface_metrics.shape.skewness, curve_metrics.shape.skewness);
+            assert_eq!(surface_metrics.range.range, curve_metrics.range.range);
+            assert_eq!(surface_metrics.trend.slope, curve_metrics.trend.slope);
+            assert_eq!(surface_metrics.risk.volatility, curve_metrics.risk.volatility);
+        }
+    }
 }
