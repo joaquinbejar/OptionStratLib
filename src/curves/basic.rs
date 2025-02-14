@@ -190,4 +190,40 @@ mod tests_basic_curves_trait {
 
         assert_eq!(curve.points.len(), 1);
     }
+
+    #[test]
+    fn test_get_strike_versus_black_scholes_price() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Price, &option);
+
+        assert!(result.is_ok());
+        let (strike, price) = result.unwrap();
+
+        assert_eq!(strike, option.strike_price.to_dec());
+
+        assert!(price > Decimal::ZERO); 
+        let direct_bs_price = option.calculate_price_black_scholes().unwrap();
+        assert_eq!(price, direct_bs_price); 
+    }
+
+    #[test]
+    fn test_get_strike_versus_unsupported_axis() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Expiration, &option);
+
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::OperationError(crate::error::OperationErrorKind::InvalidParameters {
+                                               operation,
+                                               reason,
+                                           })) => {
+                assert_eq!(operation, "get_axis_value");
+                assert!(reason.contains("not supported"));
+                assert!(reason.contains("Expiration"));
+            }
+            _ => panic!("Expected OperationError with InvalidParameters"),
+        }
+    }
 }
