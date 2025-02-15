@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::error::Error;
 use std::fmt;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Copy)]
 pub enum ExpirationDate {
     Days(Positive),
     DateTime(DateTime<Utc>),
@@ -369,24 +369,23 @@ impl<'de> Deserialize<'de> for ExpirationDate {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Clone, PartialEq, Eq, Hash)]
+
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Side {
     Long,
     Short,
 }
 
-#[allow(dead_code)]
-#[derive(Clone, PartialEq, Eq, Hash)]
+
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptionStyle {
     Call,
     Put,
 }
 
-#[allow(dead_code)]
-#[derive(Clone, Debug, PartialEq)]
 /// Represents the type of option in a financial context.
 /// Options can be categorized into various types based on their characteristics and the conditions under which they can be exercised.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum OptionType {
     /// A European option can only be exercised at the expiry date.
     /// This type of option does not allow the holder to exercise the option before the specified expiration date.
@@ -507,7 +506,7 @@ pub enum OptionType {
 
 /// Describes how the average price is calculated for Asian options.
 #[allow(dead_code)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum AsianAveragingType {
     /// Arithmetic averaging calculates the average of the prices in a straightforward manner.
     /// This is the most common type of averaging for Asian options.
@@ -519,7 +518,7 @@ pub enum AsianAveragingType {
 
 /// Describes the type of barrier for Barrier options.
 #[allow(dead_code)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BarrierType {
     /// The option becomes active only if the underlying asset price goes above a certain level.
     UpAndIn,
@@ -533,7 +532,7 @@ pub enum BarrierType {
 
 /// Describes the type of binary option.
 #[allow(dead_code)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BinaryType {
     /// The option pays a fixed amount of cash if the underlying asset is above or below a certain level.
     CashOrNothing,
@@ -543,7 +542,7 @@ pub enum BinaryType {
 
 /// Describes the type of lookback option.
 #[allow(dead_code)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum LookbackType {
     /// The strike price is fixed at the beginning, and the payoff is based on the maximum or minimum price of the underlying asset during the option's life.
     FixedStrike,

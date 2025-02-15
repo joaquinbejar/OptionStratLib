@@ -109,7 +109,7 @@ impl ShortStraddle {
             Side::Short,
             underlying_symbol.clone(),
             strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -412,7 +412,7 @@ impl Optimizable for ShortStraddle {
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
-            self.short_call.option.expiration_date.clone(),
+            self.short_call.option.expiration_date,
             call.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
@@ -535,7 +535,7 @@ impl Graph for ShortStraddle {
 impl ProbabilityAnalysis for ShortStraddle {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         let option = &self.short_call.option;
-        Ok(option.expiration_date.clone())
+        Ok(option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -741,7 +741,7 @@ impl LongStraddle {
             Side::Long,
             underlying_symbol.clone(),
             strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -1035,7 +1035,7 @@ impl Optimizable for LongStraddle {
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
-            self.long_call.option.expiration_date.clone(),
+            self.long_call.option.expiration_date,
             call.implied_volatility.unwrap() / 100.0,
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
@@ -1142,7 +1142,7 @@ impl Graph for LongStraddle {
 impl ProbabilityAnalysis for LongStraddle {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         let option = &self.long_call.option;
-        Ok(option.expiration_date.clone())
+        Ok(option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -1698,7 +1698,7 @@ mod tests_long_straddle {
             underlying_symbol.clone(),
             underlying_price,
             call_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             risk_free_rate,
             dividend_yield,

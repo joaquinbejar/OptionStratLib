@@ -95,7 +95,7 @@ impl OptionDataPriceParams {
     }
 
     pub fn get_expiration_date(&self) -> ExpirationDate {
-        self.expiration_date.clone()
+        self.expiration_date
     }
 
     pub fn get_implied_volatility(&self) -> Option<Positive> {
@@ -212,7 +212,6 @@ impl RandomPositionsParams {
     }
 }
 
-#[allow(dead_code)]
 pub(crate) fn generate_list_of_strikes(
     reference_price: Positive,
     chain_size: usize,
@@ -253,9 +252,9 @@ pub(crate) fn adjust_volatility(
     Some(volatility_skew)
 }
 
-#[allow(dead_code)]
 pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
-    let input: Result<T, String> = match s.parse::<T>() {
+    let trimmed = s.trim();
+    let input: Result<T, String> = match trimmed.parse::<T>() {
         Ok(value) => Ok(value),
         Err(_) => {
             return None;
@@ -420,6 +419,107 @@ mod tests_parse {
         let input = "42.01";
         let result: Option<Positive> = parse(input);
         assert_eq!(result, spos!(42.01));
+    }
+}
+
+#[cfg(test)]
+mod tests_parse_bis {
+    use super::*;
+    use crate::{spos, Positive};
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_parse_decimal() {
+        let input = "42.5";
+        let result: Option<Decimal> = parse(input);
+        assert_eq!(result, Some(dec!(42.5)));
+
+        let invalid = "not_a_decimal";
+        let result: Option<Decimal> = parse(invalid);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_empty_string() {
+        let input = "";
+        let result: Option<i32> = parse(input);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_whitespace() {
+        let input = "  ";
+        let result: Option<i32> = parse(input);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_bool() {
+        let input = "true";
+        let result: Option<bool> = parse(input);
+        assert_eq!(result, Some(true));
+
+        let input = "false";
+        let result: Option<bool> = parse(input);
+        assert_eq!(result, Some(false));
+
+        let input = "not_a_bool";
+        let result: Option<bool> = parse(input);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_positive() {
+        let input = "42.5";
+        let result: Option<Positive> = parse(input);
+        assert_eq!(result, spos!(42.5));
+
+        // Negative numbers should return None for Positive type
+        let input = "-42.5";
+        let result: Option<Positive> = parse(input);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_different_number_formats() {
+        // Integer
+        let result: Option<i32> = parse("123");
+        assert_eq!(result, Some(123));
+
+        // Float
+        let result: Option<f64> = parse("123.456");
+        assert_eq!(result, Some(123.456));
+
+        // Scientific notation
+        let result: Option<f64> = parse("1.23e2");
+        assert_eq!(result, Some(123.0));
+    }
+
+    #[test]
+    fn test_parse_with_leading_trailing_spaces() {
+        let input = "  42  ";
+        let result: Option<i32> = parse(input);
+        assert_eq!(result, Some(42));
+
+        let input = "  42.5  ";
+        let result: Option<f64> = parse(input);
+        assert_eq!(result, Some(42.5));
+    }
+
+    #[test]
+    fn test_parse_invalid_formats() {
+        // Partial number
+        let result: Option<i32> = parse("42abc");
+        assert_eq!(result, None);
+
+        // Multiple decimal points
+        let result: Option<f64> = parse("42.3.4");
+        assert_eq!(result, None);
+
+        // Invalid scientific notation
+        let result: Option<f64> = parse("1.23e");
+        assert_eq!(result, None);
     }
 }
 
@@ -664,6 +764,87 @@ mod tests_option_data_price_params {
         let display_string = format!("{}", params);
         assert!(display_string.contains("Implied Volatility: 0.000"));
     }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_option_data_price_params_getters() {
+        // Setup test parameters
+        let underlying_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(30.0));
+        let implied_volatility = spos!(0.2);
+        let risk_free_rate = dec!(0.05);
+        let dividend_yield = pos!(0.02);
+
+        let params = OptionDataPriceParams::new(
+            underlying_price,
+            expiration_date,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            None,
+        );
+
+        // Test each getter
+        assert_eq!(params.get_underlying_price(), underlying_price);
+        assert_eq!(params.get_expiration_date(), expiration_date);
+        assert_eq!(params.get_implied_volatility(), implied_volatility);
+        assert_eq!(params.get_risk_free_rate(), risk_free_rate);
+        assert_eq!(params.get_dividend_yield(), dividend_yield);
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_option_data_price_params_getters_with_none_volatility() {
+        let params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            None,  // No implied volatility
+            dec!(0.05),
+            pos!(0.02),
+            None,
+        );
+
+        assert_eq!(params.get_implied_volatility(), None);
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_option_data_price_params_getters_with_datetime_expiration() {
+        use chrono::{Utc, Duration};
+
+        let future_date = Utc::now() + Duration::days(30);
+        let expiration_date = ExpirationDate::DateTime(future_date);
+
+        let params = OptionDataPriceParams::new(
+            pos!(100.0),
+            expiration_date,
+            spos!(0.2),
+            dec!(0.05),
+            pos!(0.02),
+            None,
+        );
+
+        assert_eq!(params.get_expiration_date(), expiration_date);
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_option_data_price_params_getters_zero_values() {
+        let params = OptionDataPriceParams::new(
+            Positive::ZERO,
+            ExpirationDate::Days(Positive::ZERO),
+            Some(Positive::ZERO),
+            Decimal::ZERO,
+            Positive::ZERO,
+            None,
+        );
+
+        assert_eq!(params.get_underlying_price(), Positive::ZERO);
+        assert_eq!(params.get_expiration_date(), ExpirationDate::Days(Positive::ZERO));
+        assert_eq!(params.get_implied_volatility(), Some(Positive::ZERO));
+        assert_eq!(params.get_risk_free_rate(), Decimal::ZERO);
+        assert_eq!(params.get_dividend_yield(), Positive::ZERO);
+    }
 }
 
 #[cfg(test)]
@@ -837,3 +1018,6 @@ mod tests_sample {
         assert_eq!(built_chain.underlying_price, Positive::new(2000.0).unwrap());
     }
 }
+
+
+

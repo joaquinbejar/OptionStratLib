@@ -116,7 +116,7 @@ impl BearCallSpread {
             Side::Short,
             underlying_symbol.clone(),
             short_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -444,7 +444,7 @@ impl Optimizable for BearCallSpread {
             chain.underlying_price,
             short.strike_price,
             long.strike_price,
-            self.short_call.option.expiration_date.clone(),
+            self.short_call.option.expiration_date,
             short.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
@@ -543,7 +543,7 @@ impl Graph for BearCallSpread {
 
 impl ProbabilityAnalysis for BearCallSpread {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.short_call.option.expiration_date.clone())
+        Ok(self.short_call.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {

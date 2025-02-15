@@ -503,8 +503,8 @@ impl Optimizable for PoorMansCoveredCall {
             chain.underlying_price,
             long.strike_price,
             short.strike_price,
-            self.long_call.option.expiration_date.clone(),
-            self.short_call.option.expiration_date.clone(),
+            self.long_call.option.expiration_date,
+            self.short_call.option.expiration_date,
             short.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
@@ -640,7 +640,7 @@ impl Graph for PoorMansCoveredCall {
 
 impl ProbabilityAnalysis for PoorMansCoveredCall {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call.option.expiration_date.clone())
+        Ok(self.long_call.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {

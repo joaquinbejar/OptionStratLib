@@ -86,7 +86,7 @@ impl ProfitLossRange {
             self.lower_bound.unwrap_or(Positive::ZERO),
             volatility_adj.clone(),
             trend.clone(),
-            expiration_date.clone(),
+            expiration_date,
             risk_free_rate,
         )?;
 

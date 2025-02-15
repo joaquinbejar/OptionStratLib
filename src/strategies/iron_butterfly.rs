@@ -96,7 +96,7 @@ impl IronButterfly {
             Side::Short,
             underlying_symbol.clone(),
             short_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -122,7 +122,7 @@ impl IronButterfly {
             Side::Short,
             underlying_symbol.clone(),
             short_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -148,7 +148,7 @@ impl IronButterfly {
             Side::Long,
             underlying_symbol.clone(),
             long_call_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -514,7 +514,7 @@ impl Optimizable for IronButterfly {
                 short_strike.strike_price,
                 long_call.strike_price,
                 long_put.strike_price,
-                self.short_call.option.expiration_date.clone(),
+                self.short_call.option.expiration_date,
                 short_strike.implied_volatility.unwrap() / 100.0,
                 self.short_call.option.risk_free_rate,
                 self.short_call.option.dividend_yield,
@@ -677,7 +677,7 @@ impl Graph for IronButterfly {
 
 impl ProbabilityAnalysis for IronButterfly {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call.option.expiration_date.clone())
+        Ok(self.long_call.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -2563,9 +2563,9 @@ mod tests_iron_butterfly_probability {
         ];
 
         for expiration in expirations {
-            butterfly.long_put.option.expiration_date = expiration.clone();
-            butterfly.short_put.option.expiration_date = expiration.clone();
-            butterfly.short_call.option.expiration_date = expiration.clone();
+            butterfly.long_put.option.expiration_date = expiration;
+            butterfly.short_put.option.expiration_date = expiration;
+            butterfly.short_call.option.expiration_date = expiration;
             butterfly.long_call.option.expiration_date = expiration;
 
             let result = butterfly.probability_of_profit(None, None);

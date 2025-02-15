@@ -95,7 +95,7 @@ impl IronCondor {
             Side::Short,
             underlying_symbol.clone(),
             short_call_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -121,7 +121,7 @@ impl IronCondor {
             Side::Short,
             underlying_symbol.clone(),
             short_put_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -147,7 +147,7 @@ impl IronCondor {
             Side::Long,
             underlying_symbol.clone(),
             long_call_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -523,7 +523,7 @@ impl Optimizable for IronCondor {
                 short_put.strike_price,
                 long_call.strike_price,
                 long_put.strike_price,
-                self.short_call.option.expiration_date.clone(),
+                self.short_call.option.expiration_date,
                 short_put.implied_volatility.unwrap() / 100.0,
                 self.short_call.option.risk_free_rate,
                 self.short_call.option.dividend_yield,
@@ -706,7 +706,7 @@ impl Graph for IronCondor {
 
 impl ProbabilityAnalysis for IronCondor {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call.option.expiration_date.clone())
+        Ok(self.long_call.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {
