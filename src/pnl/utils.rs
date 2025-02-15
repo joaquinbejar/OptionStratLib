@@ -134,7 +134,7 @@ mod tests_pnl_calculator {
         let now = ExpirationDate::Days(pos!(3.0));
 
         let pnl = dummy
-            .calculate_pnl(&pos!(100.0), now.clone(), &pos!(100.0))
+            .calculate_pnl(&pos!(100.0), now, &pos!(100.0))
             .unwrap();
         assert_eq!(pnl.realized, Some(dec!(100.0)));
         assert_eq!(pnl.unrealized, None);

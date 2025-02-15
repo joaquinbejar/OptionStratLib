@@ -88,7 +88,7 @@ impl CallButterfly {
             Side::Long,
             underlying_symbol.clone(),
             long_call_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -114,7 +114,7 @@ impl CallButterfly {
             Side::Short,
             underlying_symbol.clone(),
             short_call_low_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -140,7 +140,7 @@ impl CallButterfly {
             Side::Short,
             underlying_symbol.clone(),
             short_call_high_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -518,7 +518,7 @@ impl Optimizable for CallButterfly {
             long_call.strike_price,
             short_call_low.strike_price,
             short_call_high.strike_price,
-            self.long_call.option.expiration_date.clone(),
+            self.long_call.option.expiration_date,
             long_call.implied_volatility.unwrap(),
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
@@ -662,7 +662,7 @@ impl Graph for CallButterfly {
 
 impl ProbabilityAnalysis for CallButterfly {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call.option.expiration_date.clone())
+        Ok(self.long_call.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {

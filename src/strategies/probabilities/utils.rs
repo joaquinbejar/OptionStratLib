@@ -180,7 +180,7 @@ pub fn calculate_price_probability(
         lower_bound,
         volatility_adj.clone(),
         trend.clone(),
-        expiration_date.clone(),
+        expiration_date,
         risk_free_rate,
     )?;
 
@@ -269,7 +269,7 @@ pub fn calculate_bounds_probability(
             *bound,
             volatility_adj.clone(),
             trend.clone(),
-            expiration_date.clone(),
+            expiration_date,
             risk_free_rate,
         )?;
         bound_probs.push(prob_below);

@@ -103,7 +103,7 @@ impl LongButterflySpread {
             Side::Short,
             underlying_symbol.clone(),
             middle_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity * 2.0, // Double quantity for middle strike
             underlying_price,
@@ -126,7 +126,7 @@ impl LongButterflySpread {
             Side::Long,
             underlying_symbol.clone(),
             low_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -528,7 +528,7 @@ impl Optimizable for LongButterflySpread {
                 low_strike.strike_price,
                 middle_strike.strike_price,
                 high_strike.strike_price,
-                self.long_call_low.option.expiration_date.clone(),
+                self.long_call_low.option.expiration_date,
                 middle_strike.implied_volatility.unwrap() / 100.0,
                 self.long_call_low.option.risk_free_rate,
                 self.long_call_low.option.dividend_yield,
@@ -692,7 +692,7 @@ impl Graph for LongButterflySpread {
 
 impl ProbabilityAnalysis for LongButterflySpread {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call_low.option.expiration_date.clone())
+        Ok(self.long_call_low.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -935,7 +935,7 @@ impl ShortButterflySpread {
             Side::Long,
             underlying_symbol.clone(),
             middle_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity * 2.0, // Double quantity for middle strike
             underlying_price,
@@ -958,7 +958,7 @@ impl ShortButterflySpread {
             Side::Short,
             underlying_symbol.clone(),
             low_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -1352,7 +1352,7 @@ impl Optimizable for ShortButterflySpread {
                 low_strike.strike_price,
                 middle_strike.strike_price,
                 high_strike.strike_price,
-                self.short_call_low.option.expiration_date.clone(),
+                self.short_call_low.option.expiration_date,
                 middle_strike.implied_volatility.unwrap() / 100.0,
                 self.short_call_low.option.risk_free_rate,
                 self.short_call_low.option.dividend_yield,
@@ -1514,7 +1514,7 @@ impl Graph for ShortButterflySpread {
 
 impl ProbabilityAnalysis for ShortButterflySpread {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.short_call_low.option.expiration_date.clone())
+        Ok(self.short_call_low.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {

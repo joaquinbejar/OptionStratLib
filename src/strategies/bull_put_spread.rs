@@ -104,7 +104,7 @@ impl BullPutSpread {
             Side::Long,
             underlying_symbol.clone(),
             long_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -533,7 +533,7 @@ impl Optimizable for BullPutSpread {
             chain.underlying_price,
             long.strike_price,
             short.strike_price,
-            self.long_put.option.expiration_date.clone(),
+            self.long_put.option.expiration_date,
             long.implied_volatility.unwrap() / 100.0,
             self.long_put.option.risk_free_rate,
             self.long_put.option.dividend_yield,
@@ -633,7 +633,7 @@ impl Graph for BullPutSpread {
 
 impl ProbabilityAnalysis for BullPutSpread {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.short_put.option.expiration_date.clone())
+        Ok(self.short_put.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {

@@ -95,7 +95,7 @@ impl OptionDataPriceParams {
     }
 
     pub fn get_expiration_date(&self) -> ExpirationDate {
-        self.expiration_date.clone()
+        self.expiration_date
     }
 
     pub fn get_implied_volatility(&self) -> Option<Positive> {
@@ -777,7 +777,7 @@ mod tests_option_data_price_params {
 
         let params = OptionDataPriceParams::new(
             underlying_price,
-            expiration_date.clone(),
+            expiration_date,
             implied_volatility,
             risk_free_rate,
             dividend_yield,
@@ -817,7 +817,7 @@ mod tests_option_data_price_params {
 
         let params = OptionDataPriceParams::new(
             pos!(100.0),
-            expiration_date.clone(),
+            expiration_date,
             spos!(0.2),
             dec!(0.05),
             pos!(0.02),

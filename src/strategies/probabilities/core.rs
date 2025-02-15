@@ -115,7 +115,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 *price,
                 volatility_adj.clone(),
                 trend.clone(),
-                expiration.clone(),
+                expiration,
                 None,
             )?;
 
@@ -308,7 +308,7 @@ mod tests_probability_analysis {
 
     impl ProbabilityAnalysis for MockStrategy {
         fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-            Ok(self.expiration.clone())
+            Ok(self.expiration)
         }
 
         fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -530,7 +530,7 @@ mod tests_expected_value {
 
     impl ProbabilityAnalysis for TestStrategy {
         fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-            Ok(self.expiration.clone())
+            Ok(self.expiration)
         }
 
         fn get_risk_free_rate(&self) -> Option<Decimal> {
