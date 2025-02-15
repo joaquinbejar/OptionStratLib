@@ -16,18 +16,19 @@ use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
+use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
 
 type PriceBinomialTree = OptionsResult<(Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>)>;
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct ExoticParams {
     pub spot_prices: Option<Vec<Positive>>, // Asian
     pub spot_min: Option<Decimal>,          // Lookback
     pub spot_max: Option<Decimal>,          // Lookback
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Options {
     pub option_type: OptionType,
     pub side: Side,
@@ -171,6 +172,19 @@ impl Options {
         Ok(Decimal::from_f64(price).unwrap())
     }
 
+    /// Calculates the intrinsic value of the option.
+    ///
+    /// The intrinsic value is the difference between the underlying asset's price and the option's strike price.
+    /// For call options, the intrinsic value is the maximum of zero and the difference between the underlying price and the strike price.
+    /// For put options, the intrinsic value is the maximum of zero and the difference between the strike price and the underlying price.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying_price` - The current price of the underlying asset.
+    ///
+    /// # Returns
+    ///
+    /// * `OptionsResult<Decimal>` - The intrinsic value of the option, or an error if the calculation fails.
     pub fn intrinsic_value(&self, underlying_price: Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: underlying_price,
@@ -1898,3 +1912,19 @@ mod tests_calculate_implied_volatility {
         assert_pos_relative_eq!(iv, pos!(0.111328125), pos!(0.01));
     }
 }
+
+#[cfg(test)]
+mod tests_serialize_deserialize {
+    use super::*;
+    use crate::model::utils::create_sample_option_simplest_strike;
+
+    #[test]
+    fn test_serialize_deserialize_options() {
+        let options = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
+        let serialized = serde_json::to_string(&options).expect("Failed to serialize");
+        let deserialized: Options = serde_json::from_str(&serialized).expect("Failed to deserialize");
+        assert_eq!(options, deserialized);
+    }
+}
+
+
