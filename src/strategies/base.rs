@@ -16,11 +16,13 @@ use crate::{OptionStyle, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
 use std::f64;
+use std::str::FromStr;
+use serde::{Deserialize, Serialize};
 use tracing::error;
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum StrategyType {
     BullCallSpread,
     BearCallSpread,
@@ -30,8 +32,10 @@ pub enum StrategyType {
     ShortButterflySpread,
     IronCondor,
     IronButterfly,
-    Straddle,
-    Strangle,
+    LongStraddle,
+    ShortStraddle,
+    LongStrangle,
+    ShortStrangle,
     CoveredCall,
     ProtectivePut,
     Collar,
@@ -42,6 +46,44 @@ pub enum StrategyType {
     PoorMansCoveredCall,
     CallButterfly,
     Custom,
+}
+
+impl FromStr for StrategyType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "BullCallSpread" => Ok(StrategyType::BullCallSpread),
+            "BearCallSpread" => Ok(StrategyType::BearCallSpread),
+            "BullPutSpread" => Ok(StrategyType::BullPutSpread),
+            "BearPutSpread" => Ok(StrategyType::BearPutSpread),
+            "LongButterflySpread" => Ok(StrategyType::LongButterflySpread),
+            "ShortButterflySpread" => Ok(StrategyType::ShortButterflySpread),
+            "IronCondor" => Ok(StrategyType::IronCondor),
+            "IronButterfly" => Ok(StrategyType::IronButterfly),
+            "LongStraddle" => Ok(StrategyType::LongStraddle),
+            "ShortStraddle" => Ok(StrategyType::ShortStraddle),
+            "LongStrangle" => Ok(StrategyType::LongStrangle),
+            "ShortStrangle" => Ok(StrategyType::ShortStrangle),
+            "CoveredCall" => Ok(StrategyType::CoveredCall),
+            "ProtectivePut" => Ok(StrategyType::ProtectivePut),
+            "Collar" => Ok(StrategyType::Collar),
+            "LongCall" => Ok(StrategyType::LongCall),
+            "LongPut" => Ok(StrategyType::LongPut),
+            "ShortCall" => Ok(StrategyType::ShortCall),
+            "ShortPut" => Ok(StrategyType::ShortPut),
+            "PoorMansCoveredCall" => Ok(StrategyType::PoorMansCoveredCall),
+            "CallButterfly" => Ok(StrategyType::CallButterfly),
+            "Custom" => Ok(StrategyType::Custom),
+            _ => Err(()),
+        }
+    }
+}
+
+impl StrategyType {
+    pub fn is_valid(strategy: &str) -> bool {
+        StrategyType::from_str(strategy).is_ok()
+    }
 }
 
 /// Represents a trading strategy.
@@ -764,9 +806,9 @@ mod tests_strategy_type {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_type_debug() {
-        let strategy = StrategyType::Straddle;
+        let strategy = StrategyType::ShortStraddle;
         let debug_string = format!("{:?}", strategy);
-        assert_eq!(debug_string, "Straddle");
+        assert_eq!(debug_string, "ShortStraddle");
     }
 
     #[test]
@@ -778,8 +820,10 @@ mod tests_strategy_type {
             StrategyType::BullPutSpread,
             StrategyType::BearPutSpread,
             StrategyType::IronCondor,
-            StrategyType::Straddle,
-            StrategyType::Strangle,
+            StrategyType::LongStraddle,
+            StrategyType::ShortStraddle,
+            StrategyType::LongStrangle,
+            StrategyType::ShortStrangle,
             StrategyType::CoveredCall,
             StrategyType::ProtectivePut,
             StrategyType::Collar,
@@ -801,6 +845,47 @@ mod tests_strategy_type {
                 }
             }
         }
+    }
+    
+    #[test]
+    fn test_strategy_type_from_str() {
+        assert_eq!(StrategyType::from_str("ShortStrangle"), Ok(StrategyType::ShortStrangle));
+        assert_eq!(StrategyType::from_str("LongCall"), Ok(StrategyType::LongCall));
+        assert_eq!(StrategyType::from_str("BullCallSpread"), Ok(StrategyType::BullCallSpread));
+        assert_eq!(StrategyType::from_str("InvalidStrategy"), Err(()));
+    }
+
+    #[test]
+    fn test_strategy_type_is_valid() {
+        assert!(StrategyType::is_valid("ShortStrangle"));
+        assert!(StrategyType::is_valid("LongPut"));
+        assert!(StrategyType::is_valid("CoveredCall"));
+        assert!(!StrategyType::is_valid("InvalidStrategy"));
+        assert!(!StrategyType::is_valid("Random"));
+    }
+
+    #[test]
+    fn test_strategy_type_serialization() {
+        let strategy = StrategyType::IronCondor;
+        let serialized = serde_json::to_string(&strategy).unwrap();
+        assert_eq!(serialized, "\"IronCondor\"");
+
+        let deserialized: StrategyType = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, StrategyType::IronCondor);
+    }
+
+    #[test]
+    fn test_strategy_type_deserialization() {
+        let json_data = "\"ShortStraddle\"";
+        let deserialized: StrategyType = serde_json::from_str(json_data).unwrap();
+        assert_eq!(deserialized, StrategyType::ShortStraddle);
+    }
+
+    #[test]
+    fn test_invalid_strategy_type_deserialization() {
+        let json_data = "\"InvalidStrategy\"";
+        let deserialized: Result<StrategyType, _> = serde_json::from_str(json_data);
+        assert!(deserialized.is_err());
     }
 }
 
@@ -1313,8 +1398,10 @@ mod tests_strategy_methods {
             StrategyType::ShortButterflySpread,
             StrategyType::IronCondor,
             StrategyType::IronButterfly,
-            StrategyType::Straddle,
-            StrategyType::Strangle,
+            StrategyType::LongStraddle,
+            StrategyType::ShortStraddle,
+            StrategyType::LongStrangle,
+            StrategyType::ShortStrangle,
             StrategyType::CoveredCall,
             StrategyType::ProtectivePut,
             StrategyType::Collar,
@@ -1593,3 +1680,5 @@ mod tests_strategy_net_operations {
         assert!(result > Positive::ZERO);
     }
 }
+
+

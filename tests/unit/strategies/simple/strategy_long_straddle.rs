@@ -38,7 +38,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Assertions to validate strategy properties and computations
-    assert_eq!(strategy.title(), "Long Straddle Strategy: \n\tUnderlying: CL @ $7140 Long Call European Option\n\tUnderlying: CL @ $7140 Long Put European Option");
+    assert_eq!(strategy.title(), "LongStraddle Strategy: \n\tUnderlying: CL @ $7140 Long Call European Option\n\tUnderlying: CL @ $7140 Long Put European Option");
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64(),
