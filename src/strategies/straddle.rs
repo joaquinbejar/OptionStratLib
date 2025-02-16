@@ -40,6 +40,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{info, trace};
+use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -160,6 +161,13 @@ impl ShortStraddle {
         strategy
     }
 }
+
+impl StrategyConstructor for ShortStraddle {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
+    }
+}
+
 
 impl BreakEvenable for ShortStraddle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
@@ -790,6 +798,12 @@ impl LongStraddle {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl StrategyConstructor for LongStraddle {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 

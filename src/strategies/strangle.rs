@@ -40,6 +40,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info, trace};
+use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -144,6 +145,12 @@ impl ShortStrangle {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl StrategyConstructor for ShortStrangle {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 
@@ -828,6 +835,12 @@ impl LongStrangle {
             .expect("Unable to update break even points");
 
         strategy
+    }
+}
+
+impl StrategyConstructor for LongStrangle {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 

@@ -35,7 +35,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::GreeksError;
+use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -58,6 +58,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::debug;
+use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const BEAR_CALL_SPREAD_DESCRIPTION: &str =
     "A bear call spread is created by selling a call option with a lower strike price \
@@ -167,6 +168,84 @@ impl BearCallSpread {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl StrategyConstructor for BearCallSpread {
+    fn get_strategy(vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        // Need exactly 2 options for a bear call spread
+        if vec_options.len() != 2 {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Bear Call Spread get_strategy".to_string(),
+                reason: "Must have exactly 2 options".to_string(),
+            }));
+        }
+
+        // Sort options by strike price to identify short and long positions
+        let mut sorted_options = vec_options.clone();
+        sorted_options.sort_by(|a, b| a.option.strike_price.partial_cmp(&b.option.strike_price).unwrap());
+
+        let lower_strike_option = &sorted_options[0];
+        let higher_strike_option = &sorted_options[1];
+
+        // Validate options are calls
+        if lower_strike_option.option.option_style != OptionStyle::Call
+            || higher_strike_option.option.option_style != OptionStyle::Call {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Bear Call Spread get_strategy".to_string(),
+                reason: "Options must be calls".to_string(),
+            }));
+        }
+
+        // Validate option sides
+        if lower_strike_option.option.side != Side::Short
+            || higher_strike_option.option.side != Side::Long {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Bear Call Spread get_strategy".to_string(),
+                reason: "Bear Call Spread requires a short lower strike call and a long higher strike call".to_string(),
+            }));
+        }
+
+        // Validate expiration dates match
+        if lower_strike_option.option.expiration_date != higher_strike_option.option.expiration_date {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Bear Call Spread get_strategy".to_string(),
+                reason: "Options must have the same expiration date".to_string(),
+            }));
+        }
+
+        // Create positions
+        let short_call = Position::new(
+            lower_strike_option.option.clone(),
+            lower_strike_option.premium,
+            Utc::now(),
+            lower_strike_option.open_fee,
+            lower_strike_option.close_fee,
+        );
+
+        let long_call = Position::new(
+            higher_strike_option.option.clone(),
+            higher_strike_option.premium,
+            Utc::now(),
+            higher_strike_option.open_fee,
+            higher_strike_option.close_fee,
+        );
+
+        // Create strategy
+        let mut strategy = BearCallSpread {
+            name: "Bear Call Spread".to_string(),
+            kind: StrategyType::BearCallSpread,
+            description: BEAR_CALL_SPREAD_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call,
+            long_call,
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
     }
 }
 
@@ -2561,5 +2640,109 @@ mod tests_adjust_option_position_short {
 
         assert!(result.is_ok());
         assert_eq!(strategy.short_call.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_strategy_constructor {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use crate::pos;
+
+    fn create_test_option(strike: Positive, side: Side) -> OptionWithCosts {
+        OptionWithCosts {
+            open_fee: Positive::ONE,
+            close_fee: Positive::ONE,
+            premium: pos!(5.0),
+            option: Options::new(
+                OptionType::European,
+                side,
+                "TEST".to_string(),
+                strike,
+                ExpirationDate::Days(pos!(30.0)),
+                pos!(0.2),
+                Positive::ONE,
+                pos!(100.0),
+                dec!(0.05),
+                OptionStyle::Call,
+                pos!(0.01),
+                None,
+            ),
+        }
+    }
+
+    #[test]
+    fn test_get_strategy_valid() {
+        let options = vec![
+            create_test_option(pos!(95.0), Side::Short),
+            create_test_option(pos!(105.0), Side::Long),
+        ];
+
+        let result = BearCallSpread::get_strategy(&options);
+        assert!(result.is_ok());
+
+        let strategy = result.unwrap();
+        assert_eq!(strategy.short_call.option.strike_price, pos!(95.0));
+        assert_eq!(strategy.long_call.option.strike_price, pos!(105.0));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_number_of_options() {
+        let options = vec![create_test_option(pos!(95.0), Side::Short)];
+
+        let result = BearCallSpread::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Bear Call Spread get_strategy" && reason == "Must have exactly 2 options"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_option_style() {
+        let mut option1 = create_test_option(pos!(95.0), Side::Short);
+        option1.option.option_style = OptionStyle::Put;
+        let option2 = create_test_option(pos!(105.0), Side::Long);
+
+        let options = vec![option1, option2];
+        let result = BearCallSpread::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Bear Call Spread get_strategy" && reason == "Options must be calls"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_sides() {
+        let options = vec![
+            create_test_option(pos!(95.0), Side::Long),
+            create_test_option(pos!(105.0), Side::Short),
+        ];
+
+        let result = BearCallSpread::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Bear Call Spread get_strategy" 
+                && reason == "Bear Call Spread requires a short lower strike call and a long higher strike call"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_different_expiration_dates() {
+        let mut option1 = create_test_option(pos!(95.0), Side::Short);
+        let mut option2 = create_test_option(pos!(105.0), Side::Long);
+
+        option1.option.expiration_date = ExpirationDate::Days(pos!(30.0));
+        option2.option.expiration_date = ExpirationDate::Days(pos!(60.0));
+
+        let options = vec![option1, option2];
+        let result = BearCallSpread::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Bear Call Spread get_strategy" && reason == "Options must have the same expiration date"
+        ));
     }
 }

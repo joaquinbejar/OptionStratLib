@@ -27,6 +27,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
+use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
@@ -268,6 +269,12 @@ impl CustomStrategy {
         }
 
         Ok((profit_zones, loss_zones))
+    }
+}
+
+impl StrategyConstructor for CustomStrategy {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 

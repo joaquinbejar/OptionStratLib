@@ -15,7 +15,7 @@ use crate::strategies::utils::{calculate_price_range, FindOptimalSide, Optimizat
 use crate::{OptionStyle, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
-use std::f64;
+use std::{f64, fmt};
 use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -83,6 +83,12 @@ impl FromStr for StrategyType {
 impl StrategyType {
     pub fn is_valid(strategy: &str) -> bool {
         StrategyType::from_str(strategy).is_ok()
+    }
+}
+
+impl fmt::Display for StrategyType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
