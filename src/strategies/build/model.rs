@@ -3,11 +3,12 @@
     Email: jb@taunais.com 
     Date: 16/2/25
  ******************************************************************************/
+
 use serde::{Deserialize, Serialize};
 use crate::{Options, Positive};
 use crate::error::StrategyError;
 use crate::strategies::base::StrategyType;
-use crate::strategies::{BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy, IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategies};
+use crate::strategies::{BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy, IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategies, StrategyConstructor};
 
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -24,12 +25,6 @@ pub struct StrategyRequest {
     pub options: Vec<OptionWithCosts>,
 }
 
-pub trait StrategyConstructor: Strategies {
-    fn get_strategy( _vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> where Self: Sized {
-        Err(StrategyError::NotImplemented)
-    }
-}
-
 impl StrategyRequest {
     pub fn new(strategy_type: StrategyType, options: Vec<OptionWithCosts>) -> Self {
         Self {
@@ -37,7 +32,7 @@ impl StrategyRequest {
             options,
         }
     }
-    
+
     pub fn get_strategy(&self) -> Result<Box<dyn Strategies>, StrategyError> {
         match self.strategy_type {
             StrategyType::BullCallSpread => Ok(Box::new(BullCallSpread::get_strategy(&self.options)?)),
@@ -66,7 +61,6 @@ impl StrategyRequest {
     }
 }
 
-
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
@@ -75,7 +69,7 @@ mod tests_serialization {
     use serde_json;
     use crate::model::utils::create_sample_option_with_date;
     use crate::{pos, ExpirationDate, OptionStyle, OptionType, Side};
-    
+
 
     fn sample_date() -> NaiveDateTime {
         DateTime::from_timestamp(1672531200, 0).unwrap().naive_utc()
