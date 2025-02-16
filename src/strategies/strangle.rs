@@ -83,7 +83,7 @@ impl ShortStrangle {
         }
         let mut strategy = ShortStrangle {
             name: "Short Strangle".to_string(),
-            kind: StrategyType::Strangle,
+            kind: StrategyType::ShortStrangle,
             description: SHORT_STRANGLE_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             short_call: Position::default(),
@@ -465,7 +465,7 @@ impl Profit for ShortStrangle {
 
 impl Graph for ShortStrangle {
     fn title(&self) -> String {
-        let strategy_title = format!("Short {:?} Strategy: ", self.kind);
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
         let leg_titles: Vec<String> = [self.short_call.title(), self.short_put.title()]
             .iter()
             .map(|leg| leg.to_string())
@@ -766,7 +766,7 @@ impl LongStrangle {
         }
         let mut strategy = LongStrangle {
             name: "Long Strangle".to_string(),
-            kind: StrategyType::Strangle,
+            kind: StrategyType::LongStrangle,
             description: LONG_STRANGLE_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             long_call: Position::default(),
@@ -1132,7 +1132,7 @@ impl Profit for LongStrangle {
 
 impl Graph for LongStrangle {
     fn title(&self) -> String {
-        let strategy_title = format!("Long {:?} Strategy: ", self.kind);
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
         let leg_titles: Vec<String> = [self.long_call.title(), self.long_put.title()]
             .iter()
             .map(|leg| leg.to_string())
@@ -1439,7 +1439,7 @@ mod tests_short_strangle {
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "Short Strangle");
-        assert_eq!(strategy.kind, StrategyType::Strangle);
+        assert_eq!(strategy.kind, StrategyType::ShortStrangle);
         assert_eq!(
             strategy.description,
             "A short strangle involves selling an out-of-the-money call and an \
@@ -1564,7 +1564,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
         }
 
         let title = strategy.title();
-        assert!(title.contains("Short Strangle Strategy"));
+        assert!(title.contains("ShortStrangle Strategy"));
         assert!(title.contains("Call"));
         assert!(title.contains("Put"));
     }
@@ -1765,7 +1765,7 @@ mod tests_long_strangle {
         );
 
         assert_eq!(strategy.name, "Long Strangle");
-        assert_eq!(strategy.kind, StrategyType::Strangle);
+        assert_eq!(strategy.kind, StrategyType::LongStrangle);
         assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
 
         let break_even_points = vec![128.0, 172.0];
@@ -1855,7 +1855,7 @@ mod tests_long_strangle {
     fn test_new() {
         let strategy = setup_long_strangle();
         assert_eq!(strategy.name, "Long Strangle");
-        assert_eq!(strategy.kind, StrategyType::Strangle);
+        assert_eq!(strategy.kind, StrategyType::LongStrangle);
         assert_eq!(strategy.description, LONG_STRANGLE_DESCRIPTION);
     }
 
@@ -1972,7 +1972,7 @@ mod tests_long_strangle {
 
         // Test title
         let title = strategy.title();
-        assert!(title.contains("Long Strangle Strategy"));
+        assert!(title.contains("LongStrangle Strategy"));
         assert!(title.contains("Call"));
         assert!(title.contains("Put"));
     }

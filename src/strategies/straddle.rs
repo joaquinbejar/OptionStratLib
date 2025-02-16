@@ -97,7 +97,7 @@ impl ShortStraddle {
 
         let mut strategy = ShortStraddle {
             name: "Short Straddle".to_string(),
-            kind: StrategyType::Straddle,
+            kind: StrategyType::ShortStraddle,
             description: SHORT_STRADDLE_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             short_call: Position::default(),
@@ -449,7 +449,7 @@ impl Profit for ShortStraddle {
 
 impl Graph for ShortStraddle {
     fn title(&self) -> String {
-        let strategy_title = format!("Short {:?} Strategy: ", self.kind);
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
         let leg_titles: Vec<String> = [self.short_call.title(), self.short_put.title()]
             .iter()
             .map(|leg| leg.to_string())
@@ -729,7 +729,7 @@ impl LongStraddle {
 
         let mut strategy = LongStraddle {
             name: "Long Straddle".to_string(),
-            kind: StrategyType::Straddle,
+            kind: StrategyType::LongStraddle,
             description: LONG_STRADDLE_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             long_call: Position::default(),
@@ -1059,7 +1059,7 @@ impl Profit for LongStraddle {
 
 impl Graph for LongStraddle {
     fn title(&self) -> String {
-        let strategy_title = format!("Long {:?} Strategy: ", self.kind);
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
         let leg_titles: Vec<String> = [self.long_call.title(), self.long_put.title()]
             .iter()
             .map(|leg| leg.to_string())
@@ -1338,7 +1338,7 @@ mod tests_short_straddle {
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "Short Straddle");
-        assert_eq!(strategy.kind, StrategyType::Straddle);
+        assert_eq!(strategy.kind, StrategyType::ShortStraddle);
         assert_eq!(
             strategy.description,
             "Short Straddle strategy involves simultaneously selling a put and a call option with \
@@ -1494,7 +1494,7 @@ mod tests_short_straddle {
         }
 
         let title = strategy.title();
-        assert!(title.contains("Short Straddle Strategy"));
+        assert!(title.contains("ShortStraddle Strategy"));
         assert!(title.contains("Call"));
         assert!(title.contains("Put"));
     }
@@ -1712,7 +1712,7 @@ mod tests_long_straddle {
         );
 
         assert_eq!(strategy.name, "Long Straddle");
-        assert_eq!(strategy.kind, StrategyType::Straddle);
+        assert_eq!(strategy.kind, StrategyType::LongStraddle);
         assert_eq!(strategy.description, LONG_STRADDLE_DESCRIPTION);
 
         let break_even_points = vec![148.0, 172.0];
@@ -1761,7 +1761,7 @@ mod tests_long_straddle {
     fn test_new() {
         let strategy = setup_long_straddle();
         assert_eq!(strategy.name, "Long Straddle");
-        assert_eq!(strategy.kind, StrategyType::Straddle);
+        assert_eq!(strategy.kind, StrategyType::LongStraddle);
         assert_eq!(strategy.description, LONG_STRADDLE_DESCRIPTION);
     }
 
@@ -1871,7 +1871,7 @@ mod tests_long_straddle {
 
         // Test title
         let title = strategy.title();
-        assert!(title.contains("Long Straddle Strategy"));
+        assert!(title.contains("LongStraddle Strategy"));
         assert!(title.contains("Call"));
         assert!(title.contains("Put"));
     }
