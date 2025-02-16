@@ -178,7 +178,7 @@ impl LongButterflySpread {
 }
 
 impl StrategyConstructor for LongButterflySpread {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
         todo!()
     }
 }
@@ -1015,7 +1015,7 @@ impl ShortButterflySpread {
 }
 
 impl StrategyConstructor for ShortButterflySpread {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

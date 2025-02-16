@@ -149,7 +149,7 @@ impl ShortStrangle {
 }
 
 impl StrategyConstructor for ShortStrangle {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
         todo!()
     }
 }
@@ -839,7 +839,7 @@ impl LongStrangle {
 }
 
 impl StrategyConstructor for LongStrangle {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

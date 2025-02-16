@@ -167,7 +167,7 @@ impl PoorMansCoveredCall {
 }
 
 impl StrategyConstructor for PoorMansCoveredCall {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

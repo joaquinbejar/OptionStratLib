@@ -172,7 +172,7 @@ impl BearCallSpread {
 }
 
 impl StrategyConstructor for BearCallSpread {
-    fn get_strategy(vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a bear call spread
         if vec_options.len() != 2 {
             return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
@@ -182,7 +182,7 @@ impl StrategyConstructor for BearCallSpread {
         }
 
         // Sort options by strike price to identify short and long positions
-        let mut sorted_options = vec_options.clone();
+        let mut sorted_options = vec_options.to_vec();
         sorted_options.sort_by(|a, b| a.option.strike_price.partial_cmp(&b.option.strike_price).unwrap());
 
         let lower_strike_option = &sorted_options[0];
