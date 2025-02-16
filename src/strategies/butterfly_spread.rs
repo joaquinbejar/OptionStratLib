@@ -46,7 +46,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
-use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
+use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =
     "A long butterfly spread is created by buying one call at a lower strike price, \

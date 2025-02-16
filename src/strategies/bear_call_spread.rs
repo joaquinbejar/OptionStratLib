@@ -58,7 +58,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::debug;
-use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
+use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const BEAR_CALL_SPREAD_DESCRIPTION: &str =
     "A bear call spread is created by selling a call option with a lower strike price \

@@ -45,7 +45,7 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use crate::error::GreeksError;
 use tracing::debug;
-use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
+use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =
     "A bull put spread is created by buying a put option with a lower strike price \

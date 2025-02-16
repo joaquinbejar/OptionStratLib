@@ -38,7 +38,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
-use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
+use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
     "A bear put spread is created by buying a put option with a higher strike price \
