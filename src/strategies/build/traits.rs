@@ -8,6 +8,8 @@ use crate::strategies::build::model::OptionWithCosts;
 use crate::strategies::Strategies;
 
 pub trait StrategyConstructor: Strategies {
+
+    #[allow(clippy::ptr_arg)]
     fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError>
     where
         Self: Sized,
