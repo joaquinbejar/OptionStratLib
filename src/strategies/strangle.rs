@@ -41,7 +41,6 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info, trace};
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
-use crate::strategies::ShortStraddle;
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \

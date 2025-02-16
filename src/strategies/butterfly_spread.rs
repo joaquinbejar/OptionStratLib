@@ -46,7 +46,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
-use crate::strategies::BearPutSpread;
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =

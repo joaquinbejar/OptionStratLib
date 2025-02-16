@@ -41,7 +41,6 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
-use crate::strategies::IronCondor;
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \

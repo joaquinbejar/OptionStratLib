@@ -61,7 +61,6 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
-use crate::strategies::ShortStrangle;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \

@@ -41,7 +41,6 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{info, trace};
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
-use crate::strategies::IronButterfly;
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral

@@ -44,7 +44,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info};
-use crate::strategies::BearCallSpread;
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =

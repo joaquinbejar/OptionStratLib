@@ -43,10 +43,8 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
-
 use crate::error::GreeksError;
 use tracing::debug;
-use crate::strategies::BullCallSpread;
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =

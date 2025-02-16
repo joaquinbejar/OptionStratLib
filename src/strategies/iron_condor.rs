@@ -39,7 +39,6 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
-use crate::strategies::ShortButterflySpread;
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \

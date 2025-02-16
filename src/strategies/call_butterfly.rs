@@ -33,7 +33,6 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
 use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
-use crate::strategies::ShortStrangle;
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
