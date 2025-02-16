@@ -205,6 +205,7 @@ pub mod protective_put;
 pub mod straddle;
 pub mod strangle;
 pub mod utils;
+mod general;
 
 pub use base::Strategies;
 pub use bear_call_spread::BearCallSpread;
@@ -223,3 +224,4 @@ pub use poor_mans_covered_call::PoorMansCoveredCall;
 pub use straddle::{LongStraddle, ShortStraddle};
 pub use strangle::{LongStrangle, ShortStrangle};
 pub use utils::FindOptimalSide;
+
