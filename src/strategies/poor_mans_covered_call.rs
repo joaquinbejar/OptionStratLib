@@ -60,6 +60,8 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
+use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
+use crate::strategies::ShortStrangle;
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -162,6 +164,12 @@ impl PoorMansCoveredCall {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl StrategyConstructor for PoorMansCoveredCall {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 

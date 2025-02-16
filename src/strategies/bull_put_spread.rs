@@ -46,6 +46,8 @@ use std::error::Error;
 
 use crate::error::GreeksError;
 use tracing::debug;
+use crate::strategies::BullCallSpread;
+use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =
     "A bull put spread is created by buying a put option with a lower strike price \
@@ -156,6 +158,12 @@ impl BullPutSpread {
             .expect("Unable to update break even points");
 
         strategy
+    }
+}
+
+impl StrategyConstructor for BullPutSpread {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 

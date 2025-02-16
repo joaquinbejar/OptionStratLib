@@ -28,9 +28,7 @@ use crate::pricing::Profit;
 use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyType, Validable};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{
-    DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD,
-};
+use crate::strategies::{BullPutSpread, DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
@@ -40,6 +38,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
+use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
     "A bear put spread is created by buying a put option with a higher strike price \
@@ -149,6 +148,12 @@ impl BearPutSpread {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl StrategyConstructor for BearPutSpread {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 

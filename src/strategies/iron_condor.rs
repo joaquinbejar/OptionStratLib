@@ -38,6 +38,8 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
+use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
+use crate::strategies::ShortButterflySpread;
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -197,6 +199,12 @@ impl IronCondor {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl StrategyConstructor for IronCondor {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 

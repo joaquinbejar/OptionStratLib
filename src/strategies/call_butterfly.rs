@@ -32,6 +32,8 @@ use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
+use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
+use crate::strategies::ShortStrangle;
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -165,6 +167,12 @@ impl CallButterfly {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl StrategyConstructor for CallButterfly {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 

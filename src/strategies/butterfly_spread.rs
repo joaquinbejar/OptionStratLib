@@ -46,6 +46,8 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
+use crate::strategies::BearPutSpread;
+use crate::strategies::general::{OptionWithCosts, StrategyConstructor};
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =
     "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -173,6 +175,12 @@ impl LongButterflySpread {
             .expect("Unable to update break even points");
 
         strategy
+    }
+}
+
+impl StrategyConstructor for LongButterflySpread {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 
@@ -1004,6 +1012,12 @@ impl ShortButterflySpread {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl StrategyConstructor for ShortButterflySpread {
+    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+        todo!()
     }
 }
 
