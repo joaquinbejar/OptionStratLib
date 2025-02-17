@@ -17,7 +17,7 @@ use crate::strategies::base::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::{LongStrangle, StrategyBasics, StrategyConstructor};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -28,6 +28,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
+use crate::pnl::utils::{PnL, PnLCalculator};
 
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
@@ -678,6 +679,30 @@ impl Greeks for CustomStrategy {
             .iter()
             .map(|position| &position.option)
             .collect())
+    }
+}
+
+impl PnLCalculator for CustomStrategy {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self.positions
+            .iter()
+            .map(|position| position.calculate_pnl(market_price, expiration_date, implied_volatility))
+            .sum())
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self.positions
+            .iter()
+            .map(|position| position.calculate_pnl_at_expiration(underlying_price))
+            .sum())
     }
 }
 
