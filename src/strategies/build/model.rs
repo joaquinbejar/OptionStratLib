@@ -22,7 +22,7 @@ pub struct StrategyRequest {
 }
 
 impl StrategyRequest {
-    pub fn new(strategy_type: StrategyType, options: Vec<Position>) -> Self {
+    pub fn new(strategy_type: StrategyType, positions: Vec<Position>) -> Self {
         Self {
             strategy_type,
             positions,
@@ -133,7 +133,7 @@ mod tests_serialization {
 
         // Verify structure
         assert!(serialized.contains("\"strategy_type\":\"BearCallSpread\""));
-        assert!(serialized.contains("\"options\":["));
+        assert!(serialized.contains("\"positions\":["));
         assert!(serialized.contains("\"underlying_symbol\":\"AAPL\""));
         assert!(serialized.contains("\"premium\":4.5"));
         assert!(serialized.contains("\"open_fee\":1"));
@@ -144,7 +144,7 @@ mod tests_serialization {
     fn test_strategy_request_deserialization() {
         let json_data = r#"{
             "strategy_type": "BearCallSpread",
-            "options": [
+            "positions": [
                 {
                     "option": {
                         "option_type": "European",
@@ -215,7 +215,7 @@ mod tests_serialization {
     fn test_strategy_request_invalid_json() {
         let invalid_json = r#"{
             "strategy_type": "InvalidStrategy",
-            "options": []
+            "positions": []
         }"#;
 
         let result = serde_json::from_str::<StrategyRequest>(invalid_json);
@@ -226,7 +226,7 @@ mod tests_serialization {
     fn test_strategy_request_empty_options() {
         let json_data = r#"{
             "strategy_type": "BearCallSpread",
-            "options": []
+            "positions": []
         }"#;
 
         let deserialized: StrategyRequest = serde_json::from_str(json_data).unwrap();
