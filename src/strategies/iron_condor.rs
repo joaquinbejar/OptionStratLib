@@ -31,7 +31,7 @@ use crate::strategies::delta_neutral::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{LongStrangle, StrategyBasics, StrategyConstructor};
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
@@ -912,28 +912,34 @@ impl PnLCalculator for IronCondor {
     ) -> Result<PnL, Box<dyn Error>> {
         Ok(self
             .long_call
-            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
             + self
                 .long_put
-                .calculate_pnl(market_price, expiration_date, implied_volatility)
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?
             + self
                 .short_call
-                .calculate_pnl(market_price, expiration_date, implied_volatility)
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?
             + self
                 .short_put
-                .calculate_pnl(market_price, expiration_date, implied_volatility))
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        Ok(self.long_call.calculate_pnl_at_expiration(underlying_price)
-            + self.long_put.calculate_pnl_at_expiration(underlying_price)
+        Ok(self
+            .long_call
+            .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .long_put
+                .calculate_pnl_at_expiration(underlying_price)?
             + self
                 .short_call
-                .calculate_pnl_at_expiration(underlying_price)
-            + self.short_put.calculate_pnl_at_expiration(underlying_price))
+                .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .short_put
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 

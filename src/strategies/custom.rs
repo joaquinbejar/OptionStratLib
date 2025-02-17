@@ -11,13 +11,14 @@ use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
+use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{
     BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{LongStrangle, StrategyBasics, StrategyConstructor};
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -28,7 +29,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
-use crate::pnl::utils::{PnL, PnLCalculator};
 
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
@@ -689,9 +689,14 @@ impl PnLCalculator for CustomStrategy {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        Ok(self.positions
+        Ok(self
+            .positions
             .iter()
-            .map(|position| position.calculate_pnl(market_price, expiration_date, implied_volatility))
+            .map(|position| {
+                position
+                    .calculate_pnl(market_price, expiration_date, implied_volatility)
+                    .unwrap()
+            })
             .sum())
     }
 
@@ -699,9 +704,14 @@ impl PnLCalculator for CustomStrategy {
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        Ok(self.positions
+        Ok(self
+            .positions
             .iter()
-            .map(|position| position.calculate_pnl_at_expiration(underlying_price))
+            .map(|position| {
+                position
+                    .calculate_pnl_at_expiration(underlying_price)
+                    .unwrap()
+            })
             .sum())
     }
 }

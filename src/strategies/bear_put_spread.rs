@@ -24,13 +24,16 @@ use crate::error::GreeksError;
 use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
+use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::Profit;
 use crate::strategies::base::{
     BreakEvenable, Optimizable, Positionable, StrategyBasic, StrategyType, Validable,
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD};
+use crate::strategies::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD,
+};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -41,7 +44,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
-use crate::pnl::utils::{PnL, PnLCalculator};
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
     "A bear put spread is created by buying a put option with a higher strike price \
@@ -673,10 +675,10 @@ impl PnLCalculator for BearPutSpread {
     ) -> Result<PnL, Box<dyn Error>> {
         Ok(self
             .short_put
-            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
             + self
-            .long_put
-            .calculate_pnl(market_price, expiration_date, implied_volatility))
+                .long_put
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
     }
 
     fn calculate_pnl_at_expiration(
@@ -685,8 +687,10 @@ impl PnLCalculator for BearPutSpread {
     ) -> Result<PnL, Box<dyn Error>> {
         Ok(self
             .short_put
-            .calculate_pnl_at_expiration(underlying_price)
-            + self.long_put.calculate_pnl_at_expiration(underlying_price))
+            .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .long_put
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 

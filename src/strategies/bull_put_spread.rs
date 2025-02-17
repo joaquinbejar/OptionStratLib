@@ -38,7 +38,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{LongStrangle, StrategyBasics, StrategyConstructor};
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -783,18 +783,22 @@ impl PnLCalculator for BullPutSpread {
     ) -> Result<PnL, Box<dyn Error>> {
         Ok(self
             .short_put
-            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
             + self
                 .long_put
-                .calculate_pnl(market_price, expiration_date, implied_volatility))
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        Ok(self.short_put.calculate_pnl_at_expiration(underlying_price)
-            + self.long_put.calculate_pnl_at_expiration(underlying_price))
+        Ok(self
+            .short_put
+            .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .long_put
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 

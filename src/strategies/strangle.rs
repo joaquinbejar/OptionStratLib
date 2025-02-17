@@ -26,6 +26,7 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
+use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
@@ -838,6 +839,34 @@ impl DeltaNeutrality for ShortStrangle {
     }
 }
 
+impl PnLCalculator for ShortStrangle {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .short_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
+            + self
+                .short_put
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .short_call
+            .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .short_put
+                .calculate_pnl_at_expiration(underlying_price)?)
+    }
+}
+
 const LONG_STRANGLE_DESCRIPTION: &str =
     "A long strangle involves buying an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when high volatility \
@@ -1608,6 +1637,34 @@ impl DeltaNeutrality for LongStrangle {
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
+    }
+}
+
+impl PnLCalculator for LongStrangle {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
+            + self
+                .long_put
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .long_put
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 
@@ -4054,5 +4111,165 @@ mod tests_strategy_constructor {
                 ))
             ));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_long_strangle_pnl {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_strangle() -> Result<LongStrangle, StrategyError> {
+        // Create long call position
+        let long_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(105.0), // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create long put position
+        let long_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(95.0),  // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        LongStrangle::get_strategy(&vec![long_call, long_put])
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_money() {
+        let strangle = create_test_strangle().unwrap();
+        let market_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.3);
+
+        let result = strangle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // At the money, both options should have time value but no intrinsic value
+        // Initial cost is 2 * (premium + fees) = 2 * (5.0 + 1.0) = 12.0
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(12.0), pos!(1e-6));
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(0.746072), dec!(1e-6));
+        assert_eq!(pnl.initial_income, pos!(0.0));
+        // Unrealized loss should be less than full premium paid (time value remains)
+        assert!(pnl.unrealized.unwrap() > dec!(-12.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_above_call_strike() {
+        let strangle = create_test_strangle().unwrap();
+        let market_price = pos!(110.0); // Above call strike
+        let expiration_date = ExpirationDate::Days(pos!(30.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = strangle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Call should be in the money by 5.0 (110 - 105)
+        // Put should still have some time value
+        assert!(pnl.unrealized.unwrap() > dec!(-7.0)); // Better than max loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_below_put_strike() {
+        let strangle = create_test_strangle().unwrap();
+        let market_price = pos!(90.0); // Below put strike
+        let expiration_date = ExpirationDate::Days(pos!(30.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = strangle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Put should be in the money by 5.0 (95 - 90)
+        // Call should still have some time value
+        assert!(pnl.unrealized.unwrap() > dec!(-7.0)); // Better than max loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_loss() {
+        let strangle = create_test_strangle().unwrap();
+        let underlying_price = pos!(100.0); // At the money
+
+        let result = strangle.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // At expiration, both options expire worthless
+        // Max loss is the total premium paid plus fees
+        assert_eq!(pnl.realized.unwrap(), dec!(-12.0));
+        assert_eq!(pnl.initial_costs, pos!(12.0));
+        assert_eq!(pnl.initial_income, pos!(0.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_call_profit() {
+        let strangle = create_test_strangle().unwrap();
+        let underlying_price = pos!(115.0); // Well above call strike
+
+        let result = strangle.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // Call profit: 115 - 105 = 10
+        // Put expires worthless
+        // Total: 10 - initial costs (12)
+        assert_eq!(pnl.realized.unwrap(), dec!(-2.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_put_profit() {
+        let strangle = create_test_strangle().unwrap();
+        let underlying_price = pos!(85.0); // Well below put strike
+
+        let result = strangle.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // Put profit: 95 - 85 = 10
+        // Call expires worthless
+        // Total: 10 - initial costs (12)
+        assert_eq!(pnl.realized.unwrap(), dec!(-2.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_with_higher_volatility() {
+        let strangle = create_test_strangle().unwrap();
+        let market_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(30.0));
+        let implied_volatility = pos!(0.4); // Higher volatility
+
+        let result = strangle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // With higher volatility, options should be worth more
+        // Loss should be less than with lower volatility
+        assert!(pnl.unrealized.unwrap() > dec!(-12.0));
     }
 }

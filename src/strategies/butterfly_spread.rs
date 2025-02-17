@@ -38,7 +38,7 @@ use crate::strategies::delta_neutral::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{LongStrangle, StrategyBasics, StrategyConstructor};
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -890,13 +890,17 @@ impl PnLCalculator for LongButterflySpread {
     ) -> Result<PnL, Box<dyn Error>> {
         Ok(self
             .short_call
-            .calculate_pnl(market_price, expiration_date, implied_volatility)
-            + self
-                .long_call_low
-                .calculate_pnl(market_price, expiration_date, implied_volatility)
-            + self
-                .long_call_high
-                .calculate_pnl(market_price, expiration_date, implied_volatility))
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
+            + self.long_call_low.calculate_pnl(
+                market_price,
+                expiration_date,
+                implied_volatility,
+            )?
+            + self.long_call_high.calculate_pnl(
+                market_price,
+                expiration_date,
+                implied_volatility,
+            )?)
     }
 
     fn calculate_pnl_at_expiration(
@@ -905,13 +909,13 @@ impl PnLCalculator for LongButterflySpread {
     ) -> Result<PnL, Box<dyn Error>> {
         Ok(self
             .short_call
-            .calculate_pnl_at_expiration(underlying_price)
+            .calculate_pnl_at_expiration(underlying_price)?
             + self
                 .long_call_low
-                .calculate_pnl_at_expiration(underlying_price)
+                .calculate_pnl_at_expiration(underlying_price)?
             + self
                 .long_call_high
-                .calculate_pnl_at_expiration(underlying_price))
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 
@@ -1759,26 +1763,32 @@ impl PnLCalculator for ShortButterflySpread {
     ) -> Result<PnL, Box<dyn Error>> {
         Ok(self
             .long_call
-            .calculate_pnl(market_price, expiration_date, implied_volatility)
-            + self
-                .short_call_low
-                .calculate_pnl(market_price, expiration_date, implied_volatility)
-            + self
-                .short_call_high
-                .calculate_pnl(market_price, expiration_date, implied_volatility))
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
+            + self.short_call_low.calculate_pnl(
+                market_price,
+                expiration_date,
+                implied_volatility,
+            )?
+            + self.short_call_high.calculate_pnl(
+                market_price,
+                expiration_date,
+                implied_volatility,
+            )?)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        Ok(self.long_call.calculate_pnl_at_expiration(underlying_price)
+        Ok(self
+            .long_call
+            .calculate_pnl_at_expiration(underlying_price)?
             + self
                 .short_call_low
-                .calculate_pnl_at_expiration(underlying_price)
+                .calculate_pnl_at_expiration(underlying_price)?
             + self
                 .short_call_high
-                .calculate_pnl_at_expiration(underlying_price))
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 
