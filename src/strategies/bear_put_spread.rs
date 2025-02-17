@@ -30,9 +30,7 @@ use crate::strategies::base::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{
-    DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD,
-};
+use crate::strategies::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -43,6 +41,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
+use crate::pnl::utils::{PnL, PnLCalculator};
 
 const BEAR_PUT_SPREAD_DESCRIPTION: &str =
     "A bear put spread is created by buying a put option with a higher strike price \
@@ -662,6 +661,32 @@ impl DeltaNeutrality for BearPutSpread {
             strike: self.short_put.option.strike_price,
             option_type: OptionStyle::Put,
         }]
+    }
+}
+
+impl PnLCalculator for BearPutSpread {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .short_put
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            + self
+            .long_put
+            .calculate_pnl(market_price, expiration_date, implied_volatility))
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .short_put
+            .calculate_pnl_at_expiration(underlying_price)
+            + self.long_put.calculate_pnl_at_expiration(underlying_price))
     }
 }
 
