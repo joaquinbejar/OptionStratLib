@@ -314,8 +314,10 @@ impl PnLCalculator for Position {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        self.option
-            .calculate_pnl(market_price, expiration_date, implied_volatility)
+        let mut pnl = self.option
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?;
+        pnl.date_time = self.date;
+        Ok(pnl)
     }
 
     fn calculate_pnl_at_expiration(
