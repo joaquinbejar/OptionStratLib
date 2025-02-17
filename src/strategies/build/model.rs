@@ -14,12 +14,16 @@ use crate::strategies::{
     StrategyConstructor,
 };
 use serde::{Deserialize, Serialize};
+use crate::greeks::Greeks;
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct StrategyRequest {
     pub strategy_type: StrategyType,
     pub positions: Vec<Position>,
 }
+
+pub trait StrategyWithGreeks: Strategies + Greeks {}
+impl<T: Strategies + Greeks> StrategyWithGreeks for T {}
 
 impl StrategyRequest {
     pub fn new(strategy_type: StrategyType, positions: Vec<Position>) -> Self {
@@ -29,7 +33,7 @@ impl StrategyRequest {
         }
     }
 
-    pub fn get_strategy(&self) -> Result<Box<dyn Strategies>, StrategyError> {
+    pub fn get_strategy(&self) -> Result<Box<dyn StrategyWithGreeks>, StrategyError> {
         match self.strategy_type {
             StrategyType::BullCallSpread => {
                 Ok(Box::new(BullCallSpread::get_strategy(&self.positions)?))
