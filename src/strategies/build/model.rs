@@ -43,21 +43,25 @@ impl StrategyRequest {
             StrategyType::BearPutSpread => {
                 Ok(Box::new(BearPutSpread::get_strategy(&self.positions)?))
             }
-            StrategyType::LongButterflySpread => {
-                Ok(Box::new(LongButterflySpread::get_strategy(&self.positions)?))
-            }
-            StrategyType::ShortButterflySpread => {
-                Ok(Box::new(ShortButterflySpread::get_strategy(&self.positions)?))
-            }
+            StrategyType::LongButterflySpread => Ok(Box::new(LongButterflySpread::get_strategy(
+                &self.positions,
+            )?)),
+            StrategyType::ShortButterflySpread => Ok(Box::new(ShortButterflySpread::get_strategy(
+                &self.positions,
+            )?)),
             StrategyType::IronCondor => Ok(Box::new(IronCondor::get_strategy(&self.positions)?)),
             StrategyType::IronButterfly => {
                 Ok(Box::new(IronButterfly::get_strategy(&self.positions)?))
             }
-            StrategyType::LongStraddle => Ok(Box::new(LongStraddle::get_strategy(&self.positions)?)),
+            StrategyType::LongStraddle => {
+                Ok(Box::new(LongStraddle::get_strategy(&self.positions)?))
+            }
             StrategyType::ShortStraddle => {
                 Ok(Box::new(ShortStraddle::get_strategy(&self.positions)?))
             }
-            StrategyType::LongStrangle => Ok(Box::new(LongStrangle::get_strategy(&self.positions)?)),
+            StrategyType::LongStrangle => {
+                Ok(Box::new(LongStrangle::get_strategy(&self.positions)?))
+            }
             StrategyType::ShortStrangle => {
                 Ok(Box::new(ShortStrangle::get_strategy(&self.positions)?))
             }
@@ -68,9 +72,9 @@ impl StrategyRequest {
             StrategyType::LongPut => Err(StrategyError::NotImplemented),
             StrategyType::ShortCall => Err(StrategyError::NotImplemented),
             StrategyType::ShortPut => Err(StrategyError::NotImplemented),
-            StrategyType::PoorMansCoveredCall => {
-                Ok(Box::new(PoorMansCoveredCall::get_strategy(&self.positions)?))
-            }
+            StrategyType::PoorMansCoveredCall => Ok(Box::new(PoorMansCoveredCall::get_strategy(
+                &self.positions,
+            )?)),
             StrategyType::CallButterfly => {
                 Ok(Box::new(CallButterfly::get_strategy(&self.positions)?))
             }

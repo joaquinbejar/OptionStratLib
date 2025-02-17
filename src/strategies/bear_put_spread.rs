@@ -25,13 +25,15 @@ use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pricing::Profit;
-use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyBasic, StrategyType, Validable};
+use crate::strategies::base::{
+    BreakEvenable, Optimizable, Positionable, StrategyBasic, StrategyType, Validable,
+};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::StrategyConstructor;
 use crate::strategies::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, FindOptimalSide, Strategies, DELTA_THRESHOLD,
 };
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
@@ -282,7 +284,15 @@ impl Positionable for BearPutSpread {
     }
 }
 
-impl StrategyBasic for BearPutSpread {}
+impl StrategyBasic for BearPutSpread {
+    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+        Ok(StrategyBasics {
+            name: self.name.clone(),
+            kind: self.kind.clone(),
+            description: self.description.clone(),
+        })
+    }
+}
 
 impl Strategies for BearPutSpread {
     fn get_underlying_price(&self) -> Positive {

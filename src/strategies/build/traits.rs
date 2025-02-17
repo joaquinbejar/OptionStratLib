@@ -8,7 +8,7 @@ use crate::greeks::Greeks;
 use crate::model::Position;
 use crate::strategies::Strategies;
 
-pub trait StrategyConstructor: Strategies + Greeks  {
+pub trait StrategyConstructor: Strategies + Greeks {
     fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError>
     where
         Self: Sized,
@@ -21,9 +21,9 @@ pub trait StrategyConstructor: Strategies + Greeks  {
 mod tests {
     use super::*;
     use crate::error::{GreeksError, StrategyError};
-    use crate::Options;
     use crate::strategies::base::{BreakEvenable, Positionable, StrategyBasic, Validable};
     use crate::strategies::Strategies;
+    use crate::Options;
 
     /// Mock para una estrategia específica
     #[derive(Debug, PartialEq)]

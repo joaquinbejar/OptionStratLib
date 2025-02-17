@@ -24,7 +24,7 @@ use tracing::error;
 pub struct StrategyBasics {
     pub name: String,
     pub kind: StrategyType,
-    pub description: String
+    pub description: String,
 }
 
 pub trait StrategyBasic {

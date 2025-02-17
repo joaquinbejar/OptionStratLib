@@ -245,7 +245,9 @@ mod tests_probability_analysis {
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::pricing::payoff::Profit;
-    use crate::strategies::base::{BreakEvenable, Positionable, Strategies, StrategyBasic, Validable};
+    use crate::strategies::base::{
+        BreakEvenable, Positionable, Strategies, StrategyBasic, Validable,
+    };
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::error::Error;

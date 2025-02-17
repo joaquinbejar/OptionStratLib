@@ -14,7 +14,9 @@ Key characteristics:
 - Maximum profit achieved when price rises above higher strike
 - Also known as a vertical call debit spread
 */
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
+use super::base::{
+    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -35,7 +37,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::StrategyConstructor;
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{pos, Options, Positive};
@@ -287,7 +289,15 @@ impl Positionable for BullCallSpread {
     }
 }
 
-impl StrategyBasic for BullCallSpread {}
+impl StrategyBasic for BullCallSpread {
+    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+        Ok(StrategyBasics {
+            name: self.name.clone(),
+            kind: self.kind.clone(),
+            description: self.description.clone(),
+        })
+    }
+}
 
 impl Strategies for BullCallSpread {
     fn get_underlying_price(&self) -> Positive {
