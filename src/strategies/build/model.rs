@@ -5,6 +5,7 @@
 ******************************************************************************/
 
 use crate::error::StrategyError;
+use crate::greeks::Greeks;
 use crate::model::Position;
 use crate::strategies::base::StrategyType;
 use crate::strategies::{
@@ -14,7 +15,6 @@ use crate::strategies::{
     StrategyConstructor,
 };
 use serde::{Deserialize, Serialize};
-use crate::greeks::Greeks;
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct StrategyRequest {

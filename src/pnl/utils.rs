@@ -6,10 +6,10 @@
 use crate::{ExpirationDate, Positive};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::iter::Sum;
 use std::ops::Add;
-use serde::{Deserialize, Serialize};
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -259,8 +259,8 @@ mod tests_pnl_calculator {
 #[cfg(test)]
 mod tests_sum {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_pnl_sum() {
@@ -341,12 +341,11 @@ mod tests_sum {
     }
 }
 
-
 #[cfg(test)]
 mod tests_add {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::pos;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_pnl_add() {
