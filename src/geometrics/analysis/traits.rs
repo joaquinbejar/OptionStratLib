@@ -389,7 +389,10 @@ mod tests {
             assert_eq!(surface_metrics.shape.skewness, curve_metrics.shape.skewness);
             assert_eq!(surface_metrics.range.range, curve_metrics.range.range);
             assert_eq!(surface_metrics.trend.slope, curve_metrics.trend.slope);
-            assert_eq!(surface_metrics.risk.volatility, curve_metrics.risk.volatility);
+            assert_eq!(
+                surface_metrics.risk.volatility,
+                curve_metrics.risk.volatility
+            );
         }
     }
 }

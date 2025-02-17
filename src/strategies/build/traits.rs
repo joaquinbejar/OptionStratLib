@@ -4,12 +4,11 @@
    Date: 16/2/25
 ******************************************************************************/
 use crate::error::StrategyError;
-use crate::strategies::build::model::OptionWithCosts;
+use crate::model::Position;
 use crate::strategies::Strategies;
 
 pub trait StrategyConstructor: Strategies {
-    
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError>
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError>
     where
         Self: Sized,
     {
@@ -22,7 +21,6 @@ mod tests {
     use super::*;
     use crate::error::StrategyError;
     use crate::strategies::base::{BreakEvenable, Positionable, Validable};
-    use crate::strategies::build::model::OptionWithCosts;
     use crate::strategies::Strategies;
 
     /// Mock para una estrategia específica
@@ -42,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_get_strategy_not_implemented() {
-        let options = vec![]; // Vec vacío de `OptionWithCosts`
+        let options = vec![];
         let result = TestStrategy::get_strategy(&options);
 
         assert!(matches!(result, Err(StrategyError::NotImplemented)));
@@ -60,7 +58,7 @@ mod tests {
     impl Strategies for ValidStrategy {}
 
     impl StrategyConstructor for ValidStrategy {
-        fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError>
+        fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError>
         where
             Self: Sized,
         {
@@ -70,7 +68,7 @@ mod tests {
 
     #[test]
     fn test_get_strategy_success() {
-        let options = vec![]; // Vec vacío de `OptionWithCosts`
+        let options = vec![];
         let result = ValidStrategy::get_strategy(&options);
 
         assert!(result.is_ok());

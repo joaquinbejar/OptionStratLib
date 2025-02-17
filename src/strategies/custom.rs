@@ -17,6 +17,7 @@ use crate::strategies::base::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -27,7 +28,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
@@ -273,7 +273,7 @@ impl CustomStrategy {
 }
 
 impl StrategyConstructor for CustomStrategy {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

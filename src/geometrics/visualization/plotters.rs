@@ -159,7 +159,6 @@ pub trait PlotBuilderExt<T: Plottable> {
     fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>;
 }
 
-
 #[cfg(test)]
 mod tests_plot_builder {
     use super::*;
@@ -212,9 +211,7 @@ mod tests_plot_builder {
     #[test]
     fn test_point_size_method_multiple_calls() {
         // Test that multiple calls override the previous value
-        let builder = create_test_builder()
-            .point_size(5)
-            .point_size(15);
+        let builder = create_test_builder().point_size(5).point_size(15);
 
         assert_eq!(builder.options.point_size, Some(15));
     }
@@ -230,9 +227,7 @@ mod tests_plot_builder {
     #[test]
     fn test_label_size_method_multiple_calls() {
         // Test that multiple calls override the previous value
-        let builder = create_test_builder()
-            .label_size(10.0)
-            .label_size(20.5);
+        let builder = create_test_builder().label_size(10.0).label_size(20.5);
 
         assert_eq!(builder.options.labels_size, Some(20.5));
     }

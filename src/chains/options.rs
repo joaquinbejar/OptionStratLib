@@ -62,14 +62,14 @@ mod tests_options_in_strike {
             OptionType::European,
             side,
             "TEST".to_string(),
-            pos!(100.0),        // strike_price
+            pos!(100.0), // strike_price
             ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),         // implied_volatility
-            pos!(1.0),         // quantity
-            pos!(100.0),       // underlying_price
-            dec!(0.05),        // risk_free_rate
+            pos!(0.2),   // implied_volatility
+            pos!(1.0),   // quantity
+            pos!(100.0), // underlying_price
+            dec!(0.05),  // risk_free_rate
             style,
-            pos!(0.01),        // dividend_yield
+            pos!(0.01), // dividend_yield
             None,
         )
     }
@@ -105,12 +105,7 @@ mod tests_options_in_strike {
         let long_put = create_test_option(Side::Long, OptionStyle::Put);
         let short_put = create_test_option(Side::Short, OptionStyle::Put);
 
-        let options_in_strike = OptionsInStrike::new(
-            long_call,
-            short_call,
-            long_put,
-            short_put,
-        );
+        let options_in_strike = OptionsInStrike::new(long_call, short_call, long_put, short_put);
 
         let deltas = options_in_strike.deltas().unwrap();
 
@@ -131,19 +126,26 @@ mod tests_options_in_strike {
         let long_put = create_test_option(Side::Long, OptionStyle::Put);
         let short_put = create_test_option(Side::Short, OptionStyle::Put);
 
-        let options_in_strike = OptionsInStrike::new(
-            long_call,
-            short_call,
-            long_put,
-            short_put,
-        );
+        let options_in_strike = OptionsInStrike::new(long_call, short_call, long_put, short_put);
 
         let cloned = options_in_strike.clone();
 
-        assert_eq!(cloned.long_call.strike_price, options_in_strike.long_call.strike_price);
-        assert_eq!(cloned.short_call.strike_price, options_in_strike.short_call.strike_price);
-        assert_eq!(cloned.long_put.strike_price, options_in_strike.long_put.strike_price);
-        assert_eq!(cloned.short_put.strike_price, options_in_strike.short_put.strike_price);
+        assert_eq!(
+            cloned.long_call.strike_price,
+            options_in_strike.long_call.strike_price
+        );
+        assert_eq!(
+            cloned.short_call.strike_price,
+            options_in_strike.short_call.strike_price
+        );
+        assert_eq!(
+            cloned.long_put.strike_price,
+            options_in_strike.long_put.strike_price
+        );
+        assert_eq!(
+            cloned.short_put.strike_price,
+            options_in_strike.short_put.strike_price
+        );
     }
 }
 

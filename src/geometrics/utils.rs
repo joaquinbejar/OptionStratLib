@@ -86,7 +86,10 @@ mod tests_geometric_object {
 
     impl From<(Decimal, Decimal)> for TestPoint {
         fn from(tuple: (Decimal, Decimal)) -> Self {
-            TestPoint { x: tuple.0, y: tuple.1 }
+            TestPoint {
+                x: tuple.0,
+                y: tuple.1,
+            }
         }
     }
 
@@ -139,11 +142,19 @@ mod tests_geometric_object {
     #[test]
     fn test_get_points() {
         let points = BTreeSet::from([
-            TestPoint { x: dec!(1.0), y: dec!(2.0) },
-            TestPoint { x: dec!(3.0), y: dec!(4.0) },
+            TestPoint {
+                x: dec!(1.0),
+                y: dec!(2.0),
+            },
+            TestPoint {
+                x: dec!(3.0),
+                y: dec!(4.0),
+            },
         ]);
 
-        let obj = TestGeometricObject { points: points.clone() };
+        let obj = TestGeometricObject {
+            points: points.clone(),
+        };
         let retrieved_points = obj.get_points();
 
         assert_eq!(retrieved_points.len(), points.len());
@@ -158,18 +169,32 @@ mod tests_geometric_object {
         let obj = TestGeometricObject::from_vector(points);
 
         assert_eq!(obj.points.len(), 2);
-        assert!(obj.points.contains(&TestPoint { x: dec!(1.0), y: dec!(2.0) }));
-        assert!(obj.points.contains(&TestPoint { x: dec!(3.0), y: dec!(4.0) }));
+        assert!(obj.points.contains(&TestPoint {
+            x: dec!(1.0),
+            y: dec!(2.0)
+        }));
+        assert!(obj.points.contains(&TestPoint {
+            x: dec!(3.0),
+            y: dec!(4.0)
+        }));
     }
 
     #[test]
     fn test_construct_from_data() {
         let points = BTreeSet::from([
-            TestPoint { x: dec!(1.0), y: dec!(2.0) },
-            TestPoint { x: dec!(3.0), y: dec!(4.0) },
+            TestPoint {
+                x: dec!(1.0),
+                y: dec!(2.0),
+            },
+            TestPoint {
+                x: dec!(3.0),
+                y: dec!(4.0),
+            },
         ]);
 
-        let result = TestGeometricObject::construct(ConstructionMethod::FromData { points: points.clone() });
+        let result = TestGeometricObject::construct(ConstructionMethod::FromData {
+            points: points.clone(),
+        });
 
         assert!(result.is_ok());
         let obj = result.unwrap();
@@ -187,11 +212,19 @@ mod tests_geometric_object {
     #[test]
     fn test_to_vector() {
         let points = BTreeSet::from([
-            TestPoint { x: dec!(1.0), y: dec!(2.0) },
-            TestPoint { x: dec!(3.0), y: dec!(4.0) },
+            TestPoint {
+                x: dec!(1.0),
+                y: dec!(2.0),
+            },
+            TestPoint {
+                x: dec!(3.0),
+                y: dec!(4.0),
+            },
         ]);
 
-        let obj = TestGeometricObject { points: points.clone() };
+        let obj = TestGeometricObject {
+            points: points.clone(),
+        };
         let vector = obj.to_vector();
 
         assert_eq!(vector.len(), points.len());
@@ -213,8 +246,14 @@ mod tests_geometric_object {
     #[test]
     fn test_len_trait() {
         let points = BTreeSet::from([
-            TestPoint { x: dec!(1.0), y: dec!(2.0) },
-            TestPoint { x: dec!(3.0), y: dec!(4.0) },
+            TestPoint {
+                x: dec!(1.0),
+                y: dec!(2.0),
+            },
+            TestPoint {
+                x: dec!(3.0),
+                y: dec!(4.0),
+            },
         ]);
 
         let obj = TestGeometricObject { points };

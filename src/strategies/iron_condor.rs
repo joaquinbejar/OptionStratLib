@@ -28,6 +28,7 @@ use crate::strategies::delta_neutral::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
@@ -38,7 +39,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const IRON_CONDOR_DESCRIPTION: &str =
     "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -202,7 +202,7 @@ impl IronCondor {
 }
 
 impl StrategyConstructor for IronCondor {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

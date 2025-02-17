@@ -21,6 +21,7 @@ use crate::strategies::delta_neutral::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -32,7 +33,6 @@ use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const RATIO_CALL_SPREAD_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -170,7 +170,7 @@ impl CallButterfly {
 }
 
 impl StrategyConstructor for CallButterfly {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

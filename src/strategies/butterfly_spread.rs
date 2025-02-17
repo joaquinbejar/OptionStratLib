@@ -35,6 +35,7 @@ use crate::strategies::delta_neutral::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -46,7 +47,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const LONG_BUTTERFLY_DESCRIPTION: &str =
     "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -178,7 +178,7 @@ impl LongButterflySpread {
 }
 
 impl StrategyConstructor for LongButterflySpread {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }
@@ -1015,7 +1015,7 @@ impl ShortButterflySpread {
 }
 
 impl StrategyConstructor for ShortButterflySpread {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

@@ -30,6 +30,7 @@ use crate::strategies::delta_neutral::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
@@ -40,7 +41,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const IRON_BUTTERFLY_DESCRIPTION: &str =
     "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
@@ -203,7 +203,7 @@ impl IronButterfly {
 }
 
 impl StrategyConstructor for IronButterfly {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

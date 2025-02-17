@@ -18,6 +18,7 @@ use chrono::{DateTime, Utc};
 use num_traits::ToPrimitive;
 use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{debug, trace};
 
@@ -52,7 +53,7 @@ use tracing::{debug, trace};
 ///
 /// The `Greeks` trait is also implemented for the `Position` struct, allowing
 /// calculations related to options' sensitivities (e.g., Delta, Gamma).
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Position {
     pub option: Options,
     pub premium: Positive,
@@ -872,57 +873,49 @@ mod tests_position {
 #[cfg(test)]
 mod tests_valid_position {
     use super::*;
-    use crate::model::types::OptionType;
+    use crate::model::utils::create_sample_position;
     use crate::pos;
-    use chrono::Utc;
-    use rust_decimal_macros::dec;
-
-    fn create_valid_option() -> Options {
-        Options {
-            option_type: OptionType::European,
-            side: Side::Long,
-            underlying_symbol: "AAPL".to_string(),
-            strike_price: pos!(100.0),
-            expiration_date: ExpirationDate::Days(pos!(30.0)),
-            implied_volatility: pos!(0.2),
-            quantity: pos!(1.0),
-            underlying_price: pos!(105.0),
-            risk_free_rate: dec!(0.05),
-            option_style: OptionStyle::Call,
-            dividend_yield: pos!(0.01),
-            exotic_params: None,
-        }
-    }
-
-    fn create_valid_position() -> Position {
-        Position {
-            option: create_valid_option(),
-            premium: pos!(5.0),
-            date: Utc::now(),
-            open_fee: pos!(0.5),
-            close_fee: pos!(0.5),
-        }
-    }
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_valid_position() {
-        let position = create_valid_position();
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
         assert!(position.validate());
     }
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_premium() {
-        let mut position = create_valid_position();
+        let mut position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
         position.premium = Positive::ZERO;
-        assert!(position.validate());
+        assert!(!position.validate());
     }
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_invalid_option() {
-        let mut position = create_valid_position();
+        let mut position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
         position.option.strike_price = Positive::ZERO; // This makes the option invalid
         assert!(!position.validate());
     }
@@ -930,7 +923,14 @@ mod tests_valid_position {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_zero_fees() {
-        let mut position = create_valid_position();
+        let mut position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
         position.open_fee = Positive::ZERO;
         position.close_fee = Positive::ZERO;
         assert!(position.validate());
@@ -1603,5 +1603,149 @@ mod tests_graph {
         let position = Position::default();
         let lines = position.get_vertical_lines();
         assert_eq!(lines.len(), 0);
+    }
+}
+
+#[cfg(test)]
+mod tests_position_serde {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::pos;
+    use serde_json;
+
+    #[test]
+    fn test_position_serialization() {
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
+        let serialized = serde_json::to_string(&position).unwrap();
+
+        // Verify the serialized string contains expected fields
+        assert!(serialized.contains("\"option\""));
+        assert!(serialized.contains("\"premium\""));
+        assert!(serialized.contains("\"date\""));
+        assert!(serialized.contains("\"open_fee\""));
+        assert!(serialized.contains("\"close_fee\""));
+        assert!(serialized.contains("AAPL"));
+        assert!(serialized.contains("95"));
+    }
+
+    #[test]
+    fn test_position_deserialization() {
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
+        let serialized = serde_json::to_string(&position).unwrap();
+        let deserialized: Position = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(position, deserialized);
+        assert_eq!(deserialized.option.underlying_symbol, "AAPL");
+        assert_eq!(deserialized.option.strike_price, pos!(95.0));
+        assert_eq!(deserialized.premium, pos!(5.0));
+        assert_eq!(deserialized.open_fee, pos!(0.5));
+        assert_eq!(deserialized.close_fee, pos!(0.5));
+    }
+
+    #[test]
+    fn test_position_json_structure() {
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
+        let serialized = serde_json::to_string_pretty(&position).unwrap();
+
+        // Print the pretty JSON for debugging
+        println!("Serialized Position:\n{}", serialized);
+
+        let value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+
+        // Test structure
+        assert!(value.is_object());
+        assert!(value.get("option").is_some());
+        assert!(value.get("premium").is_some());
+        assert!(value.get("date").is_some());
+        assert!(value.get("open_fee").is_some());
+        assert!(value.get("close_fee").is_some());
+    }
+
+    #[test]
+    fn test_position_deserialize_invalid_json() {
+        let invalid_json = r#"{
+            "option": null,
+            "premium": 5.0,
+            "date": "2024-01-01T00:00:00Z",
+            "open_fee": 1.0,
+            "close_fee": 1.0
+        }"#;
+
+        let result: Result<Position, serde_json::Error> = serde_json::from_str(invalid_json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_position_roundtrip() {
+        let original = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
+        let serialized = serde_json::to_string(&original).unwrap();
+        let deserialized: Position = serde_json::from_str(&serialized).unwrap();
+        let reserialized = serde_json::to_string(&deserialized).unwrap();
+
+        assert_eq!(serialized, reserialized);
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_position_with_different_option_types() {
+        // Test with a Put option
+        let put_position = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
+
+        let serialized = serde_json::to_string(&put_position).unwrap();
+        let deserialized: Position = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(put_position, deserialized);
+        assert_eq!(deserialized.option.option_style, OptionStyle::Put);
+
+        // Test with a Short position
+        let short_position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
+
+        let serialized = serde_json::to_string(&short_position).unwrap();
+        let deserialized: Position = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(short_position, deserialized);
+        assert_eq!(deserialized.option.side, Side::Short);
     }
 }

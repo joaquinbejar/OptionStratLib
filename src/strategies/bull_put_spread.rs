@@ -22,6 +22,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::error::GreeksError;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -34,6 +35,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -43,9 +45,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
-use crate::error::GreeksError;
 use tracing::debug;
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const BULL_PUT_SPREAD_DESCRIPTION: &str =
     "A bull put spread is created by buying a put option with a lower strike price \
@@ -160,7 +160,7 @@ impl BullPutSpread {
 }
 
 impl StrategyConstructor for BullPutSpread {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

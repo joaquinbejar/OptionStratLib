@@ -30,6 +30,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
@@ -40,7 +41,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{info, trace};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -163,11 +163,10 @@ impl ShortStraddle {
 }
 
 impl StrategyConstructor for ShortStraddle {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }
-
 
 impl BreakEvenable for ShortStraddle {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
@@ -802,7 +801,7 @@ impl LongStraddle {
 }
 
 impl StrategyConstructor for LongStraddle {
-    fn get_strategy(_vec_options: &[OptionWithCosts]) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }
