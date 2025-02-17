@@ -18,48 +18,48 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct StrategyRequest {
     pub strategy_type: StrategyType,
-    pub options: Vec<Position>,
+    pub positions: Vec<Position>,
 }
 
 impl StrategyRequest {
     pub fn new(strategy_type: StrategyType, options: Vec<Position>) -> Self {
         Self {
             strategy_type,
-            options,
+            positions,
         }
     }
 
     pub fn get_strategy(&self) -> Result<Box<dyn Strategies>, StrategyError> {
         match self.strategy_type {
             StrategyType::BullCallSpread => {
-                Ok(Box::new(BullCallSpread::get_strategy(&self.options)?))
+                Ok(Box::new(BullCallSpread::get_strategy(&self.positions)?))
             }
             StrategyType::BearCallSpread => {
-                Ok(Box::new(BearCallSpread::get_strategy(&self.options)?))
+                Ok(Box::new(BearCallSpread::get_strategy(&self.positions)?))
             }
             StrategyType::BullPutSpread => {
-                Ok(Box::new(BullPutSpread::get_strategy(&self.options)?))
+                Ok(Box::new(BullPutSpread::get_strategy(&self.positions)?))
             }
             StrategyType::BearPutSpread => {
-                Ok(Box::new(BearPutSpread::get_strategy(&self.options)?))
+                Ok(Box::new(BearPutSpread::get_strategy(&self.positions)?))
             }
             StrategyType::LongButterflySpread => {
-                Ok(Box::new(LongButterflySpread::get_strategy(&self.options)?))
+                Ok(Box::new(LongButterflySpread::get_strategy(&self.positions)?))
             }
             StrategyType::ShortButterflySpread => {
-                Ok(Box::new(ShortButterflySpread::get_strategy(&self.options)?))
+                Ok(Box::new(ShortButterflySpread::get_strategy(&self.positions)?))
             }
-            StrategyType::IronCondor => Ok(Box::new(IronCondor::get_strategy(&self.options)?)),
+            StrategyType::IronCondor => Ok(Box::new(IronCondor::get_strategy(&self.positions)?)),
             StrategyType::IronButterfly => {
-                Ok(Box::new(IronButterfly::get_strategy(&self.options)?))
+                Ok(Box::new(IronButterfly::get_strategy(&self.positions)?))
             }
-            StrategyType::LongStraddle => Ok(Box::new(LongStraddle::get_strategy(&self.options)?)),
+            StrategyType::LongStraddle => Ok(Box::new(LongStraddle::get_strategy(&self.positions)?)),
             StrategyType::ShortStraddle => {
-                Ok(Box::new(ShortStraddle::get_strategy(&self.options)?))
+                Ok(Box::new(ShortStraddle::get_strategy(&self.positions)?))
             }
-            StrategyType::LongStrangle => Ok(Box::new(LongStrangle::get_strategy(&self.options)?)),
+            StrategyType::LongStrangle => Ok(Box::new(LongStrangle::get_strategy(&self.positions)?)),
             StrategyType::ShortStrangle => {
-                Ok(Box::new(ShortStrangle::get_strategy(&self.options)?))
+                Ok(Box::new(ShortStrangle::get_strategy(&self.positions)?))
             }
             StrategyType::CoveredCall => Err(StrategyError::NotImplemented),
             StrategyType::ProtectivePut => Err(StrategyError::NotImplemented),
@@ -69,12 +69,12 @@ impl StrategyRequest {
             StrategyType::ShortCall => Err(StrategyError::NotImplemented),
             StrategyType::ShortPut => Err(StrategyError::NotImplemented),
             StrategyType::PoorMansCoveredCall => {
-                Ok(Box::new(PoorMansCoveredCall::get_strategy(&self.options)?))
+                Ok(Box::new(PoorMansCoveredCall::get_strategy(&self.positions)?))
             }
             StrategyType::CallButterfly => {
-                Ok(Box::new(CallButterfly::get_strategy(&self.options)?))
+                Ok(Box::new(CallButterfly::get_strategy(&self.positions)?))
             }
-            StrategyType::Custom => Ok(Box::new(CustomStrategy::get_strategy(&self.options)?)),
+            StrategyType::Custom => Ok(Box::new(CustomStrategy::get_strategy(&self.positions)?)),
         }
     }
 }
@@ -95,7 +95,7 @@ mod tests_serialization {
     fn test_strategy_request_serialization() {
         let strategy_request = StrategyRequest {
             strategy_type: StrategyType::BearCallSpread,
-            options: vec![
+            positions: vec![
                 Position::new(
                     create_sample_option_with_date(
                         OptionStyle::Call,
@@ -192,10 +192,10 @@ mod tests_serialization {
 
         // Verify deserialized data
         assert_eq!(deserialized.strategy_type, StrategyType::BearCallSpread);
-        assert_eq!(deserialized.options.len(), 2);
+        assert_eq!(deserialized.positions.len(), 2);
 
         // Verify first option (Short Call)
-        let short_call = &deserialized.options[0];
+        let short_call = &deserialized.positions[0];
         assert_eq!(short_call.option.side, Side::Short);
         assert_eq!(short_call.option.strike_price, pos!(900.0));
         assert_eq!(short_call.premium, pos!(4.5));
@@ -203,7 +203,7 @@ mod tests_serialization {
         assert_eq!(short_call.close_fee, pos!(1.2));
 
         // Verify second option (Long Call)
-        let long_call = &deserialized.options[1];
+        let long_call = &deserialized.positions[1];
         assert_eq!(long_call.option.side, Side::Long);
         assert_eq!(long_call.option.strike_price, pos!(910.0));
         assert_eq!(long_call.premium, pos!(3.5));
@@ -231,6 +231,6 @@ mod tests_serialization {
 
         let deserialized: StrategyRequest = serde_json::from_str(json_data).unwrap();
         assert_eq!(deserialized.strategy_type, StrategyType::BearCallSpread);
-        assert!(deserialized.options.is_empty());
+        assert!(deserialized.positions.is_empty());
     }
 }
