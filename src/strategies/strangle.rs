@@ -17,7 +17,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::GreeksError;
+use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -149,8 +149,94 @@ impl ShortStrangle {
 }
 
 impl StrategyConstructor for ShortStrangle {
-    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        // Need exactly 2 options for a short strangle
+        if vec_options.len() != 2 {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Short Strangle get_strategy".to_string(),
+                reason: "Must have exactly 2 options".to_string(),
+            }));
+        }
+
+        // Sort options by option style to identify call and put
+        let mut sorted_options = vec_options.to_vec();
+        sorted_options.sort_by(|a, b| {
+            a.option
+                .strike_price
+                .partial_cmp(&b.option.strike_price)
+                .unwrap()
+        });
+
+        let put_option = &sorted_options[0];   // Put will be first
+        let call_option = &sorted_options[1];  // Call will be second
+
+
+        // Validate one option is call and other is put
+        if call_option.option.option_style != OptionStyle::Call
+            || put_option.option.option_style != OptionStyle::Put {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Short Strangle get_strategy".to_string(),
+                reason: "One option must be a call and one must be a put".to_string(),
+            }));
+        }
+
+        // Validate both options are Short
+        if call_option.option.side != Side::Short
+            || put_option.option.side != Side::Short {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Short Strangle get_strategy".to_string(),
+                reason: "Both options must be Short positions".to_string(),
+            }));
+        }
+
+        // Validate call strike is higher than put strike
+        if call_option.option.strike_price <= put_option.option.strike_price {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Short Strangle get_strategy".to_string(),
+                reason: "Call strike must be higher than put strike".to_string(),
+            }));
+        }
+
+        // Validate expiration dates match
+        if call_option.option.expiration_date != put_option.option.expiration_date {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Short Strangle get_strategy".to_string(),
+                reason: "Options must have the same expiration date".to_string(),
+            }));
+        }
+
+        // Create positions
+        let short_call = Position::new(
+            call_option.option.clone(),
+            call_option.premium,
+            Utc::now(),
+            call_option.open_fee,
+            call_option.close_fee,
+        );
+
+        let short_put = Position::new(
+            put_option.option.clone(),
+            put_option.premium,
+            Utc::now(),
+            put_option.open_fee,
+            put_option.close_fee,
+        );
+
+        // Create strategy
+        let mut strategy = ShortStrangle {
+            name: "Short Strangle".to_string(),
+            kind: StrategyType::ShortStrangle,
+            description: SHORT_STRANGLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call,
+            short_put,
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
     }
 }
 
@@ -839,8 +925,94 @@ impl LongStrangle {
 }
 
 impl StrategyConstructor for LongStrangle {
-    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        // Need exactly 2 options for a long strangle
+        if vec_options.len() != 2 {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Long Strangle get_strategy".to_string(),
+                reason: "Must have exactly 2 options".to_string(),
+            }));
+        }
+
+        // Sort options by option style to identify call and put
+        let mut sorted_options = vec_options.to_vec();
+        sorted_options.sort_by(|a, b| {
+            a.option
+                .strike_price
+                .partial_cmp(&b.option.strike_price)
+                .unwrap()
+        });
+
+        let put_option = &sorted_options[0];   // Put will be first
+        let call_option = &sorted_options[1];  // Call will be second
+
+
+        // Validate one option is call and other is put
+        if call_option.option.option_style != OptionStyle::Call
+            || put_option.option.option_style != OptionStyle::Put {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Long Strangle get_strategy".to_string(),
+                reason: "One option must be a call and one must be a put".to_string(),
+            }));
+        }
+
+        // Validate both options are long
+        if call_option.option.side != Side::Long
+            || put_option.option.side != Side::Long {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Long Strangle get_strategy".to_string(),
+                reason: "Both options must be long positions".to_string(),
+            }));
+        }
+
+        // Validate call strike is higher than put strike
+        if call_option.option.strike_price <= put_option.option.strike_price {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Long Strangle get_strategy".to_string(),
+                reason: "Call strike must be higher than put strike".to_string(),
+            }));
+        }
+
+        // Validate expiration dates match
+        if call_option.option.expiration_date != put_option.option.expiration_date {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Long Strangle get_strategy".to_string(),
+                reason: "Options must have the same expiration date".to_string(),
+            }));
+        }
+
+        // Create positions
+        let long_call = Position::new(
+            call_option.option.clone(),
+            call_option.premium,
+            Utc::now(),
+            call_option.open_fee,
+            call_option.close_fee,
+        );
+
+        let long_put = Position::new(
+            put_option.option.clone(),
+            put_option.premium,
+            Utc::now(),
+            put_option.open_fee,
+            put_option.close_fee,
+        );
+
+        // Create strategy
+        let mut strategy = LongStrangle {
+            name: "Long Strangle".to_string(),
+            kind: StrategyType::LongStrangle,
+            description: LONG_STRANGLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call,
+            long_put,
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
     }
 }
 
@@ -3548,5 +3720,283 @@ mod tests_adjust_option_position_long {
 
         assert!(result.is_ok());
         assert_eq!(strategy.long_call.option.quantity, initial_quantity);
+    }
+}
+
+
+#[cfg(test)]
+mod tests_strategy_constructor {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{pos, OptionStyle, Side};
+
+    mod long_strangle_tests {
+        use super::*;
+
+        #[test]
+        fn test_valid_long_strangle() {
+            let options = vec![
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Long,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(110.0),
+                    pos!(0.2),
+                ),
+                create_sample_position(
+                    OptionStyle::Put,
+                    Side::Long,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(90.0),
+                    pos!(0.2),
+                ),
+            ];
+
+            let result = LongStrangle::get_strategy(&options);
+            assert!(result.is_ok());
+
+            let strategy = result.unwrap();
+            assert_eq!(strategy.long_call.option.strike_price, pos!(110.0));
+            assert_eq!(strategy.long_put.option.strike_price, pos!(90.0));
+        }
+
+        #[test]
+        fn test_wrong_number_of_options() {
+            let options = vec![create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            )];
+
+            let result = LongStrangle::get_strategy(&options);
+            assert!(matches!(
+                result,
+                Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { .. }))
+            ));
+        }
+
+        #[test]
+        fn test_wrong_option_styles() {
+            let options = vec![
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Long,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(110.0),
+                    pos!(0.2),
+                ),
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Long,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(90.0),
+                    pos!(0.2),
+                ),
+            ];
+
+            let result = LongStrangle::get_strategy(&options);
+            assert!(matches!(
+                result,
+                Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { .. }))
+            ));
+        }
+
+        #[test]
+        fn test_wrong_sides() {
+            let options = vec![
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Short,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(110.0),
+                    pos!(0.2),
+                ),
+                create_sample_position(
+                    OptionStyle::Put,
+                    Side::Long,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(90.0),
+                    pos!(0.2),
+                ),
+            ];
+
+            let result = LongStrangle::get_strategy(&options);
+            assert!(matches!(
+                result,
+                Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { .. }))
+            ));
+        }
+
+        #[test]
+        fn test_invalid_strikes() {
+            let options = vec![
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Long,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(90.0),
+                    pos!(0.2),
+                ),
+                create_sample_position(
+                    OptionStyle::Put,
+                    Side::Long,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(110.0),
+                    pos!(0.2),
+                ),
+            ];
+
+            let result = LongStrangle::get_strategy(&options);
+            assert!(matches!(
+                result,
+                Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { .. }))
+            ));
+        }
+    }
+
+    mod short_strangle_tests {
+        use super::*;
+
+        #[test]
+        fn test_valid_short_strangle() {
+            let options = vec![
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Short,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(110.0),
+                    pos!(0.2),
+                ),
+                create_sample_position(
+                    OptionStyle::Put,
+                    Side::Short,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(90.0),
+                    pos!(0.2),
+                ),
+            ];
+
+            let result = ShortStrangle::get_strategy(&options);
+            assert!(result.is_ok());
+
+            let strategy = result.unwrap();
+            assert_eq!(strategy.short_call.option.strike_price, pos!(110.0));
+            assert_eq!(strategy.short_put.option.strike_price, pos!(90.0));
+        }
+
+        #[test]
+        fn test_wrong_number_of_options() {
+            let options = vec![create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            )];
+
+            let result = ShortStrangle::get_strategy(&options);
+            assert!(matches!(
+                result,
+                Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { .. }))
+            ));
+        }
+
+        #[test]
+        fn test_wrong_option_styles() {
+            let options = vec![
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Short,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(110.0),
+                    pos!(0.2),
+                ),
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Short,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(90.0),
+                    pos!(0.2),
+                ),
+            ];
+
+            let result = ShortStrangle::get_strategy(&options);
+            assert!(matches!(
+                result,
+                Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { .. }))
+            ));
+        }
+
+        #[test]
+        fn test_wrong_sides() {
+            let options = vec![
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Short,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(110.0),
+                    pos!(0.2),
+                ),
+                create_sample_position(
+                    OptionStyle::Put,
+                    Side::Long,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(90.0),
+                    pos!(0.2),
+                ),
+            ];
+
+            let result = ShortStrangle::get_strategy(&options);
+            assert!(matches!(
+                result,
+                Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { .. }))
+            ));
+        }
+
+        #[test]
+        fn test_invalid_strikes() {
+            let options = vec![
+                create_sample_position(
+                    OptionStyle::Call,
+                    Side::Short,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(90.0),
+                    pos!(0.2),
+                ),
+                create_sample_position(
+                    OptionStyle::Put,
+                    Side::Short,
+                    pos!(100.0),
+                    pos!(1.0),
+                    pos!(110.0),
+                    pos!(0.2),
+                ),
+            ];
+
+            let result = ShortStrangle::get_strategy(&options);
+            assert!(matches!(
+                result,
+                Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { .. }))
+            ));
+        }
     }
 }
