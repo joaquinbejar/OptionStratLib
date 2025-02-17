@@ -798,7 +798,7 @@ mod tests_option_data_price_params {
         let params = OptionDataPriceParams::new(
             pos!(100.0),
             ExpirationDate::Days(pos!(30.0)),
-            None,  // No implied volatility
+            None, // No implied volatility
             dec!(0.05),
             pos!(0.02),
             None,
@@ -810,7 +810,7 @@ mod tests_option_data_price_params {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_option_data_price_params_getters_with_datetime_expiration() {
-        use chrono::{Utc, Duration};
+        use chrono::{Duration, Utc};
 
         let future_date = Utc::now() + Duration::days(30);
         let expiration_date = ExpirationDate::DateTime(future_date);
@@ -840,7 +840,10 @@ mod tests_option_data_price_params {
         );
 
         assert_eq!(params.get_underlying_price(), Positive::ZERO);
-        assert_eq!(params.get_expiration_date(), ExpirationDate::Days(Positive::ZERO));
+        assert_eq!(
+            params.get_expiration_date(),
+            ExpirationDate::Days(Positive::ZERO)
+        );
         assert_eq!(params.get_implied_volatility(), Some(Positive::ZERO));
         assert_eq!(params.get_risk_free_rate(), Decimal::ZERO);
         assert_eq!(params.get_dividend_yield(), Positive::ZERO);
@@ -1018,6 +1021,3 @@ mod tests_sample {
         assert_eq!(built_chain.underlying_price, Positive::new(2000.0).unwrap());
     }
 }
-
-
-

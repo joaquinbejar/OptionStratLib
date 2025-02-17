@@ -49,6 +49,7 @@ use crate::strategies::delta_neutral::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -60,7 +61,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -167,7 +167,7 @@ impl PoorMansCoveredCall {
 }
 
 impl StrategyConstructor for PoorMansCoveredCall {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

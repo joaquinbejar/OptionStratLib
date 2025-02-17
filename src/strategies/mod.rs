@@ -189,6 +189,7 @@
 pub mod base;
 pub mod bear_call_spread;
 pub mod bear_put_spread;
+mod build;
 pub mod bull_call_spread;
 pub mod bull_put_spread;
 pub mod butterfly_spread;
@@ -205,7 +206,6 @@ pub mod protective_put;
 pub mod straddle;
 pub mod strangle;
 pub mod utils;
-mod build;
 
 pub use base::Strategies;
 pub use bear_call_spread::BearCallSpread;
@@ -216,6 +216,8 @@ pub use butterfly_spread::{LongButterflySpread, ShortButterflySpread};
 pub use call_butterfly::CallButterfly;
 // pub use collar::Collar;
 // pub use covered_call::CoveredCall;
+pub use build::model::StrategyRequest;
+pub use build::traits::StrategyConstructor;
 pub use custom::CustomStrategy;
 pub use delta_neutral::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD};
 pub use iron_butterfly::IronButterfly;
@@ -224,6 +226,3 @@ pub use poor_mans_covered_call::PoorMansCoveredCall;
 pub use straddle::{LongStraddle, ShortStraddle};
 pub use strangle::{LongStrangle, ShortStrangle};
 pub use utils::FindOptimalSide;
-pub use build::traits::StrategyConstructor;
-pub use build::model::{OptionWithCosts, StrategyRequest};
-

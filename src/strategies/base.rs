@@ -15,9 +15,9 @@ use crate::strategies::utils::{calculate_price_range, FindOptimalSide, Optimizat
 use crate::{OptionStyle, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
-use std::{f64, fmt};
-use std::str::FromStr;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+use std::{f64, fmt};
 use tracing::error;
 
 /// This enum represents different types of trading strategies.
@@ -852,12 +852,21 @@ mod tests_strategy_type {
             }
         }
     }
-    
+
     #[test]
     fn test_strategy_type_from_str() {
-        assert_eq!(StrategyType::from_str("ShortStrangle"), Ok(StrategyType::ShortStrangle));
-        assert_eq!(StrategyType::from_str("LongCall"), Ok(StrategyType::LongCall));
-        assert_eq!(StrategyType::from_str("BullCallSpread"), Ok(StrategyType::BullCallSpread));
+        assert_eq!(
+            StrategyType::from_str("ShortStrangle"),
+            Ok(StrategyType::ShortStrangle)
+        );
+        assert_eq!(
+            StrategyType::from_str("LongCall"),
+            Ok(StrategyType::LongCall)
+        );
+        assert_eq!(
+            StrategyType::from_str("BullCallSpread"),
+            Ok(StrategyType::BullCallSpread)
+        );
         assert_eq!(StrategyType::from_str("InvalidStrategy"), Err(()));
     }
 
@@ -1686,5 +1695,3 @@ mod tests_strategy_net_operations {
         assert!(result > Positive::ZERO);
     }
 }
-
-

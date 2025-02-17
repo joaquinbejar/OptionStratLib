@@ -1,9 +1,8 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 16/2/25
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 16/2/25
+******************************************************************************/
 
-
-pub(crate) mod traits;
 pub(crate) mod model;
+pub(crate) mod traits;

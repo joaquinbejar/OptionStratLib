@@ -15,8 +15,8 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::error::Error;
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 use tracing::{error, trace};
 
 type PriceBinomialTree = OptionsResult<(Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>)>;
@@ -1920,11 +1920,11 @@ mod tests_serialize_deserialize {
 
     #[test]
     fn test_serialize_deserialize_options() {
-        let options = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
+        let options =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
         let serialized = serde_json::to_string(&options).expect("Failed to serialize");
-        let deserialized: Options = serde_json::from_str(&serialized).expect("Failed to deserialize");
+        let deserialized: Options =
+            serde_json::from_str(&serialized).expect("Failed to deserialize");
         assert_eq!(options, deserialized);
     }
 }
-
-

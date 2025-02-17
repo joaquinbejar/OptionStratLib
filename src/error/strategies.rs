@@ -91,7 +91,7 @@ pub enum StrategyError {
     StdError {
         reason: String,
     },
-    
+
     NotImplemented,
 }
 

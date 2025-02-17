@@ -30,6 +30,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
@@ -40,7 +41,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info, trace};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const SHORT_STRANGLE_DESCRIPTION: &str =
     "A short strangle involves selling an out-of-the-money call and an \
@@ -149,7 +149,7 @@ impl ShortStrangle {
 }
 
 impl StrategyConstructor for ShortStrangle {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }
@@ -839,7 +839,7 @@ impl LongStrangle {
 }
 
 impl StrategyConstructor for LongStrangle {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }

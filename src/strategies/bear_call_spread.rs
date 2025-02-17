@@ -48,6 +48,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -58,7 +59,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::debug;
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const BEAR_CALL_SPREAD_DESCRIPTION: &str =
     "A bear call spread is created by selling a call option with a lower strike price \
@@ -172,34 +172,45 @@ impl BearCallSpread {
 }
 
 impl StrategyConstructor for BearCallSpread {
-    fn get_strategy(vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a bear call spread
         if vec_options.len() != 2 {
-            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
-                operation: "Bear Call Spread get_strategy".to_string(),
-                reason: "Must have exactly 2 options".to_string(),
-            }));
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Bear Call Spread get_strategy".to_string(),
+                    reason: "Must have exactly 2 options".to_string(),
+                },
+            ));
         }
 
         // Sort options by strike price to identify short and long positions
-        let mut sorted_options = vec_options.clone();
-        sorted_options.sort_by(|a, b| a.option.strike_price.partial_cmp(&b.option.strike_price).unwrap());
+        let mut sorted_options = vec_options.to_vec();
+        sorted_options.sort_by(|a, b| {
+            a.option
+                .strike_price
+                .partial_cmp(&b.option.strike_price)
+                .unwrap()
+        });
 
         let lower_strike_option = &sorted_options[0];
         let higher_strike_option = &sorted_options[1];
 
         // Validate options are calls
         if lower_strike_option.option.option_style != OptionStyle::Call
-            || higher_strike_option.option.option_style != OptionStyle::Call {
-            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
-                operation: "Bear Call Spread get_strategy".to_string(),
-                reason: "Options must be calls".to_string(),
-            }));
+            || higher_strike_option.option.option_style != OptionStyle::Call
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Bear Call Spread get_strategy".to_string(),
+                    reason: "Options must be calls".to_string(),
+                },
+            ));
         }
 
         // Validate option sides
         if lower_strike_option.option.side != Side::Short
-            || higher_strike_option.option.side != Side::Long {
+            || higher_strike_option.option.side != Side::Long
+        {
             return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                 operation: "Bear Call Spread get_strategy".to_string(),
                 reason: "Bear Call Spread requires a short lower strike call and a long higher strike call".to_string(),
@@ -207,11 +218,14 @@ impl StrategyConstructor for BearCallSpread {
         }
 
         // Validate expiration dates match
-        if lower_strike_option.option.expiration_date != higher_strike_option.option.expiration_date {
-            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
-                operation: "Bear Call Spread get_strategy".to_string(),
-                reason: "Options must have the same expiration date".to_string(),
-            }));
+        if lower_strike_option.option.expiration_date != higher_strike_option.option.expiration_date
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Bear Call Spread get_strategy".to_string(),
+                    reason: "Options must have the same expiration date".to_string(),
+                },
+            ));
         }
 
         // Create positions
@@ -2646,36 +2660,28 @@ mod tests_adjust_option_position_short {
 #[cfg(test)]
 mod tests_strategy_constructor {
     use super::*;
-    use rust_decimal_macros::dec;
+    use crate::model::utils::create_sample_position;
     use crate::pos;
-
-    fn create_test_option(strike: Positive, side: Side) -> OptionWithCosts {
-        OptionWithCosts {
-            open_fee: Positive::ONE,
-            close_fee: Positive::ONE,
-            premium: pos!(5.0),
-            option: Options::new(
-                OptionType::European,
-                side,
-                "TEST".to_string(),
-                strike,
-                ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),
-                Positive::ONE,
-                pos!(100.0),
-                dec!(0.05),
-                OptionStyle::Call,
-                pos!(0.01),
-                None,
-            ),
-        }
-    }
 
     #[test]
     fn test_get_strategy_valid() {
         let options = vec![
-            create_test_option(pos!(95.0), Side::Short),
-            create_test_option(pos!(105.0), Side::Long),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
         ];
 
         let result = BearCallSpread::get_strategy(&options);
@@ -2688,7 +2694,14 @@ mod tests_strategy_constructor {
 
     #[test]
     fn test_get_strategy_wrong_number_of_options() {
-        let options = vec![create_test_option(pos!(95.0), Side::Short)];
+        let options = vec![create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        )];
 
         let result = BearCallSpread::get_strategy(&options);
         assert!(matches!(
@@ -2700,9 +2713,23 @@ mod tests_strategy_constructor {
 
     #[test]
     fn test_get_strategy_wrong_option_style() {
-        let mut option1 = create_test_option(pos!(95.0), Side::Short);
+        let mut option1 = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
         option1.option.option_style = OptionStyle::Put;
-        let option2 = create_test_option(pos!(105.0), Side::Long);
+        let option2 = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(105.0),
+            pos!(0.2),
+        );
 
         let options = vec![option1, option2];
         let result = BearCallSpread::get_strategy(&options);
@@ -2716,23 +2743,50 @@ mod tests_strategy_constructor {
     #[test]
     fn test_get_strategy_wrong_sides() {
         let options = vec![
-            create_test_option(pos!(95.0), Side::Long),
-            create_test_option(pos!(105.0), Side::Short),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(115.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
         ];
-
         let result = BearCallSpread::get_strategy(&options);
         assert!(matches!(
             result,
             Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
-            if operation == "Bear Call Spread get_strategy" 
+            if operation == "Bear Call Spread get_strategy"
                 && reason == "Bear Call Spread requires a short lower strike call and a long higher strike call"
         ));
     }
 
     #[test]
     fn test_get_strategy_different_expiration_dates() {
-        let mut option1 = create_test_option(pos!(95.0), Side::Short);
-        let mut option2 = create_test_option(pos!(105.0), Side::Long);
+        let mut option1 = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
+        let mut option2 = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(105.0),
+            pos!(0.2),
+        );
 
         option1.option.expiration_date = ExpirationDate::Days(pos!(30.0));
         option2.option.expiration_date = ExpirationDate::Days(pos!(60.0));

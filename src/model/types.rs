@@ -369,13 +369,11 @@ impl<'de> Deserialize<'de> for ExpirationDate {
     }
 }
 
-
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Side {
     Long,
     Short,
 }
-
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptionStyle {

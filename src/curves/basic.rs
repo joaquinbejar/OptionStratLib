@@ -202,9 +202,9 @@ mod tests_basic_curves_trait {
 
         assert_eq!(strike, option.strike_price.to_dec());
 
-        assert!(price > Decimal::ZERO); 
+        assert!(price > Decimal::ZERO);
         let direct_bs_price = option.calculate_price_black_scholes().unwrap();
-        assert_eq!(price, direct_bs_price); 
+        assert_eq!(price, direct_bs_price);
     }
 
     #[test]
@@ -215,10 +215,9 @@ mod tests_basic_curves_trait {
 
         assert!(result.is_err());
         match result {
-            Err(CurveError::OperationError(crate::error::OperationErrorKind::InvalidParameters {
-                                               operation,
-                                               reason,
-                                           })) => {
+            Err(CurveError::OperationError(
+                crate::error::OperationErrorKind::InvalidParameters { operation, reason },
+            )) => {
                 assert_eq!(operation, "get_axis_value");
                 assert!(reason.contains("not supported"));
                 assert!(reason.contains("Expiration"));

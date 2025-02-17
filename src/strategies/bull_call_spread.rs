@@ -35,6 +35,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::StrategyConstructor;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{pos, Options, Positive};
@@ -44,7 +45,6 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error, info};
-use crate::strategies::{OptionWithCosts, StrategyConstructor};
 
 const BULL_CALL_SPREAD_DESCRIPTION: &str =
     "A bull call spread is created by buying a call option with a lower strike price \
@@ -158,7 +158,7 @@ impl BullCallSpread {
 }
 
 impl StrategyConstructor for BullCallSpread {
-    fn get_strategy(_vec_options: &Vec<OptionWithCosts>) -> Result<Self, StrategyError> {
+    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
         todo!()
     }
 }
