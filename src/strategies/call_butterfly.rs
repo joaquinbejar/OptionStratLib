@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -346,6 +346,8 @@ impl Positionable for CallButterfly {
         Ok(())
     }
 }
+
+impl StrategyBasic for CallButterfly {}
 
 impl Strategies for CallButterfly {
     fn get_underlying_price(&self) -> Positive {

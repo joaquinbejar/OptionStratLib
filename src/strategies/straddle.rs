@@ -9,7 +9,7 @@ Key characteristics:
 - High cost due to purchasing both a call and a put
 - Profitable only with a large move in either direction
 */
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -294,6 +294,8 @@ impl Positionable for ShortStraddle {
         Ok(())
     }
 }
+
+impl StrategyBasic for ShortStraddle {}
 
 impl Strategies for ShortStraddle {
     fn get_underlying_price(&self) -> Positive {
@@ -931,6 +933,8 @@ impl Positionable for LongStraddle {
         Ok(())
     }
 }
+
+impl StrategyBasic for LongStraddle {}
 
 impl Strategies for LongStraddle {
     fn get_underlying_price(&self) -> Positive {

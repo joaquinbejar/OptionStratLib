@@ -15,7 +15,7 @@ Key characteristics:
 - Maximum loss is limited to the net premium paid
 - All options must have same expiration date
 */
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -376,6 +376,8 @@ impl Positionable for LongButterflySpread {
         Ok(())
     }
 }
+
+impl StrategyBasic for LongButterflySpread {}
 
 impl Strategies for LongButterflySpread {
     fn get_underlying_price(&self) -> Positive {
@@ -1213,6 +1215,8 @@ impl Positionable for ShortButterflySpread {
         Ok(())
     }
 }
+
+impl StrategyBasic for ShortButterflySpread {}
 
 impl Strategies for ShortButterflySpread {
     fn get_underlying_price(&self) -> Positive {

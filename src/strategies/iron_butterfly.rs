@@ -11,7 +11,7 @@ Key characteristics:
 - High probability of small profit
 - Requires very low volatility
 */
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -369,6 +369,8 @@ impl Positionable for IronButterfly {
         Ok(())
     }
 }
+
+impl StrategyBasic for IronButterfly {}
 
 impl Strategies for IronButterfly {
     fn get_underlying_price(&self) -> Positive {

@@ -9,7 +9,7 @@ Key characteristics:
 - Lower cost than a straddle
 - Requires a larger price move to become profitable
 */
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -370,6 +370,8 @@ impl Positionable for ShortStrangle {
         Ok(())
     }
 }
+
+impl StrategyBasic for ShortStrangle {}
 
 impl Strategies for ShortStrangle {
     fn get_underlying_price(&self) -> Positive {
@@ -1145,6 +1147,8 @@ impl Positionable for LongStrangle {
         Ok(())
     }
 }
+
+impl StrategyBasic for LongStrangle {}
 
 impl Strategies for LongStrangle {
     fn get_underlying_price(&self) -> Positive {

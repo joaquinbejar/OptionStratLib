@@ -9,7 +9,7 @@ Key characteristics:
 - Limited risk
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -370,6 +370,8 @@ impl Positionable for IronCondor {
         Ok(())
     }
 }
+
+impl StrategyBasic for IronCondor {}
 
 impl Strategies for IronCondor {
     fn get_underlying_price(&self) -> Positive {

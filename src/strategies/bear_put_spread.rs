@@ -25,7 +25,7 @@ use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pricing::Profit;
-use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyType, Validable};
+use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyBasic, StrategyType, Validable};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::StrategyConstructor;
@@ -281,6 +281,8 @@ impl Positionable for BearPutSpread {
         Ok(())
     }
 }
+
+impl StrategyBasic for BearPutSpread {}
 
 impl Strategies for BearPutSpread {
     fn get_underlying_price(&self) -> Positive {

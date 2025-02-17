@@ -27,7 +27,7 @@ Key characteristics:
 - Bearish strategy that profits from price decline
 - Both options have same expiration date
 */
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -386,6 +386,8 @@ impl Positionable for BearCallSpread {
         Ok(())
     }
 }
+
+impl StrategyBasic for BearCallSpread {}
 
 impl Strategies for BearCallSpread {
     fn get_underlying_price(&self) -> Positive {

@@ -31,7 +31,7 @@
 //! and risk associated with traditional covered call strategies.
 //!
 
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
@@ -307,6 +307,8 @@ impl Positionable for PoorMansCoveredCall {
         Ok(())
     }
 }
+
+impl StrategyBasic for PoorMansCoveredCall {}
 
 impl Strategies for PoorMansCoveredCall {
     fn get_underlying_price(&self) -> Positive {

@@ -14,7 +14,7 @@ Key characteristics:
 - Maximum profit achieved when price rises above higher strike
 - Also known as a vertical call debit spread
 */
-use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
@@ -286,6 +286,8 @@ impl Positionable for BullCallSpread {
         Ok(())
     }
 }
+
+impl StrategyBasic for BullCallSpread {}
 
 impl Strategies for BullCallSpread {
     fn get_underlying_price(&self) -> Positive {
