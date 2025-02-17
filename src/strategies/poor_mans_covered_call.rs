@@ -51,7 +51,7 @@ use crate::strategies::delta_neutral::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::{LongStrangle, StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -63,6 +63,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
+use crate::pnl::utils::{PnL, PnLCalculator};
 
 const PMCC_DESCRIPTION: &str =
     "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
@@ -771,6 +772,32 @@ impl DeltaNeutrality for PoorMansCoveredCall {
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
+    }
+}
+
+impl PnLCalculator for PoorMansCoveredCall {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            + self
+            .short_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility))
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl_at_expiration(underlying_price)
+            + self.short_call.calculate_pnl_at_expiration(underlying_price))
     }
 }
 
