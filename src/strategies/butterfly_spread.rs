@@ -31,13 +31,14 @@ use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
+use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::{LongStrangle, StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -880,6 +881,40 @@ impl DeltaNeutrality for LongButterflySpread {
     }
 }
 
+impl PnLCalculator for LongButterflySpread {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .short_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            + self
+                .long_call_low
+                .calculate_pnl(market_price, expiration_date, implied_volatility)
+            + self
+                .long_call_high
+                .calculate_pnl(market_price, expiration_date, implied_volatility))
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .short_call
+            .calculate_pnl_at_expiration(underlying_price)
+            + self
+                .long_call_low
+                .calculate_pnl_at_expiration(underlying_price)
+            + self
+                .long_call_high
+                .calculate_pnl_at_expiration(underlying_price))
+    }
+}
+
 /*
 Short Butterfly Spread Strategy
 
@@ -1712,6 +1747,38 @@ impl DeltaNeutrality for ShortButterflySpread {
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
+    }
+}
+
+impl PnLCalculator for ShortButterflySpread {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            + self
+                .short_call_low
+                .calculate_pnl(market_price, expiration_date, implied_volatility)
+            + self
+                .short_call_high
+                .calculate_pnl(market_price, expiration_date, implied_volatility))
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self.long_call.calculate_pnl_at_expiration(underlying_price)
+            + self
+                .short_call_low
+                .calculate_pnl_at_expiration(underlying_price)
+            + self
+                .short_call_high
+                .calculate_pnl_at_expiration(underlying_price))
     }
 }
 
