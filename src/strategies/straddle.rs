@@ -32,7 +32,7 @@ use crate::strategies::delta_neutral::{
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::{LongStrangle, StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
@@ -43,6 +43,7 @@ use plotters::prelude::{ShapeStyle, RED};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{info, trace};
+use crate::pnl::utils::{PnL, PnLCalculator};
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -691,6 +692,32 @@ impl DeltaNeutrality for ShortStraddle {
     }
 }
 
+impl PnLCalculator for ShortStraddle {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .short_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            + self
+            .short_put
+            .calculate_pnl(market_price, expiration_date, implied_volatility))
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .short_call
+            .calculate_pnl_at_expiration(underlying_price)
+            + self.short_put.calculate_pnl_at_expiration(underlying_price))
+    }
+}
+
 /// A Long Straddle is an options trading strategy that involves simultaneously buying
 /// a put and a call option with the same strike price and expiration date. This strategy
 /// profits from high volatility, as it makes money when the underlying asset moves
@@ -1311,6 +1338,32 @@ impl DeltaNeutrality for LongStraddle {
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
+    }
+}
+
+impl PnLCalculator for LongStraddle {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
+            + self
+            .long_put
+            .calculate_pnl(market_price, expiration_date, implied_volatility))
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl_at_expiration(underlying_price)
+            + self.long_put.calculate_pnl_at_expiration(underlying_price))
     }
 }
 
