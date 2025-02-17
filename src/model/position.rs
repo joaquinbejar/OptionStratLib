@@ -119,6 +119,7 @@ impl Position {
             Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
             Side::Short => self.fees()?,
         };
+
         Ok(total_cost)
     }
 
@@ -314,10 +315,22 @@ impl PnLCalculator for Position {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        let mut pnl = self.option
-            .calculate_pnl(market_price, expiration_date, implied_volatility)?;
-        pnl.date_time = self.date;
-        Ok(pnl)
+        let price_at_buy = self.option.calculate_price_black_scholes()?;
+        let mut current_option = self.option.clone();
+        current_option.expiration_date = expiration_date;
+        current_option.underlying_price = *market_price;
+        current_option.implied_volatility = *implied_volatility;
+        let price_at_sell = current_option.calculate_price_black_scholes()?;
+        let unrealized = price_at_sell - price_at_buy;
+        let initial_cost = self.total_cost()?;
+        let initial_income = self.premium_received()?;
+        Ok(PnL::new(
+            None,
+            Some(unrealized),
+            initial_cost,
+            initial_income,
+            self.date,
+        ))
     }
 
     fn calculate_pnl_at_expiration(
