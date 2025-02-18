@@ -80,6 +80,7 @@ pub trait Walkable {
     ///
     /// # Panics
     /// Panics if n_steps is zero
+    #[allow(clippy::too_many_arguments)]
     fn generate_random_walk_timeframe(
         &mut self,
         n_steps: usize,
