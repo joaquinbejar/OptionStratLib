@@ -31,7 +31,7 @@ pub trait Walkable {
         std_dev_change: Positive,
     ) -> Result<(), Box<dyn Error>> {
         if n_steps == 0 {
-            panic!("Number of steps must be greater than zero");
+            return Err(Box::from("Number of steps must be greater than zero"));
         }
         let mut rng = thread_rng();
         let mut current_std_dev = std_dev;
@@ -78,8 +78,6 @@ pub trait Walkable {
     /// * `time_frame` - Target timeframe for the simulation
     /// * `volatility_limits` - Optional tuple of (min_volatility, max_volatility)
     ///
-    /// # Panics
-    /// Panics if n_steps is zero
     #[allow(clippy::too_many_arguments)]
     fn generate_random_walk_timeframe(
         &mut self,
@@ -92,7 +90,7 @@ pub trait Walkable {
         volatility_limits: Option<(Positive, Positive)>,
     ) -> Result<(), Box<dyn Error>> {
         if n_steps == 0 {
-            panic!("Number of steps must be greater than zero");
+            return Err(Box::from("Number of steps must be greater than zero"));
         }
 
         // Convert daily volatilities to target timeframe
@@ -443,12 +441,10 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[should_panic]
-    fn test_zero_steps_should_panic() {
+    fn test_zero_steps_should_error() {
         let mut walk = TestWalk::new();
-
-        walk.generate_random_walk(0, pos!(100.0), 0.0, pos!(1.0), pos!(0.01)).unwrap();
+        let result = walk.generate_random_walk(0, pos!(100.0), 0.0, pos!(1.0), pos!(0.01));
+        assert!(result.is_err());
     }
 }
 
