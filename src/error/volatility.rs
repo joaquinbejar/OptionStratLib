@@ -10,7 +10,7 @@ use std::error::Error;
 use std::fmt;
 
 #[derive(Debug)]
-pub enum ImpliedVolatilityError {
+pub enum VolatilityError {
     InvalidPrice {
         price: Positive,
         reason: String,
@@ -32,27 +32,27 @@ pub enum ImpliedVolatilityError {
     },
 }
 
-impl Error for ImpliedVolatilityError {}
+impl Error for VolatilityError {}
 
-impl fmt::Display for ImpliedVolatilityError {
+impl fmt::Display for VolatilityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            ImpliedVolatilityError::InvalidPrice { price, reason } => {
+            VolatilityError::InvalidPrice { price, reason } => {
                 write!(f, "Invalid price {}: {}", price, reason)
             }
-            ImpliedVolatilityError::InvalidTime { time, reason } => {
+            VolatilityError::InvalidTime { time, reason } => {
                 write!(f, "Invalid time {}: {}", time, reason)
             }
-            ImpliedVolatilityError::ZeroVega => {
+            VolatilityError::ZeroVega => {
                 write!(f, "Vega is zero, cannot calculate implied volatility")
             }
-            ImpliedVolatilityError::VegaError { reason } => {
+            VolatilityError::VegaError { reason } => {
                 write!(f, "Error calculating vega: {}", reason)
             }
-            ImpliedVolatilityError::OptionError { reason } => {
+            VolatilityError::OptionError { reason } => {
                 write!(f, "Option error: {}", reason)
             }
-            ImpliedVolatilityError::NoConvergence {
+            VolatilityError::NoConvergence {
                 iterations,
                 last_volatility,
             } => {
@@ -66,17 +66,17 @@ impl fmt::Display for ImpliedVolatilityError {
     }
 }
 
-impl From<GreeksError> for ImpliedVolatilityError {
+impl From<GreeksError> for VolatilityError {
     fn from(error: GreeksError) -> Self {
-        ImpliedVolatilityError::VegaError {
+        VolatilityError::VegaError {
             reason: error.to_string(),
         }
     }
 }
 
-impl From<OptionsError> for ImpliedVolatilityError {
+impl From<OptionsError> for VolatilityError {
     fn from(error: OptionsError) -> Self {
-        ImpliedVolatilityError::OptionError {
+        VolatilityError::OptionError {
             reason: error.to_string(),
         }
     }
@@ -91,7 +91,7 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_invalid_price_error() {
-        let error = ImpliedVolatilityError::InvalidPrice {
+        let error = VolatilityError::InvalidPrice {
             price: pos!(0.0),
             reason: "Price cannot be zero".to_string(),
         };
@@ -101,7 +101,7 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_invalid_time_error() {
-        let error = ImpliedVolatilityError::InvalidTime {
+        let error = VolatilityError::InvalidTime {
             time: pos!(0.0),
             reason: "Time cannot be zero".to_string(),
         };
@@ -111,7 +111,7 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_zero_vega_error() {
-        let error = ImpliedVolatilityError::ZeroVega;
+        let error = VolatilityError::ZeroVega;
 
         assert_eq!(
             error.to_string(),
@@ -121,7 +121,7 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_vega_error() {
-        let error = ImpliedVolatilityError::VegaError {
+        let error = VolatilityError::VegaError {
             reason: "Failed to calculate vega".to_string(),
         };
 
@@ -133,7 +133,7 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_option_error() {
-        let error = ImpliedVolatilityError::OptionError {
+        let error = VolatilityError::OptionError {
             reason: "Invalid option parameters".to_string(),
         };
 
@@ -142,7 +142,7 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_no_convergence_error() {
-        let error = ImpliedVolatilityError::NoConvergence {
+        let error = VolatilityError::NoConvergence {
             iterations: 100,
             last_volatility: pos!(0.5),
         };
@@ -160,10 +160,10 @@ mod tests_volatility_errors {
             reason: "Volatility cannot be zero".to_string(),
         });
 
-        let implied_vol_error: ImpliedVolatilityError = greeks_error.into();
+        let implied_vol_error: VolatilityError = greeks_error.into();
 
         match implied_vol_error {
-            ImpliedVolatilityError::VegaError { reason } => {
+            VolatilityError::VegaError { reason } => {
                 assert!(reason.contains("Volatility cannot be zero"));
             }
             _ => panic!("Wrong error variant"),
@@ -176,10 +176,10 @@ mod tests_volatility_errors {
             reason: "Invalid option parameters".to_string(),
         };
 
-        let implied_vol_error: ImpliedVolatilityError = greeks_error.into();
+        let implied_vol_error: VolatilityError = greeks_error.into();
 
         match implied_vol_error {
-            ImpliedVolatilityError::OptionError { reason } => {
+            VolatilityError::OptionError { reason } => {
                 assert!(reason.contains("Invalid option parameters"));
             }
             _ => panic!("Wrong error variant"),
@@ -189,12 +189,12 @@ mod tests_volatility_errors {
     #[test]
     fn test_error_is_send() {
         fn assert_send<T: Send>() {}
-        assert_send::<ImpliedVolatilityError>();
+        assert_send::<VolatilityError>();
     }
 
     #[test]
     fn test_error_is_sync() {
         fn assert_sync<T: Sync>() {}
-        assert_sync::<ImpliedVolatilityError>();
+        assert_sync::<VolatilityError>();
     }
 }
