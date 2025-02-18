@@ -5,9 +5,11 @@
 ******************************************************************************/
 use crate::constants::*;
 use chrono::{Duration, Local, NaiveTime, Utc};
+use serde::{Deserialize, Serialize};
+use crate::Positive;
 
 /// Represents different timeframes for volatility calculations
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum TimeFrame {
     Microsecond, // 1-microsecond data
     Millisecond, // 1-millisecond data
@@ -19,12 +21,12 @@ pub enum TimeFrame {
     Month,       // Monthly data
     Quarter,     // Quarterly data
     Year,        // Yearly data
-    Custom(f64), // Custom periods per year
+    Custom(Positive), // Custom periods per year
 }
 
 impl TimeFrame {
     /// Returns the number of periods in a year for this timeframe
-    pub fn periods_per_year(&self) -> f64 {
+    pub fn periods_per_year(&self) -> Positive {
         match self {
             TimeFrame::Microsecond => {
                 TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MICROSECONDS_PER_SECOND
@@ -39,7 +41,7 @@ impl TimeFrame {
             TimeFrame::Week => WEEKS_PER_YEAR,               // Weeks in a year
             TimeFrame::Month => MONTHS_PER_YEAR,             // Months in a year
             TimeFrame::Quarter => QUARTERS_PER_YEAR,         // Quarters in a year
-            TimeFrame::Year => 1.0,                          // Base unit
+            TimeFrame::Year => Positive::ONE,                          // Base unit
             TimeFrame::Custom(periods) => *periods,          // Custom periods per year
         }
     }
@@ -72,7 +74,7 @@ pub fn get_today_or_tomorrow_formatted() -> String {
 #[cfg(test)]
 mod tests_timeframe {
     use super::*;
-    use approx::assert_relative_eq;
+    use crate::{assert_pos_relative_eq, pos};
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -142,7 +144,7 @@ mod tests_timeframe {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_custom_periods() {
-        let custom_periods = 123.45;
+        let custom_periods = pos!(123.45);
         assert_eq!(
             TimeFrame::Custom(custom_periods).periods_per_year(),
             custom_periods
@@ -170,22 +172,22 @@ mod tests_timeframe {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_specific_conversion_ratios() {
         // Test specific conversion ratios between timeframes
-        assert_relative_eq!(
+        assert_pos_relative_eq!(
             TimeFrame::Hour.periods_per_year() / TimeFrame::Day.periods_per_year(),
             TRADING_HOURS,
-            epsilon = 1e-10
+            pos!(1e-10)
         );
 
-        assert_relative_eq!(
+        assert_pos_relative_eq!(
             TimeFrame::Minute.periods_per_year() / TimeFrame::Hour.periods_per_year(),
             MINUTES_PER_HOUR,
-            epsilon = 1e-10
+             pos!(1e-10)
         );
 
-        assert_relative_eq!(
+        assert_pos_relative_eq!(
             TimeFrame::Second.periods_per_year() / TimeFrame::Minute.periods_per_year(),
             MINUTES_PER_HOUR,
-            epsilon = 1e-10
+             pos!(1e-10)
         );
     }
 
@@ -193,16 +195,16 @@ mod tests_timeframe {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_trading_days_relationship() {
         // Verify relationships with trading days
-        assert_relative_eq!(
+        assert_pos_relative_eq!(
             TimeFrame::Day.periods_per_year(),
             TRADING_DAYS,
-            epsilon = 1e-10
+            pos!(1e-10)
         );
 
-        assert_relative_eq!(
+        assert_pos_relative_eq!(
             TimeFrame::Hour.periods_per_year() / TRADING_HOURS,
             TRADING_DAYS,
-            epsilon = 1e-10
+            pos!(1e-10)
         );
     }
 
@@ -210,19 +212,18 @@ mod tests_timeframe {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_custom_edge_cases() {
         // Test edge cases for custom periods
-        assert_eq!(TimeFrame::Custom(0.0).periods_per_year(), 0.0);
+        assert_eq!(TimeFrame::Custom(Positive::ZERO).periods_per_year(), 0.0);
         assert_eq!(
-            TimeFrame::Custom(f64::INFINITY).periods_per_year(),
-            f64::INFINITY
+            TimeFrame::Custom(Positive::INFINITY).periods_per_year(),
+            Positive::INFINITY
         );
-        assert_eq!(TimeFrame::Custom(-1.0).periods_per_year(), -1.0);
     }
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_timeframe_debug() {
         assert_eq!(format!("{:?}", TimeFrame::Day), "Day");
-        assert_eq!(format!("{:?}", TimeFrame::Custom(1.5)), "Custom(1.5)");
+        assert_eq!(format!("{:?}", TimeFrame::Custom(pos!(1.5))), "Custom(1.5)");
     }
 
     #[test]
