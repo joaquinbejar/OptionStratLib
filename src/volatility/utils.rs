@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
+use std::error::Error;
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
 use crate::greeks::Greeks;
 use crate::utils::time::TimeFrame;
@@ -11,8 +12,8 @@ use crate::{pos, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
-use std::error::Error;
 use tracing::debug;
+use crate::error::VolatilityError;
 
 /// Calculates the constant volatility from a series of returns.
 ///
@@ -312,6 +313,54 @@ pub fn de_annualized_volatility(
     Ok(annual_volatility / timeframe.periods_per_year().sqrt())
 }
 
+
+/// Adjusts volatility between different timeframes using the square root of time rule
+///
+/// # Arguments
+/// * `volatility` - The volatility to adjust
+/// * `from_frame` - The original timeframe of the volatility
+/// * `to_frame` - The target timeframe for the volatility
+///
+/// # Returns
+/// The adjusted volatility for the target timeframe
+///
+/// # Example
+/// ```
+/// use optionstratlib::pos;
+/// use optionstratlib::utils::TimeFrame;
+/// use optionstratlib::volatility::adjust_volatility;
+/// let daily_vol = pos!(0.2); // 20% daily volatility
+/// let minute_vol = adjust_volatility(daily_vol, TimeFrame::Day, TimeFrame::Minute).unwrap();
+/// ```
+pub fn adjust_volatility(volatility: Positive, from_frame: TimeFrame, to_frame: TimeFrame) -> Result<Positive, Box<dyn Error>> {
+    if from_frame == to_frame {
+        return Ok(volatility);
+    }
+
+    let from_periods = from_frame.periods_per_year();
+    let to_periods = to_frame.periods_per_year();
+
+    if from_periods == to_periods {
+        return Ok(volatility);
+    }
+
+    // Check for division by zero
+    if to_periods.is_zero() {
+        return Err(Box::new(VolatilityError::InvalidTime {
+            time: to_periods,
+            reason: format!(
+                "Cannot adjust volatility to timeframe with zero periods per year: {:?}",
+                to_frame
+            ),
+        }));
+    }
+
+    // Scale factor is square root of (from_periods / to_periods)
+    let scale_factor = pos!((from_periods / to_periods).to_f64().sqrt());
+
+    Ok(volatility * scale_factor)
+}
+
 #[cfg(test)]
 mod tests_annualize_volatility {
     use super::*;
@@ -338,7 +387,7 @@ mod tests_annualize_volatility {
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_custom_timeframe() {
-        let custom_periods = 100.0;
+        let custom_periods = pos!(100.0);
         let vol = pos!(0.05);
         let annual_vol = annualized_volatility(vol, TimeFrame::Custom(custom_periods)).unwrap();
         let expected = vol * custom_periods.sqrt();
@@ -973,5 +1022,144 @@ mod tests_uncertain_volatility_bounds {
         assert!(lower < upper);
         assert!(lower > Positive::ZERO);
         assert!(upper < option.underlying_price);
+    }
+}
+
+#[cfg(test)]
+mod tests_adjust_volatility {
+    use super::*;
+    use crate::{assert_pos_relative_eq, pos};
+
+    #[test]
+    fn test_same_timeframe() {
+        let vol = pos!(0.2);
+        let result = adjust_volatility(vol, TimeFrame::Day, TimeFrame::Day).unwrap();
+        assert_eq!(result, vol);
+    }
+
+    #[test]
+    fn test_same_periods_different_timeframe() {
+        // Create two custom timeframes with same periods
+        let vol = pos!(0.2);
+        let result = adjust_volatility(
+            vol,
+            TimeFrame::Custom(pos!(252.0)),
+            TimeFrame::Day
+        ).unwrap();
+        assert_eq!(result, vol);
+    }
+
+    #[test]
+    fn test_zero_periods() {
+        let vol = pos!(0.2);
+        let result = adjust_volatility(vol, TimeFrame::Day, TimeFrame::Custom(Positive::ZERO));
+        assert!(result.is_err());
+
+        if let Err(e) = result {
+            assert!(e.to_string().contains("zero periods per year"));
+        } else {
+            panic!("Expected error for zero periods");
+        }
+    }
+
+    #[test]
+    fn test_daily_to_minute() {
+        let daily_vol = pos!(0.2);
+        let result = adjust_volatility(daily_vol, TimeFrame::Day, TimeFrame::Minute).unwrap();
+
+        // For testing, we can calculate the expected value:
+        // daily periods = 252
+        // minute periods = 252 * 6.5 * 60 = 98280
+        // scale_factor = sqrt(252/98280) ≈ 0.0506
+        // expected = 0.2 * 0.0506 ≈ 0.01012
+        assert_pos_relative_eq!(result, pos!(0.0101273936), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_minute_to_daily() {
+        let minute_vol = pos!(0.01012);
+        let result = adjust_volatility(minute_vol, TimeFrame::Minute, TimeFrame::Day).unwrap();
+
+        // This should be approximately the inverse of the previous test
+        assert_pos_relative_eq!(result, pos!(0.199853), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_daily_to_hourly() {
+        let daily_vol = pos!(0.2);
+        let result = adjust_volatility(daily_vol, TimeFrame::Day, TimeFrame::Hour).unwrap();
+
+        // daily periods = 252
+        // hourly periods = 252 * 6.5 = 1638
+        // scale_factor = sqrt(252/1638) ≈ 0.3922
+        // expected = 0.2 * 0.3922 ≈ 0.07844
+        assert_pos_relative_eq!(result, pos!(0.07844), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_monthly_to_daily() {
+        let monthly_vol = pos!(0.3);
+        let result = adjust_volatility(monthly_vol, TimeFrame::Month, TimeFrame::Day).unwrap();
+
+        // monthly periods = 12
+        // daily periods = 252
+        // scale_factor = sqrt(12/252) ≈ 0.218
+        // expected = 0.3 * 0.218 ≈ 0.0654
+        assert_pos_relative_eq!(result, pos!(0.0654653), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_custom_timeframe() {
+        let vol = pos!(0.25);
+        let custom_periods = pos!(100.0);
+        let result = adjust_volatility(
+            vol,
+            TimeFrame::Custom(custom_periods),
+            TimeFrame::Day
+        ).unwrap();
+
+        // custom periods = 100
+        // daily periods = 252
+        // scale_factor = sqrt(100/252) ≈ 0.629
+        // expected = 0.25 * 0.629 ≈ 0.15725
+        assert_pos_relative_eq!(result, pos!(0.157485197), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_yearly_to_daily() {
+        let yearly_vol = pos!(0.4);
+        let result = adjust_volatility(yearly_vol, TimeFrame::Year, TimeFrame::Day).unwrap();
+
+        // yearly periods = 1
+        // daily periods = 252
+        // scale_factor = sqrt(1/252) ≈ 0.0629
+        // expected = 0.4 * 0.0629 ≈ 0.02516
+        assert_pos_relative_eq!(result, pos!(0.025197631), pos!(0.0001));
+    }
+
+    #[test]
+    fn test_zero_volatility() {
+        let result = adjust_volatility(
+            Positive::ZERO,
+            TimeFrame::Day,
+            TimeFrame::Minute
+        ).unwrap();
+        assert_eq!(result, Positive::ZERO);
+    }
+
+    #[test]
+    fn test_very_small_volatility() {
+        let small_vol = pos!(0.0001);
+        let result = adjust_volatility(small_vol, TimeFrame::Day, TimeFrame::Hour).unwrap();
+        assert!(result > Positive::ZERO);
+        assert!(result < small_vol);
+    }
+
+    #[test]
+    fn test_very_large_volatility() {
+        let large_vol = pos!(10.0);
+        let result = adjust_volatility(large_vol, TimeFrame::Day, TimeFrame::Minute).unwrap();
+        assert!(result > Positive::ZERO);
+        assert!(result < large_vol);
     }
 }
