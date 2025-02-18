@@ -34,7 +34,7 @@
 //! * Invalid rate values
 
 use crate::error::decimal;
-use crate::error::ImpliedVolatilityError;
+use crate::error::VolatilityError;
 use crate::Positive;
 use std::error::Error;
 use std::fmt;
@@ -232,8 +232,8 @@ impl From<decimal::DecimalError> for GreeksError {
     }
 }
 
-impl From<ImpliedVolatilityError> for GreeksError {
-    fn from(error: ImpliedVolatilityError) -> Self {
+impl From<VolatilityError> for GreeksError {
+    fn from(error: VolatilityError) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidVolatility {
             value: 0.0,
             reason: error.to_string(),
@@ -488,7 +488,7 @@ mod tests_extended {
 
     #[test]
     fn test_implied_volatility_error_conversion() {
-        let iv_error = ImpliedVolatilityError::ZeroVega;
+        let iv_error = VolatilityError::ZeroVega;
         let error: GreeksError = iv_error.into();
         assert_eq!(
             format!("{}", error),

@@ -1,6 +1,6 @@
 use crate::chains::chain::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
-use crate::error::{GreeksError, ImpliedVolatilityError, OptionsError, OptionsResult};
+use crate::error::{GreeksError, VolatilityError, OptionsError, OptionsResult};
 use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -314,7 +314,7 @@ impl Options {
     pub fn calculate_implied_volatility(
         &self,
         market_price: Decimal,
-    ) -> Result<Positive, ImpliedVolatilityError> {
+    ) -> Result<Positive, VolatilityError> {
         let is_short = self.is_short();
         let target_price = if is_short {
             -market_price
@@ -360,7 +360,7 @@ impl Options {
         }
 
         // If we haven't found a solution after max iterations
-        Err(ImpliedVolatilityError::NoConvergence {
+        Err(VolatilityError::NoConvergence {
             iterations: MAX_ITERATIONS_IV,
             last_volatility: (high + low) / Positive::TWO,
         })
@@ -1758,7 +1758,7 @@ mod tests_options_black_scholes {
 #[cfg(test)]
 mod tests_calculate_implied_volatility {
     use super::*;
-    use crate::error::ImpliedVolatilityError;
+    use crate::error::VolatilityError;
     use crate::{assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
@@ -1858,7 +1858,7 @@ mod tests_calculate_implied_volatility {
         let result = option.calculate_implied_volatility(Decimal::ZERO);
         assert!(matches!(
             result,
-            Err(ImpliedVolatilityError::OptionError { .. })
+            Err(VolatilityError::OptionError { .. })
         ));
     }
 
@@ -1882,7 +1882,7 @@ mod tests_calculate_implied_volatility {
         let result = option.calculate_implied_volatility(dec!(2.5));
         assert!(matches!(
             result,
-            Err(ImpliedVolatilityError::OptionError { .. })
+            Err(VolatilityError::OptionError { .. })
         ));
     }
 

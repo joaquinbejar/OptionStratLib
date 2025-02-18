@@ -154,4 +154,4 @@ pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
-pub use volatility::ImpliedVolatilityError;
+pub use volatility::VolatilityError;
