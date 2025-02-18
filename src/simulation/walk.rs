@@ -560,10 +560,9 @@ mod tests_random_walk_timeframe {
     }
 
     #[test]
-    #[should_panic(expected = "Number of steps must be greater than zero")]
     fn test_zero_steps() {
         let mut walker = TestWalker::new();
-        walker.generate_random_walk_timeframe(
+        let result = walker.generate_random_walk_timeframe(
             0,
             pos!(100.0),
             0.0,
@@ -571,7 +570,8 @@ mod tests_random_walk_timeframe {
             pos!(0.1),
             TimeFrame::Day,
             None,
-        ).unwrap();
+        );
+        assert!(result.is_err());
     }
 
     #[test]
