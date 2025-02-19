@@ -2841,3 +2841,179 @@ mod tests_strategy_constructor {
         ));
     }
 }
+
+#[cfg(test)]
+mod tests_bear_call_spread_pnl {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_bear_call_spread() -> Result<BearCallSpread, StrategyError> {
+        // Create short call with lower strike
+        let short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(100.0), // Strike price (ATM)
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create long call with higher strike
+        let long_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(105.0), // Higher strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        BearCallSpread::get_strategy(&vec![short_call, long_call])
+    }
+
+    #[test]
+    fn test_calculate_pnl_below_strikes() {
+        let spread = create_test_bear_call_spread().unwrap();
+        let market_price = pos!(95.0);  // Below both strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Both options OTM, should be close to max profit
+        // Initial income: Premium from short call (5.0)
+        // Initial costs: Premium for long call (5.0) + total fees (2.0)
+        assert_pos_relative_eq!(pnl.initial_income, pos!(5.0), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(7.0), pos!(1e-6));
+        assert!(pnl.unrealized.unwrap() > dec!(-2.0)); // Should be near max profit
+    }
+
+    #[test]
+    fn test_calculate_pnl_between_strikes() {
+        let spread = create_test_bear_call_spread().unwrap();
+        let market_price = pos!(102.5); // Between strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.1);
+
+        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Short call ITM, long call OTM
+        assert!(pnl.unrealized.unwrap() < dec!(-0.5)); // Some loss
+        assert!(pnl.unrealized.unwrap() > dec!(-5.0)); // But not max loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_above_strikes() {
+        let spread = create_test_bear_call_spread().unwrap();
+        let market_price = pos!(110.0); // Above both strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Both options ITM, should be near max loss
+        assert!(pnl.unrealized.unwrap() < dec!(-2.0)); // Close to max loss
+        assert!(pnl.unrealized.unwrap() > dec!(-5.0)); // But not worse than max loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_profit() {
+        let spread = create_test_bear_call_spread().unwrap();
+        let underlying_price = pos!(95.0); // Below both strikes
+
+        let result = spread.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // At expiration, both options expire worthless
+        // Max profit is the net premium received minus fees
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-2.0), dec!(1e-6)); // Premium received - costs
+        assert_eq!(pnl.initial_income, pos!(5.0));
+        assert_eq!(pnl.initial_costs, pos!(7.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_loss() {
+        let spread = create_test_bear_call_spread().unwrap();
+        let underlying_price = pos!(110.0); // Well above both strikes
+
+        let result = spread.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // Max loss = spread width (5.0) - net premium received (0.0) + fees (2.0)
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-7.0), dec!(1e-6));
+        assert_eq!(pnl.initial_income, pos!(5.0));
+        assert_eq!(pnl.initial_costs, pos!(7.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_between_strikes() {
+        let spread = create_test_bear_call_spread().unwrap();
+        let underlying_price = pos!(102.5); // Between strikes
+
+        let result = spread.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // Loss should be: (102.5 - 100) = 2.5 intrinsic value of short call
+        // Plus costs (7.0) minus income (5.0)
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-4.5), dec!(1e-6));
+    }
+
+    #[test]
+    fn test_calculate_pnl_with_higher_volatility() {
+        let spread = create_test_bear_call_spread().unwrap();
+        let market_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.4); // Higher volatility
+
+        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // With higher volatility, both options are worth more
+        // Net effect should be slightly negative as short gamma position
+        assert!(pnl.unrealized.unwrap() < dec!(0.0));
+        // But still capped by the spread width
+        assert!(pnl.unrealized.unwrap() > dec!(-5.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_at_short_strike() {
+        let spread = create_test_bear_call_spread().unwrap();
+        let underlying_price = pos!(100.0); // At short strike
+
+        let result = spread.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // At the short strike, short call is ATM
+        // Loss should be just the costs minus income
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-2.0), dec!(1e-6));
+    }
+}
