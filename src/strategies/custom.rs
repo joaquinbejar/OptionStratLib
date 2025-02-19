@@ -274,8 +274,17 @@ impl CustomStrategy {
 }
 
 impl StrategyConstructor for CustomStrategy {
-    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        Ok(Self::new(
+            "CustomStrategy".to_string(),
+            "".to_string(),
+            format!("CustomStrategy: {:?}", vec_options),
+            Default::default(),
+            Vec::from(vec_options),
+            Default::default(),
+            100,
+            Default::default(),
+        ))
     }
 }
 
