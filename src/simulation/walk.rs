@@ -345,7 +345,8 @@ mod tests_random_walk {
         let mut walk = TestWalk::new();
         let initial_price = pos!(100.0);
 
-        walk.generate_random_walk(10, initial_price, 0.0, pos!(1.0), pos!(0.01)).unwrap();
+        walk.generate_random_walk(10, initial_price, 0.0, pos!(1.0), pos!(0.01))
+            .unwrap();
 
         assert_eq!(walk.values.len(), 10);
         assert_eq!(walk.values[0], initial_price);
@@ -360,7 +361,8 @@ mod tests_random_walk {
         let mean = 0.0;
         let std_dev = pos!(1.0);
         let std_dev_change = pos!(0.01);
-        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change).unwrap();
+        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change)
+            .unwrap();
         assert_eq!(walk.values.len(), n_steps);
     }
 
@@ -370,7 +372,8 @@ mod tests_random_walk {
         let mut walk = TestWalk::new();
 
         let initial_price = pos!(100.0);
-        walk.generate_random_walk(10, initial_price, 0.0, pos!(1.0), pos!(0.01)).unwrap();
+        walk.generate_random_walk(10, initial_price, 0.0, pos!(1.0), pos!(0.01))
+            .unwrap();
         assert_eq!(walk.values[0], initial_price);
     }
 
@@ -383,7 +386,8 @@ mod tests_random_walk {
         let mean = 0.0;
         let std_dev = pos!(1.0);
         let std_dev_change = pos!(0.01);
-        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change).unwrap();
+        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change)
+            .unwrap();
         assert!(walk.values.iter().all(|x| x > 0.0));
     }
 
@@ -397,7 +401,8 @@ mod tests_random_walk {
         let mean = 0.1;
         let std_dev = pos!(1.0);
         let std_dev_change = pos!(0.01);
-        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change).unwrap();
+        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change)
+            .unwrap();
         let changes: Vec<f64> = walk
             .values
             .windows(2)
@@ -419,7 +424,8 @@ mod tests_random_walk {
         let std_dev = pos!(1.0);
         let std_dev_change = Positive::ZERO;
 
-        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change).unwrap();
+        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change)
+            .unwrap();
         assert_eq!(walk.values.len(), n_steps);
         assert!(walk.values.iter().all(|x| x > 0.0));
     }
@@ -429,14 +435,17 @@ mod tests_random_walk {
     fn test_edge_cases() {
         let mut walk = TestWalk::new();
 
-        walk.generate_random_walk(1, pos!(100.0), 0.0, pos!(1.0), pos!(0.01)).unwrap();
+        walk.generate_random_walk(1, pos!(100.0), 0.0, pos!(1.0), pos!(0.01))
+            .unwrap();
         assert_eq!(walk.values.len(), 1);
         assert_eq!(walk.values[0], 100.0);
 
-        walk.generate_random_walk(100, pos!(0.1), 0.0, pos!(0.01), pos!(0.001)).unwrap();
+        walk.generate_random_walk(100, pos!(0.1), 0.0, pos!(0.01), pos!(0.001))
+            .unwrap();
         assert!(walk.values.iter().all(|x| x >= 0.0));
 
-        walk.generate_random_walk(100, pos!(1e6), 0.0, pos!(100.0), pos!(1.0)).unwrap();
+        walk.generate_random_walk(100, pos!(1e6), 0.0, pos!(100.0), pos!(1.0))
+            .unwrap();
         assert!(walk.values.iter().all(|x| x >= 0.0));
     }
 
@@ -478,7 +487,8 @@ mod tests_iterator {
             0.0,         // mean
             pos!(0.2),   // std_dev
             pos!(0.01),  // std_dev_change
-        ).unwrap();
+        )
+        .unwrap();
 
         for (i, params) in walk.enumerate() {
             debug!(
@@ -579,15 +589,17 @@ mod tests_random_walk_timeframe {
         let mut walker = TestWalker::new();
         let initial_price = pos!(100.0);
 
-        walker.generate_random_walk_timeframe(
-            100,
-            initial_price,
-            0.0,
-            pos!(0.2),
-            pos!(0.0), // No volatility change
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                100,
+                initial_price,
+                0.0,
+                pos!(0.2),
+                pos!(0.0), // No volatility change
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
 
         assert!(!walker.values.is_empty());
         assert_eq!(walker.values[0], initial_price);
@@ -599,15 +611,17 @@ mod tests_random_walk_timeframe {
         let n_steps = 100;
 
         // Usando valores más realistas para la volatilidad
-        walker.generate_random_walk_timeframe(
-            n_steps,
-            pos!(100.0), // initial price
-            0.0,         // mean
-            pos!(0.01),  // std_dev (1% volatilidad diaria)
-            pos!(0.001), // std_dev_change (0.1% VoV)
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                n_steps,
+                pos!(100.0), // initial price
+                0.0,         // mean
+                pos!(0.01),  // std_dev (1% volatilidad diaria)
+                pos!(0.001), // std_dev_change (0.1% VoV)
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
 
         assert_eq!(walker.values.len(), n_steps);
     }
@@ -618,15 +632,17 @@ mod tests_random_walk_timeframe {
         let min_vol = pos!(0.1);
         let max_vol = pos!(0.3);
 
-        walker.generate_random_walk_timeframe(
-            1000,
-            pos!(100.0),
-            0.0,
-            pos!(0.2),
-            pos!(0.1),
-            TimeFrame::Day,
-            Some((min_vol, max_vol)),
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                1000,
+                pos!(100.0),
+                0.0,
+                pos!(0.2),
+                pos!(0.1),
+                TimeFrame::Day,
+                Some((min_vol, max_vol)),
+            )
+            .unwrap();
 
         // Check that values don't change too extremely
         let max_allowed_change = max_vol.to_f64() * 4.0; // 3 standard deviations
@@ -645,15 +661,17 @@ mod tests_random_walk_timeframe {
         let mut walker = TestWalker::new();
         let n_steps = 100;
 
-        walker.generate_random_walk_timeframe(
-            n_steps,
-            pos!(100.0),
-            0.0,
-            pos!(0.0001),
-            pos!(0.00001),
-            TimeFrame::Day,
-            Some((pos!(0.00001), pos!(0.001))),
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                n_steps,
+                pos!(100.0),
+                0.0,
+                pos!(0.0001),
+                pos!(0.00001),
+                TimeFrame::Day,
+                Some((pos!(0.00001), pos!(0.001))),
+            )
+            .unwrap();
 
         assert_eq!(walker.values.len(), n_steps);
     }
@@ -665,27 +683,31 @@ mod tests_random_walk_timeframe {
         let daily_vol = pos!(0.2);
 
         // Run with daily timeframe
-        walker.generate_random_walk_timeframe(
-            100,
-            initial_price,
-            0.0,
-            daily_vol,
-            pos!(0.0),
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                100,
+                initial_price,
+                0.0,
+                daily_vol,
+                pos!(0.0),
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
         let daily_values = walker.values.clone();
 
         // Run with minute timeframe
-        walker.generate_random_walk_timeframe(
-            100,
-            initial_price,
-            0.0,
-            daily_vol,
-            pos!(0.0),
-            TimeFrame::Minute,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                100,
+                initial_price,
+                0.0,
+                daily_vol,
+                pos!(0.0),
+                TimeFrame::Minute,
+                None,
+            )
+            .unwrap();
         let minute_values = walker.values.clone();
 
         // Minute values should have smaller changes between steps
@@ -714,15 +736,17 @@ mod tests_random_walk_timeframe {
     fn test_no_negative_values() {
         let mut walker = TestWalker::new();
 
-        walker.generate_random_walk_timeframe(
-            1000,
-            pos!(100.0),
-            -0.1,      // Negative drift
-            pos!(0.5), // High volatility
-            pos!(0.1),
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                1000,
+                pos!(100.0),
+                -0.1,      // Negative drift
+                pos!(0.5), // High volatility
+                pos!(0.1),
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
 
         // Check that no values are negative
         assert!(walker.values.iter().all(|&v| v >= Positive::ZERO));
@@ -733,27 +757,31 @@ mod tests_random_walk_timeframe {
         let mut walker = TestWalker::new();
 
         // Test with no VoV
-        walker.generate_random_walk_timeframe(
-            1000,
-            pos!(100.0),
-            0.0,
-            pos!(0.2),
-            pos!(0.0), // No VoV
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                1000,
+                pos!(100.0),
+                0.0,
+                pos!(0.2),
+                pos!(0.0), // No VoV
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
         let no_vov_values = walker.values.clone();
 
         // Test with high VoV
-        walker.generate_random_walk_timeframe(
-            1000,
-            pos!(100.0),
-            0.0,
-            pos!(0.2),
-            pos!(0.2), // High VoV
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                1000,
+                pos!(100.0),
+                0.0,
+                pos!(0.2),
+                pos!(0.2), // High VoV
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
         let high_vov_values = walker.values;
 
         // Calculate price changes volatility
@@ -775,15 +803,17 @@ mod tests_random_walk_timeframe {
         let initial_price = pos!(100.0);
         let positive_drift = 0.01;
 
-        walker.generate_random_walk_timeframe(
-            1000,
-            initial_price,
-            positive_drift,
-            pos!(0.1), // Low volatility for clearer trend
-            pos!(0.0),
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                1000,
+                initial_price,
+                positive_drift,
+                pos!(0.1), // Low volatility for clearer trend
+                pos!(0.0),
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
 
         let final_value = walker.values.last().unwrap();
         assert!(
@@ -801,15 +831,17 @@ mod tests_random_walk_timeframe {
         let initial_price = pos!(100.0);
         let mean = 0.01; // positive drift
 
-        walker.generate_random_walk_timeframe(
-            n_steps,
-            initial_price,
-            mean,
-            pos!(0.0), // zero volatility
-            pos!(0.0), // zero VoV
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                n_steps,
+                initial_price,
+                mean,
+                pos!(0.0), // zero volatility
+                pos!(0.0), // zero VoV
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
 
         // With zero volatility, each step should exactly equal the mean
         // So the price should follow a deterministic path
@@ -827,15 +859,17 @@ mod tests_random_walk_timeframe {
         let initial_price = pos!(100.0);
         let mean = -0.01; // negative drift
 
-        walker.generate_random_walk_timeframe(
-            n_steps,
-            initial_price,
-            mean,
-            pos!(0.0), // zero volatility
-            pos!(0.0), // zero VoV
-            TimeFrame::Day,
-            None,
-        ).unwrap();
+        walker
+            .generate_random_walk_timeframe(
+                n_steps,
+                initial_price,
+                mean,
+                pos!(0.0), // zero volatility
+                pos!(0.0), // zero VoV
+                TimeFrame::Day,
+                None,
+            )
+            .unwrap();
 
         // With zero volatility and negative drift, price should decrease deterministically
         // until it hits zero

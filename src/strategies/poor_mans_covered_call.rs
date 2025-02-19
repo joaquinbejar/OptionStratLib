@@ -2461,7 +2461,7 @@ mod tests_strategy_constructor {
 mod tests_poor_mans_covered_call_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{ assert_pos_relative_eq, pos};
+    use crate::{assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn create_test_poor_mans_covered_call() -> Result<PoorMansCoveredCall, StrategyError> {
@@ -2491,7 +2491,7 @@ mod tests_poor_mans_covered_call_pnl {
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let pmcc = create_test_poor_mans_covered_call().unwrap();
-        let market_price = pos!(90.0);  // Below both strikes
+        let market_price = pos!(90.0); // Below both strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -2560,4 +2560,3 @@ mod tests_poor_mans_covered_call_pnl {
         assert!(pnl.unrealized.unwrap() > dec!(0.0));
     }
 }
-

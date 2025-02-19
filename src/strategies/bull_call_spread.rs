@@ -775,8 +775,8 @@ impl PnLCalculator for BullCallSpread {
             .long_call
             .calculate_pnl(market_price, expiration_date, implied_volatility)?
             + self
-            .short_call
-            .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+                .short_call
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
     }
 
     fn calculate_pnl_at_expiration(
@@ -787,8 +787,8 @@ impl PnLCalculator for BullCallSpread {
             .long_call
             .calculate_pnl_at_expiration(underlying_price)?
             + self
-            .short_call
-            .calculate_pnl_at_expiration(underlying_price)?)
+                .short_call
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 #[cfg(test)]
@@ -2760,7 +2760,7 @@ mod tests_bull_call_spread_pnl {
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let spread = create_test_bull_call_spread().unwrap();
-        let market_price = pos!(90.0);  // Below both strikes
+        let market_price = pos!(90.0); // Below both strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -2790,7 +2790,6 @@ mod tests_bull_call_spread_pnl {
 
         let pnl = result.unwrap();
         assert!(pnl.unrealized.is_some());
-
 
         // Both options ITM, should be close to max profit
         assert!(pnl.unrealized.unwrap() > dec!(-2.0)); // Near max profit
@@ -2849,7 +2848,7 @@ mod tests_bull_call_spread_pnl {
         // Loss should be just the costs minus income
         assert_decimal_eq!(pnl.realized.unwrap(), dec!(-2.0), dec!(1e-6));
     }
-    
+
     #[test]
     fn test_calculate_pnl_between_strikes() {
         let spread = create_test_bull_call_spread().unwrap();
@@ -2895,4 +2894,3 @@ mod tests_bull_call_spread_pnl {
         assert_eq!(pnl.initial_costs, pos!(7.0));
     }
 }
-

@@ -228,7 +228,8 @@ impl StrategyConstructor for IronButterfly {
 
         // Validate the positions and their structure
         // In Iron Butterfly, all strikes must be equidistant
-        let strike_prices: Vec<Positive> = sorted_options.iter()
+        let strike_prices: Vec<Positive> = sorted_options
+            .iter()
             .map(|opt| opt.option.strike_price)
             .collect();
 
@@ -242,8 +243,11 @@ impl StrategyConstructor for IronButterfly {
         }
 
         // Validate expiration dates match
-        let exp_date = sorted_options[0].option.expiration_date.clone();
-        if !sorted_options.iter().all(|opt| opt.option.expiration_date == exp_date) {
+        let exp_date = sorted_options[0].option.expiration_date;
+        if !sorted_options
+            .iter()
+            .all(|opt| opt.option.expiration_date == exp_date)
+        {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
@@ -253,8 +257,11 @@ impl StrategyConstructor for IronButterfly {
         }
 
         // Find and validate the positions
-        let long_put = sorted_options.iter()
-            .find(|opt| opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Long)
+        let long_put = sorted_options
+            .iter()
+            .find(|opt| {
+                opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Long
+            })
             .ok_or(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
@@ -262,8 +269,11 @@ impl StrategyConstructor for IronButterfly {
                 },
             ))?;
 
-        let short_put = sorted_options.iter()
-            .find(|opt| opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Short)
+        let short_put = sorted_options
+            .iter()
+            .find(|opt| {
+                opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Short
+            })
             .ok_or(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
@@ -271,8 +281,11 @@ impl StrategyConstructor for IronButterfly {
                 },
             ))?;
 
-        let short_call = sorted_options.iter()
-            .find(|opt| opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Short)
+        let short_call = sorted_options
+            .iter()
+            .find(|opt| {
+                opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Short
+            })
             .ok_or(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
@@ -280,8 +293,11 @@ impl StrategyConstructor for IronButterfly {
                 },
             ))?;
 
-        let long_call = sorted_options.iter()
-            .find(|opt| opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Long)
+        let long_call = sorted_options
+            .iter()
+            .find(|opt| {
+                opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Long
+            })
             .ok_or(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),

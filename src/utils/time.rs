@@ -4,23 +4,23 @@
    Date: 23/10/24
 ******************************************************************************/
 use crate::constants::*;
+use crate::Positive;
 use chrono::{Duration, Local, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::Positive;
 
 /// Represents different timeframes for volatility calculations
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum TimeFrame {
-    Microsecond, // 1-microsecond data
-    Millisecond, // 1-millisecond data
-    Second,      // 1-second data
-    Minute,      // 1-minute data
-    Hour,        // 1-hour data
-    Day,         // Daily data
-    Week,        // Weekly data
-    Month,       // Monthly data
-    Quarter,     // Quarterly data
-    Year,        // Yearly data
+    Microsecond,      // 1-microsecond data
+    Millisecond,      // 1-millisecond data
+    Second,           // 1-second data
+    Minute,           // 1-minute data
+    Hour,             // 1-hour data
+    Day,              // Daily data
+    Week,             // Weekly data
+    Month,            // Monthly data
+    Quarter,          // Quarterly data
+    Year,             // Yearly data
     Custom(Positive), // Custom periods per year
 }
 
@@ -41,7 +41,7 @@ impl TimeFrame {
             TimeFrame::Week => WEEKS_PER_YEAR,               // Weeks in a year
             TimeFrame::Month => MONTHS_PER_YEAR,             // Months in a year
             TimeFrame::Quarter => QUARTERS_PER_YEAR,         // Quarters in a year
-            TimeFrame::Year => Positive::ONE,                          // Base unit
+            TimeFrame::Year => Positive::ONE,                // Base unit
             TimeFrame::Custom(periods) => *periods,          // Custom periods per year
         }
     }
@@ -181,13 +181,13 @@ mod tests_timeframe {
         assert_pos_relative_eq!(
             TimeFrame::Minute.periods_per_year() / TimeFrame::Hour.periods_per_year(),
             MINUTES_PER_HOUR,
-             pos!(1e-10)
+            pos!(1e-10)
         );
 
         assert_pos_relative_eq!(
             TimeFrame::Second.periods_per_year() / TimeFrame::Minute.periods_per_year(),
             MINUTES_PER_HOUR,
-             pos!(1e-10)
+            pos!(1e-10)
         );
     }
 
@@ -195,11 +195,7 @@ mod tests_timeframe {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_trading_days_relationship() {
         // Verify relationships with trading days
-        assert_pos_relative_eq!(
-            TimeFrame::Day.periods_per_year(),
-            TRADING_DAYS,
-            pos!(1e-10)
-        );
+        assert_pos_relative_eq!(TimeFrame::Day.periods_per_year(), TRADING_DAYS, pos!(1e-10));
 
         assert_pos_relative_eq!(
             TimeFrame::Hour.periods_per_year() / TRADING_HOURS,

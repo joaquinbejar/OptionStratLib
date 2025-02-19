@@ -167,7 +167,7 @@ impl ShortStraddle {
 
 impl StrategyConstructor for ShortStraddle {
     fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
-        // Need exactly 2 options for a short straddle 
+        // Need exactly 2 options for a short straddle
         if vec_options.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -938,7 +938,7 @@ impl LongStraddle {
 
 impl StrategyConstructor for LongStraddle {
     fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
-        // Need exactly 2 options for a long straddle 
+        // Need exactly 2 options for a long straddle
         if vec_options.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -3908,7 +3908,7 @@ mod tests_short_straddle_pnl {
 
         // Both options ATM, should be near max profit
         assert_pos_relative_eq!(pnl.initial_income, pos!(10.0), pos!(1e-6)); // Premium from both options
-        assert_pos_relative_eq!(pnl.initial_costs, pos!(2.0), pos!(1e-6));  // Total fees
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(2.0), pos!(1e-6)); // Total fees
     }
 
     #[test]
@@ -4198,7 +4198,7 @@ mod tests_long_straddle_pnl {
 
         // Both options ATM, should be near max profit
         assert_pos_relative_eq!(pnl.initial_income, pos!(0.0), pos!(1e-6)); // Premium from both options
-        assert_pos_relative_eq!(pnl.initial_costs, pos!(12.0), pos!(1e-6));  // Total fees
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(12.0), pos!(1e-6)); // Total fees
     }
 
     #[test]

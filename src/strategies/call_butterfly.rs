@@ -2461,9 +2461,9 @@ mod tests_strategy_constructor {
 #[cfg(test)]
 mod tests_call_butterfly_pnl {
     use super::*;
+    use crate::model::utils::create_sample_position;
     use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
-    use crate::model::utils::create_sample_position;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
@@ -2523,7 +2523,6 @@ mod tests_call_butterfly_pnl {
         CallButterfly::get_strategy(&vec![short_call_low, long_call, short_call_high])
     }
 
-
     #[test]
     fn test_profit_below_lower_strike() {
         let strategy = setup_test_strategy();
@@ -2544,11 +2543,11 @@ mod tests_call_butterfly_pnl {
         let ratio = strategy.profit_ratio().unwrap();
         assert!(ratio > Decimal::ZERO);
     }
-    
+
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = pos!(90.0);  // Below all strikes
+        let market_price = pos!(90.0); // Below all strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -2559,7 +2558,7 @@ mod tests_call_butterfly_pnl {
         assert!(pnl.unrealized.is_some());
 
         // All options OTM, should be close to max profit
-        // Initial income from short calls 
+        // Initial income from short calls
         // Initial costs: Premium for long call + total fees
         assert_pos_relative_eq!(pnl.initial_income, pos!(10.0), pos!(1e-6)); // Premiums from two short calls
         assert_pos_relative_eq!(pnl.initial_costs, pos!(8.0), pos!(1e-6)); // Premium for long call + fees
@@ -2612,7 +2611,7 @@ mod tests_call_butterfly_pnl {
 
         let pnl = result.unwrap();
         assert!(pnl.realized.is_some());
-        
+
         assert_decimal_eq!(pnl.realized.unwrap(), dec!(2.0), dec!(1e-6));
         assert_eq!(pnl.initial_income, pos!(10.0)); // Premiums from short calls
         assert_eq!(pnl.initial_costs, pos!(8.0)); // Premium for long call + fees

@@ -1,6 +1,6 @@
 use crate::chains::chain::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
-use crate::error::{GreeksError, VolatilityError, OptionsError, OptionsResult};
+use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
 use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -1856,10 +1856,7 @@ mod tests_calculate_implied_volatility {
     fn test_invalid_market_price() {
         let option = Options::default();
         let result = option.calculate_implied_volatility(Decimal::ZERO);
-        assert!(matches!(
-            result,
-            Err(VolatilityError::OptionError { .. })
-        ));
+        assert!(matches!(result, Err(VolatilityError::OptionError { .. })));
     }
 
     #[test]
@@ -1880,10 +1877,7 @@ mod tests_calculate_implied_volatility {
         );
 
         let result = option.calculate_implied_volatility(dec!(2.5));
-        assert!(matches!(
-            result,
-            Err(VolatilityError::OptionError { .. })
-        ));
+        assert!(matches!(result, Err(VolatilityError::OptionError { .. })));
     }
 
     #[test]

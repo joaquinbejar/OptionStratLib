@@ -2920,7 +2920,7 @@ mod tests_bear_put_spread_pnl {
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let spread = create_test_bear_put_spread().unwrap();
-        let market_price = pos!(90.0);  // Below both strikes
+        let market_price = pos!(90.0); // Below both strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 

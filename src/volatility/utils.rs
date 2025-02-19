@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
-use std::error::Error;
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
+use crate::error::VolatilityError;
 use crate::greeks::Greeks;
 use crate::utils::time::TimeFrame;
 use crate::Options;
@@ -12,8 +12,8 @@ use crate::{pos, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use std::error::Error;
 use tracing::debug;
-use crate::error::VolatilityError;
 
 /// Calculates the constant volatility from a series of returns.
 ///
@@ -313,7 +313,6 @@ pub fn de_annualized_volatility(
     Ok(annual_volatility / timeframe.periods_per_year().sqrt())
 }
 
-
 /// Adjusts volatility between different timeframes using the square root of time rule
 ///
 /// # Arguments
@@ -332,7 +331,11 @@ pub fn de_annualized_volatility(
 /// let daily_vol = pos!(0.2); // 20% daily volatility
 /// let minute_vol = adjust_volatility(daily_vol, TimeFrame::Day, TimeFrame::Minute).unwrap();
 /// ```
-pub fn adjust_volatility(volatility: Positive, from_frame: TimeFrame, to_frame: TimeFrame) -> Result<Positive, Box<dyn Error>> {
+pub fn adjust_volatility(
+    volatility: Positive,
+    from_frame: TimeFrame,
+    to_frame: TimeFrame,
+) -> Result<Positive, Box<dyn Error>> {
     if from_frame == to_frame {
         return Ok(volatility);
     }
@@ -1041,11 +1044,8 @@ mod tests_adjust_volatility {
     fn test_same_periods_different_timeframe() {
         // Create two custom timeframes with same periods
         let vol = pos!(0.2);
-        let result = adjust_volatility(
-            vol,
-            TimeFrame::Custom(pos!(252.0)),
-            TimeFrame::Day
-        ).unwrap();
+        let result =
+            adjust_volatility(vol, TimeFrame::Custom(pos!(252.0)), TimeFrame::Day).unwrap();
         assert_eq!(result, vol);
     }
 
@@ -1112,11 +1112,8 @@ mod tests_adjust_volatility {
     fn test_custom_timeframe() {
         let vol = pos!(0.25);
         let custom_periods = pos!(100.0);
-        let result = adjust_volatility(
-            vol,
-            TimeFrame::Custom(custom_periods),
-            TimeFrame::Day
-        ).unwrap();
+        let result =
+            adjust_volatility(vol, TimeFrame::Custom(custom_periods), TimeFrame::Day).unwrap();
 
         // custom periods = 100
         // daily periods = 252
@@ -1139,11 +1136,7 @@ mod tests_adjust_volatility {
 
     #[test]
     fn test_zero_volatility() {
-        let result = adjust_volatility(
-            Positive::ZERO,
-            TimeFrame::Day,
-            TimeFrame::Minute
-        ).unwrap();
+        let result = adjust_volatility(Positive::ZERO, TimeFrame::Day, TimeFrame::Minute).unwrap();
         assert_eq!(result, Positive::ZERO);
     }
 

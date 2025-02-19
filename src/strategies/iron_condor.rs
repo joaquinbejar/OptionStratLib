@@ -259,7 +259,7 @@ impl StrategyConstructor for IronCondor {
         }
 
         // Validate expiration dates match
-        let expiry_date = lowest_strike.option.expiration_date.clone();
+        let expiry_date = lowest_strike.option.expiration_date;
         if !sorted_options
             .iter()
             .all(|pos| pos.option.expiration_date == expiry_date)
@@ -3562,7 +3562,7 @@ mod tests_strategy_constructor {
 mod tests_iron_condor_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{ pos};
+    use crate::pos;
     use rust_decimal_macros::dec;
 
     fn create_test_iron_condor() -> Result<IronCondor, StrategyError> {
@@ -3612,7 +3612,7 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_below_all_strikes() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(85.0);  // Below all strikes
+        let market_price = pos!(85.0); // Below all strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -3631,7 +3631,7 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_in_profit_zone_lower() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(97.0);  // Between put strikes
+        let market_price = pos!(97.0); // Between put strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -3648,7 +3648,7 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_at_middle() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(100.0);  // At middle of range
+        let market_price = pos!(100.0); // At middle of range
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -3665,7 +3665,7 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_in_profit_zone_upper() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(101.0);  // Between call strikes
+        let market_price = pos!(101.0); // Between call strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -3682,7 +3682,7 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_above_all_strikes() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(115.0);  // Above all strikes
+        let market_price = pos!(115.0); // Above all strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 

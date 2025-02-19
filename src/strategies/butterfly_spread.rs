@@ -236,7 +236,7 @@ impl StrategyConstructor for LongButterflySpread {
         let middle_strike = middle_strike_option.option.strike_price;
         let higher_strike = higher_strike_option.option.strike_price;
 
-        if !(middle_strike - lower_strike == higher_strike - middle_strike) {
+        if middle_strike - lower_strike != higher_strike - middle_strike {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Long Butterfly Spread get_strategy".to_string(),
@@ -246,9 +246,10 @@ impl StrategyConstructor for LongButterflySpread {
         }
 
         // Validate expiration dates match
-        if vec_options.iter().any(|opt|
-            opt.option.expiration_date != lower_strike_option.option.expiration_date
-        ) {
+        if vec_options
+            .iter()
+            .any(|opt| opt.option.expiration_date != lower_strike_option.option.expiration_date)
+        {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Long Butterfly Spread get_strategy".to_string(),
@@ -1225,7 +1226,7 @@ impl StrategyConstructor for ShortButterflySpread {
         let middle_strike = middle_strike_option.option.strike_price;
         let higher_strike = higher_strike_option.option.strike_price;
 
-        if !(middle_strike - lower_strike == higher_strike - middle_strike) {
+        if middle_strike - lower_strike != higher_strike - middle_strike {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Short Butterfly Spread get_strategy".to_string(),
@@ -1235,9 +1236,10 @@ impl StrategyConstructor for ShortButterflySpread {
         }
 
         // Validate expiration dates match
-        if vec_options.iter().any(|opt|
-            opt.option.expiration_date != lower_strike_option.option.expiration_date
-        ) {
+        if vec_options
+            .iter()
+            .any(|opt| opt.option.expiration_date != lower_strike_option.option.expiration_date)
+        {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Short Butterfly Spread get_strategy".to_string(),
@@ -1273,7 +1275,6 @@ impl StrategyConstructor for ShortButterflySpread {
                 higher_strike_option.open_fee,
                 higher_strike_option.close_fee,
             ),
-
         };
 
         Ok(strategy)
@@ -5496,7 +5497,7 @@ mod tests_long_butterfly_spread_constructor {
                 Side::Long,
                 pos!(90.0),
                 pos!(1.0),
-                pos!(90.0),  // Lower strike price
+                pos!(90.0), // Lower strike price
                 pos!(0.2),
             ),
             create_sample_position(
@@ -5822,14 +5823,14 @@ mod tests_long_butterfly_spread_pnl {
         LongButterflySpread::get_strategy(&vec![
             lower_long_call,
             middle_short_call,
-            higher_long_call
+            higher_long_call,
         ])
     }
 
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let spread = create_test_long_butterfly_spread().unwrap();
-        let market_price = pos!(90.0);  // Below all strikes
+        let market_price = pos!(90.0); // Below all strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -5851,7 +5852,7 @@ mod tests_long_butterfly_spread_pnl {
         let market_price = pos!(100.0); // At middle strike
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.1);
-        
+
         let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
 
@@ -5859,15 +5860,11 @@ mod tests_long_butterfly_spread_pnl {
         assert!(pnl.unrealized.is_some());
 
         // More flexible assertions
-        assert!(
-            pnl.unrealized.is_some(),
-            "Unrealized PnL should be present"
-        );
+        assert!(pnl.unrealized.is_some(), "Unrealized PnL should be present");
 
         // Check if unrealized PnL is within a reasonable range
         assert!(
-            pnl.unrealized.unwrap() >= dec!(-10.0) &&
-                pnl.unrealized.unwrap() <= dec!(10.0),
+            pnl.unrealized.unwrap() >= dec!(-10.0) && pnl.unrealized.unwrap() <= dec!(10.0),
             "Unrealized PnL should be within a reasonable range. Got: {}",
             pnl.unrealized.unwrap()
         );
@@ -5876,7 +5873,7 @@ mod tests_long_butterfly_spread_pnl {
     #[test]
     fn test_calculate_pnl_above_strikes() {
         let spread = create_test_long_butterfly_spread().unwrap();
-        let market_price = pos!(90.0); 
+        let market_price = pos!(90.0);
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -5977,14 +5974,14 @@ mod tests_short_butterfly_spread_pnl {
         ShortButterflySpread::get_strategy(&vec![
             lower_short_call,
             middle_long_call,
-            higher_short_call
+            higher_short_call,
         ])
     }
 
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let market_price = pos!(90.0);  // Below all strikes
+        let market_price = pos!(90.0); // Below all strikes
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 
@@ -6020,7 +6017,7 @@ mod tests_short_butterfly_spread_pnl {
     #[test]
     fn test_calculate_pnl_above_strikes() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let market_price = pos!(90.0); 
+        let market_price = pos!(90.0);
         let expiration_date = ExpirationDate::Days(pos!(20.0));
         let implied_volatility = pos!(0.2);
 

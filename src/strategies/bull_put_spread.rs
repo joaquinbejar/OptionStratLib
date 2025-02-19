@@ -164,7 +164,7 @@ impl BullPutSpread {
 
 impl StrategyConstructor for BullPutSpread {
     fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
-        // Need exactly 2 options for a bull put spread 
+        // Need exactly 2 options for a bull put spread
         if vec_options.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -208,7 +208,7 @@ impl StrategyConstructor for BullPutSpread {
             }));
         }
 
-        // Validate expiration dates match 
+        // Validate expiration dates match
         if lower_strike_option.option.expiration_date != higher_strike_option.option.expiration_date
         {
             return Err(StrategyError::OperationError(
@@ -253,7 +253,6 @@ impl StrategyConstructor for BullPutSpread {
         Ok(strategy)
     }
 }
-
 
 impl BreakEvenable for BullPutSpread {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
@@ -2497,8 +2496,8 @@ mod tests_adjust_option_position {
 
 #[cfg(test)]
 mod tests_strategy_constructor {
-    use crate::error::OperationErrorKind;
     use super::*;
+    use crate::error::OperationErrorKind;
     use crate::model::utils::create_sample_position;
     use crate::pos;
 
@@ -2674,7 +2673,7 @@ mod tests_bull_put_spread_pnl {
     #[test]
     fn test_calculate_pnl_all_options_otm() {
         let spread = create_test_bull_put_spread().unwrap();
-        let market_price = pos!(105.0);  // Above both strikes
+        let market_price = pos!(105.0); // Above both strikes
         let expiration_date = ExpirationDate::Days(pos!(30.0));
         let implied_volatility = pos!(0.2);
 
@@ -2813,7 +2812,7 @@ mod tests_bull_put_spread_pnl {
 
         // Test with different volatilities
         let low_vol_result = spread
-            .calculate_pnl(&market_price, expiration_date.clone(), &pos!(0.1))
+            .calculate_pnl(&market_price, expiration_date, &pos!(0.1))
             .unwrap();
         let high_vol_result = spread
             .calculate_pnl(&market_price, expiration_date, &pos!(0.3))
