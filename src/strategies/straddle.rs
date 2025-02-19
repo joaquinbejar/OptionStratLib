@@ -19,7 +19,7 @@ use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::GreeksError;
+use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -166,8 +166,103 @@ impl ShortStraddle {
 }
 
 impl StrategyConstructor for ShortStraddle {
-    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        // Need exactly 2 options for a short straddle 
+        if vec_options.len() != 2 {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Short Straddle get_strategy".to_string(),
+                    reason: "Must have exactly 2 options".to_string(),
+                },
+            ));
+        }
+
+        // Find call and put positions
+        let mut call_position = None;
+        let mut put_position = None;
+
+        for option in vec_options {
+            match option.option.option_style {
+                OptionStyle::Call => call_position = Some(option),
+                OptionStyle::Put => put_position = Some(option),
+            }
+        }
+
+        // Validate we have both positions
+        let (call_position, put_position) = match (call_position, put_position) {
+            (Some(call), Some(put)) => (call, put),
+            _ => {
+                return Err(StrategyError::OperationError(
+                    OperationErrorKind::InvalidParameters {
+                        operation: "Short Straddle get_strategy".to_string(),
+                        reason: "Must have one call and one put option".to_string(),
+                    },
+                ))
+            }
+        };
+
+        // Validate strike prices match
+        if call_position.option.strike_price != put_position.option.strike_price {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Short Straddle get_strategy".to_string(),
+                    reason: "Options must have the same strike price".to_string(),
+                },
+            ));
+        }
+
+        // Validate both positions are short
+        if call_position.option.side != Side::Short || put_position.option.side != Side::Short {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Short Straddle get_strategy".to_string(),
+                    reason: "Both options must be short positions".to_string(),
+                },
+            ));
+        }
+
+        // Validate expiration dates match
+        if call_position.option.expiration_date != put_position.option.expiration_date {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Short Straddle get_strategy".to_string(),
+                    reason: "Options must have the same expiration date".to_string(),
+                },
+            ));
+        }
+
+        // Create positions
+        let short_call = Position::new(
+            call_position.option.clone(),
+            call_position.premium,
+            Utc::now(),
+            call_position.open_fee,
+            call_position.close_fee,
+        );
+
+        let short_put = Position::new(
+            put_position.option.clone(),
+            put_position.premium,
+            Utc::now(),
+            put_position.open_fee,
+            put_position.close_fee,
+        );
+
+        // Create strategy
+        let mut strategy = ShortStraddle {
+            name: "Short Straddle".to_string(),
+            kind: StrategyType::ShortStraddle,
+            description: SHORT_STRADDLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call,
+            short_put,
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
     }
 }
 
@@ -842,8 +937,103 @@ impl LongStraddle {
 }
 
 impl StrategyConstructor for LongStraddle {
-    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        // Need exactly 2 options for a long straddle 
+        if vec_options.len() != 2 {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Long Straddle get_strategy".to_string(),
+                    reason: "Must have exactly 2 options".to_string(),
+                },
+            ));
+        }
+
+        // Find call and put positions
+        let mut call_position = None;
+        let mut put_position = None;
+
+        for option in vec_options {
+            match option.option.option_style {
+                OptionStyle::Call => call_position = Some(option),
+                OptionStyle::Put => put_position = Some(option),
+            }
+        }
+
+        // Validate we have both positions
+        let (call_position, put_position) = match (call_position, put_position) {
+            (Some(call), Some(put)) => (call, put),
+            _ => {
+                return Err(StrategyError::OperationError(
+                    OperationErrorKind::InvalidParameters {
+                        operation: "Long Straddle get_strategy".to_string(),
+                        reason: "Must have one call and one put option".to_string(),
+                    },
+                ))
+            }
+        };
+
+        // Validate strike prices match
+        if call_position.option.strike_price != put_position.option.strike_price {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Long Straddle get_strategy".to_string(),
+                    reason: "Options must have the same strike price".to_string(),
+                },
+            ));
+        }
+
+        // Validate both positions are long
+        if call_position.option.side != Side::Long || put_position.option.side != Side::Long {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Long Straddle get_strategy".to_string(),
+                    reason: "Both options must be long positions".to_string(),
+                },
+            ));
+        }
+
+        // Validate expiration dates match
+        if call_position.option.expiration_date != put_position.option.expiration_date {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Long Straddle get_strategy".to_string(),
+                    reason: "Options must have the same expiration date".to_string(),
+                },
+            ));
+        }
+
+        // Create positions
+        let long_call = Position::new(
+            call_position.option.clone(),
+            call_position.premium,
+            Utc::now(),
+            call_position.open_fee,
+            call_position.close_fee,
+        );
+
+        let long_put = Position::new(
+            put_position.option.clone(),
+            put_position.premium,
+            Utc::now(),
+            put_position.open_fee,
+            put_position.close_fee,
+        );
+
+        // Create strategy
+        let mut strategy = LongStraddle {
+            name: "Long Straddle".to_string(),
+            kind: StrategyType::LongStraddle,
+            description: LONG_STRADDLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call,
+            long_put,
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
     }
 }
 
@@ -3496,8 +3686,587 @@ mod tests_adjust_option_position {
             &OptionStyle::Call,
             &Side::Long,
         );
-
         assert!(result.is_ok());
         assert_eq!(strategy.long_call.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_short_strategy_constructor {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::pos;
+
+    #[test]
+    fn test_get_strategy_valid() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = ShortStraddle::get_strategy(&options);
+        assert!(result.is_ok());
+
+        let strategy = result.unwrap();
+        assert_eq!(strategy.short_call.option.strike_price, pos!(100.0));
+        assert_eq!(strategy.short_put.option.strike_price, pos!(100.0));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_number_of_options() {
+        let options = vec![create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+        )];
+
+        let result = ShortStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Short Straddle get_strategy" && reason == "Must have exactly 2 options"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_missing_put_option() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = ShortStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Short Straddle get_strategy" && reason == "Must have one call and one put option"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_different_strikes() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = ShortStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Short Straddle get_strategy" && reason == "Options must have the same strike price"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_sides() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = ShortStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Short Straddle get_strategy" && reason == "Both options must be short positions"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_different_expiration_dates() {
+        let mut option1 = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+        );
+        let mut option2 = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+        );
+
+        option1.option.expiration_date = ExpirationDate::Days(pos!(30.0));
+        option2.option.expiration_date = ExpirationDate::Days(pos!(60.0));
+
+        let options = vec![option1, option2];
+        let result = ShortStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Short Straddle get_strategy" && reason == "Options must have the same expiration date"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests_short_straddle_pnl {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_short_straddle() -> Result<ShortStraddle, StrategyError> {
+        let short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(100.0), // Strike price (ATM)
+            pos!(0.2),   // Implied volatility
+        );
+
+        let short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(100.0), // Same strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        ShortStraddle::get_strategy(&vec![short_call, short_put])
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_strike() {
+        let straddle = create_test_short_straddle().unwrap();
+        let market_price = pos!(100.0); // At strike price
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = straddle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Both options ATM, should be near max profit
+        assert_pos_relative_eq!(pnl.initial_income, pos!(10.0), pos!(1e-6)); // Premium from both options
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(2.0), pos!(1e-6));  // Total fees
+    }
+
+    #[test]
+    fn test_calculate_pnl_below_strike() {
+        let straddle = create_test_short_straddle().unwrap();
+        let market_price = pos!(90.0); // Below strike
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = straddle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Put ITM, call OTM
+        assert!(pnl.unrealized.unwrap() < dec!(0.0)); // Should be a loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_above_strike() {
+        let straddle = create_test_short_straddle().unwrap();
+        let market_price = pos!(110.0); // Above strike
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = straddle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Call ITM, put OTM
+        assert!(pnl.unrealized.unwrap() < dec!(0.0)); // Should be a loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_with_higher_volatility() {
+        let straddle = create_test_short_straddle().unwrap();
+        let market_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.4); // Higher volatility
+
+        let result = straddle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Higher volatility should result in larger losses
+        assert!(pnl.unrealized.unwrap() < dec!(-2.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_profit() {
+        let straddle = create_test_short_straddle().unwrap();
+        let underlying_price = pos!(100.0); // At strike price
+
+        let result = straddle.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // At strike price at expiration, both options expire worthless
+        // Max profit is the net premium received minus fees
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(8.0), dec!(1e-6)); // Premium received - costs
+        assert_eq!(pnl.initial_income, pos!(10.0));
+        assert_eq!(pnl.initial_costs, pos!(2.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_long_strategy_constructor {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::pos;
+
+    #[test]
+    fn test_get_strategy_valid() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = LongStraddle::get_strategy(&options);
+        assert!(result.is_ok());
+
+        let strategy = result.unwrap();
+        assert_eq!(strategy.long_call.option.strike_price, pos!(100.0));
+        assert_eq!(strategy.long_put.option.strike_price, pos!(100.0));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_number_of_options() {
+        let options = vec![create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+        )];
+
+        let result = LongStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Long Straddle get_strategy" && reason == "Must have exactly 2 options"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_missing_put_option() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = LongStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Long Straddle get_strategy" && reason == "Must have one call and one put option"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_different_strikes() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = LongStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Long Straddle get_strategy" && reason == "Options must have the same strike price"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_sides() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = LongStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Long Straddle get_strategy" && reason == "Both options must be long positions"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_different_expiration_dates() {
+        let mut option1 = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+        );
+        let mut option2 = create_sample_position(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+        );
+
+        option1.option.expiration_date = ExpirationDate::Days(pos!(30.0));
+        option2.option.expiration_date = ExpirationDate::Days(pos!(60.0));
+
+        let options = vec![option1, option2];
+        let result = LongStraddle::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Long Straddle get_strategy" && reason == "Options must have the same expiration date"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests_long_straddle_pnl {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_long_straddle() -> Result<LongStraddle, StrategyError> {
+        let long_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(100.0), // Strike price (ATM)
+            pos!(0.2),   // Implied volatility
+        );
+
+        let long_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(100.0), // Same strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        LongStraddle::get_strategy(&vec![long_call, long_put])
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_strike() {
+        let straddle = create_test_long_straddle().unwrap();
+        let market_price = pos!(100.0); // At strike price
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = straddle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Both options ATM, should be near max profit
+        assert_pos_relative_eq!(pnl.initial_income, pos!(0.0), pos!(1e-6)); // Premium from both options
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(12.0), pos!(1e-6));  // Total fees
+    }
+
+    #[test]
+    fn test_calculate_pnl_below_strike() {
+        let straddle = create_test_long_straddle().unwrap();
+        let market_price = pos!(100.0); // Below strike
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = straddle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Put ITM, call OTM
+        assert!(pnl.unrealized.unwrap() < dec!(0.0)); // Should be a loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_above_strike() {
+        let straddle = create_test_long_straddle().unwrap();
+        let market_price = pos!(110.0); // Above strike
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = straddle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Call ITM, put OTM
+        assert!(pnl.unrealized.unwrap() > dec!(0.0)); // Should be a loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_with_higher_volatility() {
+        let straddle = create_test_long_straddle().unwrap();
+        let market_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.4); // Higher volatility
+
+        let result = straddle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Higher volatility should result in larger losses
+        assert!(pnl.unrealized.unwrap() < dec!(3.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_profit() {
+        let straddle = create_test_long_straddle().unwrap();
+        let underlying_price = pos!(100.0); // At strike price
+
+        let result = straddle.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // At strike price at expiration, both options expire worthless
+        // Max profit is the net premium received minus fees
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-12.0), dec!(1e-6)); // Premium received - costs
+        assert_eq!(pnl.initial_income, pos!(0.0));
+        assert_eq!(pnl.initial_costs, pos!(12.0));
     }
 }
