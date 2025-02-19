@@ -12,7 +12,7 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, ProbabilityError};
+use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
@@ -37,7 +37,7 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
 
-const RATIO_CALL_SPREAD_DESCRIPTION: &str =
+const CALL_BUTTERFLY_DESCRIPTION: &str =
     "A Ratio Call Spread involves buying one call option and selling multiple call options \
     at a higher strike price. This strategy is used when a moderate rise in the underlying \
     asset's price is expected, but with limited upside potential.";
@@ -51,7 +51,6 @@ pub struct CallButterfly {
     long_call: Position,
     short_call_low: Position,
     short_call_high: Position,
-    underlying_price: Positive,
 }
 
 impl CallButterfly {
@@ -80,12 +79,11 @@ impl CallButterfly {
         let mut strategy = CallButterfly {
             name: underlying_symbol.to_string(),
             kind: StrategyType::CallButterfly,
-            description: RATIO_CALL_SPREAD_DESCRIPTION.to_string(),
+            description: CALL_BUTTERFLY_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             long_call: Position::default(),
             short_call_low: Position::default(),
             short_call_high: Position::default(),
-            underlying_price,
         };
         let long_call_option = Options::new(
             OptionType::European,
@@ -173,8 +171,109 @@ impl CallButterfly {
 }
 
 impl StrategyConstructor for CallButterfly {
-    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        // Need exactly 3 options for a call butterfly
+        if vec_options.len() != 3 {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Call Butterfly get_strategy".to_string(),
+                    reason: "Must have exactly 3 options".to_string(),
+                },
+            ));
+        }
+
+        // Sort options by strike price
+        let mut sorted_options = vec_options.to_vec();
+        sorted_options.sort_by(|a, b| {
+            a.option
+                .strike_price
+                .partial_cmp(&b.option.strike_price)
+                .unwrap()
+        });
+
+        let low_short_call = &sorted_options[0];
+        let long_call = &sorted_options[1];
+        let high_short_call = &sorted_options[2];
+
+        // Validate options are calls
+        if low_short_call.option.option_style != OptionStyle::Call
+            || long_call.option.option_style != OptionStyle::Call
+            || high_short_call.option.option_style != OptionStyle::Call
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Call Butterfly get_strategy".to_string(),
+                    reason: "Options must be calls".to_string(),
+                },
+            ));
+        }
+
+        // Validate option sides
+        if low_short_call.option.side != Side::Short
+            || long_call.option.side != Side::Long
+            || high_short_call.option.side != Side::Short
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Call Butterfly get_strategy".to_string(),
+                    reason: "Call Butterfly requires one long call and two short calls".to_string(),
+                },
+            ));
+        }
+
+        // Validate expiration dates match
+        if low_short_call.option.expiration_date != long_call.option.expiration_date
+            || long_call.option.expiration_date != high_short_call.option.expiration_date
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Call Butterfly get_strategy".to_string(),
+                    reason: "Options must have the same expiration date".to_string(),
+                },
+            ));
+        }
+
+        // Create positions
+        let short_call_low = Position::new(
+            low_short_call.option.clone(),
+            low_short_call.premium,
+            Utc::now(),
+            low_short_call.open_fee,
+            low_short_call.close_fee,
+        );
+
+        let long_call = Position::new(
+            long_call.option.clone(),
+            long_call.premium,
+            Utc::now(),
+            long_call.open_fee,
+            long_call.close_fee,
+        );
+
+        let short_call_high = Position::new(
+            high_short_call.option.clone(),
+            high_short_call.premium,
+            Utc::now(),
+            high_short_call.open_fee,
+            high_short_call.close_fee,
+        );
+
+        // Create strategy
+        let mut strategy = CallButterfly {
+            name: "Call Butterfly".to_string(),
+            kind: StrategyType::CallButterfly,
+            description: CALL_BUTTERFLY_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call,
+            short_call_low,
+            short_call_high,
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
     }
 }
 
@@ -362,7 +461,7 @@ impl StrategyBasic for CallButterfly {
 
 impl Strategies for CallButterfly {
     fn get_underlying_price(&self) -> Positive {
-        self.underlying_price
+        self.long_call.option.underlying_price
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
@@ -423,10 +522,6 @@ impl Validable for CallButterfly {
             return false;
         }
         if !self.short_call_high.validate() {
-            return false;
-        }
-        if self.underlying_price <= Positive::ZERO {
-            error!("Underlying price must be greater than zero");
             return false;
         }
         if self.long_call.option.strike_price >= self.short_call_low.option.strike_price {
@@ -674,7 +769,8 @@ impl Graph for CallButterfly {
             font_size: 18,
         });
 
-        points.push(self.get_point_at_price(self.underlying_price));
+        let underlying_price = self.get_underlying_price();
+        points.push(self.get_point_at_price(underlying_price));
 
         points
     }
@@ -1036,72 +1132,9 @@ mod tests_call_butterfly_validation {
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_validate_invalid_underlying_price() {
-        let mut strategy = setup_basic_strategy();
-        strategy.underlying_price = Positive::ZERO;
-        assert!(!strategy.validate());
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_validate_valid_strategy() {
         let strategy = setup_basic_strategy();
         assert!(strategy.validate());
-    }
-}
-
-#[cfg(test)]
-mod tests_call_butterfly_pnl {
-    use super::*;
-    use crate::pos;
-    use rust_decimal_macros::dec;
-
-    fn setup_test_strategy() -> CallButterfly {
-        CallButterfly::new(
-            "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0),
-            pos!(150.0),
-            pos!(155.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            dec!(0.01),
-            pos!(0.02),
-            pos!(1.0),
-            pos!(7.0),
-            pos!(5.0),
-            pos!(3.0),
-            pos!(4.0),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-        )
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_profit_below_lower_strike() {
-        let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(pos!(140.0)).unwrap();
-        assert!(profit <= Decimal::ZERO);
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_profit_above_upper_strike() {
-        let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(pos!(160.0)).unwrap();
-        assert!(profit <= Decimal::ZERO);
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_profit_ratio() {
-        let strategy = setup_test_strategy();
-        let ratio = strategy.profit_ratio().unwrap();
-        assert!(ratio > Decimal::ZERO);
     }
 }
 
@@ -2238,5 +2271,403 @@ mod tests_adjust_option_position {
 
         assert!(result.is_ok());
         assert_eq!(strategy.long_call.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_strategy_constructor {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::pos;
+
+    #[test]
+    fn test_get_strategy_valid() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = CallButterfly::get_strategy(&options);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_number_of_options() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(95.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = CallButterfly::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Call Butterfly get_strategy" && reason == "Must have exactly 3 options"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_option_style() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(95.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(105.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = CallButterfly::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Call Butterfly get_strategy" && reason == "Options must be calls"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_sides() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(95.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(105.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = CallButterfly::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Call Butterfly get_strategy"
+                && reason == "Call Butterfly requires one long call and two short calls"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_different_expiration_dates() {
+        let mut options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(95.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(105.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            ),
+        ];
+
+        // Modify expiration date for second option
+        options[1].option.expiration_date = ExpirationDate::Days(pos!(60.0));
+
+        let result = CallButterfly::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Call Butterfly get_strategy" && reason == "Options must have the same expiration date"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests_call_butterfly_pnl {
+    use super::*;
+    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
+    use crate::model::utils::create_sample_position;
+
+    fn setup_test_strategy() -> CallButterfly {
+        CallButterfly::new(
+            "AAPL".to_string(),
+            pos!(150.0),
+            pos!(145.0),
+            pos!(150.0),
+            pos!(155.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),
+            dec!(0.01),
+            pos!(0.02),
+            pos!(1.0),
+            pos!(7.0),
+            pos!(5.0),
+            pos!(3.0),
+            pos!(4.0),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+            pos!(0.1),
+        )
+    }
+
+    fn create_test_call_butterfly() -> Result<CallButterfly, StrategyError> {
+        // Create short call at lower strike
+        let short_call_low = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(95.0),  // Lower short strike
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create long call at middle strike
+        let long_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(100.0), // Middle (long) strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create short call at higher strike
+        let short_call_high = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(105.0), // Higher short strike
+            pos!(0.2),   // Implied volatility
+        );
+
+        CallButterfly::get_strategy(&vec![short_call_low, long_call, short_call_high])
+    }
+
+
+    #[test]
+    fn test_profit_below_lower_strike() {
+        let strategy = setup_test_strategy();
+        let profit = strategy.calculate_profit_at(pos!(140.0)).unwrap();
+        assert!(profit <= Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_profit_above_upper_strike() {
+        let strategy = setup_test_strategy();
+        let profit = strategy.calculate_profit_at(pos!(160.0)).unwrap();
+        assert!(profit <= Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_profit_ratio() {
+        let strategy = setup_test_strategy();
+        let ratio = strategy.profit_ratio().unwrap();
+        assert!(ratio > Decimal::ZERO);
+    }
+    
+    #[test]
+    fn test_calculate_pnl_below_strikes() {
+        let butterfly = create_test_call_butterfly().unwrap();
+        let market_price = pos!(90.0);  // Below all strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // All options OTM, should be close to max profit
+        // Initial income from short calls 
+        // Initial costs: Premium for long call + total fees
+        assert_pos_relative_eq!(pnl.initial_income, pos!(10.0), pos!(1e-6)); // Premiums from two short calls
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(8.0), pos!(1e-6)); // Premium for long call + fees
+        assert!(pnl.unrealized.unwrap() > dec!(-2.0)); // Should be near max profit
+    }
+
+    #[test]
+    fn test_calculate_pnl_between_strikes() {
+        let butterfly = create_test_call_butterfly().unwrap();
+        let market_price = pos!(100.0); // At middle strike
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.1);
+
+        let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // At-the-money, some loss expected
+        assert!(pnl.unrealized.unwrap() < dec!(0.0));
+        assert!(pnl.unrealized.unwrap() > dec!(-5.0)); // But not max loss
+    }
+
+    #[test]
+    fn test_calculate_pnl_above_strikes() {
+        let butterfly = create_test_call_butterfly().unwrap();
+        let market_price = pos!(110.0); // Above all strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Both short calls ITM, long call ITM
+        // Expect significant loss, but capped
+        assert!(pnl.unrealized.unwrap() < dec!(-5.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_profit() {
+        let butterfly = create_test_call_butterfly().unwrap();
+        let underlying_price = pos!(95.0); // Below lower short strike
+
+        let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+        
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(2.0), dec!(1e-6));
+        assert_eq!(pnl.initial_income, pos!(10.0)); // Premiums from short calls
+        assert_eq!(pnl.initial_costs, pos!(8.0)); // Premium for long call + fees
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_loss() {
+        let butterfly = create_test_call_butterfly().unwrap();
+        let underlying_price = pos!(110.0); // Above highest short strike
+
+        let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // Max loss at expiration when price is above highest strike
+        // Loss = width of spread - net premium received
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-8.0), dec!(1e-6));
+        assert_eq!(pnl.initial_income, pos!(10.0)); // Premiums from short calls
+        assert_eq!(pnl.initial_costs, pos!(8.0)); // Premium for long call + fees
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_between_strikes() {
+        let butterfly = create_test_call_butterfly().unwrap();
+        let underlying_price = pos!(100.0); // At middle strike
+
+        let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // At middle strike, some loss due to fees and net premium
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-3.0), dec!(1e-6));
+    }
+
+    #[test]
+    fn test_calculate_pnl_with_higher_volatility() {
+        let butterfly = create_test_call_butterfly().unwrap();
+        let market_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.4); // Higher volatility
+
+        let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // With higher volatility, option values change
+        // Net effect should be slightly negative
+        assert!(pnl.unrealized.unwrap() < dec!(0.0));
+        // But still capped by the butterfly spread
+        assert!(pnl.unrealized.unwrap() > dec!(-5.0));
     }
 }
