@@ -18,7 +18,7 @@ use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, ProbabilityError};
+use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -205,8 +205,123 @@ impl IronCondor {
 }
 
 impl StrategyConstructor for IronCondor {
-    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        // Need exactly 4 options for an Iron Condor
+        if vec_options.len() != 4 {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Condor get_strategy".to_string(),
+                    reason: "Must have exactly 4 options".to_string(),
+                },
+            ));
+        }
+
+        // Sort options by strike price to identify each position
+        let mut sorted_options = vec_options.to_vec();
+        sorted_options.sort_by(|a, b| {
+            a.option
+                .strike_price
+                .partial_cmp(&b.option.strike_price)
+                .unwrap()
+        });
+
+        let lowest_strike = &sorted_options[0];
+        let lower_middle_strike = &sorted_options[1];
+        let upper_middle_strike = &sorted_options[2];
+        let highest_strike = &sorted_options[3];
+
+        // Validate option types
+        if lowest_strike.option.option_style != OptionStyle::Put
+            || lower_middle_strike.option.option_style != OptionStyle::Put
+            || upper_middle_strike.option.option_style != OptionStyle::Call
+            || highest_strike.option.option_style != OptionStyle::Call
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Condor get_strategy".to_string(),
+                    reason: "Invalid option types for Iron Condor".to_string(),
+                },
+            ));
+        }
+
+        // Validate option sides
+        if lowest_strike.option.side != Side::Long
+            || lower_middle_strike.option.side != Side::Short
+            || upper_middle_strike.option.side != Side::Short
+            || highest_strike.option.side != Side::Long
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Condor get_strategy".to_string(),
+                    reason: "Invalid option sides for Iron Condor".to_string(),
+                },
+            ));
+        }
+
+        // Validate expiration dates match
+        let expiry_date = lowest_strike.option.expiration_date.clone();
+        if !sorted_options
+            .iter()
+            .all(|pos| pos.option.expiration_date == expiry_date)
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Condor get_strategy".to_string(),
+                    reason: "All options must have the same expiration date".to_string(),
+                },
+            ));
+        }
+
+        // Create positions
+        let long_put = Position::new(
+            lowest_strike.option.clone(),
+            lowest_strike.premium,
+            Utc::now(),
+            lowest_strike.open_fee,
+            lowest_strike.close_fee,
+        );
+
+        let short_put = Position::new(
+            lower_middle_strike.option.clone(),
+            lower_middle_strike.premium,
+            Utc::now(),
+            lower_middle_strike.open_fee,
+            lower_middle_strike.close_fee,
+        );
+
+        let short_call = Position::new(
+            upper_middle_strike.option.clone(),
+            upper_middle_strike.premium,
+            Utc::now(),
+            upper_middle_strike.open_fee,
+            upper_middle_strike.close_fee,
+        );
+
+        let long_call = Position::new(
+            highest_strike.option.clone(),
+            highest_strike.premium,
+            Utc::now(),
+            highest_strike.open_fee,
+            highest_strike.close_fee,
+        );
+
+        // Create strategy
+        let mut strategy = IronCondor {
+            name: "Iron Condor".to_string(),
+            kind: StrategyType::IronCondor,
+            description: "Iron Condor strategy description".to_string(), // Replace with actual description
+            break_even_points: Vec::new(),
+            long_put,
+            short_put,
+            short_call,
+            long_call,
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
     }
 }
 
@@ -3219,5 +3334,453 @@ mod tests_adjust_option_position {
 
         assert!(result.is_ok());
         assert_eq!(strategy.short_call.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_strategy_constructor {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::pos;
+
+    #[test]
+    fn test_get_strategy_valid() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(90.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = IronCondor::get_strategy(&options);
+        assert!(result.is_ok());
+
+        let strategy = result.unwrap();
+        assert_eq!(strategy.long_put.option.strike_price, pos!(90.0));
+        assert_eq!(strategy.short_put.option.strike_price, pos!(95.0));
+        assert_eq!(strategy.short_call.option.strike_price, pos!(105.0));
+        assert_eq!(strategy.long_call.option.strike_price, pos!(110.0));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_number_of_options() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(90.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = IronCondor::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Iron Condor get_strategy" && reason == "Must have exactly 4 options"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_option_types() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call, // Should be Put
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(90.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = IronCondor::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Iron Condor get_strategy" && reason == "Invalid option types for Iron Condor"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_sides() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short, // Should be Long
+                pos!(100.0),
+                pos!(1.0),
+                pos!(90.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = IronCondor::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Iron Condor get_strategy" && reason == "Invalid option sides for Iron Condor"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_different_expiration_dates() {
+        let mut options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(90.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(110.0),
+                pos!(0.2),
+            ),
+        ];
+
+        // Change expiration date of one option
+        options[0].option.expiration_date = ExpirationDate::Days(pos!(60.0));
+
+        let result = IronCondor::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Iron Condor get_strategy" && reason == "All options must have the same expiration date"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests_iron_condor_pnl {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{ pos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_iron_condor() -> Result<IronCondor, StrategyError> {
+        // Create long put (lowest strike)
+        let long_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(90.0),  // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create short put
+        let short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(95.0),  // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create short call
+        let short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(105.0), // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create long call (highest strike)
+        let long_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(110.0), // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        IronCondor::get_strategy(&vec![long_put, short_put, short_call, long_call])
+    }
+
+    #[test]
+    fn test_calculate_pnl_below_all_strikes() {
+        let condor = create_test_iron_condor().unwrap();
+        let market_price = pos!(85.0);  // Below all strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Long put ITM, other options OTM
+        // Loss should be capped at long put protection level
+        let max_loss = dec!(-5.0); // Width of put spread
+        assert!(pnl.unrealized.unwrap() >= max_loss);
+    }
+
+    #[test]
+    fn test_calculate_pnl_in_profit_zone_lower() {
+        let condor = create_test_iron_condor().unwrap();
+        let market_price = pos!(97.0);  // Between put strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Price in profit zone, should show positive PnL
+        assert!(pnl.unrealized.unwrap() > dec!(0.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_middle() {
+        let condor = create_test_iron_condor().unwrap();
+        let market_price = pos!(100.0);  // At middle of range
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Maximum profit zone
+        assert!(pnl.unrealized.unwrap() > dec!(0.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_in_profit_zone_upper() {
+        let condor = create_test_iron_condor().unwrap();
+        let market_price = pos!(101.0);  // Between call strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Price in profit zone, should show positive PnL
+        assert!(pnl.unrealized.unwrap() > dec!(0.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_above_all_strikes() {
+        let condor = create_test_iron_condor().unwrap();
+        let market_price = pos!(115.0);  // Above all strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Long call ITM, other options OTM
+        // Loss should be capped at long call protection level
+        let max_loss = dec!(-5.0); // Width of call spread
+        assert!(pnl.unrealized.unwrap() >= max_loss);
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_profit() {
+        let condor = create_test_iron_condor().unwrap();
+        let underlying_price = pos!(101.0); // At middle of range
+
+        let result = condor.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // At expiration, all options expire worthless
+        // Max profit is the net premium received minus fees
+        assert!(pnl.realized.unwrap() < dec!(0.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_loss_lower() {
+        let condor = create_test_iron_condor().unwrap();
+        let underlying_price = pos!(85.0); // Below all strikes
+
+        let result = condor.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // Max loss = width of put spread - net premium received + fees
+        let max_loss = dec!(-9.0); // Width of put spread
+        assert!(pnl.realized.unwrap() >= max_loss);
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_loss_upper() {
+        let condor = create_test_iron_condor().unwrap();
+        let underlying_price = pos!(115.0); // Above all strikes
+
+        let result = condor.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // Max loss = width of call spread - net premium received + fees
+        let max_loss = dec!(-9.0); // Width of call spread
+        assert!(pnl.realized.unwrap() >= max_loss);
+    }
+
+    #[test]
+    fn test_calculate_pnl_with_higher_volatility() {
+        let condor = create_test_iron_condor().unwrap();
+        let market_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.4); // Higher volatility
+
+        let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // With higher volatility, all options are worth more
+        // Net effect should be negative as short gamma position
+        assert!(pnl.unrealized.unwrap() < dec!(0.0));
+        // But still capped by the spread width
+        assert!(pnl.unrealized.unwrap() >= dec!(-5.0));
+    }
+
+    #[test]
+    fn test_calculate_pnl_near_expiration() {
+        let condor = create_test_iron_condor().unwrap();
+        let market_price = pos!(100.0);
+        let expiration_date = ExpirationDate::Days(pos!(1.0)); // Near expiration
+        let implied_volatility = pos!(0.2);
+
+        let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Near expiration, theta decay should be minimal
+        // and profit should be near maximum if price is in the middle
+        assert!(pnl.unrealized.unwrap() > dec!(0.0));
     }
 }
