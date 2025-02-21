@@ -19,9 +19,39 @@ use statrs::distribution::Normal;
 use std::error::Error;
 use tracing::{info, trace};
 
+/// The `Walkable` trait defines a generic structure for creating and manipulating
+/// entities capable of simulating or managing a random walk sequence of values. 
+/// Implementations of this trait must handle a vector of `Positive` values, which 
+/// serve as the primary storage for the y-axis values used in simulations or computations.
 pub trait Walkable {
+
+    /// Provides mutable access to the vector of y-axis values (`Positive`)
+    /// associated with the structure implementing this trait.
+    ///
+    /// # Returns
+    /// A mutable reference to the `Vec<Positive>` containing y-axis values.
     fn get_y_values(&mut self) -> &mut Vec<Positive>;
 
+    /// Generates a random walk sequence of values using a normal distribution.
+    ///
+    /// # Arguments
+    /// * `n_steps` - The total number of steps to generate in the random walk.
+    /// * `initial_price` - The starting value of the sequence, represented as a `Positive`.
+    /// * `mean` - The mean value for the normal distribution of price changes.
+    /// * `std_dev` - The initial standard deviation (volatility) for the normal distribution.
+    /// * `std_dev_change` - The daily change in volatility (volatility of volatility or VoV).
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// * `n_steps` is zero, as a random walk requires at least one step.
+    ///
+    /// # Behavior
+    /// The function:
+    /// 1. Ensures `n_steps` is greater than zero.
+    /// 2. Initializes the random number generator and prepares the vector of output values.
+    /// 3. Adjusts volatility dynamically based on `std_dev_change`.
+    /// 4. Calculates steps using a normal distribution with the given `mean` and `std_dev`.
+    /// 5. Converts all computed values into `Positive` and updates the underlying vector.
     fn generate_random_walk(
         &mut self,
         n_steps: usize,
@@ -67,17 +97,28 @@ pub trait Walkable {
         Ok(())
     }
 
-    /// Generates a random walk with volatility adjusted for a specific timeframe
+    /// Generates a random walk sequence of values over a specified timeframe,
+    /// adjusting for volatility changes for the given periods.
     ///
     /// # Arguments
-    /// * `n_steps` - Number of steps in the random walk
-    /// * `initial_price` - Starting price
-    /// * `mean` - Mean of the normal distribution for price changes
-    /// * `std_dev` - Daily volatility (standard deviation)
-    /// * `std_dev_change` - Daily volatility of volatility (VoV)
-    /// * `time_frame` - Target timeframe for the simulation
-    /// * `volatility_limits` - Optional tuple of (min_volatility, max_volatility)
+    /// * `n_steps` - The total number of steps in the random walk.
+    /// * `initial_price` - The initial value of the sequence as a `Positive`.
+    /// * `mean` - The mean of the price change distribution.
+    /// * `std_dev` - Daily volatility (standard deviation) represented as `Positive`.
+    /// * `std_dev_change` - Daily change in volatility (VoV) represented as `Positive`.
+    /// * `time_frame` - The timeframe over which the simulation takes place.
+    /// * `volatility_limits` - An optional tuple representing the minimum and maximum volatility limits.
     ///
+    /// # Errors
+    /// Returns an error if:
+    /// * `n_steps` is zero, as a random walk requires at least one step.
+    ///
+    /// # Behavior
+    /// 1. Converts daily volatility (`std_dev`) and its change (`std_dev_change`) to the target timeframe.
+    /// 2. Dynamically adjusts volatility based on the provided volatility change (`std_dev_change`).
+    /// 3. Constrains volatility within the specified limits, if provided.
+    /// 4. Computes step values using a normal distribution adjusted for the timeframe's volatility.
+    /// 5. Updates the internal storage of `Positive` values with the generated sequence.
     #[allow(clippy::too_many_arguments)]
     fn generate_random_walk_timeframe(
         &mut self,
@@ -148,18 +189,38 @@ pub trait Walkable {
     }
 }
 
+/// Represents a specific implementation of the `Walkable` trait called `RandomWalkGraph`.
+/// It is used to simulate and store a random walk's data, along with other metadata such
+/// as titles, timeframes, and optional financial parameters (e.g., risk-free rate, dividend yield).
 pub struct RandomWalkGraph {
+    /// Values representing the y-axis data of the random walk.
     values: Vec<Positive>,
+    /// Text for the graph's title.
     title_text: String,
+    /// Tracks the current index for traversing the graph.
     current_index: usize,
+    /// Optional risk-free rate used in calculations.
     risk_free_rate: Option<Decimal>,
+    /// Optional dividend yield percentage.
     dividend_yield: Option<Positive>,
+    /// Specifies the timeframe (e.g., daily, weekly) for the graph calculations.
     time_frame: TimeFrame,
+    /// Determines the window size used in volatility calculations.
     volatility_window: usize,
+    /// Optional initial volatility of the random walk.
     initial_volatility: Option<Positive>,
 }
 
 impl RandomWalkGraph {
+    /// Creates a new `RandomWalkGraph` instance.
+    ///
+    /// # Arguments
+    /// * `title` - A string representing the graph's title.
+    /// * `risk_free_rate` - An optional risk-free rate as a `Decimal`.
+    /// * `dividend_yield` - An optional dividend yield value as a `Positive`.
+    /// * `time_frame` - The timeframe for the graph's data (e.g., daily, weekly).
+    /// * `volatility_window` - The window size for calculating historical volatility.
+    /// * `initial_volatility` - Optional initial volatility for the graph's random walk.
     pub fn new(
         title: String,
         risk_free_rate: Option<Decimal>,
@@ -180,6 +241,13 @@ impl RandomWalkGraph {
         }
     }
 
+    /// Calculates the current volatility of the random walk based on historical
+    /// returns. This considers a moving window of data or defaults to the
+    /// initial volatility if insufficient data exists.
+    ///
+    /// # Returns
+    /// * The computed volatility as an optional `Positive`.
+    /// * Returns `None` if the volatility cannot be computed or is invalid.
     fn calculate_current_volatility(&self) -> Option<Positive> {
         if self.current_index < 2 {
             return self.initial_volatility;
@@ -216,32 +284,59 @@ impl RandomWalkGraph {
         }
     }
 
+    /// Resets the iterator for traversing the graph's values to its starting position.
     pub fn reset_iterator(&mut self) {
         self.current_index = 0;
     }
 
+    /// Calculates the remaining time, in steps, for the graph's iteration.
+    ///
+    /// # Returns
+    /// The time remaining as a `Positive`.
     fn get_remaining_time(&self) -> Positive {
         pos!((self.values.len() - self.current_index) as f64)
     }
 }
 
+/// Implements the `Walkable` trait for the `RandomWalkGraph` structure. This provides
+/// the graph with an interface for managing its y-values and performing random walk simulations.
 impl Walkable for RandomWalkGraph {
     fn get_y_values(&mut self) -> &mut Vec<Positive> {
         &mut self.values
     }
 }
 
+/// Implements a `Profit` trait for `RandomWalkGraph`, providing functionality
+/// for calculating potential profit at a given price level.
 impl Profit for RandomWalkGraph {
+    
+    /// Calculates the profit at a specified price, returning it as a `Decimal`.
+    ///
+    /// # Arguments
+    /// * `price` - The price at which the profit is being calculated, represented as a `Positive`.
+    ///
+    /// # Returns
+    /// A `Decimal` value representing the calculated profit.
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         Ok(price.to_dec())
     }
 }
 
+/// Implements a `Graph` trait for `RandomWalkGraph`, allowing it to manage
+/// the graphical data, such as titles and y-axis values.
 impl Graph for RandomWalkGraph {
+    /// Retrieves the title text for the graph.
     fn title(&self) -> String {
         self.title_text.clone()
     }
 
+    /// Processes y-axis values from the graph and converts them into a vector of `f64`.
+    ///
+    /// # Arguments
+    /// * `_data` - A slice of `Positive` values, optionally usable during processing.
+    ///
+    /// # Returns
+    /// A vector of `f64` values as the processed y-axis data.
     fn get_values(&self, _data: &[Positive]) -> Vec<f64> {
         info!("Number of values: {}", self.values.len());
         info!("First value: {:?}", self.values.first().unwrap());
