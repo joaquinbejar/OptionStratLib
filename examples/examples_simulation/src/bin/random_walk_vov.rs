@@ -13,8 +13,8 @@ use optionstratlib::{pos, spos};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    let days = 1.0; // todo! raise a error if days < 1
-    let n_steps = 24 * 60 * days as usize;
+    let hours = 23.0; // todo! raise a error if days < 1
+    let n_steps = 60 * hours as usize;
     let initial_price = pos!(5781.88);
     let mean = 0.0;
     let std_dev = pos!(11.3);
@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Random Walk VoV".to_string(),
         risk_free_rate,
         dividend_yield,
-        TimeFrame::Day,
+        TimeFrame::Hour,
         volatility_window,
         initial_volatility,
     );
