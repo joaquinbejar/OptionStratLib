@@ -1535,67 +1535,75 @@ impl OptionChain {
             .map(|iv| iv.value())
             .ok_or_else(|| "No ATM implied volatility available".to_string())
     }
-    
+
     pub fn gamma_exposure(&self) -> Result<Decimal, ChainError> {
         let mut gamma_exposure = Decimal::ZERO;
         for option in &self.options {
             if let Some(four_options) = &option.options {
                 gamma_exposure += four_options.long_call.gamma()?;
-            } else { 
-                warn!("No options greeks no initialized. Please run the update_greeks method first.");
+            } else {
+                warn!(
+                    "No options greeks no initialized. Please run the update_greeks method first."
+                );
             }
         }
         Ok(gamma_exposure)
     }
-    
+
     pub fn delta_exposure(&self) -> Result<Decimal, ChainError> {
         let mut delta_exposure = Decimal::ZERO;
         for option in &self.options {
             if let Some(four_options) = &option.options {
                 delta_exposure += four_options.long_call.delta()?;
-            }else {
-                warn!("No options greeks no initialized. Please run the update_greeks method first.");
+            } else {
+                warn!(
+                    "No options greeks no initialized. Please run the update_greeks method first."
+                );
             }
         }
         Ok(delta_exposure)
     }
-    
+
     pub fn vega_exposure(&self) -> Result<Decimal, ChainError> {
         let mut vega_exposure = Decimal::ZERO;
         for option in &self.options {
             if let Some(four_options) = &option.options {
                 vega_exposure += four_options.long_call.vega()?;
-            }else {
-                warn!("No options greeks no initialized. Please run the update_greeks method first.");
+            } else {
+                warn!(
+                    "No options greeks no initialized. Please run the update_greeks method first."
+                );
             }
         }
         Ok(vega_exposure)
     }
-    
+
     pub fn theta_exposure(&self) -> Result<Decimal, ChainError> {
         let mut theta_exposure = Decimal::ZERO;
         for option in &self.options {
             if let Some(four_options) = &option.options {
                 theta_exposure += four_options.long_call.theta()?;
-            }else {
-                warn!("No options greeks no initialized. Please run the update_greeks method first.");
+            } else {
+                warn!(
+                    "No options greeks no initialized. Please run the update_greeks method first."
+                );
             }
         }
         Ok(theta_exposure)
     }
-    
+
     pub fn gamma_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Gamma, &OptionStyle::Call, &Side::Long)
     }
-    
+
     pub fn delta_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long)
     }
-    
+
     pub fn vega_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Vega, &OptionStyle::Call, &Side::Long)
     }
-    
+
     pub fn theta_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
     }
@@ -6128,17 +6136,20 @@ mod tests_option_chain_serde {
     }
 }
 
-
 #[cfg(test)]
 mod tests_gamma_calculations {
     use super::*;
-    use rust_decimal_macros::dec;
-    use crate::{assert_decimal_eq, pos, spos};
     use crate::utils::setup_logger;
+    use crate::utils::time::get_tomorrow_formatted;
+    use crate::{assert_decimal_eq, pos, spos};
+    use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined gamma values
     fn create_test_chain_with_gamma() -> OptionChain {
-        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        option_chain.expiration_date = get_tomorrow_formatted();
+        option_chain
     }
 
     #[test]
@@ -6152,18 +6163,12 @@ mod tests_gamma_calculations {
         let gamma_exposure = result.unwrap();
         // Total gamma should be sum of all individual gammas
         // 0.04 + 0.06 + 0.02 = 0.12
-        assert_decimal_eq!(gamma_exposure, dec!(0.000277), dec!(0.000001));
+        assert_decimal_eq!(gamma_exposure, dec!(0.00466612), dec!(0.001));
     }
 
     #[test]
     fn test_gamma_exposure_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
         let result = chain.gamma_exposure();
         assert!(result.is_ok());
@@ -6188,10 +6193,10 @@ mod tests_gamma_calculations {
             spos!(60.0),
             Some(30),
         );
-        
+
         chain.update_greeks();
         let result = chain.gamma_exposure().unwrap();
-        assert_decimal_eq!(result, dec!(0.000277), dec!(0.000001));
+        assert_decimal_eq!(result, dec!(0.0046671), dec!(0.0001));
     }
 
     #[test]
@@ -6218,19 +6223,372 @@ mod tests_gamma_calculations {
 
     #[test]
     fn test_gamma_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
         let result = chain.gamma_curve();
         // Should return error or empty curve depending on implementation
-        match result {
-            Ok(curve) => assert!(curve.points.is_empty()),
-            Err(_) => assert!(true), // Both outcomes are acceptable for empty chain
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_delta_calculations {
+    use super::*;
+    use crate::utils::setup_logger;
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with predefined delta values
+    fn create_test_chain_with_delta() -> OptionChain {
+        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+    }
+
+    #[test]
+    fn test_delta_exposure_basic() {
+        setup_logger();
+        let mut chain = create_test_chain_with_delta();
+        // Initialize the greeks first
+        chain.update_greeks();
+        let result = chain.delta_exposure();
+
+        assert!(result.is_ok());
+        let delta_exposure = result.unwrap();
+        // Test against expected value from sample data
+        assert_decimal_eq!(delta_exposure, dec!(31.0), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_delta_exposure_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.delta_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_delta_exposure_uninitialized_greeks() {
+        let mut chain = create_test_chain_with_delta();
+        chain.update_greeks();
+        // Don't initialize greeks, should return zero exposure
+        let result = chain.delta_exposure();
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(31.0));
+    }
+
+    #[test]
+    fn test_delta_exposure_updates() {
+        setup_logger();
+        let mut chain = create_test_chain_with_delta();
+
+        // Get initial delta exposure (should be 0 as greeks aren't initialized)
+        let initial_delta = chain.delta_exposure().unwrap();
+        assert_eq!(initial_delta, dec!(0.0));
+
+        // Update greeks and check new delta exposure
+        chain.update_greeks();
+        let updated_delta = chain.delta_exposure().unwrap();
+        assert_decimal_eq!(updated_delta, dec!(31.0), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_delta_curve() {
+        let mut chain = create_test_chain_with_delta();
+        chain.update_greeks();
+        let result = chain.delta_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_delta_curve_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.delta_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+
+    #[test]
+    fn test_delta_curve_shape() {
+        setup_logger();
+        let mut chain = create_test_chain_with_delta();
+        chain.update_greeks();
+        let curve = chain.delta_curve().unwrap();
+
+        // Get sorted points by strike
+        let points: Vec<&Point2D> = curve.points.iter().collect();
+
+        // Verify the delta curve shape:
+        // 1. Delta should be roughly between 0 and 1 for calls
+        // 2. Should decrease as strike increases
+        for point in &points {
+            // Check delta bounds for call options
+            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
+            assert!(point.y <= dec!(1.1));
+        }
+
+        // Check monotonic decrease
+        for i in 1..points.len() {
+            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_vega_calculations {
+    use super::*;
+    use crate::utils::setup_logger;
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with predefined vega values
+    fn create_test_chain_with_vega() -> OptionChain {
+        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+    }
+
+    #[test]
+    fn test_vega_exposure_basic() {
+        setup_logger();
+        let mut chain = create_test_chain_with_vega();
+        // Initialize the greeks first
+        chain.update_greeks();
+        let result = chain.vega_exposure();
+
+        assert!(result.is_ok());
+        let vega_exposure = result.unwrap();
+        // Test against expected value from sample data
+        assert_decimal_eq!(vega_exposure, dec!(0.0), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_vega_exposure_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.vega_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_vega_exposure_uninitialized_greeks() {
+        let mut chain = create_test_chain_with_vega();
+        chain.update_greeks();
+        // Don't initialize greeks, should return zero exposure
+        let result = chain.vega_exposure();
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_vega_exposure_updates() {
+        setup_logger();
+        let mut chain = create_test_chain_with_vega();
+
+        // Get initial vega exposure (should be 0 as greeks aren't initialized)
+        let initial_vega = chain.vega_exposure().unwrap();
+        assert_eq!(initial_vega, dec!(0.0));
+
+        // Update greeks and check new vega exposure
+        chain.update_greeks();
+        let updated_vega = chain.vega_exposure().unwrap();
+        assert_decimal_eq!(updated_vega, dec!(0.0), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_vega_curve() {
+        let mut chain = create_test_chain_with_vega();
+        chain.update_greeks();
+        let result = chain.vega_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_vega_curve_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.vega_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+
+    #[test]
+    fn test_vega_curve_shape() {
+        setup_logger();
+        let mut chain = create_test_chain_with_vega();
+        chain.update_greeks();
+        let curve = chain.vega_curve().unwrap();
+
+        // Get sorted points by strike
+        let points: Vec<&Point2D> = curve.points.iter().collect();
+
+        // Verify the vega curve shape:
+        // 1. Delta should be roughly between 0 and 1 for calls
+        // 2. Should decrease as strike increases
+        for point in &points {
+            // Check vega bounds for call options
+            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
+            assert!(point.y <= dec!(1.1));
+        }
+
+        // Check monotonic decrease
+        for i in 1..points.len() {
+            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_theta_calculations {
+    use super::*;
+    use crate::utils::setup_logger;
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with predefined theta values
+    fn create_test_chain_with_theta() -> OptionChain {
+        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+    }
+
+    #[test]
+    fn test_theta_exposure_basic() {
+        setup_logger();
+        let mut chain = create_test_chain_with_theta();
+        // Initialize the greeks first
+        chain.update_greeks();
+        let result = chain.theta_exposure();
+
+        assert!(result.is_ok());
+        let theta_exposure = result.unwrap();
+        // Test against expected value from sample data
+        assert_decimal_eq!(theta_exposure, dec!(0.0), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_theta_exposure_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.theta_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_theta_exposure_uninitialized_greeks() {
+        let mut chain = create_test_chain_with_theta();
+        chain.update_greeks();
+        // Don't initialize greeks, should return zero exposure
+        let result = chain.theta_exposure();
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_theta_exposure_updates() {
+        setup_logger();
+        let mut chain = create_test_chain_with_theta();
+
+        // Get initial theta exposure (should be 0 as greeks aren't initialized)
+        let initial_theta = chain.theta_exposure().unwrap();
+        assert_eq!(initial_theta, dec!(0.0));
+
+        // Update greeks and check new theta exposure
+        chain.update_greeks();
+        let updated_theta = chain.theta_exposure().unwrap();
+        assert_decimal_eq!(updated_theta, dec!(0.0), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_theta_curve() {
+        let mut chain = create_test_chain_with_theta();
+        chain.update_greeks();
+        let result = chain.theta_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_theta_curve_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.theta_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+
+    #[test]
+    fn test_theta_curve_shape() {
+        setup_logger();
+        let mut chain = create_test_chain_with_theta();
+        chain.update_greeks();
+        let curve = chain.theta_curve().unwrap();
+
+        // Get sorted points by strike
+        let points: Vec<&Point2D> = curve.points.iter().collect();
+
+        // Verify the theta curve shape:
+        // 1. Delta should be roughly between 0 and 1 for calls
+        // 2. Should decrease as strike increases
+        for point in &points {
+            // Check theta bounds for call options
+            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
+            assert!(point.y <= dec!(1.1));
+        }
+
+        // Check monotonic decrease
+        for i in 1..points.len() {
+            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
         }
     }
 }

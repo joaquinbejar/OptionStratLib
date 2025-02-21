@@ -79,7 +79,10 @@ pub enum ChainError {
 #[derive(Debug)]
 pub enum OptionDataErrorKind {
     /// Invalid strike price
-    InvalidStrike { strike: f64, reason: String },
+    InvalidStrike {
+        strike: f64,
+        reason: String,
+    },
     /// Invalid implied volatility
     InvalidVolatility {
         volatility: Option<f64>,
@@ -92,7 +95,10 @@ pub enum OptionDataErrorKind {
         reason: String,
     },
     /// Invalid delta
-    InvalidDelta { delta: Option<f64>, reason: String },
+    InvalidDelta {
+        delta: Option<f64>,
+        reason: String,
+    },
     /// Error in price calculation
     PriceCalculationError(String),
 
