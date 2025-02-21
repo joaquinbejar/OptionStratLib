@@ -6137,6 +6137,7 @@ mod tests_option_chain_serde {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests_gamma_calculations {
     use super::*;
     use crate::utils::setup_logger;
@@ -6234,6 +6235,7 @@ mod tests_gamma_calculations {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests_delta_calculations {
     use super::*;
     use crate::utils::setup_logger;
@@ -6246,6 +6248,7 @@ mod tests_delta_calculations {
     }
 
     #[test]
+
     fn test_delta_exposure_basic() {
         setup_logger();
         let mut chain = create_test_chain_with_delta();
@@ -6260,6 +6263,7 @@ mod tests_delta_calculations {
     }
 
     #[test]
+
     fn test_delta_exposure_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -6269,6 +6273,7 @@ mod tests_delta_calculations {
     }
 
     #[test]
+
     fn test_delta_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_delta();
         chain.update_greeks();
@@ -6280,6 +6285,7 @@ mod tests_delta_calculations {
     }
 
     #[test]
+
     fn test_delta_exposure_updates() {
         setup_logger();
         let mut chain = create_test_chain_with_delta();
@@ -6295,6 +6301,7 @@ mod tests_delta_calculations {
     }
 
     #[test]
+
     fn test_delta_curve() {
         let mut chain = create_test_chain_with_delta();
         chain.update_greeks();
@@ -6317,6 +6324,7 @@ mod tests_delta_calculations {
     }
 
     #[test]
+
     fn test_delta_curve_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -6328,6 +6336,7 @@ mod tests_delta_calculations {
     }
 
     #[test]
+
     fn test_delta_curve_shape() {
         setup_logger();
         let mut chain = create_test_chain_with_delta();
@@ -6354,6 +6363,7 @@ mod tests_delta_calculations {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests_vega_calculations {
     use super::*;
     use crate::utils::setup_logger;
@@ -6366,6 +6376,7 @@ mod tests_vega_calculations {
     }
 
     #[test]
+
     fn test_vega_exposure_basic() {
         setup_logger();
         let mut chain = create_test_chain_with_vega();
@@ -6380,6 +6391,7 @@ mod tests_vega_calculations {
     }
 
     #[test]
+
     fn test_vega_exposure_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -6389,6 +6401,7 @@ mod tests_vega_calculations {
     }
 
     #[test]
+
     fn test_vega_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_vega();
         chain.update_greeks();
@@ -6400,6 +6413,7 @@ mod tests_vega_calculations {
     }
 
     #[test]
+
     fn test_vega_exposure_updates() {
         setup_logger();
         let mut chain = create_test_chain_with_vega();
@@ -6415,6 +6429,7 @@ mod tests_vega_calculations {
     }
 
     #[test]
+
     fn test_vega_curve() {
         let mut chain = create_test_chain_with_vega();
         chain.update_greeks();
@@ -6437,6 +6452,7 @@ mod tests_vega_calculations {
     }
 
     #[test]
+
     fn test_vega_curve_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -6448,6 +6464,7 @@ mod tests_vega_calculations {
     }
 
     #[test]
+
     fn test_vega_curve_shape() {
         setup_logger();
         let mut chain = create_test_chain_with_vega();
@@ -6474,6 +6491,7 @@ mod tests_vega_calculations {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests_theta_calculations {
     use super::*;
     use crate::utils::setup_logger;
