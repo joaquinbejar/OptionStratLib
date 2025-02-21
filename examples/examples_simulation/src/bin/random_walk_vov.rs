@@ -13,7 +13,7 @@ use optionstratlib::{pos, spos};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    let days = 1.0;
+    let days = 1.0; // todo! raise a error if days < 1
     let n_steps = 24 * 60 * days as usize;
     let initial_price = pos!(5781.88);
     let mean = 0.0;
@@ -40,8 +40,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         TimeFrame::Minute,
         None,
     )?;
+
     let _ = random_walk.graph(
-        &[],
+        &random_walk.get_x_values(),
         GraphBackend::Bitmap {
             file_path: "Draws/Simulation/random_walk_vov.png",
             size: (1200, 800),

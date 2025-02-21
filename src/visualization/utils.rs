@@ -118,22 +118,15 @@ pub trait Graph: Profit {
         backend: GraphBackend,
         title_size: u32,
     ) -> Result<(), Box<dyn Error>> {
+        
+        if x_axis_data.is_empty()  {
+            return Err("No valid values to plot".into());
+        }
 
-        // Generate profit values for each price in the data vector
         let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
         if y_axis_data.is_empty() {
             return Err("No valid values to plot".into());
         }
-
-        let default_x_data: Vec<Positive>;
-        let x_axis_data: &[Positive] = if x_axis_data.is_empty() {
-            default_x_data = (0..y_axis_data.len())
-                .map(|i| Positive::from(i as f64))
-                .collect();
-            &default_x_data 
-        } else {
-            x_axis_data
-        };
         
         let (max_x_value, min_x_value, max_y_value, min_y_value) =
             calculate_axis_range(x_axis_data, &y_axis_data, None);

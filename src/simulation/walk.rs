@@ -20,17 +20,24 @@ use std::error::Error;
 use tracing::{info, trace};
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
-/// entities capable of simulating or managing a random walk sequence of values. 
-/// Implementations of this trait must handle a vector of `Positive` values, which 
+/// entities capable of simulating or managing a random walk sequence of values.
+/// Implementations of this trait must handle a vector of `Positive` values, which
 /// serve as the primary storage for the y-axis values used in simulations or computations.
 pub trait Walkable {
-
     /// Provides mutable access to the vector of y-axis values (`Positive`)
     /// associated with the structure implementing this trait.
     ///
     /// # Returns
     /// A mutable reference to the `Vec<Positive>` containing y-axis values.
-    fn get_y_values(&mut self) -> &mut Vec<Positive>;
+    fn get_y_values(&self) -> &Vec<Positive>;
+
+    fn get_x_values(&self) -> Vec<Positive> {
+        (0..self.get_y_values().len())
+            .map(|i| Positive::from(i as f64))
+            .collect()
+    }
+
+    fn get_y_values_ref(&mut self) -> &mut Vec<Positive>;
 
     /// Generates a random walk sequence of values using a normal distribution.
     ///
@@ -69,7 +76,7 @@ pub trait Walkable {
         result.push(initial_price);
         let mut current_value = initial_price;
 
-        let values = self.get_y_values();
+        let values = self.get_y_values_ref();
         values.clear();
         values.reserve(n_steps);
         values.push(initial_price);
@@ -155,7 +162,7 @@ pub trait Walkable {
         result.push(initial_price);
         let mut current_value = initial_price;
 
-        let values = self.get_y_values();
+        let values = self.get_y_values_ref();
         values.clear();
         values.reserve(n_steps);
         values.push(initial_price);
@@ -301,7 +308,11 @@ impl RandomWalkGraph {
 /// Implements the `Walkable` trait for the `RandomWalkGraph` structure. This provides
 /// the graph with an interface for managing its y-values and performing random walk simulations.
 impl Walkable for RandomWalkGraph {
-    fn get_y_values(&mut self) -> &mut Vec<Positive> {
+    fn get_y_values(&self) -> &Vec<Positive> {
+        &self.values
+    }
+
+    fn get_y_values_ref(&mut self) -> &mut Vec<Positive> {
         &mut self.values
     }
 }
@@ -309,7 +320,6 @@ impl Walkable for RandomWalkGraph {
 /// Implements a `Profit` trait for `RandomWalkGraph`, providing functionality
 /// for calculating potential profit at a given price level.
 impl Profit for RandomWalkGraph {
-    
     /// Calculates the profit at a specified price, returning it as a `Decimal`.
     ///
     /// # Arguments
@@ -429,7 +439,11 @@ mod tests_random_walk {
     }
 
     impl Walkable for TestWalk {
-        fn get_y_values(&mut self) -> &mut Vec<Positive> {
+        fn get_y_values(&self) -> &Vec<Positive> {
+            &self.values
+        }
+
+        fn get_y_values_ref(&mut self) -> &mut Vec<Positive> {
             &mut self.values
         }
     }
@@ -645,7 +659,11 @@ mod tests_random_walk_timeframe {
     }
 
     impl Walkable for TestWalker {
-        fn get_y_values(&mut self) -> &mut Vec<Positive> {
+        fn get_y_values(&self) -> &Vec<Positive> {
+            &self.values
+        }
+
+        fn get_y_values_ref(&mut self) -> &mut Vec<Positive> {
             &mut self.values
         }
 
