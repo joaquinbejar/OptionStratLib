@@ -54,7 +54,7 @@
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper error
 //! handling and formatting.
 
-use crate::error::OptionsError;
+use crate::error::{GreeksError, OptionsError};
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -95,6 +95,8 @@ pub enum OptionDataErrorKind {
     InvalidDelta { delta: Option<f64>, reason: String },
     /// Error in price calculation
     PriceCalculationError(String),
+
+    OtherError(String),
 }
 
 /// Specific errors for chain building
@@ -182,6 +184,7 @@ impl fmt::Display for OptionDataErrorKind {
             OptionDataErrorKind::PriceCalculationError(msg) => {
                 write!(f, "Price calculation error: {}", msg)
             }
+            OptionDataErrorKind::OtherError(msg) => write!(f, "{}", msg),
         }
     }
 }
@@ -325,6 +328,12 @@ impl ChainError {
 impl From<String> for ChainError {
     fn from(msg: String) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(msg))
+    }
+}
+
+impl From<GreeksError> for ChainError {
+    fn from(err: GreeksError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::OtherError(err.to_string()))
     }
 }
 

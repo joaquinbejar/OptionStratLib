@@ -14,7 +14,7 @@ use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::error::{CurveError, SurfaceError};
 use crate::geometrics::{Len, LinearInterpolation};
-use crate::greeks::{delta, gamma};
+use crate::greeks::{delta, gamma, Greeks};
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
@@ -32,7 +32,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
@@ -1534,6 +1534,70 @@ impl OptionChain {
             .and_then(|opt| opt.implied_volatility)
             .map(|iv| iv.value())
             .ok_or_else(|| "No ATM implied volatility available".to_string())
+    }
+    
+    pub fn gamma_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut gamma_exposure = Decimal::ZERO;
+        for option in &self.options {
+            if let Some(four_options) = &option.options {
+                gamma_exposure += four_options.long_call.gamma()?;
+            } else { 
+                warn!("No options greeks no initialized. Please run the update_greeks method first.");
+            }
+        }
+        Ok(gamma_exposure)
+    }
+    
+    pub fn delta_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut delta_exposure = Decimal::ZERO;
+        for option in &self.options {
+            if let Some(four_options) = &option.options {
+                delta_exposure += four_options.long_call.delta()?;
+            }else {
+                warn!("No options greeks no initialized. Please run the update_greeks method first.");
+            }
+        }
+        Ok(delta_exposure)
+    }
+    
+    pub fn vega_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut vega_exposure = Decimal::ZERO;
+        for option in &self.options {
+            if let Some(four_options) = &option.options {
+                vega_exposure += four_options.long_call.vega()?;
+            }else {
+                warn!("No options greeks no initialized. Please run the update_greeks method first.");
+            }
+        }
+        Ok(vega_exposure)
+    }
+    
+    pub fn theta_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut theta_exposure = Decimal::ZERO;
+        for option in &self.options {
+            if let Some(four_options) = &option.options {
+                theta_exposure += four_options.long_call.theta()?;
+            }else {
+                warn!("No options greeks no initialized. Please run the update_greeks method first.");
+            }
+        }
+        Ok(theta_exposure)
+    }
+    
+    pub fn gamma_curve(&self) -> Result<Curve, CurveError> {
+        self.curve(&BasicAxisTypes::Gamma, &OptionStyle::Call, &Side::Long)
+    }
+    
+    pub fn delta_curve(&self) -> Result<Curve, CurveError> {
+        self.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long)
+    }
+    
+    pub fn vega_curve(&self) -> Result<Curve, CurveError> {
+        self.curve(&BasicAxisTypes::Vega, &OptionStyle::Call, &Side::Long)
+    }
+    
+    pub fn theta_curve(&self) -> Result<Curve, CurveError> {
+        self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
     }
 }
 
@@ -6061,5 +6125,112 @@ mod tests_option_chain_serde {
 
         assert!(option.call_bid.is_none());
         assert!(option.implied_volatility.is_none());
+    }
+}
+
+
+#[cfg(test)]
+mod tests_gamma_calculations {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use crate::{assert_decimal_eq, pos, spos};
+    use crate::utils::setup_logger;
+
+    // Helper function to create a test chain with predefined gamma values
+    fn create_test_chain_with_gamma() -> OptionChain {
+        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+    }
+
+    #[test]
+    fn test_gamma_exposure_basic() {
+        setup_logger();
+        let mut chain = create_test_chain_with_gamma();
+        chain.update_greeks();
+        let result = chain.gamma_exposure();
+
+        assert!(result.is_ok());
+        let gamma_exposure = result.unwrap();
+        // Total gamma should be sum of all individual gammas
+        // 0.04 + 0.06 + 0.02 = 0.12
+        assert_decimal_eq!(gamma_exposure, dec!(0.000277), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_gamma_exposure_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.gamma_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_gamma_exposure_missing_gamma() {
+        let mut chain = create_test_chain_with_gamma();
+
+        // Add an option without gamma
+        chain.add_option(
+            pos!(110.0),
+            spos!(0.5),
+            spos!(0.7),
+            spos!(2.5),
+            spos!(2.7),
+            spos!(0.35),
+            Some(dec!(0.3)),
+            Some(dec!(-0.7)),
+            None, // No gamma value
+            spos!(60.0),
+            Some(30),
+        );
+        
+        chain.update_greeks();
+        let result = chain.gamma_exposure().unwrap();
+        assert_decimal_eq!(result, dec!(0.000277), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_gamma_curve() {
+        let mut chain = create_test_chain_with_gamma();
+        chain.update_greeks();
+        let result = chain.gamma_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_gamma_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.gamma_curve();
+        // Should return error or empty curve depending on implementation
+        match result {
+            Ok(curve) => assert!(curve.points.is_empty()),
+            Err(_) => assert!(true), // Both outcomes are acceptable for empty chain
+        }
     }
 }
