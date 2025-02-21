@@ -115,7 +115,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 *price,
                 volatility_adj.clone(),
                 trend.clone(),
-                expiration.clone(),
+                expiration,
                 None,
             )?;
 
@@ -245,7 +245,9 @@ mod tests_probability_analysis {
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::pricing::payoff::Profit;
-    use crate::strategies::base::{Positionable, Strategies, Validable};
+    use crate::strategies::base::{
+        BreakEvenable, Positionable, Strategies, StrategyBasic, Validable,
+    };
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::error::Error;
@@ -261,6 +263,15 @@ mod tests_probability_analysis {
     impl Validable for MockStrategy {}
 
     impl Positionable for MockStrategy {}
+
+    impl BreakEvenable for MockStrategy {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+            // Ok(&vec![pos!(95.0), pos!(105.0)])
+            Ok(&self.break_points)
+        }
+    }
+
+    impl StrategyBasic for MockStrategy {}
 
     impl Strategies for MockStrategy {
         fn get_underlying_price(&self) -> Positive {
@@ -279,11 +290,6 @@ mod tests_probability_analysis {
                 pos!(105.0),
                 pos!(110.0),
             ])
-        }
-
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            // Ok(&vec![pos!(95.0), pos!(105.0)])
-            Ok(&self.break_points)
         }
     }
 
@@ -306,7 +312,7 @@ mod tests_probability_analysis {
 
     impl ProbabilityAnalysis for MockStrategy {
         fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-            Ok(self.expiration.clone())
+            Ok(self.expiration)
         }
 
         fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -478,7 +484,7 @@ mod tests_probability_analysis {
 mod tests_expected_value {
     use super::*;
     use crate::error::strategies::StrategyError;
-    use crate::strategies::base::{Positionable, Validable};
+    use crate::strategies::base::{BreakEvenable, Positionable, StrategyBasic, Validable};
     use rust_decimal_macros::dec;
     use std::error::Error;
 
@@ -501,6 +507,10 @@ mod tests_expected_value {
     impl Validable for TestStrategy {}
 
     impl Positionable for TestStrategy {}
+
+    impl BreakEvenable for TestStrategy {}
+
+    impl StrategyBasic for TestStrategy {}
 
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
@@ -526,7 +536,7 @@ mod tests_expected_value {
 
     impl ProbabilityAnalysis for TestStrategy {
         fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-            Ok(self.expiration.clone())
+            Ok(self.expiration)
         }
 
         fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -658,6 +668,8 @@ mod tests_expected_value {
 
         impl Validable for ExtremeStrategy {}
         impl Positionable for ExtremeStrategy {}
+        impl BreakEvenable for ExtremeStrategy {}
+        impl StrategyBasic for ExtremeStrategy {}
         impl Strategies for ExtremeStrategy {
             fn get_underlying_price(&self) -> Positive {
                 self.base.get_underlying_price()

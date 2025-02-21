@@ -18,8 +18,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut option_chain =
         OptionChain::load_from_json("examples/Chains/DAX-30-jan-2025-21637.0.json")?;
     info!("Chain loaded");
-    option_chain.update_deltas();
-    println!("{}", &option_chain);
+    option_chain.update_greeks();
+    info!("{}", &option_chain);
 
     let mut strategy = ShortStrangle::new(
         "SP500".to_string(),

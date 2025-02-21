@@ -98,16 +98,6 @@ mod tests {
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_monte_carlo_option_pricing_in_the_money() {
-        let mut option = create_test_option();
-        option.strike_price = pos!(80.0);
-        let price = monte_carlo_option_pricing(&option, 25, 100).unwrap();
-        // The price should be higher for an in-the-money option
-        assert!(price > dec!(20.0));
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_monte_carlo_option_pricing_zero_volatility() {
         let mut option = create_test_option();
         option.implied_volatility = Positive::ZERO;

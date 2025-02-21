@@ -20,8 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut option_chain =
         OptionChain::load_from_json("examples/Chains/DAX-30-jan-2025-21637.0.json")?;
     info!("Chain loaded");
-    option_chain.update_deltas();
-    println!("{}", &option_chain);
+    option_chain.update_greeks();
+    info!("{}", &option_chain);
 
     let datetime = DateTime::parse_from_rfc3339("2025-01-30T18:30:00Z").unwrap();
 

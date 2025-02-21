@@ -11,10 +11,14 @@ use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
+use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
-use crate::strategies::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use crate::strategies::base::{
+    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -72,7 +76,10 @@ impl CustomStrategy {
         if !strategy.validate() {
             panic!("Invalid strategy");
         }
-        strategy.calculate_break_even_points();
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
+
         let _ = strategy.max_profit_iter();
         strategy
     }
@@ -266,6 +273,32 @@ impl CustomStrategy {
     }
 }
 
+impl StrategyConstructor for CustomStrategy {
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        Ok(Self::new(
+            "CustomStrategy".to_string(),
+            "".to_string(),
+            format!("CustomStrategy: {:?}", vec_options),
+            Default::default(),
+            Vec::from(vec_options),
+            Default::default(),
+            100,
+            Default::default(),
+        ))
+    }
+}
+
+impl BreakEvenable for CustomStrategy {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.calculate_break_even_points();
+        Ok(())
+    }
+}
+
 impl Positionable for CustomStrategy {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         self.positions.push(position.clone());
@@ -282,6 +315,16 @@ impl Positionable for CustomStrategy {
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(self.positions.iter().collect())
+    }
+}
+
+impl StrategyBasic for CustomStrategy {
+    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+        Ok(StrategyBasics {
+            name: self.name.clone(),
+            kind: self.kind.clone(),
+            description: self.description.clone(),
+        })
     }
 }
 
@@ -388,10 +431,6 @@ impl Strategies for CustomStrategy {
                 Ok(Decimal::from_f64(result).unwrap())
             }
         }
-    }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
     }
 }
 
@@ -568,7 +607,7 @@ impl Graph for CustomStrategy {
 impl ProbabilityAnalysis for CustomStrategy {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
         match self.positions.first() {
-            Some(position) => Ok(position.option.expiration_date.clone()),
+            Some(position) => Ok(position.option.expiration_date),
             None => Err(ProbabilityError::NoPositions(
                 "get_expiration: No positions found ".to_string(),
             )),
@@ -652,6 +691,40 @@ impl Greeks for CustomStrategy {
     }
 }
 
+impl PnLCalculator for CustomStrategy {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .positions
+            .iter()
+            .map(|position| {
+                position
+                    .calculate_pnl(market_price, expiration_date, implied_volatility)
+                    .unwrap()
+            })
+            .sum())
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .positions
+            .iter()
+            .map(|position| {
+                position
+                    .calculate_pnl_at_expiration(underlying_price)
+                    .unwrap()
+            })
+            .sum())
+    }
+}
+
 #[cfg(test)]
 fn create_test_strategy() -> CustomStrategy {
     use crate::{OptionStyle, OptionType, Options, Side};
@@ -692,7 +765,7 @@ fn create_test_strategy() -> CustomStrategy {
             Side::Short,
             underlying_symbol.clone(),
             short_strike_1_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             short_strike_1_quantity,
             underlying_price,
@@ -713,7 +786,7 @@ fn create_test_strategy() -> CustomStrategy {
             Side::Short,
             underlying_symbol.clone(),
             short_strike_2_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             short_strike_2_quantity,
             underlying_price,
@@ -734,7 +807,7 @@ fn create_test_strategy() -> CustomStrategy {
             Side::Short,
             underlying_symbol.clone(),
             short_put_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             short_put_quantity,
             underlying_price,
@@ -761,7 +834,7 @@ fn create_test_strategy() -> CustomStrategy {
             Side::Short,
             underlying_symbol.clone(),
             extra_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             extra_quantity,
             underlying_price,
@@ -853,7 +926,7 @@ mod tests_custom_strategy {
                 Side::Long,
                 underlying_symbol.clone(),
                 long_strike_itm,
-                expiration.clone(),
+                expiration,
                 implied_volatility,
                 long_quantity,
                 underlying_price,
@@ -906,7 +979,7 @@ mod tests_custom_strategy {
                 Side::Long,
                 underlying_symbol.clone(),
                 long_strike_itm,
-                expiration.clone(),
+                expiration,
                 implied_volatility,
                 long_quantity,
                 underlying_price,
@@ -929,7 +1002,7 @@ mod tests_custom_strategy {
                 Side::Long,
                 underlying_symbol.clone(),
                 long_strike_otm,
-                expiration.clone(),
+                expiration,
                 implied_volatility,
                 long_quantity,
                 underlying_price,
@@ -1131,7 +1204,7 @@ mod tests_max_profit {
                 Side::Long,
                 underlying_symbol.clone(),
                 long_strike_itm,
-                expiration.clone(),
+                expiration,
                 implied_volatility,
                 long_quantity,
                 underlying_price,
@@ -1154,7 +1227,7 @@ mod tests_max_profit {
                 Side::Long,
                 underlying_symbol.clone(),
                 long_strike_otm,
-                expiration.clone(),
+                expiration,
                 implied_volatility,
                 long_quantity,
                 underlying_price,
@@ -1223,7 +1296,7 @@ mod tests_max_loss {
                 Side::Long,
                 underlying_symbol.clone(),
                 long_strike_itm,
-                expiration.clone(),
+                expiration,
                 implied_volatility,
                 long_quantity,
                 underlying_price,
@@ -1246,7 +1319,7 @@ mod tests_max_loss {
                 Side::Long,
                 underlying_symbol.clone(),
                 long_strike_otm,
-                expiration.clone(),
+                expiration,
                 implied_volatility,
                 long_quantity,
                 underlying_price,

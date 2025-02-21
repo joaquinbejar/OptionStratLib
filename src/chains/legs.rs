@@ -50,7 +50,7 @@ impl Display for StrategyLegs<'_> {
             } => {
                 write!(
                     f,
-                    "Two Legs Strategy:\n1st Leg: {}\n2nd Leg: {}\n3rd Leg: {}",
+                    "Three Legs Strategy:\n1st Leg: {}\n2nd Leg: {}\n3rd Leg: {}",
                     first, second, third
                 )
             }
@@ -95,6 +95,8 @@ mod tests {
     fn create_test_option(strike: Decimal) -> OptionData {
         OptionData::new(
             strike.into(),
+            None,
+            None,
             None,
             None,
             None,
@@ -285,5 +287,31 @@ mod tests {
             }
             _ => panic!("Expected TwoLegs variant after cloning"),
         }
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn test_display_three_legs() {
+        let option1 = create_test_option(dec!(100.0));
+        let option2 = create_test_option(dec!(110.0));
+        let option3 = create_test_option(dec!(120.0));
+
+        let strategy = StrategyLegs::ThreeLegs {
+            first: &option1,
+            second: &option2,
+            third: &option3,
+        };
+
+        let display_string = format!("{}", strategy);
+        assert!(display_string.contains("Three Legs Strategy")); // Note: This is actually a bug in the Display implementation
+        assert!(display_string.contains("1st Leg"));
+        assert!(display_string.contains("2nd Leg"));
+        assert!(display_string.contains("3rd Leg"));
+
+        // Verify strikes are displayed in correct order
+        let lines: Vec<&str> = display_string.lines().collect();
+        assert!(lines[1].contains(&option1.strike_price.to_string()));
+        assert!(lines[2].contains(&option2.strike_price.to_string()));
+        assert!(lines[3].contains(&option3.strike_price.to_string()));
     }
 }

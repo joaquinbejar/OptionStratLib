@@ -3,11 +3,12 @@
    Email: jb@taunais.com
    Date: 26/8/24
 ******************************************************************************/
-use crate::error::curves::CurvesError;
+use crate::error::curves::CurveError;
 use crate::geometrics::HasX;
 use crate::model::positive::is_positive;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
@@ -44,7 +45,7 @@ use std::hash::{Hash, Hasher};
 ///
 /// This structure enables high precision for x and y values, making it particularly
 /// well-suited for scientific applications and precise geometry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Point2D {
     pub x: Decimal,
     pub y: Decimal,
@@ -117,15 +118,15 @@ impl Point2D {
     /// conversions fail due to invalid type requirements.
     pub fn to_tuple<T: From<Decimal> + 'static, U: From<Decimal> + 'static>(
         &self,
-    ) -> Result<(T, U), CurvesError> {
+    ) -> Result<(T, U), CurveError> {
         if is_positive::<T>() && self.x <= Decimal::ZERO {
-            return Err(CurvesError::Point2DError {
+            return Err(CurveError::Point2DError {
                 reason: "x must be positive for type T",
             });
         }
 
         if is_positive::<U>() && self.y <= Decimal::ZERO {
-            return Err(CurvesError::Point2DError {
+            return Err(CurveError::Point2DError {
                 reason: "y must be positive for type U",
             });
         }
@@ -145,7 +146,7 @@ impl Point2D {
     ///
     /// # Usage
     /// This function allows constructing a `Point2D` directly from a tuple representation.
-    pub fn from_tuple<T: Into<Decimal>, U: Into<Decimal>>(x: T, y: U) -> Result<Self, CurvesError> {
+    pub fn from_tuple<T: Into<Decimal>, U: Into<Decimal>>(x: T, y: U) -> Result<Self, CurveError> {
         Ok(Self::new(x, y))
     }
 
@@ -158,13 +159,13 @@ impl Point2D {
     ///
     /// # Errors
     /// Returns a `CurvesError::Point2DError` with a reason explaining the failure.
-    pub fn to_f64_tuple(&self) -> Result<(f64, f64), CurvesError> {
+    pub fn to_f64_tuple(&self) -> Result<(f64, f64), CurveError> {
         let x = self.x.to_f64();
         let y = self.y.to_f64();
 
         match (x, y) {
             (Some(x), Some(y)) => Ok((x, y)),
-            _ => Err(CurvesError::Point2DError {
+            _ => Err(CurveError::Point2DError {
                 reason: "Error converting Decimal to f64",
             }),
         }
@@ -184,12 +185,12 @@ impl Point2D {
     /// # Errors
     /// Returns a `CurvesError::Point2DError` with a reason if either `x` or `y` could not be
     /// converted from `f64`.
-    pub fn from_f64_tuple(x: f64, y: f64) -> Result<Self, CurvesError> {
+    pub fn from_f64_tuple(x: f64, y: f64) -> Result<Self, CurveError> {
         let x = Decimal::from_f64(x);
         let y = Decimal::from_f64(y);
         match (x, y) {
             (Some(x), Some(y)) => Ok(Self::new(x, y)),
-            _ => Err(CurvesError::Point2DError {
+            _ => Err(CurveError::Point2DError {
                 reason: "Error converting f64 to Decimal",
             }),
         }
@@ -222,7 +223,7 @@ mod tests {
         };
 
         let result = if is_positive::<Decimal>() && point.x <= Decimal::ZERO {
-            Err(CurvesError::Point2DError {
+            Err(CurveError::Point2DError {
                 reason: "x must be positive for type T",
             })
         } else {
@@ -240,7 +241,7 @@ mod tests {
         };
 
         let result = if is_positive::<Decimal>() && point.y <= Decimal::ZERO {
-            Err(CurvesError::Point2DError {
+            Err(CurveError::Point2DError {
                 reason: "y must be positive for type U",
             })
         } else {
@@ -274,7 +275,7 @@ mod tests {
         let result = Point2D::from_f64_tuple(f64::INFINITY, 2.0);
         assert!(result.is_err());
         match result {
-            Err(CurvesError::Point2DError { reason }) => {
+            Err(CurveError::Point2DError { reason }) => {
                 assert_eq!(reason, "Error converting f64 to Decimal");
             }
             _ => panic!("Unexpected error type"),
@@ -292,5 +293,210 @@ mod tests {
         assert_eq!(p1, p3);
         assert_eq!(p1, p4);
         assert_ne!(p1, p5);
+    }
+}
+
+#[cfg(test)]
+mod tests_point2d_serde {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use serde_json::Value;
+
+    #[test]
+    fn test_basic_serialization() {
+        let point = Point2D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point.x, deserialized.x);
+        assert_eq!(point.y, deserialized.y);
+    }
+
+    #[test]
+    fn test_zero_values() {
+        let point = Point2D {
+            x: dec!(0.0),
+            y: dec!(0.0),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_negative_values() {
+        let point = Point2D {
+            x: dec!(-1.5),
+            y: dec!(-2.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_high_precision_values() {
+        let point = Point2D {
+            x: dec!(1.12345678901234567890),
+            y: dec!(2.12345678901234567890),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point.x, deserialized.x);
+        assert_eq!(point.y, deserialized.y);
+    }
+
+    #[test]
+    fn test_json_structure() {
+        let point = Point2D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let json_value: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Verify JSON structure
+        assert!(json_value.is_object());
+        assert_eq!(json_value.as_object().unwrap().len(), 2);
+        assert!(json_value.get("x").is_some());
+        assert!(json_value.get("y").is_some());
+    }
+
+    #[test]
+    fn test_pretty_print() {
+        let point = Point2D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+        };
+
+        let serialized = serde_json::to_string_pretty(&point).unwrap();
+
+        // Verify pretty print format
+        assert!(serialized.contains('\n'));
+        assert!(serialized.contains("  "));
+
+        // Verify we can still deserialize pretty-printed JSON
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_deserialize_from_integers() {
+        let json_str = r#"{"x": 1, "y": 2}"#;
+        let point: Point2D = serde_json::from_str(json_str).unwrap();
+
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+    }
+
+    #[test]
+    fn test_deserialize_from_strings() {
+        let json_str = r#"{"x": "1.5", "y": "2.5"}"#;
+        let point: Point2D = serde_json::from_str(json_str).unwrap();
+
+        assert_eq!(point.x, dec!(1.5));
+        assert_eq!(point.y, dec!(2.5));
+    }
+
+    #[test]
+    fn test_invalid_json() {
+        // Missing field
+        let json_str = r#"{"x": 1.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+
+        // Invalid number format
+        let json_str = r#"{"x": "invalid", "y": 2.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+
+        // Wrong data type
+        let json_str = r#"{"x": true, "y": 2.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_max_values() {
+        let point = Point2D {
+            x: Decimal::MAX,
+            y: Decimal::MAX,
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_min_values() {
+        let point = Point2D {
+            x: Decimal::MIN,
+            y: Decimal::MIN,
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_json_to_vec() {
+        let points = vec![
+            Point2D {
+                x: dec!(1.0),
+                y: dec!(2.0),
+            },
+            Point2D {
+                x: dec!(3.0),
+                y: dec!(4.0),
+            },
+        ];
+
+        let serialized = serde_json::to_string(&points).unwrap();
+        let deserialized: Vec<Point2D> = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(points, deserialized);
+    }
+
+    #[test]
+    fn test_duplicate_fields() {
+        let json_str = r#"{"x": 1.5, "y": 2.5, "x": 3.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extra_fields() {
+        let json_str = r#"{"x": 1.5, "y": 2.5, "z": 3.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_unknown_fields() {
+        let json_str = r#"{"x": 1.5, "r": 2.5, "z": 3.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_array() {
+        let json_str = "[1.5, 2.5]";
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_ok());
     }
 }

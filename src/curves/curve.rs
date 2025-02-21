@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::curves::utils::detect_peaks_and_valleys;
 use crate::curves::Point2D;
-use crate::error::{CurvesError, InterpolationError, MetricsError};
+use crate::error::{CurveError, InterpolationError, MetricsError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
@@ -16,6 +16,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ops::Index;
 
@@ -80,12 +81,20 @@ use std::ops::Index;
 /// - **x_range**:
 ///   - A tuple `(Decimal, Decimal)` that specifies the minimum and maximum x-coordinate values
 ///     for the curve. Operations performed on the curve should ensure they fall within this range.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Curve {
     pub points: BTreeSet<Point2D>,
     pub x_range: (Decimal, Decimal),
 }
 
+impl Default for Curve {
+    fn default() -> Self {
+        Curve {
+            points: BTreeSet::new(),
+            x_range: (Decimal::ZERO, Decimal::ZERO),
+        }
+    }
+}
 impl Curve {
     /// Creates a new curve from a vector of points.
     ///
@@ -126,7 +135,7 @@ impl Len for Curve {
 }
 
 impl GeometricObject<Point2D, Decimal> for Curve {
-    type Error = CurvesError;
+    type Error = CurveError;
 
     fn get_points(&self) -> BTreeSet<&Point2D> {
         self.points.iter().collect()
@@ -151,7 +160,7 @@ impl GeometricObject<Point2D, Decimal> for Curve {
         match method {
             ConstructionMethod::FromData { points } => {
                 if points.is_empty() {
-                    return Err(CurvesError::Point2DError {
+                    return Err(CurveError::Point2DError {
                         reason: "Empty points array",
                     });
                 }
@@ -165,18 +174,18 @@ impl GeometricObject<Point2D, Decimal> for Curve {
                         steps,
                     } => (t_start, t_end, steps),
                     _ => {
-                        return Err(CurvesError::ConstructionError(
+                        return Err(CurveError::ConstructionError(
                             "Invalid parameters".to_string(),
                         ))
                     }
                 };
                 let step_size = (t_end - t_start) / Decimal::from(steps);
 
-                let points: Result<BTreeSet<Point2D>, CurvesError> = (0..=steps)
+                let points: Result<BTreeSet<Point2D>, CurveError> = (0..=steps)
                     .into_par_iter()
                     .map(|i| {
                         let t = t_start + step_size * Decimal::from(i);
-                        f(t).map_err(|e| CurvesError::ConstructionError(e.to_string()))
+                        f(t).map_err(|e| CurveError::ConstructionError(e.to_string()))
                     })
                     .collect();
 
@@ -747,7 +756,7 @@ impl CubicInterpolation<Point2D, Decimal> for Curve {
 /// - [`SplineInterpolation`]: The trait definition for spline interpolation.
 /// - [`Point2D`]: Represents a point in 2D space.
 /// - [`Curve`]: Represents a mathematical curve made up of points for interpolation.
-/// - [`CurvesError`]: Enumerates possible errors during curve operations.
+/// - [`CurveError`]: Enumerates possible errors during curve operations.
 impl SplineInterpolation<Point2D, Decimal> for Curve {
     /// Performs cubic spline interpolation for a given x-coordinate and returns the interpolated
     /// `Point2D` value. This function computes the second derivatives of the curve points, solves
@@ -831,7 +840,7 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
     ///
     /// - [`Point2D`]: Represents a 2D point and is used as input/output
     ///   for this function.
-    /// - [`CurvesError`] Represents any error encountered during
+    /// - [`CurveError`] Represents any error encountered during
     ///   interpolation.
     ///
     /// # Performance
@@ -1239,7 +1248,7 @@ impl MetricsExtractor for Curve {
 /// functionality for merging multiple curves using a specified mathematical
 /// operation and performing arithmetic operations between two curves.
 impl Arithmetic<Curve> for Curve {
-    type Error = CurvesError;
+    type Error = CurveError;
 
     /// Merges a collection of curves into a single curve based on the specified
     /// mathematical operation.
@@ -1300,9 +1309,9 @@ impl Arithmetic<Curve> for Curve {
     /// This function enables combining multiple curves for tasks such as:
     /// - Summing y-values across different curves to compute a composite curve.
     /// - Finding the maximum/minimum y-value at each x-point for a collection of curves.
-    fn merge(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurvesError> {
+    fn merge(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurveError> {
         if curves.is_empty() {
-            return Err(CurvesError::invalid_parameters(
+            return Err(CurveError::invalid_parameters(
                 "merge_curves",
                 "No curves provided for merging",
             ));
@@ -1328,7 +1337,7 @@ impl Arithmetic<Curve> for Curve {
 
         // Check if ranges are compatible
         if min_x >= max_x {
-            return Err(CurvesError::invalid_parameters(
+            return Err(CurveError::invalid_parameters(
                 "merge_curves",
                 "Curves have incompatible x-ranges",
             ));
@@ -1339,19 +1348,19 @@ impl Arithmetic<Curve> for Curve {
         let step_size = (max_x - min_x) / Decimal::from(steps);
 
         // Interpolate and perform operation using parallel iterator
-        let result_points: Result<Vec<Point2D>, CurvesError> = (0..=steps)
+        let result_points: Result<Vec<Point2D>, CurveError> = (0..=steps)
             .into_par_iter()
             .map(|i| {
                 let x = min_x + step_size * Decimal::from(i);
 
                 // Interpolate y values for each curve
-                let y_values: Result<Vec<Decimal>, CurvesError> = curves
+                let y_values: Result<Vec<Decimal>, CurveError> = curves
                     .iter()
                     .map(|curve| {
                         curve
                             .interpolate(x, InterpolationType::Cubic)
                             .map(|point| point.y)
-                            .map_err(CurvesError::from)
+                            .map_err(CurveError::from)
                     })
                     .collect();
 
@@ -1434,13 +1443,13 @@ impl Arithmetic<Curve> for Curve {
     ///
     /// Use this method to easily perform arithmetic operations between two curves,
     /// such as summing their y-values or finding their pointwise maximum.
-    fn merge_with(&self, other: &Curve, operation: MergeOperation) -> Result<Curve, CurvesError> {
+    fn merge_with(&self, other: &Curve, operation: MergeOperation) -> Result<Curve, CurveError> {
         Self::merge(&[self, other], operation)
     }
 }
 
 impl AxisOperations<Point2D, Decimal> for Curve {
-    type Error = CurvesError;
+    type Error = CurveError;
 
     fn contains_point(&self, x: &Decimal) -> bool {
         let point = Point2D::new(*x, Decimal::ZERO);
@@ -1467,7 +1476,7 @@ impl AxisOperations<Point2D, Decimal> for Curve {
                 let dist_b = (b.x - *x).abs();
                 dist_a.partial_cmp(&dist_b).unwrap()
             })
-            .ok_or(CurvesError::Point2DError {
+            .ok_or(CurveError::Point2DError {
                 reason: "No points available",
             })
     }
@@ -1522,11 +1531,11 @@ where
 }
 
 impl GeometricTransformations<Point2D> for Curve {
-    type Error = CurvesError;
+    type Error = CurveError;
 
     fn translate(&self, deltas: Vec<&Decimal>) -> Result<Self, Self::Error> {
         if deltas.len() != 2 {
-            return Err(CurvesError::invalid_parameters(
+            return Err(CurveError::invalid_parameters(
                 "translate",
                 "Expected 2 deltas for 2D translation",
             ));
@@ -1543,7 +1552,7 @@ impl GeometricTransformations<Point2D> for Curve {
 
     fn scale(&self, factors: Vec<&Decimal>) -> Result<Self, Self::Error> {
         if factors.len() != 2 {
-            return Err(CurvesError::invalid_parameters(
+            return Err(CurveError::invalid_parameters(
                 "scale",
                 "Expected 2 factors for 2D scaling",
             ));
@@ -1590,7 +1599,7 @@ impl GeometricTransformations<Point2D> for Curve {
 
     fn extrema(&self) -> Result<(Point2D, Point2D), Self::Error> {
         if self.points.is_empty() {
-            return Err(CurvesError::invalid_parameters(
+            return Err(CurveError::invalid_parameters(
                 "extrema",
                 "Curve has no points",
             ));
@@ -2418,7 +2427,7 @@ mod tests_curve_arithmetic {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
-    use crate::error::CurvesError::OperationError;
+    use crate::error::CurveError::OperationError;
     use crate::error::OperationErrorKind;
     use crate::geometrics::{ConstructionMethod, ConstructionParams};
     use std::error::Error;
@@ -2431,7 +2440,7 @@ mod tests_extended {
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            CurvesError::Point2DError { reason } => {
+            CurveError::Point2DError { reason } => {
                 assert_eq!(reason, "Empty points array");
             }
             _ => {
@@ -2458,7 +2467,7 @@ mod tests_extended {
     #[test]
     fn test_construct_parametric_invalid_function() {
         let f = |_t: Decimal| -> Result<Point2D, Box<dyn Error>> {
-            Err(Box::new(CurvesError::ConstructionError(
+            Err(Box::new(CurveError::ConstructionError(
                 "Function evaluation failed".to_string(),
             )))
         };
@@ -2474,7 +2483,7 @@ mod tests_extended {
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            CurvesError::ConstructionError(reason) => {
+            CurveError::ConstructionError(reason) => {
                 assert_eq!(reason, "Construction error: Function evaluation failed");
             }
             _ => {
@@ -2486,13 +2495,13 @@ mod tests_extended {
     #[test]
     fn test_segment_not_found_error() {
         let segment: Option<Point2D> = None;
-        let result: Result<Point2D, CurvesError> = segment.ok_or_else(|| CurvesError::StdError {
+        let result: Result<Point2D, CurveError> = segment.ok_or_else(|| CurveError::StdError {
             reason: "Could not find valid segment for interpolation".to_string(),
         });
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            CurvesError::StdError { reason } => {
+            CurveError::StdError { reason } => {
                 assert_eq!(reason, "Could not find valid segment for interpolation");
             }
             _ => {
@@ -2522,7 +2531,7 @@ mod tests_extended {
         let result = if vec![curve.clone()].len() == 1 {
             Ok(curve.clone())
         } else {
-            Err(CurvesError::invalid_parameters(
+            Err(CurveError::invalid_parameters(
                 "merge_curves",
                 "Invalid state",
             ))
@@ -2535,7 +2544,7 @@ mod tests_extended {
         let min_x = dec!(10.0);
         let max_x = dec!(5.0);
         let result = if min_x >= max_x {
-            Err(CurvesError::invalid_parameters(
+            Err(CurveError::invalid_parameters(
                 "merge_curves",
                 "Curves have incompatible x-ranges",
             ))
@@ -3198,5 +3207,209 @@ mod tests_geometric_transformations {
             let area = curve.measure_under(&dec!(0.0)).unwrap();
             assert!(area > dec!(0.0));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_curve_serde {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test curve
+    fn create_test_curve() -> Curve {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D {
+            x: dec!(1.0),
+            y: dec!(2.0),
+        });
+        points.insert(Point2D {
+            x: dec!(3.0),
+            y: dec!(4.0),
+        });
+        points.insert(Point2D {
+            x: dec!(5.0),
+            y: dec!(6.0),
+        });
+
+        Curve {
+            points,
+            x_range: (dec!(1.0), dec!(5.0)),
+        }
+    }
+
+    #[test]
+    fn test_basic_serialization() {
+        let curve = create_test_curve();
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curve.points, deserialized.points);
+        assert_eq!(curve.x_range, deserialized.x_range);
+    }
+
+    #[test]
+    fn test_pretty_print() {
+        let curve = create_test_curve();
+        let serialized = serde_json::to_string_pretty(&curve).unwrap();
+
+        // Verify pretty print format
+        assert!(serialized.contains('\n'));
+        assert!(serialized.contains("  "));
+
+        // Verify deserialization still works
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(curve.points, deserialized.points);
+    }
+
+    #[test]
+    fn test_empty_curve() {
+        let curve = Curve {
+            points: BTreeSet::new(),
+            x_range: (dec!(0.0), dec!(0.0)),
+        };
+
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert!(deserialized.points.is_empty());
+        assert_eq!(deserialized.x_range, (dec!(0.0), dec!(0.0)));
+    }
+
+    #[test]
+    fn test_curve_with_negative_values() {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D {
+            x: dec!(-1.0),
+            y: dec!(-2.0),
+        });
+        points.insert(Point2D {
+            x: dec!(-3.0),
+            y: dec!(-4.0),
+        });
+
+        let curve = Curve {
+            points,
+            x_range: (dec!(-3.0), dec!(-1.0)),
+        };
+
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curve.points, deserialized.points);
+        assert_eq!(curve.x_range, deserialized.x_range);
+    }
+
+    #[test]
+    fn test_curve_with_high_precision() {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D {
+            x: dec!(1.12345678901234567890),
+            y: dec!(2.12345678901234567890),
+        });
+        points.insert(Point2D {
+            x: dec!(3.12345678901234567890),
+            y: dec!(4.12345678901234567890),
+        });
+
+        let curve = Curve {
+            points,
+            x_range: (dec!(1.12345678901234567890), dec!(3.12345678901234567890)),
+        };
+
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curve.points, deserialized.points);
+        assert_eq!(curve.x_range, deserialized.x_range);
+    }
+
+    #[test]
+    fn test_invalid_json() {
+        // Missing required fields
+        let json_str = r#"{"points": []}"#;
+        let result = serde_json::from_str::<Curve>(json_str);
+        assert!(result.is_err());
+
+        // Invalid points format
+        let json_str = r#"{"points": [1, 2, 3], "x_range": [0, 1]}"#;
+        let result = serde_json::from_str::<Curve>(json_str);
+        assert!(result.is_err());
+
+        // Invalid x_range format
+        let json_str = r#"{"points": [], "x_range": "invalid"}"#;
+        let result = serde_json::from_str::<Curve>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_json_structure() {
+        let curve = create_test_curve();
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+
+        // Check structure
+        assert!(json.is_object());
+        assert!(json.get("points").is_some());
+        assert!(json.get("x_range").is_some());
+
+        // Check points is an array
+        assert!(json.get("points").unwrap().is_array());
+
+        // Check x_range is an array of 2 elements
+        let x_range = json.get("x_range").unwrap().as_array().unwrap();
+        assert_eq!(x_range.len(), 2);
+    }
+
+    #[test]
+    fn test_multiple_curves() {
+        let curve1 = create_test_curve();
+        let mut curve2 = create_test_curve();
+        curve2.x_range = (dec!(6.0), dec!(10.0));
+
+        let curves = vec![curve1, curve2];
+        let serialized = serde_json::to_string(&curves).unwrap();
+        let deserialized: Vec<Curve> = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curves.len(), deserialized.len());
+        assert_eq!(curves[0].points, deserialized[0].points);
+        assert_eq!(curves[1].points, deserialized[1].points);
+    }
+
+    #[test]
+    fn test_ordering_preservation() {
+        let curve = create_test_curve();
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        // Convert points to vectors to check ordering
+        let original_points: Vec<_> = curve.points.into_iter().collect();
+        let deserialized_points: Vec<_> = deserialized.points.into_iter().collect();
+
+        // Check if points maintain their order
+        assert_eq!(original_points, deserialized_points);
+    }
+
+    #[test]
+    fn test_curve_with_extremes() {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D {
+            x: Decimal::MAX,
+            y: Decimal::MAX,
+        });
+        points.insert(Point2D {
+            x: Decimal::MIN,
+            y: Decimal::MIN,
+        });
+
+        let curve = Curve {
+            points,
+            x_range: (Decimal::MIN, Decimal::MAX),
+        };
+
+        let serialized = serde_json::to_string(&curve).unwrap();
+        let deserialized: Curve = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(curve.points, deserialized.points);
+        assert_eq!(curve.x_range, deserialized.x_range);
     }
 }

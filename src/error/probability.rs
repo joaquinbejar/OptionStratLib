@@ -280,6 +280,9 @@ impl From<StrategyError> for ProbabilityError {
                 }
             },
             StrategyError::StdError { reason: msg } => ProbabilityError::StdError(msg),
+            StrategyError::NotImplemented => {
+                ProbabilityError::StdError("Strategy not implemented".to_string())
+            }
         }
     }
 }

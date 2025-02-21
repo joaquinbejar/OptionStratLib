@@ -119,7 +119,8 @@
 //! use optionstratlib::error::position::PositionError;
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::Positive;
-//! use optionstratlib::strategies::base::{Positionable, Strategies, Validable};
+//! use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
+//! use optionstratlib::strategies::StrategyBasic;
 //!
 //! struct MyStrategy {
 //!     legs: Vec<Position>,
@@ -142,6 +143,12 @@
 //!         Ok(self.legs.iter().collect())
 //!     }
 //! }
+//!
+//!
+//! impl BreakEvenable for MyStrategy {}
+//!
+//!
+//! impl StrategyBasic for MyStrategy {}
 //!
 //! impl Strategies for MyStrategy {}
 //! ```
@@ -186,6 +193,7 @@
 pub mod base;
 pub mod bear_call_spread;
 pub mod bear_put_spread;
+mod build;
 pub mod bull_call_spread;
 pub mod bull_put_spread;
 pub mod butterfly_spread;
@@ -212,6 +220,9 @@ pub use butterfly_spread::{LongButterflySpread, ShortButterflySpread};
 pub use call_butterfly::CallButterfly;
 // pub use collar::Collar;
 // pub use covered_call::CoveredCall;
+pub use base::{StrategyBasic, StrategyBasics};
+pub use build::model::StrategyRequest;
+pub use build::traits::StrategyConstructor;
 pub use custom::CustomStrategy;
 pub use delta_neutral::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD};
 pub use iron_butterfly::IronButterfly;

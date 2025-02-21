@@ -1,4 +1,5 @@
 use num_traits::ToPrimitive;
+use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;

@@ -91,6 +91,8 @@ pub enum StrategyError {
     StdError {
         reason: String,
     },
+
+    NotImplemented,
 }
 
 #[derive(Debug)]
@@ -131,6 +133,7 @@ impl fmt::Display for StrategyError {
             StrategyError::ProfitLossError(err) => write!(f, "Profit/Loss error: {}", err),
             StrategyError::OperationError(err) => write!(f, "Operation error: {}", err),
             StrategyError::StdError { reason } => write!(f, "Error: {}", reason),
+            StrategyError::NotImplemented => write!(f, "Operation not implemented"),
         }
     }
 }

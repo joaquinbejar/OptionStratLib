@@ -6,10 +6,13 @@
 use crate::{ExpirationDate, Positive};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
+use std::iter::Sum;
+use std::ops::Add;
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct PnL {
     /// The realized profit or loss.
     pub realized: Option<Decimal>,
@@ -37,6 +40,106 @@ impl PnL {
             initial_costs,
             initial_income,
             date_time,
+        }
+    }
+}
+
+impl Sum for PnL {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(PnL::default(), |acc, x| PnL {
+            realized: match (acc.realized, x.realized) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
+            unrealized: match (acc.unrealized, x.unrealized) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
+            initial_costs: acc.initial_costs + x.initial_costs,
+            initial_income: acc.initial_income + x.initial_income,
+            date_time: x.date_time, // Tomamos la fecha más reciente
+        })
+    }
+}
+
+impl<'a> Sum<&'a PnL> for PnL {
+    fn sum<I: Iterator<Item = &'a PnL>>(iter: I) -> Self {
+        iter.fold(PnL::default(), |acc, x| PnL {
+            realized: match (acc.realized, x.realized) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
+            unrealized: match (acc.unrealized, x.unrealized) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
+            initial_costs: acc.initial_costs + x.initial_costs,
+            initial_income: acc.initial_income + x.initial_income,
+            date_time: x.date_time, // Tomamos la fecha más reciente
+        })
+    }
+}
+
+impl Add for PnL {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        PnL {
+            realized: match (self.realized, other.realized) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
+            unrealized: match (self.unrealized, other.unrealized) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
+            initial_costs: self.initial_costs + other.initial_costs,
+            initial_income: self.initial_income + other.initial_income,
+            date_time: if self.date_time > other.date_time {
+                self.date_time
+            } else {
+                other.date_time
+            },
+        }
+    }
+}
+
+impl Add for &PnL {
+    type Output = PnL;
+
+    fn add(self, other: Self) -> PnL {
+        PnL {
+            realized: match (self.realized, other.realized) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
+            unrealized: match (self.unrealized, other.unrealized) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            },
+            initial_costs: self.initial_costs + other.initial_costs,
+            initial_income: self.initial_income + other.initial_income,
+            date_time: if self.date_time > other.date_time {
+                self.date_time
+            } else {
+                other.date_time
+            },
         }
     }
 }
@@ -134,7 +237,7 @@ mod tests_pnl_calculator {
         let now = ExpirationDate::Days(pos!(3.0));
 
         let pnl = dummy
-            .calculate_pnl(&pos!(100.0), now.clone(), &pos!(100.0))
+            .calculate_pnl(&pos!(100.0), now, &pos!(100.0))
             .unwrap();
         assert_eq!(pnl.realized, Some(dec!(100.0)));
         assert_eq!(pnl.unrealized, None);
@@ -150,5 +253,147 @@ mod tests_pnl_calculator {
         assert_eq!(pnl_at_expiration.unrealized, None);
         assert_eq!(pnl_at_expiration.initial_costs, pos!(10.0));
         assert_eq!(pnl_at_expiration.initial_income, pos!(20.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_sum {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_pnl_sum() {
+        let pnl1 = PnL {
+            realized: Some(dec!(10.0)),
+            unrealized: Some(dec!(5.0)),
+            initial_costs: pos!(2.0),
+            initial_income: pos!(1.0),
+            date_time: Utc::now(),
+        };
+
+        let pnl2 = PnL {
+            realized: Some(dec!(20.0)),
+            unrealized: Some(dec!(10.0)),
+            initial_costs: pos!(3.0),
+            initial_income: pos!(2.0),
+            date_time: Utc::now(),
+        };
+
+        let sum: PnL = vec![pnl1.clone(), pnl2.clone()].into_iter().sum();
+
+        assert_eq!(sum.realized, Some(dec!(30.0)));
+        assert_eq!(sum.unrealized, Some(dec!(15.0)));
+        assert_eq!(sum.initial_costs, pos!(5.0));
+        assert_eq!(sum.initial_income, pos!(3.0));
+    }
+
+    #[test]
+    fn test_pnl_sum_with_none() {
+        let pnl1 = PnL {
+            realized: None,
+            unrealized: Some(dec!(5.0)),
+            initial_costs: pos!(2.0),
+            initial_income: pos!(1.0),
+            date_time: Utc::now(),
+        };
+
+        let pnl2 = PnL {
+            realized: Some(dec!(20.0)),
+            unrealized: None,
+            initial_costs: pos!(3.0),
+            initial_income: pos!(2.0),
+            date_time: Utc::now(),
+        };
+
+        let sum: PnL = vec![pnl1.clone(), pnl2.clone()].into_iter().sum();
+
+        assert_eq!(sum.realized, Some(dec!(20.0)));
+        assert_eq!(sum.unrealized, Some(dec!(5.0)));
+        assert_eq!(sum.initial_costs, pos!(5.0));
+        assert_eq!(sum.initial_income, pos!(3.0));
+    }
+
+    #[test]
+    fn test_pnl_sum_reference() {
+        let pnl1 = PnL {
+            realized: Some(dec!(10.0)),
+            unrealized: Some(dec!(5.0)),
+            initial_costs: pos!(2.0),
+            initial_income: pos!(1.0),
+            date_time: Utc::now(),
+        };
+
+        let pnl2 = PnL {
+            realized: Some(dec!(20.0)),
+            unrealized: Some(dec!(10.0)),
+            initial_costs: pos!(3.0),
+            initial_income: pos!(2.0),
+            date_time: Utc::now(),
+        };
+
+        let sum: PnL = vec![&pnl1, &pnl2].into_iter().sum();
+
+        assert_eq!(sum.realized, Some(dec!(30.0)));
+        assert_eq!(sum.unrealized, Some(dec!(15.0)));
+        assert_eq!(sum.initial_costs, pos!(5.0));
+        assert_eq!(sum.initial_income, pos!(3.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_add {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_pnl_add() {
+        let pnl1 = PnL {
+            realized: Some(dec!(10.0)),
+            unrealized: Some(dec!(5.0)),
+            initial_costs: pos!(2.0),
+            initial_income: pos!(1.0),
+            date_time: Utc::now(),
+        };
+
+        let pnl2 = PnL {
+            realized: Some(dec!(20.0)),
+            unrealized: Some(dec!(10.0)),
+            initial_costs: pos!(3.0),
+            initial_income: pos!(2.0),
+            date_time: Utc::now(),
+        };
+
+        let sum = pnl1 + pnl2;
+        assert_eq!(sum.realized, Some(dec!(30.0)));
+        assert_eq!(sum.unrealized, Some(dec!(15.0)));
+        assert_eq!(sum.initial_costs, pos!(5.0));
+        assert_eq!(sum.initial_income, pos!(3.0));
+    }
+
+    #[test]
+    fn test_pnl_add_ref() {
+        let pnl1 = PnL {
+            realized: Some(dec!(10.0)),
+            unrealized: Some(dec!(5.0)),
+            initial_costs: pos!(2.0),
+            initial_income: pos!(1.0),
+            date_time: Utc::now(),
+        };
+
+        let pnl2 = PnL {
+            realized: Some(dec!(20.0)),
+            unrealized: Some(dec!(10.0)),
+            initial_costs: pos!(3.0),
+            initial_income: pos!(2.0),
+            date_time: Utc::now(),
+        };
+
+        let sum = &pnl1 + &pnl2;
+        assert_eq!(sum.realized, Some(dec!(30.0)));
+        assert_eq!(sum.unrealized, Some(dec!(15.0)));
+        assert_eq!(sum.initial_costs, pos!(5.0));
+        assert_eq!(sum.initial_income, pos!(3.0));
     }
 }

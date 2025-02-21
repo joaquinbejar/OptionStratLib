@@ -1,5 +1,6 @@
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
+use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bear_put_spread::BearPutSpread;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;

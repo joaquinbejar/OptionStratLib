@@ -151,10 +151,10 @@ fn calculate_call_option_price(
     let big_n_d1 = big_n(d1)?;
     let big_n_d2 = big_n(d2)?;
 
-    let result = option.underlying_price * big_n_d1
-        - option.strike_price * (-option.risk_free_rate * t).exp() * big_n_d2;
+    let result = option.underlying_price.to_dec() * big_n_d1
+        - option.strike_price.to_dec() * (-option.risk_free_rate * t).exp() * big_n_d2;
 
-    Ok(result.into())
+    Ok(result)
 }
 
 /// Calculates the price of a European put option using the Black-Scholes model.
@@ -195,10 +195,10 @@ fn calculate_put_option_price(
     let big_n_d1 = big_n(-d1)?;
     let big_n_d2 = big_n(-d2)?;
 
-    let result = option.strike_price * (-option.risk_free_rate * t).exp() * big_n_d2
-        - option.underlying_price * big_n_d1;
+    let result = option.strike_price.to_dec() * (-option.risk_free_rate * t).exp() * big_n_d2
+        - option.underlying_price.to_dec() * big_n_d1;
 
-    Ok(result.into())
+    Ok(result)
 }
 
 pub trait BlackScholes {

@@ -1,4 +1,5 @@
 use num_traits::ToPrimitive;
+use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;

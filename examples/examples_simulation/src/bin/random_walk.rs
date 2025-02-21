@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let n_steps = 252 * years as usize;
     let initial_price = pos!(100.0);
     let mean = 0.02;
-    let std_dev = pos!(1.0);
+    let std_dev = pos!(1.1);
     let std_dev_change = pos!(0.1);
     let risk_free_rate = Some(dec!(0.05));
     let dividend_yield = spos!(0.02);

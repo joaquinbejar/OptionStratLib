@@ -15,12 +15,30 @@ use crate::strategies::utils::{calculate_price_range, FindOptimalSide, Optimizat
 use crate::{OptionStyle, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
-use std::f64;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+use std::{f64, fmt};
 use tracing::error;
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct StrategyBasics {
+    pub name: String,
+    pub kind: StrategyType,
+    pub description: String,
+}
+
+pub trait StrategyBasic {
+    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "get_basics",
+            std::any::type_name::<Self>(),
+        ))
+    }
+}
 
 /// This enum represents different types of trading strategies.
 /// Each variant represents a specific strategy type.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum StrategyType {
     BullCallSpread,
     BearCallSpread,
@@ -30,8 +48,10 @@ pub enum StrategyType {
     ShortButterflySpread,
     IronCondor,
     IronButterfly,
-    Straddle,
-    Strangle,
+    LongStraddle,
+    ShortStraddle,
+    LongStrangle,
+    ShortStrangle,
     CoveredCall,
     ProtectivePut,
     Collar,
@@ -42,6 +62,50 @@ pub enum StrategyType {
     PoorMansCoveredCall,
     CallButterfly,
     Custom,
+}
+
+impl FromStr for StrategyType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "BullCallSpread" => Ok(StrategyType::BullCallSpread),
+            "BearCallSpread" => Ok(StrategyType::BearCallSpread),
+            "BullPutSpread" => Ok(StrategyType::BullPutSpread),
+            "BearPutSpread" => Ok(StrategyType::BearPutSpread),
+            "LongButterflySpread" => Ok(StrategyType::LongButterflySpread),
+            "ShortButterflySpread" => Ok(StrategyType::ShortButterflySpread),
+            "IronCondor" => Ok(StrategyType::IronCondor),
+            "IronButterfly" => Ok(StrategyType::IronButterfly),
+            "LongStraddle" => Ok(StrategyType::LongStraddle),
+            "ShortStraddle" => Ok(StrategyType::ShortStraddle),
+            "LongStrangle" => Ok(StrategyType::LongStrangle),
+            "ShortStrangle" => Ok(StrategyType::ShortStrangle),
+            "CoveredCall" => Ok(StrategyType::CoveredCall),
+            "ProtectivePut" => Ok(StrategyType::ProtectivePut),
+            "Collar" => Ok(StrategyType::Collar),
+            "LongCall" => Ok(StrategyType::LongCall),
+            "LongPut" => Ok(StrategyType::LongPut),
+            "ShortCall" => Ok(StrategyType::ShortCall),
+            "ShortPut" => Ok(StrategyType::ShortPut),
+            "PoorMansCoveredCall" => Ok(StrategyType::PoorMansCoveredCall),
+            "CallButterfly" => Ok(StrategyType::CallButterfly),
+            "Custom" => Ok(StrategyType::Custom),
+            _ => Err(()),
+        }
+    }
+}
+
+impl StrategyType {
+    pub fn is_valid(strategy: &str) -> bool {
+        StrategyType::from_str(strategy).is_ok()
+    }
+}
+
+impl fmt::Display for StrategyType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// Represents a trading strategy.
@@ -79,7 +143,7 @@ impl Strategy {
     }
 }
 
-pub trait Strategies: Validable + Positionable {
+pub trait Strategies: StrategyBasic + Validable + Positionable + BreakEvenable {
     fn get_underlying_price(&self) -> Positive {
         panic!("Underlying price is not applicable for this strategy");
     }
@@ -272,13 +336,6 @@ pub trait Strategies: Validable + Positionable {
         Ok((min, max))
     }
 
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Err(StrategyError::operation_not_supported(
-            "get_break_even_points",
-            std::any::type_name::<Self>(),
-        ))
-    }
-
     /// Calculates the range of profit based on break-even points for any strategy that implements
     /// the `Strategies` trait. Break-even points are determined using the `get_break_even_points` method.
     ///
@@ -302,6 +359,19 @@ pub trait Strategies: Validable + Positionable {
                 Ok(*break_even_points.last().unwrap() - *break_even_points.first().unwrap())
             }
         }
+    }
+}
+
+pub trait BreakEvenable {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "get_break_even_points",
+            std::any::type_name::<Self>(),
+        ))
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        unimplemented!("Update break even points is not implemented for this strategy")
     }
 }
 
@@ -471,11 +541,15 @@ mod tests_strategies {
         }
     }
 
-    impl Strategies for MockStrategy {
+    impl BreakEvenable for MockStrategy {
         fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
             Ok(&self.break_even_points)
         }
+    }
 
+    impl StrategyBasic for MockStrategy {}
+
+    impl Strategies for MockStrategy {
         fn max_profit(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::THOUSAND)
         }
@@ -550,6 +624,8 @@ mod tests_strategies {
             }
         }
         impl Positionable for DefaultStrategy {}
+        impl BreakEvenable for DefaultStrategy {}
+        impl StrategyBasic for DefaultStrategy {}
         impl Strategies for DefaultStrategy {}
 
         let strategy = DefaultStrategy;
@@ -574,6 +650,8 @@ mod tests_strategies {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
+        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let mut strategy = PanicStrategy;
@@ -633,6 +711,8 @@ mod tests_strategies_extended {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
+        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -645,6 +725,8 @@ mod tests_strategies_extended {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
+        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -657,6 +739,8 @@ mod tests_strategies_extended {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
+        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -669,6 +753,8 @@ mod tests_strategies_extended {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
+        impl BreakEvenable for PanicStrategy {}
+        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -681,6 +767,8 @@ mod tests_strategies_extended {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
+        impl BreakEvenable for TestStrategy {}
+        impl StrategyBasic for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_profit(&self) -> Result<Positive, StrategyError> {
                 Ok(pos!(100.0))
@@ -697,6 +785,8 @@ mod tests_strategies_extended {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
+        impl BreakEvenable for TestStrategy {}
+        impl StrategyBasic for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_loss(&self) -> Result<Positive, StrategyError> {
                 Ok(pos!(50.0))
@@ -717,6 +807,8 @@ mod tests_strategies_extended {
                 Ok(vec![])
             }
         }
+        impl BreakEvenable for EmptyStrategy {}
+        impl StrategyBasic for EmptyStrategy {}
         impl Strategies for EmptyStrategy {}
 
         let strategy = EmptyStrategy;
@@ -747,9 +839,9 @@ mod tests_strategy_type {
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     fn test_strategy_type_debug() {
-        let strategy = StrategyType::Straddle;
+        let strategy = StrategyType::ShortStraddle;
         let debug_string = format!("{:?}", strategy);
-        assert_eq!(debug_string, "Straddle");
+        assert_eq!(debug_string, "ShortStraddle");
     }
 
     #[test]
@@ -761,8 +853,10 @@ mod tests_strategy_type {
             StrategyType::BullPutSpread,
             StrategyType::BearPutSpread,
             StrategyType::IronCondor,
-            StrategyType::Straddle,
-            StrategyType::Strangle,
+            StrategyType::LongStraddle,
+            StrategyType::ShortStraddle,
+            StrategyType::LongStrangle,
+            StrategyType::ShortStrangle,
             StrategyType::CoveredCall,
             StrategyType::ProtectivePut,
             StrategyType::Collar,
@@ -784,6 +878,56 @@ mod tests_strategy_type {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_strategy_type_from_str() {
+        assert_eq!(
+            StrategyType::from_str("ShortStrangle"),
+            Ok(StrategyType::ShortStrangle)
+        );
+        assert_eq!(
+            StrategyType::from_str("LongCall"),
+            Ok(StrategyType::LongCall)
+        );
+        assert_eq!(
+            StrategyType::from_str("BullCallSpread"),
+            Ok(StrategyType::BullCallSpread)
+        );
+        assert_eq!(StrategyType::from_str("InvalidStrategy"), Err(()));
+    }
+
+    #[test]
+    fn test_strategy_type_is_valid() {
+        assert!(StrategyType::is_valid("ShortStrangle"));
+        assert!(StrategyType::is_valid("LongPut"));
+        assert!(StrategyType::is_valid("CoveredCall"));
+        assert!(!StrategyType::is_valid("InvalidStrategy"));
+        assert!(!StrategyType::is_valid("Random"));
+    }
+
+    #[test]
+    fn test_strategy_type_serialization() {
+        let strategy = StrategyType::IronCondor;
+        let serialized = serde_json::to_string(&strategy).unwrap();
+        assert_eq!(serialized, "\"IronCondor\"");
+
+        let deserialized: StrategyType = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, StrategyType::IronCondor);
+    }
+
+    #[test]
+    fn test_strategy_type_deserialization() {
+        let json_data = "\"ShortStraddle\"";
+        let deserialized: StrategyType = serde_json::from_str(json_data).unwrap();
+        assert_eq!(deserialized, StrategyType::ShortStraddle);
+    }
+
+    #[test]
+    fn test_invalid_strategy_type_deserialization() {
+        let json_data = "\"InvalidStrategy\"";
+        let deserialized: Result<StrategyType, _> = serde_json::from_str(json_data);
+        assert!(deserialized.is_err());
     }
 }
 
@@ -820,13 +964,19 @@ mod tests_max_min_strikes {
 
     impl Positionable for TestStrategy {}
 
+    impl BreakEvenable for TestStrategy {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+            Ok(&self.break_even_points)
+        }
+    }
+
+    impl StrategyBasic for TestStrategy {}
+
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
         }
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            Ok(&self.break_even_points)
-        }
+
         fn max_profit(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::ZERO)
         }
@@ -1015,13 +1165,17 @@ mod tests_best_range_to_show {
 
     impl Positionable for TestStrategy {}
 
+    impl BreakEvenable for TestStrategy {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+            Ok(&self.break_even_points)
+        }
+    }
+
+    impl StrategyBasic for TestStrategy {}
+
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
-        }
-
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            Ok(&self.break_even_points)
         }
 
         fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
@@ -1143,13 +1297,17 @@ mod tests_range_to_show {
 
     impl Positionable for TestStrategy {}
 
+    impl BreakEvenable for TestStrategy {
+        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+            Ok(&self.break_even_points)
+        }
+    }
+
+    impl StrategyBasic for TestStrategy {}
+
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
-        }
-
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            Ok(&self.break_even_points)
         }
 
         fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
@@ -1215,11 +1373,15 @@ mod tests_range_of_profit {
 
     impl Positionable for TestStrategy {}
 
-    impl Strategies for TestStrategy {
+    impl BreakEvenable for TestStrategy {
         fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
             Ok(&self.break_even_points)
         }
     }
+
+    impl StrategyBasic for TestStrategy {}
+
+    impl Strategies for TestStrategy {}
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1266,6 +1428,8 @@ mod tests_strategy_methods {
         struct TestStrategy;
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
+        impl BreakEvenable for TestStrategy {}
+        impl StrategyBasic for TestStrategy {}
         impl Strategies for TestStrategy {}
 
         let strategy = TestStrategy;
@@ -1285,8 +1449,10 @@ mod tests_strategy_methods {
             StrategyType::ShortButterflySpread,
             StrategyType::IronCondor,
             StrategyType::IronButterfly,
-            StrategyType::Straddle,
-            StrategyType::Strangle,
+            StrategyType::LongStraddle,
+            StrategyType::ShortStraddle,
+            StrategyType::LongStrangle,
+            StrategyType::ShortStrangle,
             StrategyType::CoveredCall,
             StrategyType::ProtectivePut,
             StrategyType::Collar,
@@ -1322,6 +1488,10 @@ mod tests_optimizable {
 
     impl Positionable for TestOptimizableStrategy {}
 
+    impl BreakEvenable for TestOptimizableStrategy {}
+
+    impl StrategyBasic for TestOptimizableStrategy {}
+
     impl Strategies for TestOptimizableStrategy {}
 
     impl Optimizable for TestOptimizableStrategy {
@@ -1340,8 +1510,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::All));
         assert!(strategy.is_valid_long_option(
@@ -1362,8 +1534,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Upper));
     }
@@ -1380,8 +1554,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Lower));
     }
@@ -1398,8 +1574,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::All));
         assert!(strategy.is_valid_short_option(
@@ -1420,8 +1598,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Upper));
     }
@@ -1438,8 +1618,10 @@ mod tests_optimizable {
             spos!(4.5),      // put_ask
             spos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
-            spos!(1000.0),   // volume
-            Some(100),       // open_interest
+            Some(dec!(0.3)),
+            Some(dec!(0.3)),
+            spos!(1000.0), // volume
+            Some(100),     // open_interest
         );
         assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Lower));
     }
@@ -1478,6 +1660,10 @@ mod tests_strategy_net_operations {
             Ok(self.positions.iter().collect())
         }
     }
+
+    impl BreakEvenable for TestStrategy {}
+
+    impl StrategyBasic for TestStrategy {}
 
     impl Strategies for TestStrategy {}
 

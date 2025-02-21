@@ -4,6 +4,7 @@
    Date: 21/8/24
 ******************************************************************************/
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::Position;
 use crate::{pos, Options, Positive};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use rust_decimal_macros::dec;
@@ -35,6 +36,37 @@ pub(crate) fn create_sample_option(
         pos!(0.01),
         None,
     )
+}
+
+#[allow(dead_code)]
+pub(crate) fn create_sample_position(
+    option_style: OptionStyle,
+    side: Side,
+    underlying_price: Positive,
+    quantity: Positive,
+    strike_price: Positive,
+    implied_volatility: Positive,
+) -> Position {
+    Position {
+        option: Options {
+            option_type: OptionType::European,
+            side,
+            underlying_symbol: "AAPL".to_string(),
+            strike_price,
+            expiration_date: ExpirationDate::Days(pos!(30.0)),
+            implied_volatility,
+            quantity,
+            underlying_price,
+            risk_free_rate: dec!(0.05),
+            option_style,
+            dividend_yield: pos!(0.01),
+            exotic_params: None,
+        },
+        premium: pos!(5.0),
+        date: Utc::now(),
+        open_fee: pos!(0.5),
+        close_fee: pos!(0.5),
+    }
 }
 
 #[allow(dead_code)]

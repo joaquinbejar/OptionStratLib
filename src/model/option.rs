@@ -1,6 +1,6 @@
 use crate::chains::chain::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
-use crate::error::{GreeksError, ImpliedVolatilityError, OptionsError, OptionsResult};
+use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
 use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -15,19 +15,20 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::{ShapeStyle, BLACK};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{error, trace};
 
 type PriceBinomialTree = OptionsResult<(Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>)>;
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct ExoticParams {
     pub spot_prices: Option<Vec<Positive>>, // Asian
     pub spot_min: Option<Decimal>,          // Lookback
     pub spot_max: Option<Decimal>,          // Lookback
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Options {
     pub option_type: OptionType,
     pub side: Side,
@@ -171,6 +172,19 @@ impl Options {
         Ok(Decimal::from_f64(price).unwrap())
     }
 
+    /// Calculates the intrinsic value of the option.
+    ///
+    /// The intrinsic value is the difference between the underlying asset's price and the option's strike price.
+    /// For call options, the intrinsic value is the maximum of zero and the difference between the underlying price and the strike price.
+    /// For put options, the intrinsic value is the maximum of zero and the difference between the strike price and the underlying price.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying_price` - The current price of the underlying asset.
+    ///
+    /// # Returns
+    ///
+    /// * `OptionsResult<Decimal>` - The intrinsic value of the option, or an error if the calculation fails.
     pub fn intrinsic_value(&self, underlying_price: Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: underlying_price,
@@ -273,6 +287,7 @@ impl Options {
     /// ```rust
     /// use rust_decimal_macros::dec;
     /// use rust_decimal::Decimal;
+    /// use tracing::{error, info};
     /// use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Side};
     ///
     /// let options = Options::new(
@@ -292,14 +307,14 @@ impl Options {
     /// let market_price = dec!(133.5);  
     ///
     /// match options.calculate_implied_volatility(market_price) {
-    ///     Ok(volatility) => println!("Implied Volatility: {}", volatility.to_dec()),
-    ///     Err(e) => println!("Failed to calculate implied volatility: {:?}", e),
+    ///     Ok(volatility) => info!("Implied Volatility: {}", volatility.to_dec()),
+    ///     Err(e) => error!("Failed to calculate implied volatility: {:?}", e),
     /// }
     /// ```
     pub fn calculate_implied_volatility(
         &self,
         market_price: Decimal,
-    ) -> Result<Positive, ImpliedVolatilityError> {
+    ) -> Result<Positive, VolatilityError> {
         let is_short = self.is_short();
         let target_price = if is_short {
             -market_price
@@ -345,7 +360,7 @@ impl Options {
         }
 
         // If we haven't found a solution after max iterations
-        Err(ImpliedVolatilityError::NoConvergence {
+        Err(VolatilityError::NoConvergence {
             iterations: MAX_ITERATIONS_IV,
             last_volatility: (high + low) / Positive::TWO,
         })
@@ -1743,7 +1758,7 @@ mod tests_options_black_scholes {
 #[cfg(test)]
 mod tests_calculate_implied_volatility {
     use super::*;
-    use crate::error::ImpliedVolatilityError;
+    use crate::error::VolatilityError;
     use crate::{assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
@@ -1841,10 +1856,7 @@ mod tests_calculate_implied_volatility {
     fn test_invalid_market_price() {
         let option = Options::default();
         let result = option.calculate_implied_volatility(Decimal::ZERO);
-        assert!(matches!(
-            result,
-            Err(ImpliedVolatilityError::OptionError { .. })
-        ));
+        assert!(matches!(result, Err(VolatilityError::OptionError { .. })));
     }
 
     #[test]
@@ -1865,10 +1877,7 @@ mod tests_calculate_implied_volatility {
         );
 
         let result = option.calculate_implied_volatility(dec!(2.5));
-        assert!(matches!(
-            result,
-            Err(ImpliedVolatilityError::OptionError { .. })
-        ));
+        assert!(matches!(result, Err(VolatilityError::OptionError { .. })));
     }
 
     #[test]
@@ -1895,5 +1904,21 @@ mod tests_calculate_implied_volatility {
         // Test with large initial vol
         let iv = option.calculate_implied_volatility(dec!(60.30)).unwrap();
         assert_pos_relative_eq!(iv, pos!(0.111328125), pos!(0.01));
+    }
+}
+
+#[cfg(test)]
+mod tests_serialize_deserialize {
+    use super::*;
+    use crate::model::utils::create_sample_option_simplest_strike;
+
+    #[test]
+    fn test_serialize_deserialize_options() {
+        let options =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
+        let serialized = serde_json::to_string(&options).expect("Failed to serialize");
+        let deserialized: Options =
+            serde_json::from_str(&serialized).expect("Failed to deserialize");
+        assert_eq!(options, deserialized);
     }
 }

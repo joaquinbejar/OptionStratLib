@@ -31,24 +31,28 @@
 //! and risk associated with traditional covered call strategies.
 //!
 
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{
+    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+};
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, ProbabilityError};
+use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
+use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::Options;
@@ -158,12 +162,108 @@ impl PoorMansCoveredCall {
             .add_position(&short_call.clone())
             .expect("Invalid short call option");
 
-        let net_debit = strategy.net_cost().unwrap() / quantity;
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
+        strategy
+    }
+}
 
-        strategy
-            .break_even_points
-            .push(long_call_strike + net_debit);
-        strategy
+impl StrategyConstructor for PoorMansCoveredCall {
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        // Need exactly 2 options for a poor man's covered call
+        if vec_options.len() != 2 {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Poor Man's Covered Call get_strategy".to_string(),
+                    reason: "Must have exactly 2 options".to_string(),
+                },
+            ));
+        }
+
+        // Sort options by strike price to identify long and short positions
+        let mut sorted_options = vec_options.to_vec();
+        sorted_options.sort_by(|a, b| {
+            a.option
+                .strike_price
+                .partial_cmp(&b.option.strike_price)
+                .unwrap()
+        });
+
+        let lower_strike_option = &sorted_options[0];
+        let higher_strike_option = &sorted_options[1];
+
+        // Validate options are calls
+        if lower_strike_option.option.option_style != OptionStyle::Call
+            || higher_strike_option.option.option_style != OptionStyle::Call
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Poor Man's Covered Call get_strategy".to_string(),
+                    reason: "Options must be calls".to_string(),
+                },
+            ));
+        }
+
+        // Validate option sides
+        if lower_strike_option.option.side != Side::Long
+            || higher_strike_option.option.side != Side::Short
+        {
+            return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "Poor Man's Covered Call get_strategy".to_string(),
+                reason: "Poor Man's Covered Call requires a long lower strike call and a short higher strike call".to_string(),
+            }));
+        }
+
+        // Create positions
+        let long_call = Position::new(
+            lower_strike_option.option.clone(),
+            lower_strike_option.premium,
+            Utc::now(),
+            lower_strike_option.open_fee,
+            lower_strike_option.close_fee,
+        );
+
+        let short_call = Position::new(
+            higher_strike_option.option.clone(),
+            higher_strike_option.premium,
+            Utc::now(),
+            higher_strike_option.open_fee,
+            higher_strike_option.close_fee,
+        );
+
+        // Create strategy
+        let mut strategy = PoorMansCoveredCall {
+            name: "Poor Man's Covered Call".to_string(),
+            kind: StrategyType::PoorMansCoveredCall,
+            description: PMCC_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call,
+            short_call,
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
+    }
+}
+
+impl BreakEvenable for PoorMansCoveredCall {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let net_debit = self.net_cost()? / self.long_call.option.quantity;
+
+        self.break_even_points
+            .push((self.long_call.option.strike_price + net_debit).round_to(2));
+
+        Ok(())
     }
 }
 
@@ -286,6 +386,16 @@ impl Positionable for PoorMansCoveredCall {
     }
 }
 
+impl StrategyBasic for PoorMansCoveredCall {
+    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+        Ok(StrategyBasics {
+            name: self.name.clone(),
+            kind: self.kind.clone(),
+            description: self.description.clone(),
+        })
+    }
+}
+
 impl Strategies for PoorMansCoveredCall {
     fn get_underlying_price(&self) -> Positive {
         self.long_call.option.underlying_price
@@ -332,10 +442,6 @@ impl Strategies for PoorMansCoveredCall {
             _ => ZERO,
         };
         Ok(Decimal::from_f64(result).unwrap())
-    }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
     }
 }
 
@@ -492,8 +598,8 @@ impl Optimizable for PoorMansCoveredCall {
             chain.underlying_price,
             long.strike_price,
             short.strike_price,
-            self.long_call.option.expiration_date.clone(),
-            self.short_call.option.expiration_date.clone(),
+            self.long_call.option.expiration_date,
+            self.short_call.option.expiration_date,
             short.implied_volatility.unwrap() / 100.0,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
@@ -629,7 +735,7 @@ impl Graph for PoorMansCoveredCall {
 
 impl ProbabilityAnalysis for PoorMansCoveredCall {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call.option.expiration_date.clone())
+        Ok(self.long_call.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -714,8 +820,13 @@ impl DeltaNeutrality for PoorMansCoveredCall {
 
     fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-        let l_c_delta = self.short_call.option.delta().unwrap();
-        let qty = Positive((net_delta.abs() / l_c_delta).abs());
+        let delta = self.short_call.option.delta().unwrap();
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
+
         vec![DeltaAdjustment::SellOptions {
             quantity: qty * self.short_call.option.quantity,
             strike: self.short_call.option.strike_price,
@@ -725,13 +836,45 @@ impl DeltaNeutrality for PoorMansCoveredCall {
 
     fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
         let net_delta = self.calculate_net_delta().net_delta;
-        let l_c_delta = self.long_call.option.delta().unwrap();
-        let qty = Positive((net_delta.abs() / l_c_delta).abs());
+        let delta = self.long_call.option.delta().unwrap();
+        let qty = if delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / delta).abs())
+        };
         vec![DeltaAdjustment::BuyOptions {
             quantity: qty * self.long_call.option.quantity,
             strike: self.long_call.option.strike_price,
             option_type: OptionStyle::Call,
         }]
+    }
+}
+
+impl PnLCalculator for PoorMansCoveredCall {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
+            + self
+                .short_call
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .short_call
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 
@@ -1033,6 +1176,8 @@ mod tests_pmcc_optimization {
                 spos!(5.0),
                 spos!(0.2),
                 Some(dec!(0.5)),
+                None,
+                None,
                 spos!(100.0),
                 Some(50),
             );
@@ -1075,6 +1220,8 @@ mod tests_pmcc_optimization {
             None,
             None,
             None,
+            None,
+            None,
         );
         assert!(strategy.is_valid_short_option(&option, &FindOptimalSide::Upper));
     }
@@ -1090,6 +1237,8 @@ mod tests_pmcc_optimization {
             spos!(4.8),
             spos!(5.0),
             spos!(0.2),
+            None,
+            None,
             None,
             None,
             None,
@@ -1130,6 +1279,8 @@ mod tests_pmcc_optimization {
             None,
             None,
             None,
+            None,
+            None,
         );
         assert!(!strategy.is_valid_short_option(&option, &FindOptimalSide::Upper));
     }
@@ -1146,6 +1297,8 @@ mod tests_pmcc_optimization {
             spos!(4.8),
             spos!(5.0),
             spos!(0.2),
+            None,
+            None,
             None,
             None,
             None,
@@ -2020,7 +2173,7 @@ mod tests_poor_mans_covered_call_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }
@@ -2188,5 +2341,222 @@ mod tests_adjust_option_position {
 
         assert!(result.is_ok());
         assert_eq!(strategy.short_call.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_strategy_constructor {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::pos;
+
+    #[test]
+    fn test_get_strategy_valid() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = PoorMansCoveredCall::get_strategy(&options);
+        assert!(result.is_ok());
+
+        let strategy = result.unwrap();
+        assert_eq!(strategy.long_call.option.strike_price, pos!(95.0));
+        assert_eq!(strategy.short_call.option.strike_price, pos!(105.0));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_number_of_options() {
+        let options = vec![create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        )];
+
+        let result = PoorMansCoveredCall::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Poor Man's Covered Call get_strategy" && reason == "Must have exactly 2 options"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_option_style() {
+        let mut option1 = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(95.0),
+            pos!(0.2),
+        );
+        option1.option.option_style = OptionStyle::Put;
+        let option2 = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(90.0),
+            pos!(1.0),
+            pos!(105.0),
+            pos!(0.2),
+        );
+
+        let options = vec![option1, option2];
+        let result = PoorMansCoveredCall::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Poor Man's Covered Call get_strategy" && reason == "Options must be calls"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_sides() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(90.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+        ];
+        let result = PoorMansCoveredCall::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Poor Man's Covered Call get_strategy"
+                && reason == "Poor Man's Covered Call requires a long lower strike call and a short higher strike call"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests_poor_mans_covered_call_pnl {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_poor_mans_covered_call() -> Result<PoorMansCoveredCall, StrategyError> {
+        // Create long call with lower strike
+        let long_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(95.0),  // Strike price (Lower)
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create short call with higher strike
+        let short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(105.0), // Higher strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        PoorMansCoveredCall::get_strategy(&vec![long_call, short_call])
+    }
+
+    #[test]
+    fn test_calculate_pnl_below_strikes() {
+        let pmcc = create_test_poor_mans_covered_call().unwrap();
+        let market_price = pos!(90.0); // Below both strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = pmcc.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Both options OTM
+        assert_pos_relative_eq!(pnl.initial_income, pos!(5.0), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(7.0), pos!(1e-6));
+        assert!(pnl.unrealized.unwrap() < dec!(0.0)); // Loss due to time decay
+    }
+
+    #[test]
+    fn test_calculate_pnl_between_strikes() {
+        let pmcc = create_test_poor_mans_covered_call().unwrap();
+        let market_price = pos!(101.0); // Between strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = pmcc.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Long call ITM, short call OTM
+        assert!(pnl.unrealized.unwrap() > dec!(0.0)); // Should show some profit
+    }
+
+    #[test]
+    fn test_calculate_pnl_above_strikes() {
+        let pmcc = create_test_poor_mans_covered_call().unwrap();
+        let market_price = pos!(110.0); // Above both strikes
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.2);
+
+        let result = pmcc.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Both options ITM, profit limited
+        assert!(pnl.unrealized.unwrap() > dec!(0.0));
+        assert!(pnl.unrealized.unwrap() < dec!(10.0)); // Maximum profit is width of spread
+    }
+
+    #[test]
+    fn test_calculate_pnl_with_higher_volatility() {
+        let pmcc = create_test_poor_mans_covered_call().unwrap();
+        let market_price = pos!(105.0);
+        let expiration_date = ExpirationDate::Days(pos!(20.0));
+        let implied_volatility = pos!(0.4); // Higher volatility
+
+        let result = pmcc.calculate_pnl(&market_price, expiration_date, &implied_volatility);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.unrealized.is_some());
+
+        // Higher volatility should increase both option values
+        // Net effect should be positive as long gamma position
+        assert!(pnl.unrealized.unwrap() > dec!(0.0));
     }
 }

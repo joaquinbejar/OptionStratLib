@@ -25,12 +25,13 @@
 //! Handles various time frames for financial calculations:
 //!
 //! ```rust
+//! use optionstratlib::pos;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let daily = TimeFrame::Day;
 //! let trading_days_per_year = daily.periods_per_year(); // Returns 252.0
 //!
-//! let custom = TimeFrame::Custom(365.0);
+//! let custom = TimeFrame::Custom(pos!(365.0));
 //! let periods = custom.periods_per_year(); // Returns 365.0
 //! ```
 //!
@@ -92,13 +93,14 @@
 //!
 //! ```rust
 //! use tracing::info;
+//! use optionstratlib::pos;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let timeframes = vec![
 //!     TimeFrame::Day,
 //!     TimeFrame::Week,
 //!     TimeFrame::Month,
-//!     TimeFrame::Custom(360.0)
+//!     TimeFrame::Custom(pos!(360.0))
 //! ];
 //!
 //! for tf in timeframes {
@@ -176,7 +178,9 @@ pub mod logger;
 pub mod others;
 pub(crate) mod tests;
 pub mod time;
+mod traits;
 
 pub use logger::{setup_logger, setup_logger_with_level};
 pub use others::{approx_equal, get_random_element, process_n_times_iter};
 pub use time::TimeFrame;
+pub use traits::Len;

@@ -38,12 +38,13 @@ use rayon::iter::{
 };
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
 
 /// Represents a mathematical surface in 3D space
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Surface {
     /// Collection of 3D points defining the surface
     pub points: BTreeSet<Point3D>,
@@ -141,6 +142,16 @@ impl Surface {
                 )
             })
             .collect()
+    }
+}
+
+impl Default for Surface {
+    fn default() -> Self {
+        Self {
+            points: BTreeSet::new(),
+            x_range: (Decimal::ZERO, Decimal::ZERO),
+            y_range: (Decimal::ZERO, Decimal::ZERO),
+        }
     }
 }
 
@@ -3008,5 +3019,251 @@ mod tests_surface_geometric_transformations {
             let volume = surface.measure_under(&dec!(0.0)).unwrap();
             assert!(volume > dec!(0.0));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_surface_serde {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test surface
+    fn create_test_surface() -> Surface {
+        let mut points = BTreeSet::new();
+        points.insert(Point3D {
+            x: dec!(1.0),
+            y: dec!(2.0),
+            z: dec!(3.0),
+        });
+        points.insert(Point3D {
+            x: dec!(4.0),
+            y: dec!(5.0),
+            z: dec!(6.0),
+        });
+        points.insert(Point3D {
+            x: dec!(7.0),
+            y: dec!(8.0),
+            z: dec!(9.0),
+        });
+
+        Surface {
+            points,
+            x_range: (dec!(1.0), dec!(7.0)),
+            y_range: (dec!(2.0), dec!(8.0)),
+        }
+    }
+
+    #[test]
+    fn test_basic_serialization() {
+        let surface = create_test_surface();
+        let serialized = serde_json::to_string(&surface).unwrap();
+        let deserialized: Surface = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(surface.points, deserialized.points);
+        assert_eq!(surface.x_range, deserialized.x_range);
+        assert_eq!(surface.y_range, deserialized.y_range);
+    }
+
+    #[test]
+    fn test_pretty_print() {
+        let surface = create_test_surface();
+        let serialized = serde_json::to_string_pretty(&surface).unwrap();
+
+        // Verify pretty print format
+        assert!(serialized.contains('\n'));
+        assert!(serialized.contains("  "));
+
+        // Verify deserialization still works
+        let deserialized: Surface = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(surface.points, deserialized.points);
+    }
+
+    #[test]
+    fn test_empty_surface() {
+        let surface = Surface {
+            points: BTreeSet::new(),
+            x_range: (dec!(0.0), dec!(0.0)),
+            y_range: (dec!(0.0), dec!(0.0)),
+        };
+
+        let serialized = serde_json::to_string(&surface).unwrap();
+        let deserialized: Surface = serde_json::from_str(&serialized).unwrap();
+
+        assert!(deserialized.points.is_empty());
+        assert_eq!(deserialized.x_range, (dec!(0.0), dec!(0.0)));
+        assert_eq!(deserialized.y_range, (dec!(0.0), dec!(0.0)));
+    }
+
+    #[test]
+    fn test_surface_with_negative_values() {
+        let mut points = BTreeSet::new();
+        points.insert(Point3D {
+            x: dec!(-1.0),
+            y: dec!(-2.0),
+            z: dec!(-3.0),
+        });
+        points.insert(Point3D {
+            x: dec!(-4.0),
+            y: dec!(-5.0),
+            z: dec!(-6.0),
+        });
+
+        let surface = Surface {
+            points,
+            x_range: (dec!(-4.0), dec!(-1.0)),
+            y_range: (dec!(-5.0), dec!(-2.0)),
+        };
+
+        let serialized = serde_json::to_string(&surface).unwrap();
+        let deserialized: Surface = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(surface.points, deserialized.points);
+        assert_eq!(surface.x_range, deserialized.x_range);
+        assert_eq!(surface.y_range, deserialized.y_range);
+    }
+
+    #[test]
+    fn test_surface_with_high_precision() {
+        let mut points = BTreeSet::new();
+        points.insert(Point3D {
+            x: dec!(1.12345678901234567890),
+            y: dec!(2.12345678901234567890),
+            z: dec!(3.12345678901234567890),
+        });
+        points.insert(Point3D {
+            x: dec!(4.12345678901234567890),
+            y: dec!(5.12345678901234567890),
+            z: dec!(6.12345678901234567890),
+        });
+
+        let surface = Surface {
+            points,
+            x_range: (dec!(1.12345678901234567890), dec!(4.12345678901234567890)),
+            y_range: (dec!(2.12345678901234567890), dec!(5.12345678901234567890)),
+        };
+
+        let serialized = serde_json::to_string(&surface).unwrap();
+        let deserialized: Surface = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(surface.points, deserialized.points);
+        assert_eq!(surface.x_range, deserialized.x_range);
+        assert_eq!(surface.y_range, deserialized.y_range);
+    }
+
+    #[test]
+    fn test_invalid_json() {
+        // Missing required fields
+        let json_str = r#"{"points": []}"#;
+        let result = serde_json::from_str::<Surface>(json_str);
+        assert!(result.is_err());
+
+        // Invalid points format
+        let json_str = r#"{"points": [1, 2, 3], "x_range": [0, 1], "y_range": [0, 1]}"#;
+        let result = serde_json::from_str::<Surface>(json_str);
+        assert!(result.is_err());
+
+        // Invalid range format
+        let json_str = r#"{"points": [], "x_range": "invalid", "y_range": [0, 1]}"#;
+        let result = serde_json::from_str::<Surface>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_json_structure() {
+        let surface = create_test_surface();
+        let serialized = serde_json::to_string(&surface).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+
+        // Check structure
+        assert!(json.is_object());
+        assert!(json.get("points").is_some());
+        assert!(json.get("x_range").is_some());
+        assert!(json.get("y_range").is_some());
+
+        // Check points is an array
+        assert!(json.get("points").unwrap().is_array());
+
+        // Check ranges are arrays of 2 elements
+        let x_range = json.get("x_range").unwrap().as_array().unwrap();
+        let y_range = json.get("y_range").unwrap().as_array().unwrap();
+        assert_eq!(x_range.len(), 2);
+        assert_eq!(y_range.len(), 2);
+    }
+
+    #[test]
+    fn test_multiple_surfaces() {
+        let surface1 = create_test_surface();
+        let mut surface2 = create_test_surface();
+        surface2.x_range = (dec!(8.0), dec!(14.0));
+        surface2.y_range = (dec!(9.0), dec!(15.0));
+
+        let surfaces = vec![surface1, surface2];
+        let serialized = serde_json::to_string(&surfaces).unwrap();
+        let deserialized: Vec<Surface> = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(surfaces.len(), deserialized.len());
+        assert_eq!(surfaces[0].points, deserialized[0].points);
+        assert_eq!(surfaces[1].points, deserialized[1].points);
+    }
+
+    #[test]
+    fn test_ordering_preservation() {
+        let surface = create_test_surface();
+        let serialized = serde_json::to_string(&surface).unwrap();
+        let deserialized: Surface = serde_json::from_str(&serialized).unwrap();
+
+        // Convert points to vectors to check ordering
+        let original_points: Vec<_> = surface.points.into_iter().collect();
+        let deserialized_points: Vec<_> = deserialized.points.into_iter().collect();
+
+        // Check if points maintain their order
+        assert_eq!(original_points, deserialized_points);
+    }
+
+    #[test]
+    fn test_surface_with_extremes() {
+        let mut points = BTreeSet::new();
+        points.insert(Point3D {
+            x: Decimal::MAX,
+            y: Decimal::MAX,
+            z: Decimal::MAX,
+        });
+        points.insert(Point3D {
+            x: Decimal::MIN,
+            y: Decimal::MIN,
+            z: Decimal::MIN,
+        });
+
+        let surface = Surface {
+            points,
+            x_range: (Decimal::MIN, Decimal::MAX),
+            y_range: (Decimal::MIN, Decimal::MAX),
+        };
+
+        let serialized = serde_json::to_string(&surface).unwrap();
+        let deserialized: Surface = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(surface.points, deserialized.points);
+        assert_eq!(surface.x_range, deserialized.x_range);
+        assert_eq!(surface.y_range, deserialized.y_range);
+    }
+
+    #[test]
+    fn test_surface_points_array_format() {
+        // Test that points can be deserialized from array format
+        let json_str = r#"{
+            "points": [
+                [1.0, 2.0, 3.0],
+                [4.0, 5.0, 6.0]
+            ],
+            "x_range": [1.0, 4.0],
+            "y_range": [2.0, 5.0]
+        }"#;
+
+        let result = serde_json::from_str::<Surface>(json_str);
+        assert!(result.is_ok());
+
+        let surface = result.unwrap();
+        assert_eq!(surface.points.len(), 2);
     }
 }

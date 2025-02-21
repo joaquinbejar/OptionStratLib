@@ -54,6 +54,7 @@
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper error
 //! handling and formatting.
 
+use crate::error::{GreeksError, OptionsError};
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -78,7 +79,10 @@ pub enum ChainError {
 #[derive(Debug)]
 pub enum OptionDataErrorKind {
     /// Invalid strike price
-    InvalidStrike { strike: f64, reason: String },
+    InvalidStrike {
+        strike: f64,
+        reason: String,
+    },
     /// Invalid implied volatility
     InvalidVolatility {
         volatility: Option<f64>,
@@ -91,9 +95,14 @@ pub enum OptionDataErrorKind {
         reason: String,
     },
     /// Invalid delta
-    InvalidDelta { delta: Option<f64>, reason: String },
+    InvalidDelta {
+        delta: Option<f64>,
+        reason: String,
+    },
     /// Error in price calculation
     PriceCalculationError(String),
+
+    OtherError(String),
 }
 
 /// Specific errors for chain building
@@ -181,6 +190,7 @@ impl fmt::Display for OptionDataErrorKind {
             OptionDataErrorKind::PriceCalculationError(msg) => {
                 write!(f, "Price calculation error: {}", msg)
             }
+            OptionDataErrorKind::OtherError(msg) => write!(f, "{}", msg),
         }
     }
 }
@@ -274,6 +284,14 @@ impl From<io::Error> for ChainError {
     }
 }
 
+impl From<OptionsError> for ChainError {
+    fn from(error: OptionsError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(
+            error.to_string(),
+        ))
+    }
+}
+
 impl ChainError {
     pub fn invalid_strike(strike: f64, reason: &str) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::InvalidStrike {
@@ -316,6 +334,12 @@ impl ChainError {
 impl From<String> for ChainError {
     fn from(msg: String) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(msg))
+    }
+}
+
+impl From<GreeksError> for ChainError {
+    fn from(err: GreeksError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::OtherError(err.to_string()))
     }
 }
 

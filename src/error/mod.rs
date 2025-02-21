@@ -144,7 +144,7 @@ mod volatility;
 
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
-pub use curves::CurvesError;
+pub use curves::CurveError;
 pub use decimal::{DecimalError, DecimalResult};
 pub use greeks::GreeksError;
 pub use interpolation::InterpolationError;
@@ -154,4 +154,4 @@ pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
-pub use volatility::ImpliedVolatilityError;
+pub use volatility::VolatilityError;

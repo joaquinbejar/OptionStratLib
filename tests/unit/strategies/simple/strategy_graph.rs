@@ -1,4 +1,5 @@
 use approx::assert_relative_eq;
+use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;

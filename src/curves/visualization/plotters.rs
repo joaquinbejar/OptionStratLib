@@ -46,7 +46,7 @@
 //! ```
 
 use crate::curves::Curve;
-use crate::error::CurvesError;
+use crate::error::CurveError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
 #[cfg(not(target_arch = "wasm32"))]
 use num_traits::ToPrimitive;
@@ -56,7 +56,7 @@ use std::path::Path;
 
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
-    type Error = CurvesError;
+    type Error = CurveError;
 
     fn plot(&self) -> PlotBuilder<Self>
     where
@@ -136,7 +136,7 @@ impl Plottable for Curve {
 /// `Curve` struct, `PlotBuilder`, and `PlotOptions`. These modules provide the functionality
 /// required to create, configure, and render curve plots.
 impl Plottable for Vec<Curve> {
-    type Error = CurvesError;
+    type Error = CurveError;
 
     fn plot(&self) -> PlotBuilder<Self>
     where
@@ -152,13 +152,13 @@ impl Plottable for Vec<Curve> {
 /// Plotting implementation for single Curve
 impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
     #[cfg(target_arch = "wasm32")]
-    fn save(self, _path: impl AsRef<Path>) -> Result<(), CurvesError> {
+    fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
         // Do nothing in wasm
         Ok(())
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError> {
+    fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
         // Convert points to f64
         let points: Vec<(f64, f64)> = self
             .data
@@ -166,6 +166,12 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
             .iter()
             .map(|p| (p.x.to_f64().unwrap_or(0.0), p.y.to_f64().unwrap_or(0.0)))
             .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No points to plot".to_string(),
+            ));
+        }
 
         // Determine plot range
         let x_min = points.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
@@ -178,7 +184,7 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
             .into_drawing_area();
 
         root.fill(&self.options.background_color)
-            .map_err(|e| CurvesError::StdError {
+            .map_err(|e| CurveError::StdError {
                 reason: e.to_string(),
             })?;
 
@@ -191,7 +197,7 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
             .x_label_area_size(30)
             .y_label_area_size(30)
             .build_cartesian_2d(x_min..x_max, y_min..y_max)
-            .map_err(|e| CurvesError::StdError {
+            .map_err(|e| CurveError::StdError {
                 reason: e.to_string(),
             })?;
 
@@ -203,7 +209,7 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
             .x_desc(self.options.x_label.as_deref().unwrap_or("X"))
             .y_desc(self.options.y_label.as_deref().unwrap_or("Y"))
             .draw()
-            .map_err(|e| CurvesError::StdError {
+            .map_err(|e| CurveError::StdError {
                 reason: e.to_string(),
             })?;
 
@@ -221,11 +227,11 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
                 points,
                 color.stroke_width(self.options.line_width),
             ))
-            .map_err(|e| CurvesError::StdError {
+            .map_err(|e| CurveError::StdError {
                 reason: e.to_string(),
             })?;
 
-        root.present().map_err(|e| CurvesError::StdError {
+        root.present().map_err(|e| CurveError::StdError {
             reason: e.to_string(),
         })?;
 
@@ -307,13 +313,13 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
 ///   `Decimal` to `f64` when plotting.
 impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
     #[cfg(target_arch = "wasm32")]
-    fn save(self, _path: impl AsRef<Path>) -> Result<(), CurvesError> {
+    fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
         // Do nothing in wasm
         Ok(())
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn save(self, path: impl AsRef<Path>) -> Result<(), CurvesError> {
+    fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
         // Prepare all curve points
         let all_curve_points: Vec<Vec<(f64, f64)>> = self
             .data
@@ -350,7 +356,7 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
             .into_drawing_area();
 
         root.fill(&self.options.background_color)
-            .map_err(|e| CurvesError::StdError {
+            .map_err(|e| CurveError::StdError {
                 reason: e.to_string(),
             })?;
 
@@ -363,7 +369,7 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
             .x_label_area_size(30)
             .y_label_area_size(30)
             .build_cartesian_2d(x_min..x_max, y_min..y_max)
-            .map_err(|e| CurvesError::StdError {
+            .map_err(|e| CurveError::StdError {
                 reason: e.to_string(),
             })?;
 
@@ -375,7 +381,7 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
             .x_desc(self.options.x_label.as_deref().unwrap_or("X"))
             .y_desc(self.options.y_label.as_deref().unwrap_or("Y"))
             .draw()
-            .map_err(|e| CurvesError::StdError {
+            .map_err(|e| CurveError::StdError {
                 reason: e.to_string(),
             })?;
 
@@ -401,7 +407,7 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
                     points,
                     colors[i % colors.len()].stroke_width(self.options.line_width),
                 ))
-                .map_err(|e| CurvesError::StdError {
+                .map_err(|e| CurveError::StdError {
                     reason: e.to_string(),
                 })?
                 .label(label)
@@ -413,11 +419,11 @@ impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
             .configure_series_labels()
             .border_style(BLACK)
             .draw()
-            .map_err(|e| CurvesError::StdError {
+            .map_err(|e| CurveError::StdError {
                 reason: e.to_string(),
             })?;
 
-        root.present().map_err(|e| CurvesError::StdError {
+        root.present().map_err(|e| CurveError::StdError {
             reason: e.to_string(),
         })?;
 
@@ -667,7 +673,7 @@ mod tests_extended {
     }
 
     impl Plottable for Plot {
-        type Error = CurvesError;
+        type Error = CurveError;
 
         fn plot(&self) -> PlotBuilder<Self>
         where
@@ -682,12 +688,12 @@ mod tests_extended {
 
     impl PlotBuilderExt<Plot> for PlotBuilder<Plot> {
         #[cfg(target_arch = "wasm32")]
-        fn save(self, _path: impl AsRef<Path>) -> Result<(), CurvesError> {
+        fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
             Ok(())
         }
 
         #[cfg(not(target_arch = "wasm32"))]
-        fn save(self, _path: impl AsRef<Path>) -> Result<(), CurvesError> {
+        fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
             Ok(())
         }
     }
@@ -765,9 +771,9 @@ mod tests_extended {
 
     #[test]
     fn test_map_err_to_std_error() {
-        let result: Result<(), CurvesError> =
+        let result: Result<(), CurveError> =
             Err(std::io::Error::new(std::io::ErrorKind::Other, "Test error")).map_err(|e| {
-                CurvesError::StdError {
+                CurveError::StdError {
                     reason: e.to_string(),
                 }
             });
@@ -775,7 +781,7 @@ mod tests_extended {
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            CurvesError::StdError { reason } => {
+            CurveError::StdError { reason } => {
                 assert_eq!(reason, "Test error");
             }
             _ => panic!("Unexpected error type"),
@@ -797,13 +803,13 @@ mod tests_extended {
 
     #[test]
     fn test_draw_series_error() {
-        let result: Result<(), CurvesError> =
-            Err("Draw error".to_string()).map_err(|e| CurvesError::StdError { reason: e });
+        let result: Result<(), CurveError> =
+            Err("Draw error".to_string()).map_err(|e| CurveError::StdError { reason: e });
 
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            CurvesError::StdError { reason } => {
+            CurveError::StdError { reason } => {
                 assert_eq!(reason, "Draw error");
             }
             _ => panic!("Unexpected error type"),

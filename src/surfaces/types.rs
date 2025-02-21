@@ -9,6 +9,7 @@ use crate::geometrics::HasX;
 use crate::model::positive::is_positive;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 /// Represents a point in three-dimensional space with `x`, `y` and `z` coordinates.
@@ -22,7 +23,7 @@ use std::cmp::Ordering;
 /// - **x**: The x-coordinate of the point, represented as a `Decimal`
 /// - **y**: The y-coordinate of the point, represented as a `Decimal`
 /// - **z**: The z-coordinate of the point, represented as a `Decimal`
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Point3D {
     pub x: Decimal,
     pub y: Decimal,
@@ -281,5 +282,204 @@ mod tests {
         assert_eq!(p1, p3);
         assert_ne!(p1, p4);
         assert_ne!(p1, p5);
+    }
+}
+
+#[cfg(test)]
+mod tests_point3d_serde {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use serde_json::Value;
+
+    #[test]
+    fn test_basic_serialization() {
+        let point = Point3D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+            z: dec!(3.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point3D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point.x, deserialized.x);
+        assert_eq!(point.y, deserialized.y);
+        assert_eq!(point.z, deserialized.z);
+    }
+
+    #[test]
+    fn test_zero_values() {
+        let point = Point3D {
+            x: dec!(0.0),
+            y: dec!(0.0),
+            z: dec!(0.0),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point3D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_negative_values() {
+        let point = Point3D {
+            x: dec!(-1.5),
+            y: dec!(-2.5),
+            z: dec!(-3.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point3D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_high_precision_values() {
+        let point = Point3D {
+            x: dec!(1.12345678901234567890),
+            y: dec!(2.12345678901234567890),
+            z: dec!(3.12345678901234567890),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point3D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point.x, deserialized.x);
+        assert_eq!(point.y, deserialized.y);
+        assert_eq!(point.z, deserialized.z);
+    }
+
+    #[test]
+    fn test_json_structure() {
+        let point = Point3D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+            z: dec!(3.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let json_value: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Verify JSON structure
+        assert!(json_value.is_object());
+        assert_eq!(json_value.as_object().unwrap().len(), 3);
+        assert!(json_value.get("x").is_some());
+        assert!(json_value.get("y").is_some());
+        assert!(json_value.get("z").is_some());
+    }
+
+    #[test]
+    fn test_pretty_print() {
+        let point = Point3D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+            z: dec!(3.5),
+        };
+
+        let serialized = serde_json::to_string_pretty(&point).unwrap();
+
+        // Verify pretty print format
+        assert!(serialized.contains('\n'));
+        assert!(serialized.contains("  "));
+
+        // Verify we can still deserialize pretty-printed JSON
+        let deserialized: Point3D = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_deserialize_from_integers() {
+        let json_str = r#"{"x": 1, "y": 2, "z": 3}"#;
+        let point: Point3D = serde_json::from_str(json_str).unwrap();
+
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+        assert_eq!(point.z, dec!(3.0));
+    }
+
+    #[test]
+    fn test_deserialize_from_strings() {
+        let json_str = r#"{"x": "1.5", "y": "2.5", "z": "3.5"}"#;
+        let point: Point3D = serde_json::from_str(json_str).unwrap();
+
+        assert_eq!(point.x, dec!(1.5));
+        assert_eq!(point.y, dec!(2.5));
+        assert_eq!(point.z, dec!(3.5));
+    }
+
+    #[test]
+    fn test_invalid_json() {
+        // Missing field
+        let json_str = r#"{"x": 1.5, "y": 2.5}"#;
+        let result = serde_json::from_str::<Point3D>(json_str);
+        assert!(result.is_err());
+
+        // Invalid number format
+        let json_str = r#"{"x": "invalid", "y": 2.5, "z": 3.5}"#;
+        let result = serde_json::from_str::<Point3D>(json_str);
+        assert!(result.is_err());
+
+        // Wrong data type
+        let json_str = r#"{"x": true, "y": 2.5, "z": 3.5}"#;
+        let result = serde_json::from_str::<Point3D>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_max_values() {
+        let point = Point3D {
+            x: Decimal::MAX,
+            y: Decimal::MAX,
+            z: Decimal::MAX,
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point3D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_min_values() {
+        let point = Point3D {
+            x: Decimal::MIN,
+            y: Decimal::MIN,
+            z: Decimal::MIN,
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point3D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_json_to_vec() {
+        let points = vec![
+            Point3D {
+                x: dec!(1.0),
+                y: dec!(2.0),
+                z: dec!(3.0),
+            },
+            Point3D {
+                x: dec!(4.0),
+                y: dec!(5.0),
+                z: dec!(6.0),
+            },
+        ];
+
+        let serialized = serde_json::to_string(&points).unwrap();
+        let deserialized: Vec<Point3D> = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(points, deserialized);
+    }
+
+    #[test]
+    fn test_array() {
+        let json_str = "[1.5,  2.5, 3.5]";
+        let result = serde_json::from_str::<Point3D>(json_str);
+        assert!(result.is_ok());
     }
 }

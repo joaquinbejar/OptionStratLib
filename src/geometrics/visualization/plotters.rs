@@ -158,3 +158,90 @@ pub trait PlotBuilderExt<T: Plottable> {
     /// Save plot to file
     fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>;
 }
+
+#[cfg(test)]
+mod tests_plot_builder {
+    use super::*;
+
+    /// A mock Plottable implementation for testing
+    struct MockPlottable;
+
+    impl Plottable for MockPlottable {
+        type Error = std::io::Error;
+
+        fn plot(&self) -> PlotBuilder<Self> {
+            PlotBuilder {
+                data: MockPlottable,
+                options: PlotOptions::default(),
+            }
+        }
+    }
+
+    /// Convenience function to create a test plot builder
+    fn create_test_builder() -> PlotBuilder<MockPlottable> {
+        MockPlottable.plot()
+    }
+
+    #[test]
+    fn test_z_label_method() {
+        // Test setting z_label with a string
+        let builder = create_test_builder().z_label("Z Axis");
+
+        assert_eq!(builder.options.z_label, Some("Z Axis".to_string()));
+    }
+
+    #[test]
+    fn test_z_label_method_with_different_types() {
+        // Test setting z_label with different string-like types
+        let builder1 = create_test_builder().z_label(String::from("Z Axis"));
+        let builder2 = create_test_builder().z_label("Z Axis");
+
+        assert_eq!(builder1.options.z_label, Some("Z Axis".to_string()));
+        assert_eq!(builder2.options.z_label, Some("Z Axis".to_string()));
+    }
+
+    #[test]
+    fn test_point_size_method() {
+        // Test setting point size
+        let builder = create_test_builder().point_size(10);
+
+        assert_eq!(builder.options.point_size, Some(10));
+    }
+
+    #[test]
+    fn test_point_size_method_multiple_calls() {
+        // Test that multiple calls override the previous value
+        let builder = create_test_builder().point_size(5).point_size(15);
+
+        assert_eq!(builder.options.point_size, Some(15));
+    }
+
+    #[test]
+    fn test_label_size_method() {
+        // Test setting label size
+        let builder = create_test_builder().label_size(12.5);
+
+        assert_eq!(builder.options.labels_size, Some(12.5));
+    }
+
+    #[test]
+    fn test_label_size_method_multiple_calls() {
+        // Test that multiple calls override the previous value
+        let builder = create_test_builder().label_size(10.0).label_size(20.5);
+
+        assert_eq!(builder.options.labels_size, Some(20.5));
+    }
+
+    #[test]
+    fn test_chaining_multiple_methods() {
+        // Test chaining multiple configuration methods
+        let builder = create_test_builder()
+            .z_label("Z Axis")
+            .point_size(10)
+            .label_size(12.5);
+
+        assert_eq!(builder.options.z_label, Some("Z Axis".to_string()));
+        assert_eq!(builder.options.point_size, Some(10));
+        assert_eq!(builder.options.labels_size, Some(12.5));
+    }
+}

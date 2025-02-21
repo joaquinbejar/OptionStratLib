@@ -212,6 +212,8 @@ mod tests_get_random_element {
                 None,                   // delta
                 None,                   // volume
                 None,                   // open_interest
+                None,
+                None,
             );
             set.insert(option_data);
         }

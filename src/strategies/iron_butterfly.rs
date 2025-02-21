@@ -11,25 +11,29 @@ Key characteristics:
 - High probability of small profit
 - Requires very low volatility
 */
-use super::base::{Optimizable, Positionable, Strategies, StrategyType, Validable};
+use super::base::{
+    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+};
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, ProbabilityError};
+use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
+use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::{
     DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD,
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
+use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
@@ -96,7 +100,7 @@ impl IronButterfly {
             Side::Short,
             underlying_symbol.clone(),
             short_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -122,7 +126,7 @@ impl IronButterfly {
             Side::Short,
             underlying_symbol.clone(),
             short_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -148,7 +152,7 @@ impl IronButterfly {
             Side::Long,
             underlying_symbol.clone(),
             long_call_strike,
-            expiration.clone(),
+            expiration,
             implied_volatility,
             quantity,
             underlying_price,
@@ -194,18 +198,151 @@ impl IronButterfly {
             .add_position(&long_put.clone())
             .expect("Invalid long put");
 
-        // Calculate break-even points
-        let net_credit = strategy.net_premium_received().unwrap() / quantity;
+        strategy
+            .update_break_even_points()
+            .expect("Unable to update break even points");
+        strategy
+    }
+}
 
-        strategy
-            .break_even_points
-            .push((short_strike + net_credit).round_to(2));
-        strategy
-            .break_even_points
-            .push((short_strike - net_credit).round_to(2));
+impl StrategyConstructor for IronButterfly {
+    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+        // Need exactly 4 options for an Iron Butterfly
+        if vec_options.len() != 4 {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Butterfly get_strategy".to_string(),
+                    reason: "Must have exactly 4 options".to_string(),
+                },
+            ));
+        }
 
-        strategy.break_even_points.sort();
-        strategy
+        // Sort options by strike price to identify positions
+        let mut sorted_options = vec_options.to_vec();
+        sorted_options.sort_by(|a, b| {
+            a.option
+                .strike_price
+                .partial_cmp(&b.option.strike_price)
+                .unwrap()
+        });
+
+        // Validate the positions and their structure
+        // In Iron Butterfly, all strikes must be equidistant
+        let strike_prices: Vec<Positive> = sorted_options
+            .iter()
+            .map(|opt| opt.option.strike_price)
+            .collect();
+
+        if strike_prices[1] - strike_prices[0] != strike_prices[3] - strike_prices[2] {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Butterfly get_strategy".to_string(),
+                    reason: "Strike prices must be equidistant".to_string(),
+                },
+            ));
+        }
+
+        // Validate expiration dates match
+        let exp_date = sorted_options[0].option.expiration_date;
+        if !sorted_options
+            .iter()
+            .all(|opt| opt.option.expiration_date == exp_date)
+        {
+            return Err(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Butterfly get_strategy".to_string(),
+                    reason: "All options must have the same expiration date".to_string(),
+                },
+            ));
+        }
+
+        // Find and validate the positions
+        let long_put = sorted_options
+            .iter()
+            .find(|opt| {
+                opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Long
+            })
+            .ok_or(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Butterfly get_strategy".to_string(),
+                    reason: "Missing long put position".to_string(),
+                },
+            ))?;
+
+        let short_put = sorted_options
+            .iter()
+            .find(|opt| {
+                opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Short
+            })
+            .ok_or(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Butterfly get_strategy".to_string(),
+                    reason: "Missing short put position".to_string(),
+                },
+            ))?;
+
+        let short_call = sorted_options
+            .iter()
+            .find(|opt| {
+                opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Short
+            })
+            .ok_or(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Butterfly get_strategy".to_string(),
+                    reason: "Missing short call position".to_string(),
+                },
+            ))?;
+
+        let long_call = sorted_options
+            .iter()
+            .find(|opt| {
+                opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Long
+            })
+            .ok_or(StrategyError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "Iron Butterfly get_strategy".to_string(),
+                    reason: "Missing long call position".to_string(),
+                },
+            ))?;
+
+        // Create strategy
+        let mut strategy = IronButterfly {
+            name: "Iron Butterfly".to_string(),
+            kind: StrategyType::IronButterfly,
+            description: IRON_BUTTERFLY_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: short_call.clone(),
+            short_put: short_put.clone(),
+            long_call: long_call.clone(),
+            long_put: long_put.clone(),
+        };
+
+        // Validate and update break-even points
+        strategy.validate();
+        strategy.update_break_even_points()?;
+
+        Ok(strategy)
+    }
+}
+
+impl BreakEvenable for IronButterfly {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        let net_credit = self.net_premium_received()? / self.short_call.option.quantity;
+
+        self.break_even_points
+            .push((self.short_call.option.strike_price + net_credit).round_to(2));
+
+        self.break_even_points
+            .push((self.short_call.option.strike_price - net_credit).round_to(2));
+
+        self.break_even_points.sort();
+        Ok(())
     }
 }
 
@@ -350,6 +487,16 @@ impl Positionable for IronButterfly {
     }
 }
 
+impl StrategyBasic for IronButterfly {
+    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+        Ok(StrategyBasics {
+            name: self.name.clone(),
+            kind: self.kind.clone(),
+            description: self.description.clone(),
+        })
+    }
+}
+
 impl Strategies for IronButterfly {
     fn get_underlying_price(&self) -> Positive {
         self.long_put.option.underlying_price
@@ -407,10 +554,6 @@ impl Strategies for IronButterfly {
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
             _ => Ok((max_profit / max_loss * 100.0).into()),
         }
-    }
-
-    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-        Ok(&self.break_even_points)
     }
 }
 
@@ -505,7 +648,7 @@ impl Optimizable for IronButterfly {
                 short_strike.strike_price,
                 long_call.strike_price,
                 long_put.strike_price,
-                self.short_call.option.expiration_date.clone(),
+                self.short_call.option.expiration_date,
                 short_strike.implied_volatility.unwrap() / 100.0,
                 self.short_call.option.risk_free_rate,
                 self.short_call.option.dividend_yield,
@@ -668,7 +811,7 @@ impl Graph for IronButterfly {
 
 impl ProbabilityAnalysis for IronButterfly {
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call.option.expiration_date.clone())
+        Ok(self.long_call.option.expiration_date)
     }
 
     fn get_risk_free_rate(&self) -> Option<Decimal> {
@@ -788,8 +931,17 @@ impl DeltaNeutrality for IronButterfly {
         let net_delta = self.calculate_net_delta().net_delta;
         let l_p_delta = self.long_put.option.delta().unwrap();
         let s_c_delta = self.short_call.option.delta().unwrap();
-        let qty_p = Positive((net_delta.abs() / l_p_delta).abs());
-        let qty_c = Positive((net_delta.abs() / s_c_delta).abs());
+        let qty_p = if l_p_delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / l_p_delta).abs())
+        };
+        let qty_c = if s_c_delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / s_c_delta).abs())
+        };
+
         vec![
             DeltaAdjustment::BuyOptions {
                 quantity: qty_p * self.long_put.option.quantity,
@@ -808,9 +960,17 @@ impl DeltaNeutrality for IronButterfly {
         let net_delta = self.calculate_net_delta().net_delta;
         let s_p_delta = self.short_put.option.delta().unwrap();
         let l_c_delta = self.long_call.option.delta().unwrap();
-        let qty_p = Positive((net_delta.abs() / s_p_delta).abs());
-        let qty_c = Positive((net_delta.abs() / l_c_delta).abs());
 
+        let qty_p = if s_p_delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / s_p_delta).abs())
+        };
+        let qty_c = if l_c_delta == Decimal::ZERO {
+            Positive::ONE
+        } else {
+            Positive((net_delta.abs() / l_c_delta).abs())
+        };
         vec![
             DeltaAdjustment::BuyOptions {
                 quantity: qty_c * self.long_call.option.quantity,
@@ -823,6 +983,46 @@ impl DeltaNeutrality for IronButterfly {
                 option_type: OptionStyle::Put,
             },
         ]
+    }
+}
+
+impl PnLCalculator for IronButterfly {
+    fn calculate_pnl(
+        &self,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?
+            + self
+                .long_put
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?
+            + self
+                .short_call
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?
+            + self
+                .short_put
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        Ok(self
+            .long_call
+            .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .long_put
+                .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .short_call
+                .calculate_pnl_at_expiration(underlying_price)?
+            + self
+                .short_put
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
 
@@ -1452,12 +1652,14 @@ mod tests_iron_butterfly_optimizable {
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
             chain.add_option(
                 pos!(strike),
-                spos!(5.0),   // call_bid
-                spos!(5.2),   // call_ask
-                spos!(5.0),   // put_bid
-                spos!(5.2),   // put_ask
-                spos!(0.2),   // implied_volatility
-                None,         // delta
+                spos!(5.0), // call_bid
+                spos!(5.2), // call_ask
+                spos!(5.0), // put_bid
+                spos!(5.2), // put_ask
+                spos!(0.2), // implied_volatility
+                None,       // delta
+                None,
+                None,
                 spos!(100.0), // volume
                 Some(50),     // open_interest
             );
@@ -1537,6 +1739,8 @@ mod tests_iron_butterfly_optimizable {
             spos!(5.2),
             spos!(0.2),
             None,
+            None,
+            None,
             spos!(100.0),
             Some(50),
         );
@@ -1558,6 +1762,8 @@ mod tests_iron_butterfly_optimizable {
             spos!(5.0),
             spos!(5.2),
             spos!(0.2),
+            None,
+            None,
             None,
             spos!(100.0),
             Some(50),
@@ -1985,7 +2191,7 @@ mod tests_iron_butterfly_graph {
         let max_profit_point = &points[2];
 
         assert_eq!(max_profit_point.coordinates.1, 0.0);
-        assert!(max_profit_point.label.contains("0.00"));
+        assert!(max_profit_point.label.contains("0"));
     }
 
     #[test]
@@ -2531,9 +2737,9 @@ mod tests_iron_butterfly_probability {
         ];
 
         for expiration in expirations {
-            butterfly.long_put.option.expiration_date = expiration.clone();
-            butterfly.short_put.option.expiration_date = expiration.clone();
-            butterfly.short_call.option.expiration_date = expiration.clone();
+            butterfly.long_put.option.expiration_date = expiration;
+            butterfly.short_put.option.expiration_date = expiration;
+            butterfly.short_call.option.expiration_date = expiration;
             butterfly.long_call.option.expiration_date = expiration;
 
             let result = butterfly.probability_of_profit(None, None);
@@ -2612,7 +2818,7 @@ mod tests_iron_butterfly_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }
@@ -2656,7 +2862,7 @@ mod tests_iron_butterfly_position_management {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {
-                println!("Unexpected error: {:?}", invalid_position);
+                error!("Unexpected error: {:?}", invalid_position);
                 panic!()
             }
         }
@@ -2861,5 +3067,276 @@ mod tests_adjust_option_position {
 
         assert!(result.is_ok());
         assert_eq!(strategy.short_call.option.quantity, initial_quantity);
+    }
+}
+
+#[cfg(test)]
+mod tests_strategy_constructor {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::pos;
+
+    #[test]
+    fn test_get_strategy_valid() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = IronButterfly::get_strategy(&options);
+        assert!(result.is_ok());
+
+        let strategy = result.unwrap();
+        assert_eq!(strategy.long_put.option.strike_price, pos!(95.0));
+        assert_eq!(strategy.short_put.option.strike_price, pos!(100.0));
+        assert_eq!(strategy.short_call.option.strike_price, pos!(100.0));
+        assert_eq!(strategy.long_call.option.strike_price, pos!(105.0));
+    }
+
+    #[test]
+    fn test_get_strategy_wrong_number_of_options() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = IronButterfly::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Iron Butterfly get_strategy" && reason == "Must have exactly 4 options"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_non_equidistant_strikes() {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(90.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(115.0),
+                pos!(0.2),
+            ),
+        ];
+
+        let result = IronButterfly::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Iron Butterfly get_strategy" && reason == "Strike prices must be equidistant"
+        ));
+    }
+
+    #[test]
+    fn test_get_strategy_different_expiration_dates() {
+        let mut options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+        ];
+
+        options[3].option.expiration_date = ExpirationDate::Days(pos!(60.0));
+
+        let result = IronButterfly::get_strategy(&options);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Iron Butterfly get_strategy" && reason == "All options must have the same expiration date"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests_iron_butterfly_pnl {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_iron_butterfly() -> Result<IronButterfly, StrategyError> {
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(95.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Short,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(100.0),
+                pos!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                pos!(105.0),
+                pos!(0.2),
+            ),
+        ];
+
+        IronButterfly::get_strategy(&options)
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_middle_strike() {
+        let iron_butterfly = create_test_iron_butterfly().unwrap();
+        let underlying_price = pos!(100.0); // At middle strike
+
+        let result = iron_butterfly.calculate_pnl_at_expiration(&underlying_price);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        assert!(pnl.realized.is_some());
+
+        // Maximum profit at middle strike
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-4.0), dec!(0.01));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_wing_strikes() {
+        let iron_butterfly = create_test_iron_butterfly().unwrap();
+
+        // Test at lower wing
+        let result_lower = iron_butterfly.calculate_pnl_at_expiration(&pos!(95.0));
+        assert!(result_lower.is_ok());
+        let pnl_lower = result_lower.unwrap();
+        assert_decimal_eq!(pnl_lower.realized.unwrap(), dec!(-9.0), dec!(0.01));
+
+        // Test at upper wing
+        let result_upper = iron_butterfly.calculate_pnl_at_expiration(&pos!(105.0));
+        assert!(result_upper.is_ok());
+        let pnl_upper = result_upper.unwrap();
+        assert_decimal_eq!(pnl_upper.realized.unwrap(), dec!(-9.0), dec!(0.01));
+    }
+
+    #[test]
+    fn test_calculate_pnl_beyond_wings() {
+        let iron_butterfly = create_test_iron_butterfly().unwrap();
+
+        // Test far below wings
+        let result_lower = iron_butterfly.calculate_pnl_at_expiration(&pos!(90.0));
+        assert!(result_lower.is_ok());
+        let pnl_lower = result_lower.unwrap();
+        assert_decimal_eq!(pnl_lower.realized.unwrap(), dec!(-9.0), dec!(0.01));
+
+        // Test far above wings
+        let result_upper = iron_butterfly.calculate_pnl_at_expiration(&pos!(110.0));
+        assert!(result_upper.is_ok());
+        let pnl_upper = result_upper.unwrap();
+        assert_decimal_eq!(pnl_upper.realized.unwrap(), dec!(-9.0), dec!(0.01));
     }
 }
