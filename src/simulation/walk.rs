@@ -194,6 +194,8 @@ pub trait Walkable {
         }
         Ok(())
     }
+
+    fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>>;
 }
 
 /// Represents a specific implementation of the `Walkable` trait called `RandomWalkGraph`.
@@ -305,6 +307,21 @@ impl RandomWalkGraph {
     }
 }
 
+impl Default for RandomWalkGraph {
+    fn default() -> Self {
+        Self {
+            values: Vec::new(),
+            title_text: "Random Walk".to_string(),
+            current_index: 0,
+            risk_free_rate: None,
+            dividend_yield: None,
+            time_frame: TimeFrame::Day,
+            volatility_window: 4,
+            initial_volatility: None,
+        }
+    }
+}
+
 /// Implements the `Walkable` trait for the `RandomWalkGraph` structure. This provides
 /// the graph with an interface for managing its y-values and performing random walk simulations.
 impl Walkable for RandomWalkGraph {
@@ -314,6 +331,19 @@ impl Walkable for RandomWalkGraph {
 
     fn get_y_values_ref(&mut self) -> &mut Vec<Positive> {
         &mut self.values
+    }
+
+    fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
+        Ok(Self {
+            values: self.values.clone(),
+            title_text: self.title_text.clone(),
+            current_index: self.current_index,
+            risk_free_rate: self.risk_free_rate,
+            dividend_yield: self.dividend_yield,
+            time_frame: self.time_frame,
+            volatility_window: self.volatility_window,
+            initial_volatility: self.initial_volatility,
+        })
     }
 }
 
@@ -445,6 +475,10 @@ mod tests_random_walk {
 
         fn get_y_values_ref(&mut self) -> &mut Vec<Positive> {
             &mut self.values
+        }
+
+        fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
+            Ok(RandomWalkGraph::default())
         }
     }
 
@@ -679,6 +713,10 @@ mod tests_random_walk_timeframe {
             // Simple implementation for testing
             self.values = vec![initial_price; n_steps];
             Ok(())
+        }
+
+        fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
+            Ok(RandomWalkGraph::default())
         }
     }
 
