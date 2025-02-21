@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 22/10/24
 ******************************************************************************/
-use rust_decimal::Decimal;
-use tracing::info;
 use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{pos, spos};
+use rust_decimal::Decimal;
+use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         20,
     );
-    
+
     for (i, price_params) in random_walk.enumerate() {
         info!("Step {}: Params: {}", i, price_params,);
     }

@@ -118,8 +118,7 @@ pub trait Graph: Profit {
         backend: GraphBackend,
         title_size: u32,
     ) -> Result<(), Box<dyn Error>> {
-        
-        if x_axis_data.is_empty()  {
+        if x_axis_data.is_empty() {
             return Err("No valid values to plot".into());
         }
 
@@ -127,7 +126,7 @@ pub trait Graph: Profit {
         if y_axis_data.is_empty() {
             return Err("No valid values to plot".into());
         }
-        
+
         let (max_x_value, min_x_value, max_y_value, min_y_value) =
             calculate_axis_range(x_axis_data, &y_axis_data, None);
 
@@ -231,8 +230,8 @@ pub(crate) fn calculate_axis_range(
     if min_y_temp.is_infinite() || max_y_temp.is_infinite() {
         return (max_x_value, min_x_value, min_y_temp, max_y_temp);
     }
-    
-    let margin_value = margin.unwrap_or_else(|| 1.0);
+
+    let margin_value = margin.unwrap_or(1.0);
 
     let adjusted_max_profit = (max_y_temp * margin_value - max_y_temp).abs();
     let adjusted_min_profit = (min_y_temp * margin_value - min_y_temp).abs();
@@ -435,7 +434,7 @@ mod tests_calculate_axis_range {
         let x_data = vec![pos!(1.0)];
         let y_data = vec![0.0];
 
-        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data,Some(1.2));
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data, Some(1.2));
 
         assert_eq!(max_x, pos!(1.0));
         assert_eq!(min_x, pos!(1.0));
@@ -449,7 +448,7 @@ mod tests_calculate_axis_range {
         let x_data = vec![Positive::ZERO, Positive::ZERO, Positive::ZERO];
         let y_data = vec![0.0, 0.0, 0.0];
 
-        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data,Some(1.2));
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data, Some(1.2));
 
         assert_eq!(max_x, Positive::ZERO);
         assert_eq!(min_x, Positive::ZERO);
@@ -463,7 +462,7 @@ mod tests_calculate_axis_range {
         let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
         let y_data = vec![1e9, 2e9, 3e9];
 
-        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data,Some(1.2));
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data, Some(1.2));
 
         assert_eq!(max_x, 3e6);
         assert_eq!(min_x, 1e6);
@@ -601,7 +600,7 @@ mod tests {
     fn test_calculate_axis_range_empty() {
         let x_data: Vec<Positive> = vec![];
         let y_data: Vec<f64> = vec![];
-        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data,Some(1.2));
+        let (max_x, min_x, max_y, min_y) = calculate_axis_range(&x_data, &y_data, Some(1.2));
         assert_eq!(min_x, Positive::ZERO);
         assert_eq!(max_x, Positive::INFINITY);
         assert_eq!(min_y, f64::NEG_INFINITY);
@@ -675,7 +674,10 @@ mod tests_extended {
         );
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("No valid values to plot"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No valid values to plot"));
         Ok(())
     }
 
