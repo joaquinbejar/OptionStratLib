@@ -19,6 +19,7 @@ use plotters::prelude::{
 };
 use std::error::Error;
 use std::ops::Add;
+use rand::Rng;
 
 /// Aplica un degradado a un color base basado en un valor normalizado.
 ///
@@ -407,6 +408,85 @@ where
         )))?;
     }
     Ok(())
+}
+
+
+/// Creates a random, visually distinguishable color.
+///
+/// Uses HSL color space to generate colors with:
+/// - Random hue (0-360)
+/// - High saturation (60-90%)
+/// - Medium lightness (35-65%)
+///
+/// This approach helps ensure colors are:
+/// 1. Visually distinct from each other
+/// 2. Saturated enough to be visible
+/// 3. Neither too dark nor too light
+pub fn random_color() -> RGBColor {
+    let mut rng = rand::thread_rng();
+
+    // Generate HSL values
+    let h = rng.gen_range(0.0..360.0); // Hue: Full range for maximum variety
+    let s = rng.gen_range(0.6..0.9);   // Saturation: 60-90% for vivid colors
+    let l = rng.gen_range(0.35..0.65);  // Lightness: 35-65% for medium brightness
+
+    // Convert HSL to RGB
+    let rgb = hsl_to_rgb(h, s, l);
+    RGBColor(rgb.0, rgb.1, rgb.2)
+}
+
+/// Converts HSL color values to RGB.
+///
+/// Parameters:
+/// - h: Hue (0-360)
+/// - s: Saturation (0-1)
+/// - l: Lightness (0-1)
+///
+/// Returns:
+/// Tuple of (r, g, b) where each value is 0-255
+fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8) {
+    // Helper function for hue to RGB conversion
+    let hue_to_rgb = |p: f64, q: f64, mut t: f64| -> f64 {
+        if t < 0.0 { t += 1.0 }
+        if t > 1.0 { t -= 1.0 }
+
+        if t < 1.0/6.0 {
+            return p + (q - p) * 6.0 * t;
+        }
+        if t < 1.0/2.0 {
+            return q;
+        }
+        if t < 2.0/3.0 {
+            return p + (q - p) * (2.0/3.0 - t) * 6.0;
+        }
+        p
+    };
+
+    // Edge case: no saturation means a gray
+    if s == 0.0 {
+        let gray = (l * 255.0) as u8;
+        return (gray, gray, gray);
+    }
+
+    // Calculate helper values
+    let q = if l < 0.5 {
+        l * (1.0 + s)
+    } else {
+        l + s - l * s
+    };
+    let p = 2.0 * l - q;
+
+    // Convert hue to RGB channels
+    let r = hue_to_rgb(p, q, (h / 360.0) + 1.0/3.0);
+    let g = hue_to_rgb(p, q, h / 360.0);
+    let b = hue_to_rgb(p, q, (h / 360.0) - 1.0/3.0);
+
+    // Convert to 0-255 range
+    (
+        (r * 255.0) as u8,
+        (g * 255.0) as u8,
+        (b * 255.0) as u8
+    )
 }
 
 #[cfg(test)]

@@ -18,6 +18,7 @@ use rust_decimal::Decimal;
 use statrs::distribution::Normal;
 use std::error::Error;
 use tracing::{info, trace};
+use crate::visualization::model::ChartPoint;
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
 /// entities capable of simulating or managing a random walk sequence of values.
@@ -305,6 +306,17 @@ impl RandomWalkGraph {
     fn get_remaining_time(&self) -> Positive {
         pos!((self.values.len() - self.current_index) as f64)
     }
+
+    pub fn get_points(&self) -> Vec<ChartPoint<(f64, Positive)>> {
+        self.values
+            .iter()
+            .enumerate()
+            .map(|(index, &value)| ChartPoint::new(
+                (index as f64, value),
+                format!("Step {}", index)
+            ))
+            .collect()
+    }
 }
 
 impl Default for RandomWalkGraph {
@@ -326,6 +338,7 @@ impl Default for RandomWalkGraph {
 /// the graph with an interface for managing its y-values and performing random walk simulations.
 impl Walkable for RandomWalkGraph {
     fn get_y_values(&self) -> &Vec<Positive> {
+        assert_ne!(self.values.len(), 0, "Walkable::get_y_values: values should not be empty");
         &self.values
     }
 
@@ -448,6 +461,48 @@ impl Iterator for RandomWalkGraph {
             dividend_yield,
             underlying_symbol: None,
         })
+    }
+}
+
+pub struct RandomWalkIterator<'a> {
+    walk: &'a RandomWalkGraph,
+    current_index: usize,
+}
+
+impl<'a> Iterator for RandomWalkIterator<'a> {
+    type Item = OptionDataPriceParams;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_index >= self.walk.values.len() {
+            return None;
+        }
+
+        let risk_free_rate = self.walk.risk_free_rate.unwrap_or(Decimal::ZERO);
+        let dividend_yield = self.walk.dividend_yield.unwrap_or(Positive::ZERO);
+        let price = self.walk.values[self.current_index];
+        let remaining_days = pos!((self.walk.values.len() - self.current_index) as f64);
+        let expiration_date = ExpirationDate::Days(remaining_days);
+        let implied_volatility = self.walk.calculate_current_volatility();
+        self.current_index += 1;
+
+        Some(OptionDataPriceParams {
+            underlying_price: price,
+            expiration_date,
+            implied_volatility,
+            risk_free_rate,
+            dividend_yield,
+            underlying_symbol: None,
+        })
+    }
+}
+
+impl RandomWalkGraph {
+    // Add this method to RandomWalkGraph
+    pub fn iter(&self) -> RandomWalkIterator {
+        RandomWalkIterator {
+            walk: self,
+            current_index: 0,
+        }
     }
 }
 
@@ -1029,5 +1084,164 @@ mod tests_random_walk_timeframe {
             assert_eq!(walker.values[i], expected_price);
             expected_price = pos!((expected_price.to_f64() + mean).max(0.0));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_random_walk_iterator {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test RandomWalkGraph
+    fn create_test_walk() -> RandomWalkGraph {
+        let mut walk = RandomWalkGraph::new(
+            "Test Walk".to_string(),
+            Some(dec!(0.05)),          // risk_free_rate
+            Some(pos!(0.02)),          // dividend_yield
+            TimeFrame::Day,
+            5,                         // volatility_window
+            Some(pos!(0.2)),          // initial_volatility
+        );
+
+        // Add some test values
+        walk.values = vec![
+            pos!(100.0),
+            pos!(101.0),
+            pos!(102.0),
+            pos!(103.0),
+            pos!(104.0),
+        ];
+
+        walk
+    }
+
+    #[test]
+    fn test_iterator_creation() {
+        let walk = create_test_walk();
+        let iter = walk.iter();
+        assert_eq!(iter.current_index, 0);
+    }
+
+    #[test]
+    fn test_iterator_complete_traversal() {
+        let walk = create_test_walk();
+        let iter = walk.iter();
+
+        let count = iter.count();
+        assert_eq!(count, 5, "Iterator should yield exactly 5 items");
+    }
+
+    #[test]
+    fn test_iterator_values() {
+        let walk = create_test_walk();
+        let mut iter = walk.iter();
+
+        // Check first item
+        let first = iter.next().unwrap();
+        assert_eq!(first.underlying_price, pos!(100.0));
+        assert_eq!(first.risk_free_rate, dec!(0.05));
+        assert_eq!(first.dividend_yield, pos!(0.02));
+
+        // Check days to expiration decreases
+        let days_remaining = match first.expiration_date {
+            ExpirationDate::Days(days) => days,
+            _ => panic!("Expected Days variant"),
+        };
+        assert_eq!(days_remaining, pos!(5.0));
+    }
+
+    #[test]
+    fn test_iterator_empty_walk() {
+        let walk = RandomWalkGraph::new(
+            "Empty Walk".to_string(),
+            None,
+            None,
+            TimeFrame::Day,
+            5,
+            None,
+        );
+        let mut iter = walk.iter();
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn test_iterator_remaining_days() {
+        let walk = create_test_walk();
+        let mut iter = walk.iter();
+
+        // First item should have maximum remaining days
+        let first = iter.next().unwrap();
+        match first.expiration_date {
+            ExpirationDate::Days(days) => assert_eq!(days, pos!(5.0)),
+            _ => panic!("Expected Days variant"),
+        }
+
+        // Skip to last item
+        for _ in 0..3 { iter.next(); }
+        let last = iter.next().unwrap();
+        match last.expiration_date {
+            ExpirationDate::Days(days) => assert_eq!(days, pos!(1.0)),
+            _ => panic!("Expected Days variant"),
+        }
+    }
+
+    #[test]
+    fn test_iterator_multiple_traversals() {
+        let walk = create_test_walk();
+
+        // First traversal
+        let count1 = walk.iter().count();
+        assert_eq!(count1, 5);
+
+        // Second traversal
+        let count2 = walk.iter().count();
+        assert_eq!(count2, 5, "Second traversal should yield same count");
+    }
+
+    #[test]
+    fn test_iterator_partial_traversal() {
+        let walk = create_test_walk();
+        let iter = walk.iter();
+
+        // Take only first 3 items
+        let taken: Vec<_> = iter.take(3).collect();
+        assert_eq!(taken.len(), 3);
+    }
+
+    #[test]
+    fn test_default_values() {
+        let mut walk = RandomWalkGraph::new(
+            "Default Walk".to_string(),
+            None,                  // No risk_free_rate
+            None,                  // No dividend_yield
+            TimeFrame::Day,
+            5,
+            None,                  // No initial_volatility
+        );
+        walk.values = vec![pos!(100.0)];
+
+        let item = walk.iter().next().unwrap();
+        assert_eq!(item.risk_free_rate, Decimal::ZERO);
+        assert_eq!(item.dividend_yield, Positive::ZERO);
+    }
+
+    #[test]
+    fn test_iterator_implied_volatility() {
+        let mut walk = create_test_walk();
+        walk.initial_volatility = Some(pos!(0.2));
+
+        let first = walk.iter().next().unwrap();
+        assert!(first.implied_volatility.is_some());
+    }
+
+    #[test]
+    fn test_iterator_skipping() {
+        let walk = create_test_walk();
+        let mut iter = walk.iter().skip(2);
+
+        let first_after_skip = iter.next().unwrap();
+        assert_eq!(first_after_skip.underlying_price, pos!(102.0));
     }
 }
