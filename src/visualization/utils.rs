@@ -3,7 +3,6 @@ use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use crate::Positive;
 use num_traits::ToPrimitive;
-
 #[cfg(not(target_arch = "wasm32"))]
 use plotters::backend::BitMapBackend;
 #[cfg(target_arch = "wasm32")]

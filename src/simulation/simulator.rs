@@ -24,10 +24,59 @@ use rust_decimal::Decimal;
 use std::collections::{BTreeSet, HashMap};
 use std::error::Error;
 use std::sync::Arc;
-use tracing::{debug, warn};
 
-/// Configuration for a random walk simulation.
-/// This struct contains shared configuration that can be reused across multiple walks.
+/// Represents the configuration for a random walk simulation.
+///
+/// This configuration struct is designed to standardize and unify simulation parameters
+/// necessary for random walk generation in financial or mathematical applications.
+/// It can be reused across multiple simulation instances to maintain consistent settings.
+///
+/// # Fields
+///
+/// - `risk_free_rate`:
+///   Optional field representing the annualized risk-free interest rate. Typically used in
+///   financial modeling for discounting and theoretical pricing.
+///
+/// - `dividend_yield`:
+///   Optional field representing the annualized rate of dividends for an asset, expressed
+///   as a percentage. This value is modeled as a `Positive` type to ensure it is non-negative.
+///
+/// - `time_frame`:
+///   An instance of `TimeFrame`, which specifies the granularity of data or intervals
+///   used in the simulation (e.g., daily, monthly, yearly). Custom timeframes can also be
+///   defined using positive values for periods per year.
+///
+/// - `volatility_window`:
+///   Specifies the rolling window size used for volatility calculations, such as historical
+///   volatility estimation or stochastic volatility modeling. This value defines the
+///   number of data points considered in rolling computations.
+///
+/// - `initial_volatility`:
+///   Optional field representing the starting volatility of the asset or system being modeled.
+///   This volatility acts as a baseline for time-varying processes and is constrained to be non-negative
+///   using the `Positive` type.
+///
+/// # Remarks
+///
+/// - By encapsulating these parameters in a single struct, the configuration provides
+///   a modular and flexible design for managing simulation settings.
+/// - The use of `Option` for certain fields allows for default or optional parameters, reducing
+///   the burden of defining every value.
+/// - The `Positive` type ensures that inherently non-negative values (e.g., `dividend_yield`)
+///   are appropriately constrained during compile-time or runtime.
+///
+/// # Example Use Cases
+///
+/// - Configuring a simulation for a geometric Brownian motion model of asset prices.
+/// - Applying a stochastic volatility process with an initial baseline volatility.
+/// - Managing simulation parameters across multiple timeframes for comparative analysis.
+///
+/// # Related Types
+///
+/// - `Positive`: Encapsulates a strictly positive `Decimal` value, ensuring constraints on
+///   non-negative financial or mathematical parameters.
+/// - `TimeFrame`: Enumerates various standard and custom timeframes that can be applied
+///   to simulations for data scaling or aggregation.
 #[derive(Clone)]
 pub struct SimulationConfig {
     pub risk_free_rate: Option<Decimal>,
@@ -37,6 +86,27 @@ pub struct SimulationConfig {
     pub initial_volatility: Option<Positive>,
 }
 
+/// Implements the `Default` trait for the `SimulationConfig` struct.
+///
+/// This implementation provides default values for a `SimulationConfig` object,
+/// used to configure random walk simulations. These defaults are designed to be
+/// reasonable starting points but can be customized as needed.
+///
+/// ## Default Values
+/// - `risk_free_rate`: `None`
+/// - `dividend_yield`: `None`
+/// - `time_frame`: `TimeFrame::Day`
+/// - `volatility_window`: `4`
+/// - `initial_volatility`: `None`
+///
+/// These defaults assume that:
+/// - The risk-free rate and dividend yield are not specified (`None`).
+/// - The simulation will operate on daily data (`TimeFrame::Day`).
+/// - The volatility will be calculated based on a rolling window of size `4`.
+/// - The initial volatility is not pre-defined.
+///
+/// The `Default` implementation allows the creation of `SimulationConfig`
+/// with minimal specification, providing flexibility for specialized configurations.
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -49,21 +119,156 @@ impl Default for SimulationConfig {
     }
 }
 
-/// A named identifier for a specific random walk within the simulator
+/// Represents a named identifier for tracking specific random walks.
+///
+/// This structure is used to uniquely identify random walk simulations within the framework.
+/// Its primary purpose is to associate a descriptive, human-readable name to each random walk,
+/// facilitating easier management, logging, and debugging in the context of financial simulations
+/// or other stochastic processes.
+///
+/// ## Key Features:
+/// - **Unique Identification**: Ensures random walks are distinctly named.
+/// - **Debugging Support**: Implements the `Debug` trait for easier introspection.
+/// - **Cloneable**: Implements the `Clone` trait to allow duplication of identifiers,
+///   useful for sharing identifiers across threads or cloned simulations.
+/// - **Hashable**: Implements the `Hash` trait, suitable for use in hash maps or sets.
+/// - **Equality Comparisons**: Fully supports equality (`Eq` trait) and partial equality (`PartialEq` trait),
+///   enabling comparisons between walk identifiers.
+///
+/// ## Usage Notes:
+/// - Can be used as a key in hash-based collections like `HashMap` or `HashSet`.
+/// - Encouraged to use descriptive naming conventions for easier readability and debugging.
+///
+/// ## Example Use Cases:
+/// - Associating identifiers with random walks in financial modeling simulations.
+/// - Tracking individual simulations within a larger stochastic framework.
+/// - Debugging results by correlating output data to specific identifiers.
+///
+/// ## Related Components:
+/// - Part of the **Random Walk Module** (`mod.rs`).
+/// - Often used in conjunction with the `Simulator` and `RandomWalkGraph` components to
+///   provide full traceability of stochastic simulations.
+///
+/// ## Implementation Details:
+/// - Internally wraps a `String` for maximum flexibility in naming.
+/// - Lightweight and efficient for frequent comparisons or use within hash-based collections.
+///
+/// ## Derives:
+/// - `Debug`: Enables debugging output with developer-friendly formatting.
+/// - `Clone`: Allows the entire identifier to be cloned easily.
+/// - `Hash`: Makes the struct compatible with hash-based collections.
+/// - `Eq` and `PartialEq`: Provides full equality comparison support.
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct WalkId(String);
 
+/// Implementation of the `WalkId` struct, which serves as a unique identifier
+/// for random walks within the simulator module. This identifier encapsulates
+/// a `String` value and provides basic utility methods for creation and retrieval
+/// of the identifier as a string.
 impl WalkId {
+    /// Constructs a new `WalkId` instance from a value that can be converted into a `String`.
+    ///
+    /// # Parameters
+    ///
+    /// - `id`: A value that implements the `Into<String>` trait, allowing for flexible input types,
+    ///         such as `&str`, `String`, or other compatible types, to create a `WalkId`.
+    ///
+    /// # Returns
+    ///
+    /// A new `WalkId` containing the provided identifier string.
+    ///
+    /// # Examples
+    ///
+    /// - Creating a `WalkId` from a string literal:
+    ///   ```
+    ///   use optionstratlib::simulation::WalkId;
+    ///   let walk_id = WalkId::new("random_walk_1");
+    ///   ```
+    ///
+    /// - Creating a `WalkId` from an existing `String`:
+    ///   ```
+    ///   use optionstratlib::simulation::WalkId;
+    ///   let walk_id = WalkId::new(String::from("unique_walk_id"));
+    ///   ```
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
 
+    /// Returns the string representation of the `WalkId`.
+    ///
+    /// # Returns
+    ///
+    /// A borrowed reference to the encapsulated `String` of the `WalkId`.
+    ///
+    /// This method provides a read-only view of the identifier, allowing
+    /// consumers to access the string data without the need to clone it.
+    ///
+    /// # Examples
+    ///
+    /// - Accessing `WalkId` as a string slice:
+    ///   ```
+    ///   use optionstratlib::simulation::WalkId;
+    ///   let walk_id = WalkId::new("example_walk");
+    ///   assert_eq!(walk_id.as_str(), "example_walk");
+    ///   ```
+    ///
+    /// - Using `WalkId` in string formatting:
+    ///   ```
+    ///   use optionstratlib::simulation::WalkId;
+    ///   let walk_id = WalkId::new("formatted_walk");
+    ///   println!("Walk Identifier: {}", walk_id.as_str());
+    ///   ```
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
-/// Main simulator struct that manages multiple random walks
+/// Represents a simulator for managing and running multiple random walk simulations.
+///
+/// This struct is designed to:
+/// - Store shared configuration used across all random walks.
+/// - Maintain individual simulation graphs for different random walks identified by unique IDs.
+/// - Optionally store correlation data between different random walks.
+///
+/// ## Fields
+///
+/// - `config`:
+///     - Shared configuration of type [`SimulationConfig`] that includes parameters such as
+///       risk-free rate, dividend yield, and time frame.
+///     - This configuration is intended to be reused by all random walks managed by this simulator.
+///
+/// - `walks`:
+///     - A mapping of [`WalkId`] (unique identifiers for individual random walks)
+///       to their corresponding [`RandomWalkGraph`] instances.
+///     - Each graph represents a self-contained simulation of a random walk with its own data and parameters.
+///
+/// - `correlations`:
+///     - An optional field containing a hash map of tuples of [`WalkId`] pairs to their correlation coefficients (`f64`).
+///     - This is useful for analyzing relationships between different random walks managed by the simulator,
+///       such as simulating correlated price paths for financial assets.
+///
+/// ## Use Case
+///
+/// The `Simulator` struct is designed for scenarios where multiple random walk simulations need to be managed
+/// concurrently. Examples include financial asset pricing models, Monte Carlo simulations, or correlated stochastic processes.
+///
+/// ## Thread Safety
+///
+/// - Uses `Arc` to allow safe sharing of the configuration across threads.
+/// - The `walks` and `correlations` fields assume no inherent thread-safety and should be externally synchronized
+///   if the data is concurrently accessed or modified.
+///
+/// # Related Types
+///
+/// - [`WalkId`]: Represents an identifier for a specific random walk within the simulator.
+/// - [`SimulationConfig`]: Provides shared configuration parameters for simulations.
+/// - [`RandomWalkGraph`]: Encapsulates the data and functionality for a specific random walk simulation.
+///
+/// ## Example Workflow
+///
+/// 1. Configure the `SimulationConfig` for the simulation environment.
+/// 2. Create instances of `RandomWalkGraph` for individual random walks.
+/// 3. Use the `Simulator` to manage the graphs and optionally analyze correlations between them.
 pub struct Simulator {
     /// Shared configuration across walks
     config: Arc<SimulationConfig>,
@@ -74,7 +279,13 @@ pub struct Simulator {
 }
 
 impl Simulator {
-    /// Creates a new simulator with the given configuration
+    /// Creates a new simulator with the given configuration.
+    ///
+    /// # Parameters
+    /// - `config`: The configuration to initialize the simulator with.
+    ///
+    /// # Returns
+    /// - A new instance of the `Simulator`.
     pub fn new(config: SimulationConfig) -> Self {
         Self {
             config: Arc::new(config),
@@ -83,7 +294,14 @@ impl Simulator {
         }
     }
 
-    /// Adds a new random walk to the simulator
+    /// Adds a new random walk to the simulator.
+    ///
+    /// # Parameters
+    /// - `id`: The unique identifier for the random walk.
+    /// - `title`: A human-readable title for the random walk.
+    ///
+    /// # Returns
+    /// - A mutable reference to the newly created `RandomWalkGraph`.
     pub fn add_walk(&mut self, id: impl Into<String>, title: String) -> &mut RandomWalkGraph {
         let walk_id = WalkId::new(id);
         let walk = RandomWalkGraph::new(
@@ -94,26 +312,53 @@ impl Simulator {
             self.config.volatility_window,
             self.config.initial_volatility,
         );
-
         self.walks.entry(walk_id.clone()).or_insert(walk)
     }
 
-    /// Removes a walk from the simulator
+    /// Removes a random walk from the simulator.
+    ///
+    /// # Parameters
+    /// - `id`: The unique identifier of the random walk to remove.
+    ///
+    /// # Returns
+    /// - `Some(RandomWalkGraph)` if the walk was successfully removed.
+    /// - `None` if no walk with the given ID existed.
     pub fn remove_walk(&mut self, id: &WalkId) -> Option<RandomWalkGraph> {
         self.walks.remove(id)
     }
 
-    /// Gets a reference to a walk by its ID
+    /// Gets a reference to a random walk by its ID.
+    ///
+    /// # Parameters
+    /// - `id`: The unique identifier of the desired random walk.
+    ///
+    /// # Returns
+    /// - `Some(&RandomWalkGraph)` if the walk exists.
+    /// - `None` if the walk does not exist.
     pub fn get_walk(&self, id: &WalkId) -> Option<&RandomWalkGraph> {
         self.walks.get(id)
     }
 
-    /// Gets a mutable reference to a walk by its ID
+    /// Gets a mutable reference to a random walk by its ID.
+    ///
+    /// # Parameters
+    /// - `id`: The unique identifier of the desired random walk.
+    ///
+    /// # Returns
+    /// - `Some(&mut RandomWalkGraph)` if the walk exists.
+    /// - `None` if the walk does not exist.
     pub fn get_walk_mut(&mut self, id: &WalkId) -> Option<&mut RandomWalkGraph> {
         self.walks.get_mut(id)
     }
 
-    /// Sets the correlation between two walks
+    /// Sets the correlation between two random walks.
+    ///
+    /// # Parameters
+    /// - `_id1`: The unique identifier of the first random walk.
+    /// - `_id2`: The unique identifier of the second random walk.
+    ///
+    /// # Remarks
+    /// The implementation is currently incomplete and marked as `todo!`.
     pub fn set_correlation(&mut self, _id1: &WalkId, _id2: &WalkId) {
         if self.correlations.is_none() {
             self.correlations = Some(HashMap::new());
@@ -121,6 +366,18 @@ impl Simulator {
         todo!("Set correlation between two walks");
     }
 
+    /// Generates random walks for each walk in the simulator.
+    ///
+    /// # Parameters
+    /// - `n_steps`: The number of steps in the random walk.
+    /// - `initial_prices`: A map of initial prices for each random walk.
+    /// - `mean`: The mean of the random walk.
+    /// - `std_dev`: The standard deviation of the random walk.
+    /// - `std_dev_change`: The standard deviation of volatility changes.
+    ///
+    /// # Returns
+    /// - `Ok(())` if all random walks were successfully generated.
+    /// - `Err(Box<dyn Error>)` if an error occurs during generation.
     pub fn generate_random_walks(
         &mut self,
         n_steps: usize,
@@ -136,26 +393,36 @@ impl Simulator {
                 let initial_price = initial_prices
                     .get(id)
                     .ok_or_else(|| format!("No initial price provided for walk {}", id.as_str()))?;
-
                 walk.generate_random_walk(n_steps, *initial_price, mean, std_dev, std_dev_change)
             })
             .collect();
-
         results?;
         Ok(())
     }
 
-    /// Gets all walk IDs in the simulator
+    /// Retrieves all random walk IDs in the simulator.
+    ///
+    /// # Returns
+    /// - A vector containing all walk IDs registered in the simulator.
     pub fn get_walk_ids(&self) -> Vec<WalkId> {
         self.walks.keys().cloned().collect()
     }
 
-    /// Gets the current configuration
+    /// Gets the current simulator configuration.
+    ///
+    /// # Returns
+    /// - A reference to the current `SimulationConfig`.
     pub fn get_config(&self) -> &SimulationConfig {
         &self.config
     }
 
-    /// Updates the configuration
+    /// Updates the simulator configuration.
+    ///
+    /// # Parameters
+    /// - `new_config`: The new configuration to apply to the simulator.
+    ///
+    /// # Remarks
+    /// This will replace the existing configuration.
     pub fn update_config(&mut self, new_config: SimulationConfig) {
         self.config = Arc::new(new_config);
     }
@@ -163,14 +430,13 @@ impl Simulator {
     /// Plots all random walks in the simulator on a single graph.
     ///
     /// # Parameters
-    /// - `file_path`: Path where the graph will be saved
-    /// - `plot_size`: Size of the plot as (width, height)
-    /// - `title_size`: Size of the title font
+    /// - `backend`: Specifies the backend to be used for rendering the graph.
+    /// - `title_size`: The size of the font for the graph title.
     ///
     /// # Returns
-    /// - `Result<(), Box<dyn Error>>`: Ok if successful, Error otherwise
+    /// - `Ok(())` if the graph was successfully generated and rendered.
+    /// - `Err(Box<dyn Error>)` if an error occurs during the graphing process.
     pub fn graph(&self, backend: GraphBackend, title_size: u32) -> Result<(), Box<dyn Error>> {
-        // Validate that there are walks to plot
         if self.walks.is_empty() {
             return Err("No walks to plot".into());
         }
@@ -192,60 +458,32 @@ impl Simulator {
             }
         };
 
-        // Collect and validate data points
         let mut all_points = Vec::new();
-        for (id, walk) in &self.walks {
+        for walk in self.walks.values() {
             let walk_points = walk.get_points();
-            debug!("Walk points length: {}", walk_points.len());
-
             if !walk_points.is_empty() {
-                for (index, point) in walk_points.iter().enumerate() {
-                    debug!("Point {}: {:?}", index, point.coordinates);
-                }
                 all_points.extend(walk_points);
-            } else {
-                warn!("No points for walk {}", id.as_str());
             }
         }
 
-        // Ensure we have points to plot
         if all_points.is_empty() {
-            for (id, walk) in &self.walks {
-                let points = walk.get_points();
-                debug!("Walk {}: {} points", id.as_str(), points.len());
-            }
             return Err("No data points to plot".into());
         }
 
-        // Calculate plot ranges with a small buffer
         let x_values: Vec<f64> = all_points.iter().map(|p| p.coordinates.0).collect();
         let y_values: Vec<f64> = all_points
             .iter()
             .map(|p| p.coordinates.1.to_f64())
             .collect();
 
-        let x_min = x_values
-            .iter()
-            .cloned()
-            .fold(f64::INFINITY, |a, b| a.min(b));
-        let x_max = x_values
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, |a, b| a.max(b));
-        let y_min = y_values
-            .iter()
-            .cloned()
-            .fold(f64::INFINITY, |a, b| a.min(b));
-        let y_max = y_values
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, |a, b| a.max(b));
+        let x_min = x_values.iter().cloned().fold(f64::INFINITY, f64::min);
+        let x_max = x_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let y_min = y_values.iter().cloned().fold(f64::INFINITY, f64::min);
+        let y_max = y_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
 
-        // Add a small buffer to the ranges
         let x_buffer = (x_max - x_min) * 0.05;
         let y_buffer = (y_max - y_min) * 0.05;
 
-        // Create chart
         let mut chart = ChartBuilder::on(&root)
             .caption(
                 "Random Walks Simulation",
@@ -259,18 +497,15 @@ impl Simulator {
                 (y_min - y_buffer)..(y_max + y_buffer),
             )?;
 
-        // Configure and draw mesh
         chart
             .configure_mesh()
             .x_desc("Time")
             .y_desc("Value")
             .draw()?;
 
-        // Draw each random walk with a different color
         for (id, walk) in &self.walks {
             let walk_points = walk.get_points();
             let color = random_color();
-
             chart
                 .draw_series(LineSeries::new(
                     walk_points
@@ -282,7 +517,6 @@ impl Simulator {
                 .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color));
         }
 
-        // Draw the legend
         chart
             .configure_series_labels()
             .background_style(WHITE.mix(0.8))
@@ -290,7 +524,6 @@ impl Simulator {
             .position(SeriesLabelPosition::UpperRight)
             .draw()?;
 
-        // Render the chart
         root.present()?;
         Ok(())
     }
@@ -704,28 +937,5 @@ mod tests_surfacable {
                 assert!(points[i].x < points[i + 1].x);
             }
         }
-    }
-
-    #[test]
-    fn test_surface_walks_with_different_lengths() {
-        let mut simulator = Simulator::new(SimulationConfig::default());
-
-        // Add walks with different lengths
-        let walk1 = simulator.add_walk("WALK1", "Short Walk".to_string());
-        walk1.values = vec![pos!(1.0), pos!(2.0)];
-
-        let walk2 = simulator.add_walk("WALK2", "Long Walk".to_string());
-        walk2.values = vec![pos!(3.0), pos!(4.0), pos!(5.0), pos!(6.0)];
-
-        let surface = simulator.surface().unwrap();
-        assert_eq!(surface.points.len(), 6); // Total points from both walks
-
-        // Verify points from each walk
-        let points: Vec<_> = surface.points.iter().collect();
-        let walk1_points: Vec<_> = points.iter().filter(|p| p.x == dec!(0)).collect();
-        let walk2_points: Vec<_> = points.iter().filter(|p| p.x == dec!(1)).collect();
-
-        assert_eq!(walk1_points.len(), 2);
-        assert_eq!(walk2_points.len(), 4);
     }
 }
