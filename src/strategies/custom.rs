@@ -18,7 +18,7 @@ use crate::strategies::base::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::{DeltaNeutrality, StrategyBasics, StrategyConstructor};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -690,6 +690,8 @@ impl Greeks for CustomStrategy {
             .collect())
     }
 }
+
+impl DeltaNeutrality for CustomStrategy {}
 
 impl PnLCalculator for CustomStrategy {
     fn calculate_pnl(

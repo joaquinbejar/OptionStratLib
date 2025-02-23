@@ -68,11 +68,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
 
-    info!("Delta:  {:#?}", strategy.calculate_net_delta());
+    info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     info!("Delta Neutral:  {}", strategy.is_delta_neutral());
     info!(
         "Delta Suggestions:  {:#?}",
-        strategy.suggest_delta_adjustments()
+        strategy.delta_adjustments()?
     );
 
     if strategy.profit_ratio()? > Positive::ZERO.into() {

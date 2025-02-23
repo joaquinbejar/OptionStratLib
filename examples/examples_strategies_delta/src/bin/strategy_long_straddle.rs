@@ -50,11 +50,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
     info!("Profit Ratio: {:.2}%", strategy.profit_ratio()?);
 
-    info!("Delta:  {:#?}", strategy.calculate_net_delta());
+    info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     info!("Delta Neutral:  {}", strategy.is_delta_neutral());
     info!(
         "Delta Suggestions:  {:#?}",
-        strategy.suggest_delta_adjustments()
+        strategy.delta_adjustments()?
     );
 
     Ok(())

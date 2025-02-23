@@ -87,7 +87,7 @@
 //!
 //! // Check delta-neutrality within a 0.1 threshold
 //! if !strategy.is_delta_neutral() {
-//!     let adjustments = strategy.suggest_delta_adjustments();
+//!     let adjustments = strategy.delta_adjustments();
 //!     for adj in adjustments {
 //!         info!("{:?}", adj);
 //!     }
@@ -96,4 +96,4 @@
 //!
 mod model;
 
-pub use model::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD};
+pub use model::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD, DeltaPositionInfo};

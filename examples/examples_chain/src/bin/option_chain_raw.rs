@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (range / 2.0) / option_chain.underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
-    info!("Delta:  {:#?}", strategy.calculate_net_delta());
+    info!("Delta:  {:#?}", strategy.delta_neutrality()?);
 
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);

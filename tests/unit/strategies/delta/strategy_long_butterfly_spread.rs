@@ -50,23 +50,23 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho_d, dec!(-0.733649), epsilon);
 
     assert_decimal_eq!(
-        strategy.calculate_net_delta().net_delta,
+        strategy.delta_neutrality().unwrap().net_delta,
         dec!(-0.0585),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.calculate_net_delta().individual_deltas[0],
+        strategy.delta_neutrality().individual_deltas[0],
         dec!(0.8744),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.calculate_net_delta().individual_deltas[1],
+        strategy.delta_neutrality().individual_deltas[1],
         dec!(0.2513),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.suggest_delta_adjustments().len(), 2);
-    let binding = strategy.suggest_delta_adjustments();
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 2);
+    let binding = strategy.delta_adjustments().unwrap();
     let suggestion = binding.first().unwrap();
     let delta = pos!(0.06699841451825994);
     let k = pos!(5710.0);
@@ -74,7 +74,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         BuyOptions {
             quantity,
             strike,
-            option_type,
+            option_style,
         } => {
             assert_pos_relative_eq!(
                 *quantity,
@@ -82,7 +82,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
                 Positive::new_decimal(DELTA_THRESHOLD).unwrap()
             );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
-            assert_eq!(*option_type, OptionStyle::Call);
+            assert_eq!(*option_style, OptionStyle::Call);
         }
         _ => panic!("Invalid suggestion"),
     }
