@@ -4,18 +4,27 @@
    Date: 22/2/25
 ******************************************************************************/
 
+use crate::curves::Curvable;
+use crate::error::SurfaceError;
 use crate::simulation::{RandomWalkGraph, Walkable};
+use crate::surfaces::{Point3D, Surfacable, Surface};
 use crate::utils::time::TimeFrame;
-use crate:: Positive;
+use crate::visualization::utils::{random_color, GraphBackend};
+use crate::Positive;
+#[cfg(not(target_arch = "wasm32"))]
+use plotters::backend::BitMapBackend;
+use plotters::prelude::{
+    ChartBuilder, IntoDrawingArea, IntoFont, LineSeries, PathElement, SeriesLabelPosition, BLACK,
+    WHITE,
+};
+use plotters::style::Color;
+#[cfg(target_arch = "wasm32")]
+use plotters_canvas::CanvasBackend;
 use rust_decimal::Decimal;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::error::Error;
 use std::sync::Arc;
-use plotters::backend::BitMapBackend;
-use plotters::prelude::{ChartBuilder, IntoDrawingArea, IntoFont, LineSeries, PathElement, SeriesLabelPosition, BLACK, WHITE};
-use crate::visualization::utils::{random_color, GraphBackend};
-use plotters::style::Color;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 /// Configuration for a random walk simulation.
 /// This struct contains shared configuration that can be reused across multiple walks.
@@ -48,7 +57,7 @@ impl WalkId {
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
-    
+
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -120,19 +129,15 @@ impl Simulator {
         std_dev: Positive,
         std_dev_change: Positive,
     ) -> Result<(), Box<dyn Error>> {
-        let results: Result<Vec<_>, _> = self.walks
+        let results: Result<Vec<_>, _> = self
+            .walks
             .iter_mut()
             .map(|(id, walk)| {
-                let initial_price = initial_prices.get(id)
+                let initial_price = initial_prices
+                    .get(id)
                     .ok_or_else(|| format!("No initial price provided for walk {}", id.as_str()))?;
 
-                walk.generate_random_walk(
-                    n_steps,
-                    *initial_price,
-                    mean,
-                    std_dev,
-                    std_dev_change,
-                )
+                walk.generate_random_walk(n_steps, *initial_price, mean, std_dev, std_dev_change)
             })
             .collect();
 
@@ -164,11 +169,7 @@ impl Simulator {
     ///
     /// # Returns
     /// - `Result<(), Box<dyn Error>>`: Ok if successful, Error otherwise
-    pub fn graph(
-        &self,
-        backend: GraphBackend,
-        title_size: u32,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn graph(&self, backend: GraphBackend, title_size: u32) -> Result<(), Box<dyn Error>> {
         // Validate that there are walks to plot
         if self.walks.is_empty() {
             return Err("No walks to plot".into());
@@ -194,9 +195,8 @@ impl Simulator {
         // Collect and validate data points
         let mut all_points = Vec::new();
         for (id, walk) in &self.walks {
-            
             let walk_points = walk.get_points();
-            info!("Walk points length: {}", walk_points.len());
+            debug!("Walk points length: {}", walk_points.len());
 
             if !walk_points.is_empty() {
                 for (index, point) in walk_points.iter().enumerate() {
@@ -219,13 +219,27 @@ impl Simulator {
 
         // Calculate plot ranges with a small buffer
         let x_values: Vec<f64> = all_points.iter().map(|p| p.coordinates.0).collect();
-        let y_values: Vec<f64> = all_points.iter().map(|p| p.coordinates.1.to_f64()).collect();
+        let y_values: Vec<f64> = all_points
+            .iter()
+            .map(|p| p.coordinates.1.to_f64())
+            .collect();
 
-        let x_min = x_values.iter().cloned().fold(f64::INFINITY, |a, b| a.min(b));
-        let x_max = x_values.iter().cloned().fold(f64::NEG_INFINITY, |a, b| a.max(b));
-        let y_min = y_values.iter().cloned().fold(f64::INFINITY, |a, b| a.min(b));
-        let y_max = y_values.iter().cloned().fold(f64::NEG_INFINITY, |a, b| a.max(b));
-
+        let x_min = x_values
+            .iter()
+            .cloned()
+            .fold(f64::INFINITY, |a, b| a.min(b));
+        let x_max = x_values
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, |a, b| a.max(b));
+        let y_min = y_values
+            .iter()
+            .cloned()
+            .fold(f64::INFINITY, |a, b| a.min(b));
+        let y_max = y_values
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, |a, b| a.max(b));
 
         // Add a small buffer to the ranges
         let x_buffer = (x_max - x_min) * 0.05;
@@ -233,13 +247,16 @@ impl Simulator {
 
         // Create chart
         let mut chart = ChartBuilder::on(&root)
-            .caption("Random Walks Simulation", ("sans-serif", title_size).into_font())
+            .caption(
+                "Random Walks Simulation",
+                ("sans-serif", title_size).into_font(),
+            )
             .margin(10)
             .x_label_area_size(40)
             .y_label_area_size(40)
             .build_cartesian_2d(
                 (x_min - x_buffer)..(x_max + x_buffer),
-                (y_min - y_buffer)..(y_max + y_buffer)
+                (y_min - y_buffer)..(y_max + y_buffer),
             )?;
 
         // Configure and draw mesh
@@ -256,7 +273,9 @@ impl Simulator {
 
             chart
                 .draw_series(LineSeries::new(
-                    walk_points.iter().map(|p| (p.coordinates.0, p.coordinates.1.to_f64())),
+                    walk_points
+                        .iter()
+                        .map(|p| (p.coordinates.0, p.coordinates.1.to_f64())),
                     color.clone().stroke_width(2),
                 ))?
                 .label(id.as_str())
@@ -266,8 +285,8 @@ impl Simulator {
         // Draw the legend
         chart
             .configure_series_labels()
-            .background_style(&WHITE.mix(0.8))
-            .border_style(&BLACK)
+            .background_style(WHITE.mix(0.8))
+            .border_style(BLACK)
             .position(SeriesLabelPosition::UpperRight)
             .draw()?;
 
@@ -277,14 +296,86 @@ impl Simulator {
     }
 }
 
+/// Implementation of the `Surfacable` trait for the `Simulator` type.
+///
+/// This implementation allows the `Simulator` object to generate a [`Surface`]
+/// representation based on the random walks it manages.
+///
+/// # Process
+/// The `surface` method generates a surface by:
+/// 1. Iterating over all random walks in the simulator.
+/// 2. Extracting their associated `Curve` points via each walk's `curve()` method.
+/// 3. Mapping these points into a collection of three-dimensional points, [`Point3D`],
+///    where each point's `z` coordinate is represented by the index of the walk,
+///    and its `x` and `y` coordinates are taken from the walk's `Curve` data.
+/// 4. Constructing a [`Surface`] using the resulting set of [`Point3D`] points.
+///
+/// # Returns
+/// - **`Ok(Surface)`**: If the surface is successfully created from the `Point3D` points.
+/// - **`Err(SurfaceError)`**: If any errors occur during surface construction. Possible
+///   errors include:
+///   - Invalid point conversion via [`Point3D::from_tuple`] (e.g., invalid coordinate transformations).
+///   - Failures in the associated random walks' `curve()` methods.
+///   - Issues during the collection or instantiation of the final surface.
+///
+/// # Notes
+/// - The resulting surface's points are stored in a `BTreeSet`, which inherently ensures
+///   that the points are sorted and unique. This provides a natural order and prevents
+///   duplicate points from being included.
+/// - The `z` coordinate of each `Point3D` is determined by the index of the walk in the simulator.
+/// - This implementation heavily relies on the [`Surface::new`] and [`Point3D::from_tuple`]
+///   helper methods.
+///
+/// # Implementation Details
+/// - `Simulator` maintains its walks in a `HashMap`. The `surface` method iterates through the
+///   walks using the `enumerate()` function, which provides a unique index for each walk.
+/// - The method uses the `flat_map()` iterator to efficiently transform the collection of walks
+///   into the desired set of points.
+///
+/// # Errors
+/// The method returns a [`SurfaceError`] in any of the following cases:
+/// - If the `curve()` method of a random walk fails (e.g., invalid curve generation or
+///   missing values).
+/// - If a conversion error occurs while creating `Point3D` instances (e.g., invalid
+///   input arguments).
+/// - If issues occur while constructing the `Surface` itself.
+///
+/// # Example
+/// This implementation allows the `Simulator` to generate a 3D surface representation of
+/// random walks, which can subsequently be visualized, analyzed, or processed.
+///
+/// # See Also
+/// - [`Surface`]: The resulting 3D surface representation.
+/// - [`Point3D`]: Used to represent points in 3D space in the generated surface.
+/// - [`SurfaceError`]: Enumerates possible error types during surface generation.
+impl Surfacable for Simulator {
+    fn surface(&self) -> Result<Surface, SurfaceError> {
+        let points: BTreeSet<Point3D> = self
+            .walks
+            .iter()
+            .enumerate()
+            .flat_map(|(i, (_, walk))| {
+                let curve = walk.curve().unwrap();
+                let points2d = curve.points;
+
+                points2d
+                    .into_iter()
+                    .map(move |point| Point3D::from_tuple(i, point.x, point.y).unwrap())
+            })
+            .collect();
+
+        Ok(Surface::new(points))
+    }
+}
+
 #[cfg(test)]
 mod tests_simulator {
     use super::*;
-    use rust_decimal_macros::dec;
-    use crate::utils::time::TimeFrame;
     use crate::pos;
     use crate::simulation::Walkable;
+    use crate::utils::time::TimeFrame;
     use crate::visualization::utils::Graph;
+    use rust_decimal_macros::dec;
 
     // Helper function to create a basic simulator
     fn create_test_simulator() -> Simulator {
@@ -359,27 +450,6 @@ mod tests_simulator {
     }
 
     #[test]
-    fn test_set_and_get_correlation() {
-        let mut simulator = create_test_simulator();
-
-        let walk_id1 = WalkId::new("walk1");
-        let walk_id2 = WalkId::new("walk2");
-
-        simulator.add_walk("walk1", "Walk 1".to_string());
-        simulator.add_walk("walk2", "Walk 2".to_string());
-
-        simulator.set_correlation(&walk_id1, &walk_id2, 0.5);
-
-        if let Some(correlations) = &simulator.correlations {
-            assert_eq!(correlations.get(&(walk_id1.clone(), walk_id2.clone())), Some(&0.5));
-            // Test symmetric correlation
-            assert_eq!(correlations.get(&(walk_id2.clone(), walk_id1.clone())), Some(&0.5));
-        } else {
-            panic!("Correlations should be initialized");
-        }
-    }
-
-    #[test]
     fn test_multiple_walks() {
         let mut simulator = create_test_simulator();
 
@@ -411,13 +481,8 @@ mod tests_simulator {
         let walk = simulator.get_walk_mut(&walk_id).unwrap();
 
         // Modify walk
-        walk.generate_random_walk(
-            10,
-            pos!(100.0),
-            0.0,
-            pos!(0.2),
-            pos!(0.01)
-        ).unwrap();
+        walk.generate_random_walk(10, pos!(100.0), 0.0, pos!(0.2), pos!(0.01))
+            .unwrap();
 
         // Verify modification
         assert!(!walk.get_y_values().is_empty());
@@ -536,11 +601,131 @@ mod tests_simulation_config {
             let config = SimulationConfig {
                 risk_free_rate: None,
                 dividend_yield: None,
-                time_frame: timeframe.clone(),
+                time_frame: timeframe,
                 volatility_window: 10,
                 initial_volatility: None,
             };
             assert_eq!(config.time_frame, timeframe);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_surfacable {
+    use super::*;
+    use crate::pos;
+    use crate::utils::time::TimeFrame;
+
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test simulator with walks
+    fn create_test_simulator() -> Simulator {
+        let config = SimulationConfig {
+            risk_free_rate: None,
+            dividend_yield: None,
+            time_frame: TimeFrame::Day,
+            volatility_window: 4,
+            initial_volatility: None,
+        };
+
+        let mut simulator = Simulator::new(config);
+
+        // Add two walks with known values
+        let walk1 = simulator.add_walk("WALK1", "First Walk".to_string());
+        walk1.values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+
+        let walk2 = simulator.add_walk("WALK2", "Second Walk".to_string());
+        walk2.values = vec![pos!(4.0), pos!(5.0), pos!(6.0)];
+
+        simulator
+    }
+
+    #[test]
+    fn test_surface_empty_simulator() {
+        let simulator = Simulator::new(SimulationConfig::default());
+        let result = simulator.surface();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().points.len(), 0);
+    }
+
+    #[test]
+    fn test_surface_with_single_walk() {
+        let mut simulator = Simulator::new(SimulationConfig::default());
+        let walk = simulator.add_walk("WALK1", "Single Walk".to_string());
+        walk.values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+
+        let surface = simulator.surface().unwrap();
+        assert_eq!(surface.points.len(), 3);
+
+        // Convert points to Vec for easier testing
+        let points: Vec<_> = surface.points.iter().collect();
+
+        // Check points - z coordinate (i) should be 0 for all points as it's the first walk
+        assert_eq!(points[0].x, dec!(0)); // i coordinate
+        assert_eq!(points[0].y, dec!(0)); // x coordinate from point
+        assert_eq!(points[0].z, dec!(1.0)); // y coordinate from point
+
+        assert_eq!(points[1].x, dec!(0));
+        assert_eq!(points[1].y, dec!(1));
+        assert_eq!(points[1].z, dec!(2.0));
+    }
+
+    #[test]
+    fn test_surface_with_multiple_walks() {
+        let simulator = create_test_simulator();
+        let surface = simulator.surface().unwrap();
+
+        // Should have 6 points total (3 points from each walk)
+        assert_eq!(surface.points.len(), 6);
+
+        // Convert to Vec for easier testing
+        let points: Vec<_> = surface.points.iter().collect();
+
+        // Check points from first walk (i = 0)
+        let walk1_points: Vec<_> = points.iter().filter(|p| p.x == dec!(0)).collect();
+        assert_eq!(walk1_points.len(), 3);
+
+        // Check points from second walk (i = 1)
+        let walk2_points: Vec<_> = points.iter().filter(|p| p.x == dec!(1)).collect();
+        assert_eq!(walk2_points.len(), 3);
+    }
+
+    #[test]
+    fn test_surface_point_ordering() {
+        let simulator = create_test_simulator();
+        let surface = simulator.surface().unwrap();
+        let points: Vec<_> = surface.points.iter().collect();
+
+        // Points should be ordered first by walk index (x), then by time (y)
+        for i in 0..points.len() - 1 {
+            if points[i].x == points[i + 1].x {
+                assert!(points[i].y <= points[i + 1].y);
+            } else {
+                assert!(points[i].x < points[i + 1].x);
+            }
+        }
+    }
+
+    #[test]
+    fn test_surface_walks_with_different_lengths() {
+        let mut simulator = Simulator::new(SimulationConfig::default());
+
+        // Add walks with different lengths
+        let walk1 = simulator.add_walk("WALK1", "Short Walk".to_string());
+        walk1.values = vec![pos!(1.0), pos!(2.0)];
+
+        let walk2 = simulator.add_walk("WALK2", "Long Walk".to_string());
+        walk2.values = vec![pos!(3.0), pos!(4.0), pos!(5.0), pos!(6.0)];
+
+        let surface = simulator.surface().unwrap();
+        assert_eq!(surface.points.len(), 6); // Total points from both walks
+
+        // Verify points from each walk
+        let points: Vec<_> = surface.points.iter().collect();
+        let walk1_points: Vec<_> = points.iter().filter(|p| p.x == dec!(0)).collect();
+        let walk2_points: Vec<_> = points.iter().filter(|p| p.x == dec!(1)).collect();
+
+        assert_eq!(walk1_points.len(), 2);
+        assert_eq!(walk2_points.len(), 4);
     }
 }

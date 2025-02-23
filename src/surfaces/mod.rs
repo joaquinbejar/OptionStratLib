@@ -11,10 +11,12 @@
 
 mod basic;
 mod surface;
+mod traits;
 mod types;
 mod utils;
 mod visualization;
 
 pub use basic::BasicSurfaces;
 pub use surface::Surface;
+pub use traits::Surfacable;
 pub use types::Point3D;

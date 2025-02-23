@@ -5,9 +5,13 @@
 ******************************************************************************/
 use crate::chains::utils::OptionDataPriceParams;
 use crate::constants::ZERO;
+use crate::curves::{Curvable, Curve, Point2D};
+use crate::error::CurveError;
+use crate::geometrics::GeometricObject;
 use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::utils::time::TimeFrame;
+use crate::visualization::model::ChartPoint;
 use crate::visualization::utils::Graph;
 use crate::volatility::adjust_volatility;
 use crate::{pos, Positive};
@@ -18,7 +22,6 @@ use rust_decimal::Decimal;
 use statrs::distribution::Normal;
 use std::error::Error;
 use tracing::{info, trace};
-use crate::visualization::model::ChartPoint;
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
 /// entities capable of simulating or managing a random walk sequence of values.
@@ -204,7 +207,7 @@ pub trait Walkable {
 /// as titles, timeframes, and optional financial parameters (e.g., risk-free rate, dividend yield).
 pub struct RandomWalkGraph {
     /// Values representing the y-axis data of the random walk.
-    values: Vec<Positive>,
+    pub(crate) values: Vec<Positive>,
     /// Text for the graph's title.
     title_text: String,
     /// Tracks the current index for traversing the graph.
@@ -311,11 +314,18 @@ impl RandomWalkGraph {
         self.values
             .iter()
             .enumerate()
-            .map(|(index, &value)| ChartPoint::new(
-                (index as f64, value),
-                format!("Step {}", index)
-            ))
+            .map(|(index, &value)| {
+                ChartPoint::new((index as f64, value), format!("Step {}", index))
+            })
             .collect()
+    }
+
+    // Add this method to RandomWalkGraph
+    pub fn iter(&self) -> RandomWalkIterator {
+        RandomWalkIterator {
+            walk: self,
+            current_index: 0,
+        }
     }
 }
 
@@ -338,7 +348,11 @@ impl Default for RandomWalkGraph {
 /// the graph with an interface for managing its y-values and performing random walk simulations.
 impl Walkable for RandomWalkGraph {
     fn get_y_values(&self) -> &Vec<Positive> {
-        assert_ne!(self.values.len(), 0, "Walkable::get_y_values: values should not be empty");
+        assert_ne!(
+            self.values.len(),
+            0,
+            "Walkable::get_y_values: values should not be empty"
+        );
         &self.values
     }
 
@@ -469,7 +483,7 @@ pub struct RandomWalkIterator<'a> {
     current_index: usize,
 }
 
-impl<'a> Iterator for RandomWalkIterator<'a> {
+impl Iterator for RandomWalkIterator<'_> {
     type Item = OptionDataPriceParams;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -496,13 +510,15 @@ impl<'a> Iterator for RandomWalkIterator<'a> {
     }
 }
 
-impl RandomWalkGraph {
-    // Add this method to RandomWalkGraph
-    pub fn iter(&self) -> RandomWalkIterator {
-        RandomWalkIterator {
-            walk: self,
-            current_index: 0,
-        }
+impl Curvable for RandomWalkGraph {
+    fn curve(&self) -> Result<Curve, CurveError> {
+        let points = self
+            .values
+            .iter()
+            .enumerate()
+            .map(|(i, p)| Point2D::new(i, p.to_dec()))
+            .collect();
+        Ok(Curve::from_vector(points))
     }
 }
 
@@ -1098,11 +1114,11 @@ mod tests_random_walk_iterator {
     fn create_test_walk() -> RandomWalkGraph {
         let mut walk = RandomWalkGraph::new(
             "Test Walk".to_string(),
-            Some(dec!(0.05)),          // risk_free_rate
-            Some(pos!(0.02)),          // dividend_yield
+            Some(dec!(0.05)), // risk_free_rate
+            Some(pos!(0.02)), // dividend_yield
             TimeFrame::Day,
-            5,                         // volatility_window
-            Some(pos!(0.2)),          // initial_volatility
+            5,               // volatility_window
+            Some(pos!(0.2)), // initial_volatility
         );
 
         // Add some test values
@@ -1179,7 +1195,9 @@ mod tests_random_walk_iterator {
         }
 
         // Skip to last item
-        for _ in 0..3 { iter.next(); }
+        for _ in 0..3 {
+            iter.next();
+        }
         let last = iter.next().unwrap();
         match last.expiration_date {
             ExpirationDate::Days(days) => assert_eq!(days, pos!(1.0)),
@@ -1214,11 +1232,11 @@ mod tests_random_walk_iterator {
     fn test_default_values() {
         let mut walk = RandomWalkGraph::new(
             "Default Walk".to_string(),
-            None,                  // No risk_free_rate
-            None,                  // No dividend_yield
+            None, // No risk_free_rate
+            None, // No dividend_yield
             TimeFrame::Day,
             5,
-            None,                  // No initial_volatility
+            None, // No initial_volatility
         );
         walk.values = vec![pos!(100.0)];
 
@@ -1243,5 +1261,110 @@ mod tests_random_walk_iterator {
 
         let first_after_skip = iter.next().unwrap();
         assert_eq!(first_after_skip.underlying_price, pos!(102.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_curvable {
+    use super::*;
+    use crate::pos;
+    use crate::utils::time::TimeFrame;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test graph
+    fn create_test_graph() -> RandomWalkGraph {
+        let mut graph = RandomWalkGraph::new(
+            "Test".to_string(),
+            None, // risk_free_rate
+            None, // dividend_yield
+            TimeFrame::Day,
+            4,    // volatility_window
+            None, // initial_volatility
+        );
+
+        // Add some test values
+        graph.values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
+
+        graph
+    }
+
+    #[test]
+    fn test_curve_empty_graph() {
+        let graph = RandomWalkGraph::new("Empty".to_string(), None, None, TimeFrame::Day, 4, None);
+
+        let curve = graph.curve().unwrap();
+        assert_eq!(curve.points.len(), 0);
+    }
+
+    #[test]
+    fn test_curve_with_values() {
+        let graph = create_test_graph();
+        let curve = graph.curve().unwrap();
+
+        // Check number of points
+        assert_eq!(curve.points.len(), 5);
+
+        // Check specific points - they should be (index, value) pairs
+        let points: Vec<_> = curve.points.iter().collect();
+        assert_eq!(points[0].x, dec!(0));
+        assert_eq!(points[0].y, dec!(1.0));
+
+        assert_eq!(points[2].x, dec!(2));
+        assert_eq!(points[2].y, dec!(3.0));
+
+        assert_eq!(points[4].x, dec!(4));
+        assert_eq!(points[4].y, dec!(5.0));
+    }
+
+    #[test]
+    fn test_curve_ordering() {
+        let graph = create_test_graph();
+        let curve = graph.curve().unwrap();
+
+        // Points should be ordered by x coordinate
+        let points: Vec<_> = curve.points.iter().collect();
+        for i in 0..points.len() - 1 {
+            assert!(points[i].x < points[i + 1].x);
+        }
+    }
+
+    #[test]
+    fn test_curve_point_conversion() {
+        let mut graph = create_test_graph();
+        graph.values = vec![pos!(1.23), pos!(4.56)];
+
+        let curve = graph.curve().unwrap();
+        let points: Vec<_> = curve.points.iter().collect();
+
+        // Check decimal precision is maintained
+        assert_eq!(points[0].y, dec!(1.23));
+        assert_eq!(points[1].y, dec!(4.56));
+    }
+
+    #[test]
+    fn test_curve_large_values() {
+        let mut graph = create_test_graph();
+        graph.values = vec![pos!(1000000.0), pos!(2000000.0), pos!(3000000.0)];
+
+        let curve = graph.curve().unwrap();
+        let points: Vec<_> = curve.points.iter().collect();
+
+        // Check handling of large numbers
+        assert_eq!(points[0].y, dec!(1000000.0));
+        assert_eq!(points[1].y, dec!(2000000.0));
+        assert_eq!(points[2].y, dec!(3000000.0));
+    }
+
+    #[test]
+    fn test_curve_with_single_value() {
+        let mut graph = create_test_graph();
+        graph.values = vec![pos!(1.0)];
+
+        let curve = graph.curve().unwrap();
+        assert_eq!(curve.points.len(), 1);
+
+        let point = curve.points.iter().next().unwrap();
+        assert_eq!(point.x, dec!(0));
+        assert_eq!(point.y, dec!(1.0));
     }
 }
