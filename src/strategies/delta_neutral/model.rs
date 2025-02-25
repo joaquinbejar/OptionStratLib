@@ -353,7 +353,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             total_size += option.quantity;
             if delta.abs() > DELTA_THRESHOLD {
                 // Avoid division by zero
-                let adjustment = get_adjustment(net_delta, delta, option);
+                let adjustment = get_adjustment(net_delta, delta / option.quantity, option);
                 adjustments.push(adjustment);
             }
         }
@@ -415,16 +415,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
 
     fn apply_delta_adjustments(
         &mut self,
-        _action: Action,
-        side: Option<Side>,
-        option_style: Option<OptionStyle>,
+        action: Option<Action>,
     ) -> Result<(), Box<dyn Error>> {
         let delta_info = self.delta_neutrality()?;
         if delta_info.is_neutral {
             return Ok(());
         }
 
-        for adjustment in self.delta_adjustments().unwrap() {
+        for adjustment in self.delta_adjustments()? {
             match adjustment {
                 DeltaAdjustment::BuyUnderlying(quantity) => {
                     if side.is_none() || side == Some(Side::Long) {
