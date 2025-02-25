@@ -304,7 +304,7 @@ impl Positionable for BullCallSpread {
     ) -> Result<Vec<&mut Position>, PositionError> {
         match (side, option_style, strike) {
             (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Put is not valid for BearCallSpread".to_string(),
             )),
             (Side::Long, OptionStyle::Call, strike)
@@ -318,7 +318,7 @@ impl Positionable for BullCallSpread {
                 Ok(vec![&mut self.short_call])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -348,7 +348,7 @@ impl Positionable for BullCallSpread {
         ) {
             (_, OptionStyle::Put, _) => {
                 return Err(PositionError::invalid_position_type(
-                    position.option.side.clone(),
+                    position.option.side,
                     "Put is not valid for PoorMansCoveredCall".to_string(),
                 ))
             }
@@ -364,7 +364,7 @@ impl Positionable for BullCallSpread {
             }
             _ => {
                 return Err(PositionError::invalid_position_type(
-                    position.option.side.clone(),
+                    position.option.side,
                     "Strike not found in positions".to_string(),
                 ))
             }

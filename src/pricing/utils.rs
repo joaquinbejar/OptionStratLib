@@ -253,8 +253,8 @@ pub(crate) fn calculate_option_price(
     let info = PayoffInfo {
         spot: params.asset * u.powu(i as u64) * d.powi((params.no_steps - i) as i64),
         strike: params.strike,
-        style: params.option_style.clone(),
-        side: params.side.clone(),
+        style: *params.option_style,
+        side: *params.side,
         spot_prices: None,
         spot_min: None,
         spot_max: None,
@@ -287,8 +287,8 @@ pub(crate) fn calculate_discounted_payoff(
     let info = PayoffInfo {
         spot: params.asset * (params.int_rate * params.expiry).exp(),
         strike: params.strike,
-        style: params.option_style.clone(),
-        side: params.side.clone(),
+        style: *params.option_style,
+        side: *params.side,
         spot_prices: None,
         spot_min: None,
         spot_max: None,

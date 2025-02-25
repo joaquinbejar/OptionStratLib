@@ -407,7 +407,7 @@ impl Positionable for LongButterflySpread {
             }
 
             (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Put not found in positions".to_string(),
             )),
             (Side::Long, OptionStyle::Call, strike)
@@ -421,7 +421,7 @@ impl Positionable for LongButterflySpread {
                 Ok(vec![&mut self.long_call_high])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -457,7 +457,7 @@ impl Positionable for LongButterflySpread {
 
             (_, OptionStyle::Put, _) => {
                 return Err(PositionError::invalid_position_type(
-                    position.option.side.clone(),
+                    position.option.side,
                     "Put not found in positions".to_string(),
                 ))
             }
@@ -473,7 +473,7 @@ impl Positionable for LongButterflySpread {
             }
             _ => {
                 return Err(PositionError::invalid_position_type(
-                    position.option.side.clone(),
+                    position.option.side,
                     "Strike not found in positions".to_string(),
                 ))
             }
@@ -1327,7 +1327,7 @@ impl Positionable for ShortButterflySpread {
             }
 
             (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Put not found in positions".to_string(),
             )),
             (Side::Short, OptionStyle::Call, strike)
@@ -1341,7 +1341,7 @@ impl Positionable for ShortButterflySpread {
                 Ok(vec![&mut self.short_call_high])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -1377,7 +1377,7 @@ impl Positionable for ShortButterflySpread {
 
             (_, OptionStyle::Put, _) => {
                 return Err(PositionError::invalid_position_type(
-                    position.option.side.clone(),
+                    position.option.side,
                     "Put not found in positions".to_string(),
                 ))
             }
@@ -1393,7 +1393,7 @@ impl Positionable for ShortButterflySpread {
             }
             _ => {
                 return Err(PositionError::invalid_position_type(
-                    position.option.side.clone(),
+                    position.option.side,
                     "Strike not found in positions".to_string(),
                 ))
             }

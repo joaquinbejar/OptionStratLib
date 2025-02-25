@@ -274,8 +274,8 @@ impl Validable for PoorMansCoveredCall {
 impl Positionable for PoorMansCoveredCall {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (
-            position.option.option_style.clone(),
-            position.option.side.clone(),
+            position.option.option_style,
+            position.option.side,
         ) {
             (OptionStyle::Call, Side::Long) => {
                 self.long_call = position.clone();
@@ -286,7 +286,7 @@ impl Positionable for PoorMansCoveredCall {
                 Ok(())
             }
             _ => Err(PositionError::invalid_position_style(
-                position.option.option_style.clone(),
+                position.option.option_style,
                 "Position is a Put, it is not valid for PoorMansCoveredCall".to_string(),
             )),
         }
@@ -314,7 +314,7 @@ impl Positionable for PoorMansCoveredCall {
     ) -> Result<Vec<&mut Position>, PositionError> {
         match (side, option_style, strike) {
             (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Put is not valid for PoorMansCoveredCall".to_string(),
             )),
             (Side::Long, OptionStyle::Call, strike)
@@ -328,7 +328,7 @@ impl Positionable for PoorMansCoveredCall {
                 Ok(vec![&mut self.short_call])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -358,7 +358,7 @@ impl Positionable for PoorMansCoveredCall {
         ) {
             (_, OptionStyle::Put, _) => {
                 return Err(PositionError::invalid_position_type(
-                    position.option.side.clone(),
+                    position.option.side,
                     "Put is not valid for PoorMansCoveredCall".to_string(),
                 ))
             }
@@ -374,7 +374,7 @@ impl Positionable for PoorMansCoveredCall {
             }
             _ => {
                 return Err(PositionError::invalid_position_type(
-                    position.option.side.clone(),
+                    position.option.side,
                     "Strike not found in positions".to_string(),
                 ))
             }

@@ -365,8 +365,8 @@ impl Validable for IronCondor {
 impl Positionable for IronCondor {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (
-            position.option.option_style.clone(),
-            position.option.side.clone(),
+            position.option.option_style,
+            position.option.side,
         ) {
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
@@ -434,7 +434,7 @@ impl Positionable for IronCondor {
                 Ok(vec![&mut self.long_put])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -463,7 +463,7 @@ impl Positionable for IronCondor {
             && position.option.strike_price != self.short_put.option.strike_price
         {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Strike not found in positions".to_string(),
             ));
         }
@@ -2501,8 +2501,8 @@ mod tests_iron_condor_delta {
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2500.0));
         let size = dec!(0.18282752);
-        let delta1 = pos!(6.65987264937990580);
-        let delta2 = pos!(0.26277844096032370);
+        let delta1 = pos!(6.659_872_649_379_905);
+        let delta2 = pos!(0.262_778_440_960_323_7);
         let k1 = pos!(2725.0);
         let k2 = pos!(2560.0);
         assert_decimal_eq!(

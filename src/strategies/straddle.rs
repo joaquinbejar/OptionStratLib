@@ -326,7 +326,7 @@ impl Positionable for ShortStraddle {
     ) -> Result<Vec<&mut Position>, PositionError> {
         match (side, option_style, strike) {
             (Side::Long, _, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Position side is Long, it is not valid for ShortStraddle".to_string(),
             )),
             (Side::Short, OptionStyle::Call, strike)
@@ -340,7 +340,7 @@ impl Positionable for ShortStraddle {
                 Ok(vec![&mut self.short_put])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -365,7 +365,7 @@ impl Positionable for ShortStraddle {
 
         if position.option.side == Side::Long {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Position side is Long, it is not valid for ShortStraddle".to_string(),
             ));
         }
@@ -374,7 +374,7 @@ impl Positionable for ShortStraddle {
             && position.option.strike_price != self.short_put.option.strike_price
         {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Strike not found in positions".to_string(),
             ));
         }
@@ -1044,7 +1044,7 @@ impl Positionable for LongStraddle {
     ) -> Result<Vec<&mut Position>, PositionError> {
         match (side, option_style, strike) {
             (Side::Short, _, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Position side is Short, it is not valid for LongStraddle".to_string(),
             )),
             (Side::Long, OptionStyle::Call, strike)
@@ -1058,7 +1058,7 @@ impl Positionable for LongStraddle {
                 Ok(vec![&mut self.long_put])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -1083,7 +1083,7 @@ impl Positionable for LongStraddle {
 
         if position.option.side == Side::Short {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Position side is Short, it is not valid for LongStraddle".to_string(),
             ));
         }
@@ -1092,7 +1092,7 @@ impl Positionable for LongStraddle {
             && position.option.strike_price != self.long_put.option.strike_price
         {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Strike not found in positions".to_string(),
             ));
         }

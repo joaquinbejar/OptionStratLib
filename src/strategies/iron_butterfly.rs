@@ -365,8 +365,8 @@ impl Validable for IronButterfly {
 impl Positionable for IronButterfly {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (
-            position.option.option_style.clone(),
-            position.option.side.clone(),
+            position.option.option_style,
+            position.option.side,
         ) {
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
@@ -432,7 +432,7 @@ impl Positionable for IronButterfly {
                 Ok(vec![&mut self.long_put])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -461,7 +461,7 @@ impl Positionable for IronButterfly {
             && position.option.strike_price != self.short_put.option.strike_price
         {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Strike not found in positions".to_string(),
             ));
         }

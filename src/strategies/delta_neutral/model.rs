@@ -264,7 +264,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
 
         Ok(DeltaInfo {
             net_delta: self.delta()?,
-            individual_deltas: individual_deltas,
+            individual_deltas,
             is_neutral: self.is_delta_neutral(),
             underlying_price,
             neutrality_threshold: DELTA_THRESHOLD,
@@ -298,7 +298,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// # Returns
     /// * `Result<Vec<DeltaAdjustment>, GreeksError>` - Vector of suggested position adjustments
-    /// or error if calculations fail
+    ///   or error if calculations fail
     ///
     /// # Notes
     /// - Uses DELTA_THRESHOLD to determine if adjustments are needed
@@ -375,14 +375,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 DeltaAdjustment::BuyOptions {
                     quantity: Positive(size_diff1.abs()),
                     strike: options[0].strike_price,
-                    option_style: options[0].option_style.clone(),
+                    option_style: options[0].option_style,
                     side: options[0].side,
                 }
             } else {
                 DeltaAdjustment::SellOptions {
                     quantity: Positive(size_diff1.abs()),
                     strike: options[0].strike_price,
-                    option_style: options[0].option_style.clone(),
+                    option_style: options[0].option_style,
                     side: options[0].side,
                 }
             };
@@ -392,14 +392,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 DeltaAdjustment::BuyOptions {
                     quantity: Positive(size_diff2.abs()),
                     strike: options[1].strike_price,
-                    option_style: options[1].option_style.clone(),
+                    option_style: options[1].option_style,
                     side: options[1].side,
                 }
             } else {
                 DeltaAdjustment::SellOptions {
                     quantity: Positive(size_diff2.abs()),
                     strike: options[1].strike_price,
-                    option_style: options[1].option_style.clone(),
+                    option_style: options[1].option_style,
                     side: options[1].side,
                 }
             };

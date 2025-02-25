@@ -148,8 +148,8 @@ impl Options {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,
             strike: self.strike_price,
-            style: self.option_style.clone(),
-            side: self.side.clone(),
+            style: self.option_style,
+            side: self.side,
             spot_prices: None,
             spot_min: None,
             spot_max: None,
@@ -162,8 +162,8 @@ impl Options {
         let payoff_info = PayoffInfo {
             spot: price,
             strike: self.strike_price,
-            style: self.option_style.clone(),
-            side: self.side.clone(),
+            style: self.option_style,
+            side: self.side,
             spot_prices: None,
             spot_min: None,
             spot_max: None,
@@ -189,8 +189,8 @@ impl Options {
         let payoff_info = PayoffInfo {
             spot: underlying_price,
             strike: self.strike_price,
-            style: self.option_style.clone(),
-            side: self.side.clone(),
+            style: self.option_style,
+            side: self.side,
             spot_prices: None,
             spot_min: None,
             spot_max: None,

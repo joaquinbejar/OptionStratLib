@@ -289,7 +289,7 @@ impl Positionable for ShortStrangle {
                 Ok(())
             }
             _ => Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Position side is Long, it is not valid for ShortStrangle".to_string(),
             )),
         }
@@ -317,7 +317,7 @@ impl Positionable for ShortStrangle {
     ) -> Result<Vec<&mut Position>, PositionError> {
         match (side, option_style, strike) {
             (Side::Long, _, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Position side is Long, it is not valid for ShortStrangle".to_string(),
             )),
             (Side::Short, OptionStyle::Call, strike)
@@ -331,7 +331,7 @@ impl Positionable for ShortStrangle {
                 Ok(vec![&mut self.short_put])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -356,7 +356,7 @@ impl Positionable for ShortStrangle {
 
         if position.option.side == Side::Long {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Position side is Long, it is not valid for ShortStrangle".to_string(),
             ));
         }
@@ -365,7 +365,7 @@ impl Positionable for ShortStrangle {
             && position.option.strike_price != self.short_put.option.strike_price
         {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Strike not found in positions".to_string(),
             ));
         }
@@ -1055,7 +1055,7 @@ impl Positionable for LongStrangle {
                 Ok(())
             }
             _ => Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Position side is Short, it is not valid for LongStrangle".to_string(),
             )),
         }
@@ -1083,7 +1083,7 @@ impl Positionable for LongStrangle {
     ) -> Result<Vec<&mut Position>, PositionError> {
         match (side, option_style, strike) {
             (Side::Short, _, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Position side is Short, it is not valid for LongStrangle".to_string(),
             )),
             (Side::Long, OptionStyle::Call, strike)
@@ -1097,7 +1097,7 @@ impl Positionable for LongStrangle {
                 Ok(vec![&mut self.long_put])
             }
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -1122,7 +1122,7 @@ impl Positionable for LongStrangle {
 
         if position.option.side == Side::Short {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Position side is Short, it is not valid for LongStrangle".to_string(),
             ));
         }
@@ -1131,7 +1131,7 @@ impl Positionable for LongStrangle {
             && position.option.strike_price != self.long_put.option.strike_price
         {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Strike not found in positions".to_string(),
             ));
         }
@@ -3086,9 +3086,9 @@ mod tests_short_strangle_delta_size {
                     let mut temp_strategy = strategy.clone();
                     let result = temp_strategy.adjust_option_position(
                         quantity.to_dec(),
-                        &strike,
-                        &option_style,
-                        &side,
+                        strike,
+                        option_style,
+                        side,
                     );
                     assert!(result.is_ok());
                     assert!(temp_strategy.is_delta_neutral());
@@ -3108,9 +3108,9 @@ mod tests_short_strangle_delta_size {
                     let mut temp_strategy = strategy.clone();
                     let result = temp_strategy.adjust_option_position(
                         -quantity.to_dec(),
-                        &strike,
-                        &option_style,
-                        &side,
+                        strike,
+                        option_style,
+                        side,
                     );
                     assert!(result.is_ok());
                     assert!(temp_strategy.is_delta_neutral());
@@ -3201,7 +3201,7 @@ mod tests_short_strangle_delta_size {
         let k_call = pos!(7450.0);
 
         // let size_put = dec!(-0.1722170236744605883028172966);
-        let delta_put = pos!(0.34300038535628962);
+        let delta_put = pos!(0.343_000_385_356_289_6);
         let k_put = pos!(7250.0);
 
         assert_decimal_eq!(
@@ -3351,9 +3351,9 @@ mod tests_long_strangle_delta_size {
                     let mut temp_strategy = strategy.clone();
                     let result = temp_strategy.adjust_option_position(
                         quantity.to_dec(),
-                        &strike,
-                        &option_style,
-                        &side,
+                        strike,
+                        option_style,
+                        side,
                     );
                     assert!(result.is_ok());
                     assert!(temp_strategy.is_delta_neutral());
@@ -3373,9 +3373,9 @@ mod tests_long_strangle_delta_size {
                     let mut temp_strategy = strategy.clone();
                     let result = temp_strategy.adjust_option_position(
                         -quantity.to_dec(),
-                        &strike,
-                        &option_style,
-                        &side,
+                        strike,
+                        option_style,
+                        side,
                     );
                     assert!(result.is_ok());
                     assert!(temp_strategy.is_delta_neutral());

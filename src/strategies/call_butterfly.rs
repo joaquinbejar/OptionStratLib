@@ -388,11 +388,11 @@ impl Positionable for CallButterfly {
                 Ok(vec![&mut self.long_call])
             }
             (_, OptionStyle::Put, _) => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Put not found in positions".to_string(),
             )),
             _ => Err(PositionError::invalid_position_type(
-                side.clone(),
+                *side,
                 "Strike not found in positions".to_string(),
             )),
         }
@@ -420,14 +420,14 @@ impl Positionable for CallButterfly {
             && position.option.strike_price != self.short_call_high.option.strike_price
         {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Strike not found in positions".to_string(),
             ));
         }
 
         if position.option.option_style == OptionStyle::Put {
             return Err(PositionError::invalid_position_type(
-                position.option.side.clone(),
+                position.option.side,
                 "Put is not valid for CallButterfly".to_string(),
             ));
         }

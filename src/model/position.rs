@@ -83,7 +83,7 @@ impl Position {
         self.date = Utc::now();
         self.option.update_from_option_data(option_data);
 
-        match (self.option.side.clone(), self.option.option_style.clone()) {
+        match (self.option.side, self.option.option_style) {
             (Side::Long, OptionStyle::Call) => {
                 self.premium = option_data.call_ask.unwrap();
             }
