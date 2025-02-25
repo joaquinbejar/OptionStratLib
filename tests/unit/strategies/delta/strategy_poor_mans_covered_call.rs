@@ -1,6 +1,5 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
-use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::strategies::DELTA_THRESHOLD;
@@ -8,6 +7,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use optionstratlib::strategies::DeltaAdjustment::BuyOptions;
 
 #[test]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -61,13 +61,12 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 1);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
     let binding = strategy.delta_adjustments().unwrap();
-    let suggestion = binding.first().unwrap();
     let delta = pos!(3.415412207592464);
     let k = pos!(2800.0);
-    match suggestion {
-        SellOptions {
+    match &binding[1] {
+        BuyOptions {
             quantity,
             strike,
             option_style,

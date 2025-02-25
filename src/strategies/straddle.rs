@@ -2672,9 +2672,8 @@ mod tests_short_straddle_delta {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
-            DeltaAdjustment::SellOptions {
+        match &binding[0] {
+            DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,
@@ -2683,7 +2682,7 @@ mod tests_short_straddle_delta {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_style, OptionStyle::Call);
-                assert_eq!(*side, Side::Long);
+                assert_eq!(*side, Side::Short);
             }
             _ => panic!("Invalid suggestion"),
         }
@@ -2713,9 +2712,8 @@ mod tests_short_straddle_delta {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
-            DeltaAdjustment::SellOptions {
+        match &binding[1] {
+            DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,
@@ -2724,7 +2722,7 @@ mod tests_short_straddle_delta {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_style, OptionStyle::Put);
-                assert_eq!(*side, Side::Long);
+                assert_eq!(*side, Side::Short);
             }
             _ => panic!("Invalid suggestion"),
         }
@@ -2843,8 +2841,9 @@ mod tests_long_straddle_delta {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
+
+
+        match &binding[1] {
             DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
@@ -2935,9 +2934,9 @@ mod tests_short_straddle_delta_size {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
-            DeltaAdjustment::SellOptions {
+
+        match &binding[0] {
+            DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,
@@ -2946,7 +2945,7 @@ mod tests_short_straddle_delta_size {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_style, OptionStyle::Call);
-                assert_eq!(*side, Side::Long);
+                assert_eq!(*side, Side::Short);
             }
             _ => panic!("Invalid suggestion"),
         }
@@ -2977,9 +2976,9 @@ mod tests_short_straddle_delta_size {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
-            DeltaAdjustment::SellOptions {
+
+        match &binding[1] {
+            DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,
@@ -2988,7 +2987,7 @@ mod tests_short_straddle_delta_size {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_style, OptionStyle::Put);
-                assert_eq!(*side, Side::Long);
+                assert_eq!(*side, Side::Short);
             }
             _ => panic!("Invalid suggestion"),
         }
@@ -3108,8 +3107,8 @@ mod tests_long_straddle_delta_size {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
+
+        match &binding[1] {
             DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,

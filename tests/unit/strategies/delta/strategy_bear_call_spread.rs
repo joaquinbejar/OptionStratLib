@@ -50,22 +50,22 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
         dec!(0.6412),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
         dec!(-1.3416),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 1);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
     let binding = strategy.delta_adjustments().unwrap();
-    let suggestion = binding.first().unwrap();
     let delta = pos!(2.184538786861796);
     let k = pos!(5820.0);
-    match suggestion {
+
+    match &binding[1] {
         BuyOptions {
             quantity,
             strike,

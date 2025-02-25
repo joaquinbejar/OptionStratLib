@@ -60,12 +60,12 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
+        strategy.delta_neutrality().unwrap().individual_deltas[2].delta,
         dec!(0.2513),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 2);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
     let binding = strategy.delta_adjustments().unwrap();
     let suggestion = binding.first().unwrap();
     let delta = pos!(0.06699841451825994);
@@ -84,7 +84,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
             );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
             assert_eq!(*option_style, OptionStyle::Call);
-            assert_eq!(*side, optionstratlib::model::types::Side::Short);
+            assert_eq!(*side, optionstratlib::model::types::Side::Long);
 
         }
         _ => panic!("Invalid suggestion"),

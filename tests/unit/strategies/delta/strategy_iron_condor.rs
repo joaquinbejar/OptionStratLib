@@ -53,22 +53,21 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
+        strategy.delta_neutrality().unwrap().individual_deltas[2].delta,
         dec!(0.2492),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
+        strategy.delta_neutrality().unwrap().individual_deltas[3].delta,
         dec!(-0.1611),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 2);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 4);
     let binding = strategy.delta_adjustments().unwrap();
-    let suggestion = binding.first().unwrap();
     let delta = pos!(0.921345173469528);
     let k = pos!(2800.0);
-    match suggestion {
+    match &binding[2] {
         BuyOptions {
             quantity,
             strike,
@@ -82,7 +81,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
             );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
             assert_eq!(*option_style, OptionStyle::Call);
-            assert_eq!(*side, optionstratlib::model::types::Side::Short);
+            assert_eq!(*side, optionstratlib::model::types::Side::Long);
         }
         _ => panic!("Invalid suggestion"),
     }

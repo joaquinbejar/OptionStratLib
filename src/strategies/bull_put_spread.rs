@@ -2042,9 +2042,8 @@ mod tests_delta {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
-            DeltaAdjustment::SellOptions {
+        match &binding[1] {
+            DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,
@@ -2170,9 +2169,8 @@ mod tests_delta_size {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
-            DeltaAdjustment::SellOptions {
+        match &binding[1] {
+            DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,

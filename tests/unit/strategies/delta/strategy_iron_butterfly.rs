@@ -5,7 +5,7 @@ use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::iron_butterfly::IronButterfly;
 use optionstratlib::strategies::DELTA_THRESHOLD;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive};
+use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive, Side};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -53,22 +53,21 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     );
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
-        dec!(0.2492),
+        dec!(-0.5888889052),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
-        dec!(-0.1611),
+        dec!(1.4111110947),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 2);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 4);
 
     let binding = strategy.delta_adjustments().unwrap();
-    let suggestion = binding.first().unwrap();
     let delta = pos!(11.301514988575999);
     let k = pos!(2500.0);
-    match suggestion {
+    match &binding[3] {
         BuyOptions {
             quantity,
             strike,
@@ -82,7 +81,7 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
             );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
             assert_eq!(*option_style, OptionStyle::Put);
-            assert_eq!(*side, optionstratlib::model::types::Side::Short);
+            assert_eq!(*side, Side::Long);
         }
         _ => panic!("Invalid suggestion"),
     }

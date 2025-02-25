@@ -51,17 +51,17 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
         dec!(1.9189),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
         dec!(-0.6583),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 1);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
     let binding = strategy.delta_adjustments().unwrap();
     let suggestion = binding.first().unwrap();
     let delta = pos!(3.829496711654006);

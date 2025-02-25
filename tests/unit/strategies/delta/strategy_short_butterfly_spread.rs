@@ -59,18 +59,17 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
+        strategy.delta_neutrality().unwrap().individual_deltas[2].delta,
         dec!(-0.5914),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 1);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
 
     let binding = strategy.delta_adjustments().unwrap();
-    let suggestion = binding.first().unwrap();
     let delta = pos!(0.11409430831966512);
     let k = pos!(5780.0);
-    match suggestion {
+    match &binding[1] {
         DeltaAdjustment::BuyOptions {
             quantity,
             strike,

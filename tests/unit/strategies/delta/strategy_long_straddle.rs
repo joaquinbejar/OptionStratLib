@@ -60,7 +60,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 1);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
     let binding = strategy.delta_adjustments().unwrap();
     let suggestion = binding.first().unwrap();
     let delta = pos!(0.04693144355338067);
@@ -79,7 +79,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
             );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
             assert_eq!(*option_style, OptionStyle::Call);
-            assert_eq!(*side, optionstratlib::model::types::Side::Short);
+            assert_eq!(*side, optionstratlib::model::types::Side::Long);
         }
         _ => panic!("Invalid suggestion"),
     }
