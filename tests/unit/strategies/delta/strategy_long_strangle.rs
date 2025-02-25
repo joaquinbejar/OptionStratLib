@@ -50,12 +50,12 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().individual_deltas[0],
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
         dec!(0.41685408),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().individual_deltas[1],
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
         dec!(-0.416937),
         DELTA_THRESHOLD
     );

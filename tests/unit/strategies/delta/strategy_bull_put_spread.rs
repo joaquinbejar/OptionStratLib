@@ -51,12 +51,12 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().individual_deltas[0],
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
         dec!(1.9189),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().individual_deltas[1],
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
         dec!(-0.6583),
         DELTA_THRESHOLD
     );
@@ -71,6 +71,7 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
             quantity,
             strike,
             option_style,
+            side, 
         } => {
             assert_pos_relative_eq!(
                 *quantity,
@@ -79,6 +80,7 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
             );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
             assert_eq!(*option_style, OptionStyle::Put);
+            assert_eq!(*side, optionstratlib::model::types::Side::Long);
         }
         _ => panic!("Invalid suggestion"),
     }

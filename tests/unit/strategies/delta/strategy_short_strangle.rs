@@ -51,18 +51,17 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().individual_deltas[0],
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
         dec!(-0.4168540),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.delta_neutrality().individual_deltas[1],
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
         dec!(0.4169376),
         DELTA_THRESHOLD
     );
     assert!(strategy.is_delta_neutral());
     assert_eq!(strategy.delta_adjustments().unwrap().len(), 1);
-
     assert_eq!(strategy.delta_adjustments().unwrap()[0], NoAdjustmentNeeded);
 
     Ok(())

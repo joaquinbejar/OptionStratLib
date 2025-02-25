@@ -2236,8 +2236,8 @@ mod tests_delta {
         let strike = pos!(5820.0);
         let strategy = get_strategy(pos!(5800.0), strike);
         let size = dec!(-0.0971);
-        let delta = pos!(0.3029931694406447);
-        let k = pos!(5820.0);
+        let delta = pos!(0.23253626);
+        let k = pos!(5800.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -2247,7 +2247,7 @@ mod tests_delta {
         let binding = strategy.delta_adjustments().unwrap();
         let suggestion = binding.first().unwrap();
         match suggestion {
-            DeltaAdjustment::BuyOptions {
+            DeltaAdjustment::SellOptions {
                 quantity,
                 strike,
                 option_style,
@@ -2261,12 +2261,12 @@ mod tests_delta {
             _ => panic!("Invalid suggestion"),
         }
 
-        let mut option = strategy.long_call.option.clone();
+        let mut option = strategy.short_call.option.clone();
         option.quantity = delta;
         let delta = option.delta().unwrap();
-        assert_decimal_eq!(delta, -size, DELTA_THRESHOLD);
+        assert_decimal_eq!(delta, size, DELTA_THRESHOLD);
         assert_decimal_eq!(
-            delta + strategy.delta_neutrality().unwrap().net_delta,
+            delta - strategy.delta_neutrality().unwrap().net_delta,
             Decimal::ZERO,
             DELTA_THRESHOLD
         );

@@ -26,7 +26,7 @@ use crate::model::utils::mean_and_std;
 use crate::model::ProfitLossRange;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
@@ -2412,9 +2412,9 @@ mod tests_iron_condor_graph {
 #[cfg(test)]
 mod tests_iron_condor_delta {
     use super::*;
+    use crate::strategies::{DeltaAdjustment, DELTA_THRESHOLD};
     use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
-    use crate::strategies::DELTA_THRESHOLD;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
@@ -2461,7 +2461,7 @@ mod tests_iron_condor_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -2476,7 +2476,7 @@ mod tests_iron_condor_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
@@ -2520,7 +2520,7 @@ mod tests_iron_condor_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -2627,7 +2627,7 @@ mod tests_iron_condor_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -2642,7 +2642,7 @@ mod tests_iron_condor_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
@@ -2686,7 +2686,7 @@ mod tests_iron_condor_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -2701,7 +2701,7 @@ mod tests_iron_condor_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
