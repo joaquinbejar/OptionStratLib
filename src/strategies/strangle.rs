@@ -2779,8 +2779,8 @@ mod tests_short_strangle_delta {
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
         let size = dec!(0.086108);
-        let delta = pos!(0.207_000_884_203_610_32);
-        let k = pos!(7450.0);
+        let delta = pos!(0.171500192678);
+        let k = pos!(7250.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -2788,8 +2788,7 @@ mod tests_short_strangle_delta {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
+        match &binding[1] {
             DeltaAdjustment::SellOptions {
                 quantity,
                 strike,
@@ -2798,21 +2797,16 @@ mod tests_short_strangle_delta {
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
-                assert_eq!(*option_style, OptionStyle::Call);
-                assert_eq!(*side, Side::Long);
+                assert_eq!(*option_style, OptionStyle::Put);
+                assert_eq!(*side, Side::Short);
             }
             _ => panic!("Invalid suggestion"),
         }
 
-        let mut option = strategy.short_call.option.clone();
-        option.quantity = delta;
-        let delta = option.delta().unwrap();
-        assert_decimal_eq!(delta, -size, DELTA_THRESHOLD);
-        assert_decimal_eq!(
-            delta + strategy.delta_neutrality().unwrap().net_delta,
-            Decimal::ZERO,
-            DELTA_THRESHOLD
-        );
+        let  short_call = strategy.short_call.option.clone();
+        let mut short_put = strategy.short_put.option.clone();
+        short_put.quantity = short_put.quantity - delta.to_dec();
+        assert_decimal_eq!(short_call.delta().unwrap(), -short_put.delta().unwrap(), DELTA_THRESHOLD);
     }
 
     #[test]
@@ -2996,18 +2990,17 @@ mod tests_long_strangle_delta {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
+        match binding[1] {
             DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,
                 side
             } => {
-                assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
-                assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
-                assert_eq!(*option_style, OptionStyle::Put);
-                assert_eq!(*side, Side::Long);
+                assert_pos_relative_eq!(quantity, delta, Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(strike, k, Positive(DELTA_THRESHOLD));
+                assert_eq!(option_style, OptionStyle::Put);
+                assert_eq!(side, Side::Long);
             }
             _ => panic!("Invalid suggestion"),
         }
@@ -3043,7 +3036,7 @@ mod tests_long_strangle_delta {
 mod tests_short_strangle_delta_size {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::{Action, ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
@@ -3176,11 +3169,26 @@ mod tests_short_strangle_delta_size {
                 }
                 _ => panic!("Invalid suggestion"),
             }
-            
         };
+    }
 
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn create_test_apply_delta_adjustments() {
+        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let result = strategy.apply_delta_adjustments(Some(Action::Buy));
+        assert!(result.is_ok());
+        assert!(strategy.is_delta_neutral());
         
+        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let result = strategy.apply_delta_adjustments(Some(Action::Sell));
+        assert!(result.is_ok());
+        assert!(strategy.is_delta_neutral());
 
+        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let result = strategy.apply_delta_adjustments(None);
+        assert!(result.is_ok());
+        assert!(strategy.is_delta_neutral());
     }
 
     #[test]
@@ -3192,7 +3200,7 @@ mod tests_short_strangle_delta_size {
         let delta_call = pos!(0.4140017684072);
         let k_call = pos!(7450.0);
 
-        let size_put = dec!(-0.1722170236744605883028172966);
+        // let size_put = dec!(-0.1722170236744605883028172966);
         let delta_put = pos!(0.34300038535628962);
         let k_put = pos!(7250.0);
 
@@ -3204,8 +3212,6 @@ mod tests_short_strangle_delta_size {
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
         let first_suggestion = binding.first().unwrap();
-        println!("{:?}", strategy.delta_neutrality().unwrap());
-        println!("{:?}", first_suggestion);
         match first_suggestion {
             DeltaAdjustment::BuyOptions {
                 quantity,
@@ -3221,61 +3227,11 @@ mod tests_short_strangle_delta_size {
             _ => panic!("Invalid suggestion"),
         }
 
-        let mut option = strategy.short_call.option.clone();
-        option.quantity += delta_call;
-        let delta_put_temp = strategy.short_put.option.delta().unwrap();
-        let delta = option.delta().unwrap();
-        assert_decimal_eq!(delta, -delta_put_temp, DELTA_THRESHOLD);
-        assert_decimal_eq!(
-            delta + strategy.delta_neutrality().unwrap().net_delta,
-            Decimal::ZERO,
-            DELTA_THRESHOLD
-        );
-        println!(
-            "Delta: {} {} {}",
-            delta,
-            strategy.delta_neutrality().unwrap().net_delta,
-            delta + strategy.delta_neutrality().unwrap().net_delta
-        );
+        let mut short_call = strategy.short_call.option.clone();
+        short_call.quantity += delta_call;
+        let short_put = strategy.short_put.option.clone();
+        assert_decimal_eq!(short_call.delta().unwrap(), -short_put.delta().unwrap(), DELTA_THRESHOLD);
         
-        // let last_suggestion = binding.last().unwrap();
-        // println!("{:?}", last_suggestion);
-        // match last_suggestion {
-        //     DeltaAdjustment::BuyOptions {
-        //         quantity,
-        //         strike,
-        //         option_style,
-        //         side, 
-        //     } => {
-        //         assert_pos_relative_eq!(*quantity, delta_put, Positive(DELTA_THRESHOLD));
-        //         assert_pos_relative_eq!(*strike, k_put, Positive(DELTA_THRESHOLD));
-        //         assert_eq!(*option_style, OptionStyle::Put);
-        //         assert_eq!(*side, Side::Long);
-        //     }
-        //     _ => panic!("Invalid suggestion"),
-        // }
-
-        // let mut option = strategy.short_put.option.clone();
-        // option.quantity = delta_put;
-        // let delta = option.delta().unwrap();
-        // assert_decimal_eq!(delta, -size_put, DELTA_THRESHOLD);
-        // println!(
-        //     "Delta: {} {} {}",
-        //     delta,
-        //     strategy.delta_neutrality().unwrap().net_delta,
-        //     delta - strategy.delta_neutrality().unwrap().net_delta
-        // );
-        // 
-        // println!("Delta: {}", strategy.delta_neutrality().unwrap());
-        // assert_decimal_eq!(
-        //     delta - strategy.delta_neutrality().unwrap().net_delta,
-        //     Decimal::ZERO,
-        //     DELTA_THRESHOLD
-        // );
-
-        println!("Put Delta {}", strategy.short_put.option.delta().unwrap());
-        println!("Call Delta {}", strategy.short_call.option.delta().unwrap());
-
         let result = strategy.adjust_option_position(
             -delta_put.to_dec(),
             &k_put,
@@ -3300,9 +3256,8 @@ mod tests_short_strangle_delta_size {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
-            DeltaAdjustment::SellOptions {
+        match &binding[1] {
+            DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,
@@ -3311,7 +3266,7 @@ mod tests_short_strangle_delta_size {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_style, OptionStyle::Put);
-                assert_eq!(*side, Side::Long);
+                assert_eq!(*side, Side::Short);
             }
             _ => panic!("Invalid suggestion"),
         }
@@ -3347,7 +3302,7 @@ mod tests_short_strangle_delta_size {
 mod tests_long_strangle_delta_size {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::{Action, ExpirationDate, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
@@ -3373,6 +3328,132 @@ mod tests_long_strangle_delta_size {
             pos!(7.01),     // open_fee_short_put
             pos!(7.01),     // close_fee_short_put
         )
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn create_test_apply_adjustments() {
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let binding = strategy.delta_adjustments().unwrap();
+        for suggestion in binding.iter() {
+            match suggestion {
+                DeltaAdjustment::BuyOptions {
+                    quantity,
+                    strike,
+                    option_style,
+                    side,
+                } => {
+                    assert_pos_relative_eq!(*quantity, pos!(0.41400176840722), Positive(DELTA_THRESHOLD));
+                    assert_pos_relative_eq!(*strike, pos!(7450.0), Positive(DELTA_THRESHOLD));
+                    assert_eq!(*option_style, OptionStyle::Call);
+                    assert_eq!(*side, Side::Long);
+
+                    let mut temp_strategy = strategy.clone();
+                    let result = temp_strategy.adjust_option_position(
+                        quantity.to_dec(),
+                        &strike,
+                        &option_style,
+                        &side,
+                    );
+                    assert!(result.is_ok());
+                    assert!(temp_strategy.is_delta_neutral());
+
+                },
+                DeltaAdjustment::SellOptions {
+                    quantity,
+                    strike,
+                    option_style,
+                    side,
+                } => {
+                    assert_pos_relative_eq!(*quantity, pos!(0.3430003853562), Positive(DELTA_THRESHOLD));
+                    assert_pos_relative_eq!(*strike, pos!(7250.0), Positive(DELTA_THRESHOLD));
+                    assert_eq!(*option_style, OptionStyle::Put);
+                    assert_eq!(*side, Side::Long);
+
+                    let mut temp_strategy = strategy.clone();
+                    let result = temp_strategy.adjust_option_position(
+                        -quantity.to_dec(),
+                        &strike,
+                        &option_style,
+                        &side,
+                    );
+                    assert!(result.is_ok());
+                    assert!(temp_strategy.is_delta_neutral());
+                },
+                DeltaAdjustment::SameSize(first, second) => {
+                    let call_short_qty = match **first {
+                        DeltaAdjustment::BuyOptions {
+                            quantity,
+                            strike,
+                            option_style,
+                            side,
+                        } => {
+                            assert_pos_relative_eq!(quantity, pos!(0.1875856830735), Positive(DELTA_THRESHOLD));
+                            assert_pos_relative_eq!(strike, pos!(7450.0), Positive(DELTA_THRESHOLD));
+                            assert_eq!(option_style, OptionStyle::Call);
+                            assert_eq!(side, Side::Long);
+                            quantity
+                        },
+                        _ => panic!("Invalid first adjustment"),
+                    };
+                    let put_short_qty =match **second {
+                        DeltaAdjustment::SellOptions {
+                            quantity,
+                            strike,
+                            option_style,
+                            side,
+                        } => {
+                            assert_pos_relative_eq!(quantity, pos!(0.187585683073), Positive(DELTA_THRESHOLD));
+                            assert_pos_relative_eq!(strike, pos!(7250.0), Positive(DELTA_THRESHOLD));
+                            assert_eq!(option_style, OptionStyle::Put);
+                            assert_eq!(side, Side::Long);
+                            quantity
+                        }
+                        _ => {
+                            panic!("Invalid suggestion")
+                        }
+                    };
+
+                    let mut temp_strategy = strategy.clone();
+                    let result = temp_strategy.adjust_option_position(
+                        call_short_qty.to_dec(),
+                        &pos!(7450.0),
+                        &OptionStyle::Call,
+                        &Side::Long,
+                    );
+                    assert!(result.is_ok());
+                    let result = temp_strategy.adjust_option_position(
+                        -put_short_qty.to_dec(),
+                        &pos!(7250.0),
+                        &OptionStyle::Put,
+                        &Side::Long,
+                    );
+                    assert!(result.is_ok());
+                    assert!(temp_strategy.is_delta_neutral());
+
+                }
+                _ => panic!("Invalid suggestion"),
+            }
+        };
+    }
+
+    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    fn create_test_apply_delta_adjustments() {
+        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let result = strategy.apply_delta_adjustments(Some(Action::Buy));
+        assert!(result.is_ok());
+        assert!(strategy.is_delta_neutral());
+
+        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let result = strategy.apply_delta_adjustments(Some(Action::Sell));
+        assert!(result.is_ok());
+        assert!(strategy.is_delta_neutral());
+
+        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let result = strategy.apply_delta_adjustments(None);
+        assert!(result.is_ok());
+        assert!(strategy.is_delta_neutral());
     }
 
     #[test]
@@ -3422,8 +3503,8 @@ mod tests_long_strangle_delta_size {
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
         let size = dec!(0.244340);
-        let delta = pos!(0.5848105371755788);
-        let k = pos!(7050.0);
+        let delta = pos!(0.452497797238);
+
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -3431,28 +3512,30 @@ mod tests_long_strangle_delta_size {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        let suggestion = binding.first().unwrap();
-        match suggestion {
-            DeltaAdjustment::BuyOptions {
+        let first_suggestion = binding.first().unwrap();
+        
+        match first_suggestion {
+            DeltaAdjustment::SellOptions {
                 quantity,
                 strike,
                 option_style,
                 side, 
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
-                assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
-                assert_eq!(*option_style, OptionStyle::Put);
+                assert_pos_relative_eq!(*strike, pos!(7150.0), Positive(DELTA_THRESHOLD));
+                assert_eq!(*option_style, OptionStyle::Call);
                 assert_eq!(*side, Side::Long);
             }
             _ => panic!("Invalid suggestion"),
         }
+        
 
-        let mut option = strategy.long_put.option.clone();
+        let mut option = strategy.long_call.option.clone();
         option.quantity = delta;
         let delta = option.delta().unwrap();
-        assert_decimal_eq!(delta, -size, DELTA_THRESHOLD);
+        assert_decimal_eq!(delta, size, DELTA_THRESHOLD);
         assert_decimal_eq!(
-            delta + strategy.delta_neutrality().unwrap().net_delta,
+            delta - strategy.delta_neutrality().unwrap().net_delta,
             Decimal::ZERO,
             DELTA_THRESHOLD
         );
