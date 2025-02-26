@@ -33,4 +33,7 @@
 //!
 mod model;
 
-pub use model::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DeltaPositionInfo, DELTA_THRESHOLD, DeltaNeutralResponse};
+pub use model::{
+    DeltaAdjustment, DeltaInfo, DeltaNeutralResponse, DeltaNeutrality, DeltaPositionInfo,
+    DELTA_THRESHOLD,
+};

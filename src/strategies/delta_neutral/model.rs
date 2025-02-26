@@ -908,17 +908,16 @@ mod tests_serialization {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{pos, ExpirationDate};
     use crate::strategies::ShortStrangle;
+    use crate::{pos, ExpirationDate};
 
     #[test]
     fn test_delta_response_serialization() {
-
         let strategy = ShortStrangle::new(
             "CL".to_string(),
             pos!(7250.0), // underlying_price
-            pos!(7450.0),     // call_strike
-            pos!(7050.0),     // put_strike
+            pos!(7450.0), // call_strike
+            pos!(7050.0), // put_strike
             ExpirationDate::Days(pos!(45.0)),
             pos!(0.3745),   // implied_volatility
             dec!(0.05),     // risk_free_rate
@@ -937,10 +936,9 @@ mod tests {
             delta_info,
             adjustments,
         };
-        
+
         // serialize and pretty print
         let serialized = serde_json::to_string_pretty(&response).unwrap();
         println!("{}", serialized);
-
     }
 }

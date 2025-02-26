@@ -8,7 +8,12 @@ use crate::error::StrategyError;
 use crate::greeks::Greeks;
 use crate::model::Position;
 use crate::strategies::base::StrategyType;
-use crate::strategies::{BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy, DeltaNeutrality, IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategies, StrategyConstructor};
+use crate::strategies::{
+    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy,
+    DeltaNeutrality, IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle,
+    PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategies,
+    StrategyConstructor,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
