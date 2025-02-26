@@ -24,10 +24,13 @@ use plotters::prelude::{
 use plotters::style::Color;
 #[cfg(target_arch = "wasm32")]
 use plotters_canvas::CanvasBackend;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use std::collections::{BTreeSet, HashMap};
 use std::error::Error;
 use std::sync::Arc;
+use num_traits::{FromPrimitive, ToPrimitive};
+use crate::pnl::model::PnLRange;
+use crate::risk::RiskMetricsSimulation;
 
 /// Represents the configuration for a random walk simulation.
 ///
@@ -532,11 +535,233 @@ impl Simulator {
         Ok(())
     }
 
-    pub fn simulate_strategy<S, T>(&self, _strategy: S) -> Result<SimulationResult, Box<dyn Error>>
+    /// Simulates the performance of a strategy across all random walks.
+    ///
+    /// This method runs a Monte Carlo simulation using the random walks generated in the simulator
+    /// and evaluates the performance of the provided strategy.
+    ///
+    /// # Parameters
+    /// - `strategy`: An immutable reference to a strategy implementing the Strategable trait
+    ///
+    /// # Returns
+    /// - `Ok(SimulationResult)`: A structured result containing risk metrics and performance statistics
+    /// - `Err(Box<dyn Error>)`: If the simulation fails due to insufficient data or calculation errors
+    ///
+    /// # Type Parameters
+    /// - `S`: The concrete strategy type that implements Strategable
+    /// - `T`: The associated Strategy type from the Strategable trait
+    pub fn simulate_strategy<S, T>(&self, strategy: S) -> Result<SimulationResult, Box<dyn Error>>
     where
         S: Strategable<Strategy = T>,
     {
-        todo!()
+        // Verify that walks exist for the simulation
+        if self.walks.is_empty() {
+            return Err("No walks available for strategy simulation".into());
+        }
+
+        // Get simulation configuration
+        let iterations = self.walks.len();
+        let risk_free_rate = self.config.risk_free_rate.unwrap_or(Decimal::ZERO);
+
+        // Arrays to store simulation results
+        let mut profits = Vec::with_capacity(iterations);
+        let mut max_drawdowns = Vec::with_capacity(iterations);
+
+        // For each walk in the simulation (treating each walk as one iteration)
+        for (_, walk) in &self.walks {
+            // Get the points from this walk
+            let points = walk.get_points();
+            if points.is_empty() {
+                return Err("Walk contains no points for simulation".into());
+            }
+
+            // Extract the final price from the walk
+            let final_price = points.last().unwrap().coordinates.1;
+            let final_price_positive = final_price;
+
+            // Calculate the PnL at expiration for this price path
+            let pnl = strategy.calculate_profit_at(final_price_positive)?;
+            profits.push(pnl);
+
+            // Calculate maximum drawdown for this path
+            let mut max_price = Positive::ZERO;
+            let mut max_drawdown = Positive::ZERO;
+
+            for point in points {
+                let price = point.coordinates.1;
+
+                // Skip if price is zero or negative (shouldn't happen with stock prices)
+                if price <= Decimal::ZERO {
+                    continue;
+                }
+
+                // Update maximum price seen so far
+                if price > max_price {
+                    max_price = price;
+                }
+                // Calculate drawdown if current price is below maximum
+                else if max_price > Decimal::ZERO {
+                    let drawdown = (max_price - price) / max_price;
+                    if drawdown > max_drawdown {
+                        max_drawdown = drawdown;
+                    }
+                }
+            }
+
+            max_drawdowns.push(max_drawdown);
+        }
+
+        // Sort results for statistical calculations
+        profits.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Calculate basic statistics
+        let profit_count = profits.iter().filter(|&&p| p > Decimal::ZERO).count();
+        let loss_count = iterations - profit_count;
+
+        let profit_probability = Decimal::from_f64((profit_count as f64 / iterations as f64) * 100.0)
+            .unwrap_or(Decimal::ZERO);
+        let loss_probability = Decimal::from_f64(100.0).unwrap_or(Decimal::ZERO) - profit_probability;
+
+        let max_profit = *profits.last().unwrap_or(&Decimal::ZERO);
+        let max_loss = profits.first().map(|&p| p.abs()).unwrap_or(Decimal::ZERO);
+
+        // Calculate average PnL
+        let sum: Decimal = profits.iter().sum();
+        let average_pnl = if iterations > 0 { sum / Decimal::from(iterations) } else { Decimal::ZERO };
+
+        // Calculate standard deviation
+        let variance_sum: Decimal = profits
+            .iter()
+            .map(|&p| (p - average_pnl).powu(2))
+            .sum();
+
+        let pnl_std_dev = Decimal::from_f64(
+            (variance_sum / Decimal::from(iterations))
+                .to_f64()
+                .unwrap_or(0.0)
+                .sqrt(),
+        )
+            .unwrap_or(Decimal::ZERO);
+
+        // Calculate Value at Risk (VaR) and Conditional VaR (CVaR)
+        let var_95_index = (iterations as f64 * 0.05) as usize;
+        let var_99_index = (iterations as f64 * 0.01) as usize;
+
+        // Handle edge cases for small number of iterations
+        let var_95 = if var_95_index < profits.len() {
+            -profits[var_95_index]
+        } else {
+            Decimal::ZERO
+        };
+
+        let var_99 = if var_99_index < profits.len() {
+            -profits[var_99_index]
+        } else {
+            Decimal::ZERO
+        };
+
+        // Calculate CVaR (Expected Shortfall)
+        let cvar_95 = if var_95_index > 0 {
+            let cvar_95_sum: Decimal = profits.iter().take(var_95_index).sum();
+            -cvar_95_sum / Decimal::from(var_95_index)
+        } else {
+            Decimal::ZERO
+        };
+
+        // Calculate probability of severe loss (>50% of investment)
+        // Assuming we can get this from the strategy
+        let severe_loss_threshold = Decimal::from_f64(0.5).unwrap_or(Decimal::ZERO);
+
+        let severe_loss_count = profits
+            .iter()
+            .filter(|&&p| p < -severe_loss_threshold)
+            .count();
+
+        let severe_loss_probability = Decimal::from_f64(
+            (severe_loss_count as f64 / iterations as f64) * 100.0
+        ).unwrap_or(Decimal::ZERO);
+
+        // Calculate Sharpe Ratio
+        let sharpe_ratio = if pnl_std_dev > Decimal::ZERO {
+            (average_pnl - risk_free_rate) / pnl_std_dev
+        } else {
+            Decimal::ZERO
+        };
+
+        // Create PnL distribution for histogram
+        let mut pnl_distribution = HashMap::new();
+
+        // Convert to i32 for histogram ranges
+        let min_pnl = (profits.first().copied().unwrap_or(Decimal::ZERO).to_f64().unwrap_or(0.0) * 100.0) as i32;
+        let max_pnl = (profits.last().copied().unwrap_or(Decimal::ZERO).to_f64().unwrap_or(0.0) * 100.0) as i32;
+
+        // Create buckets for histogram
+        let num_buckets = 20;
+        let bucket_size = if max_pnl > min_pnl {
+            ((max_pnl - min_pnl) / num_buckets).max(1)
+        } else {
+            1
+        };
+
+        for i in 0..num_buckets {
+            let lower = min_pnl + i * bucket_size;
+            let upper = lower + bucket_size;
+            let range = PnLRange { lower, upper };
+
+            let count = profits
+                .iter()
+                .filter(|&&p| {
+                    let p_int = (p.to_f64().unwrap_or(0.0) * 100.0) as i32;
+                    p_int >= lower && p_int < upper
+                })
+                .count();
+
+            let probability = Decimal::from_f64(count as f64 / iterations as f64)
+                .unwrap_or(Decimal::ZERO);
+
+            pnl_distribution.insert(range, probability);
+        }
+
+        // Convert values to specific types
+        let profit_probability_positive = Positive::from(profit_probability);
+
+        let loss_probability_positive = Positive::from(loss_probability);
+
+        let max_profit_positive = Positive::from(max_profit);
+
+        let max_loss_positive = Positive::from(max_loss);
+
+        let pnl_std_dev_positive = Positive::from(pnl_std_dev);
+
+        let severe_loss_probability_positive = Positive::from(severe_loss_probability);
+
+        let max_drawdown_positive = Positive::new(
+                max_drawdowns.iter()
+                    .fold(0.0, |max, &d| f64::max(max, d.to_f64())) * 100.0
+        )?;
+
+        // Build and return the simulation result
+        let result = SimulationResult {
+            iterations: iterations as u32,
+            profit_probability: profit_probability_positive,
+            loss_probability: loss_probability_positive,
+            max_profit: max_profit_positive,
+            max_loss: max_loss_positive,
+            average_pnl: average_pnl,
+            pnl_std_dev: pnl_std_dev_positive,
+            risk_levels: RiskMetricsSimulation {
+                var_95,
+                var_99,
+                cvar_95,
+                severe_loss_probability: severe_loss_probability_positive,
+                max_drawdown: max_drawdown_positive,
+                sharpe_ratio,
+            },
+            pnl_distribution,
+            additional_metrics: HashMap::new(),
+        };
+
+        Ok(result)
     }
 }
 
