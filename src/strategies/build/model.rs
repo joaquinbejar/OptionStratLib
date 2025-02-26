@@ -8,12 +8,7 @@ use crate::error::StrategyError;
 use crate::greeks::Greeks;
 use crate::model::Position;
 use crate::strategies::base::StrategyType;
-use crate::strategies::{
-    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy,
-    IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle,
-    PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategies,
-    StrategyConstructor,
-};
+use crate::strategies::{BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy, DeltaNeutrality, IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategies, StrategyConstructor};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -22,8 +17,8 @@ pub struct StrategyRequest {
     pub positions: Vec<Position>,
 }
 
-pub trait StrategyWithGreeks: Strategies + Greeks {}
-impl<T: Strategies + Greeks> StrategyWithGreeks for T {}
+pub trait StrategyWithGreeks: Strategies + Greeks + DeltaNeutrality {}
+impl<T: Strategies + Greeks + DeltaNeutrality> StrategyWithGreeks for T {}
 
 impl StrategyRequest {
     pub fn new(strategy_type: StrategyType, positions: Vec<Position>) -> Self {
