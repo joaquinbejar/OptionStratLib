@@ -16,7 +16,7 @@ Key characteristics:
 - All options must have same expiration date
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -483,8 +483,8 @@ impl Positionable for LongButterflySpread {
     }
 }
 
-impl StrategyBasic for LongButterflySpread {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for LongButterflySpread {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),
@@ -1403,8 +1403,8 @@ impl Positionable for ShortButterflySpread {
     }
 }
 
-impl StrategyBasic for ShortButterflySpread {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for ShortButterflySpread {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),

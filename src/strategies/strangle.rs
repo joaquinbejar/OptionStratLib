@@ -10,7 +10,7 @@ Key characteristics:
 - Requires a larger price move to become profitable
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyBasics,
+    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyBasics,
     StrategyType, Validable,
 };
 use crate::chains::chain::OptionChain;
@@ -382,8 +382,8 @@ impl Positionable for ShortStrangle {
     }
 }
 
-impl StrategyBasic for ShortStrangle {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for ShortStrangle {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),
@@ -1148,8 +1148,8 @@ impl Positionable for LongStrangle {
     }
 }
 
-impl StrategyBasic for LongStrangle {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for LongStrangle {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),

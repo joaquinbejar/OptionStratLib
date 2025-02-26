@@ -21,7 +21,7 @@ pub trait StrategyConstructor: Strategies + Greeks {
 mod tests {
     use super::*;
     use crate::error::{GreeksError, StrategyError};
-    use crate::strategies::base::{BreakEvenable, Positionable, StrategyBasic, Validable};
+    use crate::strategies::base::{BreakEvenable, Positionable, Validable};
     use crate::strategies::Strategies;
     use crate::Options;
 
@@ -34,8 +34,6 @@ mod tests {
     impl Positionable for TestStrategy {}
 
     impl BreakEvenable for TestStrategy {}
-
-    impl StrategyBasic for TestStrategy {}
 
     impl Strategies for TestStrategy {}
 
@@ -64,8 +62,6 @@ mod tests {
     impl Positionable for ValidStrategy {}
 
     impl BreakEvenable for ValidStrategy {}
-
-    impl StrategyBasic for ValidStrategy {}
 
     impl Strategies for ValidStrategy {}
 

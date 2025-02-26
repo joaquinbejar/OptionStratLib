@@ -27,7 +27,7 @@ use crate::model::{Position, ProfitLossRange};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::Profit;
 use crate::strategies::base::{
-    BreakEvenable, Optimizable, Positionable, StrategyBasic, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyType, Validable,
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
@@ -369,8 +369,8 @@ impl Positionable for BearPutSpread {
     }
 }
 
-impl StrategyBasic for BearPutSpread {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for BearPutSpread {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),

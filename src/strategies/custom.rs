@@ -14,7 +14,7 @@ use crate::model::{Position, ProfitLossRange};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{
-    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
@@ -318,8 +318,8 @@ impl Positionable for CustomStrategy {
     }
 }
 
-impl StrategyBasic for CustomStrategy {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for CustomStrategy {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),

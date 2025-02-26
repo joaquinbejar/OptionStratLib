@@ -120,7 +120,7 @@
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::Positive;
 //! use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
-//! use optionstratlib::strategies::StrategyBasic;
+//! use optionstratlib::strategies::Strategable;
 //!
 //! struct MyStrategy {
 //!     legs: Vec<Position>,
@@ -144,11 +144,7 @@
 //!     }
 //! }
 //!
-//!
 //! impl BreakEvenable for MyStrategy {}
-//!
-//!
-//! impl StrategyBasic for MyStrategy {}
 //!
 //! impl Strategies for MyStrategy {}
 //! ```
@@ -220,7 +216,7 @@ pub use butterfly_spread::{LongButterflySpread, ShortButterflySpread};
 pub use call_butterfly::CallButterfly;
 // pub use collar::Collar;
 // pub use covered_call::CoveredCall;
-pub use base::{StrategyBasic, StrategyBasics};
+pub use base::{Strategable, StrategyBasics};
 pub use build::model::StrategyRequest;
 pub use build::traits::StrategyConstructor;
 pub use custom::CustomStrategy;

@@ -8,7 +8,9 @@ mod test_simulator;
 
 use crate::curves::Curvable;
 use crate::error::SurfaceError;
+use crate::simulation::model::SimulationResult;
 use crate::simulation::{RandomWalkGraph, Walkable};
+use crate::strategies::Strategable;
 use crate::surfaces::{Point3D, Surfacable, Surface};
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::{random_color, GraphBackend};
@@ -69,7 +71,7 @@ use std::sync::Arc;
 ///
 /// # Example Use Cases
 ///
-/// - Configuring a simulation for a geometric Brownian motion model of asset prices.
+/// - Configuring a simulation for a geometric Brownian motion model of asset.
 /// - Applying a stochastic volatility process with an initial baseline volatility.
 /// - Managing simulation parameters across multiple timeframes for comparative analysis.
 ///
@@ -247,7 +249,7 @@ impl WalkId {
 /// - `correlations`:
 ///     - An optional field containing a hash map of tuples of [`WalkId`] pairs to their correlation coefficients (`f64`).
 ///     - This is useful for analyzing relationships between different random walks managed by the simulator,
-///       such as simulating correlated price paths for financial assets.
+///       such as simulating correlated paths for financial assets.
 ///
 /// ## Use Case
 ///
@@ -372,7 +374,7 @@ impl Simulator {
     ///
     /// # Parameters
     /// - `n_steps`: The number of steps in the random walk.
-    /// - `initial_prices`: A map of initial prices for each random walk.
+    /// - `initial`: A map of initial for each random walk.
     /// - `mean`: The mean of the random walk.
     /// - `std_dev`: The standard deviation of the random walk.
     /// - `std_dev_change`: The standard deviation of volatility changes.
@@ -383,7 +385,7 @@ impl Simulator {
     pub fn generate_random_walks(
         &mut self,
         n_steps: usize,
-        initial_prices: &HashMap<WalkId, Positive>,
+        initial: &HashMap<WalkId, Positive>,
         mean: f64,
         std_dev: Positive,
         std_dev_change: Positive,
@@ -392,10 +394,10 @@ impl Simulator {
             .walks
             .iter_mut()
             .map(|(id, walk)| {
-                let initial_price = initial_prices
+                let first = initial
                     .get(id)
-                    .ok_or_else(|| format!("No initial price provided for walk {}", id.as_str()))?;
-                walk.generate_random_walk(n_steps, *initial_price, mean, std_dev, std_dev_change)
+                    .ok_or_else(|| format!("No initial provided for walk {}", id.as_str()))?;
+                walk.generate_random_walk(n_steps, *first, mean, std_dev, std_dev_change)
             })
             .collect();
         results?;
@@ -528,6 +530,13 @@ impl Simulator {
 
         root.present()?;
         Ok(())
+    }
+
+    pub fn simulate_strategy<S, T>(&self, _strategy: S) -> Result<SimulationResult, Box<dyn Error>>
+    where
+        S: Strategable<Strategy = T>,
+    {
+        todo!()
     }
 }
 

@@ -28,7 +28,7 @@ Key characteristics:
 - Both options have same expiration date
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -388,8 +388,8 @@ impl Positionable for BearCallSpread {
     }
 }
 
-impl StrategyBasic for BearCallSpread {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for BearCallSpread {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),

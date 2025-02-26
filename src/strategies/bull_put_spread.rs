@@ -15,7 +15,7 @@ Key characteristics:
 - Also known as a vertical put credit spread
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -376,8 +376,8 @@ impl Positionable for BullPutSpread {
     }
 }
 
-impl StrategyBasic for BullPutSpread {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for BullPutSpread {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),

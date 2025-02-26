@@ -10,7 +10,7 @@ Key characteristics:
 - Profitable only with a large move in either direction
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -391,8 +391,8 @@ impl Positionable for ShortStraddle {
     }
 }
 
-impl StrategyBasic for ShortStraddle {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for ShortStraddle {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),
@@ -1109,8 +1109,8 @@ impl Positionable for LongStraddle {
     }
 }
 
-impl StrategyBasic for LongStraddle {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for LongStraddle {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),

@@ -174,8 +174,10 @@
 //! - Thread-safe random number generation
 //! - Supports various time frames (daily, weekly, monthly)
 
+mod model;
 mod simulator;
 pub mod walk;
 
+pub use model::SimulationResult;
 pub use simulator::{SimulationConfig, Simulator, WalkId};
 pub use walk::{RandomWalkGraph, Walkable};

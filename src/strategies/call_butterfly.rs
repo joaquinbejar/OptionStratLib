@@ -4,7 +4,7 @@
    Date: 25/9/24
 ******************************************************************************/
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -447,8 +447,8 @@ impl Positionable for CallButterfly {
     }
 }
 
-impl StrategyBasic for CallButterfly {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for CallButterfly {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),
