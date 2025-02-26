@@ -577,6 +577,15 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct DeltaNeutralResponse {
+    /// Detailed information about the delta status of the strategy.
+    pub delta_info: DeltaInfo,
+
+    /// A list of recommended adjustments to achieve delta neutrality.
+    pub adjustments: Vec<DeltaAdjustment>,
+}
+
 #[cfg(test)]
 mod tests_display_implementations {
     use super::*;
@@ -893,5 +902,45 @@ mod tests_serialization {
             }
             _ => panic!("Deserialized to wrong variant"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{pos, ExpirationDate};
+    use crate::strategies::ShortStrangle;
+
+    #[test]
+    fn test_delta_response_serialization() {
+
+        let strategy = ShortStrangle::new(
+            "CL".to_string(),
+            pos!(7250.0), // underlying_price
+            pos!(7450.0),     // call_strike
+            pos!(7050.0),     // put_strike
+            ExpirationDate::Days(pos!(45.0)),
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
+        );
+        let delta_info = strategy.delta_neutrality().unwrap();
+        let adjustments = strategy.delta_adjustments().unwrap();
+        let response = DeltaNeutralResponse {
+            delta_info,
+            adjustments,
+        };
+        
+        // serialize and pretty print
+        let serialized = serde_json::to_string_pretty(&response).unwrap();
+        println!("{}", serialized);
+
     }
 }
