@@ -71,7 +71,7 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
             quantity,
             strike,
             option_style,
-            side, 
+            side,
         } => {
             assert_pos_relative_eq!(
                 *quantity,

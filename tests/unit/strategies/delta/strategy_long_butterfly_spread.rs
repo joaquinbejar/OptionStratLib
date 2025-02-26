@@ -75,7 +75,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
             quantity,
             strike,
             option_style,
-            side ,
+            side,
         } => {
             assert_pos_relative_eq!(
                 *quantity,
@@ -85,7 +85,6 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
             assert_eq!(*option_style, OptionStyle::Call);
             assert_eq!(*side, optionstratlib::model::types::Side::Long);
-
         }
         _ => panic!("Invalid suggestion"),
     }

@@ -2134,7 +2134,7 @@ mod tests_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side    ,
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));

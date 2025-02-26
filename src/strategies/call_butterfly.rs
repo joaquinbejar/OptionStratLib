@@ -1264,7 +1264,7 @@ mod tests_call_butterfly_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -1306,7 +1306,7 @@ mod tests_call_butterfly_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -1321,7 +1321,7 @@ mod tests_call_butterfly_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
@@ -1340,8 +1340,6 @@ mod tests_call_butterfly_delta {
             + short_call_high.delta().unwrap()
             + long_call.delta().unwrap();
         assert_decimal_eq!(delta, Decimal::ZERO, DELTA_THRESHOLD);
-
-
     }
 
     #[test]
@@ -1414,7 +1412,7 @@ mod tests_call_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -1457,7 +1455,7 @@ mod tests_call_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -1472,7 +1470,7 @@ mod tests_call_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));

@@ -364,10 +364,7 @@ impl Validable for IronCondor {
 
 impl Positionable for IronCondor {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        match (
-            position.option.option_style,
-            position.option.side,
-        ) {
+        match (position.option.option_style, position.option.side) {
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
                 Ok(())

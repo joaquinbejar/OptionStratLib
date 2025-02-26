@@ -364,10 +364,7 @@ impl Validable for IronButterfly {
 
 impl Positionable for IronButterfly {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        match (
-            position.option.option_style,
-            position.option.side,
-        ) {
+        match (position.option.option_style, position.option.side) {
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
                 Ok(())
@@ -2252,7 +2249,7 @@ mod tests_iron_butterfly_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -2267,7 +2264,7 @@ mod tests_iron_butterfly_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
@@ -2351,13 +2348,13 @@ mod tests_iron_butterfly_delta_size {
         );
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
-        
+
         match &binding[0] {
             DeltaAdjustment::SellOptions {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -2415,7 +2412,7 @@ mod tests_iron_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -2430,7 +2427,7 @@ mod tests_iron_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));

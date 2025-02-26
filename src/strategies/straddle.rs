@@ -2677,7 +2677,7 @@ mod tests_short_straddle_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -2717,7 +2717,7 @@ mod tests_short_straddle_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -2806,7 +2806,7 @@ mod tests_long_straddle_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -2842,13 +2842,12 @@ mod tests_long_straddle_delta {
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
 
-
         match &binding[1] {
             DeltaAdjustment::BuyOptions {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -2940,7 +2939,7 @@ mod tests_short_straddle_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -2982,7 +2981,7 @@ mod tests_short_straddle_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -3113,7 +3112,7 @@ mod tests_long_straddle_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));

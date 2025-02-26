@@ -58,10 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     info!("Delta Neutral:  {}", strategy.is_delta_neutral());
-    info!(
-        "Delta Suggestions:  {:#?}",
-        strategy.delta_adjustments()?
-    );
+    info!("Delta Suggestions:  {:#?}", strategy.delta_adjustments()?);
 
     Ok(())
 }

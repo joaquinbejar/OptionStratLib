@@ -70,10 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     info!("Delta Neutral:  {}", strategy.is_delta_neutral());
-    info!(
-        "Delta Suggestions:  {:#?}",
-        strategy.delta_adjustments()?
-    );
+    info!("Delta Suggestions:  {:#?}", strategy.delta_adjustments()?);
 
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);

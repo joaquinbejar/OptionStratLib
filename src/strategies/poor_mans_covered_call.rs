@@ -273,10 +273,7 @@ impl Validable for PoorMansCoveredCall {
 
 impl Positionable for PoorMansCoveredCall {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        match (
-            position.option.option_style,
-            position.option.side,
-        ) {
+        match (position.option.option_style, position.option.side) {
             (OptionStyle::Call, Side::Long) => {
                 self.long_call = position.clone();
                 Ok(())
@@ -1641,7 +1638,7 @@ mod tests_short_straddle_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -1682,7 +1679,7 @@ mod tests_short_straddle_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -1771,7 +1768,7 @@ mod tests_short_straddle_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -1812,7 +1809,7 @@ mod tests_short_straddle_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));

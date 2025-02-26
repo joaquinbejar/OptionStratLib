@@ -4039,7 +4039,7 @@ mod tests_long_butterfly_delta {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -4135,7 +4135,7 @@ mod tests_long_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));
@@ -4150,7 +4150,7 @@ mod tests_long_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side, 
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta2, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k2, Positive(DELTA_THRESHOLD));
@@ -4192,7 +4192,7 @@ mod tests_long_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
@@ -4338,7 +4338,6 @@ mod tests_short_butterfly_delta {
             _ => panic!("Invalid suggestion"),
         }
 
-
         match &binding[1] {
             DeltaAdjustment::SellOptions {
                 quantity,
@@ -4478,7 +4477,7 @@ mod tests_short_butterfly_delta_size {
                 quantity,
                 strike,
                 option_style,
-                side    ,
+                side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta1, Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, k1, Positive(DELTA_THRESHOLD));

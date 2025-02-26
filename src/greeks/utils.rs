@@ -10,10 +10,10 @@ use crate::model::decimal::f64_to_decimal;
 use crate::Options;
 use crate::Positive;
 use core::f64;
-use std::error::Error;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use statrs::distribution::{ContinuousCDF, Normal};
+use std::error::Error;
 
 /// Calculates the `d1` parameter used in the Black-Scholes options pricing model.
 ///
@@ -423,8 +423,6 @@ pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal),
     Ok((d1_value?, d2_value?))
 }
 
-
-
 /// Calculates the optimal position sizes for two positions to achieve delta neutrality
 /// while maintaining a specified total position size.
 ///
@@ -455,13 +453,17 @@ pub fn calculate_delta_neutral_sizes(
 ) -> Result<(Positive, Positive), Box<dyn Error>> {
     // Validate inputs
     if delta1 == delta2 {
-        return Err(Box::from("Deltas cannot be equal for delta neutrality".to_string()));
+        return Err(Box::from(
+            "Deltas cannot be equal for delta neutrality".to_string(),
+        ));
     }
-    
+
     if delta1.is_sign_positive() == delta2.is_sign_positive() {
-        return Err(Box::from("Deltas must have opposite signs for delta neutrality".to_string()));
+        return Err(Box::from(
+            "Deltas must have opposite signs for delta neutrality".to_string(),
+        ));
     }
-    
+
     // We need to solve the system of equations:
     // 1) size1 + size2 = total_size
     // 2) size1 * delta1 + size2 * delta2 = 0 (delta neutral)
@@ -473,17 +475,20 @@ pub fn calculate_delta_neutral_sizes(
     // size1 * (delta1 - delta2) = -total_size * delta2
     // size1 = (-total_size * delta2) / (delta1 - delta2)
 
-    let size1:Positive = Positive((-total_size.to_dec() * delta2) / (delta1 - delta2));
+    let size1: Positive = Positive((-total_size.to_dec() * delta2) / (delta1 - delta2));
     let size2 = total_size - size1;
 
     // Validate results
     if size1 < Decimal::ZERO || size2 < Decimal::ZERO {
-        return Err(Box::from("Solution would require negative position sizes".to_string()));
+        return Err(Box::from(
+            "Solution would require negative position sizes".to_string(),
+        ));
     }
 
     // Verify the solution
     let total_delta: Decimal = size1.to_dec() * delta1 + size2.to_dec() * delta2;
-    if total_delta.abs() > Decimal::new(1, 6) { // Allow small numerical errors
+    if total_delta.abs() > Decimal::new(1, 6) {
+        // Allow small numerical errors
         return Err(Box::from("Could not achieve delta neutrality".to_string()));
     }
 
@@ -493,16 +498,17 @@ pub fn calculate_delta_neutral_sizes(
 #[cfg(test)]
 mod tests_calculate_delta_neutral_sizes {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::{assert_pos_relative_eq, pos};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_valid_delta_neutral_calculation() {
         let result = calculate_delta_neutral_sizes(
-            dec!(-0.30),  // Short call delta
-            dec!(0.20),   // Short put delta
-            pos!(7.0)     // Total size
-        ).unwrap();
+            dec!(-0.30), // Short call delta
+            dec!(0.20),  // Short put delta
+            pos!(7.0),   // Total size
+        )
+        .unwrap();
 
         let (size1, size2) = result;
 
@@ -511,27 +517,18 @@ mod tests_calculate_delta_neutral_sizes {
 
         // Check delta neutrality
         let total_delta = size1 * dec!(-0.30) + size2 * dec!(0.20);
-        assert_pos_relative_eq!(total_delta, Positive::ZERO , pos!(0.0001));
+        assert_pos_relative_eq!(total_delta, Positive::ZERO, pos!(0.0001));
     }
 
     #[test]
     fn test_equal_deltas() {
-        let result = calculate_delta_neutral_sizes(
-            dec!(0.25),
-            dec!(0.25),
-            pos!(10.0)
-        );
+        let result = calculate_delta_neutral_sizes(dec!(0.25), dec!(0.25), pos!(10.0));
         assert!(result.is_err());
     }
-    
 
     #[test]
     fn test_impossible_neutrality() {
-        let result = calculate_delta_neutral_sizes(
-            dec!(-0.95),
-            dec!(-0.90),
-            pos!(10.0)
-        );
+        let result = calculate_delta_neutral_sizes(dec!(-0.95), dec!(-0.90), pos!(10.0));
         assert!(result.is_err());
     }
 }
