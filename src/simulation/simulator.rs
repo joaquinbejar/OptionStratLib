@@ -8,6 +8,8 @@ mod test_simulator;
 
 use crate::curves::Curvable;
 use crate::error::SurfaceError;
+use crate::pnl::model::PnLRange;
+use crate::risk::RiskMetricsSimulation;
 use crate::simulation::model::SimulationResult;
 use crate::simulation::{RandomWalkGraph, Walkable};
 use crate::strategies::Strategable;
@@ -15,6 +17,7 @@ use crate::surfaces::{Point3D, Surfacable, Surface};
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::{random_color, GraphBackend};
 use crate::Positive;
+use num_traits::{FromPrimitive, ToPrimitive};
 #[cfg(not(target_arch = "wasm32"))]
 use plotters::backend::BitMapBackend;
 use plotters::prelude::{
@@ -28,9 +31,6 @@ use rust_decimal::{Decimal, MathematicalOps};
 use std::collections::{BTreeSet, HashMap};
 use std::error::Error;
 use std::sync::Arc;
-use num_traits::{FromPrimitive, ToPrimitive};
-use crate::pnl::model::PnLRange;
-use crate::risk::RiskMetricsSimulation;
 
 /// Represents the configuration for a random walk simulation.
 ///
@@ -550,9 +550,9 @@ impl Simulator {
     /// # Type Parameters
     /// - `S`: The concrete strategy type that implements Strategable
     /// - `T`: The associated Strategy type from the Strategable trait
-    pub fn simulate_strategy<S, T>(&self, strategy: &S) -> Result<SimulationResult, Box<dyn Error>>
+    pub fn simulate_strategy<S>(&self, strategy: &S) -> Result<SimulationResult, Box<dyn Error>>
     where
-        S: Strategable<Strategy = T>,
+        S: Strategable,
     {
         // Verify that walks exist for the simulation
         if self.walks.is_empty() {
@@ -568,7 +568,7 @@ impl Simulator {
         let mut max_drawdowns = Vec::with_capacity(iterations);
 
         // For each walk in the simulation (treating each walk as one iteration)
-        for (_, walk) in &self.walks {
+        for walk in self.walks.values() {
             // Get the points from this walk
             let points = walk.get_points();
             if points.is_empty() {
@@ -618,16 +618,25 @@ impl Simulator {
         let profit_count = profit_at_end.iter().filter(|&&p| p > Decimal::ZERO).count();
         let _loss_count = iterations - profit_count;
 
-        let profit_probability = Decimal::from_f64((profit_count as f64 / iterations as f64) * 100.0)
-            .unwrap_or(Decimal::ZERO);
-        let loss_probability = Decimal::from_f64(100.0).unwrap_or(Decimal::ZERO) - profit_probability;
+        let profit_probability =
+            Decimal::from_f64((profit_count as f64 / iterations as f64) * 100.0)
+                .unwrap_or(Decimal::ZERO);
+        let loss_probability =
+            Decimal::from_f64(100.0).unwrap_or(Decimal::ZERO) - profit_probability;
 
         let max_profit_at_end = *profit_at_end.last().unwrap_or(&Decimal::ZERO);
-        let max_loss = profit_at_end.first().map(|&p| p.abs()).unwrap_or(Decimal::ZERO);
+        let max_loss = profit_at_end
+            .first()
+            .map(|&p| p.abs())
+            .unwrap_or(Decimal::ZERO);
 
         // Calculate average PnL
         let sum: Decimal = profit_at_end.iter().sum();
-        let average_pnl = if iterations > 0 { sum / Decimal::from(iterations) } else { Decimal::ZERO };
+        let average_pnl = if iterations > 0 {
+            sum / Decimal::from(iterations)
+        } else {
+            Decimal::ZERO
+        };
 
         // Calculate standard deviation
         let variance_sum: Decimal = profit_at_end
@@ -641,7 +650,7 @@ impl Simulator {
                 .unwrap_or(0.0)
                 .sqrt(),
         )
-            .unwrap_or(Decimal::ZERO);
+        .unwrap_or(Decimal::ZERO);
 
         // Calculate Value at Risk (VaR) and Conditional VaR (CVaR)
         let var_95_index = (iterations as f64 * 0.05) as usize;
@@ -677,9 +686,9 @@ impl Simulator {
             .filter(|&&p| p < -severe_loss_threshold)
             .count();
 
-        let severe_loss_probability = Decimal::from_f64(
-            (severe_loss_count as f64 / iterations as f64) * 100.0
-        ).unwrap_or(Decimal::ZERO);
+        let severe_loss_probability =
+            Decimal::from_f64((severe_loss_count as f64 / iterations as f64) * 100.0)
+                .unwrap_or(Decimal::ZERO);
 
         // Calculate Sharpe Ratio
         let sharpe_ratio = if pnl_std_dev > Decimal::ZERO {
@@ -692,8 +701,20 @@ impl Simulator {
         let mut pnl_distribution = HashMap::new();
 
         // Convert to i32 for histogram ranges
-        let min_pnl = (profit_at_end.first().copied().unwrap_or(Decimal::ZERO).to_f64().unwrap_or(0.0) * 100.0) as i32;
-        let max_pnl = (profit_at_end.last().copied().unwrap_or(Decimal::ZERO).to_f64().unwrap_or(0.0) * 100.0) as i32;
+        let min_pnl = (profit_at_end
+            .first()
+            .copied()
+            .unwrap_or(Decimal::ZERO)
+            .to_f64()
+            .unwrap_or(0.0)
+            * 100.0) as i32;
+        let max_pnl = (profit_at_end
+            .last()
+            .copied()
+            .unwrap_or(Decimal::ZERO)
+            .to_f64()
+            .unwrap_or(0.0)
+            * 100.0) as i32;
 
         // Create buckets for histogram
         let num_buckets = 20;
@@ -716,8 +737,8 @@ impl Simulator {
                 })
                 .count();
 
-            let probability = Decimal::from_f64(count as f64 / iterations as f64)
-                .unwrap_or(Decimal::ZERO);
+            let probability =
+                Decimal::from_f64(count as f64 / iterations as f64).unwrap_or(Decimal::ZERO);
 
             pnl_distribution.insert(range, probability);
         }
@@ -729,7 +750,7 @@ impl Simulator {
 
         let max_profit_positive = if max_profit_at_end.is_sign_positive() {
             Positive::from(max_profit_at_end)
-        } else { 
+        } else {
             Positive::ZERO
         };
 
@@ -740,8 +761,10 @@ impl Simulator {
         let severe_loss_probability_positive = Positive::from(severe_loss_probability);
 
         let max_drawdown_positive = Positive::new(
-                max_drawdowns.iter()
-                    .fold(0.0, |max, &d| f64::max(max, d.to_f64())) * 100.0
+            max_drawdowns
+                .iter()
+                .fold(0.0, |max, &d| f64::max(max, d.to_f64()))
+                * 100.0,
         )?;
 
         // Build and return the simulation result
@@ -751,7 +774,7 @@ impl Simulator {
             loss_probability: loss_probability_positive,
             max_profit: max_profit_positive,
             max_loss: max_loss_positive,
-            average_pnl: average_pnl,
+            average_pnl,
             pnl_std_dev: pnl_std_dev_positive,
             risk_levels: RiskMetricsSimulation {
                 var_95,

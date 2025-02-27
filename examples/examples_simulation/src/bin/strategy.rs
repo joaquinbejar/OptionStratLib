@@ -1,25 +1,25 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 27/2/25
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 27/2/25
+******************************************************************************/
 
 use optionstratlib::simulation::{SimulationConfig, Simulator, WalkId};
+use optionstratlib::strategies::{ShortStrangle, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{pos, spos, ExpirationDate, Positive};
 use rust_decimal::Decimal;
-use std::collections::HashMap;
 use rust_decimal_macros::dec;
+use std::collections::HashMap;
 use tracing::info;
-use optionstratlib::strategies::{ShortStrangle, Strategies};
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
     let symbol = "CL";
     let initial_price = pos!(7250.0);
-    
+
     let days = pos!(45.0);
 
     // Setup simulation parameters
@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for i in 0..100 {
         let asset_id = WalkId::new(format!("{}_{:02}", symbol, i));
-        simulator.add_walk(asset_id.as_str(), format!("{} {:02}",symbol, i));
+        simulator.add_walk(asset_id.as_str(), format!("{} {:02}", symbol, i));
         initial_prices.insert(asset_id, initial_price);
     }
 
@@ -52,9 +52,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let strategy = ShortStrangle::new(
         symbol.to_string(),
-        pos!(7250.0), // underlying_price
-        initial_price,     // call_strike
-        pos!(7050.0),     // put_strike
+        pos!(7250.0),  // underlying_price
+        initial_price, // call_strike
+        pos!(7050.0),  // put_strike
         ExpirationDate::Days(days),
         pos!(0.3745),   // implied_volatility
         dec!(0.05),     // risk_free_rate
@@ -67,9 +67,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pos!(7.01),     // open_fee_short_put
         pos!(7.01),     // close_fee_short_put
     );
-    
+
     let simulation_result = simulator.simulate_strategy(&strategy)?;
-    
+
     info!("Simulation result: {:?}", simulation_result);
 
     simulator.graph(
@@ -79,10 +79,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         20,
     )?;
-    
-    // 
+
+    //
     // let surface = simulator.surface()?;
-    // 
+    //
     // surface
     //     .plot()
     //     .title("Simulated Surface")

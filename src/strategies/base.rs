@@ -40,7 +40,6 @@ pub struct StrategyBasics {
 pub trait Strategable:
     Strategies
     + StrategyConstructor
-    + Optimizable
     + Profit
     + Graph
     + ProbabilityAnalysis
