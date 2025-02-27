@@ -550,7 +550,7 @@ impl Simulator {
     /// # Type Parameters
     /// - `S`: The concrete strategy type that implements Strategable
     /// - `T`: The associated Strategy type from the Strategable trait
-    pub fn simulate_strategy<S, T>(&self, strategy: S) -> Result<SimulationResult, Box<dyn Error>>
+    pub fn simulate_strategy<S, T>(&self, strategy: &S) -> Result<SimulationResult, Box<dyn Error>>
     where
         S: Strategable<Strategy = T>,
     {
@@ -564,7 +564,7 @@ impl Simulator {
         let risk_free_rate = self.config.risk_free_rate.unwrap_or(Decimal::ZERO);
 
         // Arrays to store simulation results
-        let mut profits = Vec::with_capacity(iterations);
+        let mut profit_at_end = Vec::with_capacity(iterations);
         let mut max_drawdowns = Vec::with_capacity(iterations);
 
         // For each walk in the simulation (treating each walk as one iteration)
@@ -581,7 +581,7 @@ impl Simulator {
 
             // Calculate the PnL at expiration for this price path
             let pnl = strategy.calculate_profit_at(final_price_positive)?;
-            profits.push(pnl);
+            profit_at_end.push(pnl);
 
             // Calculate maximum drawdown for this path
             let mut max_price = Positive::ZERO;
@@ -612,25 +612,25 @@ impl Simulator {
         }
 
         // Sort results for statistical calculations
-        profits.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        profit_at_end.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         // Calculate basic statistics
-        let profit_count = profits.iter().filter(|&&p| p > Decimal::ZERO).count();
-        let loss_count = iterations - profit_count;
+        let profit_count = profit_at_end.iter().filter(|&&p| p > Decimal::ZERO).count();
+        let _loss_count = iterations - profit_count;
 
         let profit_probability = Decimal::from_f64((profit_count as f64 / iterations as f64) * 100.0)
             .unwrap_or(Decimal::ZERO);
         let loss_probability = Decimal::from_f64(100.0).unwrap_or(Decimal::ZERO) - profit_probability;
 
-        let max_profit = *profits.last().unwrap_or(&Decimal::ZERO);
-        let max_loss = profits.first().map(|&p| p.abs()).unwrap_or(Decimal::ZERO);
+        let max_profit_at_end = *profit_at_end.last().unwrap_or(&Decimal::ZERO);
+        let max_loss = profit_at_end.first().map(|&p| p.abs()).unwrap_or(Decimal::ZERO);
 
         // Calculate average PnL
-        let sum: Decimal = profits.iter().sum();
+        let sum: Decimal = profit_at_end.iter().sum();
         let average_pnl = if iterations > 0 { sum / Decimal::from(iterations) } else { Decimal::ZERO };
 
         // Calculate standard deviation
-        let variance_sum: Decimal = profits
+        let variance_sum: Decimal = profit_at_end
             .iter()
             .map(|&p| (p - average_pnl).powu(2))
             .sum();
@@ -648,21 +648,21 @@ impl Simulator {
         let var_99_index = (iterations as f64 * 0.01) as usize;
 
         // Handle edge cases for small number of iterations
-        let var_95 = if var_95_index < profits.len() {
-            -profits[var_95_index]
+        let var_95 = if var_95_index < profit_at_end.len() {
+            -profit_at_end[var_95_index]
         } else {
             Decimal::ZERO
         };
 
-        let var_99 = if var_99_index < profits.len() {
-            -profits[var_99_index]
+        let var_99 = if var_99_index < profit_at_end.len() {
+            -profit_at_end[var_99_index]
         } else {
             Decimal::ZERO
         };
 
         // Calculate CVaR (Expected Shortfall)
         let cvar_95 = if var_95_index > 0 {
-            let cvar_95_sum: Decimal = profits.iter().take(var_95_index).sum();
+            let cvar_95_sum: Decimal = profit_at_end.iter().take(var_95_index).sum();
             -cvar_95_sum / Decimal::from(var_95_index)
         } else {
             Decimal::ZERO
@@ -672,7 +672,7 @@ impl Simulator {
         // Assuming we can get this from the strategy
         let severe_loss_threshold = Decimal::from_f64(0.5).unwrap_or(Decimal::ZERO);
 
-        let severe_loss_count = profits
+        let severe_loss_count = profit_at_end
             .iter()
             .filter(|&&p| p < -severe_loss_threshold)
             .count();
@@ -692,8 +692,8 @@ impl Simulator {
         let mut pnl_distribution = HashMap::new();
 
         // Convert to i32 for histogram ranges
-        let min_pnl = (profits.first().copied().unwrap_or(Decimal::ZERO).to_f64().unwrap_or(0.0) * 100.0) as i32;
-        let max_pnl = (profits.last().copied().unwrap_or(Decimal::ZERO).to_f64().unwrap_or(0.0) * 100.0) as i32;
+        let min_pnl = (profit_at_end.first().copied().unwrap_or(Decimal::ZERO).to_f64().unwrap_or(0.0) * 100.0) as i32;
+        let max_pnl = (profit_at_end.last().copied().unwrap_or(Decimal::ZERO).to_f64().unwrap_or(0.0) * 100.0) as i32;
 
         // Create buckets for histogram
         let num_buckets = 20;
@@ -708,7 +708,7 @@ impl Simulator {
             let upper = lower + bucket_size;
             let range = PnLRange { lower, upper };
 
-            let count = profits
+            let count = profit_at_end
                 .iter()
                 .filter(|&&p| {
                     let p_int = (p.to_f64().unwrap_or(0.0) * 100.0) as i32;
@@ -727,7 +727,11 @@ impl Simulator {
 
         let loss_probability_positive = Positive::from(loss_probability);
 
-        let max_profit_positive = Positive::from(max_profit);
+        let max_profit_positive = if max_profit_at_end.is_sign_positive() {
+            Positive::from(max_profit_at_end)
+        } else { 
+            Positive::ZERO
+        };
 
         let max_loss_positive = Positive::from(max_loss);
 
