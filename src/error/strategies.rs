@@ -67,8 +67,8 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
-use crate::error::common::OperationErrorKind;
 use crate::error::PositionError;
+use crate::error::common::OperationErrorKind;
 use std::error::Error;
 use std::fmt;
 
@@ -296,9 +296,11 @@ mod tests_display {
         let error = StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
             reason: "Cannot calculate maximum profit".to_string(),
         });
-        assert!(error
-            .to_string()
-            .contains("Cannot calculate maximum profit"));
+        assert!(
+            error
+                .to_string()
+                .contains("Cannot calculate maximum profit")
+        );
     }
 
     #[test]

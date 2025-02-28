@@ -1,13 +1,13 @@
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
-use optionstratlib::constants::ZERO;
-use optionstratlib::strategies::base::BreakEvenable;
-use optionstratlib::strategies::straddle::LongStraddle;
-use optionstratlib::strategies::Strategies;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use optionstratlib::constants::ZERO;
+use optionstratlib::strategies::Strategies;
+use optionstratlib::strategies::base::BreakEvenable;
+use optionstratlib::strategies::straddle::LongStraddle;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -38,7 +38,10 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Assertions to validate strategy properties and computations
-    assert_eq!(strategy.title(), "LongStraddle Strategy: \n\tUnderlying: CL @ $7140 Long Call European Option\n\tUnderlying: CL @ $7140 Long Put European Option");
+    assert_eq!(
+        strategy.title(),
+        "LongStraddle Strategy: \n\tUnderlying: CL @ $7140 Long Call European Option\n\tUnderlying: CL @ $7140 Long Put European Option"
+    );
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64(),

@@ -12,18 +12,18 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
+use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
+use crate::model::ProfitLossRange;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
-use crate::model::ProfitLossRange;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::DeltaNeutrality;
@@ -36,13 +36,12 @@ use crate::{Options, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
 
-const IRON_CONDOR_DESCRIPTION: &str =
-    "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
+const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
     It involves selling an out-of-the-money put and call while buying further out-of-the-money put and call options. \
     This strategy is used when low volatility is expected and the underlying asset's price is anticipated to remain \
     within a specific range.";
@@ -1905,8 +1904,10 @@ mod tests_iron_condor_optimizable {
         assert!(condor.is_valid_short_option(&option, &FindOptimalSide::All));
         assert!(!condor.is_valid_short_option(&option, &FindOptimalSide::Lower));
         assert!(condor.is_valid_short_option(&option, &FindOptimalSide::Upper));
-        assert!(condor
-            .is_valid_short_option(&option, &FindOptimalSide::Range(pos!(100.0), pos!(110.0))));
+        assert!(
+            condor
+                .is_valid_short_option(&option, &FindOptimalSide::Range(pos!(100.0), pos!(110.0)))
+        );
     }
 
     #[test]
@@ -2409,7 +2410,7 @@ mod tests_iron_condor_graph {
 #[cfg(test)]
 mod tests_iron_condor_delta {
     use super::*;
-    use crate::strategies::{DeltaAdjustment, DELTA_THRESHOLD};
+    use crate::strategies::{DELTA_THRESHOLD, DeltaAdjustment};
     use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 

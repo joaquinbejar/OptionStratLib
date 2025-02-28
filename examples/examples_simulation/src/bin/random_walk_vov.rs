@@ -52,7 +52,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let volatilities = random_walk.get_volatilities()?;
     for (i, price_params) in random_walk.enumerate() {
-        info!("Step {}: Vol: {} Params: {}", i, volatilities[i], price_params);
+        info!(
+            "Step {}: Vol: {} Params: {}",
+            i, volatilities[i], price_params
+        );
         // info!("Step {}: Params: {}", i, price_params);
     }
     Ok(())

@@ -85,7 +85,6 @@ mod tests_random_walk {
             .unwrap();
         assert!(walk.values.iter().all(|x| x > 0.0));
     }
-    
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -197,7 +196,7 @@ mod tests_iterator {
 mod tests_random_walk_timeframe {
     use super::*;
     use crate::pos;
-    
+
     // Mock struct for testing
     struct TestWalker {
         values: Vec<Positive>,
@@ -293,7 +292,7 @@ mod tests_random_walk_timeframe {
 
         assert_eq!(walker.values.len(), n_steps);
     }
-    
+
     #[test]
     fn test_small_valid_volatility() {
         let mut walker = TestWalker::new();
@@ -389,7 +388,6 @@ mod tests_random_walk_timeframe {
         // Check that no values are negative
         assert!(walker.values.iter().all(|&v| v >= Positive::ZERO));
     }
-    
 }
 
 #[cfg(test)]

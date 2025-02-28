@@ -1,7 +1,7 @@
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
-use crate::{d2f, f2d, pos, Positive};
+use crate::{Positive, d2f, f2d, pos};
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 

@@ -9,9 +9,9 @@ use crate::pricing::payoff::Profit;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
 use crate::strategies::probabilities::utils::{
-    calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
+    PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;

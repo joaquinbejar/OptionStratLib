@@ -30,19 +30,21 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
+use crate::Options;
+use crate::Positive;
+use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
+use crate::model::ProfitLossRange;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
-use crate::model::ProfitLossRange;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::DeltaNeutrality;
@@ -52,17 +54,14 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::Options;
-use crate::Positive;
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::debug;
 
-const BEAR_CALL_SPREAD_DESCRIPTION: &str =
-    "A bear call spread is created by selling a call option with a lower strike price \
+const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by selling a call option with a lower strike price \
     and simultaneously buying a call option with a higher strike price, both with the same \
     expiration date. This strategy is used when you expect a moderate decline in the underlying \
     asset's price. The maximum profit is limited to the net credit received, while the maximum \
@@ -364,7 +363,7 @@ impl Positionable for BearCallSpread {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Put is not valid for PoorMansCoveredCall".to_string(),
-                ))
+                ));
             }
             (Side::Long, OptionStyle::Call, strike)
                 if *strike == self.long_call.option.strike_price =>
@@ -380,7 +379,7 @@ impl Positionable for BearCallSpread {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Strike not found in positions".to_string(),
-                ))
+                ));
             }
         }
 
@@ -988,7 +987,7 @@ mod tests_bear_call_spread_positionable {
     use super::*;
     use crate::model::position::Position;
     use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::{pos, Options};
+    use crate::{Options, pos};
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -2295,7 +2294,7 @@ mod tests_delta_size {
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive, Side};
+    use crate::{Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 

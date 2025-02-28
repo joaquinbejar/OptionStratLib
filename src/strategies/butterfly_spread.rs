@@ -18,19 +18,20 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
+use crate::Options;
+use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
+use crate::model::ProfitLossRange;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
-use crate::model::ProfitLossRange;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::DeltaNeutrality;
@@ -39,18 +40,16 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::Options;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use chrono::Utc;
 use num_traits::ToPrimitive;
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
 
-const LONG_BUTTERFLY_DESCRIPTION: &str =
-    "A long butterfly spread is created by buying one call at a lower strike price, \
+const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by buying one call at a lower strike price, \
     selling two calls at a middle strike price, and buying one call at a higher strike price, \
     all with the same expiration date. This strategy profits when the underlying price stays \
     near the middle strike price at expiration.";
@@ -459,7 +458,7 @@ impl Positionable for LongButterflySpread {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Put not found in positions".to_string(),
-                ))
+                ));
             }
             (Side::Long, OptionStyle::Call, strike)
                 if *strike == self.long_call_low.option.strike_price =>
@@ -475,7 +474,7 @@ impl Positionable for LongButterflySpread {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Strike not found in positions".to_string(),
-                ))
+                ));
             }
         }
 
@@ -970,8 +969,7 @@ Key characteristics:
 - All options must have same expiration date
 */
 
-const SHORT_BUTTERFLY_DESCRIPTION: &str =
-    "A short butterfly spread is created by selling one call at a lower strike price, \
+const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created by selling one call at a lower strike price, \
     buying two calls at a middle strike price, and selling one call at a higher strike price, \
     all with the same expiration date. This strategy profits when the underlying price moves \
     significantly away from the middle strike price in either direction.";
@@ -1379,7 +1377,7 @@ impl Positionable for ShortButterflySpread {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Put not found in positions".to_string(),
-                ))
+                ));
             }
             (Side::Short, OptionStyle::Call, strike)
                 if *strike == self.short_call_low.option.strike_price =>
@@ -1395,7 +1393,7 @@ impl Positionable for ShortButterflySpread {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Strike not found in positions".to_string(),
-                ))
+                ));
             }
         }
 

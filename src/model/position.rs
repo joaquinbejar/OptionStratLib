@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 18/8/24
 ******************************************************************************/
+use crate::Options;
 use crate::chains::chain::OptionData;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError};
@@ -12,11 +13,10 @@ use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::Options;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
 use num_traits::ToPrimitive;
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -185,9 +185,9 @@ impl Position {
     pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),
-            ExpirationDate::DateTime(datetime) => Ok(pos!(datetime
-                .signed_duration_since(Utc::now())
-                .num_days() as f64)),
+            ExpirationDate::DateTime(datetime) => Ok(pos!(
+                datetime.signed_duration_since(Utc::now()).num_days() as f64
+            )),
         }
     }
 
@@ -1419,7 +1419,7 @@ mod tests_premium {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use crate::{assert_decimal_eq, pos, OptionType};
+    use crate::{OptionType, assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {

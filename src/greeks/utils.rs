@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
+use crate::Options;
+use crate::Positive;
 use crate::constants::PI;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{GreeksError, InputErrorKind, MathErrorKind};
 use crate::model::decimal::f64_to_decimal;
-use crate::Options;
-use crate::Positive;
 use core::f64;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -728,14 +728,16 @@ mod calculate_d1_values {
         let implied_volatility = Positive::ZERO;
 
         // When volatility is zero, d1 should handle the case correctly
-        assert!(d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_err());
+        assert!(
+            d1(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -749,14 +751,16 @@ mod calculate_d1_values {
         let implied_volatility = pos!(0.2);
 
         // When time to expiry is zero, d1 should handle the case correctly
-        assert!(d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_err());
+        assert!(
+            d1(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -799,14 +803,16 @@ mod calculate_d1_values {
         let implied_volatility = pos!(0.2);
 
         // Very high underlying price should result in a large d1 value
-        assert!(d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_ok());
+        assert!(
+            d1(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -849,14 +855,16 @@ mod calculate_d1_values {
         let implied_volatility = pos!(0.2);
 
         // Since strike price is zero, the function should call handle_zero and return positive infinity
-        assert!(d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_err());
+        assert!(
+            d1(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -870,14 +878,16 @@ mod calculate_d1_values {
         let implied_volatility = pos!(0.2);
 
         // High risk-free rate should result in a large d1 value, potentially infinite
-        assert!(d1(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_err());
+        assert!(
+            d1(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_err()
+        );
     }
 }
 
@@ -1095,14 +1105,16 @@ mod calculate_d2_values {
         let implied_volatility = Positive::ZERO;
 
         // When volatility is zero, d2 should handle the case correctly using handle_zero
-        assert!(d2(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_err());
+        assert!(
+            d2(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -1116,14 +1128,16 @@ mod calculate_d2_values {
         let implied_volatility = pos!(0.2);
 
         // When time to expiration is zero, handle_zero should be called
-        assert!(d2(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_err());
+        assert!(
+            d2(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -1166,14 +1180,16 @@ mod calculate_d2_values {
         let implied_volatility = pos!(0.2);
 
         // Very high underlying price should result in a large d2 value
-        assert!(d2(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_ok());
+        assert!(
+            d2(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -1216,14 +1232,16 @@ mod calculate_d2_values {
         let implied_volatility = pos!(0.2);
 
         // Since strike price is zero, the function should call handle_zero and return positive infinity
-        assert!(d2(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_err());
+        assert!(
+            d2(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -1237,14 +1255,16 @@ mod calculate_d2_values {
         let implied_volatility = pos!(0.2);
 
         // High risk-free rate should result in a large d2 value, potentially infinite
-        assert!(d2(
-            underlying_price,
-            strike_price,
-            risk_free_rate,
-            expiration_date,
-            implied_volatility,
-        )
-        .is_err());
+        assert!(
+            d2(
+                underlying_price,
+                strike_price,
+                risk_free_rate,
+                expiration_date,
+                implied_volatility,
+            )
+            .is_err()
+        );
     }
 }
 
@@ -2190,8 +2210,8 @@ mod tests_cumulative_distribution {
 #[cfg(test)]
 mod tests_calculate_d_values_bis {
     use super::*;
-    use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::model::ExpirationDate;
+    use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 

@@ -6,9 +6,10 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
+use crate::Options;
+use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
@@ -25,18 +26,16 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::Options;
-use crate::{spos, Positive};
+use crate::{Positive, spos};
 use chrono::Utc;
 use num_traits::ToPrimitive;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
 
-const CALL_BUTTERFLY_DESCRIPTION: &str =
-    "A Ratio Call Spread involves buying one call option and selling multiple call options \
+const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
     at a higher strike price. This strategy is used when a moderate rise in the underlying \
     asset's price is expected, but with limited upside potential.";
 
@@ -940,9 +939,11 @@ mod tests_call_butterfly {
         let strategy = setup();
         assert_eq!(strategy.name, "AAPL");
         assert_eq!(strategy.kind, StrategyType::CallButterfly);
-        assert!(strategy
-            .description
-            .contains("A Ratio Call Spread involves"));
+        assert!(
+            strategy
+                .description
+                .contains("A Ratio Call Spread involves")
+        );
     }
 
     #[test]

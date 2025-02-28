@@ -29,8 +29,8 @@ use crate::geometrics::{
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
 };
-use crate::surfaces::types::Axis;
 use crate::surfaces::Point3D;
+use crate::surfaces::types::Axis;
 #[cfg(not(target_arch = "wasm32"))]
 use num_traits::ToPrimitive;
 use rayon::iter::{
@@ -206,7 +206,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
                     _ => {
                         return Err(SurfaceError::ConstructionError(
                             "Invalid parameters".to_string(),
-                        ))
+                        ));
                     }
                 };
                 let x_step = (x_end - x_start) / Decimal::from(x_steps);
@@ -1250,12 +1250,16 @@ mod tests_surface_basic {
         let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
 
         // Verify the points are mapped correctly for X-axis curve
-        assert!(curve_points
-            .iter()
-            .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
-        assert!(curve_points
-            .iter()
-            .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0))));
+        assert!(
+            curve_points
+                .iter()
+                .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0)))
+        );
+        assert!(
+            curve_points
+                .iter()
+                .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0)))
+        );
     }
 
     #[test]
@@ -1268,12 +1272,16 @@ mod tests_surface_basic {
         let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
 
         // Verify the points are mapped correctly for Y-axis curve
-        assert!(curve_points
-            .iter()
-            .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
-        assert!(curve_points
-            .iter()
-            .any(|p| p == &Point2D::new(dec!(1.0), dec!(2.0))));
+        assert!(
+            curve_points
+                .iter()
+                .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0)))
+        );
+        assert!(
+            curve_points
+                .iter()
+                .any(|p| p == &Point2D::new(dec!(1.0), dec!(2.0)))
+        );
     }
 
     #[test]
@@ -1286,12 +1294,16 @@ mod tests_surface_basic {
         let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
 
         // Verify the points are mapped correctly for Z-axis curve
-        assert!(curve_points
-            .iter()
-            .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0))));
-        assert!(curve_points
-            .iter()
-            .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0))));
+        assert!(
+            curve_points
+                .iter()
+                .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0)))
+        );
+        assert!(
+            curve_points
+                .iter()
+                .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0)))
+        );
     }
 
     #[test]
@@ -2634,9 +2646,11 @@ mod tests_axis_operations {
         assert_eq!(point.y, dec!(0.0));
         assert_eq!(point.z, dec!(1.0));
 
-        assert!(surface
-            .get_point(&Point2D::new(dec!(2.0), dec!(2.0)))
-            .is_none());
+        assert!(
+            surface
+                .get_point(&Point2D::new(dec!(2.0), dec!(2.0)))
+                .is_none()
+        );
     }
 
     #[test]
@@ -2774,10 +2788,12 @@ mod tests_surface_geometric_transformations {
                 .scale(vec![&dec!(0.0), &dec!(0.0), &dec!(0.0)])
                 .unwrap();
 
-            assert!(result
-                .points
-                .iter()
-                .all(|p| p.x == dec!(0.0) && p.y == dec!(0.0) && p.z == dec!(0.0)));
+            assert!(
+                result
+                    .points
+                    .iter()
+                    .all(|p| p.x == dec!(0.0) && p.y == dec!(0.0) && p.z == dec!(0.0))
+            );
         }
 
         #[test]

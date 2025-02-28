@@ -210,9 +210,9 @@ impl From<Box<dyn Error>> for SurfaceError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::CurveError;
     use crate::error::curves::CurvesResult;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::error::CurveError;
     use std::error::Error;
     use std::fmt;
 

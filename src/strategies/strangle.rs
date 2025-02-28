@@ -13,39 +13,38 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyBasics,
     StrategyType, Validable,
 };
+use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
+use crate::model::ProfitLossRange;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
-use crate::model::ProfitLossRange;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
+use crate::strategies::StrategyConstructor;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
-use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::strategies::StrategyConstructor;
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info, trace};
 
-const SHORT_STRANGLE_DESCRIPTION: &str =
-    "A short strangle involves selling an out-of-the-money call and an \
+const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
 is expected and the underlying asset's price is anticipated to remain stable.";
 
@@ -447,11 +446,17 @@ impl Strategies for ShortStrangle {
     }
 
     fn expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
-        let options = [self.short_call.option.expiration_date, self.short_put.option.expiration_date];
+        let options = [
+            self.short_call.option.expiration_date,
+            self.short_put.option.expiration_date,
+        ];
         Ok(options.to_vec())
     }
 
-    fn set_expiration_date(&mut self, expiration_date: ExpirationDate) -> Result<(), StrategyError> {
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
         self.short_call.option.expiration_date = expiration_date;
         self.short_put.option.expiration_date = expiration_date;
         Ok(())
@@ -820,8 +825,7 @@ impl PnLCalculator for ShortStrangle {
     }
 }
 
-const LONG_STRANGLE_DESCRIPTION: &str =
-    "A long strangle involves buying an out-of-the-money call and an \
+const LONG_STRANGLE_DESCRIPTION: &str = "A long strangle involves buying an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when high volatility \
 is expected and a significant move in the underlying asset's price is anticipated, but the \
 direction is uncertain.";
@@ -1838,8 +1842,12 @@ is expected and the underlying asset's price is anticipated to remain stable."
         assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::All));
 
         // Test FindOptimalSide::Range
-        assert!(strategy
-            .is_valid_short_option(option_data, &FindOptimalSide::Range(min_strike, max_strike)));
+        assert!(
+            strategy.is_valid_short_option(
+                option_data,
+                &FindOptimalSide::Range(min_strike, max_strike)
+            )
+        );
     }
 
     #[test]
@@ -2208,8 +2216,10 @@ mod tests_long_strangle {
         assert!(strategy.is_valid_long_option(option_data, &FindOptimalSide::Upper));
         assert!(!strategy.is_valid_long_option(option_data, &FindOptimalSide::Lower));
         assert!(strategy.is_valid_long_option(option_data, &FindOptimalSide::All));
-        assert!(strategy
-            .is_valid_long_option(option_data, &FindOptimalSide::Range(min_strike, max_strike)));
+        assert!(
+            strategy
+                .is_valid_long_option(option_data, &FindOptimalSide::Range(min_strike, max_strike))
+        );
     }
 
     #[test]
@@ -4087,7 +4097,7 @@ mod tests_adjust_option_position_long {
 mod tests_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{pos, OptionStyle, Side};
+    use crate::{OptionStyle, Side, pos};
 
     mod long_strangle_tests {
         use super::*;

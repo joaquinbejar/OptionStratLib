@@ -4,11 +4,11 @@ use optionstratlib::geometrics::{
     ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
 };
 use optionstratlib::greeks::delta;
-use optionstratlib::model::types::{OptionStyle, Side};
 use optionstratlib::model::Options;
+use optionstratlib::model::types::{OptionStyle, Side};
 use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{pos, Positive};
+use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), SurfaceError> {

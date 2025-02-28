@@ -148,19 +148,11 @@ impl Positive {
     }
 
     pub fn max(self, other: Positive) -> Positive {
-        if self.0 > other.0 {
-            self
-        } else {
-            other
-        }
+        if self.0 > other.0 { self } else { other }
     }
 
     pub fn min(self, other: Positive) -> Positive {
-        if self.0 < other.0 {
-            self
-        } else {
-            other
-        }
+        if self.0 < other.0 { self } else { other }
     }
 
     pub fn floor(&self) -> Positive {

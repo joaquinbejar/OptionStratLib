@@ -6,6 +6,7 @@
 #[cfg(test)]
 mod test_simulator;
 
+use crate::Positive;
 use crate::curves::Curvable;
 use crate::error::SurfaceError;
 use crate::simulation::model::SimulationResult;
@@ -13,12 +14,11 @@ use crate::simulation::{RandomWalkGraph, Walkable};
 use crate::strategies::Strategable;
 use crate::surfaces::{Point3D, Surfacable, Surface};
 use crate::utils::time::TimeFrame;
-use crate::visualization::utils::{random_color, GraphBackend};
-use crate::Positive;
+use crate::visualization::utils::{GraphBackend, random_color};
 #[cfg(not(target_arch = "wasm32"))]
 use plotters::backend::BitMapBackend;
 use plotters::prelude::{
-    ChartBuilder, IntoDrawingArea, IntoFont, LineSeries, PathElement, SeriesLabelPosition, BLACK,
+    BLACK, ChartBuilder, IntoDrawingArea, IntoFont, LineSeries, PathElement, SeriesLabelPosition,
     WHITE,
 };
 use plotters::style::Color;

@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 26/2/25
 ******************************************************************************/
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};

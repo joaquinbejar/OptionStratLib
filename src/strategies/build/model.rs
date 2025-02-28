@@ -87,7 +87,7 @@ impl StrategyRequest {
 mod tests_serialization {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
-    use crate::{pos, OptionStyle, Side};
+    use crate::{OptionStyle, Side, pos};
     use chrono::{DateTime, NaiveDateTime, Utc};
     use serde_json;
 

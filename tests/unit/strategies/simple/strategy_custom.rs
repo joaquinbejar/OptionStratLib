@@ -1,13 +1,13 @@
 use approx::assert_relative_eq;
 use chrono::Utc;
 use num_traits::ToPrimitive;
+use optionstratlib::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::Strategies;
+use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::Options;
-use optionstratlib::{pos, Positive};
+use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 

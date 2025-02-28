@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 9/1/25
 ******************************************************************************/
-use crate::curves::utils::detect_peaks_and_valleys;
 use crate::curves::Point2D;
+use crate::curves::utils::detect_peaks_and_valleys;
 use crate::error::{CurveError, InterpolationError, MetricsError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
@@ -176,7 +176,7 @@ impl GeometricObject<Point2D, Decimal> for Curve {
                     _ => {
                         return Err(CurveError::ConstructionError(
                             "Invalid parameters".to_string(),
-                        ))
+                        ));
                     }
                 };
                 let step_size = (t_end - t_start) / Decimal::from(steps);
@@ -1645,9 +1645,9 @@ impl GeometricTransformations<Point2D> for Curve {
 mod tests_curves {
     use super::*;
     use crate::curves::utils::{create_constant_curve, create_linear_curve};
-    use crate::{pos, Positive};
-    use rust_decimal_macros::dec;
+    use crate::{Positive, pos};
     use Decimal;
+    use rust_decimal_macros::dec;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -1811,12 +1811,16 @@ mod tests_linear_interpolate {
             Point2D::new(dec!(1.0), dec!(2.0)),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(-0.1), InterpolationType::Linear)
-            .is_err());
-        assert!(curve
-            .interpolate(dec!(1.1), InterpolationType::Linear)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(-0.1), InterpolationType::Linear)
+                .is_err()
+        );
+        assert!(
+            curve
+                .interpolate(dec!(1.1), InterpolationType::Linear)
+                .is_err()
+        );
     }
 
     #[test]
@@ -1827,9 +1831,11 @@ mod tests_linear_interpolate {
             dec!(0.0),
         )]));
 
-        assert!(curve
-            .interpolate(dec!(0.5), InterpolationType::Linear)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(0.5), InterpolationType::Linear)
+                .is_err()
+        );
     }
 
     #[test]
@@ -1890,12 +1896,16 @@ mod tests_bilinear_interpolate {
             Point2D::new(dec!(1.0), dec!(2.0)),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(-0.5), InterpolationType::Bilinear)
-            .is_err());
-        assert!(curve
-            .interpolate(dec!(1.5), InterpolationType::Bilinear)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(-0.5), InterpolationType::Bilinear)
+                .is_err()
+        );
+        assert!(
+            curve
+                .interpolate(dec!(1.5), InterpolationType::Bilinear)
+                .is_err()
+        );
     }
 
     #[test]
@@ -1907,9 +1917,11 @@ mod tests_bilinear_interpolate {
             Point2D::new(dec!(2.0), dec!(2.0)),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(0.5), InterpolationType::Bilinear)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(0.5), InterpolationType::Bilinear)
+                .is_err()
+        );
     }
 
     #[test]
@@ -1953,12 +1965,16 @@ mod tests_bilinear_interpolate {
             Point2D::new(dec!(1.0), dec!(2.0)),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(-0.1), InterpolationType::Bilinear)
-            .is_err());
-        assert!(curve
-            .interpolate(dec!(1.1), InterpolationType::Bilinear)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(-0.1), InterpolationType::Bilinear)
+                .is_err()
+        );
+        assert!(
+            curve
+                .interpolate(dec!(1.1), InterpolationType::Bilinear)
+                .is_err()
+        );
     }
 
     #[test]
@@ -1971,12 +1987,16 @@ mod tests_bilinear_interpolate {
             Point2D::new(Decimal::ONE, Decimal::TWO),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(-1), InterpolationType::Bilinear)
-            .is_err());
-        assert!(curve
-            .interpolate(Decimal::TWO, InterpolationType::Bilinear)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(-1), InterpolationType::Bilinear)
+                .is_err()
+        );
+        assert!(
+            curve
+                .interpolate(Decimal::TWO, InterpolationType::Bilinear)
+                .is_err()
+        );
     }
 }
 
@@ -2033,9 +2053,11 @@ mod tests_cubic_interpolate {
             Point2D::new(dec!(2.0), dec!(4.0)),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(1.5), InterpolationType::Cubic)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(1.5), InterpolationType::Cubic)
+                .is_err()
+        );
     }
 
     #[test]
@@ -2048,12 +2070,16 @@ mod tests_cubic_interpolate {
             Point2D::new(dec!(3.0), dec!(9.0)),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(-0.5), InterpolationType::Cubic)
-            .is_err());
-        assert!(curve
-            .interpolate(dec!(3.5), InterpolationType::Cubic)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(-0.5), InterpolationType::Cubic)
+                .is_err()
+        );
+        assert!(
+            curve
+                .interpolate(dec!(3.5), InterpolationType::Cubic)
+                .is_err()
+        );
     }
 
     #[test]
@@ -2131,9 +2157,11 @@ mod tests_spline_interpolate {
             Point2D::new(dec!(1.0), dec!(1.0)),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(0.5), InterpolationType::Spline)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(0.5), InterpolationType::Spline)
+                .is_err()
+        );
     }
 
     #[test]
@@ -2145,12 +2173,16 @@ mod tests_spline_interpolate {
             Point2D::new(dec!(2.0), dec!(4.0)),
         ]));
 
-        assert!(curve
-            .interpolate(dec!(-0.5), InterpolationType::Spline)
-            .is_err());
-        assert!(curve
-            .interpolate(dec!(2.5), InterpolationType::Spline)
-            .is_err());
+        assert!(
+            curve
+                .interpolate(dec!(-0.5), InterpolationType::Spline)
+                .is_err()
+        );
+        assert!(
+            curve
+                .interpolate(dec!(2.5), InterpolationType::Spline)
+                .is_err()
+        );
     }
 
     #[test]
@@ -2967,10 +2999,12 @@ mod tests_geometric_transformations {
             let curve = create_test_curve();
             let result = curve.scale(vec![&dec!(0.0), &dec!(0.0)]).unwrap();
 
-            assert!(result
-                .points
-                .iter()
-                .all(|p| p.x == dec!(0.0) && p.y == dec!(0.0)));
+            assert!(
+                result
+                    .points
+                    .iter()
+                    .all(|p| p.x == dec!(0.0) && p.y == dec!(0.0))
+            );
         }
 
         #[test]

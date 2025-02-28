@@ -220,7 +220,7 @@ pub use base::{Strategable, StrategyBasics};
 pub use build::model::StrategyRequest;
 pub use build::traits::StrategyConstructor;
 pub use custom::CustomStrategy;
-pub use delta_neutral::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD};
+pub use delta_neutral::{DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality};
 pub use iron_butterfly::IronButterfly;
 pub use iron_condor::IronCondor;
 pub use poor_mans_covered_call::PoorMansCoveredCall;

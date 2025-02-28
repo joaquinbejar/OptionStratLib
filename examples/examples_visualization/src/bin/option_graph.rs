@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
+use optionstratlib::Options;
+use optionstratlib::Positive;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use optionstratlib::pos;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::Options;
-use optionstratlib::Positive;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

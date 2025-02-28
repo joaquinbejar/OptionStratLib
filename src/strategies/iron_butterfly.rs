@@ -14,18 +14,18 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
+use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
+use crate::model::ProfitLossRange;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
-use crate::model::ProfitLossRange;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::DeltaNeutrality;
@@ -38,13 +38,12 @@ use crate::{Options, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{error, info};
 
-const IRON_BUTTERFLY_DESCRIPTION: &str =
-    "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
+const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
     while buying an out-of-the-money call and an out-of-the-money put. The short options have the same \
     strike price. This strategy profits from low volatility and time decay, with maximum profit when \
     the underlying price equals the strike price of the short options at expiration.";
@@ -1683,8 +1682,10 @@ mod tests_iron_butterfly_optimizable {
 
         // Test with different sides - should prefer at-the-money options
         assert!(butterfly.is_valid_short_option(&option, &FindOptimalSide::All));
-        assert!(butterfly
-            .is_valid_short_option(&option, &FindOptimalSide::Range(pos!(95.0), pos!(105.0))));
+        assert!(
+            butterfly
+                .is_valid_short_option(&option, &FindOptimalSide::Range(pos!(95.0), pos!(105.0)))
+        );
     }
 
     #[test]

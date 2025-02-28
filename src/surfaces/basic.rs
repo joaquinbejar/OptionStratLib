@@ -116,7 +116,7 @@ pub trait BasicSurfaces {
 #[cfg(test)]
 mod tests_basic_surfaces {
     use super::*;
-    use crate::{pos, ExpirationDate, OptionType};
+    use crate::{ExpirationDate, OptionType, pos};
     use rust_decimal_macros::dec;
     use std::sync::Arc;
 

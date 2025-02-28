@@ -9,7 +9,7 @@ use optionstratlib::strategies::{ShortStrangle, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::{pos, spos, ExpirationDate, Positive};
+use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::HashMap;

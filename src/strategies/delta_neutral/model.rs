@@ -5,7 +5,6 @@
 ******************************************************************************/
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, StrategyError};
-use crate::greeks::calculate_delta_neutral_sizes;
 /// # Delta Neutrality Management Module
 ///
 /// This module provides tools and structures to manage and maintain delta neutrality
@@ -42,9 +41,10 @@ use crate::greeks::calculate_delta_neutral_sizes;
 /// appropriate hedging actions (e.g., buying or selling options or underlying assets)
 /// based on the delta exposure of the strategy.
 use crate::greeks::Greeks;
+use crate::greeks::calculate_delta_neutral_sizes;
 use crate::model::types::{Action, OptionStyle};
-use crate::strategies::base::Positionable;
 use crate::strategies::Strategies;
+use crate::strategies::base::Positionable;
 use crate::{Options, Positive, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -909,7 +909,7 @@ mod tests_serialization {
 mod tests {
     use super::*;
     use crate::strategies::ShortStrangle;
-    use crate::{pos, ExpirationDate};
+    use crate::{ExpirationDate, pos};
 
     #[test]
     fn test_delta_response_serialization() {

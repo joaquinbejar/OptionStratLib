@@ -3,14 +3,14 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::pos;
-use optionstratlib::strategies::bear_call_spread::BearCallSpread;
-use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::Strategies;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use optionstratlib::pos;
+use optionstratlib::strategies::Strategies;
+use optionstratlib::strategies::bear_call_spread::BearCallSpread;
+use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::visualization::utils::Graph;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

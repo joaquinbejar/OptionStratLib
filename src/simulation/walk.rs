@@ -15,10 +15,10 @@ use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::simulation::model::WalkResult;
 use crate::strategies::Strategable;
-use crate::utils::time::{convert_time_frame, units_per_year, TimeFrame};
+use crate::utils::time::{TimeFrame, convert_time_frame, units_per_year};
 use crate::visualization::model::ChartPoint;
 use crate::visualization::utils::Graph;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use num_traits::FromPrimitive;
 use rand::distributions::Distribution;
 use rand::thread_rng;
@@ -113,7 +113,7 @@ pub trait Walkable {
         let mut rng = thread_rng();
         let mut current_volatility = volatility;
 
-        let dt: f64 = 1.0 / 252.0; 
+        let dt: f64 = 1.0 / 252.0;
         let sqrt_dt = dt.sqrt();
 
         let values = self.get_y_values_ref();
@@ -155,11 +155,10 @@ pub trait Walkable {
 
             trace!(
                 "Current price: {}, Volatility: {}",
-                current_price,
-                current_volatility
+                current_price, current_volatility
             );
         }
-        
+
         for vol in volatilities {
             if !vol.is_zero() {
                 self.save_volatility(vol)?;
@@ -266,8 +265,7 @@ pub trait Walkable {
 
             trace!(
                 "Current price: {}, Volatility: {}",
-                current_price,
-                current_volatility
+                current_price, current_volatility
             );
         }
 
@@ -352,26 +350,33 @@ pub trait Walkable {
             let days_left = convert_time_frame(pos!(i as f64), &time_frame, &TimeFrame::Day);
 
             // Debug log to track calculations
-            info!("Step {}: Params: Underlying Price: {}, Expiration: {} Years, Implied Volatility: {}", 
-               i, price, days_left.to_f64() / 365.0, volatility);
+            info!(
+                "Step {}: Params: Underlying Price: {}, Expiration: {} Years, Implied Volatility: {}",
+                i,
+                price,
+                days_left.to_f64() / 365.0,
+                volatility
+            );
 
             let pnl = if !days_left.is_zero() {
-                 strategy.calculate_pnl(price, ExpirationDate::Days(days_left), volatility)?
+                strategy.calculate_pnl(price, ExpirationDate::Days(days_left), volatility)?
             } else {
                 strategy.calculate_pnl_at_expiration(price)?
             };
-            
+
             // Ensure unwrap is safe
             let pnl_unrealized = match pnl.unrealized {
                 Some(value) => value,
-                None => {
-                    match pnl.realized {
-                        Some(value) => value,
-                        None => return Err(
-                            format!("No unrealized PnL calculated for price: {}", price_dec).into(),
+                None => match pnl.realized {
+                    Some(value) => value,
+                    None => {
+                        return Err(format!(
+                            "No unrealized PnL calculated for price: {}",
+                            price_dec
                         )
+                        .into());
                     }
-                }
+                },
             };
 
             walk_result.pnl_at_prices.insert(price_dec, pnl_unrealized);

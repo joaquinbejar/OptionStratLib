@@ -12,19 +12,19 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
+use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
+use crate::model::ProfitLossRange;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
-use crate::model::ProfitLossRange;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::DeltaNeutrality;
@@ -38,7 +38,7 @@ use crate::{Options, Positive};
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{info, trace};
@@ -195,7 +195,7 @@ impl StrategyConstructor for ShortStraddle {
                         operation: "Short Straddle get_strategy".to_string(),
                         reason: "Must have one call and one put option".to_string(),
                     },
-                ))
+                ));
             }
         };
 
@@ -914,7 +914,7 @@ impl StrategyConstructor for LongStraddle {
                         operation: "Long Straddle get_strategy".to_string(),
                         reason: "Must have one call and one put option".to_string(),
                     },
-                ))
+                ));
             }
         };
 
@@ -1759,8 +1759,12 @@ mod tests_short_straddle {
         assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::All));
 
         // Test FindOptimalSide::Range
-        assert!(strategy
-            .is_valid_short_option(option_data, &FindOptimalSide::Range(min_strike, max_strike)));
+        assert!(
+            strategy.is_valid_short_option(
+                option_data,
+                &FindOptimalSide::Range(min_strike, max_strike)
+            )
+        );
     }
 
     #[test]
@@ -2096,8 +2100,10 @@ mod tests_long_straddle {
         assert!(strategy.is_valid_long_option(option_data, &FindOptimalSide::Upper));
         assert!(!strategy.is_valid_long_option(option_data, &FindOptimalSide::Lower));
         assert!(strategy.is_valid_long_option(option_data, &FindOptimalSide::All));
-        assert!(strategy
-            .is_valid_long_option(option_data, &FindOptimalSide::Range(min_strike, max_strike)));
+        assert!(
+            strategy
+                .is_valid_long_option(option_data, &FindOptimalSide::Range(min_strike, max_strike))
+        );
     }
 
     #[test]
@@ -2892,7 +2898,7 @@ mod tests_short_straddle_delta_size {
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::Positive;
     use crate::strategies::straddle::ShortStraddle;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos, Side};
+    use crate::{Side, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -3025,7 +3031,7 @@ mod tests_long_straddle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::{LongStraddle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos, Side};
+    use crate::{Side, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;

@@ -34,17 +34,19 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
-use crate::chains::chain::{OptionChain, OptionData};
+use crate::Options;
+use crate::Positive;
 use crate::chains::StrategyLegs;
+use crate::chains::chain::{OptionChain, OptionData};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
+use crate::model::ProfitLossRange;
 use crate::model::position::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
-use crate::model::ProfitLossRange;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::DeltaNeutrality;
@@ -53,18 +55,15 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::Options;
-use crate::Positive;
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
 
-const PMCC_DESCRIPTION: &str =
-    "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
+const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
     using long-term equity anticipation securities (LEAPS) instead of the underlying stock. \
     It involves buying a long-term in-the-money call option and selling a short-term out-of-the-money call option. \
     This strategy aims to generate income while reducing the capital required compared to a traditional covered call.";
@@ -357,7 +356,7 @@ impl Positionable for PoorMansCoveredCall {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Put is not valid for PoorMansCoveredCall".to_string(),
-                ))
+                ));
             }
             (Side::Long, OptionStyle::Call, strike)
                 if *strike == self.long_call.option.strike_price =>
@@ -373,7 +372,7 @@ impl Positionable for PoorMansCoveredCall {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Strike not found in positions".to_string(),
-                ))
+                ));
             }
         }
 

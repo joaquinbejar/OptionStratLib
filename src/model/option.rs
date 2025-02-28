@@ -5,14 +5,14 @@ use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::{
-    black_scholes, generate_binomial_tree, price_binomial, telegraph, BinomialPricingParams,
-    Payoff, PayoffInfo, Profit,
+    BinomialPricingParams, Payoff, PayoffInfo, Profit, black_scholes, generate_binomial_tree,
+    price_binomial, telegraph,
 };
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};

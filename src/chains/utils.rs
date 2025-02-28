@@ -3,10 +3,10 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
+use crate::Positive;
 use crate::chains::chain::OptionData;
 use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
-use crate::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -426,7 +426,7 @@ mod tests_parse {
 #[cfg(test)]
 mod tests_parse_bis {
     use super::*;
-    use crate::{spos, Positive};
+    use crate::{Positive, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 

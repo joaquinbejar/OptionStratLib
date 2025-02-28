@@ -1,7 +1,7 @@
+use crate::Positive;
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-use crate::Positive;
 use num_traits::ToPrimitive;
 #[cfg(not(target_arch = "wasm32"))]
 use plotters::backend::BitMapBackend;
@@ -82,7 +82,10 @@ macro_rules! configure_chart_and_draw_mesh {
             .y_labels($y_labels)
             .draw()?;
         // Draw a horizontal line at y = 0
-        $chart.draw_series(plotters::prelude::LineSeries::new(vec![($min_x, 0.0), ($max_x, 0.0)], &plotters::prelude::BLACK))?;
+        $chart.draw_series(plotters::prelude::LineSeries::new(
+            vec![($min_x, 0.0), ($max_x, 0.0)],
+            &plotters::prelude::BLACK,
+        ))?;
     }};
 }
 
@@ -550,9 +553,9 @@ mod tests_calculate_axis_range {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Positive;
     use crate::pos;
     use crate::visualization::model::LabelOffsetType;
-    use crate::Positive;
     use plotters::style::RGBColor;
     use rust_decimal::Decimal;
     use std::error::Error;
@@ -750,10 +753,12 @@ mod tests_extended {
         );
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("No valid values to plot"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("No valid values to plot")
+        );
         Ok(())
     }
 

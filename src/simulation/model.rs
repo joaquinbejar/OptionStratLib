@@ -5,12 +5,12 @@
 ******************************************************************************/
 use crate::pnl::model::PnLRange;
 use crate::risk::{RiskCategory, RiskMetricsSimulation};
-use crate::{pos, Positive};
+use crate::simulation::WalkId;
+use crate::{Positive, pos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::simulation::WalkId;
 
 /// Represents the results of a trading strategy simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,8 +37,8 @@ pub struct SimulationResult {
     pub pnl_distribution: HashMap<PnLRange, Decimal>,
     /// Additional strategy-specific metrics.
     pub additional_metrics: HashMap<String, Decimal>,
-    
-    pub walk_results: HashMap<WalkId,WalkResult>
+
+    pub walk_results: HashMap<WalkId, WalkResult>,
 }
 
 impl Default for SimulationResult {
@@ -110,7 +110,6 @@ impl SimulationResult {
     }
 }
 
-
 /// Contains the results of a strategy on a single random walk.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WalkResult {
@@ -128,7 +127,7 @@ pub struct WalkResult {
 
     /// Prices diffs
     pub diff: Decimal,
-    
+
     pub max_value: (Decimal, Decimal),
 
     /// Maximum drawdown observed during the walk
@@ -142,8 +141,8 @@ pub struct WalkResult {
 
     /// Map of hypothetical PnL at different price points
     pub pnl_at_prices: HashMap<Decimal, Decimal>,
-    
+
     pub extra_metrics: HashMap<String, Decimal>,
-    
+
     pub volatilities: Vec<Positive>,
 }

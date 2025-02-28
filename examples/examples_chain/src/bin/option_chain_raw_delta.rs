@@ -9,7 +9,7 @@ use optionstratlib::strategies::base::Optimizable;
 use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::{pos, ExpirationDate, Positive};
+use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use tracing::{debug, info};
 

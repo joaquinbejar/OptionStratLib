@@ -5,7 +5,7 @@ use optionstratlib::geometrics::{
 use optionstratlib::greeks::Greeks;
 use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;

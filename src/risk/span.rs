@@ -4,7 +4,7 @@
    Date: 2/10/24
 ******************************************************************************/
 use crate::model::position::Position;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 

@@ -20,10 +20,10 @@ pub trait StrategyConstructor: Strategies + Greeks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{GreeksError, StrategyError};
-    use crate::strategies::base::{BreakEvenable, Positionable, Validable};
-    use crate::strategies::Strategies;
     use crate::Options;
+    use crate::error::{GreeksError, StrategyError};
+    use crate::strategies::Strategies;
+    use crate::strategies::base::{BreakEvenable, Positionable, Validable};
 
     /// Mock para una estrategia específica
     #[derive(Debug, PartialEq)]

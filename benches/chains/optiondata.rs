@@ -1,7 +1,7 @@
-use criterion::{black_box, Criterion};
+use criterion::{Criterion, black_box};
 use optionstratlib::chains::chain::OptionData;
 use optionstratlib::chains::utils::OptionDataPriceParams;
-use optionstratlib::{pos, ExpirationDate, Positive};
+use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
 
 pub fn benchmark_option_data(c: &mut Criterion) {

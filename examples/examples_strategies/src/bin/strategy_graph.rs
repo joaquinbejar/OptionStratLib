@@ -3,15 +3,15 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
+use optionstratlib::ExpirationDate;
+use optionstratlib::Positive;
 use optionstratlib::pos;
+use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

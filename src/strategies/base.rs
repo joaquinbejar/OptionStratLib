@@ -3,19 +3,19 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+use crate::chains::StrategyLegs;
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
+use crate::error::OperationErrorKind;
 use crate::error::position::PositionError;
 use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
-use crate::error::OperationErrorKind;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::pnl::utils::PnLCalculator;
 use crate::pricing::Profit;
 use crate::strategies::probabilities::ProbabilityAnalysis;
-use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range};
 use crate::strategies::{DeltaNeutrality, StrategyConstructor};
 use crate::visualization::utils::Graph;
 use crate::{ExpirationDate, OptionStyle, Positive, Side};
@@ -290,7 +290,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
                         operation: "get_positions".to_string(),
                         reason: err.to_string(),
                     },
-                ))
+                ));
             }
         };
 
@@ -352,7 +352,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
                         operation: "get_positions".to_string(),
                         reason: "No positions found".to_string(),
                     },
-                ))
+                ));
             }
         };
 
@@ -425,12 +425,15 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
             }
         }
     }
-    
+
     fn expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
         unimplemented!("Expiration dates is not implemented for this strategy")
     }
-    
-    fn set_expiration_date(&mut self, _expiration_date: ExpirationDate) -> Result<(), StrategyError> {
+
+    fn set_expiration_date(
+        &mut self,
+        _expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
         unimplemented!("Set expiration date is not implemented for this strategy")
     }
 }
@@ -996,7 +999,7 @@ mod tests_strategy_type {
 #[cfg(test)]
 mod tests_max_min_strikes {
     use super::*;
-    use crate::{pos, Side};
+    use crate::{Side, pos};
 
     struct TestStrategy {
         strikes: Vec<Positive>,

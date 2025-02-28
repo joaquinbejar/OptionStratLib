@@ -13,9 +13,9 @@ Key characteristics:
 - Maximum profit achieved when price falls below lower strike
 - Also known as a vertical put debit spread
 */
+use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{DARK_BLUE, DARK_GREEN};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::probability::ProbabilityError;
@@ -35,16 +35,15 @@ use crate::strategies::{DeltaNeutrality, FindOptimalSide, Strategies};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
 
-const BEAR_PUT_SPREAD_DESCRIPTION: &str =
-    "A bear put spread is created by buying a put option with a higher strike price \
+const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by buying a put option with a higher strike price \
     and simultaneously selling a put option with a lower strike price, both with the same \
     expiration date. This strategy is used when you expect a moderate decrease in the underlying \
     asset's price. The maximum profit is limited to the difference between strike prices minus \
@@ -345,7 +344,7 @@ impl Positionable for BearPutSpread {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Call is not valid for BearPutSpread".to_string(),
-                ))
+                ));
             }
             (Side::Long, OptionStyle::Put, strike)
                 if *strike == self.long_put.option.strike_price =>
@@ -361,7 +360,7 @@ impl Positionable for BearPutSpread {
                 return Err(PositionError::invalid_position_type(
                     position.option.side,
                     "Strike not found in positions".to_string(),
-                ))
+                ));
             }
         }
 
@@ -951,7 +950,7 @@ mod tests_bear_put_spread_strategy {
 
         // Max Profit = (Width * Quantity) - Net Premium
         assert_eq!(max_profit, pos!(16.0)); // (10 * 2) - (4 - 2)
-                                            // Max Loss = Net Premium
+        // Max Loss = Net Premium
         assert_eq!(max_loss, pos!(4.0));
     }
 }

@@ -4,7 +4,7 @@
    Date: 23/10/24
 ******************************************************************************/
 use crate::constants::*;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use chrono::{Duration, Local, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -68,7 +68,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Month => pos!(12.0),                   // 12
         TimeFrame::Quarter => pos!(4.0),                  // 4
         TimeFrame::Year => pos!(1.0),                     // 1
-        TimeFrame::Custom(periods) => *periods, // Custom periods per year
+        TimeFrame::Custom(periods) => *periods,           // Custom periods per year
     }
 }
 
@@ -108,7 +108,7 @@ pub fn convert_time_frame(
     if from_time_frame == to_time_frame {
         return value;
     }
-    
+
     if value.is_zero() {
         return Positive::ZERO;
     }
@@ -320,11 +320,10 @@ mod tests_timeframe {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ assert_pos_relative_eq, pos};
+    use crate::{assert_pos_relative_eq, pos};
 
     #[test]
     fn test_convert_seconds_to_minutes() {
@@ -358,13 +357,15 @@ mod tests {
 
     #[test]
     fn test_convert_custom_to_day() {
-        let result = convert_time_frame(pos!(10.0), &TimeFrame::Custom(pos!(365.0)), &TimeFrame::Day);
+        let result =
+            convert_time_frame(pos!(10.0), &TimeFrame::Custom(pos!(365.0)), &TimeFrame::Day);
         assert_pos_relative_eq!(result, pos!(10.0), pos!(1e-10));
     }
 
     #[test]
     fn test_convert_day_to_custom() {
-        let result = convert_time_frame(pos!(2.0), &TimeFrame::Day, &TimeFrame::Custom(pos!(365.0)));
+        let result =
+            convert_time_frame(pos!(2.0), &TimeFrame::Day, &TimeFrame::Custom(pos!(365.0)));
         assert_pos_relative_eq!(result, pos!(2.0), pos!(1e-10));
     }
 
@@ -378,7 +379,7 @@ mod tests {
     fn test_convert_weeks_to_months() {
         let result = convert_time_frame(pos!(4.0), &TimeFrame::Week, &TimeFrame::Month);
         // Approximately 0.92 months (4 weeks / 4.33 weeks per month)
-        assert_pos_relative_eq!(result , pos!(0.920_547_945_255_920_4), pos!(1e-10));
+        assert_pos_relative_eq!(result, pos!(0.920_547_945_255_920_4), pos!(1e-10));
     }
 
     #[test]
@@ -389,7 +390,8 @@ mod tests {
 
     #[test]
     fn test_zero() {
-        let result = convert_time_frame(Positive::ZERO, &TimeFrame::Millisecond, &TimeFrame::Second);
+        let result =
+            convert_time_frame(Positive::ZERO, &TimeFrame::Millisecond, &TimeFrame::Second);
         assert_pos_relative_eq!(result, Positive::ZERO, pos!(1e-10));
     }
 }

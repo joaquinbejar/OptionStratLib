@@ -6,7 +6,7 @@ use {
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{BullCallSpread, FindOptimalSide, Strategies},
     optionstratlib::utils::setup_logger,
-    optionstratlib::{pos, ExpirationDate, Positive},
+    optionstratlib::{ExpirationDate, Positive, pos},
     rust_decimal_macros::dec,
     std::error::Error,
 };

@@ -3,9 +3,9 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
+use crate::Options;
 use crate::greeks::{big_n, calculate_d_values};
 use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::Options;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 
@@ -215,7 +215,7 @@ mod tests_black_scholes {
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::greeks::{d1, d2};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos, Options, Positive};
+    use crate::{Options, Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn mock_options_call() -> Options {
@@ -471,7 +471,7 @@ mod tests_black_scholes_trait {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::{assert_decimal_eq, pos, Positive};
+    use crate::{Positive, assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     // Mock struct to implement BlackScholes trait
@@ -641,7 +641,7 @@ mod tests_black_scholes_trait_bis {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::{assert_decimal_eq, pos, Positive};
+    use crate::{Positive, assert_decimal_eq, pos};
     use num_traits::FromPrimitive;
     use rust_decimal_macros::dec;
 
@@ -869,7 +869,7 @@ mod tests_black_scholes_trait_bis {
 mod tests_black_scholes_bis {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
-    use crate::{assert_decimal_eq, pos, Positive};
+    use crate::{Positive, assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     fn create_base_option(side: Side, style: OptionStyle) -> Options {

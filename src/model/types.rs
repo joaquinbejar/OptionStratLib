@@ -1,6 +1,6 @@
 use crate::constants::{DAYS_IN_A_YEAR, ZERO};
-use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use crate::{pos, Positive};
+use crate::pricing::payoff::{Payoff, PayoffInfo, standard_payoff};
+use crate::{Positive, pos};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::de::{MapAccess, Visitor};
