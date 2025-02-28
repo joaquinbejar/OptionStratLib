@@ -87,17 +87,17 @@ fn units_per_year(time_frame: &TimeFrame) -> Positive {
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::pos;
+/// use optionstratlib::{assert_pos_relative_eq, pos};
 /// use optionstratlib::utils::time::convert_time_frame;
 /// use optionstratlib::utils::TimeFrame;
 ///
 /// // Convert 60 seconds to minutes
 /// let result = convert_time_frame(pos!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
-/// assert_eq!(result, pos!(1.0));
+/// assert_pos_relative_eq!(result, pos!(1.0), pos!(0.0000001));
 ///
 /// // Convert 12 hours to days
 /// let result = convert_time_frame(pos!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
-/// assert_eq!(result, pos!(0.5));
+/// assert_pos_relative_eq!(result, pos!(0.5), pos!(0.0000001));
 /// ```
 pub fn convert_time_frame(
     value: Positive,

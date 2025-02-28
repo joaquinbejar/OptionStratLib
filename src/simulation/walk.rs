@@ -121,6 +121,7 @@ pub trait Walkable {
         values.reserve(n_steps);
         values.push(initial_price);
 
+        let mut volatilities = Vec::with_capacity(n_steps);
         for _ in 0..n_steps - 1 {
             if std_dev_change > Positive::ZERO {
                 current_std_dev = Normal::new(std_dev.into(), std_dev_change.into())
@@ -134,12 +135,17 @@ pub trait Walkable {
                 mean
             } else {
                 let normal = Normal::new(mean, current_std_dev.to_f64()).unwrap();
+                volatilities.push(current_std_dev);
                 normal.sample(&mut rng)
             };
 
             current_value = pos!((current_value.to_f64() + step).max(ZERO));
             values.push(current_value);
             trace!("Current value: {}", current_value);
+        }
+
+        for vol in volatilities {
+            self.save_volatility(vol)?;
         }
         Ok(())
     }
@@ -250,7 +256,7 @@ pub trait Walkable {
     }
 
     fn get_volatilities(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
-        Ok(Vec::new())
+        unimplemented!()
     }
 
     fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>>;
@@ -296,7 +302,6 @@ pub trait Walkable {
         let min_value = Decimal::MAX;
 
         // reverse i for expiration date descending
-
         for ((step, implied_volatility), i) in values
             .iter()
             .zip(volatilities.iter())

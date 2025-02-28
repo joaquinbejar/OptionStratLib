@@ -445,6 +445,17 @@ impl Strategies for ShortStrangle {
         let end_price = last_option + max_profit;
         Ok(calculate_price_range(start_price, end_price, step))
     }
+
+    fn expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
+        let options = [self.short_call.option.expiration_date, self.short_put.option.expiration_date];
+        Ok(options.to_vec())
+    }
+
+    fn set_expiration_date(&mut self, expiration_date: ExpirationDate) -> Result<(), StrategyError> {
+        self.short_call.option.expiration_date = expiration_date;
+        self.short_put.option.expiration_date = expiration_date;
+        Ok(())
+    }
 }
 
 impl Validable for ShortStrangle {

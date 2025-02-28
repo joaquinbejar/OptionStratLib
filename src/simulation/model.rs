@@ -10,6 +10,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::simulation::WalkId;
 
 /// Represents the results of a trading strategy simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +37,14 @@ pub struct SimulationResult {
     pub pnl_distribution: HashMap<PnLRange, Decimal>,
     /// Additional strategy-specific metrics.
     pub additional_metrics: HashMap<String, Decimal>,
+    
+    pub walk_results: HashMap<WalkId,WalkResult>
+}
+
+impl Default for SimulationResult {
+    fn default() -> Self {
+        Self::new(0)
+    }
 }
 
 impl SimulationResult {
@@ -56,6 +65,7 @@ impl SimulationResult {
             risk_levels: RiskMetricsSimulation::default(),
             pnl_distribution: HashMap::new(),
             additional_metrics: HashMap::new(),
+            walk_results: HashMap::new(),
         }
     }
 
@@ -102,6 +112,7 @@ impl SimulationResult {
 
 
 /// Contains the results of a strategy on a single random walk.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WalkResult {
     /// Initial price at the start of the walk
     pub initially: Decimal,
