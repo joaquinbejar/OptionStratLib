@@ -56,7 +56,7 @@ impl TimeFrame {
 /// # Returns
 ///
 /// A Decimal representing how many of the given time frame fit in a year
-fn units_per_year(time_frame: &TimeFrame) -> Positive {
+pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
     match time_frame {
         TimeFrame::Microsecond => pos!(31536000000000.0), // 365 * 24 * 60 * 60 * 1_000_000
         TimeFrame::Millisecond => pos!(31536000000.0),    // 365 * 24 * 60 * 60 * 1_000
