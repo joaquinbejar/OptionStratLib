@@ -9,9 +9,7 @@ use plotters::backend::BitMapBackend;
 use plotters_canvas::CanvasBackend;
 
 use plotters::element::{Circle, Text};
-use plotters::prelude::ChartBuilder;
 use plotters::prelude::RGBColor;
-use plotters::prelude::BLACK;
 use plotters::prelude::{
     Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
     Ranged, WHITE,
@@ -62,7 +60,7 @@ macro_rules! create_drawing_area {
 #[macro_export]
 macro_rules! build_chart {
     ($root:expr, $title:expr, $title_size:expr, $min_x:expr, $max_x:expr, $min_y:expr, $max_y:expr) => {
-        ChartBuilder::on($root)
+        plotters::prelude::ChartBuilder::on($root)
             .caption($title, ("sans-serif", $title_size))
             .margin(10)
             .top_x_label_area_size(40)
@@ -84,7 +82,7 @@ macro_rules! configure_chart_and_draw_mesh {
             .y_labels($y_labels)
             .draw()?;
         // Draw a horizontal line at y = 0
-        $chart.draw_series(LineSeries::new(vec![($min_x, 0.0), ($max_x, 0.0)], &BLACK))?;
+        $chart.draw_series(plotters::prelude::LineSeries::new(vec![($min_x, 0.0), ($max_x, 0.0)], &plotters::prelude::BLACK))?;
     }};
 }
 
@@ -103,7 +101,7 @@ macro_rules! draw_line_segments {
                 let points: Vec<(f64, f64)> =
                     vec![(last_price.to_f64(), last_profit), (price.to_f64(), value)];
 
-                $chart.draw_series(LineSeries::new(points, color))?;
+                $chart.draw_series(plotters::prelude::LineSeries::new(points, color))?;
             }
             last_point = Some((price, value));
         }

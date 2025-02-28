@@ -7,24 +7,27 @@
 mod test_walk;
 
 use crate::chains::utils::OptionDataPriceParams;
-use crate::constants::ZERO;
 use crate::curves::{Curvable, Curve, Point2D};
 use crate::error::CurveError;
 use crate::geometrics::GeometricObject;
 use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
-use crate::utils::time::TimeFrame;
+use crate::simulation::model::WalkResult;
+use crate::strategies::Strategable;
+use crate::utils::time::{convert_time_frame, TimeFrame};
 use crate::visualization::model::ChartPoint;
-use crate::visualization::utils::Graph;
-use crate::volatility::adjust_volatility;
-use crate::{pos, Positive};
-use num_traits::ToPrimitive;
+use crate::volatility::{adjust_volatility};
+use num_traits::{FromPrimitive, ToPrimitive};
 use rand::distributions::Distribution;
 use rand::thread_rng;
 use rust_decimal::Decimal;
 use statrs::distribution::Normal;
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{info, trace};
+use crate::constants::ZERO;
+use crate::{pos, Positive};
+use crate::visualization::utils::Graph;
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
 /// entities capable of simulating or managing a random walk sequence of values.
@@ -203,6 +206,9 @@ pub trait Walkable {
         values.clear();
         values.reserve(n_steps);
         values.push(initial_price);
+        
+        let mut volatilities = Vec::with_capacity(n_steps);
+        volatilities.push(std_dev_adjusted);
 
         for _ in 0..n_steps - 1 {
             if std_dev_change_adjusted > Positive::ZERO {
@@ -227,12 +233,105 @@ pub trait Walkable {
 
             current_value = pos!((current_value.to_f64() + step).max(ZERO));
             values.push(current_value);
+            volatilities.push(current_std_dev);
             trace!("Current value: {}", current_value);
         }
+
+        for vol in volatilities {
+            let vol_adjusted = adjust_volatility(vol, time_frame, TimeFrame::Day)?;
+            self.save_volatility(vol_adjusted)?;
+        }
+        
         Ok(())
     }
 
+    fn save_volatility(&mut self, _volatility: Positive) -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
+
+    fn get_volatilities(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
+        Ok(Vec::new())
+    }
+
     fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>>;
+
+    fn walk_strategy<S>(
+        &self,
+        strategy: &mut S,
+        time_frame: TimeFrame,
+    ) -> Result<WalkResult, Box<dyn Error>>
+    where
+        S: Strategable,
+    {
+        // Verify that walks exist for the simulation
+        if self.get_x_values().is_empty() {
+            return Err("No walks available for strategy simulation".into());
+        }
+
+        let values = self.get_y_values();
+        let values_len: Positive = Decimal::from_usize(values.len()).unwrap().into();
+        let days = convert_time_frame(values_len, &time_frame, &TimeFrame::Day);
+        strategy.set_expiration_date(ExpirationDate::Days(days))?;
+
+        let initially = values.first().unwrap().to_dec();
+        let finally = values.last().unwrap().to_dec();
+        let volatilities = self.get_volatilities()?;
+
+        let mut walk_result = WalkResult {
+            initially,
+            finally,
+            payoff: strategy.calculate_profit_at(Positive(finally))?,
+            change_percentage: (finally - initially) / initially * Decimal::ONE_HUNDRED,
+            diff: finally - initially,
+            max_value: (Decimal::ZERO, Decimal::ZERO),
+            min_value: (Decimal::ZERO, Decimal::ZERO),
+            positive_points: Vec::new(),
+            negative_points: Vec::new(),
+            pnl_at_prices: HashMap::new(),
+            extra_metrics: HashMap::new(),
+            volatilities: volatilities.clone(),
+        };
+
+        let max_value = Decimal::MIN;
+        let min_value = Decimal::MAX;
+
+        // reverse i for expiration date descending
+
+        for ((step, implied_volatility), i) in values
+            .iter()
+            .zip(volatilities.iter())
+            .zip((0..values.len()).rev())
+        {
+            let step_dec = step.to_dec();
+            let days_left = convert_time_frame(pos!(i as f64), &time_frame, &TimeFrame::Day);
+
+            let pnl = strategy.calculate_pnl(
+                step,
+                ExpirationDate::Days(days_left),
+                implied_volatility,
+            )?;
+
+            let pnl_unrealized = pnl.unrealized.unwrap();
+
+            walk_result.pnl_at_prices.insert(step_dec, pnl_unrealized);
+
+            // Separate into positive and negative points
+            if pnl_unrealized >= Decimal::ZERO {
+                walk_result.positive_points.push((step_dec, pnl_unrealized));
+            } else {
+                walk_result.negative_points.push((step_dec, pnl_unrealized));
+            }
+
+            if pnl_unrealized > max_value {
+                walk_result.max_value = (step_dec, pnl_unrealized);
+            }
+            if pnl_unrealized < min_value {
+                walk_result.min_value = (step_dec, pnl_unrealized);
+            }
+        }
+
+        Ok(walk_result)
+    }
 }
 
 /// A structure implementing a specific type of `Walkable` trait called `RandomWalkGraph`.
@@ -313,6 +412,8 @@ pub struct RandomWalkGraph {
     volatility_window: usize,
     /// Optional initial volatility of the random walk.
     initial_volatility: Option<Positive>,
+
+    pub volatilities: Vec<Positive>,
 }
 
 impl RandomWalkGraph {
@@ -351,6 +452,7 @@ impl RandomWalkGraph {
             time_frame,
             volatility_window,
             initial_volatility,
+            volatilities: Vec::new(),
         }
     }
 
@@ -365,34 +467,43 @@ impl RandomWalkGraph {
     /// * `Some(Positive)` - The computed volatility when it is valid and non-negative.
     /// * `None` - If the volatility could not be calculated or results in an invalid value.
     fn calculate_current_volatility(&self) -> Option<Positive> {
-        if self.current_index < 2 {
-            return self.initial_volatility;
+        let window_size = self.volatility_window.min(self.values.len());
+    
+        // Always use initial volatility as our base/target level
+        let target_volatility = self.initial_volatility?;
+    
+        // If we don't have enough data points yet, just return the initial volatility
+        if self.current_index < window_size + 1 {
+            return Some(target_volatility);
         }
-        let returns: Vec<f64> = self.values[..self.current_index]
+    
+        // Get returns from the appropriate window
+        let start_idx = self.current_index.saturating_sub(window_size);
+        let end_idx = self.current_index;
+    
+        let returns: Vec<f64> = self.values[start_idx..end_idx]
             .windows(2)
-            .map(|w| ((w[1].to_dec() - w[0]) / w[0]).to_f64().unwrap())
+            .map(|w| ((w[1].to_dec() - w[0].to_dec()) / w[0].to_dec()).to_f64().unwrap())
             .collect();
+    
         if returns.is_empty() {
-            return self.initial_volatility;
+            return Some(target_volatility);
         }
-        let window_size = self.volatility_window.min(returns.len());
-        let recent_returns = if returns.len() > window_size {
-            &returns[returns.len() - window_size..]
-        } else {
-            &returns
-        };
-        let mean = recent_returns.iter().sum::<f64>() / recent_returns.len() as f64;
-        let variance = recent_returns
+    
+        // Calculate the standard deviation of returns
+        let mean = returns.iter().sum::<f64>() / returns.len() as f64;
+    
+        // Use n-1 for sample standard deviation
+        let divisor = if returns.len() > 1 { returns.len() - 1 } else { 1 } as f64;
+        let variance = returns
             .iter()
             .map(|r| (r - mean).powi(2))
-            .sum::<f64>()
-            / (recent_returns.len() - 1) as f64;
-        let volatility = (variance * self.time_frame.periods_per_year()).sqrt();
-        if volatility < ZERO || volatility.is_nan() {
-            None
-        } else {
-            Some(volatility.into())
-        }
+            .sum::<f64>() / divisor;
+    
+        // Convert to annualized volatility
+        let realized_volatility = variance.sqrt() * 100.0;
+        
+        Some(pos!(realized_volatility))
     }
 
     /// Resets the current iterator index to its initial state.
@@ -460,6 +571,7 @@ impl Default for RandomWalkGraph {
             time_frame: TimeFrame::Day,
             volatility_window: 4,
             initial_volatility: None,
+            volatilities: Vec::new(),
         }
     }
 }
@@ -536,7 +648,17 @@ impl Walkable for RandomWalkGraph {
             time_frame: self.time_frame,
             volatility_window: self.volatility_window,
             initial_volatility: self.initial_volatility,
+            volatilities: self.volatilities.clone(),
         })
+    }
+
+    fn save_volatility(&mut self, volatility: Positive) -> Result<(), Box<dyn Error>> {
+        self.volatilities.push(volatility);
+        Ok(())
+    }
+
+    fn get_volatilities(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
+        Ok(self.volatilities.clone())
     }
 }
 
@@ -611,6 +733,7 @@ impl Profit for RandomWalkGraph {
 /// - The `values` field in `RandomWalkGraph` must contain valid `Positive` elements
 ///   that can be converted to `f64` for visualization purposes.
 impl Graph for RandomWalkGraph {
+    
     /// Retrieves the title text for the graph.
     fn title(&self) -> String {
         self.title_text.clone()

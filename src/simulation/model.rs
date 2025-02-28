@@ -99,3 +99,40 @@ impl SimulationResult {
             .unwrap_or(Decimal::ZERO)
     }
 }
+
+
+/// Contains the results of a strategy on a single random walk.
+pub struct WalkResult {
+    /// Initial price at the start of the walk
+    pub initially: Decimal,
+
+    /// Final price at the end of the walk
+    pub finally: Decimal,
+
+    /// Option payoff at last price
+    pub payoff: Decimal,
+
+    /// Percentage change in price from start to end
+    pub change_percentage: Decimal,
+
+    /// Prices diffs
+    pub diff: Decimal,
+    
+    pub max_value: (Decimal, Decimal),
+
+    /// Maximum drawdown observed during the walk
+    pub min_value: (Decimal, Decimal),
+
+    /// Collection of profit points throughout the walk
+    pub positive_points: Vec<(Decimal, Decimal)>,
+
+    /// Collection of drawdown points throughout the walk
+    pub negative_points: Vec<(Decimal, Decimal)>,
+
+    /// Map of hypothetical PnL at different price points
+    pub pnl_at_prices: HashMap<Decimal, Decimal>,
+    
+    pub extra_metrics: HashMap<String, Decimal>,
+    
+    pub volatilities: Vec<Positive>,
+}

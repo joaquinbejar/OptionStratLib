@@ -18,7 +18,7 @@ use crate::strategies::probabilities::ProbabilityAnalysis;
 use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{DeltaNeutrality, StrategyConstructor};
 use crate::visualization::utils::Graph;
-use crate::{OptionStyle, Positive, Side};
+use crate::{ExpirationDate, OptionStyle, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -424,6 +424,14 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
                 Ok(*break_even_points.last().unwrap() - *break_even_points.first().unwrap())
             }
         }
+    }
+    
+    fn expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
+        unimplemented!("Expiration dates is not implemented for this strategy")
+    }
+    
+    fn set_expiration_date(&mut self, _expiration_date: ExpirationDate) -> Result<(), StrategyError> {
+        unimplemented!("Set expiration date is not implemented for this strategy")
     }
 }
 

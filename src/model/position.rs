@@ -311,14 +311,14 @@ impl Greeks for Position {
 impl PnLCalculator for Position {
     fn calculate_pnl(
         &self,
-        market_price: &Positive,
+        underlying_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
         let price_at_buy = self.option.calculate_price_black_scholes()?;
         let mut current_option = self.option.clone();
         current_option.expiration_date = expiration_date;
-        current_option.underlying_price = *market_price;
+        current_option.underlying_price = *underlying_price;
         current_option.implied_volatility = *implied_volatility;
         let price_at_sell = current_option.calculate_price_black_scholes()?;
         let unrealized = price_at_sell - price_at_buy;

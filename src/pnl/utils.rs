@@ -147,7 +147,7 @@ impl Add for &PnL {
 pub trait PnLCalculator {
     fn calculate_pnl(
         &self,
-        _market_price: &Positive,
+        _underlying_price: &Positive,
         _expiration_date: ExpirationDate,
         _implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>>;
