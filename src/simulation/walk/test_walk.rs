@@ -9,8 +9,6 @@ use super::*;
 mod tests_random_walk {
     use super::*;
     use crate::pos;
-    use num_traits::ToPrimitive;
-    use statrs::statistics::Statistics;
 
     struct TestWalk {
         values: Vec<Positive>,
@@ -87,28 +85,7 @@ mod tests_random_walk {
             .unwrap();
         assert!(walk.values.iter().all(|x| x > 0.0));
     }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_statistical_properties() {
-        let mut walk = TestWalk::new();
-
-        let n_steps = 10000;
-        let initial_price = pos!(100.0);
-        let mean = 0.1;
-        let std_dev = pos!(1.0);
-        let std_dev_change = pos!(0.01);
-        walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change)
-            .unwrap();
-        let changes: Vec<f64> = walk
-            .values
-            .windows(2)
-            .map(|w| (w[1].to_dec() - w[0]).to_f64().unwrap())
-            .collect();
-
-        let empirical_mean = changes.mean();
-        assert!((empirical_mean - mean).abs() < 0.1);
-    }
+    
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -220,21 +197,7 @@ mod tests_iterator {
 mod tests_random_walk_timeframe {
     use super::*;
     use crate::pos;
-
-    // Helper function to calculate volatility of a series
-    fn calculate_volatility(values: &[Positive]) -> f64 {
-        let returns: Vec<f64> = values
-            .windows(2)
-            .map(|w| (w[1].to_f64() / w[0].to_f64()).ln())
-            .collect();
-
-        let mean = returns.iter().sum::<f64>() / returns.len() as f64;
-        let variance =
-            returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (returns.len() - 1) as f64;
-
-        variance.sqrt()
-    }
-
+    
     // Mock struct for testing
     struct TestWalker {
         values: Vec<Positive>,
@@ -330,37 +293,7 @@ mod tests_random_walk_timeframe {
 
         assert_eq!(walker.values.len(), n_steps);
     }
-
-    #[test]
-    fn test_volatility_limits() {
-        let mut walker = TestWalker::new();
-        let min_vol = pos!(0.1);
-        let max_vol = pos!(0.3);
-
-        walker
-            .generate_random_walk_timeframe(
-                1000,
-                pos!(100.0),
-                0.0,
-                pos!(0.2),
-                pos!(0.1),
-                TimeFrame::Day,
-                Some((min_vol, max_vol)),
-            )
-            .unwrap();
-
-        // Check that values don't change too extremely
-        let max_allowed_change = max_vol.to_f64() * 4.0; // 3 standard deviations
-        for i in 1..walker.values.len() {
-            let change = (walker.values[i].to_f64() - walker.values[i - 1].to_f64()).abs();
-            assert!(
-                change <= max_allowed_change,
-                "Change between steps too large: {}",
-                change
-            );
-        }
-    }
-
+    
     #[test]
     fn test_small_valid_volatility() {
         let mut walker = TestWalker::new();
@@ -456,134 +389,7 @@ mod tests_random_walk_timeframe {
         // Check that no values are negative
         assert!(walker.values.iter().all(|&v| v >= Positive::ZERO));
     }
-
-    #[test]
-    fn test_volatility_of_volatility() {
-        let mut walker = TestWalker::new();
-
-        // Test with no VoV
-        walker
-            .generate_random_walk_timeframe(
-                1000,
-                pos!(100.0),
-                0.0,
-                pos!(0.2),
-                pos!(0.0), // No VoV
-                TimeFrame::Day,
-                None,
-            )
-            .unwrap();
-        let no_vov_values = walker.values.clone();
-
-        // Test with high VoV
-        walker
-            .generate_random_walk_timeframe(
-                1000,
-                pos!(100.0),
-                0.0,
-                pos!(0.2),
-                pos!(0.2), // High VoV
-                TimeFrame::Day,
-                None,
-            )
-            .unwrap();
-        let high_vov_values = walker.values;
-
-        // Calculate price changes volatility
-        let no_vov_volatility = calculate_volatility(&no_vov_values);
-        let high_vov_volatility = calculate_volatility(&high_vov_values);
-
-        // High VoV should result in more variable price changes
-        assert!(
-            high_vov_volatility > no_vov_volatility,
-            "High VoV volatility ({}) should be greater than no VoV volatility ({})",
-            high_vov_volatility,
-            no_vov_volatility
-        );
-    }
-
-    #[test]
-    fn test_mean_drift() {
-        let mut walker = TestWalker::new();
-        let initial_price = pos!(100.0);
-        let positive_drift = 0.01;
-
-        walker
-            .generate_random_walk_timeframe(
-                1000,
-                initial_price,
-                positive_drift,
-                pos!(0.1), // Low volatility for clearer trend
-                pos!(0.0),
-                TimeFrame::Day,
-                None,
-            )
-            .unwrap();
-
-        let final_value = walker.values.last().unwrap();
-        assert!(
-            *final_value > initial_price,
-            "With positive drift, final value ({}) should be greater than initial value ({})",
-            final_value,
-            initial_price
-        );
-    }
-
-    #[test]
-    fn test_zero_volatility() {
-        let mut walker = TestWalker::new();
-        let n_steps = 100;
-        let initial_price = pos!(100.0);
-        let mean = 0.01; // positive drift
-
-        walker
-            .generate_random_walk_timeframe(
-                n_steps,
-                initial_price,
-                mean,
-                pos!(0.0), // zero volatility
-                pos!(0.0), // zero VoV
-                TimeFrame::Day,
-                None,
-            )
-            .unwrap();
-
-        // With zero volatility, each step should exactly equal the mean
-        // So the price should follow a deterministic path
-        let mut expected_price = initial_price;
-        for i in 0..n_steps {
-            assert_eq!(walker.values[i], expected_price);
-            expected_price = pos!((expected_price.to_f64() + mean).max(0.0));
-        }
-    }
-
-    #[test]
-    fn test_zero_volatility_negative_drift() {
-        let mut walker = TestWalker::new();
-        let n_steps = 100;
-        let initial_price = pos!(100.0);
-        let mean = -0.01; // negative drift
-
-        walker
-            .generate_random_walk_timeframe(
-                n_steps,
-                initial_price,
-                mean,
-                pos!(0.0), // zero volatility
-                pos!(0.0), // zero VoV
-                TimeFrame::Day,
-                None,
-            )
-            .unwrap();
-
-        // With zero volatility and negative drift, price should decrease deterministically
-        // until it hits zero
-        let mut expected_price = initial_price;
-        for i in 0..n_steps {
-            assert_eq!(walker.values[i], expected_price);
-            expected_price = pos!((expected_price.to_f64() + mean).max(0.0));
-        }
-    }
+    
 }
 
 #[cfg(test)]

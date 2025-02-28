@@ -113,7 +113,7 @@ pub trait Walkable {
         let mut rng = thread_rng();
         let mut current_volatility = volatility;
 
-        let dt = (1.0 / 252.0) as f64; // Correct - daily time step for annual parameters
+        let dt: f64 = 1.0 / 252.0; 
         let sqrt_dt = dt.sqrt();
 
         let values = self.get_y_values_ref();

@@ -9,6 +9,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::{pos, spos, ExpirationDate, Positive};
 use optionstratlib::strategies::ShortStrangle;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
@@ -18,9 +19,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let days = pos!(45.0);
     let n_steps = (24.0 * days) as usize;
 
-    let mean = 0.0;
+    let mean = 0.01;
     let std_dev = pos!(0.2);
-    let std_dev_change = pos!(0.1);
+    let std_dev_change = pos!(0.01);
     let risk_free_rate = Some(Decimal::ZERO);
     let dividend_yield = spos!(0.0);
     let volatility_window = 20;
@@ -33,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         volatility_window,
         initial_volatility,
     );
-    random_walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change)?;
+    random_walk.generate_random_walk_timeframe(n_steps, initial_price, mean, std_dev, std_dev_change, TimeFrame::Hour, Some((pos!(0.15), pos!(0.28))))?;
     let mut strategy = ShortStrangle::new(
         symbol.to_string(),
         initial_price,  // underlying_price
@@ -51,7 +52,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pos!(7.01),     // open_fee_short_put
         pos!(7.01),     // close_fee_short_put
     );
+    random_walk.graph(
+        &random_walk.get_x_values(),
+        GraphBackend::Bitmap {
+            file_path: "Draws/Simulation/strategy_walk.png",
+            size: (1200, 800),
+        },
+        20,
+    )?;
     let walk_result = random_walk.walk_strategy(&mut strategy, TimeFrame::Hour)?;
-    println!("{:?}", walk_result);
+    let _json_output = serde_json::to_string_pretty(&walk_result)?;
+    // println!("{}", json_output);
     Ok(())
 }
