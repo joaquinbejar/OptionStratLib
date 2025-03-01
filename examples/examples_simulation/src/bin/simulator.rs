@@ -43,7 +43,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Generate correlated walks
-    simulator.generate_random_walks(n_steps, &initial_prices, mean, std_dev, std_dev_change, config.time_frame, None)?;
+    simulator.generate_random_walks(
+        n_steps,
+        &initial_prices,
+        mean,
+        std_dev,
+        std_dev_change,
+        config.time_frame,
+        None,
+    )?;
 
     simulator.graph(
         GraphBackend::Bitmap {

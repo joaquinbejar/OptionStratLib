@@ -23,7 +23,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dividend_yield = spos!(0.02);
     let volatility_window = 20;
     let initial_volatility = Some(std_dev);
-    
 
     let mut random_walk = RandomWalkGraph::new(
         "Random Walk VoV".to_string(),

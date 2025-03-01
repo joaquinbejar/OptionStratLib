@@ -50,7 +50,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Generate correlated walks
-    simulator.generate_random_walks(n_steps, &initial_prices, mu, volatility, vov, config.time_frame, None)?;
+    simulator.generate_random_walks(
+        n_steps,
+        &initial_prices,
+        mu,
+        volatility,
+        vov,
+        config.time_frame,
+        None,
+    )?;
 
     let mut strategy = ShortStrangle::new(
         symbol.to_string(),
