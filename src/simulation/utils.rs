@@ -15,6 +15,7 @@ use rust_decimal_macros::dec;
 use std::collections::HashMap;
 use std::error::Error;
 
+#[allow(clippy::ptr_arg)]
 pub(super) fn calculate_extra_metrics(
     y_values: &Vec<Positive>,
 ) -> Result<HashMap<String, Decimal>, Box<dyn Error>> {
@@ -203,7 +204,12 @@ pub(super) fn calculate_extra_metrics(
         / len;
 
     let skewness = if m2 > dec!(0) {
-        m3 / m2.powf(1.5)
+        let m2_sqrt = m2.sqrt().unwrap_or(Decimal::ZERO);
+        if m2_sqrt > Decimal::ZERO {
+            m3 / (m2_sqrt * m2)
+        } else {
+            dec!(0)
+        }
     } else {
         dec!(0)
     };
@@ -662,7 +668,7 @@ mod tests_calculate_extra_metrics {
         // Create a simple upward trend
         let y_values: Vec<Positive> = (1..=10).map(|i| Positive(Decimal::from(i * 10))).collect();
 
-        let result = calculate_extra_metrics( &y_values).unwrap();
+        let result = calculate_extra_metrics(&y_values).unwrap();
 
         // Basic checks
         assert!(result.contains_key("realized_volatility"));
@@ -684,7 +690,7 @@ mod tests_calculate_extra_metrics {
             .map(|i| Positive(Decimal::from(110 - i * 10)))
             .collect();
 
-        let result = calculate_extra_metrics( &y_values).unwrap();
+        let result = calculate_extra_metrics(&y_values).unwrap();
 
         // In a steady downtrend, probability of profit should be 0
         assert_eq!(result["probability_of_profit"], dec!(0));
@@ -709,11 +715,11 @@ mod tests_calculate_extra_metrics {
             Positive(dec!(40)),
         ];
 
-        let result = calculate_extra_metrics( &y_values).unwrap();
+        let result = calculate_extra_metrics(&y_values).unwrap();
 
         // Volatility should be higher than in steady trend
         let uptrend_y: Vec<Positive> = (1..=10).map(|i| Positive(Decimal::from(i * 10))).collect();
-        let uptrend_result = calculate_extra_metrics( &uptrend_y).unwrap();
+        let uptrend_result = calculate_extra_metrics(&uptrend_y).unwrap();
 
         assert!(result["realized_volatility"] > uptrend_result["realized_volatility"]);
     }
@@ -748,7 +754,7 @@ mod tests_calculate_extra_metrics {
             Positive(dec!(120)),
         ];
 
-        let result = calculate_extra_metrics( &y_values).unwrap();
+        let result = calculate_extra_metrics(&y_values).unwrap();
 
         // Check max drawdown (should be around -0.46 to -0.47)
         assert!(result["max_drawdown_percentage"] < dec!(-0.45));
@@ -764,7 +770,7 @@ mod tests_calculate_extra_metrics {
         // Test with insufficient data
         let y_values: Vec<Positive> = vec![Positive(dec!(100))];
 
-        let result = calculate_extra_metrics( &y_values);
+        let result = calculate_extra_metrics(&y_values);
         assert!(result.is_err());
     }
 
@@ -784,7 +790,7 @@ mod tests_calculate_extra_metrics {
             Positive(dec!(120)), // outlier creates positive skew
         ];
 
-        let result = calculate_extra_metrics( &y_values).unwrap();
+        let result = calculate_extra_metrics(&y_values).unwrap();
 
         // Skewness should be positive
         assert!(result["skewness"] > dec!(0));
@@ -801,7 +807,7 @@ mod tests_calculate_extra_metrics {
             Positive(dec!(110)), // -4.3% (loss of 5)
         ];
 
-        let result = calculate_extra_metrics( &y_values).unwrap();
+        let result = calculate_extra_metrics(&y_values).unwrap();
 
         // Gross profit should be around 0.195, gross loss around 0.088
         // Profit factor should be around 2.2
@@ -834,7 +840,7 @@ mod serialization_tests {
         ];
 
         // Calculate metrics
-        let metrics_result = calculate_extra_metrics( &y_values).unwrap();
+        let metrics_result = calculate_extra_metrics(&y_values).unwrap();
 
         // Serialize the HashMap to JSON
         let serialized = serde_json::to_string_pretty(&metrics_result).unwrap();
@@ -1141,18 +1147,18 @@ mod tests_calculate_sharpe_ratio {
         fn from(mock: MockWalkResult) -> Self {
             // Create a minimal WalkResult with only the fields needed for testing
             WalkResult {
-                initially: dec!(100),  // Default value, not used in calculate_sharpe_ratio
-                finally: dec!(100),    // Default value, not used in calculate_sharpe_ratio
+                initially: dec!(100), // Default value, not used in calculate_sharpe_ratio
+                finally: dec!(100),   // Default value, not used in calculate_sharpe_ratio
                 payoff: mock.payoff,
                 change_percentage: dec!(0), // Default value, not used in calculate_sharpe_ratio
-                diff: dec!(0),        // Default value, not used in calculate_sharpe_ratio
+                diff: dec!(0),              // Default value, not used in calculate_sharpe_ratio
                 max_value: (dec!(0), dec!(0)), // Default value, not used in calculate_sharpe_ratio
                 min_value: (dec!(0), dec!(0)), // Default value, not used in calculate_sharpe_ratio
                 positive_points: Vec::new(), // Default value, not used in calculate_sharpe_ratio
                 negative_points: Vec::new(), // Default value, not used in calculate_sharpe_ratio
                 pnl_at_prices: HashMap::new(), // Default value, not used in calculate_sharpe_ratio
                 extra_metrics: HashMap::new(), // Default value, not used in calculate_sharpe_ratio
-                volatilities: Vec::new(), // Default value, not used in calculate_sharpe_ratio
+                volatilities: Vec::new(),   // Default value, not used in calculate_sharpe_ratio
             }
         }
     }
@@ -1179,9 +1185,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(10) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1200,9 +1204,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(-10) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1221,9 +1223,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(0) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1242,9 +1242,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(10) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1268,9 +1266,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(-10) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1294,9 +1290,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(-10) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1320,9 +1314,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(10) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1336,13 +1328,9 @@ mod tests_calculate_sharpe_ratio {
     #[test]
     fn test_calculate_sharpe_ratio_single_result() {
         // Test with a single result
-        let mock_walks = vec![
-            MockWalkResult { payoff: dec!(10) },
-        ];
+        let mock_walks = vec![MockWalkResult { payoff: dec!(10) }];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1362,9 +1350,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(2) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1390,9 +1376,7 @@ mod tests_calculate_sharpe_ratio {
             MockWalkResult { payoff: dec!(50) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_sharpe_ratio(&walk_results);
 
@@ -1422,22 +1406,21 @@ mod tests_aggregate_extra_metrics {
         fn from(mock: MockWalkResult) -> Self {
             // Create a minimal WalkResult with only the fields needed for testing
             WalkResult {
-                initially: dec!(100),  // Default value
-                finally: dec!(100),    // Default value
+                initially: dec!(100), // Default value
+                finally: dec!(100),   // Default value
                 payoff: mock.payoff,
-                change_percentage: dec!(0), // Default value
-                diff: dec!(0),        // Default value
+                change_percentage: dec!(0),    // Default value
+                diff: dec!(0),                 // Default value
                 max_value: (dec!(0), dec!(0)), // Default value
                 min_value: (dec!(0), dec!(0)), // Default value
-                positive_points: Vec::new(), // Default value
-                negative_points: Vec::new(), // Default value
+                positive_points: Vec::new(),   // Default value
+                negative_points: Vec::new(),   // Default value
                 pnl_at_prices: HashMap::new(), // Default value
                 extra_metrics: mock.extra_metrics,
                 volatilities: Vec::new(), // Default value
             }
         }
     }
-
 
     #[test]
     fn test_aggregate_extra_metrics_empty_input() {
@@ -1477,9 +1460,7 @@ mod tests_aggregate_extra_metrics {
             });
         }
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Replace calculate_sortino_ratio with mock (in a real environment)
         let result = aggregate_extra_metrics(&walk_results);
@@ -1516,7 +1497,11 @@ mod tests_aggregate_extra_metrics {
             extra_metrics.insert("sharpe_ratio".to_string(), Decimal::from(i) / dec!(2));
 
             // Alternate between positive and negative payoffs
-            let payoff = if i % 2 == 0 { Decimal::from(i * 10) } else { Decimal::from(-i * 10) };
+            let payoff = if i % 2 == 0 {
+                Decimal::from(i * 10)
+            } else {
+                Decimal::from(-i * 10)
+            };
 
             mock_walks.push(MockWalkResult {
                 payoff,
@@ -1524,9 +1509,7 @@ mod tests_aggregate_extra_metrics {
             });
         }
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = aggregate_extra_metrics(&walk_results);
 
@@ -1577,9 +1560,7 @@ mod tests_aggregate_extra_metrics {
             });
         }
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = aggregate_extra_metrics(&walk_results);
 
@@ -1613,9 +1594,7 @@ mod tests_aggregate_extra_metrics {
             });
         }
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = aggregate_extra_metrics(&walk_results);
 
@@ -1648,9 +1627,7 @@ mod tests_aggregate_extra_metrics {
             });
         }
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = aggregate_extra_metrics(&walk_results);
 
@@ -1678,9 +1655,7 @@ mod tests_aggregate_extra_metrics {
             });
         }
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = aggregate_extra_metrics(&walk_results);
 
@@ -1693,7 +1668,6 @@ mod tests_aggregate_extra_metrics {
         assert!(metrics.contains_key("profitable_walks_count"));
         assert_eq!(metrics["profitable_walks_count"], dec!(4)); // All payoffs are positive
     }
-    
 }
 
 #[cfg(test)]
@@ -1712,18 +1686,18 @@ mod tests_generate_pnl_distribution {
         fn from(mock: MockWalkResult) -> Self {
             // Create a minimal WalkResult with only the fields needed for testing
             WalkResult {
-                initially: dec!(100),  // Default value
-                finally: dec!(100),    // Default value
+                initially: dec!(100), // Default value
+                finally: dec!(100),   // Default value
                 payoff: mock.payoff,
-                change_percentage: dec!(0), // Default value
-                diff: dec!(0),        // Default value
+                change_percentage: dec!(0),    // Default value
+                diff: dec!(0),                 // Default value
                 max_value: (dec!(0), dec!(0)), // Default value
                 min_value: (dec!(0), dec!(0)), // Default value
-                positive_points: Vec::new(), // Default value
-                negative_points: Vec::new(), // Default value
+                positive_points: Vec::new(),   // Default value
+                negative_points: Vec::new(),   // Default value
                 pnl_at_prices: HashMap::new(), // Default value
                 extra_metrics: HashMap::new(), // Default value
-                volatilities: Vec::new(), // Default value
+                volatilities: Vec::new(),      // Default value
             }
         }
     }
@@ -1736,7 +1710,10 @@ mod tests_generate_pnl_distribution {
 
         assert!(result.is_err());
         if let Err(e) = result {
-            assert_eq!(e.to_string(), "No walk results to generate PnL distribution");
+            assert_eq!(
+                e.to_string(),
+                "No walk results to generate PnL distribution"
+            );
         }
     }
 
@@ -1748,9 +1725,7 @@ mod tests_generate_pnl_distribution {
             MockWalkResult { payoff: dec!(20) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = generate_pnl_distribution(&walk_results, 0);
         assert!(result.is_err());
@@ -1775,9 +1750,7 @@ mod tests_generate_pnl_distribution {
             MockWalkResult { payoff: dec!(18) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Range size of 10 means all values (10-18) will fall into one bucket (10-20)
         let result = generate_pnl_distribution(&walk_results, 10);
@@ -1789,7 +1762,10 @@ mod tests_generate_pnl_distribution {
         assert_eq!(distribution.len(), 1);
 
         // Find the bucket and check its probability
-        let bucket = PnLRange { lower: 10, upper: 20 };
+        let bucket = PnLRange {
+            lower: 10,
+            upper: 20,
+        };
         assert!(distribution.contains_key(&bucket));
         assert_eq!(distribution[&bucket], dec!(1)); // 4/4 = 100% probability
     }
@@ -1804,9 +1780,7 @@ mod tests_generate_pnl_distribution {
             MockWalkResult { payoff: dec!(35) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Range size of 10 means values will fall into 4 buckets
         let result = generate_pnl_distribution(&walk_results, 10);
@@ -1819,10 +1793,22 @@ mod tests_generate_pnl_distribution {
 
         // Check each bucket and its probability
         let buckets = [
-            PnLRange { lower: 0, upper: 10 },
-            PnLRange { lower: 10, upper: 20 },
-            PnLRange { lower: 20, upper: 30 },
-            PnLRange { lower: 30, upper: 40 },
+            PnLRange {
+                lower: 0,
+                upper: 10,
+            },
+            PnLRange {
+                lower: 10,
+                upper: 20,
+            },
+            PnLRange {
+                lower: 20,
+                upper: 30,
+            },
+            PnLRange {
+                lower: 30,
+                upper: 40,
+            },
         ];
 
         for bucket in &buckets {
@@ -1841,9 +1827,7 @@ mod tests_generate_pnl_distribution {
             MockWalkResult { payoff: dec!(15) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Range size of 10
         let result = generate_pnl_distribution(&walk_results, 10);
@@ -1856,10 +1840,22 @@ mod tests_generate_pnl_distribution {
 
         // Check the buckets and probabilities
         let buckets = [
-            PnLRange { lower: -30, upper: -20 },
-            PnLRange { lower: -20, upper: -10 },
-            PnLRange { lower: 0, upper: 10 },
-            PnLRange { lower: 10, upper: 20 },
+            PnLRange {
+                lower: -30,
+                upper: -20,
+            },
+            PnLRange {
+                lower: -20,
+                upper: -10,
+            },
+            PnLRange {
+                lower: 0,
+                upper: 10,
+            },
+            PnLRange {
+                lower: 10,
+                upper: 20,
+            },
         ];
 
         for bucket in &buckets {
@@ -1880,9 +1876,7 @@ mod tests_generate_pnl_distribution {
             MockWalkResult { payoff: dec!(25) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Range size of 10
         let result = generate_pnl_distribution(&walk_results, 10);
@@ -1894,9 +1888,27 @@ mod tests_generate_pnl_distribution {
         assert_eq!(distribution.len(), 3);
 
         // Check probabilities
-        assert_eq!(distribution[&PnLRange { lower: 0, upper: 10 }], dec!(1) / dec!(6)); // 1/6
-        assert_eq!(distribution[&PnLRange { lower: 10, upper: 20 }], dec!(4) / dec!(6)); // 4/6
-        assert_eq!(distribution[&PnLRange { lower: 20, upper: 30 }], dec!(1) / dec!(6)); // 1/6
+        assert_eq!(
+            distribution[&PnLRange {
+                lower: 0,
+                upper: 10
+            }],
+            dec!(1) / dec!(6)
+        ); // 1/6
+        assert_eq!(
+            distribution[&PnLRange {
+                lower: 10,
+                upper: 20
+            }],
+            dec!(4) / dec!(6)
+        ); // 4/6
+        assert_eq!(
+            distribution[&PnLRange {
+                lower: 20,
+                upper: 30
+            }],
+            dec!(1) / dec!(6)
+        ); // 1/6
     }
 
     #[test]
@@ -1908,9 +1920,7 @@ mod tests_generate_pnl_distribution {
             MockWalkResult { payoff: dec!(15) }, // Middle of bucket
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Range size of 10
         let result = generate_pnl_distribution(&walk_results, 10);
@@ -1918,22 +1928,23 @@ mod tests_generate_pnl_distribution {
         assert!(result.is_ok());
         let distribution = result.unwrap();
 
-
         assert_eq!(distribution.len(), 1);
 
-        assert_eq!(distribution[&PnLRange { lower: 10, upper: 20 }], dec!(2) / dec!(3)); // 2/3
+        assert_eq!(
+            distribution[&PnLRange {
+                lower: 10,
+                upper: 20
+            }],
+            dec!(2) / dec!(3)
+        ); // 2/3
     }
 
     #[test]
     fn test_generate_pnl_distribution_single_value() {
         // Test with a single value
-        let mock_walks = vec![
-            MockWalkResult { payoff: dec!(15) },
-        ];
+        let mock_walks = vec![MockWalkResult { payoff: dec!(15) }];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Range size of 10
         let result = generate_pnl_distribution(&walk_results, 10);
@@ -1943,7 +1954,13 @@ mod tests_generate_pnl_distribution {
 
         // Should have 1 bucket: 10-20
         assert_eq!(distribution.len(), 1);
-        assert_eq!(distribution[&PnLRange { lower: 10, upper: 20 }], dec!(1)); // 100% probability
+        assert_eq!(
+            distribution[&PnLRange {
+                lower: 10,
+                upper: 20
+            }],
+            dec!(1)
+        ); // 100% probability
     }
 
     #[test]
@@ -1956,9 +1973,7 @@ mod tests_generate_pnl_distribution {
             MockWalkResult { payoff: dec!(35) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Try with range size of 20
         let result = generate_pnl_distribution(&walk_results, 20);
@@ -1968,8 +1983,20 @@ mod tests_generate_pnl_distribution {
 
         // Should have 2 buckets: 0-20, 20-40
         assert_eq!(distribution.len(), 2);
-        assert_eq!(distribution[&PnLRange { lower: 0, upper: 20 }], dec!(0.5)); // 2/4
-        assert_eq!(distribution[&PnLRange { lower: 20, upper: 40 }], dec!(0.5)); // 2/4
+        assert_eq!(
+            distribution[&PnLRange {
+                lower: 0,
+                upper: 20
+            }],
+            dec!(0.5)
+        ); // 2/4
+        assert_eq!(
+            distribution[&PnLRange {
+                lower: 20,
+                upper: 40
+            }],
+            dec!(0.5)
+        ); // 2/4
     }
 
     #[test]
@@ -1982,9 +2009,7 @@ mod tests_generate_pnl_distribution {
             MockWalkResult { payoff: dec!(35) },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Range size of 100 should put all values in a single bucket
         let result = generate_pnl_distribution(&walk_results, 100);
@@ -1994,7 +2019,13 @@ mod tests_generate_pnl_distribution {
 
         // Should have 1 bucket: 0-100
         assert_eq!(distribution.len(), 1);
-        assert_eq!(distribution[&PnLRange { lower: 0, upper: 100 }], dec!(1)); // All in one bucket
+        assert_eq!(
+            distribution[&PnLRange {
+                lower: 0,
+                upper: 100
+            }],
+            dec!(1)
+        ); // All in one bucket
     }
 }
 
@@ -2017,22 +2048,20 @@ mod tests_calculate_risk_metrics {
             // Create a minimal WalkResult with only the fields needed for testing
             WalkResult {
                 initially: mock.initially,
-                finally: dec!(100),    // Default value, not used in calculate_risk_metrics
+                finally: dec!(100), // Default value, not used in calculate_risk_metrics
                 payoff: mock.payoff,
                 change_percentage: dec!(0), // Default value, not used in calculate_risk_metrics
-                diff: dec!(0),        // Default value, not used in calculate_risk_metrics
+                diff: dec!(0),              // Default value, not used in calculate_risk_metrics
                 max_value: (dec!(0), dec!(0)), // Default value, not used in calculate_risk_metrics
                 min_value: mock.min_value,
                 positive_points: Vec::new(), // Default value, not used in calculate_risk_metrics
                 negative_points: Vec::new(), // Default value, not used in calculate_risk_metrics
                 pnl_at_prices: HashMap::new(), // Default value, not used in calculate_risk_metrics
                 extra_metrics: HashMap::new(), // Default value, not used in calculate_risk_metrics
-                volatilities: Vec::new(), // Default value, not used in calculate_risk_metrics
+                volatilities: Vec::new(),    // Default value, not used in calculate_risk_metrics
             }
         }
     }
-
-
 
     #[test]
     fn test_calculate_risk_metrics_empty_input() {
@@ -2104,7 +2133,7 @@ mod tests_calculate_risk_metrics {
                 payoff: dec!(40),
                 min_value: (dec!(100), dec!(0)),
             },
-            // For a 20-element array, indices: 
+            // For a 20-element array, indices:
             // 5% = index 1 (0-based), 1% = index 0 (0-based)
             MockWalkResult {
                 initially: dec!(100),
@@ -2158,9 +2187,7 @@ mod tests_calculate_risk_metrics {
             },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         // Temporarily replace calculate_sharpe_ratio in a real test
         // Here we're just noting that we would do this
@@ -2240,9 +2267,7 @@ mod tests_calculate_risk_metrics {
             },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_risk_metrics(&walk_results);
 
@@ -2250,7 +2275,10 @@ mod tests_calculate_risk_metrics {
         let risk_metrics = result.unwrap();
 
         // Severe loss probability: 3 out of 10 walks = 30%
-        assert_eq!(risk_metrics.severe_loss_probability, Positive::from(dec!(30)));
+        assert_eq!(
+            risk_metrics.severe_loss_probability,
+            Positive::from(dec!(30))
+        );
     }
 
     #[test]
@@ -2279,9 +2307,7 @@ mod tests_calculate_risk_metrics {
             },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_risk_metrics(&walk_results);
 
@@ -2313,9 +2339,7 @@ mod tests_calculate_risk_metrics {
             },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_risk_metrics(&walk_results);
 
@@ -2328,7 +2352,10 @@ mod tests_calculate_risk_metrics {
         assert_eq!(risk_metrics.cvar_95, dec!(10));
 
         // Severe loss probability should be 0
-        assert_eq!(risk_metrics.severe_loss_probability, Positive::from(dec!(0)));
+        assert_eq!(
+            risk_metrics.severe_loss_probability,
+            Positive::from(dec!(0))
+        );
 
         // Max drawdown should be 0
         assert_eq!(risk_metrics.max_drawdown, Positive::from(dec!(0)));
@@ -2355,9 +2382,7 @@ mod tests_calculate_risk_metrics {
             },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_risk_metrics(&walk_results);
 
@@ -2374,7 +2399,10 @@ mod tests_calculate_risk_metrics {
         assert_eq!(risk_metrics.cvar_95, dec!(80));
 
         // Severe loss probability should be 100% (all losses > 50%)
-        assert_eq!(risk_metrics.severe_loss_probability, Positive::from(dec!(100)));
+        assert_eq!(
+            risk_metrics.severe_loss_probability,
+            Positive::from(dec!(100))
+        );
 
         // Max drawdown should be 80%
         assert_eq!(risk_metrics.max_drawdown, Positive::from(dec!(0.8)));
@@ -2406,9 +2434,7 @@ mod tests_calculate_risk_metrics {
             },
         ];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_risk_metrics(&walk_results);
 
@@ -2422,7 +2448,10 @@ mod tests_calculate_risk_metrics {
         assert_eq!(risk_metrics.var_99, dec!(50));
 
         // Severe loss probability: 1 out of 4 = 25%
-        assert_eq!(risk_metrics.severe_loss_probability, Positive::from(dec!(25)));
+        assert_eq!(
+            risk_metrics.severe_loss_probability,
+            Positive::from(dec!(25))
+        );
 
         // Max drawdown should be 50%
         assert_eq!(risk_metrics.max_drawdown, Positive::from(dec!(0.5)));
@@ -2431,17 +2460,13 @@ mod tests_calculate_risk_metrics {
     #[test]
     fn test_calculate_risk_metrics_single_result() {
         // Test with a single result
-        let mock_walks = vec![
-            MockWalkResult {
-                initially: dec!(100),
-                payoff: dec!(-30),
-                min_value: (dec!(70), dec!(0)), // 30% drawdown
-            },
-        ];
+        let mock_walks = vec![MockWalkResult {
+            initially: dec!(100),
+            payoff: dec!(-30),
+            min_value: (dec!(70), dec!(0)), // 30% drawdown
+        }];
 
-        let walk_results: Vec<WalkResult> = mock_walks.into_iter()
-            .map(|m| m.into())
-            .collect();
+        let walk_results: Vec<WalkResult> = mock_walks.into_iter().map(|m| m.into()).collect();
 
         let result = calculate_risk_metrics(&walk_results);
 
@@ -2455,7 +2480,10 @@ mod tests_calculate_risk_metrics {
         assert_eq!(risk_metrics.cvar_95, dec!(30));
 
         // Severe loss probability: 0 out of 1 = 0%
-        assert_eq!(risk_metrics.severe_loss_probability, Positive::from(dec!(0)));
+        assert_eq!(
+            risk_metrics.severe_loss_probability,
+            Positive::from(dec!(0))
+        );
 
         // Max drawdown should be 30%
         assert_eq!(risk_metrics.max_drawdown, Positive::from(dec!(0.3)));
@@ -2470,8 +2498,9 @@ mod tests_create_simulation_result {
 
     // Create a helper function to create test walk results
     fn create_test_walk_results(payoffs: Vec<Decimal>) -> Vec<WalkResult> {
-        payoffs.into_iter().map(|payoff| {
-            WalkResult {
+        payoffs
+            .into_iter()
+            .map(|payoff| WalkResult {
                 initially: dec!(100),
                 finally: dec!(100) + payoff,
                 payoff,
@@ -2484,13 +2513,9 @@ mod tests_create_simulation_result {
                 pnl_at_prices: HashMap::new(),
                 extra_metrics: HashMap::new(),
                 volatilities: Vec::new(),
-            }
-        }).collect()
+            })
+            .collect()
     }
-
-
-
-
 
     #[test]
     fn test_create_simulation_result_empty_input() {
@@ -2508,8 +2533,16 @@ mod tests_create_simulation_result {
     fn test_create_simulation_result_basic_metrics() {
         // Create test data: 8 positive payoffs, 2 negative
         let payoffs = vec![
-            dec!(15), dec!(10), dec!(5), dec!(20), dec!(25),
-            dec!(30), dec!(15), dec!(10), dec!(-5), dec!(-10)
+            dec!(15),
+            dec!(10),
+            dec!(5),
+            dec!(20),
+            dec!(25),
+            dec!(30),
+            dec!(15),
+            dec!(10),
+            dec!(-5),
+            dec!(-10),
         ];
         let walk_results = create_test_walk_results(payoffs);
 
@@ -2687,6 +2720,6 @@ mod tests_create_simulation_result {
     // ) -> Result<SimulationResult, Box<dyn Error>> { ... }
     //
     // Then in tests you could pass the test versions:
-    // create_simulation_result(walk_results, 10, test_calculate_risk_metrics, 
+    // create_simulation_result(walk_results, 10, test_calculate_risk_metrics,
     //                          test_generate_pnl_distribution, test_aggregate_extra_metrics)
 }

@@ -4,8 +4,10 @@
    Date: 27/2/25
 ******************************************************************************/
 
+use optionstratlib::geometrics::Plottable;
 use optionstratlib::simulation::{SimulationConfig, Simulator, WalkId};
 use optionstratlib::strategies::{ShortStrangle, Strategies};
+use optionstratlib::surfaces::Surfacable;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
@@ -14,8 +16,6 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::HashMap;
 use tracing::info;
-use optionstratlib::geometrics::Plottable;
-use optionstratlib::surfaces::Surfacable;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate correlated walks
     simulator.generate_random_walks(n_steps, &initial_prices, mu, volatility, vov)?;
 
-    let strategy = ShortStrangle::new(
+    let mut strategy = ShortStrangle::new(
         symbol.to_string(),
         pos!(7250.0),  // underlying_price
         initial_price, // call_strike
@@ -70,28 +70,66 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pos!(7.01),     // close_fee_short_put
     );
 
-    let simulation_result = simulator.simulate_strategy(&strategy)?;
+    let simulation_result = simulator.simulate_strategy(&mut strategy)?;
 
-    info!("Simulation result: {:?}", simulation_result);
+    info!(
+        "Simulation result iterations: {:?}",
+        simulation_result.iterations
+    );
+    info!(
+        "Simulation result profit_probability: {:?}",
+        simulation_result.profit_probability
+    );
+    info!(
+        "Simulation result loss_probability: {:?}",
+        simulation_result.loss_probability
+    );
+    info!(
+        "Simulation result max_profit: {:?}",
+        simulation_result.max_profit
+    );
+    info!(
+        "Simulation result max_loss: {:?}",
+        simulation_result.max_loss
+    );
+    info!(
+        "Simulation result average_pnl: {:?}",
+        simulation_result.average_pnl
+    );
+    info!(
+        "Simulation result pnl_std_dev: {:?}",
+        simulation_result.pnl_std_dev
+    );
+    info!(
+        "Simulation result risk_levels: {}",
+        serde_json::to_string_pretty(&simulation_result.risk_levels).unwrap()
+    );
+    info!(
+        "Simulation result pnl_distribution: {}",
+        serde_json::to_string_pretty(&simulation_result.pnl_distribution).unwrap()
+    );
+    info!(
+        "Simulation result additional_metrics: {}",
+        serde_json::to_string_pretty(&simulation_result.additional_metrics).unwrap()
+    );
 
     simulator.graph(
         GraphBackend::Bitmap {
-            file_path: &"Draws/Simulation/strategy.png",
+            file_path: &"Draws/Simulation/simulator_strategy.png",
             size: (1200, 800),
         },
         20,
     )?;
 
-    
     let surface = simulator.surface()?;
-    
+
     surface
         .plot()
         .title("Simulated Surface")
         .x_label("Walk")
         .y_label("Time")
         .z_label("Price")
-        .save("Draws/Simulation/strategy_surface.png")?;
+        .save("Draws/Simulation/simulator_strategy_surface.png")?;
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

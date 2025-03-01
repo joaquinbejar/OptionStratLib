@@ -10,6 +10,7 @@ use crate::Positive;
 use crate::curves::Curvable;
 use crate::error::SurfaceError;
 use crate::simulation::model::SimulationResult;
+use crate::simulation::utils::create_simulation_result;
 use crate::simulation::{RandomWalkGraph, Walkable};
 use crate::strategies::Strategable;
 use crate::surfaces::{Point3D, Surfacable, Surface};
@@ -548,7 +549,7 @@ impl Simulator {
     /// # Type Parameters
     /// - `S`: The concrete strategy type that implements Strategable
     /// - `T`: The associated Strategy type from the Strategable trait
-    pub fn simulate_strategy<S>(&self, _strategy: &S) -> Result<SimulationResult, Box<dyn Error>>
+    pub fn simulate_strategy<S>(&self, strategy: &mut S) -> Result<SimulationResult, Box<dyn Error>>
     where
         S: Strategable,
     {
@@ -557,30 +558,15 @@ impl Simulator {
             return Err("No walks available for strategy simulation".into());
         }
 
-        // // Build and return the simulation result
-        // let result = SimulationResult {
-        //     iterations: iterations as u32,
-        //     profit_probability: profit_probability_positive,
-        //     loss_probability: loss_probability_positive,
-        //     max_profit: max_profit_positive,
-        //     max_loss: max_loss_positive,
-        //     average_pnl,
-        //     pnl_std_dev: pnl_std_dev_positive,
-        //     risk_levels: RiskMetricsSimulation {
-        //         var_95,
-        //         var_99,
-        //         cvar_95,
-        //         severe_loss_probability: severe_loss_probability_positive,
-        //         max_drawdown: max_drawdown_positive,
-        //         sharpe_ratio,
-        //     },
-        //     pnl_distribution,
-        //     additional_metrics: HashMap::new(),
-        //     walk_results: Default::default(),
-        // };
-        //
-        // Ok(result)
-        Ok(SimulationResult::default())
+        let walks = self
+            .walks
+            .values()
+            .map(|walk| walk.walk_strategy(strategy, walk.time_frame))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let result = create_simulation_result(walks, 10)?;
+
+        Ok(result)
     }
 }
 

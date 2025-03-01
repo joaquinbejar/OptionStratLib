@@ -14,6 +14,7 @@ use crate::geometrics::GeometricObject;
 use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::simulation::model::WalkResult;
+use crate::simulation::utils::calculate_extra_metrics;
 use crate::strategies::Strategable;
 use crate::utils::time::{TimeFrame, convert_time_frame, units_per_year};
 use crate::visualization::model::ChartPoint;
@@ -26,8 +27,7 @@ use rust_decimal::Decimal;
 use statrs::distribution::Normal;
 use std::collections::HashMap;
 use std::error::Error;
-use tracing::{info, trace, warn};
-use crate::simulation::utils::calculate_extra_metrics;
+use tracing::{debug, info, trace, warn};
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
 /// entities capable of simulating or managing a random walk sequence of values.
@@ -322,9 +322,8 @@ pub trait Walkable {
             )
             .into());
         }
-        
-        let extra_metrics = calculate_extra_metrics( values)
-            .unwrap_or_else(|err| {
+
+        let extra_metrics = calculate_extra_metrics(values).unwrap_or_else(|err| {
             warn!("Failed to calculate extra metrics: {}", err);
             HashMap::new()
         });
@@ -345,7 +344,7 @@ pub trait Walkable {
         };
 
         // Debug output to check volatilities
-        info!(
+        debug!(
             "Using {} volatility values for {} price points",
             volatilities.len(),
             values.len()
@@ -357,7 +356,7 @@ pub trait Walkable {
             let days_left = convert_time_frame(pos!(i as f64), &time_frame, &TimeFrame::Day);
 
             // Debug log to track calculations
-            info!(
+            debug!(
                 "Step {}: Params: Underlying Price: {}, Expiration: {} Years, Implied Volatility: {}",
                 i,
                 price,
@@ -485,7 +484,7 @@ pub struct RandomWalkGraph {
     /// Optional dividend yield percentage.
     dividend_yield: Option<Positive>,
     /// Specifies the timeframe (e.g., daily, weekly) for the graph calculations.
-    time_frame: TimeFrame,
+    pub(crate) time_frame: TimeFrame,
     /// Determines the window size used in volatility calculations.
     volatility_window: usize,
     /// Optional initial volatility of the random walk.
