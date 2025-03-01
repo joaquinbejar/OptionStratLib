@@ -14,6 +14,8 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::HashMap;
 use tracing::info;
+use optionstratlib::geometrics::Plottable;
+use optionstratlib::surfaces::Surfacable;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
@@ -24,9 +26,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Setup simulation parameters
     let n_steps = (24.0 * days) as usize;
-    let mean = 0.0;
-    let std_dev = pos!(11.3);
-    let std_dev_change = pos!(0.1);
+    let mu = 0.0;
+    let volatility = pos!(0.2);
+    let vov = pos!(0.01);
 
     // Create simulation config
     let config = SimulationConfig {
@@ -34,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dividend_yield: spos!(0.02),
         time_frame: TimeFrame::Hour,
         volatility_window: 20,
-        initial_volatility: Some(std_dev),
+        initial_volatility: Some(volatility),
     };
 
     // Initialize simulator
@@ -48,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Generate correlated walks
-    simulator.generate_random_walks(n_steps, &initial_prices, mean, std_dev, std_dev_change)?;
+    simulator.generate_random_walks(n_steps, &initial_prices, mu, volatility, vov)?;
 
     let strategy = ShortStrangle::new(
         symbol.to_string(),
@@ -80,16 +82,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         20,
     )?;
 
-    //
-    // let surface = simulator.surface()?;
-    //
-    // surface
-    //     .plot()
-    //     .title("Simulated Surface")
-    //     .x_label("Walk")
-    //     .y_label("Time")
-    //     .z_label("Price")
-    //     .save("Draws/Simulation/surface.png")?;
+    
+    let surface = simulator.surface()?;
+    
+    surface
+        .plot()
+        .title("Simulated Surface")
+        .x_label("Walk")
+        .y_label("Time")
+        .z_label("Price")
+        .save("Draws/Simulation/strategy_surface.png")?;
 
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
