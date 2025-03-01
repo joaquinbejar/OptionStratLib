@@ -26,7 +26,8 @@ use rust_decimal::Decimal;
 use statrs::distribution::Normal;
 use std::collections::HashMap;
 use std::error::Error;
-use tracing::{info, trace};
+use tracing::{info, trace, warn};
+use crate::simulation::utils::calculate_extra_metrics;
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
 /// entities capable of simulating or managing a random walk sequence of values.
@@ -301,7 +302,7 @@ pub trait Walkable {
         // Verify that walks exist for the simulation
         if self.get_x_values().is_empty() {
             return Err("No walks available for strategy simulation".into());
-        }
+        };
 
         let values = self.get_y_values();
         let values_len: Positive = Decimal::from_usize(values.len()).unwrap().into();
@@ -321,6 +322,12 @@ pub trait Walkable {
             )
             .into());
         }
+        
+        let extra_metrics = calculate_extra_metrics( values)
+            .unwrap_or_else(|err| {
+            warn!("Failed to calculate extra metrics: {}", err);
+            HashMap::new()
+        });
 
         let mut walk_result = WalkResult {
             initially,
@@ -333,7 +340,7 @@ pub trait Walkable {
             positive_points: Vec::new(),
             negative_points: Vec::new(),
             pnl_at_prices: HashMap::new(),
-            extra_metrics: HashMap::new(),
+            extra_metrics,
             volatilities: volatilities.clone(),
         };
 
