@@ -20,8 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let years = 3.0;
     let n_steps = 252 * years as usize;
     let mean = 0.0;
-    let std_dev = pos!(11.3);
-    let std_dev_change = pos!(0.1);
+    let std_dev = pos!(0.2);
+    let std_dev_change = pos!(0.01);
 
     // Create simulation config
     let config = SimulationConfig {
