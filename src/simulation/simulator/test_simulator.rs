@@ -23,7 +23,7 @@ mod tests_simulator {
             volatility_window: 10,
             initial_volatility: Some(pos!(0.2)),
         };
-        Simulator::new(config)
+        Simulator::new(&config)
     }
 
     #[test]
@@ -265,7 +265,7 @@ mod tests_surfacable {
             initial_volatility: None,
         };
 
-        let mut simulator = Simulator::new(config);
+        let mut simulator = Simulator::new(&config);
 
         // Add two walks with known values
         let walk1 = simulator.add_walk("WALK1", "First Walk".to_string());
@@ -279,7 +279,7 @@ mod tests_surfacable {
 
     #[test]
     fn test_surface_empty_simulator() {
-        let simulator = Simulator::new(SimulationConfig::default());
+        let simulator = Simulator::new(&SimulationConfig::default());
         let result = simulator.surface();
         assert!(result.is_ok());
         assert_eq!(result.unwrap().points.len(), 0);
@@ -287,7 +287,7 @@ mod tests_surfacable {
 
     #[test]
     fn test_surface_with_single_walk() {
-        let mut simulator = Simulator::new(SimulationConfig::default());
+        let mut simulator = Simulator::new(&SimulationConfig::default());
         let walk = simulator.add_walk("WALK1", "Single Walk".to_string());
         walk.values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
 
@@ -361,7 +361,7 @@ mod tests {
             volatility_window: 10,
             initial_volatility: Some(pos!(0.2)),
         };
-        Simulator::new(config)
+        Simulator::new(&config)
     }
 
     #[test]
@@ -525,6 +525,8 @@ mod tests {
             0.0,        // mean
             pos!(0.2),  // std_dev
             pos!(0.01), // std_dev_change
+            TimeFrame::Hour,
+            None,
         );
 
         assert!(result.is_ok());

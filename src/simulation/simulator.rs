@@ -384,6 +384,7 @@ impl Simulator {
     /// # Returns
     /// - `Ok(())` if all random walks were successfully generated.
     /// - `Err(Box<dyn Error>)` if an error occurs during generation.
+    #[allow(clippy::too_many_arguments)]
     pub fn generate_random_walks(
         &mut self,
         n_steps: usize,
@@ -401,7 +402,15 @@ impl Simulator {
                 let first = initial
                     .get(id)
                     .ok_or_else(|| format!("No initial provided for walk {}", id.as_str()))?;
-                walk.generate_random_walk_timeframe(n_steps, *first, mean, std_dev, std_dev_change, time_frame, volatility_limits )
+                walk.generate_random_walk_timeframe(
+                    n_steps,
+                    *first,
+                    mean,
+                    std_dev,
+                    std_dev_change,
+                    time_frame,
+                    volatility_limits,
+                )
             })
             .collect();
         results?;
