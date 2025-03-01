@@ -1,6 +1,6 @@
+use crate::Options;
 use crate::f2d;
 use crate::pricing::utils::wiener_increment;
-use crate::Options;
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use std::error::Error;
@@ -65,7 +65,7 @@ mod tests {
     use super::*;
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{assert_decimal_eq, f2du, pos, Positive};
+    use crate::{Positive, assert_decimal_eq, f2du, pos};
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 

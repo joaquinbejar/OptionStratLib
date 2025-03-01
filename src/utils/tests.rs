@@ -39,8 +39,8 @@ macro_rules! assert_pos_relative_eq {
 
 #[cfg(test)]
 mod tests_assert_positivef64_relative_eq {
-    use crate::pos;
     use crate::Positive;
+    use crate::pos;
 
     #[test]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

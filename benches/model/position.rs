@@ -5,11 +5,11 @@
 ******************************************************************************/
 
 use chrono::Utc;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use optionstratlib::model::Position;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::visualization::utils::Graph;
-use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
 use rust_decimal_macros::dec;
 
 fn create_test_option() -> Options {

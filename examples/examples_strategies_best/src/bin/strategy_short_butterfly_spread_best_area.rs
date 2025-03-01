@@ -1,3 +1,5 @@
+use optionstratlib::ExpirationDate;
+use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::constants::ZERO;
 use optionstratlib::pos;
@@ -6,8 +8,6 @@ use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};

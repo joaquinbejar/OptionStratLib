@@ -5,14 +5,14 @@ use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::{
-    black_scholes, generate_binomial_tree, price_binomial, telegraph, BinomialPricingParams,
-    Payoff, PayoffInfo, Profit,
+    BinomialPricingParams, Payoff, PayoffInfo, Profit, black_scholes, generate_binomial_tree,
+    price_binomial, telegraph,
 };
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -148,8 +148,8 @@ impl Options {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,
             strike: self.strike_price,
-            style: self.option_style.clone(),
-            side: self.side.clone(),
+            style: self.option_style,
+            side: self.side,
             spot_prices: None,
             spot_min: None,
             spot_max: None,
@@ -162,8 +162,8 @@ impl Options {
         let payoff_info = PayoffInfo {
             spot: price,
             strike: self.strike_price,
-            style: self.option_style.clone(),
-            side: self.side.clone(),
+            style: self.option_style,
+            side: self.side,
             spot_prices: None,
             spot_min: None,
             spot_max: None,
@@ -189,8 +189,8 @@ impl Options {
         let payoff_info = PayoffInfo {
             spot: underlying_price,
             strike: self.strike_price,
-            style: self.option_style.clone(),
-            side: self.side.clone(),
+            style: self.option_style,
+            side: self.side,
             spot_prices: None,
             spot_min: None,
             spot_max: None,

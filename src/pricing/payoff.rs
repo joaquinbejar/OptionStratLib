@@ -1,7 +1,7 @@
+use crate::Positive;
 use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::types::{OptionStyle, Side};
 use crate::visualization::model::{ChartPoint, LabelOffsetType};
-use crate::Positive;
 use num_traits::ToPrimitive;
 use plotters::prelude::RED;
 use rust_decimal::Decimal;

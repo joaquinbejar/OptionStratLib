@@ -102,4 +102,5 @@
 //! * Income tracking
 //! * Timestamp-based calculations
 
+pub mod model;
 pub mod utils;

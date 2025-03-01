@@ -4,14 +4,14 @@
    Date: 29/1/25
 ******************************************************************************/
 use chrono::DateTime;
+use optionstratlib::ExpirationDate;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::base::Optimizable;
 use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::ExpirationDate;
-use optionstratlib::{pos, Positive};
+use optionstratlib::{Positive, pos};
 use rust_decimal::Decimal;
 use tracing::{debug, info};
 
@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (range / 2.0) / option_chain.underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
-    info!("Delta:  {:#?}", strategy.calculate_net_delta());
+    info!("Delta:  {:#?}", strategy.delta_neutrality()?);
 
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);

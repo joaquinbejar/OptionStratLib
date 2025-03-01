@@ -1,10 +1,10 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::{LongStrangle, DELTA_THRESHOLD};
+use optionstratlib::strategies::{DELTA_THRESHOLD, LongStrangle};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, pos};
 use optionstratlib::{ExpirationDate, Positive};
+use optionstratlib::{assert_decimal_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -45,22 +45,22 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho_d, dec!(0.00073528197151), epsilon);
 
     assert_decimal_eq!(
-        strategy.calculate_net_delta().net_delta,
+        strategy.delta_neutrality().unwrap().net_delta,
         dec!(-0.0000835),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.calculate_net_delta().individual_deltas[0],
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
         dec!(0.41685408),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.calculate_net_delta().individual_deltas[1],
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
         dec!(-0.416937),
         DELTA_THRESHOLD
     );
     assert!(strategy.is_delta_neutral());
-    assert_eq!(strategy.suggest_delta_adjustments().len(), 1);
-    assert_eq!(strategy.suggest_delta_adjustments()[0], NoAdjustmentNeeded);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 1);
+    assert_eq!(strategy.delta_adjustments().unwrap()[0], NoAdjustmentNeeded);
     Ok(())
 }

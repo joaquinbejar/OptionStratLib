@@ -5,13 +5,12 @@
 ******************************************************************************/
 
 use crate::error::StrategyError;
-use crate::greeks::Greeks;
 use crate::model::Position;
 use crate::strategies::base::StrategyType;
 use crate::strategies::{
     BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy,
     IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle,
-    PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategies,
+    PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable,
     StrategyConstructor,
 };
 use serde::{Deserialize, Serialize};
@@ -22,9 +21,6 @@ pub struct StrategyRequest {
     pub positions: Vec<Position>,
 }
 
-pub trait StrategyWithGreeks: Strategies + Greeks {}
-impl<T: Strategies + Greeks> StrategyWithGreeks for T {}
-
 impl StrategyRequest {
     pub fn new(strategy_type: StrategyType, positions: Vec<Position>) -> Self {
         Self {
@@ -33,7 +29,7 @@ impl StrategyRequest {
         }
     }
 
-    pub fn get_strategy(&self) -> Result<Box<dyn StrategyWithGreeks>, StrategyError> {
+    pub fn get_strategy(&self) -> Result<Box<dyn Strategable>, StrategyError> {
         match self.strategy_type {
             StrategyType::BullCallSpread => {
                 Ok(Box::new(BullCallSpread::get_strategy(&self.positions)?))
@@ -91,7 +87,7 @@ impl StrategyRequest {
 mod tests_serialization {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
-    use crate::{pos, OptionStyle, Side};
+    use crate::{OptionStyle, Side, pos};
     use chrono::{DateTime, NaiveDateTime, Utc};
     use serde_json;
 

@@ -4,8 +4,8 @@
    Date: 26/9/24
 ******************************************************************************/
 use crate::chains::utils::{
-    adjust_volatility, default_empty_string, generate_list_of_strikes, OptionChainBuildParams,
-    OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
+    OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
+    adjust_volatility, default_empty_string, generate_list_of_strikes,
 };
 use crate::chains::{
     DeltasInStrike, FourOptions, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult,
@@ -14,7 +14,7 @@ use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::error::{CurveError, SurfaceError};
 use crate::geometrics::{Len, LinearInterpolation};
-use crate::greeks::{delta, gamma, Greeks};
+use crate::greeks::{Greeks, delta, gamma};
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
@@ -22,12 +22,12 @@ use crate::strategies::utils::FindOptimalSide;
 use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::de::{MapAccess, Visitor};
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
@@ -453,8 +453,7 @@ impl OptionData {
     ) -> Result<(), ChainError> {
         trace!(
             "call_middle {:?} put_middle {:?}",
-            self.call_middle,
-            self.put_middle
+            self.call_middle, self.put_middle
         );
         if self.call_middle.is_none() || self.put_middle.is_none() {
             info!("Calculation middel prices for IV calculation:");
@@ -3055,9 +3054,11 @@ mod tests_filter_option_data {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Upper);
         assert_eq!(filtered.len(), 2);
-        assert!(filtered
-            .iter()
-            .all(|opt| opt.strike_price > chain.underlying_price));
+        assert!(
+            filtered
+                .iter()
+                .all(|opt| opt.strike_price > chain.underlying_price)
+        );
     }
 
     #[test]
@@ -3066,9 +3067,11 @@ mod tests_filter_option_data {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Lower);
         assert_eq!(filtered.len(), 2);
-        assert!(filtered
-            .iter()
-            .all(|opt| opt.strike_price < chain.underlying_price));
+        assert!(
+            filtered
+                .iter()
+                .all(|opt| opt.strike_price < chain.underlying_price)
+        );
     }
 
     #[test]
@@ -3085,9 +3088,11 @@ mod tests_filter_option_data {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Range(pos!(95.0), pos!(105.0)));
         assert_eq!(filtered.len(), 3);
-        assert!(filtered
-            .iter()
-            .all(|opt| opt.strike_price >= pos!(95.0) && opt.strike_price <= pos!(105.0)));
+        assert!(
+            filtered
+                .iter()
+                .all(|opt| opt.strike_price >= pos!(95.0) && opt.strike_price <= pos!(105.0))
+        );
     }
 }
 
@@ -4292,8 +4297,12 @@ mod tests_is_valid_optimal_side {
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
 
-        assert!(option_data
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+        assert!(
+            option_data.is_valid_optimal_side(
+                pos!(100.0),
+                &FindOptimalSide::Range(range_start, range_end)
+            )
+        );
     }
 
     #[test]
@@ -4315,8 +4324,12 @@ mod tests_is_valid_optimal_side {
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
 
-        assert!(!option_data
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+        assert!(
+            !option_data.is_valid_optimal_side(
+                pos!(100.0),
+                &FindOptimalSide::Range(range_start, range_end)
+            )
+        );
     }
 
     #[test]
@@ -4338,8 +4351,12 @@ mod tests_is_valid_optimal_side {
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
 
-        assert!(!option_data
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+        assert!(
+            !option_data.is_valid_optimal_side(
+                pos!(100.0),
+                &FindOptimalSide::Range(range_start, range_end)
+            )
+        );
     }
 
     #[test]
@@ -4374,10 +4391,18 @@ mod tests_is_valid_optimal_side {
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
 
-        assert!(option_data_lower
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
-        assert!(option_data_upper
-            .is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Range(range_start, range_end)));
+        assert!(
+            option_data_lower.is_valid_optimal_side(
+                pos!(100.0),
+                &FindOptimalSide::Range(range_start, range_end)
+            )
+        );
+        assert!(
+            option_data_upper.is_valid_optimal_side(
+                pos!(100.0),
+                &FindOptimalSide::Range(range_start, range_end)
+            )
+        );
     }
 }
 

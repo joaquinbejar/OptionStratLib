@@ -155,9 +155,9 @@ pub(crate) mod payoff;
 pub mod telegraph;
 pub(crate) mod utils;
 
-pub use binomial_model::{generate_binomial_tree, price_binomial, BinomialPricingParams};
-pub use black_scholes_model::{black_scholes, BlackScholes};
+pub use binomial_model::{BinomialPricingParams, generate_binomial_tree, price_binomial};
+pub use black_scholes_model::{BlackScholes, black_scholes};
 pub use monte_carlo::monte_carlo_option_pricing;
 pub use payoff::{Payoff, PayoffInfo, Profit};
-pub use telegraph::{telegraph, TelegraphProcess};
+pub use telegraph::{TelegraphProcess, telegraph};
 pub use utils::{probability_keep_under_strike, simulate_returns};

@@ -9,9 +9,9 @@ use crate::pricing::payoff::Profit;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
 use crate::strategies::probabilities::utils::{
-    calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
+    PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;
@@ -245,9 +245,7 @@ mod tests_probability_analysis {
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::pricing::payoff::Profit;
-    use crate::strategies::base::{
-        BreakEvenable, Positionable, Strategies, StrategyBasic, Validable,
-    };
+    use crate::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::error::Error;
@@ -270,8 +268,6 @@ mod tests_probability_analysis {
             Ok(&self.break_points)
         }
     }
-
-    impl StrategyBasic for MockStrategy {}
 
     impl Strategies for MockStrategy {
         fn get_underlying_price(&self) -> Positive {
@@ -484,7 +480,7 @@ mod tests_probability_analysis {
 mod tests_expected_value {
     use super::*;
     use crate::error::strategies::StrategyError;
-    use crate::strategies::base::{BreakEvenable, Positionable, StrategyBasic, Validable};
+    use crate::strategies::base::{BreakEvenable, Positionable, Validable};
     use rust_decimal_macros::dec;
     use std::error::Error;
 
@@ -509,8 +505,6 @@ mod tests_expected_value {
     impl Positionable for TestStrategy {}
 
     impl BreakEvenable for TestStrategy {}
-
-    impl StrategyBasic for TestStrategy {}
 
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
@@ -669,7 +663,6 @@ mod tests_expected_value {
         impl Validable for ExtremeStrategy {}
         impl Positionable for ExtremeStrategy {}
         impl BreakEvenable for ExtremeStrategy {}
-        impl StrategyBasic for ExtremeStrategy {}
         impl Strategies for ExtremeStrategy {
             fn get_underlying_price(&self) -> Positive {
                 self.base.get_underlying_price()

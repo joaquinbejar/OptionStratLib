@@ -4,8 +4,8 @@
    Date: 19/1/25
 ******************************************************************************/
 
-use crate::error::{GreeksError, OptionsError};
 use crate::Positive;
+use crate::error::{GreeksError, OptionsError};
 use std::error::Error;
 use std::fmt;
 

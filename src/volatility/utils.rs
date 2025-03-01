@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
+use crate::Options;
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
 use crate::error::VolatilityError;
 use crate::greeks::Greeks;
 use crate::utils::time::TimeFrame;
-use crate::Options;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
@@ -561,10 +561,12 @@ mod tests_ewma_volatility {
 
         // Verify general properties rather than exact values due to complexity of calculation
         assert!(result.iter().all(|&x| x > Positive::ZERO));
-        assert!(result
-            .iter()
-            .zip(result.iter().skip(1))
-            .all(|(a, b)| *b >= *a));
+        assert!(
+            result
+                .iter()
+                .zip(result.iter().skip(1))
+                .all(|(a, b)| *b >= *a)
+        );
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]

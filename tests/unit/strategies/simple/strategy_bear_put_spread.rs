@@ -1,12 +1,12 @@
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
-use optionstratlib::strategies::base::BreakEvenable;
-use optionstratlib::strategies::bear_put_spread::BearPutSpread;
-use optionstratlib::strategies::Strategies;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
+use optionstratlib::strategies::Strategies;
+use optionstratlib::strategies::base::BreakEvenable;
+use optionstratlib::strategies::bear_put_spread::BearPutSpread;
+use optionstratlib::utils::setup_logger;
+use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -38,7 +38,10 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     );
 
     // Assertions to validate strategy properties and computations
-    assert_eq!(strategy.title(), "Bear Put Spread Strategy:\n\tUnderlying: SP500 @ $5850 Long Put European Option\n\tUnderlying: SP500 @ $5720 Short Put European Option");
+    assert_eq!(
+        strategy.title(),
+        "Bear Put Spread Strategy:\n\tUnderlying: SP500 @ $5850 Long Put European Option\n\tUnderlying: SP500 @ $5720 Short Put European Option"
+    );
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
         strategy.net_premium_received().unwrap().to_f64(),

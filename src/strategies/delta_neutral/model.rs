@@ -4,7 +4,7 @@
    Date: 10/12/24
 ******************************************************************************/
 use crate::error::position::PositionValidationErrorKind;
-use crate::error::PositionError;
+use crate::error::{GreeksError, PositionError, StrategyError};
 /// # Delta Neutrality Management Module
 ///
 /// This module provides tools and structures to manage and maintain delta neutrality
@@ -35,65 +35,213 @@ use crate::error::PositionError;
 /// - **`DELTA_THRESHOLD`** defines the maximum allowed deviation from neutrality.
 /// - The module introduces two levels of adjustment:
 ///   - `generate_delta_reducing_adjustments`: Suggests adjustments to reduce a positive delta.
-///   - `generate_delta_increasing_adjustments`: Suggests adjustments to increase a negative delta.
 ///
 /// ## Usage
 /// This module is designed to help maintain a delta-neutral portfolio by suggesting
 /// appropriate hedging actions (e.g., buying or selling options or underlying assets)
 /// based on the delta exposure of the strategy.
 use crate::greeks::Greeks;
-use crate::model::types::OptionStyle;
+use crate::greeks::calculate_delta_neutral_sizes;
+use crate::model::types::{Action, OptionStyle};
+use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
-use crate::{Positive, Side};
+use crate::{Options, Positive, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
-use tracing::info;
+use tracing::debug;
 
 pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 
-/// Represents the possible adjustments needed to achieve delta neutrality
-#[derive(Debug, PartialEq)]
+/// The `DeltaAdjustment` enum is used to define how a trading strategy can
+/// be modified to achieve or maintain a delta-neutral state. Delta neutrality
+/// refers to a situation where the combined delta of all positions is close
+/// to zero, minimizing directional market risk.
+///
+/// Variants:
+/// - `BuyOptions`: Represents buying option contracts with specific parameters.
+/// - `SellOptions`: Represents selling option contracts with specific parameters.
+/// - `BuyUnderlying`: Represents buying units of the underlying asset.
+/// - `SellUnderlying`: Represents selling units of the underlying asset.
+/// - `NoAdjustmentNeeded`: Indicates that the strategy is already delta neutral
+///   within a specified threshold.
+/// - `SameSize`: Represents combining two `DeltaAdjustment` actions of to keep the same
+///   size for balancing or maintaining neutrality.
+///
+/// Each variant provides detailed parameters needed for the associated adjustment,
+/// such as the quantity of options or underlying asset and other relevant details.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum DeltaAdjustment {
-    /// Buy options with specified parameters
+    /// Represents buying a number of option contracts to adjust delta.
+    ///
+    /// Fields:
+    /// - `quantity`: The number of contracts to buy. This value is represented
+    ///   using the `Positive` type, ensuring it is non-negative.
+    /// - `strike`: The strike price of the options being purchased.
+    /// - `option_type`: Defines the type of option being purchased, either
+    ///   `Call` or `Put`, indicated by the `OptionStyle` enum.
     BuyOptions {
-        /// Number of contracts to buy
+        /// Number of contracts to buy.
         quantity: Positive,
-        /// Strike price of the options
+        /// Strike price of the options.
         strike: Positive,
-        /// Type of option (Call or Put)
-        option_type: OptionStyle,
+        /// Type of the option (Call or Put).
+        option_style: OptionStyle,
+        /// Side of the option (Long or Short).
+        side: Side,
     },
-    /// Sell options with specified parameters
+
+    /// Represents selling a number of option contracts to adjust delta.
+    ///
+    /// Fields:
+    /// - `quantity`: The number of contracts to sell. This value is represented
+    ///   using the `Positive` type, ensuring it is non-negative.
+    /// - `strike`: The strike price of the options being sold.
+    /// - `option_type`: Defines the type of option being sold, either `Call`
+    ///   or `Put`, indicated by the `OptionStyle` enum.
     SellOptions {
-        /// Number of contracts to sell
+        /// Number of contracts to sell.
         quantity: Positive,
-        /// Strike price of the options
+        /// Strike price of the options.
         strike: Positive,
-        /// Type of option (Call or Put)
-        option_type: OptionStyle,
+        /// Type of the option (Call or Put).
+        option_style: OptionStyle,
+        /// side of the option (Long or Short).
+        side: Side,
     },
-    /// Buy underlying asset with specified quantity
+
+    /// Represents buying a quantity of the underlying asset to adjust delta.
+    ///
+    /// This variant is used when buying shares, units, or equivalent of the
+    /// underlying asset is necessary to adjust the delta of a strategy.
+    ///
+    /// - The `Positive` argument specifies the quantity being purchased.
     BuyUnderlying(Positive),
-    /// Sell underlying asset with specified quantity
+
+    /// Represents selling a quantity of the underlying asset to adjust delta.
+    ///
+    /// This variant is used when selling shares, units, or equivalent of the
+    /// underlying asset is necessary to adjust the delta of a strategy.
+    ///
+    /// - The `Positive` argument specifies the quantity being sold.
     SellUnderlying(Positive),
-    /// No adjustment needed, strategy is already neutral within threshold
+
+    /// Indicates that no adjustment is needed to achieve delta neutrality.
+    ///
+    /// This is used when the strategy's current delta falls within the
+    /// acceptable neutrality threshold, and no action is required.
     NoAdjustmentNeeded,
+
+    /// Combines two adjustments of the same size to maintain or balance
+    /// delta neutrality.
+    ///
+    /// Fields:
+    /// - `DeltaAdjustment, DeltaAdjustment`: The two adjustments to keep the same
+    ///   size being combined.
+    SameSize(Box<DeltaAdjustment>, Box<DeltaAdjustment>),
 }
 
-/// Contains detailed information about the delta status of a strategy
-#[derive(Debug)]
+impl fmt::Display for DeltaAdjustment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                write!(
+                    f,
+                    "Buy {} {} {} options at strike {}",
+                    quantity, side, option_style, strike
+                )
+            }
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                write!(
+                    f,
+                    "Sell {} {} {} options at strike {}",
+                    quantity, side, option_style, strike
+                )
+            }
+            DeltaAdjustment::BuyUnderlying(quantity) => {
+                write!(f, "Buy {} units of the underlying asset", quantity)
+            }
+            DeltaAdjustment::SellUnderlying(quantity) => {
+                write!(f, "Sell {} units of the underlying asset", quantity)
+            }
+            DeltaAdjustment::NoAdjustmentNeeded => {
+                write!(f, "No adjustment needed")
+            }
+            DeltaAdjustment::SameSize(adj1, adj2) => {
+                write!(f, "Same size adjustments: [{}] and [{}]", adj1, adj2)
+            }
+        }
+    }
+}
+
+/// Represents the delta and associated details for a single position in an options strategy.
+///
+/// ## Fields
+/// - `delta`: The delta value of the position, representing the sensitivity of the position's price
+///   to changes in the underlying asset price.
+/// - `quantity`: The quantity of the options in the position.
+/// - `strike`: The strike price of the option, represented as a positive value.
+/// - `option_style`: Indicates whether the option is a call or a put.
+/// - `side`: Indicates whether the position is long or short.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct DeltaPositionInfo {
+    pub delta: Decimal,
+    pub quantity: Positive,
+    pub strike: Positive,
+    pub option_style: OptionStyle,
+    pub side: Side,
+}
+
+impl fmt::Display for DeltaPositionInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Delta: {:.4}", self.delta)?;
+        writeln!(f, "  Quantity: {}", self.quantity)?;
+        writeln!(f, "  Strike: {}", self.strike)?;
+        writeln!(f, "  Option Style: {:?}", self.option_style)?;
+        writeln!(f, "  Side: {:?}", self.side)?;
+        Ok(())
+    }
+}
+
+/// Contains detailed information about an options strategy's delta status.
+///
+/// This structure provides both an analysis of the cumulative delta of the strategy
+/// and details about its individual positions. It can be used to evaluate whether
+/// a strategy is delta neutral and to inform adjustments.
+///
+/// ## Fields
+/// - `net_delta`: The net delta of the strategy, representing the overall sensitivity
+///   of the strategy to changes in the underlying asset price.
+/// - `individual_deltas`: A vector of `DeltaPositionInfo` structures containing
+///   the delta information for each position in the strategy.
+/// - `is_neutral`: Indicates whether the strategy is considered delta neutral based
+///   on the configured neutrality threshold.
+/// - `neutrality_threshold`: The threshold used to determine if the strategy is delta neutral.
+///   If the net delta is within this range, the strategy is considered neutral.
+/// - `underlying_price`: The current price of the underlying asset, represented as a positive value.
+///
+/// ## Purpose
+/// DeltaInfo serves as a central structure to analyze and manage the delta status
+/// of multi-position strategies, such as those used in options trading. It is particularly
+/// useful for implementing delta-neutral strategy adjustments.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeltaInfo {
-    /// Net delta of the entire strategy
     pub net_delta: Decimal,
-    /// Individual deltas of each component
-    pub individual_deltas: Vec<Decimal>,
-    /// Whether the strategy is considered delta neutral
+    pub individual_deltas: Vec<DeltaPositionInfo>,
     pub is_neutral: bool,
-    /// The threshold used to determine neutrality
     pub neutrality_threshold: Decimal,
-    /// The current underlying price
     pub underlying_price: Positive,
 }
 
@@ -128,9 +276,8 @@ impl fmt::Display for DeltaInfo {
 /// * `is_delta_neutral`: Determines if the strategy is delta-neutral within a specified threshold.
 /// * `suggest_delta_adjustments`: Suggests potential actions to achieve delta neutrality.
 /// * `generate_delta_reducing_adjustments`: Produces adjustments required to reduce a positive delta.
-/// * `generate_delta_increasing_adjustments`: Produces adjustments required to increase a negative delta.
 /// * `get_atm_strike`: Retrieves the ATM (At-The-Money) strike price closest to the current underlying asset price.
-pub trait DeltaNeutrality: Greeks + Positionable {
+pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// Calculates the net delta of the strategy and provides detailed information.
     ///
     /// # Returns
@@ -142,7 +289,31 @@ pub trait DeltaNeutrality: Greeks + Positionable {
     /// * The current price of the underlying asset.
     ///
     /// This provides an overview of the delta position and helps in determining adjustments.
-    fn calculate_net_delta(&self) -> DeltaInfo;
+    fn delta_neutrality(&self) -> Result<DeltaInfo, GreeksError> {
+        let options = self.get_options()?;
+        if options.is_empty() {
+            return Err(GreeksError::StdError("No options found".to_string()));
+        }
+        let underlying_price = self.get_underlying_price();
+        let individual_deltas: Vec<DeltaPositionInfo> = options
+            .iter()
+            .map(|option| DeltaPositionInfo {
+                delta: option.delta().unwrap(),
+                quantity: option.quantity,
+                strike: option.strike_price,
+                option_style: option.option_style,
+                side: option.side,
+            })
+            .collect();
+
+        Ok(DeltaInfo {
+            net_delta: self.delta()?,
+            individual_deltas,
+            is_neutral: self.is_delta_neutral(),
+            underlying_price,
+            neutrality_threshold: DELTA_THRESHOLD,
+        })
+    }
 
     /// Checks if the strategy is delta neutral within the specified threshold.
     ///
@@ -154,156 +325,223 @@ pub trait DeltaNeutrality: Greeks + Positionable {
     /// * `true` if the absolute value of the net delta is within the threshold.
     /// * `false` otherwise.
     fn is_delta_neutral(&self) -> bool {
-        self.calculate_net_delta().net_delta.abs() <= DELTA_THRESHOLD
-    }
-
-    fn get_atm_strike(&self) -> Positive {
-        panic!("get_atm_strike Not implemented");
-    }
-
-    /// Suggests adjustments to achieve delta neutrality.
-    ///
-    /// # Arguments
-    /// * `threshold` - A `Decimal` value defining the maximum allowable deviation for neutrality.
-    ///
-    /// # Returns
-    /// * A `Vec<DeltaAdjustment>` containing potential adjustments (if needed) to bring the strategy closer to neutrality.
-    /// * If the strategy is already neutral, a `DeltaAdjustment::NoAdjustmentNeeded` is suggested.
-    ///
-    /// The adjustments suggested may include buying or selling options or the underlying asset, depending on the net delta.
-    fn suggest_delta_adjustments(&self) -> Vec<DeltaAdjustment> {
-        let delta_info = self.calculate_net_delta();
-        if delta_info.is_neutral {
-            return vec![DeltaAdjustment::NoAdjustmentNeeded];
-        }
-        let net_delta = delta_info.net_delta;
-        // For positive delta, suggest delta-reducing adjustments
-        if net_delta > DELTA_THRESHOLD {
-            self.generate_delta_reducing_adjustments()
-        }
-        // For negative delta, suggest delta-increasing adjustments
-        else if net_delta < -DELTA_THRESHOLD {
-            self.generate_delta_increasing_adjustments()
-        } else {
-            vec![DeltaAdjustment::NoAdjustmentNeeded]
+        match self.delta() {
+            Ok(delta) => delta.abs() <= DELTA_THRESHOLD,
+            Err(_) => false,
         }
     }
 
-    /// Generates adjustments to reduce a positive delta.
-    ///
-    /// # Arguments
-    /// * `net_delta` - A `Decimal` representing the current positive net delta requiring adjustment.
-    ///
-    /// # Returns
-    /// * A `Vec<DeltaAdjustment>` suggesting actions to reduce delta (e.g., selling the underlying asset or buying put options).
-    ///
-    /// Adjustments may include:
-    /// * Selling the underlying asset.
-    /// * Buying puts at ATM strikes.
-    fn generate_delta_reducing_adjustments(&self) -> Vec<DeltaAdjustment> {
-        let net_delta = Positive(self.calculate_net_delta().net_delta.abs());
-        vec![
-            DeltaAdjustment::SellUnderlying(net_delta),
-            DeltaAdjustment::BuyOptions {
-                quantity: (net_delta * 2.0).round_to(12),
-                strike: self.get_atm_strike(),
-                option_type: OptionStyle::Put,
-            },
-            DeltaAdjustment::SellOptions {
-                quantity: (net_delta * 2.0).round_to(12),
-                strike: self.get_atm_strike(),
-                option_type: OptionStyle::Call,
-            },
-        ]
+    fn get_atm_strike(&self) -> Result<Positive, StrategyError> {
+        Ok(self.get_underlying_price())
     }
 
-    /// Generates adjustments to increase a negative delta.
+    /// Calculates required position adjustments to maintain delta neutrality
     ///
     /// # Arguments
-    /// * `net_delta` - A `Decimal` representing the current negative net delta requiring adjustment.
+    /// None - Uses internal position state
     ///
     /// # Returns
-    /// * A `Vec<DeltaAdjustment>` suggesting actions to increase delta (e.g., buying the underlying asset or buying call options).
+    /// * `Result<Vec<DeltaAdjustment>, GreeksError>` - Vector of suggested position adjustments
+    ///   or error if calculations fail
     ///
-    /// Adjustments may include:
-    /// * Buying the underlying asset.
-    /// * Buying calls at ATM strikes.
-    fn generate_delta_increasing_adjustments(&self) -> Vec<DeltaAdjustment> {
-        let net_delta = Positive(self.calculate_net_delta().net_delta.abs());
-        vec![
-            DeltaAdjustment::BuyUnderlying(net_delta),
-            DeltaAdjustment::BuyOptions {
-                quantity: (net_delta * 2.0).round_to(12),
-                strike: self.get_atm_strike(),
-                option_type: OptionStyle::Call,
-            },
-            DeltaAdjustment::SellOptions {
-                quantity: (net_delta * 2.0).round_to(12),
-                strike: self.get_atm_strike(),
-                option_type: OptionStyle::Put,
-            },
-        ]
+    /// # Notes
+    /// - Uses DELTA_THRESHOLD to determine if adjustments are needed
+    /// - Suggests opposite positions to neutralize current delta exposure
+    /// - Accounts for both option style (Put/Call) and position side (Long/Short)
+    fn delta_adjustments(&self) -> Result<Vec<DeltaAdjustment>, GreeksError> {
+        let net_delta = self.delta()?;
+
+        // Check if adjustments are needed
+        if net_delta.abs() <= DELTA_THRESHOLD {
+            return Ok(vec![DeltaAdjustment::NoAdjustmentNeeded]);
+        }
+
+        let options = self.get_options()?;
+        let mut adjustments = Vec::with_capacity(options.len());
+
+        // Helper to determine adjustment type based on delta sign and position
+        let get_adjustment =
+            |net_delta: Decimal, option_delta: Decimal, option: &Options| -> DeltaAdjustment {
+                match (
+                    net_delta.is_sign_positive(),
+                    option_delta.is_sign_positive(),
+                ) {
+                    (true, true) => DeltaAdjustment::SellOptions {
+                        quantity: Positive((net_delta / option_delta).abs()),
+                        strike: option.strike_price,
+                        option_style: option.option_style,
+                        side: option.side,
+                    },
+                    (true, false) => DeltaAdjustment::BuyOptions {
+                        quantity: Positive((net_delta / option_delta).abs()),
+                        strike: option.strike_price,
+                        option_style: option.option_style,
+                        side: option.side,
+                    },
+                    (false, true) => DeltaAdjustment::BuyOptions {
+                        quantity: Positive((net_delta / option_delta).abs()),
+                        strike: option.strike_price,
+                        option_style: option.option_style,
+                        side: option.side,
+                    },
+                    (false, false) => DeltaAdjustment::SellOptions {
+                        quantity: Positive((net_delta / option_delta).abs()),
+                        strike: option.strike_price,
+                        option_style: option.option_style,
+                        side: option.side,
+                    },
+                }
+            };
+
+        let mut total_size: Positive = Positive::ZERO;
+        // Calculate adjustments for each option
+        for option in &options {
+            let delta = option.delta()?;
+            total_size += option.quantity;
+            if delta.abs() > DELTA_THRESHOLD {
+                // Avoid division by zero
+                let adjustment = get_adjustment(net_delta, delta / option.quantity, option);
+                adjustments.push(adjustment);
+            }
+        }
+
+        if options.len() == 2 {
+            // Calculate delta neutral sizes based on the current options
+            let (delta_neutral_size1, delta_neutral_size2) = calculate_delta_neutral_sizes(
+                options[0].delta()?,
+                options[1].delta()?,
+                total_size,
+            )?;
+
+            // Calculate position differences (how much to adjust each position)
+            let size_diff1: Decimal = delta_neutral_size1.to_dec() - options[0].quantity.to_dec();
+            let size_diff2: Decimal = delta_neutral_size2.to_dec() - options[1].quantity.to_dec();
+
+            // Create adjustment for first option
+            let adjustment1 = if size_diff1.is_sign_positive() {
+                DeltaAdjustment::BuyOptions {
+                    quantity: Positive(size_diff1.abs()),
+                    strike: options[0].strike_price,
+                    option_style: options[0].option_style,
+                    side: options[0].side,
+                }
+            } else {
+                DeltaAdjustment::SellOptions {
+                    quantity: Positive(size_diff1.abs()),
+                    strike: options[0].strike_price,
+                    option_style: options[0].option_style,
+                    side: options[0].side,
+                }
+            };
+
+            // Create adjustment for second option
+            let adjustment2 = if size_diff2.is_sign_positive() {
+                DeltaAdjustment::BuyOptions {
+                    quantity: Positive(size_diff2.abs()),
+                    strike: options[1].strike_price,
+                    option_style: options[1].option_style,
+                    side: options[1].side,
+                }
+            } else {
+                DeltaAdjustment::SellOptions {
+                    quantity: Positive(size_diff2.abs()),
+                    strike: options[1].strike_price,
+                    option_style: options[1].option_style,
+                    side: options[1].side,
+                }
+            };
+
+            adjustments.push(DeltaAdjustment::SameSize(
+                Box::new(adjustment1),
+                Box::new(adjustment2),
+            ));
+        }
+
+        Ok(adjustments)
     }
 
-    fn apply_delta_adjustments(
-        &mut self,
-        side: Option<Side>,
-        option_style: Option<OptionStyle>,
-    ) -> Result<(), Box<dyn Error>> {
-        let delta_info = self.calculate_net_delta();
+    fn apply_delta_adjustments(&mut self, action: Option<Action>) -> Result<(), Box<dyn Error>> {
+        let delta_info = self.delta_neutrality()?;
         if delta_info.is_neutral {
             return Ok(());
         }
 
-        for adjustment in self.suggest_delta_adjustments() {
-            match adjustment {
-                DeltaAdjustment::BuyUnderlying(quantity) => {
-                    if side.is_none() || side == Some(Side::Long) {
-                        self.adjust_underlying_position(quantity, Side::Long)?;
-                    }
+        for adjustment in self.delta_adjustments()? {
+            match (action, adjustment) {
+                // When action is Buy, only apply BuyOptions adjustments
+                (
+                    Some(Action::Buy),
+                    DeltaAdjustment::BuyOptions {
+                        quantity,
+                        strike,
+                        option_style,
+                        side,
+                    },
+                ) => {
+                    self.adjust_option_position(quantity.to_dec(), &strike, &option_style, &side)?;
                 }
-                DeltaAdjustment::SellUnderlying(quantity) => {
-                    if side.is_none() || side == Some(Side::Short) {
-                        self.adjust_underlying_position(quantity, Side::Short)?;
-                    }
+
+                // When action is Sell, only apply SellOptions adjustments
+                (
+                    Some(Action::Sell),
+                    DeltaAdjustment::SellOptions {
+                        quantity,
+                        strike,
+                        option_style,
+                        side,
+                    },
+                ) => {
+                    self.adjust_option_position(-quantity.to_dec(), &strike, &option_style, &side)?;
                 }
-                DeltaAdjustment::BuyOptions {
-                    quantity,
-                    strike,
-                    option_type,
-                } => {
-                    if (side.is_none() || side == Some(Side::Long))
-                        && (option_style.is_none() || option_style == Some(option_type.clone()))
-                    {
-                        self.adjust_option_position(quantity, &strike, &option_type, &Side::Long)?;
-                    }
+
+                // When no action specified, apply all adjustments including SameSize
+                (None, DeltaAdjustment::SameSize(first, second)) => {
+                    self.apply_single_adjustment(&first)?;
+                    self.apply_single_adjustment(&second)?;
                 }
-                DeltaAdjustment::SellOptions {
-                    quantity,
-                    strike,
-                    option_type,
-                } => {
-                    if (side.is_none() || side == Some(Side::Short))
-                        && (option_style.is_none() || option_style == Some(option_type.clone()))
-                    {
-                        self.adjust_option_position(quantity, &strike, &option_type, &Side::Short)?;
-                    }
-                }
-                DeltaAdjustment::NoAdjustmentNeeded => {
-                    return Ok(());
+
+                // Skip other combinations
+                _ => {
+                    debug!("Skipping adjustment - incompatible with requested action");
                 }
             }
         }
 
-        // Log skipped adjustments if filters were applied
-        if side.is_some() || option_style.is_some() {
-            info!(
-                "Applied delta adjustments with filters - Side: {:?}, OptionStyle: {:?}",
-                side, option_style
-            );
-        }
-
         Ok(())
+    }
+
+    fn apply_single_adjustment(
+        &mut self,
+        adjustment: &DeltaAdjustment,
+    ) -> Result<(), Box<dyn Error>> {
+        match adjustment {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                debug!("Applying BuyOptions adjustment");
+                self.adjust_option_position(quantity.to_dec(), strike, option_style, side)
+            }
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                debug!("Applying SellOptions adjustment");
+                self.adjust_option_position(-quantity.to_dec(), strike, option_style, side)
+            }
+            DeltaAdjustment::SameSize(_, _) => {
+                debug!("Nested SameSize adjustment not supported");
+                Ok(())
+            }
+            _ => {
+                debug!("Unknown adjustment type");
+                Ok(())
+            }
+        }
     }
 
     fn adjust_underlying_position(
@@ -318,7 +556,7 @@ pub trait DeltaNeutrality: Greeks + Positionable {
 
     fn adjust_option_position(
         &mut self,
-        quantity: Positive,
+        quantity: Decimal,
         strike: &Positive,
         option_type: &OptionStyle,
         side: &Side,
@@ -339,619 +577,368 @@ pub trait DeltaNeutrality: Greeks + Positionable {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct DeltaNeutralResponse {
+    /// Detailed information about the delta status of the strategy.
+    pub delta_info: DeltaInfo,
+
+    /// A list of recommended adjustments to achieve delta neutrality.
+    pub adjustments: Vec<DeltaAdjustment>,
+}
+
+#[cfg(test)]
+mod tests_display_implementations {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_delta_adjustment_display() {
+        // Test BuyOptions display
+        let buy_options = DeltaAdjustment::BuyOptions {
+            quantity: pos!(3.0),
+            strike: pos!(105.0),
+            option_style: OptionStyle::Call,
+            side: Side::Long,
+        };
+        assert_eq!(
+            buy_options.to_string(),
+            "Buy 3 Long Call options at strike 105"
+        );
+
+        // Test SellOptions display
+        let sell_options = DeltaAdjustment::SellOptions {
+            quantity: pos!(2.5),
+            strike: pos!(95.0),
+            option_style: OptionStyle::Put,
+            side: Side::Short,
+        };
+        assert_eq!(
+            sell_options.to_string(),
+            "Sell 2.5 Short Put options at strike 95"
+        );
+
+        // Test BuyUnderlying display
+        let buy_underlying = DeltaAdjustment::BuyUnderlying(pos!(10.0));
+        assert_eq!(
+            buy_underlying.to_string(),
+            "Buy 10 units of the underlying asset"
+        );
+
+        // Test SellUnderlying display
+        let sell_underlying = DeltaAdjustment::SellUnderlying(pos!(5.0));
+        assert_eq!(
+            sell_underlying.to_string(),
+            "Sell 5 units of the underlying asset"
+        );
+
+        // Test NoAdjustmentNeeded display
+        let no_adjustment = DeltaAdjustment::NoAdjustmentNeeded;
+        assert_eq!(no_adjustment.to_string(), "No adjustment needed");
+
+        // Test SameSize display
+        let same_size = DeltaAdjustment::SameSize(
+            Box::new(DeltaAdjustment::BuyOptions {
+                quantity: pos!(1.0),
+                strike: pos!(100.0),
+                option_style: OptionStyle::Call,
+                side: Side::Long,
+            }),
+            Box::new(DeltaAdjustment::SellOptions {
+                quantity: pos!(1.0),
+                strike: pos!(110.0),
+                option_style: OptionStyle::Call,
+                side: Side::Short,
+            }),
+        );
+        assert_eq!(
+            same_size.to_string(),
+            "Same size adjustments: [Buy 1 Long Call options at strike 100] and [Sell 1 Short Call options at strike 110]"
+        );
+    }
+
+    #[test]
+    fn test_delta_position_info_display() {
+        let position_info = DeltaPositionInfo {
+            delta: dec!(0.5),
+            quantity: pos!(2.0),
+            strike: pos!(100.0),
+            option_style: OptionStyle::Call,
+            side: Side::Long,
+        };
+
+        // Since the Display implementation uses multiple writeln! calls,
+        // we'll check for the presence of each line rather than the exact string
+        let display_str = position_info.to_string();
+
+        assert!(display_str.contains("Delta: 0.5000"));
+        assert!(display_str.contains("Quantity: 2"));
+        assert!(display_str.contains("Strike: 100"));
+        assert!(display_str.contains("OptionStyle::Call"));
+        assert!(display_str.contains("Side::Long"));
+    }
+
+    #[test]
+    fn test_delta_info_display() {
+        let delta_info = DeltaInfo {
+            net_delta: dec!(-0.25),
+            individual_deltas: vec![
+                DeltaPositionInfo {
+                    delta: dec!(0.5),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
+                    option_style: OptionStyle::Call,
+                    side: Side::Long,
+                },
+                DeltaPositionInfo {
+                    delta: dec!(-0.75),
+                    quantity: pos!(2.0),
+                    strike: pos!(95.0),
+                    option_style: OptionStyle::Put,
+                    side: Side::Short,
+                },
+            ],
+            is_neutral: false,
+            neutrality_threshold: dec!(0.1),
+            underlying_price: pos!(102.5),
+        };
+
+        // Similarly, we'll check for the presence of key components in the display string
+        let display_str = delta_info.to_string();
+
+        assert!(display_str.contains("Delta Analysis:"));
+        assert!(display_str.contains("Net Delta: -0.2500"));
+        assert!(display_str.contains("Is Neutral: false"));
+        assert!(display_str.contains("Neutrality Threshold: 0.1000"));
+        assert!(display_str.contains("Underlying Price: 102.5"));
+        assert!(display_str.contains("Individual Deltas:"));
+        assert!(display_str.contains("Position 1:"));
+        assert!(display_str.contains("Delta: 0.5000"));
+        assert!(display_str.contains("Position 2:"));
+        assert!(display_str.contains("Delta: -0.7500"));
+    }
+}
+
+#[cfg(test)]
+mod tests_serialization {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+    use serde_json;
+
+    #[test]
+    fn test_delta_adjustment_serialization() {
+        // Test BuyOptions serialization/deserialization
+        let buy_options = DeltaAdjustment::BuyOptions {
+            quantity: pos!(3.0),
+            strike: pos!(105.0),
+            option_style: OptionStyle::Call,
+            side: Side::Long,
+        };
+        let serialized = serde_json::to_string(&buy_options).unwrap();
+        let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(buy_options, deserialized);
+
+        // Test SellOptions serialization/deserialization
+        let sell_options = DeltaAdjustment::SellOptions {
+            quantity: pos!(2.5),
+            strike: pos!(95.0),
+            option_style: OptionStyle::Put,
+            side: Side::Short,
+        };
+        let serialized = serde_json::to_string(&sell_options).unwrap();
+        let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(sell_options, deserialized);
+
+        // Test BuyUnderlying serialization/deserialization
+        let buy_underlying = DeltaAdjustment::BuyUnderlying(pos!(10.0));
+        let serialized = serde_json::to_string(&buy_underlying).unwrap();
+        let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(buy_underlying, deserialized);
+
+        // Test SellUnderlying serialization/deserialization
+        let sell_underlying = DeltaAdjustment::SellUnderlying(pos!(5.0));
+        let serialized = serde_json::to_string(&sell_underlying).unwrap();
+        let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(sell_underlying, deserialized);
+
+        // Test NoAdjustmentNeeded serialization/deserialization
+        let no_adjustment = DeltaAdjustment::NoAdjustmentNeeded;
+        let serialized = serde_json::to_string(&no_adjustment).unwrap();
+        let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(no_adjustment, deserialized);
+
+        // Test SameSize serialization/deserialization
+        let same_size = DeltaAdjustment::SameSize(
+            Box::new(DeltaAdjustment::BuyOptions {
+                quantity: pos!(1.0),
+                strike: pos!(100.0),
+                option_style: OptionStyle::Call,
+                side: Side::Long,
+            }),
+            Box::new(DeltaAdjustment::SellOptions {
+                quantity: pos!(1.0),
+                strike: pos!(110.0),
+                option_style: OptionStyle::Call,
+                side: Side::Short,
+            }),
+        );
+        let serialized = serde_json::to_string(&same_size).unwrap();
+        let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(same_size, deserialized);
+    }
+
+    #[test]
+    fn test_delta_position_info_serialization() {
+        let position_info = DeltaPositionInfo {
+            delta: dec!(0.5),
+            quantity: pos!(2.0),
+            strike: pos!(100.0),
+            option_style: OptionStyle::Call,
+            side: Side::Long,
+        };
+
+        let serialized = serde_json::to_string(&position_info).unwrap();
+        let deserialized: DeltaPositionInfo = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(position_info.delta, deserialized.delta);
+        assert_eq!(position_info.quantity, deserialized.quantity);
+        assert_eq!(position_info.strike, deserialized.strike);
+        assert_eq!(position_info.option_style, deserialized.option_style);
+        assert_eq!(position_info.side, deserialized.side);
+    }
+
+    #[test]
+    fn test_delta_info_serialization() {
+        // Need to add #[derive(Serialize, Deserialize)] to DeltaInfo first
+        // if it's not already there
+
+        let delta_info = DeltaInfo {
+            net_delta: dec!(-0.25),
+            individual_deltas: vec![
+                DeltaPositionInfo {
+                    delta: dec!(0.5),
+                    quantity: pos!(1.0),
+                    strike: pos!(100.0),
+                    option_style: OptionStyle::Call,
+                    side: Side::Long,
+                },
+                DeltaPositionInfo {
+                    delta: dec!(-0.75),
+                    quantity: pos!(2.0),
+                    strike: pos!(95.0),
+                    option_style: OptionStyle::Put,
+                    side: Side::Short,
+                },
+            ],
+            is_neutral: false,
+            neutrality_threshold: dec!(0.1),
+            underlying_price: pos!(102.5),
+        };
+
+        let serialized = serde_json::to_string(&delta_info).unwrap();
+        let deserialized: DeltaInfo = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(delta_info.net_delta, deserialized.net_delta);
+        assert_eq!(delta_info.is_neutral, deserialized.is_neutral);
+        assert_eq!(
+            delta_info.neutrality_threshold,
+            deserialized.neutrality_threshold
+        );
+        assert_eq!(delta_info.underlying_price, deserialized.underlying_price);
+        assert_eq!(
+            delta_info.individual_deltas.len(),
+            deserialized.individual_deltas.len()
+        );
+
+        // Check each individual delta
+        for (original, deserialized_delta) in delta_info
+            .individual_deltas
+            .iter()
+            .zip(deserialized.individual_deltas.iter())
+        {
+            assert_eq!(original.delta, deserialized_delta.delta);
+            assert_eq!(original.quantity, deserialized_delta.quantity);
+            assert_eq!(original.strike, deserialized_delta.strike);
+            assert_eq!(original.option_style, deserialized_delta.option_style);
+            assert_eq!(original.side, deserialized_delta.side);
+        }
+    }
+
+    #[test]
+    fn test_specific_json_formats() {
+        // Test that the JSON format is as expected
+        let buy_options = DeltaAdjustment::BuyOptions {
+            quantity: pos!(3.0),
+            strike: pos!(105.0),
+            option_style: OptionStyle::Call,
+            side: Side::Long,
+        };
+
+        let serialized = serde_json::to_string(&buy_options).unwrap();
+        // This test is fragile but can help catch unexpected changes in the JSON format
+        assert!(serialized.contains("\"BuyOptions\""));
+        assert!(serialized.contains("\"quantity\""));
+        assert!(serialized.contains("\"strike\""));
+        assert!(serialized.contains("\"option_style\""));
+        assert!(serialized.contains("\"side\""));
+
+        // Parse a manually constructed JSON and verify it deserializes correctly
+        let json_str =
+            r#"{"BuyOptions":{"quantity":3.0,"strike":105.0,"option_style":"Call","side":"Long"}}"#;
+        let deserialized: DeltaAdjustment = serde_json::from_str(json_str).unwrap();
+
+        match deserialized {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                assert_eq!(quantity, pos!(3.0));
+                assert_eq!(strike, pos!(105.0));
+                assert_eq!(option_style, OptionStyle::Call);
+                assert_eq!(side, Side::Long);
+            }
+            _ => panic!("Deserialized to wrong variant"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::GreeksError;
-    use crate::greeks::Greek;
-    use crate::{pos, Options};
-    use rust_decimal::Decimal;
-    use rust_decimal_macros::dec;
-
-    // Mock struct to implement required traits for testing
-    struct MockStrategy {
-        delta: Decimal,
-        underlying_price: Positive,
-        individual_deltas: Vec<Decimal>,
-    }
-
-    // Implement Greeks trait for MockStrategy
-    impl Greeks for MockStrategy {
-        fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-            Ok(vec![])
-        }
-
-        fn greeks(&self) -> Result<Greek, GreeksError> {
-            Ok(Greek {
-                delta: self.delta,
-                gamma: Decimal::ZERO,
-                theta: Decimal::ZERO,
-                vega: Decimal::ZERO,
-                rho: Decimal::ZERO,
-                rho_d: Decimal::ZERO,
-                alpha: Decimal::ZERO,
-            })
-        }
-    }
-
-    impl Positionable for MockStrategy {}
-
-    // Implement DeltaNeutrality trait for MockStrategy
-    impl DeltaNeutrality for MockStrategy {
-        fn calculate_net_delta(&self) -> DeltaInfo {
-            DeltaInfo {
-                net_delta: self.delta,
-                individual_deltas: self.individual_deltas.clone(),
-                is_neutral: self.delta.abs() <= dec!(0.01),
-                neutrality_threshold: dec!(0.01),
-                underlying_price: self.underlying_price,
-            }
-        }
-
-        fn get_atm_strike(&self) -> Positive {
-            pos!(100.0)
-        }
-    }
-
-    // Helper function to create a mock strategy
-    fn create_mock_strategy(delta: Decimal, price: Positive) -> MockStrategy {
-        MockStrategy {
-            delta,
-            underlying_price: price,
-            individual_deltas: vec![delta],
-        }
-    }
+    use crate::strategies::ShortStrangle;
+    use crate::{ExpirationDate, pos};
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_calculate_net_delta() {
-        let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
-        let info = strategy.calculate_net_delta();
-
-        assert_eq!(info.net_delta, dec!(0.5));
-        assert_eq!(info.individual_deltas, vec![dec!(0.5)]);
-        assert!(!info.is_neutral);
-        assert_eq!(info.underlying_price, pos!(100.0));
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_is_delta_neutral() {
-        let neutral_strategy = create_mock_strategy(dec!(0.00005), pos!(100.0));
-        let non_neutral_strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
-
-        assert!(neutral_strategy.is_delta_neutral());
-        assert!(!non_neutral_strategy.is_delta_neutral());
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_suggest_delta_adjustments_neutral() {
-        let strategy = create_mock_strategy(dec!(0.005), pos!(100.0));
-        let adjustments = strategy.suggest_delta_adjustments();
-
-        assert_eq!(adjustments, vec![DeltaAdjustment::NoAdjustmentNeeded]);
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_suggest_delta_adjustments_positive() {
-        let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
-        let adjustments = strategy.suggest_delta_adjustments();
-
-        assert_eq!(
+    fn test_delta_response_serialization() {
+        let strategy = ShortStrangle::new(
+            "CL".to_string(),
+            pos!(7250.0), // underlying_price
+            pos!(7450.0), // call_strike
+            pos!(7050.0), // put_strike
+            ExpirationDate::Days(pos!(45.0)),
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(2.0),      // quantity
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
+        );
+        let delta_info = strategy.delta_neutrality().unwrap();
+        let adjustments = strategy.delta_adjustments().unwrap();
+        let response = DeltaNeutralResponse {
+            delta_info,
             adjustments,
-            vec![
-                DeltaAdjustment::SellUnderlying(pos!(0.5)),
-                DeltaAdjustment::BuyOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
-                    option_type: OptionStyle::Put,
-                },
-                DeltaAdjustment::SellOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
-                    option_type: OptionStyle::Call,
-                }
-            ]
-        );
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_suggest_delta_adjustments_negative() {
-        let strategy = create_mock_strategy(dec!(-0.5), pos!(100.0));
-        let adjustments = strategy.suggest_delta_adjustments();
-
-        assert_eq!(
-            adjustments,
-            vec![
-                DeltaAdjustment::BuyUnderlying(pos!(0.5)),
-                DeltaAdjustment::BuyOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
-                    option_type: OptionStyle::Call,
-                },
-                DeltaAdjustment::SellOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
-                    option_type: OptionStyle::Put,
-                }
-            ]
-        );
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_delta_info_display() {
-        let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
-        let info = strategy.calculate_net_delta();
-        let display_string = format!("{}", info);
-
-        assert!(display_string.contains("Net Delta: 0.5000"));
-        assert!(display_string.contains("Is Neutral: false"));
-        assert!(display_string.contains("Underlying Price: 100"));
-        assert!(display_string.contains("Individual Deltas:"));
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_generate_delta_reducing_adjustments() {
-        let strategy = create_mock_strategy(dec!(0.5), pos!(100.0));
-        let adjustments = strategy.generate_delta_reducing_adjustments();
-
-        assert_eq!(
-            adjustments,
-            vec![
-                DeltaAdjustment::SellUnderlying(pos!(0.5)),
-                DeltaAdjustment::BuyOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
-                    option_type: OptionStyle::Put,
-                },
-                DeltaAdjustment::SellOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
-                    option_type: OptionStyle::Call,
-                }
-            ]
-        );
-    }
-
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_generate_delta_increasing_adjustments() {
-        let strategy = create_mock_strategy(dec!(-0.5), pos!(100.0));
-        let adjustments = strategy.generate_delta_increasing_adjustments();
-
-        assert_eq!(
-            adjustments,
-            vec![
-                DeltaAdjustment::BuyUnderlying(pos!(0.5)),
-                DeltaAdjustment::BuyOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
-                    option_type: OptionStyle::Call,
-                },
-                DeltaAdjustment::SellOptions {
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
-                    option_type: OptionStyle::Put,
-                }
-            ]
-        );
-    }
-}
-
-#[cfg(test)]
-mod additional_tests {
-    use super::*;
-    use crate::error::GreeksError;
-    use crate::greeks::Greek;
-    use crate::{pos, Options};
-    use std::cell::RefCell;
-
-    // Enhanced mock to track adjustments
-    struct MockStrategyWithAdjustments {
-        delta: Decimal,
-        underlying_price: Positive,
-        individual_deltas: Vec<Decimal>,
-        underlying_adjustments: RefCell<Vec<(Positive, Side)>>,
-        option_adjustments: RefCell<Vec<(Positive, Positive, OptionStyle, Side)>>,
-    }
-
-    impl Greeks for MockStrategyWithAdjustments {
-        fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-            Ok(vec![])
-        }
-
-        fn greeks(&self) -> Result<Greek, GreeksError> {
-            Ok(Greek {
-                delta: self.delta,
-                gamma: Decimal::ZERO,
-                theta: Decimal::ZERO,
-                vega: Decimal::ZERO,
-                rho: Decimal::ZERO,
-                rho_d: Decimal::ZERO,
-                alpha: Decimal::ZERO,
-            })
-        }
-    }
-
-    impl Positionable for MockStrategyWithAdjustments {}
-
-    impl DeltaNeutrality for MockStrategyWithAdjustments {
-        fn calculate_net_delta(&self) -> DeltaInfo {
-            DeltaInfo {
-                net_delta: self.delta,
-                individual_deltas: self.individual_deltas.clone(),
-                is_neutral: self.delta.abs() <= dec!(0.01),
-                neutrality_threshold: dec!(0.01),
-                underlying_price: self.underlying_price,
-            }
-        }
-
-        fn get_atm_strike(&self) -> Positive {
-            self.underlying_price
-        }
-
-        fn adjust_underlying_position(
-            &mut self,
-            quantity: Positive,
-            side: Side,
-        ) -> Result<(), Box<dyn Error>> {
-            self.underlying_adjustments
-                .borrow_mut()
-                .push((quantity, side));
-            Ok(())
-        }
-
-        fn adjust_option_position(
-            &mut self,
-            quantity: Positive,
-            strike: &Positive,
-            option_type: &OptionStyle,
-            side: &Side,
-        ) -> Result<(), Box<dyn Error>> {
-            self.option_adjustments.borrow_mut().push((
-                quantity,
-                *strike,
-                option_type.clone(),
-                side.clone(),
-            ));
-            Ok(())
-        }
-    }
-
-    impl MockStrategyWithAdjustments {
-        fn new(delta: Decimal, price: Positive) -> Self {
-            Self {
-                delta,
-                underlying_price: price,
-                individual_deltas: vec![delta],
-                underlying_adjustments: RefCell::new(vec![]),
-                option_adjustments: RefCell::new(vec![]),
-            }
-        }
-    }
-
-    #[test]
-    fn test_get_atm_strike() {
-        let strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
-        assert_eq!(strategy.get_atm_strike(), pos!(100.0));
-    }
-
-    #[test]
-    fn test_no_adjustment_needed() {
-        let strategy = MockStrategyWithAdjustments::new(dec!(0.0001), pos!(100.0));
-        let adjustments = strategy.suggest_delta_adjustments();
-        assert_eq!(adjustments, vec![DeltaAdjustment::NoAdjustmentNeeded]);
-    }
-
-    #[test]
-    fn test_apply_delta_adjustments_neutral() -> Result<(), Box<dyn Error>> {
-        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.0001), pos!(100.0));
-        strategy.apply_delta_adjustments(None, None)?;
-
-        assert!(strategy.underlying_adjustments.borrow().is_empty());
-        assert!(strategy.option_adjustments.borrow().is_empty());
-        Ok(())
-    }
-
-    #[test]
-    fn test_apply_delta_adjustments_with_filters() -> Result<(), Box<dyn Error>> {
-        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
-
-        // Test with Side filter
-        strategy.apply_delta_adjustments(Some(Side::Long), None)?;
-
-        // Only Long adjustments should be applied
-        let option_adjustments = strategy.option_adjustments.borrow();
-        assert!(option_adjustments
-            .iter()
-            .all(|(_, _, _, side)| matches!(side, Side::Long)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_adjust_underlying_position() -> Result<(), Box<dyn Error>> {
-        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
-
-        strategy.adjust_underlying_position(pos!(1.0), Side::Long)?;
-
-        let adjustments = strategy.underlying_adjustments.borrow();
-        assert_eq!(adjustments.len(), 1);
-        assert_eq!(adjustments[0], (pos!(1.0), Side::Long));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_adjust_option_position() -> Result<(), Box<dyn Error>> {
-        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
-
-        strategy.adjust_option_position(
-            pos!(1.0),
-            &pos!(100.0),
-            &OptionStyle::Call,
-            &Side::Long,
-        )?;
-
-        let adjustments = strategy.option_adjustments.borrow();
-        assert_eq!(adjustments.len(), 1);
-        assert_eq!(
-            adjustments[0],
-            (pos!(1.0), pos!(100.0), OptionStyle::Call, Side::Long)
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_apply_delta_adjustments_with_option_style_filter() -> Result<(), Box<dyn Error>> {
-        let mut strategy = MockStrategyWithAdjustments::new(dec!(0.5), pos!(100.0));
-
-        // Test with OptionStyle filter
-        strategy.apply_delta_adjustments(None, Some(OptionStyle::Call))?;
-
-        // Only Call options should be adjusted
-        let option_adjustments = strategy.option_adjustments.borrow();
-        assert!(option_adjustments
-            .iter()
-            .all(|(_, _, style, _)| matches!(style, OptionStyle::Call)));
-
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod delta_adjustment_tests {
-    use super::*;
-    use crate::error::GreeksError;
-    use crate::greeks::Greek;
-    use crate::{pos, Options};
-    use std::cell::RefCell;
-
-    // Enhanced mock strategy for testing specific adjustment scenarios
-    struct TestMockStrategy {
-        delta: Decimal,
-        underlying_price: Positive,
-        underlying_adjustments: RefCell<Vec<(Positive, Side)>>,
-        option_adjustments: RefCell<Vec<(Positive, Positive, OptionStyle, Side)>>,
-    }
-
-    impl Greeks for TestMockStrategy {
-        fn greeks(&self) -> Result<Greek, GreeksError> {
-            Ok(Greek {
-                delta: self.delta,
-                gamma: Decimal::ZERO,
-                theta: Decimal::ZERO,
-                vega: Decimal::ZERO,
-                rho: Decimal::ZERO,
-                rho_d: Decimal::ZERO,
-                alpha: Decimal::ZERO,
-            })
-        }
-
-        fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-            Ok(vec![])
-        }
-    }
-
-    impl Positionable for TestMockStrategy {}
-
-    impl DeltaNeutrality for TestMockStrategy {
-        fn calculate_net_delta(&self) -> DeltaInfo {
-            DeltaInfo {
-                net_delta: self.delta,
-                individual_deltas: vec![self.delta],
-                is_neutral: self.delta.abs() <= DELTA_THRESHOLD,
-                neutrality_threshold: DELTA_THRESHOLD,
-                underlying_price: self.underlying_price,
-            }
-        }
-
-        fn get_atm_strike(&self) -> Positive {
-            self.underlying_price
-        }
-
-        fn adjust_underlying_position(
-            &mut self,
-            quantity: Positive,
-            side: Side,
-        ) -> Result<(), Box<dyn Error>> {
-            self.underlying_adjustments
-                .borrow_mut()
-                .push((quantity, side));
-            Ok(())
-        }
-
-        fn adjust_option_position(
-            &mut self,
-            quantity: Positive,
-            strike: &Positive,
-            option_type: &OptionStyle,
-            side: &Side,
-        ) -> Result<(), Box<dyn Error>> {
-            self.option_adjustments.borrow_mut().push((
-                quantity,
-                *strike,
-                option_type.clone(),
-                side.clone(),
-            ));
-            Ok(())
-        }
-    }
-
-    impl TestMockStrategy {
-        fn new(delta: Decimal, price: Positive) -> Self {
-            Self {
-                delta,
-                underlying_price: price,
-                underlying_adjustments: RefCell::new(vec![]),
-                option_adjustments: RefCell::new(vec![]),
-            }
-        }
-    }
-
-    #[test]
-    fn test_apply_buy_underlying_adjustment() -> Result<(), Box<dyn Error>> {
-        let mut strategy = TestMockStrategy::new(dec!(-0.5), pos!(100.0));
-
-        // Test BuyUnderlying with no side filter
-        strategy.apply_delta_adjustments(None, None)?;
-
-        let adjustments = strategy.underlying_adjustments.borrow();
-        assert!(adjustments
-            .iter()
-            .any(|(_, side)| matches!(side, Side::Long)));
-        assert!(adjustments.iter().any(|(qty, _)| *qty == pos!(0.5)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_apply_buy_options_adjustment() -> Result<(), Box<dyn Error>> {
-        let mut strategy = TestMockStrategy::new(dec!(-0.5), pos!(100.0));
-
-        // Test BuyOptions with call option
-        strategy.apply_delta_adjustments(Some(Side::Long), Some(OptionStyle::Call))?;
-
-        let adjustments = strategy.option_adjustments.borrow();
-        let call_adjustments: Vec<_> = adjustments
-            .iter()
-            .filter(|(_, _, style, side)| {
-                matches!(style, OptionStyle::Call) && matches!(side, Side::Long)
-            })
-            .collect();
-
-        assert!(!call_adjustments.is_empty());
-        assert_eq!(call_adjustments[0].0, pos!(1.0)); // Quantity
-        assert_eq!(call_adjustments[0].1, pos!(100.0)); // Strike
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_apply_sell_options_adjustment() -> Result<(), Box<dyn Error>> {
-        let mut strategy = TestMockStrategy::new(dec!(0.5), pos!(100.0));
-
-        // Test SellOptions with call option
-        strategy.apply_delta_adjustments(Some(Side::Short), Some(OptionStyle::Call))?;
-
-        let adjustments = strategy.option_adjustments.borrow();
-        let call_adjustments: Vec<_> = adjustments
-            .iter()
-            .filter(|(_, _, style, side)| {
-                matches!(style, OptionStyle::Call) && matches!(side, Side::Short)
-            })
-            .collect();
-
-        assert!(!call_adjustments.is_empty());
-        assert_eq!(call_adjustments[0].0, pos!(1.0)); // Quantity
-        assert_eq!(call_adjustments[0].1, pos!(100.0)); // Strike
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_no_adjustment_needed_early_return() -> Result<(), Box<dyn Error>> {
-        let mut strategy = TestMockStrategy::new(dec!(0.00005), pos!(100.0));
-
-        // Execute adjustment when strategy is already neutral
-        strategy.apply_delta_adjustments(None, None)?;
-
-        // Verify no adjustments were made
-        assert!(strategy.underlying_adjustments.borrow().is_empty());
-        assert!(strategy.option_adjustments.borrow().is_empty());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_adjust_underlying_position_direct() -> Result<(), Box<dyn Error>> {
-        let mut strategy = TestMockStrategy::new(dec!(0.5), pos!(100.0));
-
-        // Test direct adjustment of underlying position
-        strategy.adjust_underlying_position(pos!(1.0), Side::Long)?;
-
-        {
-            let adjustments = strategy.underlying_adjustments.borrow();
-            assert_eq!(adjustments.len(), 1);
-            assert_eq!(adjustments[0], (pos!(1.0), Side::Long));
-        } // préstamo inmutable termina aquí
-
-        // Test with short side
-        strategy.adjust_underlying_position(pos!(2.0), Side::Short)?;
-
-        {
-            let adjustments = strategy.underlying_adjustments.borrow();
-            assert_eq!(adjustments.len(), 2);
-            assert_eq!(adjustments[1], (pos!(2.0), Side::Short));
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_adjust_option_position_direct() -> Result<(), Box<dyn Error>> {
-        let mut strategy = TestMockStrategy::new(dec!(0.5), pos!(100.0));
-
-        // Test calls
-        strategy.adjust_option_position(
-            pos!(1.0),
-            &pos!(100.0),
-            &OptionStyle::Call,
-            &Side::Long,
-        )?;
-
-        {
-            let adjustments = strategy.option_adjustments.borrow();
-            assert_eq!(adjustments.len(), 1);
-            assert_eq!(
-                adjustments[0],
-                (pos!(1.0), pos!(100.0), OptionStyle::Call, Side::Long)
-            );
-        } // préstamo inmutable termina aquí
-
-        // Test puts
-        strategy.adjust_option_position(
-            pos!(2.0),
-            &pos!(110.0),
-            &OptionStyle::Put,
-            &Side::Short,
-        )?;
-
-        {
-            let adjustments = strategy.option_adjustments.borrow();
-            assert_eq!(adjustments.len(), 2);
-            assert_eq!(
-                adjustments[1],
-                (pos!(2.0), pos!(110.0), OptionStyle::Put, Side::Short)
-            );
-        }
-
-        Ok(())
+        };
+
+        // serialize and pretty print
+        let serialized = serde_json::to_string_pretty(&response).unwrap();
+        println!("{}", serialized);
     }
 }

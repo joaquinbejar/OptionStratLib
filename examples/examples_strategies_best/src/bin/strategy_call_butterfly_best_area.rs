@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
+use optionstratlib::ExpirationDate;
+use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
@@ -10,8 +12,6 @@ use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::{debug, info};

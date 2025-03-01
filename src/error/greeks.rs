@@ -33,9 +33,9 @@
 //! * Invalid price values
 //! * Invalid rate values
 
-use crate::error::decimal;
-use crate::error::VolatilityError;
 use crate::Positive;
+use crate::error::VolatilityError;
+use crate::error::decimal;
 use std::error::Error;
 use std::fmt;
 

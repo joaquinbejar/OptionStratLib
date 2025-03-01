@@ -1309,7 +1309,7 @@ mod tests_gamma_equations_values {
     use super::*;
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::utils::logger::setup_logger;
-    use crate::{pos, OptionType};
+    use crate::{OptionType, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
@@ -1386,7 +1386,7 @@ pub mod tests_vega_equation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, OptionType, Side};
-    use crate::{pos, Positive};
+    use crate::{Positive, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 

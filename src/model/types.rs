@@ -1,6 +1,6 @@
 use crate::constants::{DAYS_IN_A_YEAR, ZERO};
-use crate::pricing::payoff::{standard_payoff, Payoff, PayoffInfo};
-use crate::{pos, Positive};
+use crate::pricing::payoff::{Payoff, PayoffInfo, standard_payoff};
+use crate::{Positive, pos};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::de::{MapAccess, Visitor};
@@ -369,13 +369,19 @@ impl<'de> Deserialize<'de> for ExpirationDate {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Action {
+    Buy,
+    Sell,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Side {
     Long,
     Short,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptionStyle {
     Call,
     Put,

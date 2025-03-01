@@ -76,9 +76,9 @@
 //! different values and validate results against real data to find the best configuration
 //! for your specific model.
 
+use crate::Options;
 use crate::error::decimal::DecimalError;
 use crate::pricing::utils::simulate_returns;
-use crate::Options;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -291,7 +291,7 @@ pub fn telegraph(
 mod tests_telegraph_process_basis {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{pos, Positive};
+    use crate::{Positive, pos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -418,9 +418,9 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
+    use crate::Positive;
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
-    use crate::Positive;
     use rust_decimal_macros::dec;
 
     // Helper function to create a mock Options struct

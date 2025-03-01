@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 18/8/24
 ******************************************************************************/
+use crate::Options;
 use crate::chains::chain::OptionData;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError};
@@ -12,11 +13,10 @@ use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::Options;
-use crate::{pos, Positive};
+use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
 use num_traits::ToPrimitive;
-use plotters::prelude::{ShapeStyle, BLACK};
+use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -83,7 +83,7 @@ impl Position {
         self.date = Utc::now();
         self.option.update_from_option_data(option_data);
 
-        match (self.option.side.clone(), self.option.option_style.clone()) {
+        match (self.option.side, self.option.option_style) {
             (Side::Long, OptionStyle::Call) => {
                 self.premium = option_data.call_ask.unwrap();
             }
@@ -185,9 +185,9 @@ impl Position {
     pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),
-            ExpirationDate::DateTime(datetime) => Ok(pos!(datetime
-                .signed_duration_since(Utc::now())
-                .num_days() as f64)),
+            ExpirationDate::DateTime(datetime) => Ok(pos!(
+                datetime.signed_duration_since(Utc::now()).num_days() as f64
+            )),
         }
     }
 
@@ -311,14 +311,14 @@ impl Greeks for Position {
 impl PnLCalculator for Position {
     fn calculate_pnl(
         &self,
-        market_price: &Positive,
+        underlying_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
         let price_at_buy = self.option.calculate_price_black_scholes()?;
         let mut current_option = self.option.clone();
         current_option.expiration_date = expiration_date;
-        current_option.underlying_price = *market_price;
+        current_option.underlying_price = *underlying_price;
         current_option.implied_volatility = *implied_volatility;
         let price_at_sell = current_option.calculate_price_black_scholes()?;
         let unrealized = price_at_sell - price_at_buy;
@@ -1419,7 +1419,7 @@ mod tests_premium {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use crate::{assert_decimal_eq, pos, OptionType};
+    use crate::{OptionType, assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {

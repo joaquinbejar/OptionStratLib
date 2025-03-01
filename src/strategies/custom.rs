@@ -14,18 +14,18 @@ use crate::model::{Position, ProfitLossRange};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::{
-    BreakEvenable, Optimizable, Positionable, Strategies, StrategyBasic, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::{DeltaNeutrality, StrategyBasics, StrategyConstructor};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{pos, ExpirationDate, Options, Positive};
+use crate::{ExpirationDate, Options, Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{ShapeStyle, RED};
+use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
@@ -318,8 +318,8 @@ impl Positionable for CustomStrategy {
     }
 }
 
-impl StrategyBasic for CustomStrategy {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+impl Strategable for CustomStrategy {
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
             kind: self.kind.clone(),
@@ -691,6 +691,8 @@ impl Greeks for CustomStrategy {
     }
 }
 
+impl DeltaNeutrality for CustomStrategy {}
+
 impl PnLCalculator for CustomStrategy {
     fn calculate_pnl(
         &self,
@@ -866,12 +868,12 @@ fn create_test_strategy() -> CustomStrategy {
 #[cfg(test)]
 mod tests_custom_strategy {
     use super::*;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::pos;
     use crate::utils::logger::setup_logger;
-    use crate::Options;
     use approx::assert_relative_eq;
     use chrono::Utc;
     use rust_decimal_macros::dec;
@@ -1159,11 +1161,11 @@ mod tests_custom_strategy {
 #[cfg(test)]
 mod tests_max_profit {
     use super::*;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use crate::utils::logger::setup_logger;
-    use crate::Options;
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1251,11 +1253,11 @@ mod tests_max_profit {
 #[cfg(test)]
 mod tests_max_loss {
     use super::*;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionType};
     use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use crate::utils::logger::setup_logger;
-    use crate::Options;
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1343,10 +1345,10 @@ mod tests_max_loss {
 #[cfg(test)]
 mod tests_total_cost {
     use super::*;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::pos;
     use crate::utils::setup_logger;
-    use crate::Options;
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1474,7 +1476,7 @@ mod tests_best_range_to_show {
     use super::*;
     use crate::constants::STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{pos, Options};
+    use crate::{Options, pos};
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1621,9 +1623,9 @@ mod tests_best_range_to_show {
 #[cfg(test)]
 mod tests_greeks {
     use super::*;
+    use crate::Options;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
     use crate::utils::setup_logger;
-    use crate::Options;
     use crate::{assert_decimal_eq, pos};
     use chrono::Utc;
     use rust_decimal_macros::dec;

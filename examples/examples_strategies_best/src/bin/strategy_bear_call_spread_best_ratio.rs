@@ -1,3 +1,5 @@
+use optionstratlib::ExpirationDate;
+use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
@@ -5,8 +7,6 @@ use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};

@@ -3,17 +3,17 @@
    Email: jb@taunais.com
    Date: 5/8/24
 ******************************************************************************/
+use crate::Options;
+use crate::Positive;
 use crate::error::decimal::DecimalError;
 use crate::greeks::{big_n, d2};
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
-use crate::Options;
-use crate::Positive;
 use num_traits::FromPrimitive;
-use rand::distributions::Distribution;
 use rand::Rng;
+use rand::distributions::Distribution;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use statrs::distribution::Normal;
@@ -41,13 +41,13 @@ pub fn simulate_returns(
     /// Generates a pair of normally distributed random numbers using Box-Muller transform
     fn generate_normal_pair<R: Rng>(rng: &mut R) -> Result<(Decimal, Decimal), DecimalError> {
         // Generate two uniform random numbers between 0 and 1
-        let u1 = Decimal::from_f64(rng.gen::<f64>()).ok_or(DecimalError::ConversionError {
+        let u1 = Decimal::from_f64(rng.r#gen::<f64>()).ok_or(DecimalError::ConversionError {
             from_type: "f64".to_string(),
             to_type: "Decimal".to_string(),
             reason: "Failed to convert f64 to Decimal".to_string(),
         })?;
 
-        let u2 = Decimal::from_f64(rng.gen::<f64>()).ok_or(DecimalError::ConversionError {
+        let u2 = Decimal::from_f64(rng.r#gen::<f64>()).ok_or(DecimalError::ConversionError {
             from_type: "f64".to_string(),
             to_type: "Decimal".to_string(),
             reason: "Failed to convert f64 to Decimal".to_string(),
@@ -253,8 +253,8 @@ pub(crate) fn calculate_option_price(
     let info = PayoffInfo {
         spot: params.asset * u.powu(i as u64) * d.powi((params.no_steps - i) as i64),
         strike: params.strike,
-        style: params.option_style.clone(),
-        side: params.side.clone(),
+        style: *params.option_style,
+        side: *params.side,
         spot_prices: None,
         spot_min: None,
         spot_max: None,
@@ -287,8 +287,8 @@ pub(crate) fn calculate_discounted_payoff(
     let info = PayoffInfo {
         spot: params.asset * (params.int_rate * params.expiry).exp(),
         strike: params.strike,
-        style: params.option_style.clone(),
-        side: params.side.clone(),
+        style: *params.option_style,
+        side: *params.side,
         spot_prices: None,
         spot_min: None,
         spot_max: None,
@@ -504,13 +504,15 @@ mod tests_simulate_returns_bis {
     #[test]
     #[should_panic]
     fn test_simulate_returns_invalid_std_dev() {
-        assert!(simulate_returns(
-            dec!(0.05),
-            pos!(-0.2),
-            100,
-            Decimal::from_f64(1.0 / 252.0).unwrap(),
-        )
-        .is_err());
+        assert!(
+            simulate_returns(
+                dec!(0.05),
+                pos!(-0.2),
+                100,
+                Decimal::from_f64(1.0 / 252.0).unwrap(),
+            )
+            .is_err()
+        );
     }
 }
 
@@ -623,7 +625,7 @@ mod tests_probability_keep_under_strike {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{ExpirationDate, OptionStyle, OptionType};
-    use crate::{assert_decimal_eq, pos, Positive};
+    use crate::{Positive, assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
     use tracing::info;
 

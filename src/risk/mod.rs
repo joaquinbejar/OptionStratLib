@@ -173,6 +173,8 @@
 //! - Short option minimum is always enforced for short positions
 //! - Results are conservative estimates of potential losses
 
+mod model;
 mod span;
 
+pub use model::{RiskCategory, RiskMetricsSimulation};
 pub use span::SPANMargin;

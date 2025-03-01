@@ -1463,7 +1463,7 @@ mod chain_test {
     use crate::chains::chain::OptionChain;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::chains::{RNDAnalysis, RNDParameters};
-    use crate::{assert_decimal_eq, pos, spos, ExpirationDate};
+    use crate::{ExpirationDate, assert_decimal_eq, pos, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use tracing::debug;

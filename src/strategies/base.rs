@@ -3,16 +3,22 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+use crate::chains::StrategyLegs;
 use crate::chains::chain::{OptionChain, OptionData};
 use crate::chains::utils::OptionDataGroup;
-use crate::chains::StrategyLegs;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
+use crate::error::OperationErrorKind;
 use crate::error::position::PositionError;
 use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
-use crate::error::OperationErrorKind;
+use crate::greeks::Greeks;
 use crate::model::position::Position;
-use crate::strategies::utils::{calculate_price_range, FindOptimalSide, OptimizationCriteria};
-use crate::{OptionStyle, Positive, Side};
+use crate::pnl::utils::PnLCalculator;
+use crate::pricing::Profit;
+use crate::strategies::probabilities::ProbabilityAnalysis;
+use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range};
+use crate::strategies::{DeltaNeutrality, StrategyConstructor};
+use crate::visualization::utils::Graph;
+use crate::{ExpirationDate, OptionStyle, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -27,12 +33,71 @@ pub struct StrategyBasics {
     pub description: String,
 }
 
-pub trait StrategyBasic {
-    fn get_basics(&self) -> Result<StrategyBasics, StrategyError> {
+/// This trait defines common functionalities for all trading strategies.
+/// It combines several other traits, requiring implementations for methods related to strategy
+/// information, construction, optimization, profit calculation, graphing, probability analysis,
+/// Greeks calculation, delta neutrality, and P&L calculation.
+pub trait Strategable:
+    Strategies
+    + StrategyConstructor
+    + Profit
+    + Graph
+    + ProbabilityAnalysis
+    + Greeks
+    + DeltaNeutrality
+    + PnLCalculator
+{
+    /// Returns basic information about the strategy, such as its name, type, and description.
+    ///
+    /// This method returns an error by default, as it is expected to be implemented by specific
+    /// strategy types.
+    /// The error indicates that the `info` operation is not supported for the given strategy type.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the `StrategyBasics` struct if successful, or a `StrategyError`
+    /// if the operation is not supported.
+    fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Err(StrategyError::operation_not_supported(
-            "get_basics",
+            "info",
             std::any::type_name::<Self>(),
         ))
+    }
+
+    /// Returns the type of the strategy.
+    ///
+    /// This method attempts to retrieve the strategy type from the `info()` method.
+    /// If `info()` returns an error (indicating it's not implemented for the specific strategy),
+    /// it asserts with a message and returns `StrategyType::Custom`.
+    ///
+    /// # Returns
+    ///
+    /// The `StrategyType` of the strategy.
+    fn type_name(&self) -> StrategyType {
+        match self.info() {
+            Ok(info) => info.kind,
+            Err(_) => {
+                panic!("Invalid strategy type");
+            }
+        }
+    }
+
+    /// Returns the name of the strategy.
+    ///
+    /// This method attempts to retrieve the strategy name from the `info()` method.
+    /// If `info()` returns an error (indicating it's not implemented for the specific strategy),
+    /// it asserts with a message and returns "Unknown".
+    ///
+    /// # Returns
+    ///
+    /// The name of the strategy as a `String`.
+    fn name(&self) -> String {
+        match self.info() {
+            Ok(info) => info.name,
+            Err(_) => {
+                panic!("Invalid strategy name");
+            }
+        }
     }
 }
 
@@ -143,7 +208,7 @@ impl Strategy {
     }
 }
 
-pub trait Strategies: StrategyBasic + Validable + Positionable + BreakEvenable {
+pub trait Strategies: Validable + Positionable + BreakEvenable {
     fn get_underlying_price(&self) -> Positive {
         panic!("Underlying price is not applicable for this strategy");
     }
@@ -225,7 +290,7 @@ pub trait Strategies: StrategyBasic + Validable + Positionable + BreakEvenable {
                         operation: "get_positions".to_string(),
                         reason: err.to_string(),
                     },
-                ))
+                ));
             }
         };
 
@@ -287,7 +352,7 @@ pub trait Strategies: StrategyBasic + Validable + Positionable + BreakEvenable {
                         operation: "get_positions".to_string(),
                         reason: "No positions found".to_string(),
                     },
-                ))
+                ));
             }
         };
 
@@ -359,6 +424,17 @@ pub trait Strategies: StrategyBasic + Validable + Positionable + BreakEvenable {
                 Ok(*break_even_points.last().unwrap() - *break_even_points.first().unwrap())
             }
         }
+    }
+
+    fn expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
+        unimplemented!("Expiration dates is not implemented for this strategy")
+    }
+
+    fn set_expiration_date(
+        &mut self,
+        _expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        unimplemented!("Set expiration date is not implemented for this strategy")
     }
 }
 
@@ -547,8 +623,6 @@ mod tests_strategies {
         }
     }
 
-    impl StrategyBasic for MockStrategy {}
-
     impl Strategies for MockStrategy {
         fn max_profit(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::THOUSAND)
@@ -625,7 +699,6 @@ mod tests_strategies {
         }
         impl Positionable for DefaultStrategy {}
         impl BreakEvenable for DefaultStrategy {}
-        impl StrategyBasic for DefaultStrategy {}
         impl Strategies for DefaultStrategy {}
 
         let strategy = DefaultStrategy;
@@ -651,7 +724,6 @@ mod tests_strategies {
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
-        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let mut strategy = PanicStrategy;
@@ -712,7 +784,6 @@ mod tests_strategies_extended {
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
-        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -726,7 +797,6 @@ mod tests_strategies_extended {
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
-        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -740,7 +810,6 @@ mod tests_strategies_extended {
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
-        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -754,7 +823,6 @@ mod tests_strategies_extended {
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
-        impl StrategyBasic for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
@@ -768,7 +836,6 @@ mod tests_strategies_extended {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl BreakEvenable for TestStrategy {}
-        impl StrategyBasic for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_profit(&self) -> Result<Positive, StrategyError> {
                 Ok(pos!(100.0))
@@ -786,7 +853,6 @@ mod tests_strategies_extended {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl BreakEvenable for TestStrategy {}
-        impl StrategyBasic for TestStrategy {}
         impl Strategies for TestStrategy {
             fn max_loss(&self) -> Result<Positive, StrategyError> {
                 Ok(pos!(50.0))
@@ -808,7 +874,6 @@ mod tests_strategies_extended {
             }
         }
         impl BreakEvenable for EmptyStrategy {}
-        impl StrategyBasic for EmptyStrategy {}
         impl Strategies for EmptyStrategy {}
 
         let strategy = EmptyStrategy;
@@ -934,7 +999,7 @@ mod tests_strategy_type {
 #[cfg(test)]
 mod tests_max_min_strikes {
     use super::*;
-    use crate::{pos, Side};
+    use crate::{Side, pos};
 
     struct TestStrategy {
         strikes: Vec<Positive>,
@@ -969,8 +1034,6 @@ mod tests_max_min_strikes {
             Ok(&self.break_even_points)
         }
     }
-
-    impl StrategyBasic for TestStrategy {}
 
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
@@ -1171,8 +1234,6 @@ mod tests_best_range_to_show {
         }
     }
 
-    impl StrategyBasic for TestStrategy {}
-
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
@@ -1303,8 +1364,6 @@ mod tests_range_to_show {
         }
     }
 
-    impl StrategyBasic for TestStrategy {}
-
     impl Strategies for TestStrategy {
         fn get_underlying_price(&self) -> Positive {
             self.underlying_price
@@ -1379,8 +1438,6 @@ mod tests_range_of_profit {
         }
     }
 
-    impl StrategyBasic for TestStrategy {}
-
     impl Strategies for TestStrategy {}
 
     #[test]
@@ -1429,9 +1486,7 @@ mod tests_strategy_methods {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl BreakEvenable for TestStrategy {}
-        impl StrategyBasic for TestStrategy {}
         impl Strategies for TestStrategy {}
-
         let strategy = TestStrategy;
         let result = std::panic::catch_unwind(|| strategy.get_underlying_price());
         assert!(result.is_err());
@@ -1489,8 +1544,6 @@ mod tests_optimizable {
     impl Positionable for TestOptimizableStrategy {}
 
     impl BreakEvenable for TestOptimizableStrategy {}
-
-    impl StrategyBasic for TestOptimizableStrategy {}
 
     impl Strategies for TestOptimizableStrategy {}
 
@@ -1662,8 +1715,6 @@ mod tests_strategy_net_operations {
     }
 
     impl BreakEvenable for TestStrategy {}
-
-    impl StrategyBasic for TestStrategy {}
 
     impl Strategies for TestStrategy {}
 

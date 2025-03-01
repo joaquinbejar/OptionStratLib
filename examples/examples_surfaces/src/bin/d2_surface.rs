@@ -3,10 +3,10 @@ use optionstratlib::error::SurfaceError;
 use optionstratlib::geometrics::{
     ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
 };
-use optionstratlib::greeks::{d1, d2};
+use optionstratlib::greeks::d2;
 use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{pos, Positive};
+use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), SurfaceError> {

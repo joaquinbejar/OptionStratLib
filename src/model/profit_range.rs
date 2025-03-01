@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use crate::Positive;
 use crate::error::probability::{PriceErrorKind, ProbabilityError};
 use crate::model::types::ExpirationDate;
 use crate::strategies::probabilities::utils::{
-    calculate_single_point_probability, PriceTrend, VolatilityAdjustment,
+    PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };
-use crate::Positive;
 use rust_decimal::Decimal;
 
 /// Represents a price range where a strategy is profitable

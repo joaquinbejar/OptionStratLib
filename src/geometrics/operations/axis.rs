@@ -137,7 +137,7 @@ where
 #[cfg(test)]
 mod tests_merge_indexes {
     use super::*;
-    use crate::curves::{create_linear_curve, Point2D};
+    use crate::curves::{Point2D, create_linear_curve};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;

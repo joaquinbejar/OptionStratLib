@@ -1,11 +1,11 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
-use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
+use optionstratlib::strategies::DELTA_THRESHOLD;
+use optionstratlib::strategies::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-use optionstratlib::strategies::DELTA_THRESHOLD;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive};
+use optionstratlib::{Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -46,31 +46,31 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho_d, dec!(-14.201310), epsilon);
 
     assert_decimal_eq!(
-        strategy.calculate_net_delta().net_delta,
+        strategy.delta_neutrality().unwrap().net_delta,
         dec!(0.9225),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.calculate_net_delta().individual_deltas[0],
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
         dec!(1.4628),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.calculate_net_delta().individual_deltas[1],
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
         dec!(-0.5402),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.suggest_delta_adjustments().len(), 1);
-    let binding = strategy.suggest_delta_adjustments();
-    let suggestion = binding.first().unwrap();
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
+    let binding = strategy.delta_adjustments().unwrap();
     let delta = pos!(3.415412207592464);
     let k = pos!(2800.0);
-    match suggestion {
-        SellOptions {
+    match &binding[1] {
+        BuyOptions {
             quantity,
             strike,
-            option_type,
+            option_style,
+            side,
         } => {
             assert_pos_relative_eq!(
                 *quantity,
@@ -78,7 +78,8 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
                 Positive::new_decimal(DELTA_THRESHOLD).unwrap()
             );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
-            assert_eq!(*option_type, OptionStyle::Call);
+            assert_eq!(*option_style, OptionStyle::Call);
+            assert_eq!(*side, optionstratlib::model::types::Side::Short);
         }
         _ => panic!("Invalid suggestion"),
     }

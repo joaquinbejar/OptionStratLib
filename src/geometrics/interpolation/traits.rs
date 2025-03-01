@@ -217,15 +217,21 @@ mod tests_interpolate {
             Point2D::new(dec!(1), dec!(1)),
         ]));
 
-        assert!(interpolator
-            .interpolate(dec!(0.5), InterpolationType::Bilinear)
-            .is_err());
-        assert!(interpolator
-            .interpolate(dec!(0.5), InterpolationType::Cubic)
-            .is_err());
-        assert!(interpolator
-            .interpolate(dec!(0.5), InterpolationType::Spline)
-            .is_err());
+        assert!(
+            interpolator
+                .interpolate(dec!(0.5), InterpolationType::Bilinear)
+                .is_err()
+        );
+        assert!(
+            interpolator
+                .interpolate(dec!(0.5), InterpolationType::Cubic)
+                .is_err()
+        );
+        assert!(
+            interpolator
+                .interpolate(dec!(0.5), InterpolationType::Spline)
+                .is_err()
+        );
     }
 
     #[test]

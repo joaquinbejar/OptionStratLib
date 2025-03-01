@@ -6,8 +6,8 @@
 use crate::error::curves::CurveError;
 use crate::geometrics::HasX;
 use crate::model::positive::is_positive;
-use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};

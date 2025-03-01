@@ -9,7 +9,7 @@ use optionstratlib::strategies::base::Optimizable;
 use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::{pos, ExpirationDate, Positive};
+use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use tracing::{debug, info};
 
@@ -68,12 +68,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
 
-    info!("Delta:  {:#?}", strategy.calculate_net_delta());
+    info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     info!("Delta Neutral:  {}", strategy.is_delta_neutral());
-    info!(
-        "Delta Suggestions:  {:#?}",
-        strategy.suggest_delta_adjustments()
-    );
+    info!("Delta Suggestions:  {:#?}", strategy.delta_adjustments()?);
 
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);

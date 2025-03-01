@@ -54,7 +54,7 @@ mod tests_basic_curves_trait {
     use super::*;
     use crate::curves::Point2D;
     use crate::model::types::{OptionStyle, Side};
-    use crate::{pos, ExpirationDate, OptionType, Positive};
+    use crate::{ExpirationDate, OptionType, Positive, pos};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
     use std::sync::Arc;

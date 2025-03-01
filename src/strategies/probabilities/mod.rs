@@ -232,6 +232,6 @@ pub(crate) mod utils;
 pub use analysis::StrategyProbabilityAnalysis;
 pub use core::ProbabilityAnalysis;
 pub use utils::{
-    calculate_price_probability, calculate_single_point_probability, PriceTrend,
-    VolatilityAdjustment,
+    PriceTrend, VolatilityAdjustment, calculate_price_probability,
+    calculate_single_point_probability,
 };

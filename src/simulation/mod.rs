@@ -1,9 +1,3 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 22/10/24
-******************************************************************************/
-
 //! # Random Walk Module
 //!
 //! This module implements random walk simulations for financial asset price modeling,
@@ -180,5 +174,11 @@
 //! - Thread-safe random number generation
 //! - Supports various time frames (daily, weekly, monthly)
 
-pub use walk::{RandomWalkGraph, Walkable};
+mod model;
+mod simulator;
+mod utils;
 pub mod walk;
+
+pub use model::SimulationResult;
+pub use simulator::{SimulationConfig, Simulator, WalkId};
+pub use walk::{RandomWalkGraph, Walkable};

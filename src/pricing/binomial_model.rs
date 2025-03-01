@@ -1,7 +1,7 @@
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
-use crate::{d2f, f2d, pos, Positive};
+use crate::{Positive, d2f, f2d, pos};
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 
@@ -58,8 +58,8 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn 
     let mut info = PayoffInfo {
         spot: params.asset,
         strike: params.strike,
-        style: params.option_style.clone(),
-        side: params.side.clone(),
+        style: *params.option_style,
+        side: *params.side,
         spot_prices: None,
         spot_min: None,
         spot_max: None,
@@ -156,8 +156,8 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
     let mut info = PayoffInfo {
         spot: params.asset,
         strike: params.strike,
-        style: params.option_style.clone(),
-        side: params.side.clone(),
+        style: *params.option_style,
+        side: *params.side,
         spot_prices: None,
         spot_min: None,
         spot_max: None,

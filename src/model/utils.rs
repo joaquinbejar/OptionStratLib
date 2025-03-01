@@ -3,9 +3,9 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::Position;
-use crate::{pos, Options, Positive};
+use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::{Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use rust_decimal_macros::dec;
 

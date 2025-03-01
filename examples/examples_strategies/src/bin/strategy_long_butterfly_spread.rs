@@ -4,15 +4,15 @@
    Date: 25/9/24
 ******************************************************************************/
 
+use optionstratlib::ExpirationDate;
+use optionstratlib::Positive;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pos;
-use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::Strategies;
+use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

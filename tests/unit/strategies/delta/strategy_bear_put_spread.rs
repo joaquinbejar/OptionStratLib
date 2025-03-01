@@ -1,11 +1,11 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{ExpirationDate, OptionStyle};
-use optionstratlib::strategies::bear_put_spread::BearPutSpread;
-use optionstratlib::strategies::delta_neutral::DeltaAdjustment::SellOptions;
-use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::DELTA_THRESHOLD;
+use optionstratlib::strategies::DeltaAdjustment::BuyOptions;
+use optionstratlib::strategies::bear_put_spread::BearPutSpread;
+use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{assert_decimal_eq, assert_pos_relative_eq, pos, Positive};
+use optionstratlib::{Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -46,32 +46,32 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho_d, dec!(0.636651), epsilon);
 
     assert_decimal_eq!(
-        strategy.calculate_net_delta().net_delta,
+        strategy.delta_neutrality().unwrap().net_delta,
         dec!(-1.2018),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.calculate_net_delta().individual_deltas[0],
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
         dec!(-1.6056),
         DELTA_THRESHOLD
     );
     assert_decimal_eq!(
-        strategy.calculate_net_delta().individual_deltas[1],
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
         dec!(0.4038),
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.suggest_delta_adjustments().len(), 1);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
 
-    let binding = strategy.suggest_delta_adjustments();
-    let suggestion = binding.first().unwrap();
+    let binding = strategy.delta_adjustments().unwrap();
     let delta = pos!(5.952144261472912);
     let k = pos!(5720.0);
-    match suggestion {
-        SellOptions {
+    match &binding[1] {
+        BuyOptions {
             quantity,
             strike,
-            option_type,
+            option_style,
+            side,
         } => {
             assert_pos_relative_eq!(
                 *quantity,
@@ -79,7 +79,8 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
                 Positive::new_decimal(DELTA_THRESHOLD).unwrap()
             );
             assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
-            assert_eq!(*option_type, OptionStyle::Put);
+            assert_eq!(*option_style, OptionStyle::Put);
+            assert_eq!(*side, optionstratlib::model::types::Side::Short);
         }
         _ => panic!("Invalid suggestion"),
     }

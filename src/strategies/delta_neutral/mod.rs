@@ -31,69 +31,9 @@
 //! - Utilities to evaluate whether a strategy is delta-neutral within a given threshold.
 //! - Suggestions for adjustments (buy/sell options or the underlying) to achieve neutrality.
 //!
-//! ## Example Usage
-//!
-//! ```rust
-//! use rust_decimal_macros::dec;
-//! use tracing::info;
-//! use optionstratlib::greeks::{Greek, Greeks};
-//! use optionstratlib::{Options, Positive};
-//! use optionstratlib::{d2fu, pos};
-//! use optionstratlib::error::GreeksError;
-//! use optionstratlib::strategies::base::Positionable;
-//! use optionstratlib::strategies::delta_neutral::{DeltaNeutrality, DeltaAdjustment, DeltaInfo};
-//!
-//! struct MyStrategy { /* Implementation specifics */ }
-//!
-//! let strategy = MyStrategy { /* Implementation specifics */ };
-//!
-//! impl Greeks for MyStrategy {
-//!  fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-//!       Ok(vec![])
-//!     }
-//!
-//! fn greeks(&self) -> Result<Greek, GreeksError> {
-//!     Ok(Greek {
-//!             delta: dec!(0.5),
-//!             gamma: dec!(0.2),
-//!             theta: dec!(0.1),
-//!             vega: dec!(0.3),
-//!             rho: dec!(0.4),
-//!             rho_d: dec!(0.0),
-//!             alpha: Default::default(),
-//!        })
-//!     }
-//! }
-//!
-//!
-//! impl Positionable for MyStrategy {}
-//!
-//! impl DeltaNeutrality for MyStrategy {
-//!     fn calculate_net_delta(&self) -> DeltaInfo {
-//!         DeltaInfo {
-//!            net_delta: self.greeks().unwrap().delta,
-//!            individual_deltas: vec![],
-//!            is_neutral: false,
-//!            neutrality_threshold: dec!(0.0),
-//!            underlying_price: Positive::ZERO,
-//!         }
-//!     }
-//!
-//! fn get_atm_strike(&self) -> Positive { Positive::ZERO } }
-//!
-//! // Calculate net delta
-//! let delta_info = strategy.calculate_net_delta();
-//! info!("{}", delta_info);
-//!
-//! // Check delta-neutrality within a 0.1 threshold
-//! if !strategy.is_delta_neutral() {
-//!     let adjustments = strategy.suggest_delta_adjustments();
-//!     for adj in adjustments {
-//!         info!("{:?}", adj);
-//!     }
-//! }
-//! ```
-//!
 mod model;
 
-pub use model::{DeltaAdjustment, DeltaInfo, DeltaNeutrality, DELTA_THRESHOLD};
+pub use model::{
+    DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutralResponse, DeltaNeutrality,
+    DeltaPositionInfo,
+};

@@ -17,12 +17,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let n_steps = 60 * hours as usize;
     let initial_price = pos!(5781.88);
     let mean = 0.0;
-    let std_dev = pos!(11.3);
+    let std_dev = pos!(0.2);
     let std_dev_change = pos!(0.1);
     let risk_free_rate = Some(Decimal::ZERO);
     let dividend_yield = spos!(0.02);
     let volatility_window = 20;
     let initial_volatility = Some(std_dev);
+
     let mut random_walk = RandomWalkGraph::new(
         "Random Walk VoV".to_string(),
         risk_free_rate,
@@ -50,8 +51,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         20,
     );
 
+    let volatilities = random_walk.get_volatilities()?;
     for (i, price_params) in random_walk.enumerate() {
-        info!("Step {}: Params: {}", i, price_params,);
+        info!(
+            "Step {}: Vol: {} Params: {}",
+            i, volatilities[i], price_params
+        );
+        // info!("Step {}: Params: {}", i, price_params);
     }
     Ok(())
 }

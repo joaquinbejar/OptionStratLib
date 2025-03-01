@@ -4,7 +4,7 @@ use optionstratlib::geometrics::{
 };
 use optionstratlib::greeks::d2;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{pos, Positive};
+use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 

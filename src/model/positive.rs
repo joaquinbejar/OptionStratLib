@@ -148,19 +148,11 @@ impl Positive {
     }
 
     pub fn max(self, other: Positive) -> Positive {
-        if self.0 > other.0 {
-            self
-        } else {
-            other
-        }
+        if self.0 > other.0 { self } else { other }
     }
 
     pub fn min(self, other: Positive) -> Positive {
-        if self.0 < other.0 {
-            self
-        } else {
-            other
-        }
+        if self.0 < other.0 { self } else { other }
     }
 
     pub fn floor(&self) -> Positive {
@@ -225,6 +217,12 @@ impl From<&Positive> for f64 {
 impl From<Positive> for f64 {
     fn from(value: Positive) -> Self {
         value.0.to_f64().unwrap_or(0.0)
+    }
+}
+
+impl From<Positive> for usize {
+    fn from(value: Positive) -> Self {
+        value.0.to_f64().unwrap_or(0.0) as usize
     }
 }
 
@@ -299,6 +297,12 @@ impl FromStr for Positive {
 impl From<f64> for Positive {
     fn from(value: f64) -> Self {
         Positive::new(value).expect("Value must be positive")
+    }
+}
+
+impl From<usize> for Positive {
+    fn from(value: usize) -> Self {
+        Positive::new(value as f64).expect("Value must be positive")
     }
 }
 
