@@ -177,6 +177,7 @@
 mod model;
 mod simulator;
 pub mod walk;
+mod utils;
 
 pub use model::SimulationResult;
 pub use simulator::{SimulationConfig, Simulator, WalkId};
