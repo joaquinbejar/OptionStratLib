@@ -26,6 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dividend_yield = spos!(0.0);
     let volatility_window = 20;
     let initial_volatility = Some(std_dev);
+    let time_frame = TimeFrame::Hour;
     let mut random_walk = RandomWalkGraph::new(
         symbol.to_string(),
         risk_free_rate,
@@ -40,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         mean,
         std_dev,
         std_dev_change,
-        TimeFrame::Hour,
+        time_frame,
         Some((pos!(0.15), pos!(0.28))),
     )?;
     let mut strategy = ShortStrangle::new(

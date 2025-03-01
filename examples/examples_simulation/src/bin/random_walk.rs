@@ -15,9 +15,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
     let years = 3.0;
     let n_steps = 252 * years as usize;
-    let initial_price = pos!(100.0);
-    let mean = 0.04;
-    let std_dev = pos!(0.1);
+    let initial_price = pos!(7000.0);
+    let mean = 0.0;
+    let std_dev = pos!(0.2);
     let std_dev_change = pos!(0.001);
     let risk_free_rate = Some(dec!(0.0));
     let dividend_yield = spos!(0.02);

@@ -19,13 +19,13 @@ use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    let symbol = "CL";
-    let initial_price = pos!(7250.0);
+    let symbol = "SP500";
+    let initial_price = pos!(6032.18);
 
-    let days = pos!(45.0);
+    let days = pos!(2.0);
 
     // Setup simulation parameters
-    let n_steps = (24.0 * days) as usize;
+    let n_steps = (24.0 * 60.0 * days) as usize;
     let mu = 0.0;
     let volatility = pos!(0.2);
     let vov = pos!(0.01);
@@ -33,14 +33,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create simulation config
     let config = SimulationConfig {
         risk_free_rate: Some(Decimal::ZERO),
-        dividend_yield: spos!(0.02),
+        dividend_yield: spos!(0.0),
         time_frame: TimeFrame::Hour,
         volatility_window: 20,
         initial_volatility: Some(volatility),
     };
 
     // Initialize simulator
-    let mut simulator = Simulator::new(config);
+    let mut simulator = Simulator::new(&config);
     let mut initial_prices = HashMap::new();
 
     for i in 0..100 {
@@ -50,24 +50,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Generate correlated walks
-    simulator.generate_random_walks(n_steps, &initial_prices, mu, volatility, vov)?;
+    simulator.generate_random_walks(n_steps, &initial_prices, mu, volatility, vov, config.time_frame, None)?;
 
     let mut strategy = ShortStrangle::new(
         symbol.to_string(),
-        pos!(7250.0),  // underlying_price
-        initial_price, // call_strike
-        pos!(7050.0),  // put_strike
+        initial_price, // underlying_price
+        pos!(6300.0),  // call_strike
+        pos!(5725.0),  // put_strike
         ExpirationDate::Days(days),
-        pos!(0.3745),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
+        pos!(0.2),      // implied_volatility
+        dec!(0.0),      // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(2.0),      // quantity
-        pos!(84.2),     // premium_short_call
-        pos!(353.2),    // premium_short_put
-        pos!(7.01),     // open_fee_short_call
-        pos!(7.01),     // close_fee_short_call
-        pos!(7.01),     // open_fee_short_put
-        pos!(7.01),     // close_fee_short_put
+        pos!(22.8),     // premium_short_call
+        pos!(48.69),    // premium_short_put
+        pos!(2.41),     // open_fee_short_call
+        pos!(2.41),     // close_fee_short_call
+        pos!(2.41),     // open_fee_short_put
+        pos!(2.41),     // close_fee_short_put
     );
 
     let simulation_result = simulator.simulate_strategy(&mut strategy)?;

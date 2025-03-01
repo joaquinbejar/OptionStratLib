@@ -292,9 +292,9 @@ impl Simulator {
     ///
     /// # Returns
     /// - A new instance of the `Simulator`.
-    pub fn new(config: SimulationConfig) -> Self {
+    pub fn new(config: &SimulationConfig) -> Self {
         Self {
-            config: Arc::new(config),
+            config: Arc::new(config.clone()),
             walks: HashMap::new(),
             correlations: None,
         }
@@ -391,6 +391,8 @@ impl Simulator {
         mean: f64,
         std_dev: Positive,
         std_dev_change: Positive,
+        time_frame: TimeFrame,
+        volatility_limits: Option<(Positive, Positive)>,
     ) -> Result<(), Box<dyn Error>> {
         let results: Result<Vec<_>, _> = self
             .walks
@@ -399,7 +401,7 @@ impl Simulator {
                 let first = initial
                     .get(id)
                     .ok_or_else(|| format!("No initial provided for walk {}", id.as_str()))?;
-                walk.generate_random_walk(n_steps, *first, mean, std_dev, std_dev_change)
+                walk.generate_random_walk_timeframe(n_steps, *first, mean, std_dev, std_dev_change, time_frame, volatility_limits )
             })
             .collect();
         results?;
@@ -561,7 +563,7 @@ impl Simulator {
         let walks = self
             .walks
             .values()
-            .map(|walk| walk.walk_strategy(strategy, walk.time_frame))
+            .map(|walk| walk.walk_strategy(strategy, self.config.time_frame))
             .collect::<Result<Vec<_>, _>>()?;
 
         let result = create_simulation_result(walks, 10)?;

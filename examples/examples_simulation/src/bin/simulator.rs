@@ -27,13 +27,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = SimulationConfig {
         risk_free_rate: Some(Decimal::ZERO),
         dividend_yield: spos!(0.02),
-        time_frame: TimeFrame::Hour,
+        time_frame: TimeFrame::Day,
         volatility_window: 20,
         initial_volatility: Some(std_dev),
     };
 
     // Initialize simulator
-    let mut simulator = Simulator::new(config);
+    let mut simulator = Simulator::new(&config);
     let mut initial_prices = HashMap::new();
 
     for i in 0..100 {
@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Generate correlated walks
-    simulator.generate_random_walks(n_steps, &initial_prices, mean, std_dev, std_dev_change)?;
+    simulator.generate_random_walks(n_steps, &initial_prices, mean, std_dev, std_dev_change, config.time_frame, None)?;
 
     simulator.graph(
         GraphBackend::Bitmap {
