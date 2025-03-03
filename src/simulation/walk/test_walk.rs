@@ -29,7 +29,7 @@ mod tests_random_walk {
             &mut self.values
         }
 
-        fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
+        fn get_random_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
             Ok(RandomWalkGraph::default())
         }
     }
@@ -231,7 +231,7 @@ mod tests_random_walk_timeframe {
             Ok(())
         }
 
-        fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
+        fn get_random_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
             Ok(RandomWalkGraph::default())
         }
     }
@@ -501,7 +501,7 @@ mod tests_random_walk_iterator {
         assert_eq!(count1, 5);
 
         // Second traversal
-        let count2 = walk.iter().count();
+        let count2 = walk.count();
         assert_eq!(count2, 5, "Second traversal should yield same count");
     }
 
@@ -527,7 +527,7 @@ mod tests_random_walk_iterator {
         );
         walk.values = vec![pos!(100.0)];
 
-        let item = walk.iter().next().unwrap();
+        let item = walk.next().unwrap();
         assert_eq!(item.risk_free_rate, Decimal::ZERO);
         assert_eq!(item.dividend_yield, Positive::ZERO);
     }
