@@ -22,8 +22,9 @@ use crate::visualization::utils::Graph;
 use crate::{Positive, pos};
 use num_traits::FromPrimitive;
 use rand::distributions::Distribution;
-use rand::thread_rng;
+use rand::thread_rng as rng;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use statrs::distribution::Normal;
 use std::collections::HashMap;
 use std::error::Error;
@@ -111,7 +112,7 @@ pub trait Walkable {
             return Err(Box::from("Number of steps must be greater than zero"));
         }
 
-        let mut rng = thread_rng();
+        let mut thread_rng = rng();
         let mut current_volatility = volatility;
 
         let dt: f64 = 1.0 / 252.0;
@@ -131,7 +132,7 @@ pub trait Walkable {
             if volatility_change > Positive::ZERO {
                 current_volatility = Normal::new(volatility.into(), volatility_change.into())
                     .unwrap()
-                    .sample(&mut rng)
+                    .sample(&mut thread_rng)
                     .max(ZERO)
                     .into();
             }
@@ -139,7 +140,7 @@ pub trait Walkable {
             volatilities.push(current_volatility);
 
             // Generate a standard normal random variable
-            let z = Normal::new(0.0, 1.0).unwrap().sample(&mut rng);
+            let z = Normal::new(0.0, 1.0).unwrap().sample(&mut thread_rng);
 
             // Calculate price movement using the log-normal model
             // S(t+dt) = S(t) * exp((mu - 0.5*sigma^2)*dt + sigma*sqrt(dt)*z)
@@ -208,7 +209,7 @@ pub trait Walkable {
             return Err(Box::from("Number of steps must be greater than zero"));
         }
 
-        let mut rng = thread_rng();
+        let mut thread_rng = rng();
         let mut current_volatility = volatility;
 
         // Calculate dt based on the time_frame
@@ -233,7 +234,7 @@ pub trait Walkable {
                 let vol_drift = 0.0; // Mean-reverting to initial volatility
                 let vol_term = volatility_change.to_f64()
                     * sqrt_dt
-                    * Normal::new(0.0, 1.0).unwrap().sample(&mut rng);
+                    * Normal::new(0.0, 1.0).unwrap().sample(&mut thread_rng);
                 let new_vol = current_volatility.to_f64() * f64::exp(vol_drift * dt + vol_term);
 
                 // Apply volatility limits if provided
@@ -250,7 +251,7 @@ pub trait Walkable {
             volatilities.push(current_volatility);
 
             // Generate a standard normal random variable
-            let z = Normal::new(0.0, 1.0).unwrap().sample(&mut rng);
+            let z = Normal::new(0.0, 1.0).unwrap().sample(&mut thread_rng);
 
             // Calculate price movement using the log-normal model
             let vol = current_volatility.to_f64();
@@ -289,7 +290,7 @@ pub trait Walkable {
         unimplemented!()
     }
 
-    fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>>;
+    fn get_random_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>>;
 
     fn walk_strategy<S>(
         &self,
@@ -472,6 +473,7 @@ pub trait Walkable {
 ///   timeframe, and rolling volatility window.
 /// - Can be used in combination with the `Walkable` trait for generating price paths
 ///   programmatically and iterating through the results sequentially.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RandomWalkGraph {
     /// Values representing the y-axis data of the random walk.
     pub(crate) values: Vec<Positive>,
@@ -545,7 +547,6 @@ impl RandomWalkGraph {
     /// * `None` - If the volatility could not be calculated or results in an invalid value.
     fn calculate_current_volatility(&self) -> Option<Positive> {
         let window_size = self.volatility_window.min(self.values.len());
-
         // Always use initial volatility as our base/target level
         let target_volatility = self.initial_volatility?;
 
@@ -557,13 +558,11 @@ impl RandomWalkGraph {
         // Get returns from the appropriate window
         let start_idx = self.current_index.saturating_sub(window_size);
         let end_idx = self.current_index;
-
         // Calculate log returns instead of simple returns
         let log_returns: Vec<f64> = self.values[start_idx..end_idx]
             .windows(2)
             .map(|w| (w[1].to_f64() / w[0].to_f64()).ln())
             .collect();
-
         if log_returns.is_empty() {
             return Some(target_volatility);
         }
@@ -594,7 +593,6 @@ impl RandomWalkGraph {
         let min_vol = target_volatility.to_f64() * 0.5;
         let max_vol = target_volatility.to_f64() * 1.5;
         let limited_volatility = blended_volatility.max(min_vol).min(max_vol);
-
         Some(pos!(limited_volatility))
     }
 
@@ -604,17 +602,6 @@ impl RandomWalkGraph {
     /// the `current_index` to `0`.
     pub fn reset_iterator(&mut self) {
         self.current_index = 0;
-    }
-
-    /// Retrieves the remaining time in the random walk in steps.
-    ///
-    /// Calculates the number of steps remaining for iteration in the graph.
-    ///
-    /// # Returns
-    ///
-    /// Returns a `Positive` value representing the remaining steps available for the iteration.
-    fn get_remaining_time(&self) -> Positive {
-        pos!((self.values.len() - self.current_index) as f64)
     }
 
     /// Generates a list of `ChartPoint` objects representing data points of the random walk.
@@ -637,18 +624,13 @@ impl RandomWalkGraph {
             .collect()
     }
 
-    /// Creates an iterator for traversing the `RandomWalkGraph`.
-    ///
-    /// This method returns a `RandomWalkIterator` initialized at the starting index.
-    ///
-    /// # Returns
-    ///
-    /// A `RandomWalkIterator` instance for iterating over the graph's data points.
-    pub fn iter(&self) -> RandomWalkIterator {
-        RandomWalkIterator {
-            walk: self,
-            current_index: 0,
-        }
+    pub fn iter(&self) -> Self
+    where
+        Self: Clone,
+    {
+        let mut cloned = self.clone();
+        cloned.current_index = 0;
+        cloned
     }
 }
 
@@ -691,7 +673,7 @@ impl Default for RandomWalkGraph {
 /// Retrieves a mutable reference to the vector of `Positive` y-values stored in the graph.
 /// This allows modification of the graph's data points.
 ///
-/// ### `get_randon_walk`
+/// ### `get_random_walk`
 ///
 /// Creates a new `RandomWalkGraph` instance with the same data as the current graph.
 /// This method effectively clones the current graph, ensuring no modification to the
@@ -730,7 +712,7 @@ impl Walkable for RandomWalkGraph {
         &mut self.values
     }
 
-    fn get_randon_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
+    fn get_random_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
         Ok(Self {
             values: self.values.clone(),
             title_text: self.title_text.clone(),
@@ -889,101 +871,18 @@ impl Iterator for RandomWalkGraph {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_index >= self.values.len() {
-            return None;
-        }
-
-        let risk_free_rate: Decimal = self.risk_free_rate.unwrap_or(Decimal::ZERO);
-        let dividend_yield: Positive = self.dividend_yield.unwrap_or(Positive::ZERO);
-        let price = self.values[self.current_index];
-        let remaining_days = self.get_remaining_time();
-        let expiration_date = ExpirationDate::Days(remaining_days);
-        let implied_volatility = self.calculate_current_volatility();
-        self.current_index += 1;
-
-        Some(OptionDataPriceParams {
-            underlying_price: price,
-            expiration_date,
-            implied_volatility,
-            risk_free_rate,
-            dividend_yield,
-            underlying_symbol: None,
-        })
-    }
-}
-
-/// A custom iterator for iterating through the values of a `RandomWalkGraph`
-/// while generating `OptionDataPriceParams` for each step.
-///
-/// This iterator allows sequential access to the parameters required for
-/// option pricing at each step in a random walk simulation.
-///
-/// # Fields
-/// - `walk`: A reference to the `RandomWalkGraph` being traversed.
-/// - `current_index`: The current position in the random walk values.
-///
-/// # Example Overview
-/// The iterator consumes the random walk values step by step, calculating relevant
-/// option pricing parameters at each step. These parameters include underlying price,
-/// implied volatility, expiration date, and others.
-///
-/// # Iterator Behavior
-/// Implements the `Iterator` trait to provide the `next` method, which:
-/// 1. Checks whether the end of the walk values (`self.walk.values`) is reached.
-///    - If the `current_index` exceeds or equals the length of the values, it returns `None`.
-/// 2. Constructs an `OptionDataPriceParams` object for the next step in the walk.
-///    - Retrieves:
-///      - Risk-free rate (`self.walk.risk_free_rate`)
-///      - Dividend yield (`self.walk.dividend_yield`)
-///      - Current underlying price from the `walk.values`.
-///      - Remaining days until expiration.
-///      - Implied volatility from the `calculate_current_volatility` method.
-/// 3. Increments `current_index` and returns the constructed `OptionDataPriceParams`.
-///
-/// # Notes:
-/// - If the optional financial parameters `risk_free_rate` or `dividend_yield` are
-///   not provided, default values (`Decimal::ZERO` and `Positive::ZERO`) are used.
-/// - The remaining time to expiration is expressed in days, calculated from the
-///   difference between the length of the `values` and the current iterator index.
-///
-/// # Performance:
-/// - The iterator is designed for efficient sequential processing of the random
-///   walk data without requiring explicit indexing by the user.
-///
-/// # See Also:
-/// - [`RandomWalkGraph`]: Contains the random walk data and methods for calculations.
-/// - [`OptionDataPriceParams`]: Struct generated at each step containing calculated
-///   parameters for pricing options.
-pub struct RandomWalkIterator<'a> {
-    walk: &'a RandomWalkGraph,
-    current_index: usize,
-}
-
-impl Iterator for RandomWalkIterator<'_> {
-    type Item = OptionDataPriceParams;
-
-    /// Advances the iterator and returns the `OptionDataPriceParams` for the current
-    /// step in the random walk. Returns `None` if the iterator reaches the end of the walk.
-    ///
-    /// # Details
-    /// - Retrieves the current underlying price from the `walk.values`.
-    /// - Calculates implied volatility using the `walk.calculate_current_volatility` method.
-    /// - Computes the remaining days to expiration.
-    /// - Uses default values if optional fields (`risk_free_rate` and `dividend_yield`) are unset.
-    /// - Advances the `current_index` by 1 for the next iteration.
-    ///
-    /// # Returns:
-    /// - `Some(OptionDataPriceParams)` containing the parameters for the current step.
-    /// - `None` if the iterator has completed traversing the random walk values.
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current_index >= self.walk.values.len() {
             return None; // End of iterator.
         }
-        let risk_free_rate = self.walk.risk_free_rate.unwrap_or(Decimal::ZERO);
-        let dividend_yield = self.walk.dividend_yield.unwrap_or(Positive::ZERO);
-        let price = self.walk.values[self.current_index];
-        let remaining_days = pos!((self.walk.values.len() - self.current_index) as f64);
-        let expiration_date = ExpirationDate::Days(remaining_days);
-        let implied_volatility = self.walk.calculate_current_volatility();
+        let risk_free_rate = self.risk_free_rate.unwrap_or(Decimal::ZERO);
+        let dividend_yield = self.dividend_yield.unwrap_or(Positive::ZERO);
+        let price = self.values[self.current_index];
+        let remaining_step = pos!((self.values.len() - self.current_index) as f64);
+        let left_time = convert_time_frame(remaining_step, &self.time_frame, &TimeFrame::Day);
+        if left_time.is_zero() {
+            return None;
+        }
+        let expiration_date = ExpirationDate::Days(left_time);
+        let implied_volatility = self.calculate_current_volatility();
         self.current_index += 1;
         Some(OptionDataPriceParams {
             underlying_price: price,
