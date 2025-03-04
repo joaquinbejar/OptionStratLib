@@ -175,8 +175,14 @@
 
 pub(crate) mod error;
 pub mod logger;
+
+/// This module contains other miscellaneous modules and functions.  It acts as a container for 
+/// functionality that doesn't fit neatly into the main project structure.  More specific 
+/// documentation can be found within each sub-module.
 pub mod others;
 pub(crate) mod tests;
+
+/// Module for time-related utilities.
 pub mod time;
 mod traits;
 
