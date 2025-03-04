@@ -21,33 +21,6 @@
 //! - Specialized components for options strategy visualization
 //! - Flexible backend system allowing output to bitmap images or HTML5 canvas
 //!
-//! ## Example Usage
-//!
-//! ```rust
-//! use optionstratlib::visualization::binomial_tree::draw_binomial_tree;
-//! use optionstratlib::visualization::utils::GraphBackend;
-//!
-//! // Create sample asset and option price trees
-//! let asset_tree = vec![
-//!     vec![100.0],
-//!     vec![105.0, 95.0],
-//!     vec![110.25, 99.75, 90.25],
-//! ];
-//!
-//! let option_tree = vec![
-//!     vec![5.0],
-//!     vec![10.0, 0.0],
-//!     vec![15.0, 5.0, 0.0],
-//! ];
-//!
-//! // Render the binomial tree to a file
-//! let backend = GraphBackend::Bitmap { 
-//!     file_path: "./output/binomial_tree.png", 
-//!     size: (1200, 800) 
-//! };
-//! draw_binomial_tree(&asset_tree, &option_tree, backend).unwrap();
-//! ```
-//!
 //! ## Cross-Platform Support
 //!
 //! The visualization module is designed to work across different platforms:
