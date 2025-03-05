@@ -90,7 +90,6 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 ///
 use rayon::prelude::*;
 
-
 /// Processes combinations of elements from a slice in parallel.
 ///
 /// This function takes a slice of elements, a combination size `n`, and a closure `process_combination`.

@@ -209,7 +209,6 @@ pub trait Graph: Profit {
     /// * No valid y-axis values could be calculated (e.g., all calculations resulted in errors).
     /// * There is an issue during graph creation or rendering with the chosen backend.
     ///
-    /// ```
     fn graph(
         &self,
         x_axis_data: &[Positive],

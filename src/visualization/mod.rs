@@ -30,7 +30,6 @@
 //!
 //! The appropriate backend is selected automatically based on compilation targets.
 
-
 /// This sub-module contains the implementation of the binomial tree model.
 pub mod binomial_tree;
 
