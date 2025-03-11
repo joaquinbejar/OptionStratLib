@@ -39,18 +39,91 @@ const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying on
     at a higher strike price. This strategy is used when a moderate rise in the underlying \
     asset's price is expected, but with limited upside potential.";
 
+/// Represents a Call Butterfly options trading strategy.
+///
+/// A Call Butterfly is an options strategy that combines three call options with different
+/// strike prices but the same expiration date. It consists of:
+/// - One long call at a lower strike price
+/// - Two short calls at a middle strike price
+/// - One long call at a higher strike price
+///
+/// This strategy has limited risk and limited profit potential. It benefits from low volatility
+/// and is most profitable when the underlying asset's price is at the middle strike price at expiration.
+///
+/// # Attributes
+///
+/// The structure stores both strategy metadata and the specific positions that make up the butterfly.
 #[derive(Clone, Debug)]
 pub struct CallButterfly {
+    /// The name of the strategy, typically used for identification purposes.
     pub name: String,
+
+    /// The type of strategy, which for this struct will be StrategyType::CallButterfly.
     pub kind: StrategyType,
+
+    /// A detailed description of the strategy, its objectives, and potential outcomes.
     pub description: String,
+
+    /// The price points at which the strategy breaks even (neither profits nor loses).
+    /// There are typically two break-even points for a call butterfly.
     pub break_even_points: Vec<Positive>,
+
+    /// The long call position at the lower strike price.
     long_call: Position,
+
+    /// The first short call position at the middle strike price.
     short_call_low: Position,
+
+    /// The second short call position at the middle strike price.
+    /// Combined with short_call_low, these represent the "body" of the butterfly.
     short_call_high: Position,
 }
 
 impl CallButterfly {
+
+    /// Creates a new Call Butterfly options strategy.
+    ///
+    /// A Call Butterfly strategy consists of:
+    /// - 1 long call at a lower strike price
+    /// - 2 short calls at a middle strike price (represented as two separate positions: low and high)
+    /// - 1 long call at a higher strike price
+    ///
+    /// This strategy is used when a trader expects low volatility and believes the underlying asset
+    /// will be near the middle strike price at expiration. It offers limited risk and a defined
+    /// maximum profit if the underlying price is at the middle strike at expiration.
+    ///
+    /// # Parameters
+    ///
+    /// ## Asset Information
+    /// * `underlying_symbol` - Symbol of the underlying asset (e.g., "SPY", "AAPL")
+    /// * `underlying_price` - Current market price of the underlying asset
+    /// * `dividend_yield` - Dividend yield of the underlying asset
+    ///
+    /// ## Strike Prices
+    /// * `long_call_strike` - Strike price for the long call option
+    /// * `short_call_low_strike` - Strike price for the first short call option
+    /// * `short_call_high_strike` - Strike price for the second short call option
+    ///
+    /// ## Market Parameters
+    /// * `expiration` - Expiration date for all options in the strategy
+    /// * `implied_volatility` - Implied volatility for the options
+    /// * `risk_free_rate` - Current risk-free interest rate
+    /// * `quantity` - Number of contracts for each position
+    ///
+    /// ## Premium and Fee Information
+    /// * `premium_long_call` - Premium paid for the long call
+    /// * `premium_short_call_low` - Premium received for the first short call
+    /// * `premium_short_call_high` - Premium received for the second short call
+    /// * `open_fee_long` - Fee to open the long call position
+    /// * `close_fee_long` - Fee to close the long call position
+    /// * `open_fee_short_low` - Fee to open the first short call position
+    /// * `close_fee_short_low` - Fee to close the first short call position
+    /// * `open_fee_short_high` - Fee to open the second short call position
+    /// * `close_fee_short_high` - Fee to close the second short call position
+    ///
+    /// # Returns
+    ///
+    /// A fully initialized `CallButterfly` strategy with all positions and break-even points calculated.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
