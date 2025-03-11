@@ -58,7 +58,7 @@ pub enum GreeksError {
     /// price, interest rate, or strike price values.
     InputError(InputErrorKind),
 
-    /// Errors specific to the calculation of individual Greeks (delta, gamma, 
+    /// Errors specific to the calculation of individual Greeks (delta, gamma,
     /// theta, vega, rho) or other option-related computations.
     CalculationError(CalculationErrorKind),
 
@@ -122,10 +122,7 @@ pub enum InputErrorKind {
     /// # Fields
     /// * `value` - The invalid volatility value that was provided
     /// * `reason` - A descriptive message explaining why the volatility value is invalid
-    InvalidVolatility {
-        value: f64,
-        reason: String,
-    },
+    InvalidVolatility { value: f64, reason: String },
 
     /// Represents an error with an invalid time input.
     ///
@@ -135,10 +132,7 @@ pub enum InputErrorKind {
     /// # Fields
     /// * `value` - The invalid time value that was provided (as a Positive type)
     /// * `reason` - A descriptive message explaining why the time value is invalid
-    InvalidTime {
-        value: Positive,
-        reason: String,
-    },
+    InvalidTime { value: Positive, reason: String },
 
     /// Represents an error with an invalid price input.
     ///
@@ -149,10 +143,7 @@ pub enum InputErrorKind {
     /// # Fields
     /// * `value` - The invalid price value that was provided
     /// * `reason` - A descriptive message explaining why the price value is invalid
-    InvalidPrice {
-        value: f64,
-        reason: String,
-    },
+    InvalidPrice { value: f64, reason: String },
 
     /// Represents an error with an invalid interest rate input.
     ///
@@ -162,10 +153,7 @@ pub enum InputErrorKind {
     /// # Fields
     /// * `value` - The invalid interest rate value that was provided
     /// * `reason` - A descriptive message explaining why the rate value is invalid
-    InvalidRate {
-        value: f64,
-        reason: String,
-    },
+    InvalidRate { value: f64, reason: String },
 
     /// Represents an error with an invalid strike price input.
     ///
@@ -175,10 +163,7 @@ pub enum InputErrorKind {
     /// # Fields
     /// * `value` - The invalid strike value that was provided (as a String)
     /// * `reason` - A descriptive message explaining why the strike value is invalid
-    InvalidStrike {
-        value: String,
-        reason: String,
-    },
+    InvalidStrike { value: String, reason: String },
 }
 
 /// Represents specific error types that can occur during financial derivative calculations.
@@ -188,7 +173,7 @@ pub enum InputErrorKind {
 /// the specific calculation, allowing for precise error handling and debugging.
 ///
 /// The enum is designed to be used within a broader error handling system for options pricing
-/// and financial calculations, providing specific error types for different aspects of 
+/// and financial calculations, providing specific error types for different aspects of
 /// the derivatives pricing process.
 #[derive(Debug)]
 pub enum CalculationErrorKind {
@@ -324,7 +309,6 @@ impl Error for GreeksError {}
 
 // Type alias for Results
 pub type GreeksResult<T> = Result<T, GreeksError>;
-
 
 /// Implementation of factory methods for creating specific `GreeksError` instances.
 ///
