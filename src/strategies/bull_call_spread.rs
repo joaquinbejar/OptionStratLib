@@ -53,17 +53,79 @@ const BULL_CALL_SPREAD_DESCRIPTION: &str = "A bull call spread is created by buy
     asset's price. The maximum profit is limited to the difference between strike prices minus \
     the net debit paid, while the maximum loss is limited to the net debit paid.";
 
+/// Represents a Bull Call Spread options trading strategy.
+///
+/// A Bull Call Spread is a vertical spread strategy that involves buying a call option
+/// with a lower strike price and selling another call option with a higher strike price,
+/// both with the same expiration date. This strategy is typically used when an investor
+/// expects a moderate rise in the price of the underlying asset.
+///
+/// # Advantages
+/// - Limited risk (maximum loss is the net debit paid)
+/// - Lower cost than buying a call option outright
+/// - Potential for profit if the underlying price rises
+///
+/// # Disadvantages
+/// - Limited profit potential (capped by the difference between strike prices minus the net debit)
+/// - Requires more capital than a single option position
+/// - Loses value as expiration approaches if the underlying price doesn't rise
 #[derive(Clone, Debug)]
 pub struct BullCallSpread {
+    /// The name of the strategy, typically including underlying asset information.
     pub name: String,
+
+    /// The type of strategy, which is StrategyType::BullCallSpread for this struct.
     pub kind: StrategyType,
+
+    /// A textual description of this specific bull call spread instance.
     pub description: String,
+
+    /// The price points at which the strategy breaks even (typically one point).
     pub break_even_points: Vec<Positive>,
+
+    /// The long call position (lower strike price).
     long_call: Position,
+
+    /// The short call position (higher strike price).
     short_call: Position,
 }
 
 impl BullCallSpread {
+
+    /// Creates a new Bull Call Spread strategy.
+    ///
+    /// A Bull Call Spread is created by buying a call option with a lower strike price 
+    /// and simultaneously selling a call option with a higher strike price, both with the same
+    /// expiration date. This strategy benefits from moderate increases in the underlying asset's price.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying_symbol` - The ticker symbol of the underlying asset.
+    /// * `underlying_price` - The current market price of the underlying asset.
+    /// * `long_strike` - The strike price for the long call option. If set to zero, defaults to the underlying price.
+    /// * `short_strike` - The strike price for the short call option. If set to zero, defaults to the underlying price.
+    /// * `expiration` - The expiration date for both options.
+    /// * `implied_volatility` - The implied volatility value used for option pricing.
+    /// * `risk_free_rate` - The risk-free interest rate used in option pricing calculations.
+    /// * `dividend_yield` - The dividend yield of the underlying asset.
+    /// * `quantity` - The number of contracts to create for both positions.
+    /// * `premium_long_call` - The premium paid for the long call position.
+    /// * `premium_short_call` - The premium received for the short call position.
+    /// * `open_fee_long_call` - The fee paid when opening the long call position.
+    /// * `close_fee_long_call` - The fee that will be paid when closing the long call position.
+    /// * `open_fee_short_call` - The fee paid when opening the short call position.
+    /// * `close_fee_short_call` - The fee that will be paid when closing the short call position.
+    ///
+    /// # Returns
+    ///
+    /// Returns a fully configured `BullCallSpread` strategy instance with positions and break-even points calculated.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if:
+    /// - The long call position cannot be added to the strategy
+    /// - The short call position cannot be added to the strategy
+    /// - Break-even points cannot be calculated
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
