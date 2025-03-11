@@ -1,8 +1,12 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 30/11/24
-******************************************************************************/
+//! # Probability Analysis Module
+//!
+//! This module provides functionality for analyzing the probability metrics of option trading strategies.
+//! It includes tools for calculating expected values, profit probabilities, and risk-reward ratios based
+//! on various market conditions like volatility and price trends.
+//!
+//! The `ProbabilityAnalysis` trait extends the `Strategies` and `Profit` traits to provide 
+//! comprehensive probability analysis capabilities for option strategies.
+
 use crate::error::probability::ProbabilityError;
 use crate::model::{ExpirationDate, ProfitLossRange};
 use crate::pricing::payoff::Profit;
@@ -16,9 +20,51 @@ use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;
 
+
+
 /// Trait for analyzing probabilities and risk metrics of option strategies
+///
+/// This trait provides methods to analyze the probability characteristics of options strategies,
+/// including probability of profit/loss, expected value, and risk-reward metrics.
+///
+/// # Type Requirements
+///
+/// Implementors must also implement:
+/// - The `Strategies` trait, which provides access to strategy configuration
+/// - The `Profit` trait, which provides profit calculation capabilities
+///
+/// # Key Features
+///
+/// - Calculate probability of profit for option strategies
+/// - Compute expected values with adjustments for volatility and price trends
+/// - Determine break-even points and risk-reward ratios
+/// - Analyze extreme outcome probabilities (max profit and max loss scenarios)
+///
 pub trait ProbabilityAnalysis: Strategies + Profit {
+    
     /// Calculate probability analysis for a strategy
+    ///
+    /// Performs a comprehensive probability analysis for an option strategy, taking into
+    /// account optional volatility adjustments and price trend parameters.
+    ///
+    /// # Parameters
+    ///
+    /// - `volatility_adj`: Optional volatility adjustment parameters
+    /// - `trend`: Optional price trend parameters indicating market direction bias
+    ///
+    /// # Returns
+    ///
+    /// - `Result<StrategyProbabilityAnalysis, ProbabilityError>`: Structured analysis results or an error
+    ///
+    /// # Analysis Components
+    ///
+    /// The returned analysis includes:
+    /// - Probability of profit
+    /// - Probability of reaching maximum profit
+    /// - Probability of suffering maximum loss
+    /// - Expected value
+    /// - Break-even points
+    /// - Risk-reward ratio
     fn analyze_probabilities(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -148,6 +194,18 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     }
 
     /// Calculate probability of profit
+    ///
+    /// Calculates the probability that the option strategy will result in a profit at expiration.
+    /// This method aggregates probabilities across all price ranges that would result in a profit.
+    ///
+    /// # Parameters
+    ///
+    /// - `volatility_adj`: Optional volatility adjustment parameters
+    /// - `trend`: Optional price trend parameters
+    ///
+    /// # Returns
+    ///
+    /// - `Result<Positive, ProbabilityError>`: The probability of profit (between 0 and 1) or an error
     fn probability_of_profit(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -168,6 +226,19 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         Ok(sum_of_probabilities)
     }
 
+    /// Calculate probability of loss
+    ///
+    /// Calculates the probability that the option strategy will result in a loss at expiration.
+    /// This method aggregates probabilities across all price ranges that would result in a loss.
+    ///
+    /// # Parameters
+    ///
+    /// - `volatility_adj`: Optional volatility adjustment parameters
+    /// - `trend`: Optional price trend parameters
+    ///
+    /// # Returns
+    ///
+    /// - `Result<Positive, ProbabilityError>`: The probability of loss (between 0 and 1) or an error
     fn probability_of_loss(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -189,6 +260,19 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     }
 
     /// Calculate extreme probabilities (max profit and max loss)
+    ///
+    /// Calculates the probabilities of reaching the maximum possible profit and
+    /// suffering the maximum possible loss for the strategy.
+    ///
+    /// # Parameters
+    ///
+    /// - `volatility_adj`: Optional volatility adjustment parameters
+    /// - `trend`: Optional price trend parameters
+    ///
+    /// # Returns
+    ///
+    /// - `Result<(Positive, Positive), ProbabilityError>`: A tuple containing (probability_of_max_profit, 
+    ///   probability_of_max_loss) or an error
     fn calculate_extreme_probabilities(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -232,9 +316,39 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         Ok((max_profit_prob, max_loss_prob))
     }
 
+    /// Get the expiration date of the option strategy
+    ///
+    /// # Returns
+    /// - `Result<ExpirationDate, ProbabilityError>`: The expiration date or an error
     fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError>;
+
+    /// Get the current risk-free interest rate
+    ///
+    /// # Returns
+    /// - `Option<Decimal>`: The risk-free rate as a decimal, or None if not available
     fn get_risk_free_rate(&self) -> Option<Decimal>;
+
+    /// Get the price ranges that would result in a profit
+    ///
+    /// # Returns
+    /// - `Result<Vec<ProfitLossRange>, ProbabilityError>`: A vector of price ranges 
+    ///   that result in profit, or an error
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
+
+    /// # Get Profit/Loss Ranges
+    ///
+    /// Returns a collection of price ranges with associated probabilities for profit and loss scenarios.
+    ///
+    /// This function analyzes the strategy to identify distinct price ranges where the strategy
+    /// would result in either profit or loss at expiration. Each range includes probability 
+    /// information based on the statistical model for the underlying asset.
+    ///
+    /// ## Returns
+    ///
+    /// * `Result<Vec<ProfitLossRange>, ProbabilityError>` - On success, returns a vector of 
+    ///   profit/loss ranges sorted by their price boundaries. On failure, returns a 
+    ///   `ProbabilityError` indicating what went wrong during the analysis.
+    ///
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
 }
 
