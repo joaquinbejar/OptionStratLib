@@ -54,17 +54,83 @@ const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by buyin
     asset's price. The maximum profit is limited to the net credit received, while the maximum \
     loss is limited to the difference between strike prices minus the net credit.";
 
+/// Represents a Bull Put Spread options trading strategy.
+///
+/// A Bull Put Spread consists of buying a put option with a lower strike price (long put)
+/// and selling a put option with a higher strike price (short put), both with the same 
+/// expiration date. This strategy is used when an investor is moderately bullish on the 
+/// underlying asset and wants to generate income with limited risk.
+///
+/// # Characteristics
+/// - Limited profit potential (difference between premiums received and paid)
+/// - Limited risk (difference between strike prices minus net premium received)
+/// - Bullish outlook (profits when the underlying price stays above the short put strike)
+/// - Generates upfront income from the net premium received
+///
+/// # Attributes
 #[derive(Clone, Debug)]
 pub struct BullPutSpread {
+    /// The name of the strategy, typically "Bull Put Spread"
     pub name: String,
+
+    /// The type of strategy, represented by the StrategyType enum
     pub kind: StrategyType,
+
+    /// A detailed description of the strategy, its use cases and risk profile
     pub description: String,
+
+    /// The price points at which the strategy breaks even (typically a single point)
+    /// representing the short put strike minus the net premium received
     pub break_even_points: Vec<Positive>,
+
+    /// The long put position (lower strike price) that limits the downside risk
     long_put: Position,
+
+    /// The short put position (higher strike price) that generates premium income
     short_put: Position,
 }
 
 impl BullPutSpread {
+
+    /// Creates a new Bull Put Spread options strategy.
+    ///
+    /// A Bull Put Spread is created by buying a put option with a lower strike price and simultaneously
+    /// selling a put option with a higher strike price, both with the same expiration date. This strategy
+    /// is used when you expect a moderate increase in the underlying asset's price.
+    ///
+    /// # Parameters
+    ///
+    /// * `underlying_symbol` - Symbol of the underlying asset (e.g., stock ticker).
+    /// * `underlying_price` - Current price of the underlying asset.
+    /// * `long_strike` - Strike price for the long put option. Defaults to `underlying_price` if set to zero.
+    /// * `short_strike` - Strike price for the short put option. Defaults to `underlying_price` if set to zero.
+    /// * `expiration` - Expiration date for both options.
+    /// * `implied_volatility` - Implied volatility used for option pricing calculations.
+    /// * `risk_free_rate` - Risk-free interest rate used in pricing models.
+    /// * `dividend_yield` - Dividend yield of the underlying asset.
+    /// * `quantity` - Number of option contracts.
+    /// * `premium_long_put` - Premium paid for the long put option.
+    /// * `premium_short_put` - Premium received for the short put option.
+    /// * `open_fee_long_put` - Transaction fee for opening the long put position.
+    /// * `close_fee_long_put` - Transaction fee for closing the long put position.
+    /// * `open_fee_short_put` - Transaction fee for opening the short put position.
+    /// * `close_fee_short_put` - Transaction fee for closing the short put position.
+    ///
+    /// # Returns
+    ///
+    /// A validated `BullPutSpread` strategy with calculated break-even points.
+    ///
+    /// # Strategy Details
+    ///
+    /// - Maximum profit: Limited to the net credit received (premium difference)
+    /// - Maximum loss: Limited to the difference between strike prices minus the net credit
+    /// - Break-even point: Short put strike price minus net credit received
+    /// 
+    /// # Validation
+    ///
+    /// The created strategy is validated to ensure:
+    /// 1. Both positions are valid
+    /// 2. The long put strike price is lower than the short put strike price
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
