@@ -186,25 +186,69 @@
 //!
 //! Refer to the documentation of each sub-module for more details on the specific
 //! strategies and their usage.
+//! 
+
+/// Options trading strategies module collection
+///
+/// This module provides implementations of various options trading strategies and utility functions
+/// for options trading analysis. Each submodule represents a specific strategy or utility.
 pub mod base;
+
+/// Bear Call Spread strategy implementation
 pub mod bear_call_spread;
+
+/// Bear Put Spread strategy implementation  
 pub mod bear_put_spread;
+
+/// Internal module for strategy building utilities
 mod build;
+
+/// Bull Call Spread strategy implementation
 pub mod bull_call_spread;
+
+/// Bull Put Spread strategy implementation
 pub mod bull_put_spread;
+
+/// Butterfly Spread strategy implementation
 pub mod butterfly_spread;
+
+/// Call Butterfly strategy implementation  
 pub mod call_butterfly;
+
+/// Collar strategy implementation
 pub mod collar;
+
+/// Covered Call strategy implementation
 pub mod covered_call;
+
+/// Custom strategy implementation for user-defined strategies
 pub mod custom;
+
+/// Delta-neutral strategy implementation and utilities
 pub mod delta_neutral;
+
+/// Iron Butterfly strategy implementation
 pub mod iron_butterfly;
+
+/// Iron Condor strategy implementation
 pub mod iron_condor;
+
+/// Poor Man's Covered Call strategy implementation
 pub mod poor_mans_covered_call;
+
+/// Probability calculations for options strategies
 pub mod probabilities;
+
+/// Protective Put strategy implementation
 pub mod protective_put;
+
+/// Straddle strategy implementation
 pub mod straddle;
+
+/// Strangle strategy implementation
 pub mod strangle;
+
+/// Utility functions for options calculations and analysis
 pub mod utils;
 
 pub use base::Strategies;
