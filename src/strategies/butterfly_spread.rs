@@ -1,20 +1,3 @@
-/*
-Long Butterfly Spread Strategy
-
-A long butterfly spread involves:
-1. Buy one call at a lower strike price (ITM)
-2. Sell two calls at a middle strike price (ATM)
-3. Buy one call at a higher strike price (OTM)
-
-All options have the same expiration date.
-
-Key characteristics:
-- Limited profit potential
-- Limited risk
-- Profit is highest when price is exactly at middle strike at expiration
-- Maximum loss is limited to the net premium paid
-- All options must have same expiration date
-*/
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
@@ -54,18 +37,77 @@ const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by 
     all with the same expiration date. This strategy profits when the underlying price stays \
     near the middle strike price at expiration.";
 
+/// Represents a Long Butterfly Spread options strategy.
+///
+/// A Long Butterfly Spread is created by combining three positions with the same expiration date:
+/// buying a lower strike call, selling two middle strike calls, and buying a higher strike call.
+/// This strategy has limited risk and limited profit potential, typically used when an investor
+/// expects the underlying asset to have minimal volatility.
+///
+/// # Structure
+///
+/// The strategy consists of:
+/// - A long call at a lower strike price
+/// - Two short calls at a middle strike price
+/// - A long call at a higher strike price
+///
+/// # Risk Profile
+///
+/// - Maximum profit occurs when the underlying price equals the middle strike price at expiration
+/// - Limited risk, with maximum loss equal to the net premium paid
+/// - Profitability range is constrained between the break-even points
+///
+/// # Attributes
 #[derive(Clone, Debug)]
 pub struct LongButterflySpread {
+    /// Name identifier for the strategy
     pub name: String,
+    /// The type classification of the strategy
     pub kind: StrategyType,
+    /// Textual description of the strategy's purpose and characteristics
     pub description: String,
+    /// Price points where the strategy transitions between profit and loss
     pub break_even_points: Vec<Positive>,
+    /// The middle strike call positions that are sold (short)
     short_call: Position,
+    /// The lower strike call position that is bought (long)
     long_call_low: Position,
+    /// The higher strike call position that is bought (long)
     long_call_high: Position,
 }
 
 impl LongButterflySpread {
+
+    /// Creates a new Long Butterfly Spread strategy with the specified parameters.
+    ///
+    /// A Long Butterfly Spread is created by buying one call at a lower strike price,
+    /// selling two calls at a middle strike price, and buying one call at a higher strike price,
+    /// all with the same expiration date. This strategy profits when the underlying price 
+    /// stays near the middle strike price at expiration.
+    ///
+    /// # Parameters
+    /// * `underlying_symbol` - The ticker symbol of the underlying asset
+    /// * `underlying_price` - The current market price of the underlying asset
+    /// * `low_strike` - The strike price for the long call at the lower strike
+    /// * `middle_strike` - The strike price for the two short calls
+    /// * `high_strike` - The strike price for the long call at the higher strike
+    /// * `expiration` - The expiration date for all options in the strategy
+    /// * `implied_volatility` - The implied volatility used for option pricing
+    /// * `risk_free_rate` - The risk-free interest rate used for option pricing
+    /// * `dividend_yield` - The dividend yield of the underlying asset
+    /// * `quantity` - The number of contracts for each position (note: middle position uses 2x this quantity)
+    /// * `premium_low` - The premium paid for the long call at the lower strike
+    /// * `premium_middle` - The premium received for each short call at the middle strike
+    /// * `premium_high` - The premium paid for the long call at the higher strike
+    /// * `open_fee_short_call` - Transaction fee for opening the short call positions
+    /// * `close_fee_short_call` - Transaction fee for closing the short call positions
+    /// * `open_fee_long_call_low` - Transaction fee for opening the lower strike long call
+    /// * `close_fee_long_call_low` - Transaction fee for closing the lower strike long call
+    /// * `open_fee_long_call_high` - Transaction fee for opening the higher strike long call
+    /// * `close_fee_long_call_high` - Transaction fee for closing the higher strike long call
+    ///
+    /// # Returns
+    /// A fully configured Long Butterfly Spread strategy with positions and break-even points calculated
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -951,41 +993,77 @@ impl PnLCalculator for LongButterflySpread {
     }
 }
 
-/*
-Short Butterfly Spread Strategy
 
-A short butterfly spread involves:
-1. Sell one call at a lower strike price (ITM)
-2. Buy two calls at a middle strike price (ATM)
-3. Sell one call at a higher strike price (OTM)
-
-All options have the same expiration date.
-
-Key characteristics:
-- Limited profit potential
-- Limited risk
-- Loss is highest when price is exactly at middle strike at expiration
-- Maximum profit is limited to the net premium received
-- All options must have same expiration date
-*/
 
 const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created by selling one call at a lower strike price, \
     buying two calls at a middle strike price, and selling one call at a higher strike price, \
     all with the same expiration date. This strategy profits when the underlying price moves \
     significantly away from the middle strike price in either direction.";
 
+/// Represents a Short Butterfly Spread options strategy.
+///
+/// A Short Butterfly Spread involves selling two options at the middle strike price
+/// and buying one option each at the lower and upper strike prices. This strategy
+/// profits when the underlying asset price moves significantly in either direction,
+/// with maximum loss occurring when the price stays near the middle strike at expiration.
+///
+/// The strategy consists of:
+/// - Long call at the lowest strike price
+/// - Two short calls at the middle strike price (represented as `short_call_low` and `short_call_high`)
+/// - Long call at the highest strike price
+///
 #[derive(Clone, Debug)]
 pub struct ShortButterflySpread {
+    /// The name of the strategy, typically including the underlying asset
     pub name: String,
+    /// The type of strategy, should be StrategyType::ShortButterflySpread
     pub kind: StrategyType,
+    /// A textual description of the strategy, including relevant details like strike prices
     pub description: String,
+    /// The price points at which the strategy breaks even (typically two points)
     pub break_even_points: Vec<Positive>,
+    /// The long call position at the lowest strike price
     long_call: Position,
+    /// The first short call position at the middle strike price
     short_call_low: Position,
+    /// The second short call position at the middle strike price
     short_call_high: Position,
 }
 
 impl ShortButterflySpread {
+
+    /// Creates a new Short Butterfly Spread options strategy.
+    ///
+    /// A Short Butterfly Spread is created by selling one call at a lower strike price,
+    /// buying two calls at a middle strike price, and selling one call at a higher strike price,
+    /// all with the same expiration date. This strategy profits when the underlying price moves
+    /// significantly away from the middle strike price in either direction.
+    ///
+    /// # Parameters
+    ///
+    /// * `underlying_symbol` - The ticker symbol of the underlying asset.
+    /// * `underlying_price` - The current price of the underlying asset.
+    /// * `low_strike` - The lower strike price for the short call.
+    /// * `middle_strike` - The middle strike price for the long calls.
+    /// * `high_strike` - The higher strike price for the short call.
+    /// * `expiration` - The expiration date for all options in the strategy.
+    /// * `implied_volatility` - The implied volatility used for pricing the options.
+    /// * `risk_free_rate` - The risk-free interest rate as a decimal.
+    /// * `dividend_yield` - The dividend yield of the underlying asset.
+    /// * `quantity` - The quantity of contracts for each leg (except middle strike which uses 2x quantity).
+    /// * `premium_low` - The premium for the lower strike short call.
+    /// * `premium_middle` - The premium for the middle strike long calls.
+    /// * `premium_high` - The premium for the higher strike short call.
+    /// * `open_fee_long_call` - The fee to open the long call positions.
+    /// * `close_fee_long_call` - The fee to close the long call positions.
+    /// * `open_fee_short_call_low` - The fee to open the lower strike short call position.
+    /// * `close_fee_short_call_low` - The fee to close the lower strike short call position.
+    /// * `open_fee_short_call_high` - The fee to open the higher strike short call position.
+    /// * `close_fee_short_call_high` - The fee to close the higher strike short call position.
+    ///
+    /// # Returns
+    ///
+    /// A fully initialized `ShortButterflySpread` strategy with calculated break-even points.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
