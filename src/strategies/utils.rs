@@ -1,16 +1,25 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 21/8/24
-******************************************************************************/
-use crate::Positive;
-use std::fmt::Display;
+//! Price Range Utilities
+//!
+//! This module provides utilities for working with optimal pricing strategies,
+//! including enumerations for defining search strategies and functions for 
+//! generating price ranges.
 
+use std::fmt::Display;
+use crate::model::positive::Positive;
+
+/// Defines the strategy for finding optimal pricing sides.
+///
+/// This enumeration specifies which side of a price curve to consider when
+/// finding optimal prices, or allows for searching across all prices or a specific range.
 #[derive(Debug, Clone, Copy)]
 pub enum FindOptimalSide {
+    /// Consider only the upper side of the price curve.
     Upper,
+    /// Consider only the lower side of the price curve.
     Lower,
+    /// Consider the entire price curve.
     All,
+    /// Consider prices within a specific range defined by start and end prices.
     Range(Positive, Positive),
 }
 
@@ -25,11 +34,29 @@ impl Display for FindOptimalSide {
     }
 }
 
+/// Defines the criteria used for price optimization.
+///
+/// This enumeration specifies whether optimization should prioritize 
+/// price-to-value ratio or overall area under the curve.
 pub enum OptimizationCriteria {
+    /// Optimize based on price-to-value ratio.
     Ratio,
+    /// Optimize based on the area under the price curve.
     Area,
 }
 
+/// Generates a vector of price points within a specified range.
+///
+/// # Arguments
+///
+/// * `start_price` - The starting price point
+/// * `end_price` - The ending price point
+/// * `step` - The increment between price points
+///
+/// # Returns
+///
+/// A vector containing price points from start_price to at least end_price,
+/// incremented by step.
 pub(crate) fn calculate_price_range(
     start_price: Positive,
     end_price: Positive,
@@ -44,7 +71,6 @@ pub(crate) fn calculate_price_range(
     }
     range
 }
-
 #[cfg(test)]
 mod tests_strategies_utils {
     use super::*;
