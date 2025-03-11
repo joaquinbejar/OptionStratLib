@@ -46,19 +46,125 @@ const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strat
     This strategy is used when low volatility is expected and the underlying asset's price is anticipated to remain \
     within a specific range.";
 
+/// # IronCondor
+///
+/// Represents an Iron Condor options trading strategy. This strategy involves four options positions:
+/// selling an out-of-the-money put, buying a further out-of-the-money put, selling an out-of-the-money call,
+/// and buying a further out-of-the-money call - all with the same expiration date.
+///
+/// An Iron Condor is a neutral strategy that profits from low volatility, where the underlying asset price
+/// remains within a specific range until expiration.
+///
+/// ## Fields
+/// * `name`: A descriptive name for the specific strategy instance.
+/// * `kind`: The type of strategy, which is `StrategyType::IronCondor`.
+/// * `description`: A detailed description of this specific strategy instance.
+/// * `break_even_points`: The price points at which the strategy breaks even (neither profit nor loss).
+/// * `short_call`: The short call position component of the strategy.
+/// * `short_put`: The short put position component of the strategy.
+/// * `long_call`: The long call position component of the strategy (typically with a higher strike than the short call).
+/// * `long_put`: The long put position component of the strategy (typically with a lower strike than the short put).
+///
+/// ## Risk Profile
+/// An Iron Condor has limited risk and limited profit potential. The maximum loss is limited to the difference between
+/// either the call strikes or the put strikes (whichever is greater) minus the net credit received.
+///
+/// ## Profit Profile
+/// The maximum profit is limited to the net premium (credit) received when establishing the position. This maximum profit
+/// is realized when all options expire worthless, which occurs when the underlying asset's price at expiration is between
+/// the short put and short call strike prices.
+///
+/// ## Break-Even Points
+/// There are two break-even points in an Iron Condor:
+/// 1. Upper break-even point: Short call strike price + net premium received
+/// 2. Lower break-even point: Short put strike price - net premium received
+///
+/// ## Typical Usage
+/// This strategy is typically used when:
+/// - The trader expects low volatility in the underlying asset
+/// - The trader believes the price will remain within a specific range
+/// - Implied volatility is relatively high (making the sold options more valuable)
+/// - The trader wants to generate income while having defined risk parameters
+///
+/// ## Construction
+/// An Iron Condor consists of:
+/// - Selling an out-of-the-money put (short put)
+/// - Buying a further out-of-the-money put (long put)
+/// - Selling an out-of-the-money call (short call)
+/// - Buying a further out-of-the-money call (long call)
+///
 #[derive(Clone, Debug)]
 pub struct IronCondor {
+    /// Name identifier for this specific strategy instance
     pub name: String,
+    /// Identifies this as an IronCondor strategy type
     pub kind: StrategyType,
+    /// Detailed description of this strategy instance
     pub description: String,
+    /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
+    /// The short call leg of the strategy (middle-upper strike)
     short_call: Position,
+    /// The short put leg of the strategy (middle-lower strike)
     short_put: Position,
+    /// The long call leg of the strategy (highest strike)
     long_call: Position,
+    /// The long put leg of the strategy (lowest strike)
     long_put: Position,
 }
 
 impl IronCondor {
+
+    /// # Creates a new Iron Condor options strategy
+    ///
+    /// This function constructs a new Iron Condor strategy, which combines a bull put spread with a bear call spread.
+    /// It involves selling an out-of-the-money put and call while buying further out-of-the-money put and call options.
+    ///
+    /// ## Parameters
+    ///
+    /// * `underlying_symbol`: The symbol/ticker of the underlying asset
+    /// * `underlying_price`: The current price of the underlying asset
+    /// * `short_call_strike`: Strike price for the short call option
+    /// * `short_put_strike`: Strike price for the short put option
+    /// * `long_call_strike`: Strike price for the long call option
+    /// * `long_put_strike`: Strike price for the long put option
+    /// * `expiration`: The expiration date for all options in the strategy
+    /// * `implied_volatility`: The implied volatility used for option pricing
+    /// * `risk_free_rate`: Risk-free interest rate used in option pricing models
+    /// * `dividend_yield`: Expected dividend yield of the underlying asset
+    /// * `quantity`: Number of contracts for each option position
+    /// * `premium_short_call`: Premium received for selling the call option
+    /// * `premium_short_put`: Premium received for selling the put option
+    /// * `premium_long_call`: Premium paid for buying the call option
+    /// * `premium_long_put`: Premium paid for buying the put option
+    /// * `open_fee`: Transaction fee for opening each position
+    /// * `close_fee`: Transaction fee for closing each position
+    ///
+    /// ## Returns
+    ///
+    /// Returns a configured `IronCondor` strategy instance with all positions initialized and break-even points calculated.
+    ///
+    /// ## Strategy Details
+    ///
+    /// An Iron Condor is a neutral options strategy that profits when the underlying asset price
+    /// remains within a specific range until expiration. The strategy:
+    ///
+    /// * Has limited risk (difference between strikes minus net premium received)
+    /// * Has limited profit potential (net premium received minus fees)
+    /// * Achieves maximum profit when the underlying price stays between the short strikes
+    /// * Has two break-even points calculated based on short strikes and net premium received
+    /// * Is typically used in low volatility environments when minimal price movement is expected
+    ///
+    /// ## Structure
+    ///
+    /// The strategy consists of four legs:
+    /// 1. Short Call: Selling an out-of-the-money call option
+    /// 2. Long Call: Buying a further out-of-the-money call option (protection)
+    /// 3. Short Put: Selling an out-of-the-money put option
+    /// 4. Long Put: Buying a further out-of-the-money put option (protection)
+    ///
+    /// The short options generate income, while the long options limit the potential loss.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
