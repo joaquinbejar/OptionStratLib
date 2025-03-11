@@ -53,6 +53,28 @@ use std::error::Error;
 use std::fmt;
 use tracing::debug;
 
+/// # Delta Neutrality Threshold
+///
+/// The default threshold value used to determine if an options strategy is considered delta neutral.
+///
+/// When evaluating delta neutrality, a strategy's net delta is compared against this threshold value.
+/// If the absolute value of the net delta is less than or equal to this threshold, the strategy
+/// is considered delta neutral.
+///
+/// ## Value Significance
+/// The small value (0.0001) represents a very tight threshold, meaning the strategy must have
+/// extremely minimal directional exposure to be considered neutral. This conservative threshold
+/// helps ensure strategies maintain strict delta neutrality for effective risk management.
+///
+/// ## Usage Context
+/// This constant is primarily used within delta neutrality calculations and serves as a default
+/// when a custom threshold is not specified. Functions that analyze or adjust strategies for
+/// delta neutrality may use this value when determining if additional position adjustments
+/// are necessary.
+///
+/// ## Related Components
+/// Works in conjunction with the `DeltaInfo` and `DeltaNeutralResponse` structures to provide
+/// consistent evaluation of delta neutrality across the delta neutral strategies module.
 pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 
 /// The `DeltaAdjustment` enum is used to define how a trading strategy can
@@ -188,6 +210,11 @@ impl fmt::Display for DeltaAdjustment {
 
 /// Represents the delta and associated details for a single position in an options strategy.
 ///
+/// This structure contains the key information about an individual option position's delta
+/// characteristics, including its quantity, strike price, and whether it's a call/put and
+/// long/short. It serves as a fundamental building block for analyzing and managing the
+/// delta exposure of complex options strategies.
+///
 /// ## Fields
 /// - `delta`: The delta value of the position, representing the sensitivity of the position's price
 ///   to changes in the underlying asset price.
@@ -195,12 +222,24 @@ impl fmt::Display for DeltaAdjustment {
 /// - `strike`: The strike price of the option, represented as a positive value.
 /// - `option_style`: Indicates whether the option is a call or a put.
 /// - `side`: Indicates whether the position is long or short.
+///
+/// ## Usage
+///
+/// `DeltaPositionInfo` is typically used within a collection to represent all positions in a
+/// strategy when calculating net delta exposure or determining adjustments needed for
+/// delta neutrality.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DeltaPositionInfo {
+    /// The delta value of the position, representing the sensitivity of the position's price
+    /// to changes in the underlying asset price.
     pub delta: Decimal,
+    /// The quantity of the options in the position.
     pub quantity: Positive,
+    /// The strike price of the option, represented as a positive value.
     pub strike: Positive,
+    /// Indicates whether the option is a call or a put.
     pub option_style: OptionStyle,
+    /// Indicates whether the position is long or short.
     pub side: Side,
 }
 
@@ -221,27 +260,25 @@ impl fmt::Display for DeltaPositionInfo {
 /// and details about its individual positions. It can be used to evaluate whether
 /// a strategy is delta neutral and to inform adjustments.
 ///
-/// ## Fields
-/// - `net_delta`: The net delta of the strategy, representing the overall sensitivity
-///   of the strategy to changes in the underlying asset price.
-/// - `individual_deltas`: A vector of `DeltaPositionInfo` structures containing
-///   the delta information for each position in the strategy.
-/// - `is_neutral`: Indicates whether the strategy is considered delta neutral based
-///   on the configured neutrality threshold.
-/// - `neutrality_threshold`: The threshold used to determine if the strategy is delta neutral.
-///   If the net delta is within this range, the strategy is considered neutral.
-/// - `underlying_price`: The current price of the underlying asset, represented as a positive value.
-///
 /// ## Purpose
 /// DeltaInfo serves as a central structure to analyze and manage the delta status
 /// of multi-position strategies, such as those used in options trading. It is particularly
 /// useful for implementing delta-neutral strategy adjustments.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeltaInfo {
+    /// The net delta of the strategy, representing the overall sensitivity of the
+    /// strategy to changes in the underlying asset price.
     pub net_delta: Decimal,
+    /// A vector of `DeltaPositionInfo` structures containing
+    ///   the delta information for each position in the strategy.
     pub individual_deltas: Vec<DeltaPositionInfo>,
+    /// Indicates whether the strategy is considered delta neutral based
+    ///   on the configured neutrality threshold.
     pub is_neutral: bool,
+    /// The threshold used to determine if the strategy is delta neutral.
+    ///   If the net delta is within this range, the strategy is considered neutral.
     pub neutrality_threshold: Decimal,
+    /// The current price of the underlying asset, represented as a positive value.
     pub underlying_price: Positive,
 }
 
@@ -331,6 +368,28 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         }
     }
 
+    /// # get_atm_strike
+    ///
+    /// Returns the at-the-money (ATM) strike price for a strategy by obtaining the underlying asset's price.
+    ///
+    /// An at-the-money strike is a strike price that is equal (or very close) to the current market price
+    /// of the underlying asset. This is often used as a reference point for constructing option strategies.
+    ///
+    /// ## Returns
+    ///
+    /// * `Result<Positive, StrategyError>` - The underlying price as a `Positive` value wrapped in a `Result`.
+    ///   Returns an error if retrieving the underlying price fails.
+    ///
+    /// ## Errors
+    ///
+    /// This function may return a `StrategyError` if the call to `get_underlying_price()` fails.
+    ///
+    /// ## Notes
+    ///
+    /// This implementation assumes that the ATM strike is exactly equal to the current price of the
+    /// underlying asset. In practice, the actual ATM strike might be the nearest available strike price
+    /// offered by the exchange.
+    ///
     fn get_atm_strike(&self) -> Result<Positive, StrategyError> {
         Ok(self.get_underlying_price())
     }
@@ -460,6 +519,36 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         Ok(adjustments)
     }
 
+    /// # Apply Delta Adjustments
+    ///
+    /// Applies delta-neutralizing adjustments to the current strategy based on calculated delta imbalances.
+    /// This function ensures that the strategy remains delta-neutral by executing the appropriate
+    /// position adjustments.
+    ///
+    /// ## Parameters
+    /// * `action`: Optional filtering parameter that specifies which type of adjustments to apply:
+    ///   - `Some(Action::Buy)`: Only apply options buying adjustments
+    ///   - `Some(Action::Sell)`: Only apply options selling adjustments
+    ///   - `None`: Apply all adjustment types, including paired adjustments
+    ///
+    /// ## Process
+    /// 1. Calculates the current delta neutrality status of the strategy
+    /// 2. If the strategy is already delta-neutral (within the configured threshold), returns early
+    /// 3. Determines necessary adjustments to achieve delta neutrality
+    /// 4. Applies appropriate adjustments based on the specified action filter:
+    ///    - BuyOptions adjustments when Action::Buy is specified
+    ///    - SellOptions adjustments when Action::Sell is specified
+    ///    - All adjustments including paired SameSize adjustments when no action is specified
+    ///
+    /// ## Returns
+    /// * `Result<(), Box<dyn Error>>` - Success if adjustments were applied successfully, or an error
+    ///   if any adjustment operations failed
+    ///
+    /// ## Notes
+    /// - The function uses the strategy's internal delta_neutrality() and delta_adjustments() methods
+    ///   to determine the current state and required actions
+    /// - SameSize adjustments are only applied when no specific action filter is provided
+    /// - Incompatible adjustments for the specified action are skipped with a debug message
     fn apply_delta_adjustments(&mut self, action: Option<Action>) -> Result<(), Box<dyn Error>> {
         let delta_info = self.delta_neutrality()?;
         if delta_info.is_neutral {
@@ -510,6 +599,36 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         Ok(())
     }
 
+    /// # Apply Single Adjustment
+    ///
+    /// Applies a single delta adjustment to the current position or strategy.
+    ///
+    /// This method processes a single `DeltaAdjustment` and modifies the object's state
+    /// accordingly. It handles different types of adjustments that can be made to maintain
+    /// or achieve delta neutrality in an options strategy.
+    ///
+    /// ## Parameters
+    ///
+    /// * `adjustment` - A reference to the `DeltaAdjustment` to apply, which can be one of several
+    ///   variants specifying different types of position adjustments.
+    ///
+    /// ## Returns
+    ///
+    /// * `Result<(), Box<dyn Error>>` - Returns `Ok(())` if the adjustment was applied successfully,
+    ///   or an `Error` if something went wrong during the process.
+    ///
+    /// ## Supported Adjustments
+    ///
+    /// * `BuyOptions` - Adds option contracts to the position with the specified parameters.
+    /// * `SellOptions` - Removes option contracts from the position with the specified parameters.
+    /// * `SameSize` - Currently not supported at the nested level (logs a debug message).
+    /// * Other variants - Currently not implemented (logs a debug message).
+    ///
+    /// ## Notes
+    ///
+    /// The actual position adjustment is performed by the `adjust_option_position` method, which is
+    /// called with positive quantities for buying options and negative quantities for selling options.
+    ///
     fn apply_single_adjustment(
         &mut self,
         adjustment: &DeltaAdjustment,
@@ -544,6 +663,37 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         }
     }
 
+    /// # Adjust Underlying Position
+    ///
+    /// Adjusts the quantity of the underlying asset held in a position based on the specified side (Long/Short)
+    /// and quantity.
+    ///
+    /// This method allows modifying the underlying asset position to achieve specific strategy goals, such as:
+    /// - Adjusting delta exposure for hedging purposes
+    /// - Implementing delta-neutral adjustments
+    /// - Rebalancing positions after market movements
+    /// - Executing rolling strategies
+    ///
+    /// ## Parameters
+    /// * `_quantity`: The amount of the underlying asset to adjust, represented as a `Positive` value
+    /// * `_side`: The direction of the adjustment - `Side::Long` to increase the position, `Side::Short` to decrease it
+    ///
+    /// ## Returns
+    /// * `Result<(), Box<dyn Error>>`: Returns Ok(()) on successful adjustment, or an Error if the adjustment fails
+    ///
+    /// ## Details
+    /// When adjusting the underlying position, the method will take into account current market conditions,
+    /// available capital, and potentially transaction costs to determine the optimal execution strategy.
+    ///
+    /// ## Example Use Cases
+    /// - Delta hedging an options position
+    /// - Rebalancing after a significant price move in the underlying
+    /// - Implementing a dynamic hedging strategy
+    /// - Gradually liquidating or building a position
+    ///
+    /// ## Note
+    /// Adjustments to the underlying position directly affect the overall strategy's risk profile,
+    /// particularly its delta exposure and potential profit/loss characteristics.
     fn adjust_underlying_position(
         &mut self,
         _quantity: Positive,
@@ -554,6 +704,33 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         unimplemented!("Implement underlying position adjustment")
     }
 
+    /// # Adjust Option Position
+    ///
+    /// Modifies the quantity of an existing option position in a trading strategy.
+    ///
+    /// This method adjusts the quantity of an existing option position that matches the provided
+    /// option type, side, and strike price. If the position is found, its quantity is increased
+    /// or decreased by the specified amount. If the position is not found, an error is returned.
+    ///
+    /// ## Parameters
+    ///
+    /// * `quantity`: The decimal amount by which to adjust the position. Positive values increase
+    ///   the position size, while negative values decrease it.
+    /// * `strike`: The strike price of the option position to adjust.
+    /// * `option_type`: The option style (Call or Put) of the position to adjust.
+    /// * `side`: The side (Long or Short) of the position to adjust.
+    ///
+    /// ## Returns
+    ///
+    /// * `Ok(())` if the position was successfully adjusted.
+    /// * `Err(PositionError::ValidationError)` if the position was not found.
+    ///
+    /// ## Errors
+    ///
+    /// Returns a boxed error if:
+    /// - The specified position does not exist in the strategy
+    /// - The `get_position` or `modify_position` methods fail
+    ///
     fn adjust_option_position(
         &mut self,
         quantity: Decimal,
@@ -577,11 +754,38 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     }
 }
 
+/// # DeltaNeutralResponse
+///
+/// Represents the analysis result of an options strategy's delta neutrality status and recommended adjustments.
+///
+/// This structure provides a comprehensive overview of a strategy's current delta status and suggests specific
+/// adjustments that can be made to achieve or maintain delta neutrality. It serves as the primary output of
+/// delta neutrality analysis operations.
+///
+/// ## Fields
+/// * `delta_info`: Contains detailed information about the current delta status of the strategy, including the net delta,
+///   individual position deltas, whether the strategy is currently considered neutral, and the neutrality threshold.
+/// * `adjustments`: A list of recommended actions (such as buying/selling options or the underlying asset) that can be
+///   taken to achieve or maintain delta neutrality for the strategy.
+///
+/// ## Purpose
+/// This response structure helps traders and automated systems understand the current delta exposure of a strategy
+/// and provides actionable recommendations to manage that exposure. It's particularly useful in risk management
+/// contexts where maintaining delta neutrality is essential for minimizing directional market risk.
+///
+/// ## Usage Example
+/// The `DeltaNeutralResponse` is typically generated by calling a delta neutrality assessment function on an
+/// options strategy. Clients can then use the information to make trading decisions or execute the suggested
+/// adjustments programmatically.
+///
+/// ## Related Concepts
+/// Delta neutrality is achieved when the combined delta of all positions in a strategy is close to zero,
+/// meaning the strategy's overall value is not immediately sensitive to small movements in the underlying asset's price.
+///
 #[derive(Serialize, Deserialize)]
 pub struct DeltaNeutralResponse {
     /// Detailed information about the delta status of the strategy.
     pub delta_info: DeltaInfo,
-
     /// A list of recommended adjustments to achieve delta neutrality.
     pub adjustments: Vec<DeltaAdjustment>,
 }
