@@ -54,7 +54,7 @@ const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral options
 /// a short call and short put at the same middle strike price, along with a long call at a higher strike
 /// and a long put at a lower strike, all with the same expiration date.
 ///
-/// An Iron Butterfly is a neutral options strategy that profits from low volatility, where the underlying 
+/// An Iron Butterfly is a neutral options strategy that profits from low volatility, where the underlying
 /// asset price remains close to the middle strike price through expiration.
 ///
 /// ## Fields
@@ -112,10 +112,9 @@ pub struct IronButterfly {
 }
 
 impl IronButterfly {
-
     /// # Iron Butterfly Strategy Constructor
     ///
-    /// Creates a new Iron Butterfly options trading strategy instance. An Iron Butterfly is a neutral options strategy 
+    /// Creates a new Iron Butterfly options trading strategy instance. An Iron Butterfly is a neutral options strategy
     /// that combines selling an at-the-money put and call while buying an out-of-the-money call and an out-of-the-money put.
     ///
     /// The Iron Butterfly consists of four options contracts:

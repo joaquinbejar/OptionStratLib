@@ -4,7 +4,7 @@
 //! It includes tools for calculating expected values, profit probabilities, and risk-reward ratios based
 //! on various market conditions like volatility and price trends.
 //!
-//! The `ProbabilityAnalysis` trait extends the `Strategies` and `Profit` traits to provide 
+//! The `ProbabilityAnalysis` trait extends the `Strategies` and `Profit` traits to provide
 //! comprehensive probability analysis capabilities for option strategies.
 
 use crate::error::probability::ProbabilityError;
@@ -19,8 +19,6 @@ use crate::{Positive, pos};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;
-
-
 
 /// Trait for analyzing probabilities and risk metrics of option strategies
 ///
@@ -41,7 +39,6 @@ use tracing::warn;
 /// - Analyze extreme outcome probabilities (max profit and max loss scenarios)
 ///
 pub trait ProbabilityAnalysis: Strategies + Profit {
-    
     /// Calculate probability analysis for a strategy
     ///
     /// Performs a comprehensive probability analysis for an option strategy, taking into
@@ -271,7 +268,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///
     /// # Returns
     ///
-    /// - `Result<(Positive, Positive), ProbabilityError>`: A tuple containing (probability_of_max_profit, 
+    /// - `Result<(Positive, Positive), ProbabilityError>`: A tuple containing (probability_of_max_profit,
     ///   probability_of_max_loss) or an error
     fn calculate_extreme_probabilities(
         &self,
@@ -331,7 +328,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// Get the price ranges that would result in a profit
     ///
     /// # Returns
-    /// - `Result<Vec<ProfitLossRange>, ProbabilityError>`: A vector of price ranges 
+    /// - `Result<Vec<ProfitLossRange>, ProbabilityError>`: A vector of price ranges
     ///   that result in profit, or an error
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
 
@@ -340,13 +337,13 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// Returns a collection of price ranges with associated probabilities for profit and loss scenarios.
     ///
     /// This function analyzes the strategy to identify distinct price ranges where the strategy
-    /// would result in either profit or loss at expiration. Each range includes probability 
+    /// would result in either profit or loss at expiration. Each range includes probability
     /// information based on the statistical model for the underlying asset.
     ///
     /// ## Returns
     ///
-    /// * `Result<Vec<ProfitLossRange>, ProbabilityError>` - On success, returns a vector of 
-    ///   profit/loss ranges sorted by their price boundaries. On failure, returns a 
+    /// * `Result<Vec<ProfitLossRange>, ProbabilityError>` - On success, returns a vector of
+    ///   profit/loss ranges sorted by their price boundaries. On failure, returns a
     ///   `ProbabilityError` indicating what went wrong during the analysis.
     ///
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;

@@ -73,7 +73,7 @@ is expected and the underlying asset's price is anticipated to remain stable.";
 ///
 /// ## Maximum Profit/Loss
 /// * **Max Profit**: Limited to the total premium received from selling both options
-/// * **Max Loss**: Unlimited. Upside loss = stock price - call strike - premium received. 
+/// * **Max Loss**: Unlimited. Upside loss = stock price - call strike - premium received.
 ///   Downside loss = put strike - stock price - premium received.
 ///
 /// ## Ideal Market Conditions
@@ -81,7 +81,7 @@ is expected and the underlying asset's price is anticipated to remain stable.";
 /// and when the underlying asset is anticipated to trade within a narrow price range until expiration.
 ///
 /// ## Example
-/// A short strangle might be constructed by selling a call with a strike price of $110 
+/// A short strangle might be constructed by selling a call with a strike price of $110
 /// and selling a put with a strike price of $90, when the underlying is trading at $100.
 /// The premium collected might be $2 for the call and $2 for the put, for a total of $4.
 /// Break-even points would be at $86 ($90 - $4) and $114 ($110 + $4).
@@ -102,7 +102,6 @@ pub struct ShortStrangle {
 }
 
 impl ShortStrangle {
-
     /// Creates a new Short Strangle options strategy.
     ///
     /// A Short Strangle is created by selling an out-of-the-money call option and an out-of-the-money put option with
@@ -985,7 +984,6 @@ pub struct LongStrangle {
 }
 
 impl LongStrangle {
-
     /// ## Creation
     ///
     /// Creates a new Long Strangle strategy with two positions:

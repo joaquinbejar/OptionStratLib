@@ -86,7 +86,7 @@ const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options s
 /// * `short_call`: The short call position (shorter-term, out-of-the-money call).
 ///
 /// ## Risk and Reward
-/// The maximum risk in this strategy is limited to the net debit paid (cost of the long call minus 
+/// The maximum risk in this strategy is limited to the net debit paid (cost of the long call minus
 /// the premium received for the short call).
 ///
 /// The maximum profit is capped and occurs when the underlying price at expiration of the short call
@@ -123,7 +123,6 @@ pub struct PoorMansCoveredCall {
     short_call: Position,
 }
 impl PoorMansCoveredCall {
-
     /// # Creates a new Poor Man's Covered Call strategy instance
     ///
     /// This function constructs and initializes a Poor Man's Covered Call (PMCC) options strategy, which simulates

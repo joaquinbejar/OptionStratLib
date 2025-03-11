@@ -41,10 +41,9 @@ use crate::surfaces::Surface;
 /// - **`crate::surfaces::surface`**: Contains the [`Surface`] structure and its related components.
 /// - **`crate::error::surfaces`**: Contains the [`SurfaceError`] type and its variants for error representation.
 ///
-/// # Method
-/// - `surface()`:
-///   - Returns: `Result<Surface, SurfaceError>`
-///   - Description: Generates a surface or returns an error if something goes wrong during the process.
 pub trait Surfacable {
+    /// - `surface()`:
+    ///   - Returns: `Result<Surface, SurfaceError>`
+    ///   - Description: Generates a surface or returns an error if something goes wrong during the process.
     fn surface(&self) -> Result<Surface, SurfaceError>;
 }

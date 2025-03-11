@@ -46,8 +46,8 @@ use std::sync::Arc;
 /// Represents a mathematical surface in 3D space.
 ///
 /// # Overview
-/// The `Surface` struct defines a three-dimensional surface composed of a collection 
-/// of 3D points. It tracks the range of coordinates in the X and Y dimensions to 
+/// The `Surface` struct defines a three-dimensional surface composed of a collection
+/// of 3D points. It tracks the range of coordinates in the X and Y dimensions to
 /// establish the boundaries of the surface.
 ///
 /// # Fields
@@ -81,8 +81,8 @@ use std::sync::Arc;
 ///
 /// # Usage
 /// `Surface` is primarily used for mathematical modeling, data visualization,
-/// and numerical analysis. It can represent various 3D structures such as 
-/// option pricing surfaces, terrain models, or any other data that can be 
+/// and numerical analysis. It can represent various 3D structures such as
+/// option pricing surfaces, terrain models, or any other data that can be
 /// plotted in three dimensions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Surface {
@@ -95,7 +95,6 @@ pub struct Surface {
 }
 
 impl Surface {
-
     /// Creates a new instance from a set of 3D points.
     ///
     /// # Parameters
@@ -153,7 +152,7 @@ impl Surface {
     ///
     /// # Behavior
     /// - For `Axis::X`, the returned curve contains points with (y, z) coordinates
-    /// - For `Axis::Y`, the returned curve contains points with (x, z) coordinates 
+    /// - For `Axis::Y`, the returned curve contains points with (x, z) coordinates
     /// - For `Axis::Z`, the returned curve contains points with (x, y) coordinates
     pub fn get_curve(&self, axis: Axis) -> Curve {
         let points = self
@@ -253,7 +252,7 @@ impl Surface {
     /// # Details
     /// - This function is only available on non-WebAssembly targets.
     /// - The coordinates are returned as `(x, z, y)` tuples, with y and z swapped.
-    /// - If the conversion from `Decimal` to `f64` fails for any coordinate, that value 
+    /// - If the conversion from `Decimal` to `f64` fails for any coordinate, that value
     ///   will be replaced with 0.0.
     ///
     /// # Example
@@ -276,7 +275,7 @@ impl Surface {
     /// let points = surface.get_f64_points();
     /// ```
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
+    pub fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
         self.points
             .iter()
             .map(|p| {
@@ -326,7 +325,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     /// Returns a borrowed reference to all points in the surface as an ordered set
     ///
     /// # Returns
-    /// * `BTreeSet<&Point3D>` - A sorted set containing references to all points 
+    /// * `BTreeSet<&Point3D>` - A sorted set containing references to all points
     ///   that define the surface, maintaining the natural ordering of points
     ///
     /// # Example
@@ -441,7 +440,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     /// ```
     ///
     /// ## Creating from a parametric function
-    /// ```rust
+    /// ```rust,no_run
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::curves::Point2D;
     /// use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject, ResultPoint};
@@ -592,7 +591,7 @@ impl Interpolate<Point3D, Point2D> for Surface {}
 ///
 /// ## Overview
 ///
-/// This implementation allows calculating the height (z-coordinate) of any point within 
+/// This implementation allows calculating the height (z-coordinate) of any point within
 /// the surface's x-y range by using linear interpolation based on the three nearest points
 /// in the surface. The method employs barycentric coordinate interpolation with triangulation
 /// of the nearest points.
@@ -622,7 +621,6 @@ impl Interpolate<Point3D, Point2D> for Surface {}
 /// * When the surface contains only coincident points forming a degenerate triangle
 /// * When the query point is outside the surface's x-y range
 impl LinearInterpolation<Point3D, Point2D> for Surface {
-    
     ///
     fn linear_interpolate(&self, xy: Point2D) -> Result<Point3D, InterpolationError> {
         let first = self.points.iter().next().unwrap();

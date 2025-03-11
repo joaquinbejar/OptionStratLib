@@ -67,10 +67,10 @@ volatility expectations.";
 
 /// # ShortStraddle
 ///
-/// Represents a Short Straddle options trading strategy. This strategy involves selling both a call option and a put option 
+/// Represents a Short Straddle options trading strategy. This strategy involves selling both a call option and a put option
 /// with the same strike price and expiration date.
 ///
-/// A short straddle is a neutral strategy that profits from low volatility, where the underlying asset price remains close 
+/// A short straddle is a neutral strategy that profits from low volatility, where the underlying asset price remains close
 /// to the strike price through expiration.
 ///
 /// ## Structure
@@ -127,7 +127,6 @@ pub struct ShortStraddle {
 }
 
 impl ShortStraddle {
-
     /// # ShortStraddle Constructor
     ///
     /// Creates a new Short Straddle options strategy, which involves simultaneously selling a call and a put option
@@ -870,7 +869,7 @@ when expecting large price movements but uncertain about direction.";
 /// Represents a Long Straddle options trading strategy, which involves buying both a call and put option
 /// with the same strike price and expiration date.
 ///
-/// A Long Straddle is a volatility strategy that profits when the underlying asset price moves 
+/// A Long Straddle is a volatility strategy that profits when the underlying asset price moves
 /// significantly in either direction. It consists of buying a call option and buying a put option
 /// with identical strike prices and expiration dates.
 ///
@@ -918,7 +917,6 @@ pub struct LongStraddle {
 }
 
 impl LongStraddle {
-
     /// Creates a new Long Straddle strategy.
     ///
     /// This constructor builds a Long Straddle by creating and adding both the long call and long put positions

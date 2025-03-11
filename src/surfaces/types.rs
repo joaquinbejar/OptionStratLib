@@ -165,12 +165,12 @@ impl Point3D {
     /// Converts this `Point3D` instance to a `Point2D` by projecting onto the XY plane.
     ///
     /// # Overview
-    /// This method creates a new `Point2D` instance using only the `x` and `y` coordinates 
+    /// This method creates a new `Point2D` instance using only the `x` and `y` coordinates
     /// of the current `Point3D` object, effectively projecting the 3D point onto the XY plane.
     /// The `z` coordinate is discarded in this operation.
     ///
     /// # Returns
-    /// A heap-allocated `Point2D` instance (`Box<Point2D>`) containing the `x` and `y` coordinates 
+    /// A heap-allocated `Point2D` instance (`Box<Point2D>`) containing the `x` and `y` coordinates
     /// from this `Point3D` object.
     ///
     /// # Example

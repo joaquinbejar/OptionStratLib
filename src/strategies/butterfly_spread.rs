@@ -77,12 +77,11 @@ pub struct LongButterflySpread {
 }
 
 impl LongButterflySpread {
-
     /// Creates a new Long Butterfly Spread strategy with the specified parameters.
     ///
     /// A Long Butterfly Spread is created by buying one call at a lower strike price,
     /// selling two calls at a middle strike price, and buying one call at a higher strike price,
-    /// all with the same expiration date. This strategy profits when the underlying price 
+    /// all with the same expiration date. This strategy profits when the underlying price
     /// stays near the middle strike price at expiration.
     ///
     /// # Parameters
@@ -993,8 +992,6 @@ impl PnLCalculator for LongButterflySpread {
     }
 }
 
-
-
 const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created by selling one call at a lower strike price, \
     buying two calls at a middle strike price, and selling one call at a higher strike price, \
     all with the same expiration date. This strategy profits when the underlying price moves \
@@ -1031,7 +1028,6 @@ pub struct ShortButterflySpread {
 }
 
 impl ShortButterflySpread {
-
     /// Creates a new Short Butterfly Spread options strategy.
     ///
     /// A Short Butterfly Spread is created by selling one call at a lower strike price,

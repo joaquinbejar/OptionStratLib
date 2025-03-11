@@ -20,7 +20,6 @@ use std::sync::Arc;
 /// A surface typically maps option strike prices and volatilities to various
 /// option metrics like delta, gamma, theta, vega, or price.
 pub trait BasicSurfaces {
-
     /// Creates a surface visualization based on the specified axis type and option parameters.
     ///
     /// # Parameters

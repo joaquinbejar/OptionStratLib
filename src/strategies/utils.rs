@@ -1,11 +1,11 @@
 //! Price Range Utilities
 //!
 //! This module provides utilities for working with optimal pricing strategies,
-//! including enumerations for defining search strategies and functions for 
+//! including enumerations for defining search strategies and functions for
 //! generating price ranges.
 
-use std::fmt::Display;
 use crate::model::positive::Positive;
+use std::fmt::Display;
 
 /// Defines the strategy for finding optimal pricing sides.
 ///
@@ -36,7 +36,7 @@ impl Display for FindOptimalSide {
 
 /// Defines the criteria used for price optimization.
 ///
-/// This enumeration specifies whether optimization should prioritize 
+/// This enumeration specifies whether optimization should prioritize
 /// price-to-value ratio or overall area under the curve.
 pub enum OptimizationCriteria {
     /// Optimize based on price-to-value ratio.

@@ -57,8 +57,8 @@ const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by buyin
 /// Represents a Bull Put Spread options trading strategy.
 ///
 /// A Bull Put Spread consists of buying a put option with a lower strike price (long put)
-/// and selling a put option with a higher strike price (short put), both with the same 
-/// expiration date. This strategy is used when an investor is moderately bullish on the 
+/// and selling a put option with a higher strike price (short put), both with the same
+/// expiration date. This strategy is used when an investor is moderately bullish on the
 /// underlying asset and wants to generate income with limited risk.
 ///
 /// # Characteristics
@@ -91,7 +91,6 @@ pub struct BullPutSpread {
 }
 
 impl BullPutSpread {
-
     /// Creates a new Bull Put Spread options strategy.
     ///
     /// A Bull Put Spread is created by buying a put option with a lower strike price and simultaneously
@@ -125,7 +124,7 @@ impl BullPutSpread {
     /// - Maximum profit: Limited to the net credit received (premium difference)
     /// - Maximum loss: Limited to the difference between strike prices minus the net credit
     /// - Break-even point: Short put strike price minus net credit received
-    /// 
+    ///
     /// # Validation
     ///
     /// The created strategy is validated to ensure:

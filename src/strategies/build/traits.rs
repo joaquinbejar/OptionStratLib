@@ -13,7 +13,7 @@ use crate::strategies::Strategies;
 ///
 /// This trait extends both the `Strategies` and `Greeks` traits, ensuring that
 /// implementers can both operate as option strategies and calculate Greek values
-/// for risk analysis. It provides a default implementation of the strategy 
+/// for risk analysis. It provides a default implementation of the strategy
 /// construction method that returns a "not implemented" error, which concrete
 /// implementations should override.
 ///

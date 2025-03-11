@@ -80,7 +80,6 @@ pub struct CallButterfly {
 }
 
 impl CallButterfly {
-
     /// Creates a new Call Butterfly options strategy.
     ///
     /// A Call Butterfly strategy consists of:

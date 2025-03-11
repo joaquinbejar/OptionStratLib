@@ -225,24 +225,40 @@ impl fmt::Display for StrategyType {
     }
 }
 
-/// Represents a trading strategy.
+/// Represents a complete options trading strategy with risk-reward parameters.
 ///
-/// A strategy consists of the following properties:
+/// A strategy encapsulates all the information needed to describe, analyze, and
+/// trade a specific options strategy. It includes identifying information, the positions
+/// that make up the strategy, and critical risk metrics such as maximum profit/loss
+/// and break-even points.
 ///
-/// - `name`: The name of the strategy.
-/// - `kind`: The type of the strategy.
-/// - `description`: A description of the strategy.
-/// - `legs`: A vector of positions that make up the strategy.
-/// - `max_profit`: The maximum potential profit of the strategy (optional).
-/// - `max_loss`: The maximum potential loss of the strategy (optional).
-/// - `break_even_points`: A vector of break-even points for the strategy.
+/// This structure serves as the foundation for strategy analysis, visualization,
+/// and trading execution within the options trading framework.
+///
 pub struct Strategy {
+    /// The name of the strategy, which identifies it among other strategies.
     pub name: String,
+
+    /// The type of the strategy, categorizing it according to standard options strategies.
     pub kind: StrategyType,
+
+    /// A textual description explaining the strategy's purpose, construction, and typical market scenarios.
     pub description: String,
+
+    /// A collection of positions (or legs) that together form the complete strategy.
+    /// Each position represents an option contract or underlying asset position.
     pub legs: Vec<Position>,
+
+    /// The maximum potential profit of the strategy, if limited and known.
+    /// Expressed as an absolute value, not percentage.
     pub max_profit: Option<f64>,
+
+    /// The maximum potential loss of the strategy, if limited and known.
+    /// Expressed as an absolute value, not percentage.
     pub max_loss: Option<f64>,
+
+    /// The price points of the underlying asset at which the strategy neither makes a profit nor a loss.
+    /// These points are crucial for strategy planning and risk management.
     pub break_even_points: Vec<Positive>,
 }
 
@@ -279,6 +295,40 @@ pub struct Strategy {
 /// assert!(strategy.break_even_points.is_empty());
 /// ```
 impl Strategy {
+
+    /// Creates a new `Strategy` instance.
+    ///
+    /// This function initializes a new trading strategy with the given name, kind, and description.
+    /// The `legs`, `max_profit`, `max_loss`, and `break_even_points` are initialized as empty or `None`.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the strategy.
+    /// * `kind` - The type of the strategy (e.g., BullCallSpread, LongStraddle).
+    /// * `description` - A description of the strategy.
+    ///
+    /// # Returns
+    ///
+    /// A new `Strategy` instance.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use optionstratlib::strategies::base::{Strategy, StrategyType};
+    /// let strategy = Strategy::new(
+    ///     "My Strategy".to_string(),
+    ///     StrategyType::LongCall,
+    ///     "A simple long call strategy".to_string(),
+    /// );
+    ///
+    /// assert_eq!(strategy.name, "My Strategy");
+    /// assert_eq!(strategy.kind, StrategyType::LongCall);
+    /// assert_eq!(strategy.description, "A simple long call strategy");
+    /// assert!(strategy.legs.is_empty());
+    /// assert_eq!(strategy.max_profit, None);
+    /// assert_eq!(strategy.max_loss, None);
+    /// assert!(strategy.break_even_points.is_empty());
+    /// ```
     pub fn new(name: String, kind: StrategyType, description: String) -> Self {
         Strategy {
             name,

@@ -114,7 +114,6 @@ pub struct IronCondor {
 }
 
 impl IronCondor {
-
     /// # Creates a new Iron Condor options strategy
     ///
     /// This function constructs a new Iron Condor strategy, which combines a bull put spread with a bear call spread.

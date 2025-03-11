@@ -33,7 +33,7 @@ use tracing::{debug, error};
 /// Represents a custom options trading strategy with user-defined positions and characteristics.
 ///
 /// The `CustomStrategy` struct allows traders to create and analyze bespoke options strategies
-/// that don't fit into standard predefined patterns. It contains information about the strategy's 
+/// that don't fit into standard predefined patterns. It contains information about the strategy's
 /// positions, risk-reward profile, break-even points, and provides methods for profit-loss analysis.
 ///
 /// This structure supports both analytical calculations and visualization of custom strategies,
@@ -79,7 +79,6 @@ pub struct CustomStrategy {
 }
 
 impl CustomStrategy {
-
     /// Creates a new custom options trading strategy with the specified parameters.
     ///
     /// This constructor initializes a `CustomStrategy` instance and performs several
