@@ -15,13 +15,55 @@ use crate::strategies::{
 };
 use serde::{Deserialize, Serialize};
 
+/// A request structure for creating and analyzing options trading strategies.
+///
+/// This structure encapsulates all necessary information to construct and evaluate
+/// a specific options trading strategy. It contains the strategy type (such as
+/// Bull Call Spread, Iron Condor, etc.) and the collection of financial positions
+/// that make up the strategy.
+///
+/// `StrategyRequest` is typically used as an input to strategy analysis services
+/// or functions that construct, validate, and evaluate option strategies based
+/// on their positions.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use optionstratlib::strategies::base::StrategyType;
+/// use optionstratlib::strategies::StrategyRequest;
+/// let request = StrategyRequest {
+///     strategy_type: StrategyType::BullCallSpread,
+///     positions: vec![long_call_position, short_call_position],
+/// };
+/// ```
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct StrategyRequest {
+    /// The type of options trading strategy to construct or analyze.
+    /// This determines the expected structure and validation rules
+    /// for the provided positions.
     pub strategy_type: StrategyType,
+
+    /// A collection of financial positions that make up the strategy.
+    /// These positions typically include various options contracts
+    /// (calls and puts) with different strike prices and expiration dates,
+    /// arranged according to the selected strategy type.
     pub positions: Vec<Position>,
 }
 
+/// Request handler for options trading strategies.
+///
+/// This implementation provides functionality to create new strategy requests
+/// and instantiate concrete strategy objects based on the specified strategy type
+/// and positions.
 impl StrategyRequest {
+    /// Creates a new strategy request with the specified strategy type and positions.
+    ///
+    /// # Parameters
+    /// * `strategy_type` - The type of options trading strategy to construct.
+    /// * `positions` - A collection of financial positions that make up the strategy.
+    ///
+    /// # Returns
+    /// A new `StrategyRequest` instance containing the provided strategy type and positions.
     pub fn new(strategy_type: StrategyType, positions: Vec<Position>) -> Self {
         Self {
             strategy_type,
@@ -29,6 +71,21 @@ impl StrategyRequest {
         }
     }
 
+    /// Creates and returns a concrete strategy instance based on the strategy type
+    /// and positions specified in this request.
+    ///
+    /// This method acts as a factory that constructs the appropriate strategy object
+    /// by delegating to the corresponding strategy implementation's `get_strategy` method.
+    ///
+    /// # Returns
+    /// * `Ok(Box<dyn Strategable>)` - A boxed trait object implementing the `Strategable`
+    ///   trait if the strategy creation was successful.
+    /// * `Err(StrategyError)` - An error indicating why the strategy could not be created.
+    ///   Returns `StrategyError::NotImplemented` for strategies that are not yet implemented.
+    ///
+    /// # Errors
+    /// This method can return errors from the underlying strategy constructors or
+    /// `StrategyError::NotImplemented` for strategies that are defined but not yet implemented.
     pub fn get_strategy(&self) -> Result<Box<dyn Strategable>, StrategyError> {
         match self.strategy_type {
             StrategyType::BullCallSpread => {
