@@ -11,8 +11,28 @@ use crate::{OptionStyle, Options, Positive, Side};
 use rust_decimal::Decimal;
 use std::sync::Arc;
 
+/// # BasicSurfaces Trait
+///
+/// This trait defines operations for creating and analyzing option pricing surfaces,
+/// which are three-dimensional representations of option metrics across different
+/// parameters.
+///
+/// A surface typically maps option strike prices and volatilities to various
+/// option metrics like delta, gamma, theta, vega, or price.
 pub trait BasicSurfaces {
-    /// Creates a surface based on specified axes and option parameters
+
+    /// Creates a surface visualization based on the specified axis type and option parameters.
+    ///
+    /// # Parameters
+    ///
+    /// * `axis` - The option metric to calculate and display on the surface (e.g., Delta, Gamma)
+    /// * `option_style` - Whether the options are Calls or Puts
+    /// * `volatility` - Optional vector of volatility values to use for surface calculations
+    /// * `side` - Whether the options are Long or Short positions
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Surface, SurfaceError>` - A constructed surface or an error if creation fails
     fn surface(
         &self,
         axis: &BasicAxisTypes,
@@ -21,6 +41,27 @@ pub trait BasicSurfaces {
         side: &Side,
     ) -> Result<Surface, SurfaceError>;
 
+    /// Calculates the relationship between strike price, implied volatility, and a selected
+    /// option metric for a given option.
+    ///
+    /// This method uses the option's existing implied volatility value to calculate the
+    /// desired metric (delta, gamma, theta, vega, or price).
+    ///
+    /// # Parameters
+    ///
+    /// * `axis` - The option metric to calculate (e.g., Delta, Gamma)
+    /// * `option` - Reference to the option contract to analyze
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(Decimal, Decimal, Decimal), SurfaceError>` - A tuple containing:
+    ///   - Strike price
+    ///   - Implied volatility
+    ///   - Calculated metric value
+    ///
+    /// # Errors
+    ///
+    /// Returns a `SurfaceError` if the selected axis is not supported or if any calculation fails.
     fn get_surface_strike_versus(
         &self,
         axis: &BasicAxisTypes,
@@ -66,6 +107,28 @@ pub trait BasicSurfaces {
         }
     }
 
+    /// Calculates the relationship between strike price, a specified volatility value, and a selected
+    /// option metric for a given option.
+    ///
+    /// This method uses a custom volatility value (different from the option's current implied volatility)
+    /// to calculate the desired metric (delta, gamma, theta, vega, or price).
+    ///
+    /// # Parameters
+    ///
+    /// * `axis` - The option metric to calculate (e.g., Delta, Gamma)
+    /// * `option` - Reference to the option contract to analyze
+    /// * `volatility` - The specific volatility value to use for the calculation
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(Decimal, Decimal, Decimal), SurfaceError>` - A tuple containing:
+    ///   - Strike price
+    ///   - The provided volatility value
+    ///   - Calculated metric value
+    ///
+    /// # Errors
+    ///
+    /// Returns a `SurfaceError` if the selected axis is not supported or if any calculation fails.
     fn get_surface_volatility_versus(
         &self,
         axis: &BasicAxisTypes,
