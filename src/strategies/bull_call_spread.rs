@@ -91,10 +91,9 @@ pub struct BullCallSpread {
 }
 
 impl BullCallSpread {
-
     /// Creates a new Bull Call Spread strategy.
     ///
-    /// A Bull Call Spread is created by buying a call option with a lower strike price 
+    /// A Bull Call Spread is created by buying a call option with a lower strike price
     /// and simultaneously selling a call option with a higher strike price, both with the same
     /// expiration date. This strategy benefits from moderate increases in the underlying asset's price.
     ///
