@@ -49,17 +49,74 @@ const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by buyin
     asset's price. The maximum profit is limited to the difference between strike prices minus \
     the net premium paid, while the maximum loss is limited to the net premium paid.";
 
+/// Represents a Bear Put Spread options trading strategy.
+///
+/// A Bear Put Spread is a bearish options strategy that involves buying a put option at a
+/// higher strike price and simultaneously selling another put option at a lower strike price,
+/// both with the same expiration date. This strategy is used when expecting a moderate
+/// decline in the price of the underlying asset.
+///
+/// The strategy benefits from limited risk (the net premium paid) and limited profit potential
+/// (the difference between strike prices minus the net premium paid). It is less expensive than
+/// buying a single put outright due to premium received from the short put.
+///
+/// # Attributes
 #[derive(Clone, Debug)]
 pub struct BearPutSpread {
+    /// The name identifier for this specific strategy instance.
     pub name: String,
+    /// The type of strategy, should be StrategyType::BearPutSpread.
     pub kind: StrategyType,
+    /// A detailed description of this specific strategy implementation.
     pub description: String,
+    /// The price points at which the strategy breaks even (neither profit nor loss).
     pub break_even_points: Vec<Positive>,
+    /// The long put position with the higher strike price.
     long_put: Position,
+    /// The short put position with the lower strike price.
     short_put: Position,
 }
 
 impl BearPutSpread {
+    /// Creates a new Bear Put Spread options strategy.
+    ///
+    /// A bear put spread is created by buying a put option with a higher strike price
+    /// and simultaneously selling a put option with a lower strike price, both with the same
+    /// expiration date. This strategy is used when you expect a moderate decrease in the
+    /// underlying asset's price.
+    ///
+    /// # Parameters
+    ///
+    /// * `underlying_symbol` - The symbol of the underlying asset.
+    /// * `underlying_price` - The current price of the underlying asset.
+    /// * `long_strike` - Strike price for the long put position. If set to zero, defaults to the underlying price.
+    /// * `short_strike` - Strike price for the short put position. If set to zero, defaults to the underlying price.
+    /// * `expiration` - The expiration date of the options contracts.
+    /// * `implied_volatility` - The implied volatility used for option pricing calculations.
+    /// * `risk_free_rate` - The risk-free interest rate used in option pricing models.
+    /// * `dividend_yield` - The dividend yield of the underlying asset.
+    /// * `quantity` - The number of option contracts in the strategy.
+    /// * `premium_long_put` - The premium paid for the long put option.
+    /// * `premium_short_put` - The premium received for the short put option.
+    /// * `open_fee_long_put` - The fee paid when opening the long put position.
+    /// * `close_fee_long_put` - The fee paid when closing the long put position.
+    /// * `open_fee_short_put` - The fee paid when opening the short put position.
+    /// * `close_fee_short_put` - The fee paid when closing the short put position.
+    ///
+    /// # Returns
+    ///
+    /// A validated `BearPutSpread` strategy instance with calculated break-even points.
+    ///
+    /// # Validation
+    ///
+    /// The function performs validation to ensure:
+    /// - Both put positions are valid
+    /// - The long put strike price is higher than the short put strike price
+    ///
+    /// # Note
+    ///
+    /// The maximum profit is limited to the difference between strike prices minus
+    /// the net premium paid, while the maximum loss is limited to the net premium paid.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
