@@ -436,7 +436,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     ///     Point3D::new(1, 0, 1),
     ///     Point3D::new(0, 1, 1),
     /// ]);
-    /// let surface = Surface::construct(ConstructionMethod::FromData { points })?;
+    /// let surface = Surface::construct(ConstructionMethod::FromData { points }).unwrap();
     /// ```
     ///
     /// ## Creating from a parametric function
@@ -463,7 +463,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     ///     })
     /// });
     ///
-    /// let surface = Surface::construct(ConstructionMethod::Parametric { f, params })?;
+    /// let surface = Surface::construct(ConstructionMethod::Parametric { f, params }).unwrap();
     /// ```
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
@@ -605,25 +605,30 @@ impl Interpolate<Point3D, Point2D> for Surface {}
 /// 4. Find the three nearest points to the query point
 /// 5. Calculate barycentric coordinates for the triangle formed by these points
 /// 6. Interpolate the z-value using the barycentric weights
-///
-/// ## Parameters
-///
-/// * `xy` - A `Point2D` representing the x and y coordinates where interpolation is needed
-///
-/// ## Returns
-///
-/// * `Result<Point3D, InterpolationError>` - The interpolated 3D point if successful, or an
-///   appropriate error if interpolation cannot be performed
-///
-/// ## Errors
-///
-/// Returns `InterpolationError::Linear` in the following cases:
-/// * When the surface contains only coincident points forming a degenerate triangle
-/// * When the query point is outside the surface's x-y range
 impl LinearInterpolation<Point3D, Point2D> for Surface {
+    /// ## Parameters
     ///
+    /// * `xy` - A `Point2D` representing the x and y coordinates where interpolation is needed
+    ///
+    /// ## Returns
+    ///
+    /// * `Result<Point3D, InterpolationError>` - The interpolated 3D point if successful, or an
+    ///   appropriate error if interpolation cannot be performed
+    ///
+    /// ## Errors
+    ///
+    /// Returns `InterpolationError::Linear` in the following cases:
+    /// * When the surface contains only coincident points forming a degenerate triangle
+    /// * When the query point is outside the surface's x-y range
     fn linear_interpolate(&self, xy: Point2D) -> Result<Point3D, InterpolationError> {
-        let first = self.points.iter().next().unwrap();
+        let first = match self.points.iter().next() {
+            Some(p) => p,
+            None => {
+                return Err(InterpolationError::Linear(
+                    "No points in the surface".to_string(),
+                ));
+            }
+        };
         let all_same_xy = self.points.iter().all(|p| p.x == first.x && p.y == first.y);
 
         if all_same_xy && (first.x == xy.x && first.y == xy.y) {

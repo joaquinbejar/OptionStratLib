@@ -186,7 +186,7 @@
 //!
 //! Refer to the documentation of each sub-module for more details on the specific
 //! strategies and their usage.
-//! 
+//!
 
 /// Options trading strategies module collection
 ///

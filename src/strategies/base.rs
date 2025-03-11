@@ -295,7 +295,6 @@ pub struct Strategy {
 /// assert!(strategy.break_even_points.is_empty());
 /// ```
 impl Strategy {
-
     /// Creates a new `Strategy` instance.
     ///
     /// This function initializes a new trading strategy with the given name, kind, and description.

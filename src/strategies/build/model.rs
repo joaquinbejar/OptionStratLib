@@ -26,16 +26,6 @@ use serde::{Deserialize, Serialize};
 /// or functions that construct, validate, and evaluate option strategies based
 /// on their positions.
 ///
-/// # Examples
-///
-/// ```rust,no_run
-/// use optionstratlib::strategies::base::StrategyType;
-/// use optionstratlib::strategies::StrategyRequest;
-/// let request = StrategyRequest {
-///     strategy_type: StrategyType::BullCallSpread,
-///     positions: vec![long_call_position, short_call_position],
-/// };
-/// ```
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct StrategyRequest {
     /// The type of options trading strategy to construct or analyze.
