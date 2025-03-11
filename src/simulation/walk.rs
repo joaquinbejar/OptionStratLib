@@ -29,6 +29,7 @@ use statrs::distribution::Normal;
 use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, info, trace, warn};
+use crate::utils::Len;
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
 /// entities capable of simulating or managing a random walk sequence of values.
@@ -282,16 +283,67 @@ pub trait Walkable {
         Ok(())
     }
 
+    /// Stores the provided volatility value in the internal storage.
+    ///
+    /// This function is a placeholder implementation that currently does nothing but
+    /// will be used to save volatility values for future reference or analysis.
+    ///
+    /// # Parameters
+    /// * `_volatility` - A `Positive` value representing the volatility to be stored
+    ///
+    /// # Returns
+    /// * `Result<(), Box<dyn Error>>` - Ok(()) on success or an error if the operation fails
     fn save_volatility(&mut self, _volatility: Positive) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
+    /// Retrieves all stored volatility values.
+    ///
+    /// This function is intended to return the collection of volatility values that have been
+    /// previously saved. Currently unimplemented.
+    ///
+    /// # Returns
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of `Positive` volatility values on success
+    ///   or an error if the operation fails
     fn get_volatilities(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
         unimplemented!()
     }
 
+    /// Generates and returns a random walk graph based on the current configuration.
+    ///
+    /// This function creates a new `RandomWalkGraph` instance that can be used for
+    /// price path simulation and analysis. The random walk will be generated using
+    /// the parameters stored in the current instance.
+    ///
+    /// # Returns
+    /// * `Result<RandomWalkGraph, Box<dyn Error>>` - A random walk graph instance on success
+    ///   or an error if the generation process fails
     fn get_random_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>>;
 
+    /// Simulates a strategy over a price walk and analyzes its performance.
+    ///
+    /// This method applies a trading strategy to historical price data (a "walk") and
+    /// evaluates how the strategy would have performed over that period. It calculates
+    /// profit and loss at different points, tracks maximum gains and drawdowns, and
+    /// collects performance metrics throughout the price movement.
+    ///
+    /// # Arguments
+    ///
+    /// * `strategy` - A mutable reference to any type implementing the `Strategable` trait
+    /// * `time_frame` - The time frame used for the simulation (e.g., Day, Week, Month)
+    ///
+    /// # Returns
+    ///
+    /// * `Result<WalkResult, Box<dyn Error>>` - Either a `WalkResult` containing detailed
+    ///   performance metrics or an error if the simulation couldn't be completed
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * No walk data exists
+    /// * Volatility data length doesn't match price data length
+    /// * PnL calculation fails for any price point
+    ///
     fn walk_strategy<S>(
         &self,
         strategy: &mut S,
@@ -412,11 +464,15 @@ pub trait Walkable {
     }
 }
 
-/// A structure implementing a specific type of `Walkable` trait called `RandomWalkGraph`.
-/// This struct is primarily used for simulating and representing a random walk graph,
-/// which is often used to model and analyze financial asset price movements. It includes
-/// various optional parameters, such as risk-free rate and dividend yield, to allow for
-/// advanced financial modeling.
+/// # RandomWalkGraph
+///
+/// A structure implementing the `Walkable` trait specialized for random walk simulation.
+/// This struct models financial asset price movements with advanced features for
+/// sophisticated financial simulations.
+///
+/// `RandomWalkGraph` provides functionality for modeling asset price paths using random walk 
+/// principles, with support for financial parameters like risk-free rates and dividend yields.
+/// It can be used to generate, store, and analyze price paths with customizable characteristics.
 ///
 /// ## Fields
 ///
@@ -458,6 +514,11 @@ pub trait Walkable {
 ///   The initial value of volatility used when starting the random walk. This parameter
 ///   is optional and, if absent, may default to other internally derived volatility measures.
 ///
+/// - **volatilities** (`Vec<Positive>`):  
+///   Stores the calculated volatility values at each step of the random walk,
+///   allowing for analysis of volatility patterns and potentially implementing
+///   stochastic volatility models.
+///
 /// ## Purpose
 ///
 /// The `RandomWalkGraph` struct is designed to combine financial modeling techniques,
@@ -477,22 +538,69 @@ pub trait Walkable {
 pub struct RandomWalkGraph {
     /// Values representing the y-axis data of the random walk.
     pub(crate) values: Vec<Positive>,
+
     /// Text for the graph's title.
     title_text: String,
+
     /// Tracks the current index for traversing the graph.
     current_index: usize,
+
     /// Optional risk-free rate used in calculations.
     risk_free_rate: Option<Decimal>,
+
     /// Optional dividend yield percentage.
     dividend_yield: Option<Positive>,
+
     /// Specifies the timeframe (e.g., daily, weekly) for the graph calculations.
     pub(crate) time_frame: TimeFrame,
+
     /// Determines the window size used in volatility calculations.
     volatility_window: usize,
+
     /// Optional initial volatility of the random walk.
     initial_volatility: Option<Positive>,
 
+    /// Records the calculated volatility at each step of the random walk.
     pub volatilities: Vec<Positive>,
+}
+
+/// Implements the `Len` trait for `RandomWalkGraph`, providing methods to check the 
+/// size and emptiness of the random walk data.
+///
+/// This implementation allows `RandomWalkGraph` instances to report their length and
+/// empty status, which is determined by the underlying `values` vector that stores
+/// the sequence of price points in the random walk.
+///
+/// ## Methods
+///
+/// - `len()`: Returns the number of price points in the random walk
+/// - `is_empty()`: Indicates whether the random walk contains any data points
+///
+/// ## Example
+///
+/// ```
+/// use optionstratlib::simulation::RandomWalkGraph;
+/// use optionstratlib::utils::{Len, TimeFrame};
+/// let walk = RandomWalkGraph::new("".to_string(), None, None, TimeFrame::Microsecond, 0, None);
+/// let point_count = walk.len();
+/// let has_data = !walk.is_empty();
+/// ```
+impl Len for RandomWalkGraph {
+    /// Returns the number of price points in the random walk graph.
+    ///
+    /// This method directly reflects the size of the internal `values` vector,
+    /// which represents the sequence of price points in the simulation.
+    fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    /// Checks if the random walk graph contains any data points.
+    ///
+    /// Returns `true` if there are no price points in the graph,
+    /// `false` otherwise.
+    fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
 }
 
 impl RandomWalkGraph {
@@ -624,6 +732,35 @@ impl RandomWalkGraph {
             .collect()
     }
 
+    /// Creates a fresh iterator for this random walk graph.
+    ///
+    /// This method returns a clone of the current instance with the iterator position
+    /// reset to the beginning (index 0). This allows multiple iterations over the same
+    /// random walk data without modifying the original instance.
+    ///
+    /// # Returns
+    ///
+    /// A new `RandomWalkGraph` instance with the same data but with `current_index` reset to 0,
+    /// ready for iteration from the beginning.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    ///
+    /// use optionstratlib::simulation::RandomWalkGraph;
+    /// use optionstratlib::utils::{Len, TimeFrame};
+    /// let mut walk = RandomWalkGraph::new("".to_string(), None, None, TimeFrame::Microsecond, 0, None);
+    ///
+    /// // Consume half the walk in some operation
+    /// for _ in 0..walk.len() / 2 {
+    ///     let _ = walk.next();
+    /// }
+    /// ```
+    ///
+    /// # Note
+    ///
+    /// This method is particularly useful when you need to perform multiple passes over
+    /// the walk data, such as for analysis or visualization purposes.
     pub fn iter(&self) -> Self
     where
         Self: Clone,
