@@ -8,7 +8,39 @@ use crate::greeks::Greeks;
 use crate::model::Position;
 use crate::strategies::Strategies;
 
+/// Defines a common interface for constructing financial option strategies from
+/// collections of option positions.
+///
+/// This trait extends both the `Strategies` and `Greeks` traits, ensuring that
+/// implementers can both operate as option strategies and calculate Greek values
+/// for risk analysis. It provides a default implementation of the strategy 
+/// construction method that returns a "not implemented" error, which concrete
+/// implementations should override.
+///
+/// # Type Requirements
+///
+/// Implementers must also implement:
+/// - `Strategies`: Provides strategy-specific operations and calculations
+/// - `Greeks`: Provides access to option sensitivity calculations (delta, gamma, etc.)
+///
 pub trait StrategyConstructor: Strategies + Greeks {
+    /// Attempts to construct a strategy from a vector of option positions.
+    ///
+    /// This method analyzes the provided option positions and attempts to
+    /// recognize and construct a specific options strategy. The default
+    /// implementation returns a `NotImplemented` error, so concrete types
+    /// must provide their own implementation.
+    ///
+    /// # Parameters
+    ///
+    /// * `_vec_options` - A slice of `Position` objects representing the
+    ///   option positions to analyze
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Self)` - The successfully constructed strategy
+    /// * `Err(StrategyError)` - If the positions don't match the expected
+    ///   pattern for this strategy type
     fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError>
     where
         Self: Sized,
