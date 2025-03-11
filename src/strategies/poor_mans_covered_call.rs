@@ -68,17 +68,110 @@ const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options s
     It involves buying a long-term in-the-money call option and selling a short-term out-of-the-money call option. \
     This strategy aims to generate income while reducing the capital required compared to a traditional covered call.";
 
+/// # PoorMansCoveredCall
+///
+/// Represents a Poor Man's Covered Call options trading strategy. This strategy is a cost-effective
+/// alternative to the traditional covered call, using a deep in-the-money long-term call option
+/// instead of owning the underlying stock, while selling shorter-term out-of-the-money call options.
+///
+/// A Poor Man's Covered Call (also known as a PMCC or Diagonal Debit Call Spread) requires less capital
+/// than a standard covered call while still providing similar profit potential and risk profile.
+///
+/// ## Fields
+/// * `name`: A descriptive name for the specific strategy instance.
+/// * `kind`: The type of strategy, which is `StrategyType::PoorMansCoveredCall`.
+/// * `description`: A detailed description of this specific strategy instance.
+/// * `break_even_points`: The price points at which the strategy breaks even (neither profit nor loss).
+/// * `long_call`: The long call position (typically a LEAP - Long-Term Equity Anticipation Security).
+/// * `short_call`: The short call position (shorter-term, out-of-the-money call).
+///
+/// ## Risk and Reward
+/// The maximum risk in this strategy is limited to the net debit paid (cost of the long call minus 
+/// the premium received for the short call).
+///
+/// The maximum profit is capped and occurs when the underlying price at expiration of the short call
+/// equals or exceeds the strike price of the short call.
+///
+/// ## Break-Even Point
+/// The break-even point at expiration of the short call is approximately the strike price of the long call
+/// plus the net debit paid for the spread.
+///
+/// ## Strategy Usage
+/// This strategy is typically used when:
+/// - The trader is moderately to strongly bullish on the underlying asset
+/// - The trader wants to generate income while still participating in potential upside movement
+/// - The trader wants to implement a covered call strategy with less capital investment
+/// - Implied volatility is relatively high for near-term options
+///
+/// ## Management Considerations
+/// - The strategy often involves rolling the short call forward to continue generating income
+/// - The long call should have sufficient time value to avoid assignment complications
+/// - Ideally implemented when the underlying asset has a strong positive outlook over the long term
 #[derive(Clone, Debug)]
 pub struct PoorMansCoveredCall {
+    /// Name identifier for this specific strategy instance
     pub name: String,
+    /// Identifies this as a PoorMansCoveredCall strategy type
     pub kind: StrategyType,
+    /// Detailed description of this strategy instance
     pub description: String,
+    /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
+    /// The long-term in-the-money call option (usually a LEAP)
     long_call: Position,
+    /// The shorter-term out-of-the-money call option that is sold
     short_call: Position,
 }
-
 impl PoorMansCoveredCall {
+
+    /// # Creates a new Poor Man's Covered Call strategy instance
+    ///
+    /// This function constructs and initializes a Poor Man's Covered Call (PMCC) options strategy, which simulates
+    /// a covered call using a long-term deep in-the-money call option (LEAPS) instead of owning the underlying stock,
+    /// paired with selling a shorter-term out-of-the-money call.
+    ///
+    /// ## Parameters
+    /// * `underlying_symbol`: Symbol of the underlying security (e.g., "AAPL")
+    /// * `underlying_price`: Current market price of the underlying security
+    /// * `long_call_strike`: Strike price for the long-term call option (LEAPS)
+    /// * `short_call_strike`: Strike price for the short-term call option
+    /// * `long_call_expiration`: Expiration date for the long-term call option
+    /// * `short_call_expiration`: Expiration date for the short-term call option
+    /// * `implied_volatility`: Implied volatility used for options pricing
+    /// * `risk_free_rate`: Risk-free interest rate used in options pricing models
+    /// * `dividend_yield`: Expected dividend yield of the underlying security
+    /// * `quantity`: Number of contracts for both legs of the strategy
+    /// * `premium_long_call`: Premium paid for the long-term call option
+    /// * `premium_short_call`: Premium received for the short-term call option
+    /// * `open_fee_long_call`: Transaction fee for opening the long call position
+    /// * `close_fee_long_call`: Transaction fee for closing the long call position
+    /// * `open_fee_short_call`: Transaction fee for opening the short call position
+    /// * `close_fee_short_call`: Transaction fee for closing the short call position
+    ///
+    /// ## Returns
+    /// A fully initialized `PoorMansCoveredCall` instance with both option positions and calculated break-even points.
+    ///
+    /// ## Strategy Details
+    /// The Poor Man's Covered Call is a diagonal spread that consists of:
+    /// 1. Buying a deep in-the-money, longer-term call option (LEAPS)
+    /// 2. Selling an out-of-the-money, shorter-term call option
+    ///
+    /// This strategy provides similar benefits to a traditional covered call but requires less capital,
+    /// as purchasing a LEAPS call option is less expensive than buying 100 shares of the underlying stock.
+    ///
+    /// ## Risk-Reward Profile
+    /// * Maximum profit: Limited to the short call's strike price minus the long call's strike price,
+    ///   plus the net credit received (or minus the net debit paid)
+    /// * Maximum loss: Limited to the net debit paid for the position (long call premium minus short call premium)
+    ///   plus transaction fees
+    /// * Break-even point: Long call strike price plus the net debit paid
+    ///
+    /// ## Ideal Market Conditions
+    /// This strategy is optimal when:
+    /// * The investor is moderately bullish on the underlying asset
+    /// * The investor wants to generate income from the short calls while maintaining upside potential
+    /// * The investor seeks a capital-efficient alternative to traditional covered calls
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
