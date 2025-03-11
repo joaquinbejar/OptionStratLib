@@ -39,81 +39,205 @@ use crate::error::decimal;
 use std::error::Error;
 use std::fmt;
 
+/// Represents errors that can occur during options Greek calculations.
+///
+/// This enum encapsulates the various types of errors that might arise during
+/// the calculation of option Greeks (delta, gamma, theta, vega, rho) and related
+/// financial computations. It provides a structured approach to error handling
+/// by categorizing errors based on their nature and source.
+///
+/// `GreeksError` serves as the primary error type for the Greek calculation system,
+/// allowing for precise error reporting and handling across different calculation stages.
 #[derive(Debug)]
 pub enum GreeksError {
-    /// Errors related to mathematical calculations
+    /// Errors related to mathematical calculations such as division by zero,
+    /// overflow, domain errors, or convergence failures.
     MathError(MathErrorKind),
-    /// Errors related to input validation
+
+    /// Errors related to input validation, including invalid volatility, time,
+    /// price, interest rate, or strike price values.
     InputError(InputErrorKind),
-    /// Errors related to Greek calculations
+
+    /// Errors specific to the calculation of individual Greeks (delta, gamma, 
+    /// theta, vega, rho) or other option-related computations.
     CalculationError(CalculationErrorKind),
 
+    /// Errors originating from standard Rust error types, wrapped as strings
+    /// for consistent error handling.
     StdError(String),
 }
 
+/// Represents various types of mathematical errors that can occur during calculations.
+///
+/// This enum provides specific error categories for mathematical operations, allowing
+/// precise error handling and informative reporting. Each variant contains detailed
+/// information about the specific error condition that occurred.
+///
+/// `MathErrorKind` serves as part of the error handling system for numerical calculations,
+/// particularly in financial and statistical contexts where numerical stability and
+/// precision are critical.
 #[derive(Debug)]
 pub enum MathErrorKind {
-    /// Division by zero error
+    /// Error that occurs when attempting to divide by zero.
+    /// This is a fundamental mathematical error that must be caught to prevent undefined behavior.
     DivisionByZero,
-    /// Numerical overflow
+
+    /// Error that occurs when a calculation exceeds the numerical limits of the data type.
+    /// This typically happens with very large numbers or during exponential operations.
     Overflow,
-    /// Invalid mathematical domain
+
+    /// Error that occurs when a function is evaluated outside its valid domain.
+    ///
+    /// # Fields
+    /// * `value` - The input value that caused the domain error
+    /// * `reason` - A descriptive explanation of why the value is invalid
     InvalidDomain { value: f64, reason: String },
-    /// Convergence failure
+
+    /// Error that occurs when an iterative algorithm fails to converge to a solution.
+    ///
+    /// # Fields
+    /// * `iterations` - The number of iterations performed before failure
+    /// * `tolerance` - The convergence tolerance that was not satisfied
     ConvergenceFailure { iterations: usize, tolerance: f64 },
 }
 
+/// Represents different types of input validation errors that can occur during financial calculations.
+///
+/// This enum encapsulates various error conditions related to the validation of input parameters
+/// in financial models, particularly for options pricing and risk analysis. Each variant contains
+/// detailed information about the invalid input, including both the problematic value and a reason
+/// explaining why it was rejected.
+///
+/// These error kinds are typically used within higher-level error types to provide specific
+/// information about validation failures, enabling precise error handling and informative
+/// error messages for users.
 #[derive(Debug)]
 pub enum InputErrorKind {
-    /// Invalid volatility value
+    /// Represents an error with an invalid volatility input.
+    ///
+    /// This error occurs when a volatility value is outside acceptable bounds
+    /// (typically negative values or unreasonably large values) or otherwise invalid
+    /// for the calculation being performed.
+    ///
+    /// # Fields
+    /// * `value` - The invalid volatility value that was provided
+    /// * `reason` - A descriptive message explaining why the volatility value is invalid
     InvalidVolatility {
         value: f64,
         reason: String,
     },
-    /// Invalid time value
+
+    /// Represents an error with an invalid time input.
+    ///
+    /// This error occurs when a time value (typically representing time to expiration)
+    /// is outside acceptable bounds or otherwise invalid for the calculation being performed.
+    ///
+    /// # Fields
+    /// * `value` - The invalid time value that was provided (as a Positive type)
+    /// * `reason` - A descriptive message explaining why the time value is invalid
     InvalidTime {
         value: Positive,
         reason: String,
     },
-    /// Invalid price value
+
+    /// Represents an error with an invalid price input.
+    ///
+    /// This error occurs when a price value (such as an underlying asset price)
+    /// is outside acceptable bounds (typically negative values) or otherwise
+    /// invalid for the calculation being performed.
+    ///
+    /// # Fields
+    /// * `value` - The invalid price value that was provided
+    /// * `reason` - A descriptive message explaining why the price value is invalid
     InvalidPrice {
         value: f64,
         reason: String,
     },
-    /// Invalid rate value
+
+    /// Represents an error with an invalid interest rate input.
+    ///
+    /// This error occurs when an interest rate value is outside acceptable bounds
+    /// or otherwise invalid for the calculation being performed.
+    ///
+    /// # Fields
+    /// * `value` - The invalid interest rate value that was provided
+    /// * `reason` - A descriptive message explaining why the rate value is invalid
     InvalidRate {
         value: f64,
         reason: String,
     },
+
+    /// Represents an error with an invalid strike price input.
+    ///
+    /// This error occurs when a strike price value is outside acceptable bounds,
+    /// in an incorrect format, or otherwise invalid for the calculation being performed.
+    ///
+    /// # Fields
+    /// * `value` - The invalid strike value that was provided (as a String)
+    /// * `reason` - A descriptive message explaining why the strike value is invalid
     InvalidStrike {
         value: String,
         reason: String,
     },
 }
 
+/// Represents specific error types that can occur during financial derivative calculations.
+///
+/// This enum categorizes errors that happen during the calculation of option Greeks and other
+/// financial metrics. Each variant provides detailed context about what went wrong during
+/// the specific calculation, allowing for precise error handling and debugging.
+///
+/// The enum is designed to be used within a broader error handling system for options pricing
+/// and financial calculations, providing specific error types for different aspects of 
+/// the derivatives pricing process.
 #[derive(Debug)]
 pub enum CalculationErrorKind {
     /// Error in delta calculation
+    ///
+    /// Delta measures the rate of change of the option price with respect to changes
+    /// in the underlying asset's price.
     DeltaError {
+        /// Detailed description of what caused the delta calculation to fail
         reason: String,
     },
     /// Error in gamma calculation
+    ///
+    /// Gamma measures the rate of change of delta with respect to changes in the
+    /// underlying asset's price.
     GammaError {
+        /// Detailed description of what caused the gamma calculation to fail
         reason: String,
     },
     /// Error in theta calculation
+    ///
+    /// Theta measures the rate of decay of the option's value over time, often
+    /// referred to as time decay.
     ThetaError {
+        /// Detailed description of what caused the theta calculation to fail
         reason: String,
     },
     /// Error in vega calculation
+    ///
+    /// Vega measures the sensitivity of the option price to changes in the
+    /// underlying asset's volatility.
     VegaError {
+        /// Detailed description of what caused the vega calculation to fail
         reason: String,
     },
     /// Error in rho calculation
+    ///
+    /// Rho measures the sensitivity of the option price to changes in the
+    /// risk-free interest rate.
     RhoError {
+        /// Detailed description of what caused the rho calculation to fail
         reason: String,
     },
+    /// Error originating from decimal operations
+    ///
+    /// Wraps a decimal library error that occurred during option calculations,
+    /// typically related to precision, arithmetic operations, or invalid values.
     DecimalError {
+        /// The underlying decimal calculation error
         error: decimal::DecimalError,
     },
 }
@@ -201,8 +325,25 @@ impl Error for GreeksError {}
 // Type alias for Results
 pub type GreeksResult<T> = Result<T, GreeksError>;
 
-// Helper methods for creating common errors
+
+/// Implementation of factory methods for creating specific `GreeksError` instances.
+///
+/// This implementation provides convenient constructor methods for creating different types
+/// of errors that can occur during options Greek calculations. These methods make error creation
+/// more concise and readable in the codebase, while ensuring consistent error formatting.
 impl GreeksError {
+    /// Creates an error for invalid volatility values.
+    ///
+    /// Use this method when a volatility input is outside acceptable bounds or otherwise
+    /// unsuitable for calculations. Common cases include negative values or unreasonably
+    /// large volatilities.
+    ///
+    /// # Parameters
+    /// * `value` - The invalid volatility value that triggered the error
+    /// * `reason` - An explanation of why the volatility value is invalid
+    ///
+    /// # Returns
+    /// A `GreeksError::InputError` with `InvalidVolatility` kind
     pub fn invalid_volatility(value: f64, reason: &str) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidVolatility {
             value,
@@ -210,6 +351,17 @@ impl GreeksError {
         })
     }
 
+    /// Creates an error for invalid time values.
+    ///
+    /// Use this method when a time input (typically representing time to expiration)
+    /// is outside acceptable bounds or otherwise invalid for calculations.
+    ///
+    /// # Parameters
+    /// * `value` - The invalid time value (as a `Positive` type) that triggered the error
+    /// * `reason` - An explanation of why the time value is invalid
+    ///
+    /// # Returns
+    /// A `GreeksError::InputError` with `InvalidTime` kind
     pub fn invalid_time(value: Positive, reason: &str) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidTime {
             value,
@@ -217,21 +369,42 @@ impl GreeksError {
         })
     }
 
+    /// Creates an error for delta calculation failures.
+    ///
+    /// Use this method when a calculation of the delta Greek value fails for any reason.
+    /// Delta measures the rate of change of option price with respect to changes in the
+    /// underlying asset price.
+    ///
+    /// # Parameters
+    /// * `reason` - A detailed explanation of what caused the delta calculation to fail
+    ///
+    /// # Returns
+    /// A `GreeksError::CalculationError` with `DeltaError` kind
     pub fn delta_error(reason: &str) -> Self {
         GreeksError::CalculationError(CalculationErrorKind::DeltaError {
             reason: reason.to_string(),
         })
     }
-
-    // Add more helper methods as needed...
 }
 
+/// Implements conversion from `decimal::DecimalError` to `GreeksError`.
+///
+/// This implementation allows decimal calculation errors to be automatically converted
+/// into the appropriate `GreeksError` variant, simplifying error handling when working
+/// with decimal operations in financial calculations.
+///
 impl From<decimal::DecimalError> for GreeksError {
     fn from(error: decimal::DecimalError) -> Self {
         GreeksError::CalculationError(CalculationErrorKind::DecimalError { error })
     }
 }
 
+/// Implements conversion from `VolatilityError` to `GreeksError`.
+///
+/// This implementation allows volatility-related errors to be automatically converted
+/// into appropriate `InputErrorKind::InvalidVolatility` errors, providing consistent
+/// error handling for invalid volatility values.
+///
 impl From<VolatilityError> for GreeksError {
     fn from(error: VolatilityError) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidVolatility {
@@ -241,6 +414,12 @@ impl From<VolatilityError> for GreeksError {
     }
 }
 
+/// Implements conversion from `Box<dyn Error>` to `GreeksError`.
+///
+/// This implementation serves as a catch-all for converting any type that implements
+/// the standard Error trait into a `GreeksError`. This is useful for integrating with
+/// libraries or functions that return standard error types.
+///
 impl From<Box<dyn Error>> for GreeksError {
     fn from(error: Box<dyn Error>) -> Self {
         GreeksError::StdError(error.to_string())
