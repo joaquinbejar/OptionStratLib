@@ -95,15 +95,32 @@
 //! info!("Debug View: {:?}", option);
 //! ```
 
+
+/// Core utilities for handling decimal numbers in financial calculations.
 pub mod decimal;
+
+/// Formatting utilities for displaying financial data and calculations.
 mod format;
+
+/// Components for options contract modeling and analysis, including Greeks and pricing models.
 pub mod option;
+
+/// Definitions and utilities for managing trading positions, including risk metrics and exposure tracking.
 pub mod position;
+
+/// Types and utilities for working with strictly positive numerical values in financial contexts.
 pub mod positive;
+
+/// Tools for analyzing and visualizing profit ranges across different market scenarios.
 mod profit_range;
+
+/// Common type definitions used throughout the options strategy library.
 pub mod types;
+
+/// Utility functions supporting various operations across the library.
 pub mod utils;
 
+/// Components for defining and working with chart axes in strategy visualizations.
 mod axis;
 
 pub use axis::BasicAxisTypes;
