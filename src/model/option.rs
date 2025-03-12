@@ -20,7 +20,7 @@ use std::error::Error;
 use tracing::{error, trace};
 
 /// Result type for binomial tree pricing models, containing:
-/// - The option price 
+/// - The option price
 /// - Price tree (asset price evolution)
 /// - Option value tree (option value at each node)
 type PriceBinomialTree = OptionsResult<(Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>)>;
@@ -40,11 +40,11 @@ pub struct ExoticParams {
 
     /// Minimum observed spot price during the option's lifetime,
     /// used for lookback option pricing.
-    pub spot_min: Option<Decimal>,          // Lookback
+    pub spot_min: Option<Decimal>, // Lookback
 
     /// Maximum observed spot price during the option's lifetime,
     /// used for lookback option pricing.
-    pub spot_max: Option<Decimal>,          // Lookback
+    pub spot_max: Option<Decimal>, // Lookback
 }
 
 /// Represents a financial option contract with its essential parameters and characteristics.
@@ -91,7 +91,7 @@ pub struct Options {
     /// typically based on treasury yields of similar duration.
     pub risk_free_rate: Decimal,
 
-    /// The option exercise style (European or American), determining when the 
+    /// The option exercise style (European or American), determining when the
     /// option can be exercised.
     pub option_style: OptionStyle,
 
@@ -104,11 +104,10 @@ pub struct Options {
     pub exotic_params: Option<ExoticParams>,
 }
 impl Options {
-    
     /// Creates a new options contract with the specified parameters.
     ///
     /// This constructor creates an instance of `Options` with all the required parameters
-    /// for defining and pricing an option contract. It supports both standard (vanilla) 
+    /// for defining and pricing an option contract. It supports both standard (vanilla)
     /// options and exotic options through the optional `exotic_params` parameter.
     ///
     /// # Parameters
@@ -125,7 +124,7 @@ impl Options {
     /// * `quantity` - The number of contracts in this position, represented as a `Positive` value.
     /// * `underlying_price` - The current market price of the underlying asset.
     /// * `risk_free_rate` - The current risk-free interest rate used in option pricing models.
-    /// * `option_style` - The option exercise style (European or American), determining when the 
+    /// * `option_style` - The option exercise style (European or American), determining when the
     ///   option can be exercised.
     /// * `dividend_yield` - The annualized dividend yield of the underlying asset, affecting option pricing.
     /// * `exotic_params` - Additional parameters required for exotic option types. Set to `None` for
@@ -169,7 +168,7 @@ impl Options {
     /// Updates option parameters using data from an OptionData structure.
     ///
     /// This method updates the option's strike price and implied volatility based on the
-    /// values provided in the option_data parameter. If the implied volatility is not 
+    /// values provided in the option_data parameter. If the implied volatility is not
     /// available in the option data, it defaults to zero.
     ///
     /// # Arguments
@@ -184,7 +183,7 @@ impl Options {
 
     /// Calculates the time to expiration of the option in years.
     ///
-    /// This function computes the time remaining until the option's expiration date, 
+    /// This function computes the time remaining until the option's expiration date,
     /// expressed as a positive decimal value representing years. This is a key parameter
     /// used in option pricing models.
     ///
@@ -225,7 +224,7 @@ impl Options {
 
     /// Calculates the price of an option using the binomial tree model.
     ///
-    /// This method implements the binomial option pricing model which constructs a 
+    /// This method implements the binomial option pricing model which constructs a
     /// discrete-time lattice (tree) of possible future underlying asset prices to
     /// determine the option's value. The approach is particularly valuable for pricing
     /// American options and other early-exercise scenarios.
@@ -357,8 +356,8 @@ impl Options {
     ///
     /// # Returns
     ///
-    /// * `OptionsResult<Decimal>` - A result containing the calculated payoff as a 
-    ///   Decimal value, adjusted for the quantity of contracts held, or an error if 
+    /// * `OptionsResult<Decimal>` - A result containing the calculated payoff as a
+    ///   Decimal value, adjusted for the quantity of contracts held, or an error if
     ///   the calculation failed.
     ///
     /// This method is useful for determining the exercise value of an option and for

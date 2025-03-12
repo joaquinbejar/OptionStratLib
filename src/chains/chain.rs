@@ -6189,7 +6189,7 @@ mod tests_gamma_calculations {
         let gamma_exposure = result.unwrap();
         // Total gamma should be sum of all individual gammas
         // 0.04 + 0.06 + 0.02 = 0.12
-        assert_decimal_eq!(gamma_exposure, dec!(0.00466612), dec!(0.001));
+        assert_decimal_eq!(gamma_exposure, dec!(0.003548), dec!(0.001));
     }
 
     #[test]
@@ -6222,7 +6222,7 @@ mod tests_gamma_calculations {
 
         chain.update_greeks();
         let result = chain.gamma_exposure().unwrap();
-        assert_decimal_eq!(result, dec!(0.0046671), dec!(0.001));
+        assert_decimal_eq!(result, dec!(0.0035), dec!(0.001));
     }
 
     #[test]

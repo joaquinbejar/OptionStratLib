@@ -73,7 +73,6 @@ pub struct Position {
 }
 
 impl Position {
-    
     /// Creates a new options position.
     ///
     /// This constructor initializes a new `Position` instance representing an options trade,
@@ -211,7 +210,7 @@ impl Position {
     ///
     /// # Returns
     ///
-    /// - `Result<Positive, PositionError>` - A result containing the premium received as a `Positive` 
+    /// - `Result<Positive, PositionError>` - A result containing the premium received as a `Positive`
     ///   value if successful, or a `PositionError` if any calculation errors occur.
     ///
     /// # Examples
@@ -323,10 +322,7 @@ impl Position {
     /// // Calculate PnL at expiration using the option's current underlying price
     /// let pnl_current = position.pnl_at_expiration(&None).unwrap();
     /// ```
-    pub fn pnl_at_expiration(
-        &self,
-        price: &Option<&Positive>,
-    ) -> Result<Decimal, Box<dyn Error>> {
+    pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, Box<dyn Error>> {
         match price {
             None => Ok(self.option.intrinsic_value(self.option.underlying_price)?
                 - self.total_cost()?
@@ -391,7 +387,7 @@ impl Position {
 
     /// Calculates the number of days the position has been held.
     ///
-    /// This method computes the difference between the current UTC date and the 
+    /// This method computes the difference between the current UTC date and the
     /// position's opening date, returning the result as a `Positive` value.
     ///
     /// The calculation uses Chrono's `num_days` method to determine the precise
@@ -423,14 +419,14 @@ impl Position {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),
             ExpirationDate::DateTime(datetime) => Ok(pos!(
-            datetime.signed_duration_since(Utc::now()).num_days() as f64
-        )),
+                datetime.signed_duration_since(Utc::now()).num_days() as f64
+            )),
         }
     }
 
     /// Determines if the position is a long position.
     ///
-    /// This method checks the side attribute of the option to determine the directionality 
+    /// This method checks the side attribute of the option to determine the directionality
     /// of the position. Long positions profit when the underlying asset's price increases.
     ///
     /// # Returns
@@ -494,7 +490,7 @@ impl Position {
     /// side of the position (Long/Short) and the option style (Call/Put).
     ///
     /// The break-even price is an important reference point for options traders as it
-    /// represents the threshold price that the underlying asset must cross for the 
+    /// represents the threshold price that the underlying asset must cross for the
     /// position to become profitable, accounting for all costs associated with the position.
     ///
     /// # Formula by position type:
@@ -649,14 +645,14 @@ impl Default for Position {
 
 /// Implementation of the `Greeks` trait for the `Position` struct.
 ///
-/// This implementation allows a `Position` to calculate option Greeks (delta, gamma, 
+/// This implementation allows a `Position` to calculate option Greeks (delta, gamma,
 /// theta, vega, rho, etc.) by accessing its underlying option contract. The implementation
 /// provides a way to expose the position's option for use in Greek calculations.
 ///
 impl Greeks for Position {
     /// Returns a vector containing a reference to the option contract associated with this position.
     ///
-    /// This method satisfies the `Greeks` trait requirement by providing access to the 
+    /// This method satisfies the `Greeks` trait requirement by providing access to the
     /// option contract that will be used for calculating various Greek values.
     ///
     /// # Returns
