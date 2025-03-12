@@ -201,8 +201,53 @@ fn calculate_put_option_price(
     Ok(result)
 }
 
+/// A trait for financial instruments that can be priced using the Black-Scholes option pricing model.
+///
+/// This trait defines the interface for financial instruments that can have their price
+/// calculated using the Black-Scholes formula. Implementors must provide access to their
+/// underlying option data through the `get_option` method, which allows the default
+/// implementation of `calculate_price_black_scholes` to perform the calculation.
+///
+/// # Examples
+///
+/// ```
+/// use std::error::Error;
+/// use optionstratlib::Options;///
+///
+/// use optionstratlib::pricing::BlackScholes;
+///
+/// struct MyOption {
+///     option: Options
+/// }
+///
+/// impl BlackScholes for MyOption {
+///     fn get_option(&self) -> Result<&Options, Box<dyn Error>> {
+///         Ok(&self.option)
+///     }
+/// }
+///
+/// ```
 pub trait BlackScholes {
+    /// Retrieves a reference to the options data required for Black-Scholes calculations.
+    ///
+    /// This method must be implemented by types that implement this trait.
+    /// It provides access to the option parameters needed for pricing calculations.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<&Options, Box<dyn Error>>` - A reference to the Options struct on success,
+    ///   or an error if the option data cannot be retrieved.
     fn get_option(&self) -> Result<&Options, Box<dyn Error>>;
+
+    /// Calculates the price of the option using the Black-Scholes model.
+    ///
+    /// This default implementation retrieves the option data via `get_option()`
+    /// and then passes it to the `black_scholes` function to perform the calculation.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, Box<dyn Error>>` - The calculated option price as a Decimal
+    ///   on success, or an error if the calculation fails.
     fn calculate_price_black_scholes(&self) -> Result<Decimal, Box<dyn Error>> {
         let option = self.get_option()?;
         black_scholes(option)
