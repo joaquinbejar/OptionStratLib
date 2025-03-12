@@ -80,10 +80,9 @@
 //!
 //! // Create SPAN calculator
 //! let span = SPANMargin::new(
-//!     0.15,   // 15% scanning range
-//!     0.10,   // 10% short option minimum
-//!     0.05,   // 5% price scan range
-//!     0.10   // 10% volatility scan range
+//!     dec!(0.10),   // 10% short option minimum
+//!     dec!(0.05),   // 5% price scan range
+//!     dec!(0.10),   // 10% volatility scan range
 //! );
 //!
 //! // Calculate margin requirement
@@ -94,6 +93,7 @@
 //!
 //! ```rust
 //! use chrono::Utc;
+//! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::Options;
 //! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -134,10 +134,10 @@
 //!     },
 //! ];
 //!
-//! let span = SPANMargin::new(0.15, 0.10, 0.05, 0.10);
+//! let span = SPANMargin::new(dec!(0.10), dec!(0.05), dec!(0.10));
 //!
 //! // Calculate margin for each position
-//! let margins: Vec<f64> = positions.iter()
+//! let margins: Vec<Decimal> = positions.iter()
 //!     .map(|pos| span.calculate_margin(pos))
 //!     .collect();
 //! ```

@@ -369,6 +369,7 @@ impl Position {
     /// );
     /// let unrealized_pnl = position.unrealized_pnl(current_price)?;
     /// println!("Current unrealized PnL: {}", unrealized_pnl);
+    /// Ok(())
     /// ```
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self.option.side {

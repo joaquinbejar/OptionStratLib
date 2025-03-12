@@ -193,27 +193,6 @@ pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
 /// Implement this trait for any type that can calculate profit at a specific price point,
 /// such as options contracts, spreads, or complex trading strategies.
 ///
-/// # Example
-///
-/// ```
-/// use std::cmp::max;
-/// use std::error::Error;
-/// use rust_decimal::Decimal;
-/// use optionstratlib::Positive;
-/// use optionstratlib::pricing::Profit;
-///
-/// struct CallOption {
-///     strike: Positive,
-///     premium: Decimal,
-/// }
-///
-/// impl Profit for CallOption {
-///     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-///         // Profit calculation logic for a call option
-///         Ok(max(price.into() - self.strike.into(), Decimal::ZERO) - self.premium)
-///     }
-/// }
-/// ```
 pub trait Profit {
     /// Calculates the profit at a specified price.
     ///

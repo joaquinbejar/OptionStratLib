@@ -182,12 +182,6 @@ impl Positive {
     /// * `Ok(Positive)` if the value is non-negative and valid
     /// * `Err(String)` if the value is negative or cannot be parsed as a Decimal
     ///
-    /// # Example
-    ///
-    /// ```
-    /// use optionstratlib::Positive;
-    /// let price = Positive::new(42.5)?;
-    /// ```
     pub fn new(value: f64) -> Result<Self, String> {
         let dec = Decimal::from_f64(value);
         match dec {
