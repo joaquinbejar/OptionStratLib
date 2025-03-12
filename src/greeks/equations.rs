@@ -10,20 +10,92 @@ use crate::model::types::OptionStyle;
 use crate::{Options, Positive, Side};
 use rust_decimal::{Decimal, MathematicalOps};
 
+/// Represents a complete set of option Greeks, which measure the sensitivity of an option's
+/// price to various market factors.
+///
+/// Option Greeks are essential metrics in options trading and risk management, each quantifying
+/// how the theoretical value of an option changes with respect to different parameters.
+///
+/// ## Fields
+///
+/// Each field represents a specific Greek measure:
+///
+/// * `delta`: Measures the rate of change in the option price relative to changes in the underlying asset price
+/// * `gamma`: Measures the rate of change of delta in relation to changes in the underlying asset price
+/// * `theta`: Measures the rate of change in the option price with respect to time decay (time sensitivity)
+/// * `vega`: Measures the rate of change in the option price with respect to changes in implied volatility
+/// * `rho`: Measures the rate of change in the option price with respect to the risk-free interest rate
+/// * `rho_d`: Measures the rate of change in the option price with respect to the dividend yield
+/// * `alpha`: Represents a measure of an option's excess return relative to what would be predicted by models
+///
+/// These metrics help traders understand and manage the various dimensions of risk in option positions.
 #[derive(Debug, PartialEq)]
 pub struct Greek {
+    /// Measures sensitivity to changes in the underlying asset's price (first derivative)
     pub delta: Decimal,
+    /// Measures the rate of change in delta (second derivative of the option price)
     pub gamma: Decimal,
+    /// Measures the time decay of an option's value (sensitivity to the passage of time)
     pub theta: Decimal,
+    /// Measures sensitivity to changes in implied volatility
     pub vega: Decimal,
+    /// Measures sensitivity to changes in the risk-free interest rate
     pub rho: Decimal,
+    /// Measures sensitivity to changes in the dividend yield
     pub rho_d: Decimal,
+    /// Measures the option's theoretical value not explained by other Greeks
     pub alpha: Decimal,
 }
 
+/// Trait that provides option Greeks calculation functionality for financial instruments.
+///
+/// The `Greeks` trait enables implementing types to calculate option sensitivity metrics
+/// (Greeks) across multiple option positions. Any type that can provide access to a collection
+/// of options can implement this trait to gain the ability to calculate aggregate Greek values.
+///
+/// This trait uses a composition approach where implementation only requires defining the
+/// `get_options()` method, while default implementations for all Greek calculations are provided.
+///
+/// # Greek Calculations
+///
+/// The trait provides calculations for:
+/// - Delta: Sensitivity to changes in the underlying asset's price
+/// - Gamma: Rate of change of delta (acceleration of price movement)
+/// - Theta: Time decay of option value
+/// - Vega: Sensitivity to changes in volatility
+/// - Rho: Sensitivity to changes in interest rates
+/// - Rho_d: Sensitivity to changes in dividend yield
+/// - Alpha: Ratio between gamma and theta
+///
+/// # Usage
+///
+/// Implementers only need to provide the `get_options()` method which returns a vector of
+/// references to option contracts. The trait will handle aggregating the Greek values across
+/// all options in the collection.
+///
+/// # Errors
+///
+/// Methods return `Result<T, GreeksError>` to handle various calculation errors that may
+/// occur during Greek computations.
 pub trait Greeks {
+    /// Returns a vector of references to the option contracts for which Greeks will be calculated.
+    ///
+    /// This is the only method that must be implemented by types adopting this trait.
+    /// All other methods have default implementations based on this method.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if there is an issue retrieving the options.
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError>;
 
+    /// Calculates and returns all Greeks as a single `Greek` struct.
+    ///
+    /// This method provides a convenient way to obtain all Greek values at once.
+    /// It calls each individual Greek calculation method and compiles the results.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if any individual Greek calculation fails.
     fn greeks(&self) -> Result<Greek, GreeksError> {
         let delta = self.delta()?;
         let gamma = self.gamma()?;
@@ -43,6 +115,14 @@ pub trait Greeks {
         })
     }
 
+    /// Calculates the aggregate delta value for all options.
+    ///
+    /// Delta measures the rate of change in an option's price with respect to
+    /// changes in the underlying asset's price.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or delta calculation fails.
     fn delta(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut delta_value = Decimal::ZERO;
@@ -52,6 +132,14 @@ pub trait Greeks {
         Ok(delta_value)
     }
 
+    /// Calculates the aggregate gamma value for all options.
+    ///
+    /// Gamma measures the rate of change of delta with respect to
+    /// changes in the underlying asset's price.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or gamma calculation fails.
     fn gamma(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut gamma_value = Decimal::ZERO;
@@ -61,6 +149,14 @@ pub trait Greeks {
         Ok(gamma_value)
     }
 
+    /// Calculates the aggregate theta value for all options.
+    ///
+    /// Theta measures the rate of change of the option price with respect to time,
+    /// also known as time decay.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or theta calculation fails.
     fn theta(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut theta_value = Decimal::ZERO;
@@ -70,6 +166,14 @@ pub trait Greeks {
         Ok(theta_value)
     }
 
+    /// Calculates the aggregate vega value for all options.
+    ///
+    /// Vega measures the sensitivity of the option price to changes in
+    /// the volatility of the underlying asset.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or vega calculation fails.
     fn vega(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut vega_value = Decimal::ZERO;
@@ -79,6 +183,14 @@ pub trait Greeks {
         Ok(vega_value)
     }
 
+    /// Calculates the aggregate rho value for all options.
+    ///
+    /// Rho measures the sensitivity of the option price to changes in
+    /// the risk-free interest rate.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or rho calculation fails.
     fn rho(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut rho_value = Decimal::ZERO;
@@ -88,6 +200,14 @@ pub trait Greeks {
         Ok(rho_value)
     }
 
+    /// Calculates the aggregate rho_d value for all options.
+    ///
+    /// Rho_d measures the sensitivity of the option price to changes in
+    /// the dividend yield of the underlying asset.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or rho_d calculation fails.
     fn rho_d(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut rho_d_value = Decimal::ZERO;
@@ -97,6 +217,14 @@ pub trait Greeks {
         Ok(rho_d_value)
     }
 
+    /// Calculates the aggregate alpha value for all options.
+    ///
+    /// Alpha represents the ratio between gamma and theta, providing insight into
+    /// the option's risk/reward efficiency with respect to time decay.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or alpha calculation fails.
     fn alpha(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut alpha_value = Decimal::ZERO;
