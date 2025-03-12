@@ -3,19 +3,18 @@
    Email: jb@taunais.com
    Date: 20/12/24
 ******************************************************************************/
-
 //! # Error Module
 //!
 //! This module provides a comprehensive error handling system for options trading and financial calculations.
 //! It defines specialized error types for different aspects of the library, including options trading,
 //! pricing calculations, statistical analysis, and data management.
 //!
-//! ## Core Error Types
+//! ## Core Modules Overview
 //!
 //! ### Options and Pricing
 //! * `OptionsError` - Core errors for option operations and validations
 //! * `GreeksError` - Errors in Greeks calculations (delta, gamma, etc.)
-//! * `ImpliedVolatilityError` - Errors in implied volatility calculations
+//! * `VolatilityError` - Errors in volatility calculations including implied volatility
 //!
 //! ### Trading and Analysis
 //! * `ChainError` - Option chain operations and data management
@@ -24,52 +23,11 @@
 //! * `ProbabilityError` - Statistical analysis and probability calculations
 //!
 //! ### Mathematical and Data
-//! * `CurvesError` - Curve fitting and mathematical operations
+//! * `CurveError` - Curve fitting and mathematical operations
 //! * `DecimalError` - Decimal number handling and precision
-//!
-//! ## Error Categories By Module
-//!
-//! ### Chain Errors (`ChainError`)
-//! Handles:
-//! * Option data validation
-//! * Chain construction
-//! * File operations (CSV/JSON)
-//! * Strategy validation
-//!
-//! ### Position Errors (`PositionError`)
-//! Manages:
-//! * Position validation
-//! * Strategy operations
-//! * Position limits
-//! * Option style/side compatibility
-//!
-//! ### Greeks Errors (`GreeksError`)
-//! Handles:
-//! * Greeks calculations
-//! * Mathematical validation
-//! * Input parameter validation
-//! * Numerical computations
-//!
-//! ### Strategy Errors (`StrategyError`)
-//! Covers:
-//! * Price calculations
-//! * Break-even analysis
-//! * Profit/Loss calculations
-//! * Operation validation
-//!
-//! ### Probability Errors (`ProbabilityError`)
-//! Manages:
-//! * Statistical calculations
-//! * Range analysis
-//! * Probability distributions
-//! * Market scenarios
-//!
-//! ### Decimal Errors (`DecimalError`)
-//! Handles:
-//! * Decimal conversions
-//! * Precision management
-//! * Arithmetic operations
-//! * Boundary validations
+//! * `InterpolationError` - Errors in data interpolation operations
+//! * `MetricsError` - Performance and risk metrics calculation errors
+//! * `SurfaceError` - Volatility and pricing surface construction errors
 //!
 //! ## Usage Example
 //!
@@ -103,13 +61,10 @@
 //! * Clean error propagation through type conversions
 //! * Context preservation in error chains
 //!
-//! ## Implementation Details
+//! ## Type Aliases
 //!
-//! * Each error type has specialized constructors for common cases
-//! * Error types support standard error trait implementations
-//! * Conversion traits implemented for seamless error handling
-//! * Thread-safe error types (`Send` + `Sync`)
-//! * Comprehensive string formatting for logging
+//! * `OptionsResult<T>` - Specialized result type for options operations
+//! * `DecimalResult<T>` - Specialized result type for decimal calculations
 //!
 //! ## Module Structure
 //!
@@ -120,27 +75,120 @@
 //! ├── curves.rs       - Mathematical curve errors
 //! ├── decimal.rs      - Decimal computation errors
 //! ├── greeks.rs       - Greeks calculation errors
+//! ├── interpolation.rs - Interpolation errors
+//! ├── metrics.rs      - Performance metrics errors
 //! ├── options.rs      - Core options errors
 //! ├── position.rs     - Position management errors
 //! ├── probability.rs  - Statistical analysis errors
 //! ├── strategies.rs   - Trading strategy errors
+//! ├── surfaces.rs     - Surface construction errors
 //! └── volatility.rs   - Volatility calculation errors
 //! ```
 
+/// ### Chain Errors (`ChainError`)
+/// Handles:
+/// * Option data validation
+/// * Chain construction
+/// * File operations (CSV/JSON)
+/// * Strategy validation
+///
 pub mod chains;
+
+/// Provides a common set of error kinds used across various modules:
+/// * Validation failures
+/// * Mathematical errors
+/// * Input/output errors
+/// * Data consistency issues
 mod common;
+
+/// ### Curve Errors (`CurveError`) 
+/// Handles:
+/// * Yield curve construction
+/// * Forward rate calculations
+/// * Market data fitting issues
+/// * Term structure consistency
 pub mod curves;
+
+/// ### Decimal Errors (`DecimalError`)
+/// Handles:
+/// * Decimal conversions
+/// * Precision management
+/// * Arithmetic operations
+/// * Boundary validations
 pub mod decimal;
+
+/// ### Greeks Errors (`GreeksError`)
+/// Handles:
+/// * Greeks calculations
+/// * Mathematical validation
+/// * Input parameter validation
+/// * Numerical computations
 pub mod greeks;
+
+/// ### Options Errors (`OptionsError`)
+/// Core module handling:
+/// * Option validation errors
+/// * Pricing model failures
+/// * Parameter boundary violations
+/// * Contract specification issues
 mod options;
+
+/// ### Position Errors (`PositionError`)
+/// Manages:
+/// * Position validation
+/// * Strategy operations
+/// * Position limits
+/// * Option style/side compatibility
 pub mod position;
+
+/// ### Probability Errors (`ProbabilityError`)
+/// Manages:
+/// * Statistical calculations
+/// * Range analysis
+/// * Probability distributions
+/// * Market scenarios
 pub mod probability;
+
+/// ### Strategy Errors (`StrategyError`)
+/// Covers:
+/// * Price calculations
+/// * Break-even analysis
+/// * Profit/Loss calculations
+/// * Operation validation
 pub mod strategies;
 
+/// ### Interpolation Errors (`InterpolationError`)
+/// Manages:
+/// * Data point validation
+/// * Interpolation method errors
+/// * Boundary conditions
+/// * Mathematical approximation issues
 mod interpolation;
+
+/// ### Metrics Errors (`MetricsError`)
+/// Handles:
+/// * Performance calculation failures
+/// * Risk metric validation
+/// * Statistical measurement errors
+/// * Benchmark comparison issues
 mod metrics;
+
+/// ### Surface Errors (`SurfaceError`)
+/// Covers:
+/// * Surface construction failures
+/// * Volatility skew/smile errors
+/// * Surface calibration issues
+/// * Dimensional and data completeness errors
 mod surfaces;
+
+/// ### Volatility Errors (`VolatilityError`)
+/// Handles:
+/// * Implied volatility calculation failures
+/// * Historical volatility estimation issues
+/// * Volatility model parameter validation
+/// * Market data consistency checks
 mod volatility;
+
 
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
