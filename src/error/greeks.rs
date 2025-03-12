@@ -76,14 +76,54 @@ pub enum GreeksError {
 /// `MathErrorKind` serves as part of the error handling system for numerical calculations,
 /// particularly in financial and statistical contexts where numerical stability and
 /// precision are critical.
+///
+/// # Variants
+///
+/// * `DivisionByZero` - Represents the fundamental error of attempting to divide by zero,
+///   which is mathematically undefined.
+///
+/// * `Overflow` - Represents errors when calculations exceed the numerical limits of
+///   the underlying data type, typically with very large numbers or exponential operations.
+///
+/// * `InvalidDomain` - Represents errors when a mathematical function is evaluated
+///   outside its valid domain, containing both the problematic value and reason.
+///
+/// * `ConvergenceFailure` - Represents errors when an iterative algorithm fails to
+///   converge to a solution within specified parameters.
+///
+/// # Usage
+///
+/// This error type is typically used in financial models, statistical calculations,
+/// and numerical algorithms where precise error identification is essential for
+/// debugging and proper error handling.
+///
+/// ```rust
+/// use optionstratlib::error::greeks::MathErrorKind;
+///
+/// fn calculate_square_root(value: f64) -> Result<f64, MathErrorKind> {
+///     if value < 0.0 {
+///         return Err(MathErrorKind::InvalidDomain {
+///             value,
+///             reason: "Cannot calculate square root of a negative number".to_string()
+///         });
+///     }
+///     Ok(value.sqrt())
+/// }
+/// ```
 #[derive(Debug)]
 pub enum MathErrorKind {
     /// Error that occurs when attempting to divide by zero.
+    ///
     /// This is a fundamental mathematical error that must be caught to prevent undefined behavior.
+    /// In numerical calculations, division by zero is undefined and will cause program crashes
+    /// if not properly handled.
     DivisionByZero,
 
     /// Error that occurs when a calculation exceeds the numerical limits of the data type.
+    ///
     /// This typically happens with very large numbers or during exponential operations.
+    /// Overflow errors can lead to incorrect results and should be caught to maintain
+    /// calculation integrity.
     Overflow,
 
     /// Error that occurs when a function is evaluated outside its valid domain.
@@ -91,14 +131,30 @@ pub enum MathErrorKind {
     /// # Fields
     /// * `value` - The input value that caused the domain error
     /// * `reason` - A descriptive explanation of why the value is invalid
-    InvalidDomain { value: f64, reason: String },
+    ///
+    /// Domain errors are common in mathematical functions like logarithms, square roots,
+    /// and trigonometric functions where certain input values are not allowed.
+    InvalidDomain {
+        /// The value that was outside the valid domain
+        value: f64,
+        /// Detailed explanation of why the value is invalid for the operation
+        reason: String,
+    },
 
     /// Error that occurs when an iterative algorithm fails to converge to a solution.
     ///
     /// # Fields
     /// * `iterations` - The number of iterations performed before failure
     /// * `tolerance` - The convergence tolerance that was not satisfied
-    ConvergenceFailure { iterations: usize, tolerance: f64 },
+    ///
+    /// Convergence failures typically occur in numerical methods like Newton-Raphson,
+    /// implied volatility calculations, or other root-finding algorithms.
+    ConvergenceFailure {
+        /// Number of iterations attempted before giving up
+        iterations: usize,
+        /// The tolerance threshold that wasn't met during convergence
+        tolerance: f64,
+    },
 }
 
 /// Represents different types of input validation errors that can occur during financial calculations.
@@ -108,62 +164,86 @@ pub enum MathErrorKind {
 /// detailed information about the invalid input, including both the problematic value and a reason
 /// explaining why it was rejected.
 ///
+/// # Variants
+///
+/// * `InvalidVolatility` - Represents errors related to improper volatility values
+///   such as negative values or unreasonably large inputs that would cause calculation issues.
+///
+/// * `InvalidTime` - Represents errors related to time inputs (typically time to expiration)
+///   that are outside acceptable bounds or otherwise unsuitable for financial calculations.
+///
+/// * `InvalidPrice` - Represents errors related to price inputs (like underlying asset prices)
+///   that are negative or otherwise invalid for the calculation context.
+///
+/// * `InvalidRate` - Represents errors related to interest rate values that are outside
+///   acceptable bounds for the specific financial modeling context.
+///
+/// * `InvalidStrike` - Represents errors related to strike price inputs that are malformed,
+///   out of bounds, or otherwise unsuitable for options calculations.
+///
+/// # Usage
+///
 /// These error kinds are typically used within higher-level error types to provide specific
 /// information about validation failures, enabling precise error handling and informative
 /// error messages for users.
 #[derive(Debug)]
 pub enum InputErrorKind {
-    /// Represents an error with an invalid volatility input.
+    /// Error indicating an invalid volatility input.
     ///
     /// This error occurs when a volatility value is outside acceptable bounds
     /// (typically negative values or unreasonably large values) or otherwise invalid
     /// for the calculation being performed.
-    ///
-    /// # Fields
-    /// * `value` - The invalid volatility value that was provided
-    /// * `reason` - A descriptive message explaining why the volatility value is invalid
-    InvalidVolatility { value: f64, reason: String },
+    InvalidVolatility {
+        /// The invalid volatility value that was provided
+        value: f64,
+        /// Detailed explanation of why the volatility value is invalid
+        reason: String,
+    },
 
-    /// Represents an error with an invalid time input.
+    /// Error indicating an invalid time input.
     ///
     /// This error occurs when a time value (typically representing time to expiration)
     /// is outside acceptable bounds or otherwise invalid for the calculation being performed.
-    ///
-    /// # Fields
-    /// * `value` - The invalid time value that was provided (as a Positive type)
-    /// * `reason` - A descriptive message explaining why the time value is invalid
-    InvalidTime { value: Positive, reason: String },
+    InvalidTime {
+        /// The invalid time value that was provided (as a Positive type)
+        value: Positive,
+        /// Detailed explanation of why the time value is invalid
+        reason: String,
+    },
 
-    /// Represents an error with an invalid price input.
+    /// Error indicating an invalid price input.
     ///
     /// This error occurs when a price value (such as an underlying asset price)
     /// is outside acceptable bounds (typically negative values) or otherwise
     /// invalid for the calculation being performed.
-    ///
-    /// # Fields
-    /// * `value` - The invalid price value that was provided
-    /// * `reason` - A descriptive message explaining why the price value is invalid
-    InvalidPrice { value: f64, reason: String },
+    InvalidPrice {
+        /// The invalid price value that was provided
+        value: f64,
+        /// Detailed explanation of why the price value is invalid
+        reason: String,
+    },
 
-    /// Represents an error with an invalid interest rate input.
+    /// Error indicating an invalid interest rate input.
     ///
     /// This error occurs when an interest rate value is outside acceptable bounds
     /// or otherwise invalid for the calculation being performed.
-    ///
-    /// # Fields
-    /// * `value` - The invalid interest rate value that was provided
-    /// * `reason` - A descriptive message explaining why the rate value is invalid
-    InvalidRate { value: f64, reason: String },
+    InvalidRate {
+        /// The invalid interest rate value that was provided
+        value: f64,
+        /// Detailed explanation of why the rate value is invalid
+        reason: String,
+    },
 
-    /// Represents an error with an invalid strike price input.
+    /// Error indicating an invalid strike price input.
     ///
     /// This error occurs when a strike price value is outside acceptable bounds,
     /// in an incorrect format, or otherwise invalid for the calculation being performed.
-    ///
-    /// # Fields
-    /// * `value` - The invalid strike value that was provided (as a String)
-    /// * `reason` - A descriptive message explaining why the strike value is invalid
-    InvalidStrike { value: String, reason: String },
+    InvalidStrike {
+        /// The invalid strike value that was provided (as a String)
+        value: String,
+        /// Detailed explanation of why the strike value is invalid
+        reason: String,
+    },
 }
 
 /// Represents specific error types that can occur during financial derivative calculations.
@@ -307,7 +387,25 @@ impl fmt::Display for CalculationErrorKind {
 
 impl Error for GreeksError {}
 
-// Type alias for Results
+/// Type alias for Results returned from Greek calculation functions.
+///
+/// This alias wraps the standard Rust `Result` type to provide a specialized
+/// result type for Greek calculations, using `GreeksError` as the error type.
+///
+/// # Type Parameters
+///
+/// * `T` - The success value type that will be returned when operations succeed.
+///
+/// # Related Types
+///
+/// This type alias is part of the error handling system for Greek calculations
+/// and works with the `GreeksError` enum which provides detailed error information.
+///
+/// # Usage Context
+///
+/// Typically used in functions that calculate option Greeks (delta, gamma, theta,
+/// vega, rho) and other financial metrics where specialized error handling for
+/// mathematical and input validation errors is needed.
 pub type GreeksResult<T> = Result<T, GreeksError>;
 
 /// Implementation of factory methods for creating specific `GreeksError` instances.
