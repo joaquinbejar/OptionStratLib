@@ -33,62 +33,70 @@ use std::sync::Arc;
 
 /// Represents the configuration for a random walk simulation.
 ///
-/// This configuration struct is designed to standardize and unify simulation parameters
-/// necessary for random walk generation in financial or mathematical applications.
-/// It can be reused across multiple simulation instances to maintain consistent settings.
+/// This structure encapsulates all parameters required for configuring random walk simulations
+/// in financial or statistical modeling contexts. It provides a unified interface for simulation
+/// settings that can be reused across multiple simulation runs.
 ///
 /// # Fields
 ///
-/// - `risk_free_rate`:
-///   Optional field representing the annualized risk-free interest rate. Typically used in
-///   financial modeling for discounting and theoretical pricing.
+/// * `risk_free_rate` - Optional annualized risk-free interest rate used in financial modeling
+///   for discounting and theoretical pricing calculations.
 ///
-/// - `dividend_yield`:
-///   Optional field representing the annualized rate of dividends for an asset, expressed
-///   as a percentage. This value is modeled as a `Positive` type to ensure it is non-negative.
+/// * `dividend_yield` - Optional annualized dividend yield of an asset, expressed as a percentage
+///   and constrained to be non-negative through the `Positive` type wrapper.
 ///
-/// - `time_frame`:
-///   An instance of `TimeFrame`, which specifies the granularity of data or intervals
-///   used in the simulation (e.g., daily, monthly, yearly). Custom timeframes can also be
-///   defined using positive values for periods per year.
+/// * `time_frame` - Specifies the temporal granularity of the simulation (e.g., daily, monthly,
+///   yearly). Determines how time intervals are scaled and interpreted in the simulation.
 ///
-/// - `volatility_window`:
-///   Specifies the rolling window size used for volatility calculations, such as historical
-///   volatility estimation or stochastic volatility modeling. This value defines the
-///   number of data points considered in rolling computations.
+/// * `volatility_window` - The number of data points to consider when calculating rolling
+///   volatility measures. Defines the lookback period for volatility estimation.
 ///
-/// - `initial_volatility`:
-///   Optional field representing the starting volatility of the asset or system being modeled.
-///   This volatility acts as a baseline for time-varying processes and is constrained to be non-negative
-///   using the `Positive` type.
+/// * `initial_volatility` - Optional starting volatility value for the simulation. Constrained
+///   to be non-negative through the `Positive` type wrapper.
 ///
-/// # Remarks
+/// # Examples
 ///
-/// - By encapsulating these parameters in a single struct, the configuration provides
-///   a modular and flexible design for managing simulation settings.
-/// - The use of `Option` for certain fields allows for default or optional parameters, reducing
-///   the burden of defining every value.
-/// - The `Positive` type ensures that inherently non-negative values (e.g., `dividend_yield`)
-///   are appropriately constrained during compile-time or runtime.
+/// ```rust
+/// use rust_decimal::Decimal;
+/// use optionstratlib::{pos, Positive};
+/// use optionstratlib::simulation::SimulationConfig;
+/// use optionstratlib::utils::TimeFrame;
 ///
-/// # Example Use Cases
+/// let config = SimulationConfig {
+///     risk_free_rate: Some(Decimal::new(250, 4)), // 0.0250 or 2.5%
+///     dividend_yield: Some(pos!(1.5)), // 1.5%
+///     time_frame: TimeFrame::Day,
+///     volatility_window: 30,
+///     initial_volatility: Some(pos!(0.2)), // 0.20 or 20%
+/// };
+/// ```
 ///
-/// - Configuring a simulation for a geometric Brownian motion model of asset.
-/// - Applying a stochastic volatility process with an initial baseline volatility.
-/// - Managing simulation parameters across multiple timeframes for comparative analysis.
+/// # Design Considerations
 ///
-/// # Related Types
-///
-/// - `Positive`: Encapsulates a strictly positive `Decimal` value, ensuring constraints on
-///   non-negative financial or mathematical parameters.
-/// - `TimeFrame`: Enumerates various standard and custom timeframes that can be applied
-///   to simulations for data scaling or aggregation.
+/// The configuration uses `Option` types for parameters that might not always be required or
+/// could have sensible defaults provided by the simulation implementation. The `Positive`
+/// type wrapper ensures that certain financial parameters maintain their required non-negative
+/// constraint.
 #[derive(Clone)]
 pub struct SimulationConfig {
+    /// The annualized risk-free rate used for financial calculations.
+    /// Typically expressed as a decimal (e.g., 0.05 for 5%).
     pub risk_free_rate: Option<Decimal>,
+
+    /// The annualized dividend yield of the underlying asset.
+    /// Constrained to be non-negative through the `Positive` type.
     pub dividend_yield: Option<Positive>,
+
+    /// Specifies the time interval granularity for the simulation.
+    /// Determines how time steps are interpreted and scaled.
     pub time_frame: TimeFrame,
+
+    /// The number of periods to use for rolling volatility calculations.
+    /// Larger windows result in smoother volatility estimates.
     pub volatility_window: usize,
+
+    /// The starting volatility level for the simulation, if needed.
+    /// Constrained to be non-negative through the `Positive` type.
     pub initial_volatility: Option<Positive>,
 }
 

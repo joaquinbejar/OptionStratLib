@@ -67,17 +67,75 @@ const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by sel
     asset's price. The maximum profit is limited to the net credit received, while the maximum \
     loss is limited to the difference between strike prices minus the net credit.";
 
+/// Represents a Bear Call Spread options trading strategy.
+///
+/// A Bear Call Spread is a bearish options strategy that consists of selling a call option
+/// at a lower strike price and buying a call option at a higher strike price, both with
+/// the same expiration date. This strategy is used when an investor expects a moderate
+/// decline in the price of the underlying asset.
+///
+/// The maximum profit is achieved when the underlying price is at or below the lower strike price,
+/// while the maximum loss occurs when the underlying price is at or above the higher strike price.
+///
+/// # Attributes
 #[derive(Clone, Debug)]
 pub struct BearCallSpread {
+    /// Name identifier for the strategy instance.
     pub name: String,
+
+    /// The type of strategy represented (in this case, BearCallSpread).
     pub kind: StrategyType,
+
+    /// A textual description of the strategy and its implementation details.
     pub description: String,
+
+    /// The price points at which the strategy breaks even (where profit/loss is zero).
     pub break_even_points: Vec<Positive>,
+
+    /// The short call position (call option sold at the lower strike price).
     short_call: Position,
+
+    /// The long call position (call option purchased at the higher strike price).
     long_call: Position,
 }
 
 impl BearCallSpread {
+    /// Creates a new Bear Call Spread options strategy.
+    ///
+    /// A Bear Call Spread is created by selling a call option with a lower strike price
+    /// and simultaneously buying a call option with a higher strike price, both with the same
+    /// expiration date. This strategy is used when you expect a moderate decline in the underlying
+    /// asset's price. The maximum profit is limited to the net credit received, while the maximum
+    /// loss is limited to the difference between strike prices minus the net credit.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying_symbol` - Symbol of the underlying asset
+    /// * `underlying_price` - Current market price of the underlying asset
+    /// * `short_strike` - Strike price for the short call option (defaults to underlying price if zero)
+    /// * `long_strike` - Strike price for the long call option (defaults to underlying price if zero)
+    /// * `expiration` - Expiration date for both options
+    /// * `implied_volatility` - Implied volatility used for pricing options
+    /// * `risk_free_rate` - Risk-free interest rate used in option pricing models
+    /// * `dividend_yield` - Expected dividend yield of the underlying asset
+    /// * `quantity` - Number of option contracts to trade
+    /// * `premium_short_call` - Premium received for selling the lower strike call
+    /// * `premium_long_call` - Premium paid for buying the higher strike call
+    /// * `open_fee_short_call` - Transaction fee for opening the short call position
+    /// * `close_fee_short_call` - Transaction fee for closing the short call position
+    /// * `open_fee_long_call` - Transaction fee for opening the long call position
+    /// * `close_fee_long_call` - Transaction fee for closing the long call position
+    ///
+    /// # Returns
+    ///
+    /// Returns a configured `BearCallSpread` strategy object with positions and break-even points calculated.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if:
+    /// - Adding the short or long call positions fails
+    /// - Validating the strategy fails (e.g., if short strike price is >= long strike price)
+    /// - Calculating break-even points fails
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,

@@ -691,23 +691,133 @@
 //!  
 //!  We appreciate your interest and look forward to your contributions!
 //!  
+//!
+
+/// # OptionsStratLib: Financial Options Trading Library
+///
+/// A comprehensive library for options trading analytics, modeling, and strategy development.
+/// Provides tools for pricing, risk assessment, strategy building, and performance analysis
+/// of financial options across various market conditions.
+///
+/// ## Core Modules
 extern crate core;
+
+/// * `backtesting` - Tools for historical performance evaluation of options strategies.
+///
+/// Provides framework and utilities to simulate and analyze how option strategies
+/// would have performed using historical market data. Supports various performance
+/// metrics, drawdown analysis, and strategy comparison.
 pub mod backtesting;
+
+/// * `chains` - Functionality for working with options chains and series data.
+///
+/// Tools for parsing, manipulating, and analyzing options chain data. Includes
+/// methods to filter chains by expiration, strike price, and other criteria,
+/// as well as utilities for chain visualization and analysis.
 pub mod chains;
+
+/// * `constants` - Library-wide mathematical and financial constants.
+///
+/// Defines fundamental constants used throughout the library including mathematical
+/// constants (π, epsilon values), market standards (trading days per year),
+/// calculation parameters, and visualization color schemes.
 pub mod constants;
+
+/// * `curves` - Tools for yield curves, term structures, and other financial curves.
+///
+/// Implementations of various interest rate curves, forward curves, and term structures
+/// used in options pricing and risk management. Includes interpolation methods and
+/// curve fitting algorithms.
 pub mod curves;
+
+/// * `error` - Error types and handling functionality for the library.
+///
+/// Defines the error hierarchy used throughout the library, providing detailed
+/// error types for different categories of failures including validation errors,
+/// calculation errors, and input/output errors.
 pub mod error;
+
+/// * `geometrics` - Mathematical utilities for geometric calculations relevant to options.
+///
+/// Provides specialized geometric functions and algorithms for options pricing and modeling,
+/// including path-dependent calculations and spatial transformations for volatility surfaces.
 pub mod geometrics;
+
+/// * `greeks` - Calculation and management of option sensitivity metrics (Delta, Gamma, etc.).
+///
+/// Comprehensive implementation of options Greeks (sensitivity measures) including
+/// Delta, Gamma, Theta, Vega, and Rho. Includes analytical formulas, numerical
+/// approximations, and visualization tools for risk analysis.
 pub mod greeks;
+
+/// * `model` - Core data structures and models for options and derivatives.
+///
+/// Defines the fundamental data types and structures used throughout the library,
+/// including option contract representations, position tracking, and market data models.
+/// Serves as the foundation for all other modules.
 pub mod model;
+
+/// * `pnl` - Profit and loss analysis tools for options positions.
+///
+/// Utilities for calculating, projecting, and visualizing profit and loss (P&L) profiles
+/// for individual options and complex strategies. Includes time-based P&L evolution and
+/// scenario analysis.
 pub mod pnl;
+
+/// * `pricing` - Option pricing models including Black-Scholes and numerical methods.
+///
+/// Implementations of various option pricing models including Black-Scholes-Merton,
+/// binomial trees, Monte Carlo simulation, and finite difference methods. Supports
+/// European, American, and exotic options.
 pub mod pricing;
+
+/// * `risk` - Risk assessment and management tools for options portfolios.
+///
+/// Tools for analyzing and quantifying risk in options positions and portfolios,
+/// including Value at Risk (VaR), stress testing, scenario analysis, and
+/// portfolio optimization algorithms.
 pub mod risk;
+
+/// * `simulation` - Simulation techniques for scenario analysis.
+///
+/// Framework for Monte Carlo and other simulation methods to model potential
+/// market scenarios and their impact on options strategies. Includes path generation
+/// algorithms and statistical analysis of simulation results.
 pub mod simulation;
+
+/// * `strategies` - Pre-defined option strategy templates and building blocks.
+///
+/// Library of common option strategies (spreads, straddles, condors, etc.) with
+/// implementation helpers, parameter optimization, and analysis tools. Supports
+/// strategy composition and customization.
 pub mod strategies;
+
+/// * `surfaces` - Volatility surface and other 3D financial data modeling.
+///
+/// Tools for constructing, manipulating, and analyzing volatility surfaces and
+/// other three-dimensional financial data structures. Includes interpolation methods,
+/// fitting algorithms, and visualization utilities.
 pub mod surfaces;
+
+/// * `utils` - General utility functions for data manipulation and calculations.
+///
+/// Collection of helper functions and utilities used across the library for
+/// data manipulation, mathematical operations, date handling, and other
+/// common tasks in financial calculations.
 pub mod utils;
+
+/// * `visualization` - Tools for plotting and visual representation of options data.
+///
+/// Graphics and visualization utilities for creating charts, graphs, and interactive
+/// plots of options data, strategies, and analytics. Supports various plot types
+/// optimized for different aspects of options analysis.
 pub mod visualization;
+
+/// * `volatility` - Volatility modeling, forecasting, and analysis utilities.
+///
+/// Comprehensive tools for volatility analysis including historical volatility calculation,
+/// implied volatility determination, volatility forecasting models (GARCH, EWMA), and
+/// volatility skew/smile analysis.
 pub mod volatility;
 
 pub use model::Options;

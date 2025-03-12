@@ -147,12 +147,64 @@
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
 
+/// Binomial tree model implementation for option pricing.
+///
+/// This module provides functionality to price options using binomial tree methods,
+/// which discretize time and price movements to create a lattice of possible
+/// future asset prices.
+///
+/// The binomial model is particularly useful for pricing American options and
+/// other derivatives with early exercise features.
 pub mod binomial_model;
+
+/// Black-Scholes model for option pricing and analysis.
+///
+/// This module implements the Black-Scholes-Merton model for European option pricing
+/// and related calculations such as the Greeks (delta, gamma, theta, vega, rho).
+///
+/// The Black-Scholes model provides closed-form solutions for European option prices
+/// under specific assumptions about market behavior and asset price dynamics.
 pub mod black_scholes_model;
+
+/// Constants used throughout the financial models.
+///
+/// Contains mathematical and financial constants required by various pricing models,
+/// such as day count conventions, numerical approximation parameters, and defaults.
 pub(crate) mod constants;
+
+/// Monte Carlo simulation methods for financial modeling.
+///
+/// This module provides tools for pricing options and other derivatives using
+/// Monte Carlo simulations, which generate random paths for underlying asset prices
+/// to estimate expected payoffs.
+///
+/// Monte Carlo methods are particularly valuable for complex derivatives where
+/// closed-form solutions don't exist.
 pub mod monte_carlo;
+
+/// Payoff functions for different option types and derivatives.
+///
+/// Defines payoff calculations for various financial instruments, including
+/// standard calls and puts, as well as more exotic payoff structures.
+///
+/// These payoff functions are used by the pricing models to determine the value
+/// of options at expiration or exercise.
 pub(crate) mod payoff;
+
+/// Telegraph process model for asset price movement.
+///
+/// Implements a telegraph process model which can be used as an alternative to
+/// geometric Brownian motion for modeling asset price movements with specific
+/// jump characteristics.
+///
+/// The telegraph model is particularly useful for capturing market regimes with
+/// distinct volatility states.
 pub mod telegraph;
+
+/// Utility functions for financial calculations.
+///
+/// Provides helper functions and common utilities used across the library,
+/// including numerical methods, date handling, and data transformation tools.
 pub(crate) mod utils;
 
 pub use binomial_model::{BinomialPricingParams, generate_binomial_tree, price_binomial};

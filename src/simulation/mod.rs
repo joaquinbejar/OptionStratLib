@@ -1,8 +1,14 @@
-//! # Random Walk Module
+//! # Random Walk Simulation Library
 //!
-//! This module implements random walk simulations for financial asset price modeling,
-//! with support for varying volatility and trend components. It provides tools for
-//! generating and analyzing price paths with customizable parameters.
+//! This library provides tools for simulating and analyzing random walk processes
+//! and other stochastic models. It includes implementations of various random walk algorithms,
+//! statistical utilities, and visualization capabilities.
+//!
+//! The library is organized into several modules:
+//! - `model`: Contains the data structures and types that represent stochastic processes
+//! - `simulator`: Provides simulation engines and algorithms for running the models
+//! - `utils`: Utility functions and helpers for statistical analysis and data manipulation
+//! - `walk`: Public API for creating and running random walk simulations
 //!
 //! ## Core Components
 //!
@@ -174,9 +180,30 @@
 //! - Thread-safe random number generation
 //! - Supports various time frames (daily, weekly, monthly)
 
+/// Contains data structures and types that represent stochastic processes.
+///
+/// This module defines the mathematical models and their parameters used in
+/// random walk simulations, including different types of distributions and
+/// process configurations.
 mod model;
+
+/// Provides simulation engines and algorithms for running stochastic models.
+///
+/// This module contains the core simulation logic that powers the random walk
+/// implementations, including time-stepping algorithms and state management.
 mod simulator;
+
+/// Utility functions and helpers for statistical analysis and data manipulation.
+///
+/// This module includes tools for data processing, statistical calculations,
+/// result formatting, and other helper functions used across the library.
 mod utils;
+
+/// Public API for creating and running random walk simulations.
+///
+/// This module exposes the main interfaces for setting up and executing
+/// various types of random walks, analyzing results, and extracting statistics.
+/// It serves as the primary entry point for library users.
 pub mod walk;
 
 pub use model::SimulationResult;

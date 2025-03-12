@@ -19,32 +19,121 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{error, trace};
 
+/// Result type for binomial tree pricing models, containing:
+/// - The option price
+/// - Price tree (asset price evolution)
+/// - Option value tree (option value at each node)
 type PriceBinomialTree = OptionsResult<(Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>)>;
 
+/// Parameters for exotic option pricing models.
+///
+/// This structure holds specific data required by various exotic option types
+/// such as Asian options (which depend on average prices) and Lookback options
+/// (which depend on minimum/maximum prices during the option's lifetime).
+///
+/// Each field is optional since different exotic option types require different parameters.
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct ExoticParams {
+    /// Historical spot prices, primarily used for Asian options which
+    /// depend on the average price of the underlying asset.
     pub spot_prices: Option<Vec<Positive>>, // Asian
-    pub spot_min: Option<Decimal>,          // Lookback
-    pub spot_max: Option<Decimal>,          // Lookback
+
+    /// Minimum observed spot price during the option's lifetime,
+    /// used for lookback option pricing.
+    pub spot_min: Option<Decimal>, // Lookback
+
+    /// Maximum observed spot price during the option's lifetime,
+    /// used for lookback option pricing.
+    pub spot_max: Option<Decimal>, // Lookback
 }
 
+/// Represents a financial option contract with its essential parameters and characteristics.
+///
+/// This structure contains all the necessary information to define an options contract,
+/// including its type (call/put), market position (long/short), pricing parameters,
+/// and contract specifications. It serves as the core data model for option pricing,
+/// risk analysis, and strategy development.
+///
+/// The `Options` struct supports both standard option types and exotic options through
+/// the optional `exotic_params` field, making it versatile for various financial modeling
+/// scenarios.
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Options {
+    /// Specifies whether this is a Call or Put option, determining the fundamental
+    /// right the option contract provides (buying or selling the underlying).
     pub option_type: OptionType,
+
+    /// Indicates whether the position is Long (purchased) or Short (sold/written),
+    /// which determines the profit/loss direction and risk profile.
     pub side: Side,
+
+    /// The ticker symbol or identifier of the underlying asset (e.g., "AAPL" for Apple stock).
     pub underlying_symbol: String,
+
+    /// The price at which the option holder can exercise their right to buy (for calls)
+    /// or sell (for puts) the underlying asset.
     pub strike_price: Positive,
+
+    /// When the option contract expires, either as days from now or as a specific date.
     pub expiration_date: ExpirationDate,
+
+    /// The market's expectation for future volatility of the underlying asset,
+    /// a key parameter for option pricing models.
     pub implied_volatility: Positive,
+
+    /// The number of contracts in this position.
     pub quantity: Positive,
+
+    /// The current market price of the underlying asset.
     pub underlying_price: Positive,
+
+    /// The current risk-free interest rate used in option pricing models,
+    /// typically based on treasury yields of similar duration.
     pub risk_free_rate: Decimal,
+
+    /// The option exercise style (European or American), determining when the
+    /// option can be exercised.
     pub option_style: OptionStyle,
+
+    /// The annualized dividend yield of the underlying asset, affecting option pricing
+    /// particularly for longer-dated contracts.
     pub dividend_yield: Positive,
+
+    /// Additional parameters required for exotic option types like Asian or Lookback options.
+    /// This field is None for standard (vanilla) options.
     pub exotic_params: Option<ExoticParams>,
 }
-
 impl Options {
+    /// Creates a new options contract with the specified parameters.
+    ///
+    /// This constructor creates an instance of `Options` with all the required parameters
+    /// for defining and pricing an option contract. It supports both standard (vanilla)
+    /// options and exotic options through the optional `exotic_params` parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `option_type` - Specifies whether this is a Call or Put option, determining the fundamental
+    ///   right the option contract provides.
+    /// * `side` - Indicates whether the position is Long (purchased) or Short (sold/written),
+    ///   which determines the profit/loss direction.
+    /// * `underlying_symbol` - The ticker symbol or identifier of the underlying asset (e.g., "AAPL").
+    /// * `strike_price` - The price at which the option can be exercised, represented as a `Positive` value.
+    /// * `expiration_date` - When the option contract expires, either as days from now or as a specific date.
+    /// * `implied_volatility` - The market's expectation for future volatility of the underlying asset,
+    ///   a key parameter for option pricing.
+    /// * `quantity` - The number of contracts in this position, represented as a `Positive` value.
+    /// * `underlying_price` - The current market price of the underlying asset.
+    /// * `risk_free_rate` - The current risk-free interest rate used in option pricing models.
+    /// * `option_style` - The option exercise style (European or American), determining when the
+    ///   option can be exercised.
+    /// * `dividend_yield` - The annualized dividend yield of the underlying asset, affecting option pricing.
+    /// * `exotic_params` - Additional parameters required for exotic option types. Set to `None` for
+    ///   standard (vanilla) options.
+    ///
+    /// # Returns
+    ///
+    /// A fully configured `Options` instance with all the specified parameters.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         option_type: OptionType,
@@ -76,24 +165,91 @@ impl Options {
         }
     }
 
+    /// Updates option parameters using data from an OptionData structure.
+    ///
+    /// This method updates the option's strike price and implied volatility based on the
+    /// values provided in the option_data parameter. If the implied volatility is not
+    /// available in the option data, it defaults to zero.
+    ///
+    /// # Arguments
+    ///
+    /// * `option_data` - A reference to an OptionData structure containing updated option parameters.
+    ///
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.strike_price = option_data.strike_price;
         self.implied_volatility = option_data.implied_volatility.unwrap_or(Positive::ZERO);
         trace!("Updated Option: {:#?}", self);
     }
 
+    /// Calculates the time to expiration of the option in years.
+    ///
+    /// This function computes the time remaining until the option's expiration date,
+    /// expressed as a positive decimal value representing years. This is a key parameter
+    /// used in option pricing models.
+    ///
+    /// # Returns
+    ///
+    /// * `OptionsResult<Positive>` - A result containing the time to expiration in years
+    ///   as a Positive value, or an error if the calculation failed.
+    ///
     pub fn time_to_expiration(&self) -> OptionsResult<Positive> {
         Ok(self.expiration_date.get_years()?)
     }
 
+    /// Determines if the option position is long (purchased).
+    ///
+    /// A long position indicates that the option has been bought, meaning the holder
+    /// has the right to exercise the option according to its terms.
+    ///
+    /// # Returns
+    ///
+    /// * `bool` - Returns true if the option is held as a long position, false otherwise.
+    ///
     pub fn is_long(&self) -> bool {
         matches!(self.side, Side::Long)
     }
 
+    /// Determines if the option position is short (written/sold).
+    ///
+    /// A short position indicates that the option has been sold or written, meaning
+    /// the holder has the obligation to fulfill the contract terms if the option is exercised.
+    ///
+    /// # Returns
+    ///
+    /// * `bool` - Returns true if the option is held as a short position, false otherwise.
+    ///
     pub fn is_short(&self) -> bool {
         matches!(self.side, Side::Short)
     }
 
+    /// Calculates the price of an option using the binomial tree model.
+    ///
+    /// This method implements the binomial option pricing model which constructs a
+    /// discrete-time lattice (tree) of possible future underlying asset prices to
+    /// determine the option's value. The approach is particularly valuable for pricing
+    /// American options and other early-exercise scenarios.
+    ///
+    /// The calculation divides the time to expiration into a specified number of steps,
+    /// creating a binomial tree that represents possible price paths of the underlying asset.
+    /// The option's value is then calculated by working backward from expiration to the
+    /// present value.
+    ///
+    /// # Parameters
+    ///
+    /// * `no_steps` - The number of steps to use in the binomial tree calculation.
+    ///   Higher values increase accuracy but also computational cost.
+    ///
+    /// # Returns
+    ///
+    /// * `OptionsResult<Decimal>` - A result containing the calculated option price as a
+    ///   Decimal value, or an OptionsError if the calculation failed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `OptionsError::OtherError` if:
+    /// * The number of steps is zero
+    /// * The time to expiration calculation fails
+    /// * The binomial price calculation fails
     pub fn calculate_price_binomial(&self, no_steps: usize) -> OptionsResult<Decimal> {
         if no_steps == 0 {
             return Err(OptionsError::OtherError {
@@ -115,6 +271,26 @@ impl Options {
         Ok(cpb)
     }
 
+    /// Calculates option price using the binomial tree model.
+    ///
+    /// This method implements a binomial tree (lattice) approach to option pricing, which
+    /// discretizes the underlying asset's price movement over time. The model builds a tree
+    /// of possible future asset prices and works backwards to determine the current option value.
+    ///
+    /// # Parameters
+    ///
+    /// * `no_steps` - The number of discrete time steps to use in the model. Higher values
+    ///   increase precision but also computational cost.
+    ///
+    /// # Returns
+    ///
+    /// * `PriceBinomialTree` - A result containing:
+    ///   - The calculated option price
+    ///   - The asset price tree (underlying price evolution)
+    ///   - The option value tree (option price at each node)
+    ///
+    /// This method is particularly valuable for pricing American options and other early-exercise
+    /// scenarios that cannot be accurately priced using closed-form solutions.
     pub fn calculate_price_binomial_tree(&self, no_steps: usize) -> PriceBinomialTree {
         let expiry = self.time_to_expiration()?;
         let params = BinomialPricingParams {
@@ -136,14 +312,56 @@ impl Options {
         Ok((price, asset_tree, option_tree))
     }
 
+    /// Calculates option price using the Black-Scholes model.
+    ///
+    /// This method implements the Black-Scholes option pricing formula, which provides
+    /// a closed-form solution for European-style options. The model assumes lognormal
+    /// distribution of underlying asset prices and constant volatility.
+    ///
+    /// # Returns
+    ///
+    /// * `OptionsResult<Decimal>` - A result containing the calculated option price
+    ///   as a Decimal value, or an error if the calculation failed.
+    ///
+    /// This method is computationally efficient but limited to European options without
+    /// early exercise capabilities.
     pub fn calculate_price_black_scholes(&self) -> OptionsResult<Decimal> {
         Ok(black_scholes(self)?)
     }
 
+    /// Calculates option price using the Telegraph equation approach.
+    ///
+    /// This method implements a finite-difference method based on the Telegraph equation
+    /// to price options. This approach can handle a variety of option styles and types,
+    /// including path-dependent options.
+    ///
+    /// # Parameters
+    ///
+    /// * `no_steps` - The number of discrete time steps to use in the model. Higher values
+    ///   increase precision but also computational cost.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, Box<dyn Error>>` - A result containing the calculated option price
+    ///   as a Decimal value, or a boxed error if the calculation failed.
     pub fn calculate_price_telegraph(&self, no_steps: usize) -> Result<Decimal, Box<dyn Error>> {
         telegraph(self, no_steps, None, None)
     }
 
+    /// Calculates the intrinsic value (payoff) of the option at the current underlying price.
+    ///
+    /// The payoff represents what the option would be worth if exercised immediately,
+    /// based on the current market conditions. For out-of-the-money options, the payoff
+    /// will be zero.
+    ///
+    /// # Returns
+    ///
+    /// * `OptionsResult<Decimal>` - A result containing the calculated payoff as a
+    ///   Decimal value, adjusted for the quantity of contracts held, or an error if
+    ///   the calculation failed.
+    ///
+    /// This method is useful for determining the exercise value of an option and for
+    /// analyzing whether an option has intrinsic value.
     pub fn payoff(&self) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,
@@ -158,6 +376,21 @@ impl Options {
         Ok(Decimal::from_f64(payoff).unwrap())
     }
 
+    /// Calculates the financial payoff value of the option at a specific underlying price.
+    ///
+    /// This method determines the option's payoff based on its type, strike price, style,
+    /// and side (long/short) at the given underlying price. The result represents the
+    /// total profit or loss for the option position at that price, adjusted by the position quantity.
+    ///
+    /// # Parameters
+    ///
+    /// * `price` - A `Positive` value representing the hypothetical price of the underlying asset.
+    ///
+    /// # Returns
+    ///
+    /// * `OptionsResult<Decimal>` - The calculated payoff value as a `Decimal`, wrapped in a `Result` type.
+    ///   Returns an `Err` if the payoff calculation encounters an error.
+    ///
     pub fn payoff_at_price(&self, price: Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: price,
@@ -199,6 +432,16 @@ impl Options {
         Ok(Decimal::from_f64(iv).unwrap())
     }
 
+    /// Determines whether an option is "in-the-money" based on its current price relative to strike price.
+    ///
+    /// An option is considered in-the-money when:
+    /// - For Call options: the underlying asset price is greater than or equal to the strike price
+    /// - For Put options: the underlying asset price is less than or equal to the strike price
+    ///
+    /// This status is important for evaluating the option's current value and potential profitability.
+    ///
+    /// # Returns
+    /// `true` if the option is in-the-money, `false` otherwise
     pub fn is_in_the_money(&self) -> bool {
         match self.option_style {
             OptionStyle::Call => self.underlying_price >= self.strike_price,
@@ -206,13 +449,40 @@ impl Options {
         }
     }
 
+    /// Calculates the time value component of an option's price.
+    ///
+    /// Time value represents the portion of an option's premium that exceeds its intrinsic value.
+    /// It reflects the market's expectation that the option may become more valuable before expiration
+    /// due to potential favorable movements in the underlying asset price.
+    ///
+    /// The calculation uses the Black-Scholes model to determine the total option price,
+    /// then subtracts the intrinsic value to find the time value component.
+    ///
+    /// # Returns
+    /// - `Ok(Decimal)` containing the time value (never negative, minimum value is zero)
+    /// - `Err` if the price calculation encounters an error
     pub fn time_value(&self) -> OptionsResult<Decimal> {
         let option_price = self.calculate_price_black_scholes()?.abs();
         let intrinsic_value = self.intrinsic_value(self.underlying_price)?;
-
         Ok((option_price - intrinsic_value).max(Decimal::ZERO))
     }
 
+    /// Validates that the option parameters are in a valid state for calculations.
+    ///
+    /// This function performs comprehensive validation of the option's critical parameters
+    /// to ensure they meet basic requirements for meaningful financial calculations.
+    /// It logs detailed error messages when validation fails.
+    ///
+    /// Validation checks include:
+    /// - Underlying symbol is not empty
+    /// - Implied volatility is non-negative
+    /// - Quantity is non-zero
+    /// - Risk-free rate is non-negative
+    /// - Strike price is positive and non-zero
+    /// - Underlying price is positive and non-zero
+    ///
+    /// # Returns
+    /// `true` if all parameters are valid, `false` if any validation fails
     pub(crate) fn validate(&self) -> bool {
         if self.underlying_symbol == *"" {
             error!("Underlying symbol is empty");

@@ -8,24 +8,85 @@ use crate::{Positive, pos};
 use chrono::{Duration, Local, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// Represents different timeframes for volatility calculations
+/// Represents different timeframes for volatility calculations.
+///
+/// This enum provides a standardized way to represent various time periods
+/// used in financial calculations, including common periods like days, weeks,
+/// months, and years, as well as custom periods defined by the user.
+///
+/// The `TimeFrame` enum is used throughout the library to specify the timeframe
+/// for calculations like volatility, returns, and other time-dependent metrics.
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::utils::time::TimeFrame;
+/// use optionstratlib::pos;
+///
+/// // Using standard timeframes
+/// let daily = TimeFrame::Day;
+/// let weekly = TimeFrame::Week;
+///
+/// // Using custom timeframes
+/// let custom_period = TimeFrame::Custom(pos!(360.0));
+///
+/// // Accessing the number of periods per year
+/// let periods_per_year = daily.periods_per_year(); // Returns 252.0
+/// let custom_periods = custom_period.periods_per_year(); // Returns 360.0
+/// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum TimeFrame {
-    Microsecond,      // 1-microsecond data
-    Millisecond,      // 1-millisecond data
-    Second,           // 1-second data
-    Minute,           // 1-minute data
-    Hour,             // 1-hour data
-    Day,              // Daily data
-    Week,             // Weekly data
-    Month,            // Monthly data
-    Quarter,          // Quarterly data
-    Year,             // Yearly data
-    Custom(Positive), // Custom periods per year
+    /// 1-microsecond data.
+    Microsecond,
+    /// 1-millisecond data.
+    Millisecond,
+    /// 1-second data.
+    Second,
+    /// 1-minute data.
+    Minute,
+    /// 1-hour data.
+    Hour,
+    /// Daily data.
+    Day,
+    /// Weekly data.
+    Week,
+    /// Monthly data.
+    Month,
+    /// Quarterly data.
+    Quarter,
+    /// Yearly data.
+    Year,
+    /// Custom periods per year.
+    Custom(Positive),
 }
 
 impl TimeFrame {
-    /// Returns the number of periods in a year for this timeframe
+    /// Returns the number of periods in a trading year for this timeframe.
+    ///
+    /// This function calculates the number of periods that occur within a trading year
+    /// based on the chosen `TimeFrame`.  A trading year is assumed to have 252 days
+    /// and 6.5 trading hours per day.
+    ///
+    /// For custom timeframes, the number of periods is directly specified by the user.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use optionstratlib::utils::time::TimeFrame;
+    /// use optionstratlib::pos;
+    ///
+    /// let daily = TimeFrame::Day;
+    /// let periods_per_year = daily.periods_per_year(); // Returns 252
+    /// assert_eq!(periods_per_year, pos!(252.0));
+    ///
+    /// let hourly = TimeFrame::Hour;
+    /// let periods_per_year = hourly.periods_per_year(); // Returns 1638
+    /// assert_eq!(periods_per_year, pos!(1638.0));
+    ///
+    /// let custom = TimeFrame::Custom(pos!(360.0));
+    /// let periods_per_year = custom.periods_per_year(); // Returns 360
+    /// assert_eq!(periods_per_year, pos!(360.0));
+    /// ```
     pub fn periods_per_year(&self) -> Positive {
         match self {
             TimeFrame::Microsecond => {
@@ -128,27 +189,67 @@ pub fn convert_time_frame(
     value * conversion_factor
 }
 
+/// Returns tomorrow's date in "dd-mmm-yyyy" format (lowercase).
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::utils::time::get_tomorrow_formatted;
+/// let tomorrow = get_tomorrow_formatted();
+/// println!("{}", tomorrow); // Output will vary depending on the current date.
+/// ```
 pub fn get_tomorrow_formatted() -> String {
     let tomorrow = Local::now().date_naive() + Duration::days(1);
     tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
+/// Returns the current date formatted as "dd-mmm-yyyy" in lowercase.
+///
+/// # Examples
+///
+/// ```
+/// use chrono::Local;
+/// use optionstratlib::utils::time::get_today_formatted;
+///
+/// let today_formatted = get_today_formatted();
+/// let expected_format = Local::now().date_naive().format("%d-%b-%Y").to_string().to_lowercase();
+/// assert_eq!(today_formatted, expected_format);
+/// ```
 pub fn get_today_formatted() -> String {
     let today = Local::now().date_naive();
     today.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
+/// Formats the current date or the next day's date based on the current UTC time.
+///
+/// The function checks the current UTC time against a cutoff time of 18:30:00.
+/// If the current time is past the cutoff, the date for the next day is returned.
+/// Otherwise, the current date is returned.  The returned date is formatted
+/// as `dd-mmm-yyyy` in lowercase. Note that getting the next day is done safely,
+/// handling potential overflow (e.g. the last day of the year).
+///
+/// Returns:
+///
+/// A lowercase String representing the formatted date.
+///
+/// # Examples
+///
+/// ```
+/// use chrono::{Utc, NaiveTime, Timelike};
+/// use tracing::info;
+/// use optionstratlib::utils::time::get_today_or_tomorrow_formatted;
+///
+/// info!("{}", get_today_or_tomorrow_formatted());
+/// ```
 pub fn get_today_or_tomorrow_formatted() -> String {
     let cutoff_time = NaiveTime::from_hms_opt(18, 30, 0).unwrap();
     let now = Utc::now();
-
     // Get the date we should use based on current UTC time
     let target_date = if now.time() > cutoff_time {
         now.date_naive().succ_opt().unwrap_or(now.date_naive()) // Get next day safely
     } else {
         now.date_naive()
     };
-
     target_date.format("%d-%b-%Y").to_string().to_lowercase()
 }
 

@@ -26,10 +26,16 @@ use std::str::FromStr;
 use std::{f64, fmt};
 use tracing::error;
 
+/// Represents basic information about a trading strategy.
+///
+/// This struct is used to store the name, type, and description of a strategy.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct StrategyBasics {
+    /// The name of the strategy.
     pub name: String,
+    /// The type of the strategy.  See the [`StrategyType`] enum for possible values.
     pub kind: StrategyType,
+    /// A description of the strategy.
     pub description: String,
 }
 
@@ -101,31 +107,52 @@ pub trait Strategable:
     }
 }
 
-/// This enum represents different types of trading strategies.
-/// Each variant represents a specific strategy type.
+/// Represents different option trading strategies.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum StrategyType {
+    /// Bull Call Spread strategy.
     BullCallSpread,
+    /// Bear Call Spread strategy.
     BearCallSpread,
+    /// Bull Put Spread strategy.
     BullPutSpread,
+    /// Bear Put Spread strategy.
     BearPutSpread,
+    /// Long Butterfly Spread strategy.
     LongButterflySpread,
+    /// Short Butterfly Spread strategy.
     ShortButterflySpread,
+    /// Iron Condor strategy.
     IronCondor,
+    /// Iron Butterfly strategy.
     IronButterfly,
+    /// Long Straddle strategy.
     LongStraddle,
+    /// Short Straddle strategy.
     ShortStraddle,
+    /// Long Strangle strategy.
     LongStrangle,
+    /// Short Strangle strategy.
     ShortStrangle,
+    /// Covered Call strategy.
     CoveredCall,
+    /// Protective Put strategy.
     ProtectivePut,
+    /// Collar strategy.
     Collar,
+    /// Long Call strategy.
     LongCall,
+    /// Long Put strategy.
     LongPut,
+    /// Short Call strategy.
     ShortCall,
+    /// Short Put strategy.
     ShortPut,
+    /// Poor Man's Covered Call strategy.
     PoorMansCoveredCall,
+    /// Call Butterfly strategy.
     CallButterfly,
+    /// Custom strategy.
     Custom,
 }
 
@@ -162,39 +189,145 @@ impl FromStr for StrategyType {
 }
 
 impl StrategyType {
+    /// Checks if a given string is a valid `StrategyType`.
+    ///
+    /// # Arguments
+    ///
+    /// * `strategy` - A string slice representing the strategy type.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the string is a valid `StrategyType`, `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use optionstratlib::strategies::base::StrategyType;
+    /// assert!(StrategyType::is_valid("BullCallSpread"));
+    /// assert!(!StrategyType::is_valid("InvalidStrategy"));
+    /// ```
     pub fn is_valid(strategy: &str) -> bool {
         StrategyType::from_str(strategy).is_ok()
     }
 }
-
 impl fmt::Display for StrategyType {
+    /// Formats the `StrategyType` for display.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - A mutable formatter.
+    ///
+    /// # Returns
+    ///
+    /// A `fmt::Result` indicating whether the formatting was successful.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-/// Represents a trading strategy.
+/// Represents a complete options trading strategy with risk-reward parameters.
 ///
-/// A strategy consists of the following properties:
+/// A strategy encapsulates all the information needed to describe, analyze, and
+/// trade a specific options strategy. It includes identifying information, the positions
+/// that make up the strategy, and critical risk metrics such as maximum profit/loss
+/// and break-even points.
 ///
-/// - `name`: The name of the strategy.
-/// - `kind`: The type of the strategy.
-/// - `description`: A description of the strategy.
-/// - `legs`: A vector of positions that make up the strategy.
-/// - `max_profit`: The maximum potential profit of the strategy (optional).
-/// - `max_loss`: The maximum potential loss of the strategy (optional).
-/// - `break_even_points`: A vector of break-even points for the strategy.
+/// This structure serves as the foundation for strategy analysis, visualization,
+/// and trading execution within the options trading framework.
+///
 pub struct Strategy {
+    /// The name of the strategy, which identifies it among other strategies.
     pub name: String,
+
+    /// The type of the strategy, categorizing it according to standard options strategies.
     pub kind: StrategyType,
+
+    /// A textual description explaining the strategy's purpose, construction, and typical market scenarios.
     pub description: String,
+
+    /// A collection of positions (or legs) that together form the complete strategy.
+    /// Each position represents an option contract or underlying asset position.
     pub legs: Vec<Position>,
+
+    /// The maximum potential profit of the strategy, if limited and known.
+    /// Expressed as an absolute value, not percentage.
     pub max_profit: Option<f64>,
+
+    /// The maximum potential loss of the strategy, if limited and known.
+    /// Expressed as an absolute value, not percentage.
     pub max_loss: Option<f64>,
+
+    /// The price points of the underlying asset at which the strategy neither makes a profit nor a loss.
+    /// These points are crucial for strategy planning and risk management.
     pub break_even_points: Vec<Positive>,
 }
 
+/// Creates a new `Strategy` instance.
+///
+/// This function initializes a new trading strategy with the given name, kind, and description.  The `legs`, `max_profit`, `max_loss`, and `break_even_points` are initialized as empty or `None`.
+///
+/// # Arguments
+///
+/// * `name` - The name of the strategy.
+/// * `kind` - The type of the strategy  (e.g., BullCallSpread, LongStraddle).
+/// * `description` - A description of the strategy.
+///
+/// # Returns
+///
+/// A new `Strategy` instance.
+///
+/// # Example
+///
+/// ```
+/// use optionstratlib::strategies::base::{Strategy, StrategyType};
+/// let strategy = Strategy::new(
+///     "My Strategy".to_string(),
+///     StrategyType::LongCall,
+///     "A simple long call strategy".to_string(),
+/// );
+///
+/// assert_eq!(strategy.name, "My Strategy");
+/// assert_eq!(strategy.kind, StrategyType::LongCall);
+/// assert_eq!(strategy.description, "A simple long call strategy");
+/// assert!(strategy.legs.is_empty());
+/// assert_eq!(strategy.max_profit, None);
+/// assert_eq!(strategy.max_loss, None);
+/// assert!(strategy.break_even_points.is_empty());
+/// ```
 impl Strategy {
+    /// Creates a new `Strategy` instance.
+    ///
+    /// This function initializes a new trading strategy with the given name, kind, and description.
+    /// The `legs`, `max_profit`, `max_loss`, and `break_even_points` are initialized as empty or `None`.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the strategy.
+    /// * `kind` - The type of the strategy (e.g., BullCallSpread, LongStraddle).
+    /// * `description` - A description of the strategy.
+    ///
+    /// # Returns
+    ///
+    /// A new `Strategy` instance.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use optionstratlib::strategies::base::{Strategy, StrategyType};
+    /// let strategy = Strategy::new(
+    ///     "My Strategy".to_string(),
+    ///     StrategyType::LongCall,
+    ///     "A simple long call strategy".to_string(),
+    /// );
+    ///
+    /// assert_eq!(strategy.name, "My Strategy");
+    /// assert_eq!(strategy.kind, StrategyType::LongCall);
+    /// assert_eq!(strategy.description, "A simple long call strategy");
+    /// assert!(strategy.legs.is_empty());
+    /// assert_eq!(strategy.max_profit, None);
+    /// assert_eq!(strategy.max_loss, None);
+    /// assert!(strategy.break_even_points.is_empty());
+    /// ```
     pub fn new(name: String, kind: StrategyType, description: String) -> Self {
         Strategy {
             name,
@@ -208,11 +341,25 @@ impl Strategy {
     }
 }
 
+/// Defines a set of strategies for options trading.  Provides methods for calculating key metrics
+/// such as profit/loss, cost, break-even points, and price ranges.  Implementations of this trait
+/// must also implement the `Validable`, `Positionable`, and `BreakEvenable` traits.
 pub trait Strategies: Validable + Positionable + BreakEvenable {
+    /// Retrieves the underlying asset price. The default implementation panics with a message
+    /// indicating that the underlying price is not applicable for the strategy.
+    ///
+    /// # Panics
+    /// Panics if the underlying price is not applicable for this strategy.
     fn get_underlying_price(&self) -> Positive {
         panic!("Underlying price is not applicable for this strategy");
     }
 
+    /// Calculates the maximum possible profit for the strategy.
+    /// The default implementation returns an error indicating that the operation is not supported.
+    ///
+    /// # Returns
+    /// * `Ok(Positive)` - The maximum possible profit.
+    /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
     fn max_profit(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "max_profit",
@@ -220,10 +367,22 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
         ))
     }
 
+    /// Calculates the maximum possible profit for the strategy, potentially using an iterative approach.
+    /// Defaults to calling `max_profit`.
+    ///
+    /// # Returns
+    /// * `Ok(Positive)` - The maximum possible profit.
+    /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
     fn max_profit_iter(&mut self) -> Result<Positive, StrategyError> {
         self.max_profit()
     }
 
+    /// Calculates the maximum possible loss for the strategy.
+    /// The default implementation returns an error indicating that the operation is not supported.
+    ///
+    /// # Returns
+    /// * `Ok(Positive)` - The maximum possible loss.
+    /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
     fn max_loss(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "max_loss",
@@ -231,35 +390,51 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
         ))
     }
 
+    /// Calculates the maximum possible loss for the strategy, potentially using an iterative approach.
+    /// Defaults to calling `max_loss`.
+    ///
+    /// # Returns
+    /// * `Ok(Positive)` - The maximum possible loss.
+    /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
     fn max_loss_iter(&mut self) -> Result<Positive, StrategyError> {
         self.max_loss()
     }
 
-    /// Calculates the total cost (premium paid Long - premium get short) of the strategy.
+    /// Calculates the total cost of the strategy, which is the sum of the absolute cost of all positions.
     ///
     /// # Returns
-    /// `f64` - The total cost will be zero if the strategy is not applicable.
-    ///
+    /// * `Ok(Positive)` - The total cost of the strategy.
+    /// * `Err(PositionError)` - If there is an error retrieving the positions.
     fn total_cost(&self) -> Result<Positive, PositionError> {
         let positions = self.get_positions()?;
         let costs = positions
             .iter()
             .map(|p| p.total_cost().unwrap())
             .sum::<Positive>();
-
         Ok(costs)
     }
 
+    /// Calculates the net cost of the strategy, which is the sum of the costs of all positions,
+    /// considering premiums paid and received.
+    ///
+    /// # Returns
+    /// * `Ok(Decimal)` - The net cost of the strategy.
+    /// * `Err(PositionError)` - If there is an error retrieving the positions.
     fn net_cost(&self) -> Result<Decimal, PositionError> {
         let positions = self.get_positions()?;
         let costs = positions
             .iter()
             .map(|p| p.net_cost().unwrap())
             .sum::<Decimal>();
-
         Ok(costs)
     }
 
+    /// Calculates the net premium received for the strategy. This is the total premium received from short positions
+    /// minus the total premium paid for long positions. If the result is negative, it returns zero.
+    ///
+    /// # Returns
+    /// * `Ok(Positive)` - The net premium received.
+    /// * `Err(StrategyError)` - If there is an error retrieving the positions.
     fn net_premium_received(&self) -> Result<Positive, StrategyError> {
         let positions = self.get_positions()?;
         let costs = positions
@@ -267,19 +442,22 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
             .filter(|p| p.option.side == Side::Long)
             .map(|p| p.net_cost().unwrap())
             .sum::<Decimal>();
-
         let premiums = positions
             .iter()
             .filter(|p| p.option.side == Side::Short)
             .map(|p| p.net_premium_received().unwrap())
             .sum::<Positive>();
-
         match premiums > costs {
             true => Ok(premiums - costs),
             false => Ok(Positive::ZERO),
         }
     }
 
+    /// Calculates the total fees for the strategy by summing the fees of all positions.
+    ///
+    /// # Returns
+    /// * `Ok(Positive)` - The total fees.
+    /// * `Err(StrategyError)` - If there is an error retrieving positions or calculating fees.
     fn fees(&self) -> Result<Positive, StrategyError> {
         let mut fee = Positive::ZERO;
         let positions = match self.get_positions() {
@@ -293,13 +471,18 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
                 ));
             }
         };
-
         for position in positions {
             fee += position.fees()?;
         }
         Ok(fee)
     }
 
+    /// Calculates the profit area for the strategy. The default implementation returns an error
+    /// indicating that the operation is not supported.
+    ///
+    /// # Returns
+    /// * `Ok(Decimal)` - The profit area.
+    /// * `Err(StrategyError)` - If the operation is not supported.
     fn profit_area(&self) -> Result<Decimal, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "profit_area",
@@ -307,6 +490,12 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
         ))
     }
 
+    /// Calculates the profit ratio for the strategy. The default implementation returns an error
+    /// indicating that the operation is not supported.
+    ///
+    /// # Returns
+    /// * `Ok(Decimal)` - The profit ratio.
+    /// * `Err(StrategyError)` - If the operation is not supported.
     fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "profit_ratio",
@@ -314,23 +503,33 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
         ))
     }
 
+    /// Determines the price range to display for the strategy's profit/loss graph.  This range is
+    /// calculated based on the break-even points, the underlying price, and the maximum and minimum
+    /// strike prices.  The range is expanded by applying `STRIKE_PRICE_LOWER_BOUND_MULTIPLIER` and
+    /// `STRIKE_PRICE_UPPER_BOUND_MULTIPLIER` to the minimum and maximum prices respectively.
+    ///
+    /// # Returns
+    /// * `Ok((Positive, Positive))` - A tuple containing the start and end prices of the range.
+    /// * `Err(StrategyError)` - If there is an error retrieving necessary data for the calculation.
     fn range_to_show(&self) -> Result<(Positive, Positive), StrategyError> {
         let mut all_points = self.get_break_even_points()?.clone();
         let (first_strike, last_strike) = self.max_min_strikes()?;
         let underlying_price = self.get_underlying_price();
 
-        // Calculate the largest difference from the underlying price
+        // Calculate the largest difference from the underlying price to furthest strike
         let max_diff = (last_strike.value() - underlying_price.value())
             .abs()
             .max((first_strike.value() - underlying_price.value()).abs());
 
-        // Calculate limits in a single step
+        // Expand range by max_diff
         all_points.push(
             (underlying_price - max_diff)
                 .max(Positive::ZERO)
                 .min(first_strike),
         );
         all_points.push((underlying_price + max_diff).max(last_strike));
+
+        // Sort to find min and max
         all_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let start_price = *all_points.first().unwrap() * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
@@ -338,11 +537,21 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
         Ok((start_price, end_price))
     }
 
+    /// Generates a vector of prices within the display range, using a specified step.
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Positive>)` - A vector of prices.
+    /// * `Err(StrategyError)` - If there is an error calculating the display range.
     fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (start_price, end_price) = self.range_to_show()?;
         Ok(calculate_price_range(start_price, end_price, step))
     }
 
+    /// Returns a sorted vector of unique strike prices for all positions in the strategy.
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Positive>)` - A vector of strike prices.
+    /// * `Err(StrategyError)` - If there are no positions or an error occurs retrieving them.
     fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
         let positions = match self.get_positions() {
             Ok(positions) => positions,
@@ -355,7 +564,6 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
                 ));
             }
         };
-
         let strikes: Vec<Positive> = positions
             .iter()
             .map(|leg| leg.option.strike_price)
@@ -363,13 +571,17 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
             .into_iter()
             .sorted()
             .collect();
-
         Ok(strikes)
     }
 
+    /// Returns the minimum and maximum strike prices from the positions in the strategy.
+    /// Considers underlying price when applicable, ensuring the returned range includes it.
+    ///
+    /// # Returns
+    /// * `Ok((Positive, Positive))` - A tuple containing the minimum and maximum strike prices.
+    /// * `Err(StrategyError)` - If no strikes are found or if an error occurs retrieving positions.
     fn max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
         let strikes = self.strikes()?;
-
         if strikes.is_empty() {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -378,13 +590,11 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
                 },
             ));
         }
-
         let mut min = strikes
             .iter()
             .cloned()
             .fold(Positive::INFINITY, Positive::min);
         let mut max = strikes.iter().cloned().fold(Positive::ZERO, Positive::max);
-
         // If underlying_price is not Positive::ZERO, adjust min and max values
         let underlying_price = self.get_underlying_price();
         if underlying_price != Positive::ZERO {
@@ -397,19 +607,15 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
                 max = underlying_price;
             }
         }
-
         Ok((min, max))
     }
 
-    /// Calculates the range of profit based on break-even points for any strategy that implements
-    /// the `Strategies` trait. Break-even points are determined using the `get_break_even_points` method.
+    /// Calculates the range of prices where the strategy is profitable, based on the break-even points.
     ///
-    /// # Returns
-    ///
-    /// * `None` - if there are less than two break-even points.
-    /// * `Some(Positive)` - the difference between the highest and lowest break-even points,
-    ///   or the difference between the first and second break-even points if there are exactly two.
-    ///
+    /// # Returns:
+    /// * `Ok(Positive)` - The difference between the highest and lowest break-even points.  Returns
+    ///   `Positive::INFINITY` if there is only one break-even point.
+    /// * `Err(StrategyError)` - if there are no break-even points.
     fn range_of_profit(&self) -> Result<Positive, StrategyError> {
         let mut break_even_points = self.get_break_even_points()?.clone();
         match break_even_points.len() {
@@ -426,10 +632,22 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
         }
     }
 
+    /// Returns a vector of expiration dates for the strategy.
+    ///
+    /// # Returns
+    /// * `Result<Vec<ExpirationDate>, StrategyError>` - A vector of expiration dates, or an error
+    ///   if not implemented for the specific strategy.
     fn expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
         unimplemented!("Expiration dates is not implemented for this strategy")
     }
 
+    /// Sets the expiration date for the strategy.
+    ///
+    /// # Arguments
+    /// * `expiration_date` - The new expiration date.
+    ///
+    /// # Returns
+    /// * `Result<(), StrategyError>` -  An error if not implemented for the specific strategy.
     fn set_expiration_date(
         &mut self,
         _expiration_date: ExpirationDate,
@@ -438,7 +656,18 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     }
 }
 
+/// Trait for strategies that can calculate and update break-even points.
+///
+/// This trait provides methods for retrieving and updating break-even points, which are
+/// crucial for determining profitability in various trading scenarios.
 pub trait BreakEvenable {
+    /// Retrieves the break-even points for the strategy.
+    ///
+    /// Returns a `Result` containing a reference to a vector of `Positive` values representing
+    /// the break-even points, or a `StrategyError` if the operation is not supported for the specific strategy.
+    ///
+    /// The default implementation returns a `StrategyError::OperationError` with `OperationErrorKind::NotSupported`.
+    /// Strategies implementing this trait should override this method if they support break-even point calculations.
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "get_break_even_points",
@@ -446,24 +675,57 @@ pub trait BreakEvenable {
         ))
     }
 
+    /// Updates the break-even points for the strategy.
+    ///
+    /// This method is responsible for recalculating and updating the break-even points based on
+    /// the current state of the strategy.
+    ///
+    /// The default implementation returns a `NotImplemented` error. Strategies implementing this trait
+    /// should override this method to provide specific update logic.
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         unimplemented!("Update break even points is not implemented for this strategy")
     }
 }
 
+/// This trait defines a way to validate a strategy.
+///
+/// The default implementation panics with a message indicating that validation
+/// is not applicable for the specific strategy.  Implementors of this trait
+/// should override the `validate` method to provide specific validation logic.
 pub trait Validable {
+    /// Validates the strategy.
+    ///
+    /// The default implementation panics, indicating that validation is not
+    /// applicable.  Implementors should override this method to provide
+    /// appropriate validation logic.
+    ///
+    /// Returns `true` if the strategy is valid, and `false` otherwise.
     fn validate(&self) -> bool {
         panic!("Validate is not applicable for this strategy");
     }
 }
 
+/// This trait defines methods for optimizing and validating option strategies.
+/// It combines the `Validable` and `Strategies` traits, requiring implementors
+/// to provide functionality for both validation and strategy generation.
 pub trait Optimizable: Validable + Strategies {
+    /// The type of strategy associated with this optimization.
     type Strategy: Strategies;
 
+    /// Finds the best ratio-based strategy within the given `OptionChain`.
+    ///
+    /// # Arguments
+    /// * `option_chain` - A reference to the `OptionChain` containing option data.
+    /// * `side` - A `FindOptimalSide` value specifying the filtering strategy.
     fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
     }
 
+    /// Finds the best area-based strategy within the given `OptionChain`.
+    ///
+    /// # Arguments
+    /// * `option_chain` - A reference to the `OptionChain` containing option data.
+    /// * `side` - A `FindOptimalSide` value specifying the filtering strategy.
     fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
@@ -504,6 +766,14 @@ pub trait Optimizable: Validable + Strategies {
         std::iter::empty()
     }
 
+    /// Finds the optimal strategy based on the given criteria.
+    /// The default implementation panics.  Specific strategies should override
+    /// this method to provide their own optimization logic.
+    ///
+    /// # Arguments
+    /// * `_option_chain` - A reference to the `OptionChain` containing option data.
+    /// * `_side` - A `FindOptimalSide` value specifying the filtering strategy.
+    /// * `_criteria` - An `OptimizationCriteria` value indicating the optimization goal (e.g., ratio, area).
     fn find_optimal(
         &mut self,
         _option_chain: &OptionChain,
@@ -513,10 +783,20 @@ pub trait Optimizable: Validable + Strategies {
         panic!("Find optimal is not applicable for this strategy");
     }
 
+    /// Checks if a short option is valid. The default implementation defers to `is_valid_long_option`.
+    ///
+    /// # Arguments
+    /// * `option` - A reference to the `OptionData` to validate.
+    /// * `side` - A reference to the `FindOptimalSide` specifying the filtering strategy.
     fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
         self.is_valid_long_option(option, side)
     }
 
+    /// Checks if a long option is valid based on the given criteria.
+    ///
+    /// # Arguments
+    /// * `option` - A reference to the `OptionData` to validate.
+    /// * `side` - A reference to the `FindOptimalSide` specifying the filtering strategy.
     fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
         match side {
             FindOptimalSide::Upper => option.strike_price >= self.get_underlying_price(),
@@ -528,6 +808,11 @@ pub trait Optimizable: Validable + Strategies {
         }
     }
 
+    /// Checks if the prices in the given `StrategyLegs` are valid.
+    /// Assumes the strategy consists of one long call and one short call by default.
+    ///
+    /// # Arguments
+    /// * `legs` - A reference to the `StrategyLegs` containing the option data.
     fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
         // by default, we assume Options are one long call and one short call
         let (long, short) = match legs {
@@ -538,12 +823,36 @@ pub trait Optimizable: Validable + Strategies {
             && short.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
     }
 
+    /// Creates a new strategy from the given `OptionChain` and `StrategyLegs`.
+    /// The default implementation panics. Specific strategies must override this.
+    ///
+    /// # Arguments
+    /// * `_chain` - A reference to the `OptionChain` providing option data.
+    /// * `_legs` - A reference to the `StrategyLegs` defining the strategy's components.
     fn create_strategy(&self, _chain: &OptionChain, _legs: &StrategyLegs) -> Self::Strategy {
         panic!("Create strategy is not applicable for this strategy");
     }
 }
 
+/// The `Positionable` trait defines methods for managing positions within a trading strategy.
+/// These methods allow for adding, retrieving, and modifying positions, providing a common
+/// interface for different strategies to interact with position data.
 pub trait Positionable {
+    /// Adds a position to the strategy.
+    ///
+    /// # Arguments
+    ///
+    /// * `_position` - A reference to the `Position` to be added.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), PositionError>` - Returns `Ok(())` if the position was successfully added,
+    ///   or a `PositionError` if the operation is not supported by the strategy.
+    ///
+    /// # Default Implementation
+    ///
+    /// The default implementation returns an error indicating that adding a position is not
+    /// supported. Strategies that support adding positions should override this method.
     fn add_position(&mut self, _position: &Position) -> Result<(), PositionError> {
         Err(PositionError::unsupported_operation(
             std::any::type_name::<Self>(),
@@ -551,6 +860,18 @@ pub trait Positionable {
         ))
     }
 
+    /// Retrieves all positions held by the strategy.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<&Position>, PositionError>` - A `Result` containing a vector of references to
+    ///   the `Position` objects held by the strategy, or a `PositionError` if the operation is
+    ///   not supported.
+    ///
+    /// # Default Implementation
+    ///
+    /// The default implementation returns an error indicating that getting positions is not
+    /// supported. Strategies that manage positions should override this method.
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Err(PositionError::unsupported_operation(
             std::any::type_name::<Self>(),
@@ -558,6 +879,19 @@ pub trait Positionable {
         ))
     }
 
+    /// Retrieves a specific position based on option style, side, and strike.
+    ///
+    /// # Arguments
+    ///
+    /// * `_option_style` - The style of the option (Call or Put).
+    /// * `_side` - The side of the position (Long or Short).
+    /// * `_strike` - The strike price of the option.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<&mut Position>, PositionError>` - A `Result` containing a vector of mutable
+    ///   references to the matching `Position` objects, or a `PositionError` if the operation is not supported.
+    ///   This function currently uses `unimplemented!()`.
     fn get_position(
         &mut self,
         _option_style: &OptionStyle,
@@ -567,6 +901,17 @@ pub trait Positionable {
         unimplemented!("Modify position is not implemented for this strategy")
     }
 
+    /// Modifies an existing position.
+    ///
+    /// # Arguments
+    ///
+    /// * `_position` - A reference to the `Position` to be modified.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), PositionError>` - A `Result` indicating success or failure of the
+    ///   modification, or a `PositionError` if the operation is not supported.
+    ///   This function currently uses `unimplemented!()`.
     fn modify_position(&mut self, _position: &Position) -> Result<(), PositionError> {
         unimplemented!("Modify position is not implemented for this strategy")
     }

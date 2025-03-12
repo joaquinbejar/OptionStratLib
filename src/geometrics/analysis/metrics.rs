@@ -11,32 +11,6 @@ use rust_decimal::Decimal;
 /// curve information that spans different categories, including basic statistical measures,
 /// shape characteristics, range details, trend analysis, and risk evaluation.
 ///
-/// ## Components
-///
-/// - **Basic Metrics (`basic`)**:
-///   Includes fundamental statistical measures such as mean, median, mode, and standard deviation.
-///   These measures provide a quick overview of the distribution of the observations within the curve.
-///
-/// - **Shape Metrics (`shape`)**:
-///   Captures the structural characteristics of the curve, such as skewness, kurtosis,
-///   the locations of peaks and valleys, and the points where the curve inflects.
-///   Useful for understanding curve symmetry, tail behavior, and general shape nuances.
-///
-/// - **Range Metrics (`range`)**:
-///   Describes the range of the data, including minimum and maximum observed points,
-///   the extent between these points, and quartile-based statistical details such as
-///   interquartile range. Particularly helpful when analyzing variability in data distribution.
-///
-/// - **Trend Metrics (`trend`)**:
-///   Measures the directional tendencies of the curve over time. Includes the slope,
-///   intercept, and statistical goodness-of-fit (R² value) as well as moving averages.
-///   Ideal for identifying long-term trends and evaluating the predictive nature of the curve.
-///
-/// - **Risk Metrics (`risk`)**:
-///   Quantifies curve risk using various financial metrics, such as volatility, value-at-risk (VaR),
-///   expected shortfall, beta, and the Sharpe ratio. These metrics are often used to evaluate
-///   the risk-return profile in financial contexts.
-///
 /// ## Usage
 /// This structure is particularly helpful in domains requiring holistic curve analysis,
 /// such as:
@@ -84,15 +58,29 @@ use rust_decimal::Decimal;
 /// providing a versatile and standardized way to represent curve characteristics.
 #[derive(Debug, Clone)]
 pub struct Metrics {
-    // Basic statistics
+    /// - **Basic Metrics (`basic`)**:
+    ///   Includes fundamental statistical measures such as mean, median, mode, and standard deviation.
+    ///   These measures provide a quick overview of the distribution of the observations within the curve.
     pub basic: BasicMetrics,
-    // Shape characteristics
+    /// - **Shape Metrics (`shape`)**:
+    ///   Captures the structural characteristics of the curve, such as skewness, kurtosis,
+    ///   the locations of peaks and valleys, and the points where the curve inflects.
+    ///   Useful for understanding curve symmetry, tail behavior, and general shape nuances.
     pub shape: ShapeMetrics,
-    // Range information
+    /// - **Range Metrics (`range`)**:
+    ///   Describes the range of the data, including minimum and maximum observed points,
+    ///   the extent between these points, and quartile-based statistical details such as
+    ///   interquartile range. Particularly helpful when analyzing variability in data distribution.
     pub range: RangeMetrics,
-    // Trend analysis
+    /// - **Trend Metrics (`trend`)**:
+    ///   Measures the directional tendencies of the curve over time. Includes the slope,
+    ///   intercept, and statistical goodness-of-fit (R² value) as well as moving averages.
+    ///   Ideal for identifying long-term trends and evaluating the predictive nature of the curve.
     pub trend: TrendMetrics,
-    // Risk metrics
+    /// - **Risk Metrics (`risk`)**:
+    ///   Quantifies curve risk using various financial metrics, such as volatility, value-at-risk (VaR),
+    ///   expected shortfall, beta, and the Sharpe ratio. These metrics are often used to evaluate
+    ///   the risk-return profile in financial contexts.
     pub risk: RiskMetrics,
 }
 
@@ -184,240 +172,246 @@ impl Metrics {
 /// and distribution properties. These metrics are widely used in statistical analysis,
 /// curve analysis, and various financial or scientific computations.
 ///
-/// ## Fields
+/// # Fields
 ///
-/// - **mean**: [`Decimal`]
-///   - The arithmetic average of the dataset. Represents the central value where the sum
-///     of all data points is divided by the total number of points.
-///   - Useful for understanding the overall trend or expected value of the dataset.
+/// * `mean` - The arithmetic average of the dataset. Represents the central value where the sum
+///   of all data points is divided by the total number of points.
+///   Useful for understanding the overall trend or expected value of the dataset.
 ///
-/// - **median**: [`Decimal`]
-///   - The middle value in the dataset when sorted. If the dataset has an even number
-///     of elements, the median is the average of the two middle elements.
-///   - A robust measure of central tendency, particularly in datasets with outliers.
+/// * `median` - The middle value in the dataset when sorted. If the dataset has an even number
+///   of elements, the median is the average of the two middle elements.
+///   A robust measure of central tendency, particularly in datasets with outliers.
 ///
-/// - **mode**: [`Decimal`]
-///   - The most frequently occurring value in the dataset. If no value repeats, the
-///     mode might not be well-defined (or may represent multi-modal distributions).
-///   - Useful for identifying common or dominant values in a dataset.
+/// * `mode` - The most frequently occurring value in the dataset. If no value repeats, the
+///   mode might not be well-defined (or may represent multi-modal distributions).
+///   Useful for identifying common or dominant values in a dataset.
 ///
-/// - **std_dev**: [`Decimal`]
-///   - The standard deviation of the dataset, which quantifies the amount of variation
-///     or dispersion from the mean.
-///   - A key measure of data spread, often used for assessing volatility or risk in
-///     financial contexts.
+/// * `std_dev` - The standard deviation of the dataset, which quantifies the amount of variation
+///   or dispersion from the mean.
+///   A key measure of data spread, often used for assessing volatility or risk in
+///   financial contexts.
 ///
-/// ## Applications
+/// # Applications
 /// The `BasicMetrics` structure is utilized in various domains requiring descriptive statistics:
 ///
 /// - **Financial Analysis**:
 ///   - Evaluate price variations, returns, and risks.
+///
 /// - **Scientific Research**:
 ///   - Summarize observations and patterns in experimental data.
+///
 /// - **Data Science**:
 ///   - Understand distributions, clean data, and preprocess datasets for machine learning models.
 ///
-/// ## Integration
+/// # Integration
 /// The `BasicMetrics` structure is often used as part of larger metric aggregations, such as:
-/// - [`crate::geometrics::Metrics`]: Combines `BasicMetrics` with other
+/// - [`Metrics`]: Combines `BasicMetrics` with other
 ///   metrics for a detailed analysis of curve behavior.
 /// - [`AnalysisResult`]: Provides a high-level
 ///   result of statistical and shape analysis for curves.
 ///
-/// ## Remarks
+/// # Remarks
 /// - The values are expressed as [`Decimal`] to maintain precision, important in financial
 ///   computations or datasets requiring high accuracy.
 /// - The `BasicMetrics` structure is immutable and can be cloned/copied, making it efficient for use in
 ///   concurrent or parallel computations.
 ///
-/// ## Example Workflow
+/// # Example Workflow
 /// Typically, `BasicMetrics` is computed from a dataset using statistical functions
 /// and then integrated into a more comprehensive analysis pipeline.
 ///
-/// ## Related Concepts
-/// - [`ShapeMetrics`]: Captures shape-related properties.
-/// - [`RiskMetrics`]: Measures risk characteristics.
-/// - [`TrendMetrics`]: Represents time-based trends.
+/// # Related Concepts
+/// - [`ShapeMetrics`]: Captures shape-related properties like skewness and kurtosis.
+/// - [`RiskMetrics`]: Measures risk characteristics of financial instruments.
+/// - [`TrendMetrics`]: Represents time-based trends in data series.
 #[derive(Clone, Copy, Debug)]
 pub struct BasicMetrics {
+    /// The arithmetic mean (average) of the dataset.
+    /// Calculated by summing all values and dividing by the count of values.
+    /// Provides a measure of central tendency that is affected by all values,
+    /// including outliers.
     pub mean: Decimal,
+
+    /// The median value of the dataset.
+    /// Represents the middle value when all data points are arranged in ascending order.
+    /// For datasets with even count, it's the average of the two middle values.
+    /// Less sensitive to outliers than the mean.
     pub median: Decimal,
+
+    /// The most frequently occurring value in the dataset.
+    /// If multiple values occur with equal frequency, this typically represents
+    /// the first encountered mode or a calculated central mode.
+    /// For multi-modal distributions, this is a simplification.
     pub mode: Decimal,
+
+    /// The standard deviation of the dataset.
+    /// Measures the amount of variation or dispersion from the mean.
+    /// A low standard deviation indicates values tend to be close to the mean,
+    /// while a high standard deviation indicates values are spread over a wider range.
     pub std_dev: Decimal,
 }
 
 /// Represents shape-related analysis metrics for a given curve.
 ///
 /// # Overview
-/// The `ShapeMetrics` structure is designed to encapsulate key shape-related
-/// properties of a curve, as well as critical points that describe the curve's
-/// geometrical behavior. This structure is typically used during mathematical
-/// or statistical analysis of curves.
-///
-/// The main properties include:
-/// - **Skewness**: A measure of the asymmetry of the probability distribution
-///   of a real-valued random variable. This indicates the degree and direction
-///   of asymmetry of the curve's shape.
-/// - **Kurtosis**: A measure of the "tailedness" of the probability distribution.
-///   High kurtosis implies the presence of heavy tails, whereas low kurtosis
-///   indicates light tails.
-/// - **Peaks, Valleys, and Inflection Points**: These are points along the curve
-///   that highlight its geometrical features, such as high/low points and areas
-///   where the curvature direction changes.
+/// The `ShapeMetrics` structure encapsulates shape-related properties and critical
+/// points describing a curve's geometrical behavior. It's primarily used for
+/// mathematical and statistical analysis of curves representing data distributions
+/// or mathematical functions.
 ///
 /// # Fields
-/// - **skewness (`Decimal`)**:
-///   Describes the asymmetry of the curve's distribution.
-///   A positive value indicates a tail on the right, while a negative value
-///   implies a tail on the left.
-/// - **kurtosis (`Decimal`)**:
-///   Indicates the tailedness of the curve's distribution. Higher values correspond
-///   to more extreme values in the tails.
-/// - **peaks (`Vec<Point2D>`)**:
-///   Collection of `Point2D` instances indicating the global or local maxima (peaks) along the curve.
-/// - **valleys (`Vec<Point2D>`)**:
-///   Collection of `Point2D` instances representing the global or local minima (valleys) along the curve.
-/// - **inflection_points (`Vec<Point2D>`)**:
-///   Points where the curve changes its concavity, transitioning from concave up
-///   to concave down (or vice versa).
+/// * `skewness` - A measure of distribution asymmetry. Positive values indicate right
+///   tailing while negative values indicate left tailing.
+///
+/// * `kurtosis` - A measure of the "tailedness" or presence of outliers in the distribution.
+///   Higher values indicate heavier tails and more outliers compared to a normal distribution.
+///
+/// * `peaks` - Collection of points representing local or global maxima along the curve,
+///   stored as `Point2D` coordinates.
+///
+/// * `valleys` - Collection of points representing local or global minima along the curve,
+///   stored as `Point2D` coordinates.
+///
+/// * `inflection_points` - Points where the curve changes concavity (transitioning from
+///   concave up to concave down or vice versa), stored as `Point2D` coordinates.
 ///
 /// # Applications
-/// This structure is a core component of the `CurveAnalysisResult` and plays an
-/// essential role in:
-/// - Financial metrics analysis (e.g., identifying extreme price levels or trend reversals)
-/// - Mathematical curve investigation to describe its distribution and critical behaviors
-/// - Geometrical understanding of complex curve shapes during interpolation or model fitting
+/// This structure is commonly used in:
+/// - Financial analysis to identify trend reversals or extreme price levels
+/// - Statistical distribution analysis to characterize data shape properties
+/// - Mathematical modeling to identify critical points in curve functions
+/// - Visualization and interpretation of complex curve behaviors
 ///
-/// # Example Use in Statistical Analysis
-/// The `ShapeMetrics` structure is typically instantiated and analyzed as part
-/// of a comprehensive curve analysis process. Through this, important statistical
-/// and geometrical insights can be derived, such as:
-/// - Identifying skewed or symmetric curves
-/// - Evaluating the significance of outliers through kurtosis
-/// - Locating key turning points like peaks, valleys, or moments of inflection
-///
-/// # Traits Implemented
-/// - `Debug`: Provides a human-readable representation of the structure, useful for debugging.
-/// - `Clone`: Enables the structure to be cloned, creating a deep copy of its contents.
-///
-/// # Dependencies
-/// The `Point2D` type is used to represent all positional points. This ensures that
-/// points leverage the same high-precision `Decimal` type for accurate representation.
+/// # Relationship with Other Structures
+/// `ShapeMetrics` is typically part of the larger `AnalysisResult` structure
+/// that provides comprehensive curve analysis. It uses `Point2D` to represent
+/// all positional data with high-precision `Decimal` values.
 #[derive(Clone, Debug)]
 pub struct ShapeMetrics {
+    /// Describes the asymmetry of the curve's distribution.
+    /// A positive value indicates a right tail (right-skewed distribution),
+    /// while a negative value indicates a left tail (left-skewed distribution).
+    /// A value close to zero suggests symmetry.
     pub skewness: Decimal,
+
+    /// Indicates the "tailedness" or presence of outliers in the curve's distribution.
+    /// Higher values correspond to heavier tails and more outliers compared to
+    /// a normal distribution. Standard normal distribution has kurtosis of 3.0.
+    /// Often expressed as excess kurtosis (kurtosis - 3).
     pub kurtosis: Decimal,
+
+    /// Collection of `Point2D` instances representing local or global maxima (peaks)
+    /// along the curve. These points have higher y-values than their immediate
+    /// neighboring points.
     pub peaks: Vec<Point2D>,
+
+    /// Collection of `Point2D` instances representing local or global minima (valleys)
+    /// along the curve. These points have lower y-values than their immediate
+    /// neighboring points.
     pub valleys: Vec<Point2D>,
+
+    /// Points where the curve changes concavity, transitioning from concave up to
+    /// concave down (or vice versa). At these points, the second derivative equals zero
+    /// while changing sign.
     pub inflection_points: Vec<Point2D>,
 }
 
 /// Represents statistical and range-related metrics for a dataset.
 ///
-/// `RangeMetrics` is primarily designed to provide key statistical measures
-/// related to data ranges. This structure is particularly useful when analyzing
-/// numerical datasets, such as those derived from financial curves, scientific data,
-/// or computational geometry. Key information such as the minimum and maximum points,
-/// interquartile ranges, and quartiles are stored.
+/// `RangeMetrics` provides key statistical measures related to data ranges and distributions.
+/// This structure is particularly useful when analyzing numerical datasets from financial curves,
+/// scientific measurements, or computational geometry applications.
 ///
 /// # Fields
 ///
-/// - **min**: A `Point2D` structure representing the minimum point in the range.
-///   This defines the smallest x and y coordinates observed in the data.
-///   
-/// - **max**: A `Point2D` structure representing the maximum point in the range.
-///   This captures the largest x and y coordinates observed in the data.
+/// * `min` - The minimum point in the dataset, containing both x and y coordinates as the smallest values.
+///   This defines the lower boundary of the data range.
 ///
-/// - **range**: A `Decimal` value representing the difference between the maximum and
-///   minimum values in the dataset. This is a key measure of variability.
+/// * `max` - The maximum point in the dataset, containing both x and y coordinates as the largest values.
+///   This defines the upper boundary of the data range.
 ///
-/// - **quartiles**: A tuple `(Decimal, Decimal, Decimal)` representing the first (Q1),
-///   second (Q2, or median), and third (Q3) quartiles of the dataset. These provide
-///   insight into the distribution of the data within the range.
+/// * `range` - The numerical difference between the maximum and minimum values.
+///   Provides a simple measure of data dispersion or spread.
 ///
-/// - **interquartile_range**: The interquartile range (IQR) is a `Decimal` value
-///   that represents the spread between the first (Q1) and third (Q3) quartiles.
-///   This measure is a robust indicator of variability, as it excludes potential
-///   outliers.
+/// * `quartiles` - A tuple containing first quartile (Q1), median (Q2), and third quartile (Q3).
+///   These values divide the dataset into four equal parts, providing insight into data distribution.
 ///
-/// # Overview
+/// * `interquartile_range` - The difference between the third and first quartiles (Q3 - Q1).
+///   A robust statistical measure of dispersion that is less sensitive to outliers than the full range.
 ///
-/// The `RangeMetrics` struct focuses on summarizing key metrics of a dataset.
-/// It's especially suited for analyzing data distributions, identifying outliers
-/// through IQR, and pinpointing extreme values via its `min` and `max` fields.
-/// This structure ensures precision by utilizing `Decimal` for all numerical
-/// values, making it a great fit for applications requiring high numerical accuracy.
+/// # Usage
 ///
-/// Derived traits such as `Clone`, `Copy`, and `Debug` make the structure both
-/// versatile and convenient to use, whether duplicating values or debugging
-/// intermediate results.
+/// `RangeMetrics` is typically calculated as part of a larger statistical analysis workflow.
+/// It provides essential information for box plots, outlier detection, and distribution analysis.
+///
+/// This structure is part of the curves analysis module that provides comprehensive
+/// statistical and financial analysis tools for mathematical curves.
 #[derive(Clone, Copy, Debug)]
 pub struct RangeMetrics {
+    /// The minimum point in the dataset, containing the smallest x and y coordinates observed.
     pub min: Point2D,
+
+    /// The maximum point in the dataset, containing the largest x and y coordinates observed.
     pub max: Point2D,
+
+    /// The numerical difference between the maximum and minimum values,
+    /// representing the total span of the data.
     pub range: Decimal,
+
+    /// A tuple of three values representing the first quartile (Q1),
+    /// median (Q2), and third quartile (Q3) of the dataset.
     pub quartiles: (Decimal, Decimal, Decimal),
+
+    /// The difference between the third and first quartiles (Q3 - Q1),
+    /// providing a measure of statistical dispersion that ignores extremes.
     pub interquartile_range: Decimal,
 }
 
 /// Represents key metrics for analyzing trends within a dataset or curve.
 ///
 /// # Overview
-/// The `TrendMetrics` struct is used to store various metrics related to the
-/// trend or behavior of a dataset or curve. It includes statistical values
-/// necessary to describe the linear relationship and additional smoothed data
-/// for further analysis.
+/// This structure stores comprehensive metrics that describe the linear relationship
+/// and trend behavior in a dataset. It provides statistical values derived from
+/// linear regression analysis along with smoothed data points for visualization
+/// and further analysis.
 ///
 /// # Fields
-/// - **slope**: A `Decimal` representing the slope of the linear regression line.
-///     - Indicates the rate of change in the dependent variable (y-axis) with respect
-///       to the independent variable (x-axis).
-/// - **intercept**: A `Decimal` representing the y-intercept of the regression line.
-///     - Represents the value of the dependent variable when the independent variable
-///       is zero.
-/// - **r_squared**: A `Decimal` value known as the coefficient of determination.
-///     - Measures the goodness-of-fit of the regression line to the data. A value
-///       closer to 1 indicates a stronger fit.
-/// - **moving_average**: A `Vec<Point2D>` representing the smoothed version of the data points using a moving
-///   average technique.
-///     - Each `Point2D` in the vector contains an x and y coordinate for the smoothed dataset.
+/// - **slope**: The rate of change in the dependent variable (y-axis) with respect
+///   to the independent variable (x-axis), calculated from linear regression.
+/// - **intercept**: The y-coordinate where the regression line intersects the y-axis,
+///   representing the value when x = 0.
+/// - **r_squared**: The coefficient of determination that measures how well the
+///   data fits the regression model, with values closer to 1 indicating a better fit.
+/// - **moving_average**: A series of smoothed data points derived from the original
+///   dataset to reduce noise and highlight the underlying trend pattern.
 ///
 /// # Purpose
-/// The `TrendMetrics` struct serves a variety of use cases, including but not limited to:
-/// - Evaluating financial trends (e.g., stock price movements over time).
-/// - Assessing relationships in scientific or engineering datasets.
-/// - Fitting data to linear models for predictive analysis.
+/// `TrendMetrics` is particularly useful for:
+/// - Analyzing time-series data in financial markets
+/// - Evaluating performance trends over time
+/// - Quantifying the strength and direction of relationships between variables
+/// - Providing a basis for predictive modeling and forecasting
 ///
-/// # Usage
-/// Typically, this structure is the result of a trend analysis operation, where:
-/// - The slope and intercept are computed using linear regression.
-/// - The `r_squared` value is derived to assess accuracy and reliability.
-/// - The moving average is generated as part of smoothing operations to reduce
-///   noise and identify the true trend.
-///
-/// # Key Characteristics
-/// - **High Precision**: All numerical fields are of type `Decimal` to ensure accuracy and precision.
-/// - **Debugging**: Implements the `Debug` trait to facilitate easy inspection of values during development or testing.
-/// - **Clonable**: Implements `Clone` to allow duplication of an instance, useful for preserving metrics
-///   snapshots at different stages of data analysis.
-///
-/// # Example
-/// The `TrendMetrics` is commonly used in conjunction with data manipulation and statistical
-/// libraries for performing tasks such as regression analysis, smoothing, and statistical modeling.
-///
-/// - The `slope` and `intercept` values can be used directly to create the equation of a trend line:
-///   `y = slope * x + intercept`.
-/// - The `r_squared` value provides insights into the reliability of the linear model.
-/// - The moving average offers a simplified view of the data points, useful for visualizations and
-///   identifying key trends without noise.
-///
-/// This struct is most useful in applications that require detailed statistical computations and
-/// visualization of linear trends and smoothed data.
+/// This structure is a key component of the curve analysis module and works
+/// alongside other metric types to provide comprehensive statistical analysis.
 #[derive(Clone, Debug)]
 pub struct TrendMetrics {
+    /// The slope coefficient of the linear regression line, indicating the
+    /// rate and direction of change in the dataset.
     pub slope: Decimal,
+
+    /// The y-intercept of the regression line, showing the baseline value
+    /// when the independent variable equals zero.
     pub intercept: Decimal,
+
+    /// The coefficient of determination (R²), measuring how well the regression
+    /// line fits the actual data points. Values range from 0 to 1, where 1
+    /// represents a perfect fit.
     pub r_squared: Decimal,
+
+    /// A collection of points representing the smoothed version of the original
+    /// data, calculated using moving average techniques to reduce noise and
+    /// highlight the underlying trend.
     pub moving_average: Vec<Point2D>,
 }
 
@@ -430,81 +424,46 @@ pub struct TrendMetrics {
 /// asset, or investment strategy. These metrics provide insights into the
 /// variability, potential losses, and overall return of the analyzed entity.
 ///
-/// ## Components
-///
-/// - **Volatility (`volatility`)**:
-///   Measures the degree of variation in the returns of an asset or portfolio over time.
-///   It is a widely used indicator of market risk, reflecting the extent to which returns
-///   deviate from their average.
-///   
-/// - **Value at Risk (VaR) (`value_at_risk`)**:
-///   Quantifies the maximum expected loss of an investment over a defined time horizon,
-///   with a given confidence level. It is essential for understanding tail-risk and
-///   evaluating potential losses in extreme conditions.
-///
-/// - **Expected Shortfall (ES) (`expected_shortfall`)**:
-///   Represents the average loss in the worst-case scenarios (beyond the VaR threshold).
-///   It provides a more comprehensive assessment of tail risk than VaR alone.
-///
-/// - **Beta (`beta`)**:
-///   Measures the sensitivity of an asset's returns to the market returns.
-///   A beta greater than 1 indicates higher volatility compared to the market,
-///   while a beta less than 1 indicates lower volatility.
-///   Useful for determining the systemic risk in relation to the broader market.
-///
-/// - **Sharpe Ratio (`sharpe_ratio`)**:
-///   Indicates the risk-adjusted return by comparing the portfolio's excess return
-///   (return above the risk-free rate) to its volatility. It helps to evaluate
-///   whether the returns justify the associated risk profile.
-///
-/// ## Applications
+/// # Applications
 /// The `RiskMetrics` structure is commonly utilized in:
 ///
-/// - **Portfolio Management**:
-///   To assess and balance risk-return trade-offs in portfolio construction and optimization.
-/// - **Risk Management**:
-///   To estimate potential losses and evaluate exposure to adverse market conditions.
-/// - **Performance Analysis**:
-///   To compare the investment's performance against benchmarks and alternative strategies.
-/// - **Financial Modeling**:
-///   To perform stress testing, scenario analysis, and forecasting using historical data.
+/// - **Portfolio Management**: To assess and balance risk-return trade-offs
+/// - **Risk Management**: To estimate potential losses and evaluate market exposures
+/// - **Performance Analysis**: To compare against benchmarks and alternative strategies
+/// - **Financial Modeling**: To perform stress testing and scenario analysis
 ///
-/// ## Field Descriptions
+/// # Related Concepts
+/// - [`Metrics`]: Aggregates risk metrics alongside other statistical measures
+/// - **Financial Risk Indicators**: Additional measures like maximum drawdown,
+///   Treynor ratio, and Sortino ratio
 ///
-/// - **volatility**: [`Decimal`]
-///   - Indicates the standard deviation of returns, quantifying the asset's return variability.
-/// - **value_at_risk**: [`Decimal`]
-///   - Specifies the maximum expected loss at a specified confidence level (e.g., 95% or 99%).
-/// - **expected_shortfall**: [`Decimal`]
-///   - Represents the average loss in the worst scenarios beyond the VaR threshold.
-/// - **beta**: [`Decimal`]
-///   - Describes the systemic risk by measuring market sensitivity.
-/// - **sharpe_ratio**: [`Decimal`]
-///   - Indicates the risk-adjusted performance of the investment.
-///
-/// ## Remarks
-/// The `RiskMetrics` structure is a critical component in financial analysis and
-/// often serves as an input to higher-level structures like [`crate::geometrics::Metrics`]. By
-/// combining these risk metrics with other statistical measures, it is possible to
-/// gain a comprehensive understanding of the risk-return characteristics of an asset
-/// or portfolio.
-///
-/// ## Related Concepts
-/// - [`Metrics`]: Aggregates risk
-///   alongside other statistical measures (e.g., trend, range, and shape metrics).
-/// - **Financial Risk Indicators**:
-///   Includes measures like maximum drawdown, Treynor ratio, and Sortino ratio
-///   (typically used alongside `RiskMetrics` for advanced analysis).
-///
-/// ## Note
-/// For accuracy and meaningful interpretation, ensure that the data used to compute
-/// these metrics represents a sufficiently long-time horizon and is free from anomalies.
+/// # Note
+/// For accuracy, ensure the data used to compute these metrics represents a
+/// sufficiently long time horizon and is free from anomalies.
 #[derive(Clone, Copy, Debug)]
 pub struct RiskMetrics {
+    /// Measures the degree of variation in returns over time.
+    /// Represents the standard deviation of returns and is a widely used
+    /// indicator of market risk.
     pub volatility: Decimal,
+
+    /// Quantifies the maximum expected loss over a defined time horizon
+    /// with a given confidence level (typically 95% or 99%).
+    /// Essential for understanding tail-risk and evaluating potential losses.
     pub value_at_risk: Decimal,
+
+    /// Represents the average loss in worst-case scenarios beyond the VaR threshold.
+    /// Provides a more comprehensive assessment of tail risk than VaR alone.
     pub expected_shortfall: Decimal,
+
+    /// Measures the sensitivity of an asset's returns to market returns.
+    /// A beta greater than 1 indicates higher volatility compared to the market,
+    /// while a beta less than 1 indicates lower volatility.
     pub beta: Decimal,
+
+    /// Indicates the risk-adjusted return by comparing the portfolio's excess return
+    /// (return above the risk-free rate) to its volatility.
+    /// Helps evaluate whether returns justify the associated risk profile.
     pub sharpe_ratio: Decimal,
 }
 

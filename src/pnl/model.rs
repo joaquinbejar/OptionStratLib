@@ -5,22 +5,50 @@
 ******************************************************************************/
 use serde::{Deserialize, Serialize, Serializer};
 
+/// Represents a range of Profit and Loss (PnL) values for bucketing or categorizing financial results.
+///
+/// This structure defines a discrete interval of PnL values that can be used for:
+/// - Creating histograms of trading results
+/// - Defining profit/loss categories for analysis
+/// - Setting up thresholds for performance metrics
+/// - Grouping trading outcomes for statistical analysis
+///
+/// The range is defined as [lower, upper) where lower is inclusive and upper is exclusive.
+/// PnL values are represented as integer values (i32) rather than decimals for efficient
+/// bucketing and categorization.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct PnLRange {
     /// Lower bound of this PnL bucket (inclusive)
     pub lower: i32,
-
     /// Upper bound of this PnL bucket (exclusive)
     pub upper: i32,
 }
 
-// Implementa Serialize de manera personalizada para PnLRange
+/// Implements serialization for `PnLRange` using a custom string format.
+///
+/// This implementation serializes a `PnLRange` instance as a string in the format
+/// "[lower, upper)" where:
+/// - `lower` is the inclusive lower bound of the range
+/// - `upper` is the exclusive upper bound of the range
+///
+/// This format provides a clear, human-readable representation of the profit and loss
+/// range that preserves the mathematical half-open interval notation, making it ideal
+/// for display in reports, logs, or API responses.
+///
+/// # Example
+///
+/// A `PnLRange` with `lower = 100` and `upper = 200` will be serialized as "[100, 200)".
+///
+/// # Implementation Details
+///
+/// This custom serialization is needed because the default derived implementation would
+/// serialize the struct as a JSON object with separate fields, while this implementation
+/// provides a more compact string representation.
 impl Serialize for PnLRange {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        // Serializa como string con formato "[lower, upper)"
         serializer.serialize_str(&format!("[{}, {})", self.lower, self.upper))
     }
 }

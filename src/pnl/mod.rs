@@ -102,5 +102,8 @@
 //! * Income tracking
 //! * Timestamp-based calculations
 
+/// * [`model`] - Core data structures for financial analysis and PnL modeling
 pub mod model;
+
+/// * [`utils`] - Utility functions for data manipulation and calculations
 pub mod utils;

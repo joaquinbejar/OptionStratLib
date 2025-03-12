@@ -22,31 +22,15 @@ use std::ops::Index;
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
-/// The `Curve` struct is a fundamental representation of a curve, defined as a series
-/// of points in a two-dimensional Cartesian coordinate system (`Point2D` instances).
-/// Each curve is also associated with an `x_range`, specifying the inclusive domain
-/// of the curve in terms of its x-coordinates.
-///
 /// # Overview
-/// The `Curve` structure supports precise mathematical and computational operations,
-/// including interpolation, analysis, transformations, and intersections. The use of
-/// `Decimal` for `x_range` ensures high-precision calculations, making the struct
-/// particularly suitable for scientific, financial, or mathematical applications.
+/// The `Curve` struct is a fundamental representation of a curve, defined as a series
+/// of points in a two-dimensional Cartesian coordinate system. Each curve is associated
+/// with an `x_range`, specifying the inclusive domain of the curve in terms of its x-coordinates.
 ///
-/// # Fields
-/// - **points**:
-///   - A vector of `Point2D` values representing the points that define the curve.
-///   - Points must ideally be ordered along the x-axis to ensure meaningful interpolation
-///     and transformation operations.
-/// - **x_range**:
-///   - A tuple `(min_x, max_x)`, where both values are of type `Decimal`.
-///   - Specifies the range of valid x-values for the curve.
-///   - Helps in ensuring that any external operation on the curve (e.g., interpolation
-///     or slicing) remains within the computed bounds.
-///
-/// # Derivable Traits
-/// - `Debug`: Enables formatted output of the `Curve` for debugging purposes.
-/// - `Clone`: Allows duplication of a `Curve`, including all associated points and range.
+/// This structure supports precise mathematical and computational operations, including
+/// interpolation, analysis, transformations, and intersections. The use of `Decimal`
+/// for coordinates ensures high-precision calculations, making it particularly suitable
+/// for scientific, financial, or mathematical applications.
 ///
 /// # Usage
 /// The `Curve` struct acts as the basis for high-level operations provided within
@@ -62,9 +46,6 @@ use std::ops::Index;
 /// - Comparing curves through transformations or intersections
 /// - Calculating derivatives, integrals, and extrema along the curve
 ///
-/// Since curves rely on the `Point2D` structure for representation, this type adheres
-/// to the same precision and consistency expected from high-quality numerical computations.
-///
 /// # Constraints
 /// - All points in the `points` vector must lie within the specified `x_range`.
 /// - Methods working with `Curve` data will assume that the `points` vector is ordered
@@ -74,16 +55,15 @@ use std::ops::Index;
 /// # See Also
 /// - [`Point2D`]: The fundamental data type for representing points in 2D space.
 /// - [`MergeOperation`]: Enum for combining multiple curves.
-///
-/// # Fields
-/// - **points**:
-///   - A vector of `Point2D` objects that defines the curve in terms of its x-y plane coordinates.
-/// - **x_range**:
-///   - A tuple `(Decimal, Decimal)` that specifies the minimum and maximum x-coordinate values
-///     for the curve. Operations performed on the curve should ensure they fall within this range.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Curve {
+    /// A ordered set of `Point2D` objects that defines the curve in terms of its x-y plane coordinates.
+    /// Points are stored in a `BTreeSet` which automatically maintains them in sorted order by their x-coordinate.
     pub points: BTreeSet<Point2D>,
+
+    /// A tuple `(min_x, max_x)` that specifies the minimum and maximum x-coordinate values
+    /// for the curve. Operations performed on the curve should ensure they fall within this range.
+    /// Both values are of type `Decimal` to ensure high precision in boundary calculations.
     pub x_range: (Decimal, Decimal),
 }
 

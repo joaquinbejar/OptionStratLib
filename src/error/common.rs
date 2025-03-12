@@ -12,52 +12,65 @@ impl Error for OperationErrorKind {}
 ///
 /// This enum categorizes errors for better debugging and handling in a structured way.
 ///
-/// ## Variants:
+/// # Variants
 ///
-/// ### `NotSupported`
-/// Indicates that the requested operation is not supported for a given strategy type.
-/// - Fields:
-///   - `operation` (`String`): The name of the operation that was attempted.
-///   - `strategy_type` (`String`): The type of strategy for which the operation is not supported.
+/// * `NotSupported` - Indicates that the requested operation is not supported for a given strategy type
+///   or context. Used when there's an incompatibility between an operation and its execution context.
 ///
-/// Use this variant to signify an incompatibility between a requested operation and
-/// the context (e.g., trying to calculate an invalid metric for the strategy type).
+/// * `InvalidParameters` - Reflects that the operation was provided with invalid or insufficient parameters
+///   that prevent successful execution. Used when input validation fails.
 ///
-/// ### `InvalidParameters`
-/// Reflects that the operation was provided with invalid or insufficient parameters.
-/// - Fields:
-///   - `operation` (`String`): The name of the operation that failed.
-///   - `reason` (`String`): A human-readable explanation of why the parameters are invalid.
+/// # Examples
 ///
-/// Leverage this variant when a specific operation fails due to malformed input or missing
-/// configuration.
+/// ```
+/// use optionstratlib::error::OperationErrorKind;
 ///
-/// ## Example Use Cases:
-/// - `NotSupported`: Attempting to calculate delta for a non-standard options strategy.
-/// - `InvalidParameters`: Invalid expiration date or pricing information provided during
-///   probability or profit calculations.
+/// // Creating a NotSupported error
+/// let error = OperationErrorKind::NotSupported {
+///     operation: "calculate_delta".to_string(),
+///     reason: "Not applicable for binary options".to_string()
+/// };
 ///
-/// ## Implementation Notes:
-/// - This enum is useful for libraries or systems implementing and managing trading strategies where clear error reporting is critical.
-/// - It should be used consistently across the library wherever operations might fail due to strategy-specific issues or input validation errors.
+/// // Creating an InvalidParameters error
+/// let error = OperationErrorKind::InvalidParameters {
+///     operation: "calculate_premium".to_string(),
+///     reason: "Missing volatility input".to_string()
+/// };
+/// ```
 ///
-/// ## Integration:
-/// - Can be combined with other custom and standard error types to construct a comprehensive
-///   error-handling flow within the library.
-/// - Variants should provide enough information to guide library users or developers toward correcting the issue (e.g., suggesting valid operations or explaining the parameter issue).
+/// # Use Cases
 ///
-/// ## Debugging:
-/// Implements the `Debug` trait for detailed error information during development and testing.
+/// - Used in strategy implementations to signal operation compatibility issues
+/// - Used in validation layers to report problems with input parameters
+/// - Helps create clear error messages that guide users toward resolution
 ///
-/// ## Related Modules:
-/// - Strategy operations often interact with this error type to handle unsupported cases dynamically or to validate input correctness.
-/// - Closely related to `StrategyError` or other error categories from the `strategies` module.
+/// # Related Types
+///
+/// This error type is typically used alongside other specialized error enums in the
+/// error module, such as `StrategyError`, `OptionsError`, and others.
 #[derive(Debug)]
 pub enum OperationErrorKind {
-    /// Operation not supported for this strategy
-    NotSupported { operation: String, reason: String },
+    /// Operation not supported for this strategy or context
+    ///
+    /// Used when an operation cannot be performed due to incompatibility with
+    /// the target strategy type or other contextual constraints.
+    NotSupported {
+        /// The name of the operation that was attempted
+        operation: String,
+        /// A detailed explanation of why the operation is not supported
+        reason: String,
+    },
+
     /// Invalid parameters for operation
-    InvalidParameters { operation: String, reason: String },
+    ///
+    /// Used when the input parameters for an operation are invalid, insufficient,
+    /// or incompatible with the requirements of the operation.
+    InvalidParameters {
+        /// The name of the operation that failed
+        operation: String,
+        /// A detailed explanation of why the parameters are invalid
+        reason: String,
+    },
 }
 
 impl fmt::Display for OperationErrorKind {

@@ -199,13 +199,24 @@
 //!
 //! The implementation focuses on numerical stability and accurate moment calculations,
 //! particularly for extreme market conditions.
+//!
+
+/// * `chain` - Public module for handling option chains and related functionalities
 pub mod chain;
+
+/// * `legs` - Private module implementing multi-leg option strategies and combinations
 mod legs;
+
+/// * `utils` - Public module containing utility functions and helpers for financial calculations
 pub mod utils;
 
+/// * `options` - Private module with core option pricing models and option-specific functionality
 mod options;
 
+/// * `four` - Private module implementing the four calls and puts
 mod four;
+
+/// * `rnd` - Private module for random number generation and stochastic processes
 mod rnd;
 
 pub use four::FourOptions;

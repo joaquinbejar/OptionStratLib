@@ -14,83 +14,128 @@ impl Error for CurveError {}
 
 /// Represents different types of errors that can occur in the `curves` module.
 ///
-/// This enum provides categorization of errors that may be encountered while using
-/// the `curves` module for tasks such as interpolation, data analysis, or curve construction.
+/// This enum categorizes errors that may be encountered when working with curve-related
+/// operations such as interpolation, construction, analysis, and other mathematical
+/// operations on curves and points.
 ///
-/// ## Variants
+/// # Variants
 ///
-/// ### `Point2DError`
-/// Indicates an issue related to a 2D point operation.
-/// - Fields:
-///   - `reason` (`&'static str`): A static string explaining the nature of the error.
+/// ## `Point2DError`
+/// Represents errors related to 2D point operations.
 ///
-/// Use this variant to represent fundamental issues related to points, such as missing
-/// values or invalid coordinates.
+/// * `reason` - A static string explaining the specific point-related issue.
 ///
+/// This variant is used for fundamental issues with points like invalid coordinates,
+/// missing values, or formatting problems.
 ///
-/// ### `OperationError`
-/// Represents a broader category of operational errors, encapsulated by the
-/// [`OperationErrorKind`] enum.
-/// - Fields:
-///   - `OperationErrorKind`: Encapsulates the specific kind of operation failure.
+/// ## `OperationError`
+/// Encapsulates general operational errors.
 ///
+/// * `OperationErrorKind` - The specific kind of operation failure (see `OperationErrorKind` enum).
 ///
-/// ### `StdError`
-/// Wraps a standard error with additional context.
-/// - Fields:
-///   - `reason` (`String`): A dynamic string explaining the error in detail.
+/// Used when an operation fails due to unsupported features or invalid parameters.
 ///
-/// Leverage this for general-purpose error handling where a static string or specialized
-/// variant might not offer enough flexibility or context.
+/// ## `StdError`
+/// Wraps standard errors with additional context.
 ///
+/// * `reason` - A dynamic string providing detailed error information.
 ///
-/// ### `InterpolationError`
-/// Reflects issues encountered during a curve's interpolation process.
-/// - Fields:
-///   - `String`: A human-readable explanation of the problem.
+/// Suitable for general error cases where specialized variants don't apply.
 ///
-/// This variant is commonly used for failures in interpolating data points or generating
-/// smooth curves.
+/// ## `InterpolationError`
+/// Indicates issues during the curve interpolation process.
 ///
+/// * `String` - A human-readable explanation of the interpolation failure.
 ///
-/// ### `ConstructionError`
-/// Represents errors encountered during the construction of curves or related structures.
-/// - Fields:
-///   - `String`: A description of the problem that arose during construction.
+/// Used when problems occur during data point interpolation or curve generation.
 ///
-/// Use this variant when there are issues initializing or creating curve objects, such
-/// as missing inputs or unsupported formats.
+/// ## `ConstructionError`
+/// Represents errors during the construction of curves or related structures.
 ///
+/// * `String` - A description of the construction issue.
 ///
-/// ### `AnalysisError`
-/// Captures errors related to the analysis of curves.
-/// - Fields:
-///   - `String`: A detailed explanation of the problem during analysis.
+/// Applicable when curve initialization fails due to invalid inputs, unsupported
+/// configurations, or missing required parameters.
 ///
-/// Frequently used for scenarios where analytical methods, such as curve fitting
-/// or sampling, fail due to input errors or computational issues.
+/// ## `AnalysisError`
+/// Captures errors related to curve analysis operations.
 ///
+/// * `String` - A detailed explanation of the analysis failure.
 ///
-/// ## Integration
+/// Used for failures in analytical methods like curve fitting, differentiation,
+/// or other mathematical operations on curves.
 ///
-/// - This error type is closely tied to the `curves` module's functionality and is meant
-///   to be used wherever curve-related operations (e.g., interpolation, construction, or analysis) might fail.
-/// - It is part of a broader error handling system outlined in the `error` module.
+/// ## `MetricsError`
+/// Represents errors when calculating or processing curve metrics.
 ///
+/// * `String` - An explanation of the metrics-related issue.
 ///
-/// ## Debugging
+/// Used when metric calculations fail due to invalid inputs or computational issues.
 ///
-/// Errors of this type implement the `Debug` trait to aid in diagnosing issues during
-/// development and testing processes. This ensures detailed debug output for better traceability.
+/// # Usage
 ///
+/// This error type is designed to be used throughout the `curves` module wherever
+/// operations might fail. It provides structured error information to help diagnose
+/// and handle various failure scenarios.
+///
+/// # Implementation Notes
+///
+/// The error variants are designed to provide useful context for debugging and error handling.
+/// Each variant includes specific information relevant to its error category.
+///
+/// # Examples
+///
+/// ```rust
+/// // Example of creating a construction error
+/// use optionstratlib::error::CurveError;
+/// let error = CurveError::ConstructionError("Insufficient points to construct curve".to_string());
+///
+/// // Example of creating a point error
+/// let point_error = CurveError::Point2DError { reason: "Point coordinates out of bounds" };
+/// ```
 #[derive(Debug)]
 pub enum CurveError {
-    Point2DError { reason: &'static str },
-    OperationError(OperationErrorKind),
-    StdError { reason: String },
-    ConstructionError(String),
-    AnalysisError(String),
-    MetricsError(String),
+    /// Error related to 2D point operations
+    Point2DError {
+        /// Static description of the point-related issue
+        reason: &'static str,
+    },
+
+    /// General operational error
+    OperationError(
+        /// The specific kind of operation failure
+        OperationErrorKind,
+    ),
+
+    /// Standard error with additional context
+    StdError {
+        /// Detailed explanation of the error
+        reason: String,
+    },
+
+    /// Error during curve interpolation
+    InterpolationError(
+        /// Description of the interpolation issue
+        String,
+    ),
+
+    /// Error during curve or structure construction
+    ConstructionError(
+        /// Details about the construction failure
+        String,
+    ),
+
+    /// Error during curve analysis operations
+    AnalysisError(
+        /// Explanation of the analysis issue
+        String,
+    ),
+
+    /// Error when calculating or processing curve metrics
+    MetricsError(
+        /// Description of the metrics-related issue
+        String,
+    ),
 }
 
 /// Provides helper methods for constructing specific variants of the `CurvesError` type.
@@ -151,10 +196,33 @@ impl fmt::Display for CurveError {
             CurveError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
             CurveError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
             CurveError::MetricsError(reason) => write!(f, "Metrics error: {}", reason),
+            CurveError::InterpolationError(reason) => write!(f, "Interpolation error: {}", reason),
         }
     }
 }
 
+/// Type alias representing the result of operations related to curve calculations.
+///
+/// This type alias provides a standardized result type for functions that perform operations
+/// with mathematical curves, including interpolation, construction, analysis, and other
+/// curve-related operations.
+///
+/// # Type Parameters
+///
+/// * `T` - The success value type returned when operations complete successfully.
+///
+/// # Return Value
+///
+/// Returns either:
+/// * `Ok(T)` - The operation completed successfully with a value of type `T`.
+/// * `Err(CurveError)` - The operation failed, with a [`CurveError`] describing the specific failure.
+///
+/// # Usage
+///
+/// This result type is used throughout the curves module to provide consistent error handling
+/// for curve operations. It allows functions to return detailed error information using the
+/// [`CurveError`] enum when operations fail, while returning the expected value when successful.
+///
 pub type CurvesResult<T> = Result<T, CurveError>;
 
 /// Converts a `PositionError` into a `CurvesError` by mapping it to an

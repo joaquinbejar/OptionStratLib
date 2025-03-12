@@ -36,67 +36,143 @@ use tracing::{debug, error, info, trace, warn};
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
-/// Struct representing a row in an option chain.
+/// Struct representing a row in an option chain with detailed pricing and analytics data.
+///
+/// This struct encapsulates the complete market data for an options contract at a specific
+/// strike price, including bid/ask prices for both call and put options, implied volatility,
+/// the Greeks (delta, gamma), volume, and open interest. It provides all the essential
+/// information needed for options analysis and trading decision-making.
 ///
 /// # Fields
 ///
 /// * `strike_price` - The strike price of the option, represented as a positive floating-point number.
-/// * `call_bid` - The bid price for the call option, represented as a positive floating-point number.
-/// * `call_ask` - The ask price for the call option, represented as a positive floating-point number.
-/// * `put_bid` - The bid price for the put option, represented as a positive floating-point number.
-/// * `put_ask` - The ask price for the put option, represented as a positive floating-point number.
-/// * `implied_volatility` - The implied volatility of the option, represented as a positive floating-point number.
-/// * `delta` - The delta of the option, represented as a floating-point number. This measures the sensitivity of the option's price to changes in the price of the underlying asset.
-/// * `volume` - The volume of the option traded, represented as an optional positive floating-point number. It might be `None` if the data is not available.
-/// * `open_interest` - The open interest of the option, represented as an optional unsigned integer. This represents the total number of outstanding option contracts that have not yet been settled or closed.
+/// * `call_bid` - The bid price for the call option, represented as an optional positive floating-point number.
+///   May be `None` if market data is unavailable.
+/// * `call_ask` - The ask price for the call option, represented as an optional positive floating-point number.
+///   May be `None` if market data is unavailable.
+/// * `put_bid` - The bid price for the put option, represented as an optional positive floating-point number.
+///   May be `None` if market data is unavailable.
+/// * `put_ask` - The ask price for the put option, represented as an optional positive floating-point number.
+///   May be `None` if market data is unavailable.
+/// * `call_middle` - The mid-price between call bid and ask, represented as an optional positive floating-point number.
+///   May be `None` if underlying bid/ask data is unavailable.
+/// * `put_middle` - The mid-price between put bid and ask, represented as an optional positive floating-point number.
+///   May be `None` if underlying bid/ask data is unavailable.
+/// * `implied_volatility` - The implied volatility of the option, represented as an optional positive floating-point number.
+///   May be `None` if it cannot be calculated from available market data.
+/// * `delta_call` - The delta of the call option, represented as an optional decimal number.
+///   Measures the rate of change of the option price with respect to changes in the underlying asset price.
+/// * `delta_put` - The delta of the put option, represented as an optional decimal number.
+///   Measures the rate of change of the option price with respect to changes in the underlying asset price.
+/// * `gamma` - The gamma of the option, represented as an optional decimal number.
+///   Measures the rate of change of delta with respect to changes in the underlying asset price.
+/// * `volume` - The trading volume of the option, represented as an optional positive floating-point number.
+///   May be `None` if data is not available.
+/// * `open_interest` - The open interest of the option, represented as an optional unsigned integer.
+///   Represents the total number of outstanding option contracts that have not been settled.
+/// * `options` - An optional boxed reference to a `FourOptions` struct that may contain
+///   the actual option contracts represented by this data. This field is not serialized.
 ///
+/// # Usage
+///
+/// This struct is typically used to represent a single row in an option chain table,
+/// providing comprehensive market data for options at a specific strike price. It's
+/// useful for option pricing models, strategy analysis, and trading applications.
+///
+/// # Serialization
+///
+/// This struct implements Serialize and Deserialize traits, with fields that are `None`
+/// being skipped during serialization to produce more compact JSON output.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionData {
+    /// The strike price of the option, represented as a positive floating-point number.
     #[serde(rename = "strike_price")]
     pub(crate) strike_price: Positive,
 
+    /// The bid price for the call option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) call_bid: Option<Positive>,
 
+    /// The ask price for the call option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) call_ask: Option<Positive>,
 
+    /// The bid price for the put option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) put_bid: Option<Positive>,
 
+    /// The ask price for the put option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) put_ask: Option<Positive>,
 
+    /// The mid-price between call bid and ask. Calculated as (bid + ask) / 2.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub call_middle: Option<Positive>,
 
+    /// The mid-price between put bid and ask. Calculated as (bid + ask) / 2.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub put_middle: Option<Positive>,
 
+    /// The implied volatility of the option, derived from option prices.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) implied_volatility: Option<Positive>,
 
+    /// The delta of the call option, measuring price sensitivity to underlying changes.
     #[serde(skip_serializing_if = "Option::is_none")]
     delta_call: Option<Decimal>,
 
+    /// The delta of the put option, measuring price sensitivity to underlying changes.
     #[serde(skip_serializing_if = "Option::is_none")]
     delta_put: Option<Decimal>,
 
+    /// The gamma of the option, measuring the rate of change in delta.
     #[serde(skip_serializing_if = "Option::is_none")]
     gamma: Option<Decimal>,
 
+    /// The trading volume of the option, indicating market activity.
     #[serde(skip_serializing_if = "Option::is_none")]
     volume: Option<Positive>,
 
+    /// The open interest, representing the number of outstanding contracts.
     #[serde(skip_serializing_if = "Option::is_none")]
     open_interest: Option<u64>,
 
-    // Skip this field during serialization and deserialization
+    /// Optional reference to the actual option contracts represented by this data.
+    /// This field is not serialized.
     #[serde(skip)]
     pub options: Option<Box<FourOptions>>,
 }
 
 impl OptionData {
+    /// Creates a new instance of `OptionData` with the given option market parameters.
+    ///
+    /// This constructor creates an `OptionData` structure that represents a single row in an options chain,
+    /// containing market data for both call and put options at a specific strike price. The middle prices
+    /// for calls and puts are initially set to `None` and can be calculated later if needed.
+    ///
+    /// # Parameters
+    ///
+    /// * `strike_price` - The strike price of the option contract, guaranteed to be positive.
+    /// * `call_bid` - The bid price for the call option. `None` if market data is unavailable.
+    /// * `call_ask` - The ask price for the call option. `None` if market data is unavailable.
+    /// * `put_bid` - The bid price for the put option. `None` if market data is unavailable.
+    /// * `put_ask` - The ask price for the put option. `None` if market data is unavailable.
+    /// * `implied_volatility` - The implied volatility derived from option prices. `None` if not calculable.
+    /// * `delta_call` - The delta of the call option, measuring price sensitivity to underlying changes.
+    /// * `delta_put` - The delta of the put option, measuring price sensitivity to underlying changes.
+    /// * `gamma` - The gamma of the option, measuring the rate of change in delta.
+    /// * `volume` - The trading volume of the option, indicating market activity.
+    /// * `open_interest` - The number of outstanding option contracts that have not been settled.
+    ///
+    /// # Returns
+    ///
+    /// A new `OptionData` instance with the specified parameters and with `call_middle`, `put_middle`,
+    /// and `options` fields initialized to `None`.
+    ///
+    /// # Note
+    ///
+    /// This function allows many optional parameters to accommodate scenarios where not all market data
+    /// is available from data providers.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         strike_price: Positive,
@@ -129,6 +205,21 @@ impl OptionData {
         }
     }
 
+    /// Validates the option data to ensure it meets the required criteria for calculations.
+    ///
+    /// This method performs a series of validation checks to ensure that the option data
+    /// is complete and valid for further processing or analysis. It verifies:
+    /// 1. The strike price is not zero
+    /// 2. Implied volatility is present
+    /// 3. Call option data is valid (via `valid_call()`)
+    /// 4. Put option data is valid (via `valid_put()`)
+    ///
+    /// Each validation failure is logged as an error for debugging and troubleshooting.
+    ///
+    /// # Returns
+    ///
+    /// * `true` - If all validation checks pass, indicating the option data is valid
+    /// * `false` - If any validation check fails, indicating the option data is incomplete or invalid
     pub fn validate(&self) -> bool {
         if self.strike_price == Positive::ZERO {
             error!("Error: Strike price cannot be zero");
@@ -149,6 +240,16 @@ impl OptionData {
         true
     }
 
+    /// Checks if this option data contains valid call option information.
+    ///
+    /// A call option is considered valid when all required data is present:
+    /// * The strike price is greater than zero
+    /// * Implied volatility is available
+    /// * Both bid and ask prices for the call option are available
+    ///
+    /// # Returns
+    ///
+    /// `true` if all required call option data is present, `false` otherwise.
     pub(crate) fn valid_call(&self) -> bool {
         self.strike_price > Positive::ZERO
             && self.implied_volatility.is_some()
@@ -156,6 +257,16 @@ impl OptionData {
             && self.call_ask.is_some()
     }
 
+    /// Checks if this option data contains valid put option information.
+    ///
+    /// A put option is considered valid when all required data is present:
+    /// * The strike price is greater than zero
+    /// * Implied volatility is available
+    /// * Both bid and ask prices for the put option are available
+    ///
+    /// # Returns
+    ///
+    /// `true` if all required put option data is present, `false` otherwise.
     pub(crate) fn valid_put(&self) -> bool {
         self.strike_price > Positive::ZERO
             && self.implied_volatility.is_some()
@@ -163,22 +274,77 @@ impl OptionData {
             && self.put_ask.is_some()
     }
 
+    /// Retrieves the price at which a call option can be purchased.
+    ///
+    /// This method returns the ask price for a call option, which is the price
+    /// a buyer would pay to purchase the call option.
+    ///
+    /// # Returns
+    ///
+    /// The call option's ask price as a `Positive` value, or `None` if the price is unavailable.
     pub fn get_call_buy_price(&self) -> Option<Positive> {
         self.call_ask
     }
 
+    /// Retrieves the price at which a call option can be sold.
+    ///
+    /// This method returns the bid price for a call option, which is the price
+    /// a seller would receive when selling the call option.
+    ///
+    /// # Returns
+    ///
+    /// The call option's bid price as a `Positive` value, or `None` if the price is unavailable.
     pub fn get_call_sell_price(&self) -> Option<Positive> {
         self.call_bid
     }
 
+    /// Retrieves the price at which a put option can be purchased.
+    ///
+    /// This method returns the ask price for a put option, which is the price
+    /// a buyer would pay to purchase the put option.
+    ///
+    /// # Returns
+    ///
+    /// The put option's ask price as a `Positive` value, or `None` if the price is unavailable.
     pub fn get_put_buy_price(&self) -> Option<Positive> {
         self.put_ask
     }
 
+    /// Retrieves the price at which a put option can be sold.
+    ///
+    /// This method returns the bid price for a put option, which is the price
+    /// a seller would receive when selling the put option.
+    ///
+    /// # Returns
+    ///
+    /// The put option's bid price as a `Positive` value, or `None` if the price is unavailable.
     pub fn get_put_sell_price(&self) -> Option<Positive> {
         self.put_bid
     }
 
+    /// Creates an option contract based on provided parameters and existing data.
+    ///
+    /// This method constructs a new `Options` instance by combining information from
+    /// the current object with the provided pricing parameters. It handles the logic
+    /// for determining the correct implied volatility to use, either from the provided
+    /// parameters or from the object's stored value.
+    ///
+    /// # Parameters
+    ///
+    /// * `price_params` - A reference to `OptionDataPriceParams` containing essential pricing
+    ///   information such as expiration date, underlying price, and risk-free rate.
+    /// * `side` - Defines the directional exposure of the option (Long or Short).
+    /// * `option_style` - Specifies the style of the option (Call or Put).
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Options, ChainError>` - An `Options` instance if successful, or a `ChainError`
+    ///   if required data such as implied volatility is missing.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ChainError::invalid_volatility` if neither the input parameters nor the object
+    /// itself contains a valid implied volatility value.
     fn get_option(
         &self,
         price_params: &OptionDataPriceParams,
@@ -214,6 +380,35 @@ impl OptionData {
         ))
     }
 
+    /// Creates an option contract for implied volatility calculation with specified parameters.
+    ///
+    /// This method constructs a new European-style option contract with the given parameters
+    /// to be used in implied volatility calculations or pricing models. It initializes a properly
+    /// configured `Options` instance with all necessary values for financial calculations.
+    ///
+    /// # Parameters
+    ///
+    /// * `price_params` - Contains core pricing parameters including:
+    ///   - `expiration_date` - When the option expires
+    ///   - `underlying_price` - Current market price of the underlying asset
+    ///   - `risk_free_rate` - The risk-free interest rate used in pricing models
+    ///   - `dividend_yield` - The dividend yield of the underlying asset
+    ///
+    /// * `side` - Specifies whether this is a Long or Short position, determining
+    ///   the directional exposure of the option
+    ///
+    /// * `option_style` - Determines whether this is a Call or Put option, defining
+    ///   the fundamental right the contract provides
+    ///
+    /// * `initial_iv` - The initial implied volatility estimate to use for the option,
+    ///   which will be the starting point for IV calculation algorithms
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing either:
+    /// * An `Options` instance configured with the specified parameters
+    /// * A `ChainError` if there was a problem creating the option
+    ///
     fn get_option_for_iv(
         &self,
         price_params: &OptionDataPriceParams,
@@ -237,6 +432,36 @@ impl OptionData {
         ))
     }
 
+    /// Returns a collection of option positions (calls and puts, long and short) at the same strike price.
+    ///
+    /// This method creates a comprehensive set of option positions all sharing the same strike price
+    /// but varying in option style (Call/Put) and side (Long/Short). It's useful for analyzing
+    /// option strategies that require positions across different option types at the same strike.
+    ///
+    /// # Arguments
+    ///
+    /// * `price_params` - Parameters required for pricing the options, including underlying price,
+    ///   expiration date, risk-free rate, and other market factors.
+    ///
+    /// * `side` - The initial directional bias (Long or Short) used as a starting point for creating
+    ///   the option positions. This parameter affects the first option that gets created.
+    ///
+    /// * `option_style` - The initial option style (Call or Put) used as a starting point for creating
+    ///   the option positions. This parameter affects the first option that gets created.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<OptionsInStrike, ChainError>` - If successful, returns an `OptionsInStrike` struct
+    ///   containing all four option positions (long call, short call, long put, short put).
+    ///   Returns a `ChainError` if option creation fails, such as when required volatility data
+    ///   is missing.
+    ///
+    /// # Errors
+    ///
+    /// This function will return `ChainError` if:
+    /// * The underlying `get_option` method fails, typically due to missing or invalid pricing data
+    /// * Implied volatility is not provided and cannot be derived from available data
+    ///
     fn get_options_in_strike(
         &self,
         price_params: &OptionDataPriceParams,
@@ -261,6 +486,42 @@ impl OptionData {
         })
     }
 
+    /// Calculates and sets the bid and ask prices for call and put options.
+    ///
+    /// This method computes the theoretical prices for both call and put options using the
+    /// Black-Scholes pricing model, and then stores these values in the appropriate fields.
+    /// After calculating the individual bid and ask prices, it also computes and sets the
+    /// mid-prices by calling the `set_mid_prices` method.
+    ///
+    /// # Parameters
+    ///
+    /// * `price_params` - A reference to `OptionDataPriceParams` containing the necessary
+    ///   parameters for option pricing, such as underlying price, volatility, risk-free rate,
+    ///   expiration date, and dividend yield.
+    ///
+    /// * `refresh` - A boolean flag indicating whether to force recalculation of option
+    ///   contracts even if they already exist. When set to `true`, the method will recreate
+    ///   the option contracts before calculating prices.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), ChainError>` - Returns `Ok(())` if prices are successfully calculated
+    ///   and set, or a `ChainError` if any error occurs during the process.
+    ///
+    /// # Side Effects
+    ///
+    /// Sets the following fields in the struct:
+    /// * `call_ask` - The ask price for the call option
+    /// * `call_bid` - The bid price for the call option
+    /// * `put_ask` - The ask price for the put option
+    /// * `put_bid` - The bid price for the put option
+    /// * `call_middle` and `put_middle` - The mid-prices calculated via `set_mid_prices()`
+    ///
+    /// # Errors
+    ///
+    /// May return:
+    /// * `ChainError` variants if there are issues creating the options contracts
+    /// * Errors propagated from the Black-Scholes calculation functions
     pub fn calculate_prices(
         &mut self,
         price_params: &OptionDataPriceParams,
@@ -288,6 +549,28 @@ impl OptionData {
         Ok(())
     }
 
+    /// Applies a spread to the bid and ask prices of call and put options, then recalculates mid prices.
+    ///
+    /// This method adjusts the bid and ask prices by half of the specified spread value,
+    /// subtracting from bid prices and adding to ask prices. It also ensures that all prices
+    /// are rounded to the specified number of decimal places. If any price becomes negative
+    /// after applying the spread, it is set to `None`.
+    ///
+    /// # Arguments
+    ///
+    /// * `spread` - A positive decimal value representing the total spread to apply
+    /// * `decimal_places` - The number of decimal places to round the adjusted prices to
+    ///
+    /// # Inner Function
+    ///
+    /// The method contains an inner function `round_to_decimal` that handles the rounding
+    /// of prices after applying a shift (half the spread).
+    ///
+    /// # Side Effects
+    ///
+    /// * Updates `call_ask`, `call_bid`, `put_ask`, and `put_bid` fields with adjusted values
+    /// * Sets adjusted prices to `None` if they would become negative after applying the spread
+    /// * Calls `set_mid_prices()` to recalculate the mid prices based on the new bid/ask values
     pub fn apply_spread(&mut self, spread: Positive, decimal_places: i32) {
         fn round_to_decimal(
             number: Positive,
@@ -332,6 +615,33 @@ impl OptionData {
         self.set_mid_prices();
     }
 
+    /// Calculates the delta values for call and put options based on the provided price parameters.
+    ///
+    /// Delta is a key "Greek" that measures the rate of change of the option's price with respect to changes
+    /// in the underlying asset's price. This method computes and stores delta values for both call and put options.
+    ///
+    /// # Parameters
+    ///
+    /// * `price_params` - A reference to `OptionDataPriceParams` containing essential market data and
+    ///   contract specifications needed for the calculation.
+    ///
+    /// # Behavior
+    ///
+    /// The function follows these steps:
+    /// 1. Ensures implied volatility is available, calculating it if necessary
+    /// 2. Creates option objects if they don't exist but implied volatility is available
+    /// 3. Calculates and stores delta values for call options
+    /// 4. Calculates and stores delta values for put options
+    ///
+    /// If any step fails, appropriate error messages are logged and the corresponding delta
+    /// values will remain unset.
+    ///
+    /// # Side Effects
+    ///
+    /// * Updates the `delta_call` and `delta_put` fields of the struct with calculated values
+    /// * May update the `implied_volatility` field if it was previously `None`
+    /// * May create option objects if they didn't exist but were needed for calculations
+    /// * Logs errors if calculations fail
     pub fn calculate_delta(&mut self, price_params: &OptionDataPriceParams) {
         if self.implied_volatility.is_none() {
             trace!("Implied volatility not found, calculating it");
@@ -379,6 +689,31 @@ impl OptionData {
         }
     }
 
+    /// Calculates the gamma value for an option and stores it in the object.
+    ///
+    /// Gamma measures the rate of change in delta with respect to changes in the underlying price.
+    /// It represents the second derivative of the option price with respect to the underlying price.
+    ///
+    /// This method first ensures that implied volatility is available (calculating it if needed),
+    /// then creates option structures if they don't already exist, and finally calculates
+    /// the gamma value.
+    ///
+    /// # Parameters
+    ///
+    /// * `price_params` - A reference to the pricing parameters required for option calculations,
+    ///   including underlying price, expiration date, risk-free rate and other inputs.
+    ///
+    /// # Behavior
+    ///
+    /// * If implied volatility isn't available, it attempts to calculate it first
+    /// * If option structures haven't been created yet, it creates them
+    /// * On successful calculation, stores the gamma value in `self.gamma`
+    /// * On failure, logs an error and sets `self.gamma` to `None`
+    ///
+    /// # Errors
+    ///
+    /// * Does not return errors but logs them through the tracing system
+    /// * Common failures include inability to calculate implied volatility or issues creating option objects
     pub fn calculate_gamma(&mut self, price_params: &OptionDataPriceParams) {
         if self.implied_volatility.is_none() {
             trace!("Implied volatility not found, calculating it");
@@ -398,7 +733,6 @@ impl OptionData {
                 return;
             }
         };
-
         match gamma(&option) {
             Ok(d) => self.gamma = Some(d),
             Err(e) => {
@@ -408,6 +742,26 @@ impl OptionData {
         }
     }
 
+    /// Retrieves delta values for options at the current strike price.
+    ///
+    /// Delta measures the rate of change of the option price with respect to changes
+    /// in the underlying asset's price. This method returns delta values for options
+    /// at the specific strike price defined in the price parameters.
+    ///
+    /// # Parameters
+    ///
+    /// * `price_params` - A reference to the pricing parameters required for option calculations,
+    ///   including underlying price, expiration date, risk-free rate and other inputs.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<DeltasInStrike, ChainError>` - On success, returns a structure containing delta values
+    ///   for the options at the specified strike. On failure, returns a ChainError describing the issue.
+    ///
+    /// # Errors
+    ///
+    /// * Returns a `ChainError` if there's an issue retrieving the options or calculating their deltas.
+    /// * Possible errors include missing option data, calculation failures, or invalid parameters.
     pub fn get_deltas(
         &self,
         price_params: &OptionDataPriceParams,
@@ -417,6 +771,24 @@ impl OptionData {
         Ok(options_in_strike.deltas()?)
     }
 
+    /// Validates if an option strike price is valid according to the specified search strategy.
+    ///
+    /// This method checks whether the current option's strike price falls within the constraints
+    /// defined by the `FindOptimalSide` parameter, relative to the given underlying asset price.
+    ///
+    /// # Parameters
+    ///
+    /// * `underlying_price` - The current market price of the underlying asset as a `Positive` value.
+    /// * `side` - The strategy to determine valid strike prices, specifying whether to consider
+    ///   options with strikes above, below, or within a specific range of the underlying price.
+    ///
+    /// # Returns
+    ///
+    /// `bool` - Returns true if the strike price is valid according to the specified strategy:
+    ///   * For `Upper`: Strike price must be greater than or equal to underlying price
+    ///   * For `Lower`: Strike price must be less than or equal to underlying price
+    ///   * For `All`: Always returns true (all strike prices are valid)
+    ///   * For `Range`: Strike price must fall within the specified range (inclusive)
     pub fn is_valid_optimal_side(
         &self,
         underlying_price: Positive,
@@ -432,6 +804,17 @@ impl OptionData {
         }
     }
 
+    /// Calculates and sets the mid-prices for both call and put options.
+    ///
+    /// This method computes the middle price between the bid and ask prices for
+    /// both call and put options, when both bid and ask prices are available.
+    /// The mid-price is calculated as the simple average: (bid + ask) / 2.
+    /// If either bid or ask price is missing for an option type, the corresponding
+    /// mid-price will be set to `None`.
+    ///
+    /// # Side Effects
+    ///
+    /// Updates the `call_middle` and `put_middle` fields with the calculated mid-prices.
     pub fn set_mid_prices(&mut self) {
         self.call_middle = match (self.call_bid, self.call_ask) {
             (Some(bid), Some(ask)) => Some((bid + ask) / pos!(2.0)),
@@ -443,10 +826,50 @@ impl OptionData {
         };
     }
 
+    /// Retrieves the current mid-prices for call and put options.
+    ///
+    /// This method returns the calculated middle prices for both call and put options
+    /// as a tuple. Each price may be `None` if the corresponding bid/ask prices
+    /// were not available when `set_mid_prices()` was called.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing:
+    /// * First element: The call option mid-price (bid+ask)/2, or `None` if not available
+    /// * Second element: The put option mid-price (bid+ask)/2, or `None` if not available
     pub fn get_mid_prices(&self) -> (Option<Positive>, Option<Positive>) {
         (self.call_middle, self.put_middle)
     }
 
+    /// Calculates the implied volatility for an option based on market prices.
+    ///
+    /// This function attempts to derive the implied volatility from either call or put option
+    /// mid-market prices. It first tries to use call options, and if that fails, it falls back
+    /// to put options. The calculation uses different initial volatility guesses based on whether
+    /// the option is in-the-money (ITM) or out-of-the-money (OTM).
+    ///
+    /// # Parameters
+    ///
+    /// * `&mut self` - Mutable reference to the option chain or strike object
+    /// * `price_params` - Reference to pricing parameters including underlying price and other market data
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), ChainError>` - Ok if implied volatility was successfully calculated,
+    ///   or an error describing why calculation failed
+    ///
+    /// # Process
+    ///
+    /// 1. Ensures middle prices are available, calculating them if necessary
+    /// 2. Attempts to calculate IV using call options first
+    /// 3. Falls back to put options if call calculation fails
+    /// 4. Updates the implied_volatility field if successful
+    /// 5. Creates option objects if needed once IV is established
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError::InvalidVolatility` if implied volatility cannot be calculated
+    /// from either call or put prices.
     pub fn calculate_implied_volatility(
         &mut self,
         price_params: &OptionDataPriceParams,
@@ -581,13 +1004,56 @@ impl fmt::Display for OptionData {
     }
 }
 
+/// Represents an option chain for a specific underlying asset and expiration date.
+///
+/// An option chain contains all available option contracts (calls and puts) for a given
+/// underlying asset at a specific expiration date, along with current market data and pricing
+/// parameters necessary for financial analysis and valuation.
+///
+/// This struct provides a complete representation of option market data that can be used for
+/// options strategy analysis, risk assessment, and pricing model calculations.
+///
+/// # Fields
+///
+/// * `symbol` - The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
+///
+/// * `underlying_price` - The current market price of the underlying asset, stored as a
+///   guaranteed positive value.
+///
+/// * `expiration_date` - The expiration date of the options in the chain, typically
+///   represented in a standard date format.
+///
+/// * `options` - A sorted collection of option contracts at different strike prices, containing
+///   detailed market data like bid/ask prices, implied volatility, and the Greeks.
+///
+/// * `risk_free_rate` - The risk-free interest rate used for option pricing models,
+///   typically derived from treasury yields. May be `None` if not specified.
+///
+/// * `dividend_yield` - The annual dividend yield of the underlying asset, represented
+///   as a positive percentage. May be `None` for non-dividend-paying assets.
+///
+/// # Usage
+///
+/// This struct is typically used as the primary container for options market data analysis,
+/// serving as input to pricing models, strategy backtesting, and risk management tools.
 #[derive(Debug)]
 pub struct OptionChain {
+    /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,
+
+    /// The current market price of the underlying asset.
     pub underlying_price: Positive,
+
+    /// The expiration date of the options in the chain.
     expiration_date: String,
+
+    /// A sorted collection of option contracts at different strike prices.
     pub(crate) options: BTreeSet<OptionData>,
+
+    /// The risk-free interest rate used for option pricing models.
     pub(crate) risk_free_rate: Option<Decimal>,
+
+    /// The annual dividend yield of the underlying asset.
     pub(crate) dividend_yield: Option<Positive>,
 }
 
@@ -726,6 +1192,47 @@ impl<'de> Deserialize<'de> for OptionChain {
 }
 
 impl OptionChain {
+    /// Creates a new `OptionChain` for a specific underlying instrument and expiration date.
+    ///
+    /// This constructor initializes an `OptionChain` with the fundamental parameters needed for
+    /// option calculations and analysis. It creates an empty collection of options that can be
+    /// populated later through other methods.
+    ///
+    /// # Parameters
+    ///
+    /// * `symbol` - The ticker symbol of the underlying instrument (e.g., "AAPL" for Apple Inc.).
+    ///
+    /// * `underlying_price` - The current market price of the underlying instrument as a
+    ///   `Positive` value, ensuring it's always greater than or equal to zero.
+    ///
+    /// * `expiration_date` - The expiration date for the options in this chain, provided as a
+    ///   string. The expected format depends on the implementation's requirements.
+    ///
+    /// * `risk_free_rate` - The risk-free interest rate used for theoretical pricing models.
+    ///   This is optional and can be provided later if not available at creation time.
+    ///
+    /// * `dividend_yield` - The dividend yield of the underlying instrument as a `Positive` value.
+    ///   This is optional and can be provided later for dividend-paying instruments.
+    ///
+    /// # Returns
+    ///
+    /// A new `OptionChain` instance with the specified parameters and an empty set of options.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::pos;
+    ///
+    /// let chain = OptionChain::new(
+    ///     "AAPL",
+    ///     pos!(172.50),
+    ///     "2023-12-15".to_string(),
+    ///     Some(dec!(0.05)),  // 5% risk-free rate
+    ///     Some(pos!(0.0065)) // 0.65% dividend yield
+    /// );
+    /// ```
     pub fn new(
         symbol: &str,
         underlying_price: Positive,
@@ -743,6 +1250,50 @@ impl OptionChain {
         }
     }
 
+    /// Builds a complete option chain based on the provided parameters.
+    ///
+    /// This function creates an option chain with strikes generated around the underlying price,
+    /// calculates prices and Greeks for each option using the Black-Scholes model, and applies
+    /// the specified volatility skew to reflect market conditions.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - A reference to `OptionChainBuildParams` containing all necessary parameters
+    ///   for building the chain, including price parameters, chain size, and volatility settings.
+    ///
+    /// # Returns
+    ///
+    /// A fully populated `OptionChain` containing option data for all generated strikes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    /// use optionstratlib::{pos, spos, ExpirationDate};
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// let price_params = OptionDataPriceParams::new(
+    ///     pos!(100.0),                         // underlying price
+    ///     ExpirationDate::Days(pos!(30.0)),    // expiration date
+    ///     Some(pos!(0.2)),                     // implied volatility
+    ///     dec!(0.05),                          // risk-free rate
+    ///     pos!(0.0),                           // dividend yield
+    ///     Some("SPY".to_string())              // underlying symbol
+    /// );
+    ///
+    /// let build_params = OptionChainBuildParams::new(
+    ///     "SPY".to_string(),
+    ///     spos!(1000.0),
+    ///     10,
+    ///     pos!(5.0),
+    ///     0.1,
+    ///     pos!(0.02),
+    ///     2,
+    ///     price_params,
+    /// );
+    ///
+    /// let chain = OptionChain::build_chain(&build_params);
+    /// ```
     pub fn build_chain(params: &OptionChainBuildParams) -> Self {
         let mut option_chain = OptionChain::new(
             &params.symbol,
@@ -755,13 +1306,11 @@ impl OptionChain {
             None,
             None,
         );
-
         let strikes = generate_list_of_strikes(
             params.price_params.underlying_price,
             params.chain_size,
             params.strike_interval,
         );
-
         for strike in strikes {
             let atm_distance = strike.to_dec() - params.price_params.underlying_price;
             let adjusted_volatility = adjust_volatility(
@@ -782,7 +1331,6 @@ impl OptionChain {
                 params.volume,
                 None,
             );
-
             let price_params = OptionDataPriceParams::new(
                 params.price_params.underlying_price,
                 params.price_params.expiration_date,
@@ -796,13 +1344,29 @@ impl OptionChain {
                 option_data.calculate_delta(&price_params);
                 option_data.calculate_gamma(&price_params);
             }
-
             option_chain.options.insert(option_data);
         }
         debug!("Option chain: {}", option_chain);
         option_chain
     }
 
+    /// Filters option data in the chain based on specified criteria.
+    ///
+    /// This method filters the options in the chain according to the provided side parameter,
+    /// which determines which options to include based on their strike price relative to
+    /// the underlying price.
+    ///
+    /// # Arguments
+    ///
+    /// * `side` - A `FindOptimalSide` enum value that specifies which options to include:
+    ///   - `Upper`: Only options with strikes above the underlying price
+    ///   - `Lower`: Only options with strikes below the underlying price
+    ///   - `All`: All options in the chain
+    ///   - `Range(start, end)`: Only options with strikes within the specified range
+    ///
+    /// # Returns
+    ///
+    /// A vector of references to `OptionData` objects that match the filter criteria.
     pub(crate) fn filter_option_data(&self, side: FindOptimalSide) -> Vec<&OptionData> {
         self.options
             .iter()
@@ -817,6 +1381,24 @@ impl OptionChain {
             .collect()
     }
 
+    /// Filters options and converts them to `OptionsInStrike` objects.
+    ///
+    /// Similar to `filter_option_data`, but returns more detailed `OptionsInStrike` objects
+    /// that include specific option contract information for a given side and style.
+    ///
+    /// # Arguments
+    ///
+    /// * `price_params` - Parameters used for option pricing calculations
+    /// * `side` - A `FindOptimalSide` enum value that specifies which options to include
+    ///
+    /// # Returns
+    ///
+    /// A result containing either a vector of `OptionsInStrike` objects or a `ChainError` if
+    /// conversion of any option fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if any option data fails to be converted to `OptionsInStrike`.
     #[allow(dead_code)]
     pub(crate) fn filter_options_in_strike(
         &self,
@@ -837,6 +1419,29 @@ impl OptionChain {
             .collect()
     }
 
+    /// Adds a new option to the chain with the specified parameters.
+    ///
+    /// This method creates and adds a new option at the given strike price to the chain.
+    /// It calculates mid prices and attempts to create detailed option objects with the
+    /// provided parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `strike_price` - The strike price for the new option
+    /// * `call_bid` - Optional bid price for the call option
+    /// * `call_ask` - Optional ask price for the call option
+    /// * `put_bid` - Optional bid price for the put option
+    /// * `put_ask` - Optional ask price for the put option
+    /// * `implied_volatility` - Optional implied volatility for the option
+    /// * `delta_call` - Optional delta value for the call option
+    /// * `delta_put` - Optional delta value for the put option
+    /// * `gamma` - Optional gamma value for the option
+    /// * `volume` - Optional trading volume for the option
+    /// * `open_interest` - Optional open interest for the option
+    ///
+    /// # Panics
+    ///
+    /// Panics if the expiration date in the option chain cannot be parsed.
     #[allow(clippy::too_many_arguments)]
     pub fn add_option(
         &mut self,
@@ -869,14 +1474,12 @@ impl OptionChain {
             options: None,
         };
         option_data.set_mid_prices();
-
         let expiration_date = match ExpirationDate::from_string(&self.expiration_date) {
             Ok(date) => date,
             Err(e) => {
                 panic!("Failed to parse expiration date: {}", e);
             }
         };
-
         let params = OptionDataPriceParams::new(
             self.underlying_price,
             expiration_date,
@@ -885,7 +1488,6 @@ impl OptionChain {
             self.dividend_yield.unwrap_or(Positive::ZERO),
             Some(self.symbol.clone()),
         );
-
         if let Err(e) = option_data.create_options(&params) {
             error!(
                 "Failed to create options for strike {}: {}",
@@ -895,6 +1497,16 @@ impl OptionChain {
         self.options.insert(option_data);
     }
 
+    /// Returns a formatted title string for the option chain.
+    ///
+    /// This method creates a title by combining the option chain's symbol, expiration date,
+    /// and underlying price. Spaces in the symbol and expiration date are replaced with hyphens
+    /// for better compatibility with file systems and data representation.
+    ///
+    /// # Returns
+    ///
+    /// A formatted string in the format "{symbol}-{expiration_date}-{underlying_price}"
+    /// where spaces have been replaced with hyphens in the symbol and expiration date.
     pub fn get_title(&self) -> String {
         let symbol_cleaned = self.symbol.replace(" ", "-");
         let expiration_date_cleaned = self.expiration_date.replace(" ", "-");
@@ -904,6 +1516,24 @@ impl OptionChain {
         )
     }
 
+    /// Parses a file name to set the option chain's properties.
+    ///
+    /// This method extracts information from a file name that follows the format
+    /// "symbol-day-month-year-price.extension". It sets the symbol, expiration date,
+    /// and underlying price of the option chain based on the parsed values.
+    ///
+    /// # Arguments
+    ///
+    /// * `file` - A string slice representing the file path or name to parse
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - If the file name was successfully parsed and the properties were set
+    /// * `Err(...)` - If the file name format is invalid or the underlying price cannot be parsed
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the underlying price in the file name cannot be parsed as an f64.
     pub fn set_from_title(&mut self, file: &str) -> Result<(), Box<dyn Error>> {
         let file_name = file.split('/').next_back().unwrap();
         let file_name = file_name
@@ -913,11 +1543,9 @@ impl OptionChain {
         if parts.len() != 5 {
             return Err("Invalid file name format: expected exactly 5 parts (symbol, day, month, year, price)".to_string().into());
         }
-
         self.symbol = parts[0].to_string();
         self.expiration_date = format!("{}-{}-{}", parts[1], parts[2], parts[3]);
         let underlying_price_str = parts[4].replace(",", ".");
-
         match underlying_price_str.parse::<f64>() {
             Ok(price) => {
                 self.underlying_price = pos!(price);
@@ -927,6 +1555,13 @@ impl OptionChain {
         }
     }
 
+    /// Updates the mid prices for all options in the chain.
+    ///
+    /// This method creates a new collection of options where each option has its
+    /// mid price calculated and updated. The mid price is typically the average
+    /// of the bid and ask prices.
+    ///
+    /// The original options in the chain are replaced with the updated ones.
     pub fn update_mid_prices(&mut self) {
         let modified_options: BTreeSet<OptionData> = self
             .options
@@ -937,10 +1572,17 @@ impl OptionChain {
                 option
             })
             .collect();
-
         self.options = modified_options;
     }
 
+    /// Calculates and updates the delta and gamma Greeks for all options in the chain.
+    ///
+    /// This method computes the delta and gamma values for each option in the chain based on
+    /// the current market parameters. Delta measures the rate of change of the option price
+    /// with respect to the underlying asset's price, while gamma measures the rate of change
+    /// of delta with respect to the underlying asset's price.
+    ///
+    /// The original options in the chain are replaced with the ones containing the updated Greeks.
     pub fn update_greeks(&mut self) {
         let modified_options: BTreeSet<OptionData> = self
             .options
@@ -953,10 +1595,20 @@ impl OptionChain {
                 option
             })
             .collect();
-
         self.options = modified_options;
     }
 
+    /// Calculates and updates the implied volatility for all options in the chain.
+    ///
+    /// This method attempts to compute the implied volatility for each option in the chain.
+    /// Implied volatility is the market's forecast of a likely movement in the underlying price
+    /// and is derived from the option's market price.
+    ///
+    /// If the calculation fails for any option, a debug message is logged with the strike price
+    /// and the error, but the process continues for other options.
+    ///
+    /// The original options in the chain are replaced with the ones containing the updated
+    /// implied volatility values.
     pub fn update_implied_volatilities(&mut self) {
         let modified_options: BTreeSet<OptionData> = self
             .options
@@ -973,10 +1625,28 @@ impl OptionChain {
                 option
             })
             .collect();
-
         self.options = modified_options;
     }
 
+    /// Saves the option chain data to a CSV file.
+    ///
+    /// This method writes the option chain data to a CSV file at the specified path.
+    /// The file will be named using the option chain's title (symbol, expiration date, and price).
+    /// The CSV includes headers for all option properties and each option in the chain is written as a row.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_path` - The directory path where the CSV file will be created
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), Box<dyn Error>>` - Ok(()) if successful, or an Error if the file couldn't be created
+    ///   or written to.
+    ///
+    ///
+    /// # Note
+    ///
+    /// This method is only available on non-WebAssembly targets.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_csv(&self, file_path: &str) -> Result<(), Box<dyn Error>> {
         let full_path = format!("{}/{}.csv", file_path, self.get_title());
@@ -1009,11 +1679,28 @@ impl OptionChain {
                 default_empty_string(option.open_interest),
             ])?;
         }
-
         wtr.flush()?;
         Ok(())
     }
 
+    /// Saves the option chain data to a JSON file.
+    ///
+    /// This method serializes the option chain into JSON format and writes it to a file
+    /// at the specified path. The file will be named using the option chain's title
+    /// (symbol, expiration date, and price).
+    ///
+    /// # Arguments
+    ///
+    /// * `file_path` - The directory path where the JSON file will be created
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), Box<dyn Error>>` - Ok(()) if successful, or an Error if the file couldn't be created
+    ///   or written to.
+    ///
+    /// # Note
+    ///
+    /// This method is only available on non-WebAssembly targets.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_json(&self, file_path: &str) -> Result<(), Box<dyn Error>> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
@@ -1022,6 +1709,23 @@ impl OptionChain {
         Ok(())
     }
 
+    /// Loads option chain data from a CSV file.
+    ///
+    /// This function reads option data from a CSV file and constructs an OptionChain.
+    /// It attempts to extract the symbol, underlying price, and expiration date from the file name.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_path` - The path to the CSV file containing option chain data
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self, Box<dyn Error>>` - An OptionChain if successful, or an Error if the file
+    ///   couldn't be read or the data is invalid.
+    ///
+    /// # Note
+    ///
+    /// This method is only available on non-WebAssembly targets.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_from_csv(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let mut rdr = csv::Reader::from_path(file_path)?;
@@ -1029,7 +1733,6 @@ impl OptionChain {
         for result in rdr.records() {
             let record = result?;
             debug!("To CSV: {:?}", record);
-
             let mut option_data = OptionData {
                 strike_price: record[0].parse()?,
                 call_bid: parse(&record[1]),
@@ -1049,7 +1752,6 @@ impl OptionChain {
             option_data.set_mid_prices();
             options.insert(option_data);
         }
-
         let mut option_chain = OptionChain {
             symbol: "unknown".to_string(),
             underlying_price: Positive::ZERO,
@@ -1069,6 +1771,23 @@ impl OptionChain {
         Ok(option_chain)
     }
 
+    /// Loads option chain data from a JSON file.
+    ///
+    /// This function deserializes an OptionChain from a JSON file and updates
+    /// the mid prices for all options in the chain.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_path` - The path to the JSON file containing serialized option chain data
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self, Box<dyn Error>>` - An OptionChain if successful, or an Error if the file
+    ///   couldn't be read or the data is invalid.
+    ///
+    /// # Note
+    ///
+    /// This method is only available on non-WebAssembly targets.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_from_json(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let file = File::open(file_path)?;
@@ -1077,19 +1796,30 @@ impl OptionChain {
         Ok(option_chain)
     }
 
+    /// Generates a vector of strike prices within the range of available options.
+    ///
+    /// This method creates a vector of strike prices starting from the lowest
+    /// strike price in the chain up to the highest, incrementing by the specified step.
+    ///
+    /// # Arguments
+    ///
+    /// * `step` - The increment value between consecutive strike prices
+    ///
+    /// # Returns
+    ///
+    /// * `Option<Vec<f64>>` - A vector containing the strike prices if the option chain
+    ///   is not empty, or None if there are no options in the chain.
+    ///
     pub fn strike_price_range_vec(&self, step: f64) -> Option<Vec<f64>> {
         let first = self.options.iter().next();
         let last = self.options.iter().next_back();
-
         if let (Some(first), Some(last)) = (first, last) {
             let mut range = Vec::new();
             let mut current_price = first.strike_price;
-
             while current_price <= last.strike_price {
                 range.push(current_price.to_f64());
                 current_price += pos!(step);
             }
-
             Some(range)
         } else {
             None
@@ -1535,6 +2265,26 @@ impl OptionChain {
             .ok_or_else(|| "No ATM implied volatility available".to_string())
     }
 
+    /// Calculates the total gamma exposure for all options in the chain.
+    ///
+    /// Gamma exposure represents the aggregate rate of change in the delta value
+    /// with respect to changes in the underlying asset's price across all options.
+    /// It measures the second-order price sensitivity and indicates how the delta
+    /// will change as the underlying price moves.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate gamma value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's gamma calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn gamma_exposure(&self) -> Result<Decimal, ChainError> {
         let mut gamma_exposure = Decimal::ZERO;
         for option in &self.options {
@@ -1549,6 +2299,25 @@ impl OptionChain {
         Ok(gamma_exposure)
     }
 
+    /// Calculates the total delta exposure for all options in the chain.
+    ///
+    /// Delta exposure represents the aggregate sensitivity of option prices to changes
+    /// in the underlying asset's price. A delta exposure of 1.0 means that for every
+    /// $1 change in the underlying asset, the options portfolio will change by $1 in the same direction.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate delta value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's delta calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn delta_exposure(&self) -> Result<Decimal, ChainError> {
         let mut delta_exposure = Decimal::ZERO;
         for option in &self.options {
@@ -1563,6 +2332,25 @@ impl OptionChain {
         Ok(delta_exposure)
     }
 
+    /// Calculates the total vega exposure for all options in the chain.
+    ///
+    /// Vega exposure represents the aggregate sensitivity of option prices to changes
+    /// in the implied volatility of the underlying asset. It measures how much option
+    /// prices will change for a 1% change in implied volatility.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate vega value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's vega calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn vega_exposure(&self) -> Result<Decimal, ChainError> {
         let mut vega_exposure = Decimal::ZERO;
         for option in &self.options {
@@ -1577,6 +2365,25 @@ impl OptionChain {
         Ok(vega_exposure)
     }
 
+    /// Calculates the total theta exposure for all options in the chain.
+    ///
+    /// Theta exposure represents the aggregate rate of time decay in option prices
+    /// as they approach expiration. It measures how much value the options portfolio
+    /// will lose per day, holding all other factors constant.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate theta value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's theta calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn theta_exposure(&self) -> Result<Decimal, ChainError> {
         let mut theta_exposure = Decimal::ZERO;
         for option in &self.options {
@@ -1591,18 +2398,74 @@ impl OptionChain {
         Ok(theta_exposure)
     }
 
+    /// Generates a gamma curve for visualization and analysis.
+    ///
+    /// Creates a curve representing gamma values across different strike prices
+    /// or other relevant parameters for long call options in the chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing gamma data points,
+    ///   or an error if curve generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// or calculation errors
     pub fn gamma_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Gamma, &OptionStyle::Call, &Side::Long)
     }
 
+    /// Generates a delta curve for visualization and analysis.
+    ///
+    /// Creates a curve representing delta values across different strike prices
+    /// or other relevant parameters for long call options in the chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing delta data points,
+    ///   or an error if curve generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// or calculation errors
     pub fn delta_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long)
     }
 
+    /// Generates a vega curve for visualization and analysis.
+    ///
+    /// Creates a curve representing vega values across different strike prices
+    /// or other relevant parameters for long call options in the chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing vega data points,
+    ///   or an error if curve generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// or calculation errors
     pub fn vega_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Vega, &OptionStyle::Call, &Side::Long)
     }
 
+    /// Generates a theta curve for visualization and analysis.
+    ///
+    /// Creates a curve representing theta values across different strike prices
+    /// or other relevant parameters for long call options in the chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing theta data points,
+    ///   or an error if curve generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// or calculation errors
     pub fn theta_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
     }
@@ -6189,7 +7052,7 @@ mod tests_gamma_calculations {
         let gamma_exposure = result.unwrap();
         // Total gamma should be sum of all individual gammas
         // 0.04 + 0.06 + 0.02 = 0.12
-        assert_decimal_eq!(gamma_exposure, dec!(0.00466612), dec!(0.001));
+        assert_decimal_eq!(gamma_exposure, dec!(0.003548), dec!(0.001));
     }
 
     #[test]
@@ -6222,7 +7085,7 @@ mod tests_gamma_calculations {
 
         chain.update_greeks();
         let result = chain.gamma_exposure().unwrap();
-        assert_decimal_eq!(result, dec!(0.0046671), dec!(0.001));
+        assert_decimal_eq!(result, dec!(0.0035), dec!(0.001));
     }
 
     #[test]

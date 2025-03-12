@@ -16,38 +16,44 @@ use std::hash::{Hash, Hasher};
 ///
 /// # Overview
 /// The `Point2D` struct is used to define a point in a 2D Cartesian coordinate system.
-/// Both coordinates (`x` and `y`) are stored as `Decimal` values to provide high precision,
-/// making it suitable for applications requiring accurate numerical calculations, such
-/// as mathematical curve analysis, interpolation, and geometry.
+/// Both coordinates are stored as `Decimal` values to provide high precision,
+/// making it suitable for applications requiring accurate numerical calculations.
 ///
 /// # Usage
-/// This structure is commonly used as a fundamental data type to represent points
-/// in various operations, such as:
-/// - Curve interpolation
-/// - Defining specific positions or intersections in the Cartesian plane
-/// - Transformations (translation, scaling, etc.)
+/// This structure serves as a fundamental data type in various geometric operations:
+/// - Defining positions in curve plotting and interpolation
+/// - Representing intersections between curves
+/// - Serving as input/output for mathematical transformations
+/// - Supporting coordinate-based algorithms in the library
+///
+/// # Examples
+///
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::curves::Point2D;
+///
+/// // Create a point at coordinates (3.5, -2.25)
+/// let point = Point2D {
+///     x: dec!(3.5),
+///     y: dec!(-2.25)
+/// };
+/// ```
 ///
 /// # Derivable Traits
-/// - `Debug`: Enables formatted output of the structure for debugging purposes.
-/// - `Clone`: Allows the point to be cloned, producing a duplicate in memory.
-/// - `Copy`: Simplifies handling by enabling value duplication without explicit cloning.
-/// - `PartialEq`: Enables equality comparison between two `Point2D` instances.
+/// - `Debug`: Enables formatted debugging output
+/// - `Clone` and `Copy`: Allow efficient duplication of point values
+/// - `Serialize` and `Deserialize`: Support for serialization frameworks
 ///
-/// # Examples of Use
-/// The `Point2D` struct is generally used in combination with mathematical and
-/// graphical operations within the library, as outlined in the relevant modules,
-/// such as `curve_traits` or `operations`. Examples of such use cases include
-/// finding intersections between curves and performing translations or scaling.
-///
-/// # Fields
-/// - **x**: The x-coordinate of the point, represented as a `Decimal`.
-/// - **y**: The y-coordinate of the point, represented as a `Decimal`.
-///
-/// This structure enables high precision for x and y values, making it particularly
-/// well-suited for scientific applications and precise geometry.
+/// This struct is primarily used in conjunction with the `Curve` and `Curvable` types
+/// to represent mathematical curves and perform geometric operations.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Point2D {
+    /// The x-coordinate in the Cartesian plane, represented as a high-precision `Decimal`
+    /// value to ensure accuracy in mathematical operations.
     pub x: Decimal,
+
+    /// The y-coordinate in the Cartesian plane, represented as a high-precision `Decimal`
+    /// value to ensure accuracy in mathematical operations.
     pub y: Decimal,
 }
 

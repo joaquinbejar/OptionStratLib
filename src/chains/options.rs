@@ -8,15 +8,66 @@ use crate::greeks::Greeks;
 use rust_decimal::Decimal;
 use std::error::Error;
 
+/// Represents a collection of option positions at the same strike price.
+///
+/// This structure groups four option positions - long and short calls, along with
+/// long and short puts - that share the same strike price. It's commonly used for
+/// analyzing complex option strategies like straddles, strangles, iron condors,
+/// and other multi-leg option combinations that involve positions at the same strike.
+///
+/// # Fields
+///
+/// * `long_call` - A long (bought) call option position at the strike price.
+///   Represents the right to buy the underlying asset at the strike price.
+///
+/// * `short_call` - A short (sold/written) call option position at the strike price.
+///   Represents the obligation to sell the underlying asset at the strike price
+///   if the option is exercised by its holder.
+///
+/// * `long_put` - A long (bought) put option position at the strike price.
+///   Represents the right to sell the underlying asset at the strike price.
+///
+/// * `short_put` - A short (sold/written) put option position at the strike price.
+///   Represents the obligation to buy the underlying asset at the strike price
+///   if the option is exercised by its holder.
+///
+/// # Usage
+///
+/// This struct is typically used in option strategy analysis, risk assessment,
+/// and for calculating combined payoff profiles of multiple option positions
+/// at the same strike price.
 #[derive(Debug, Clone)]
 pub struct OptionsInStrike {
+    /// A long (bought) call option position at this strike price
     pub long_call: Options,
+
+    /// A short (sold/written) call option position at this strike price
     pub short_call: Options,
+
+    /// A long (bought) put option position at this strike price
     pub long_put: Options,
+
+    /// A short (sold/written) put option position at this strike price
     pub short_put: Options,
 }
 
 impl OptionsInStrike {
+    /// Creates a new `OptionsInStrike` instance with the four basic option positions.
+    ///
+    /// This constructor creates a collection of option positions at the same strike price,
+    /// containing both call and put options in long and short positions.
+    ///
+    /// # Parameters
+    ///
+    /// * `long_call` - A long (bought) call option position at this strike price.
+    /// * `short_call` - A short (sold/written) call option position at this strike price.
+    /// * `long_put` - A long (bought) put option position at this strike price.
+    /// * `short_put` - A short (sold/written) put option position at this strike price.
+    ///
+    /// # Returns
+    ///
+    /// A new `OptionsInStrike` instance with the specified option positions.
+    ///
     pub fn new(
         long_call: Options,
         short_call: Options,
@@ -31,6 +82,22 @@ impl OptionsInStrike {
         }
     }
 
+    /// Calculates delta values for all four option positions at this strike price.
+    ///
+    /// Delta measures the rate of change of the option's price with respect to changes
+    /// in the underlying asset's price. This method computes delta for all four basic
+    /// option positions and returns them in a structured format.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<DeltasInStrike, Box<dyn Error>>` - A Result containing delta values for all
+    ///   four option positions if successful, or an error if any delta calculation fails.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if any of the underlying delta calculations fail,
+    /// which may occur due to invalid option parameters or computation errors.
+    ///
     pub fn deltas(&self) -> Result<DeltasInStrike, Box<dyn Error>> {
         Ok(DeltasInStrike {
             long_call: self.long_call.delta()?,
@@ -41,11 +108,45 @@ impl OptionsInStrike {
     }
 }
 
+/// Represents option delta values for all four basic option positions at a specific strike price.
+///
+/// This structure contains delta values for the four fundamental option positions:
+/// long call, short call, long put, and short put. Delta measures the rate of change
+/// of an option's price with respect to changes in the underlying asset's price.
+///
+/// # Fields
+///
+/// * `long_call` - Delta value for a long call position. Typically ranges between 0 and 1,
+///   where values closer to 1 indicate the option behaves more like the underlying asset.
+///
+/// * `short_call` - Delta value for a short call position. This is the negative of the long
+///   call delta, typically ranging from -1 to 0.
+///
+/// * `long_put` - Delta value for a long put position. Typically ranges between -1 and 0,
+///   where values closer to -1 indicate stronger inverse correlation with the underlying.
+///
+/// * `short_put` - Delta value for a short put position. This is the negative of the long
+///   put delta, typically ranging from 0 to 1.
+///
+/// # Usage
+///
+/// This struct is typically used in options analysis, risk management, and strategy development
+/// to assess position sensitivity to underlying price movements at specific strike prices.
+///
+/// Delta values are essential for understanding directional exposure and for implementing
+/// delta-neutral strategies in options trading.
 #[derive(Debug, Clone)]
 pub struct DeltasInStrike {
+    /// Delta value for a long call option position
     pub long_call: Decimal,
+
+    /// Delta value for a short call option position
     pub short_call: Decimal,
+
+    /// Delta value for a long put option position
     pub long_put: Decimal,
+
+    /// Delta value for a short put option position
     pub short_put: Decimal,
 }
 

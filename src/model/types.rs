@@ -9,9 +9,22 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::error::Error;
 use std::fmt;
 
+/// Represents the expiration of an option contract or financial instrument.
+///
+/// This enum allows for two different ways to specify when something expires:
+/// - As a number of days from the current date
+/// - As a specific date and time
+///
+/// `ExpirationDate` is used throughout the options modeling system to handle
+/// time-based calculations such as time decay (theta) and option valuation.
 #[derive(Clone, PartialEq, Copy)]
 pub enum ExpirationDate {
+    /// Represents expiration as a positive number of days from the current date.
+    /// This is typically used for relative time specifications.
     Days(Positive),
+
+    /// Represents expiration as an absolute point in time using UTC datetime.
+    /// This is used when a precise expiration moment is known.
     DateTime(DateTime<Utc>),
 }
 
@@ -369,21 +382,59 @@ impl<'de> Deserialize<'de> for ExpirationDate {
     }
 }
 
+/// Represents trading actions in a financial context.
+///
+/// This enum defines the fundamental trade operations that can be performed
+/// in a trading system. These actions represent the direction of a trade
+/// transaction.
+///
+/// `Action` is used to indicate whether a security is being acquired or disposed of,
+/// and is commonly paired with other transaction details such as price, quantity,
+/// and timing information.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Action {
+    /// Represents a purchase transaction, where assets are acquired.
     Buy,
+    /// Represents a selling transaction, where assets are disposed of.
     Sell,
 }
 
+/// Defines the directional exposure of a financial position.
+///
+/// This enum represents the market sentiment or directional bias of a position.
+/// It indicates whether a trader expects to profit from rising prices (Long)
+/// or falling prices (Short).
+///
+/// `Side` is a fundamental concept in trading that determines how profits and losses
+/// are calculated and affects risk management considerations.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Side {
+    /// Represents a position that profits when the underlying asset's price increases.
+    /// Long positions involve buying an asset with the expectation of selling at a higher price.
     Long,
+    /// Represents a position that profits when the underlying asset's price decreases.
+    /// Short positions involve selling an asset (often borrowed) with the expectation
+    /// of buying it back at a lower price.
     Short,
 }
 
+/// Specifies the style of an options contract.
+///
+/// This enum defines the fundamental classification of options contracts based on
+/// their exercise characteristics. The style determines when and how an option
+/// can be exercised.
+///
+/// `OptionStyle` is a critical attribute for options contracts as it directly
+/// affects valuation, pricing models, and exercise strategies.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptionStyle {
+    /// Represents a call option, which gives the holder the right (but not obligation)
+    /// to buy the underlying asset at the strike price before or at expiration.
+    /// Call options typically increase in value when the underlying asset price rises.
     Call,
+    /// Represents a put option, which gives the holder the right (but not obligation)
+    /// to sell the underlying asset at the strike price before or at expiration.
+    /// Put options typically increase in value when the underlying asset price falls.
     Put,
 }
 

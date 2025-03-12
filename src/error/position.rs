@@ -71,71 +71,221 @@ use std::error::Error;
 use std::fmt;
 
 /// Represents errors that can occur when managing positions in strategies
+///
+/// This enum provides a top-level categorization of position-related errors,
+/// grouping them by their source or nature. It helps with routing errors to
+/// appropriate handlers and providing context-aware error messages.
+///
+/// # Variants
+///
+/// * `StrategyError` - Errors related to strategy operations such as configuration
+///   issues or capacity limitations.
+///
+/// * `ValidationError` - Errors related to position validation including issues
+///   with size, price, or compatibility with strategy requirements.
+///
+/// * `LimitError` - Errors related to position limits such as maximum number of
+///   positions or maximum exposure thresholds.
+///
+/// # Usage
+///
+/// This error type is typically used in trading systems where positions need to
+/// be validated, managed, and executed within the context of trading strategies.
 #[derive(Debug)]
 pub enum PositionError {
     /// Errors related to strategy operations
     StrategyError(StrategyErrorKind),
+
     /// Errors related to position validation
     ValidationError(PositionValidationErrorKind),
+
     /// Errors related to position limits
     LimitError(PositionLimitErrorKind),
 }
 
 /// Specific errors that can occur in strategy operations
+///
+/// This enum captures detailed error types related to strategy operations,
+/// providing specific information about why a strategy operation failed.
+/// These errors typically occur during strategy management operations
+/// such as adding positions, updating configurations, or executing trades.
+///
+/// # Variants
+///
+/// * `UnsupportedOperation` - Indicates that the attempted operation is not
+///   supported by the particular strategy type.
+///
+/// * `StrategyFull` - Indicates that the strategy has reached its maximum
+///   capacity for positions.
+///
+/// * `InvalidConfiguration` - Indicates that the strategy configuration is
+///   invalid or inconsistent.
+///
+/// # Usage
+///
+/// Used when validating and executing strategy operations to provide detailed
+/// error information about why an operation could not be completed.
 #[derive(Debug)]
 pub enum StrategyErrorKind {
     /// Operation is not supported by this strategy
+    ///
+    /// Occurs when attempting to perform an operation that is not compatible
+    /// with the current strategy type.
     UnsupportedOperation {
+        /// The type of strategy that doesn't support the operation
         strategy_type: String,
+
+        /// The name of the operation that was attempted
         operation: String,
     },
+
     /// Strategy has reached its maximum capacity
+    ///
+    /// Occurs when attempting to add more positions than a strategy can handle.
     StrategyFull {
+        /// The type of strategy that reached its capacity
         strategy_type: String,
+
+        /// The maximum number of positions the strategy can hold
         max_positions: usize,
     },
+
     /// Invalid strategy configuration
+    ///
+    /// Occurs when the strategy's configuration parameters are invalid or inconsistent.
     InvalidConfiguration(String),
 }
 
 /// Errors related to position validation
+///
+/// This enum represents errors that can occur during position validation checks.
+/// These errors typically happen when attempting to create or modify a position
+/// with invalid or incompatible parameters.
+///
+/// # Variants
+///
+/// * `InvalidSize` - The position size is invalid (e.g., zero, negative, or too large).
+///
+/// * `InvalidPrice` - The position price is invalid (e.g., negative or unrealistic).
+///
+/// * `IncompatibleSide` - The position side (long/short) is incompatible with the strategy.
+///
+/// * `IncompatibleStyle` - The option style is incompatible with the strategy.
+///
+/// * `InvalidPosition` - The position is invalid for other specific reasons.
+///
+/// * `StdError` - Standard error from external systems or libraries.
+///
+/// # Usage
+///
+/// Used when validating positions to ensure they meet all requirements before
+/// being added to a strategy or executed in a trading system.
 #[derive(Debug)]
 pub enum PositionValidationErrorKind {
     /// Position size is invalid
+    ///
+    /// Occurs when the specified position size violates size constraints.
     InvalidSize {
+        /// The invalid size value
         size: f64,
+
+        /// Explanation of why the size is invalid
         reason: String,
     },
+
     /// Position price is invalid
+    ///
+    /// Occurs when the specified price violates price constraints or is unrealistic.
     InvalidPrice {
+        /// The invalid price value
         price: f64,
+
+        /// Explanation of why the price is invalid
         reason: String,
     },
+
     /// Position type is incompatible with strategy
+    ///
+    /// Occurs when the position side (long/short) conflicts with strategy requirements.
     IncompatibleSide {
+        /// The incompatible position side
         position_side: Side,
+
+        /// Explanation of why the side is incompatible
         reason: String,
     },
+
+    /// Option style is incompatible with strategy
+    ///
+    /// Occurs when the option style (American/European) conflicts with strategy requirements.
     IncompatibleStyle {
+        /// The incompatible option style
         style: OptionStyle,
+
+        /// Explanation of why the style is incompatible
         reason: String,
     },
+
+    /// Position is invalid for other reasons
+    ///
+    /// A general error for positions that fail validation for reasons not covered by other variants.
     InvalidPosition {
+        /// Explanation of why the position is invalid
         reason: String,
     },
+
+    /// Standard error from external systems
+    ///
+    /// Wraps standard errors from external libraries or systems.
     StdError {
+        /// Description of the standard error
         reason: String,
     },
 }
 
-/// Errors related to position limits
+/// Represents errors related to position limits in trading operations.
+///
+/// This enum captures different types of limit violations that can occur when
+/// managing trading positions, such as exceeding the maximum number of allowed
+/// positions or reaching the maximum exposure threshold for a portfolio.
+///
+/// # Variants
+///
+/// * `MaxPositionsReached` - Error indicating that the maximum number of allowed
+///   positions has been reached, preventing the creation of additional positions.
+///
+/// * `MaxExposureReached` - Error indicating that the maximum allowed financial
+///   exposure has been reached, preventing positions that would increase exposure.
+///
+/// # Usage
+///
+/// This error type is typically used in position management systems, risk control
+/// mechanisms, and trading platforms to enforce safety limits and prevent excessive
+/// risk taking.
+///
 #[derive(Debug)]
 pub enum PositionLimitErrorKind {
-    /// Maximum number of positions reached
-    MaxPositionsReached { current: usize, maximum: usize },
-    /// Maximum exposure reached
+    /// Error indicating the maximum number of positions has been reached
+    ///
+    /// This variant is triggered when attempting to create a new position would
+    /// exceed the configured maximum number of positions allowed in a portfolio
+    /// or trading account.
+    MaxPositionsReached {
+        /// The current number of positions in the portfolio
+        current: usize,
+        /// The maximum number of positions allowed
+        maximum: usize,
+    },
+
+    /// Error indicating the maximum allowed exposure has been reached
+    ///
+    /// This variant is triggered when a new position or modification would cause
+    /// the total portfolio exposure to exceed the configured maximum risk threshold.
+    /// Exposure is typically measured in monetary terms based on position value or risk.
     MaxExposureReached {
+        /// The current financial exposure level of the portfolio
         current_exposure: f64,
+        /// The maximum allowed exposure level
         max_exposure: f64,
     },
 }
@@ -244,8 +394,27 @@ impl fmt::Display for PositionLimitErrorKind {
 
 impl Error for PositionError {}
 
-// Helper methods for creating common errors
+/// Factory methods for creating position-related errors
+///
+/// This implementation provides a set of convenience factory methods for creating
+/// different types of position errors. These methods create properly structured
+/// error instances with clear, descriptive information about what went wrong.
+///
+/// # Methods
+///
+/// These factory methods simplify error creation throughout the codebase and ensure
+/// that errors have consistent formatting and information.
 impl PositionError {
+    /// Creates an error for operations not supported by a specific strategy type
+    ///
+    /// # Parameters
+    ///
+    /// * `strategy_type` - The name or identifier of the strategy that doesn't support the operation
+    /// * `operation` - The name of the unsupported operation that was attempted
+    ///
+    /// # Returns
+    ///
+    /// A `PositionError::StrategyError` variant with UnsupportedOperation details
     pub fn unsupported_operation(strategy_type: &str, operation: &str) -> Self {
         PositionError::StrategyError(StrategyErrorKind::UnsupportedOperation {
             strategy_type: strategy_type.to_string(),
@@ -253,6 +422,16 @@ impl PositionError {
         })
     }
 
+    /// Creates an error when a strategy has reached its maximum position capacity
+    ///
+    /// # Parameters
+    ///
+    /// * `strategy_type` - The name or identifier of the strategy that is at capacity
+    /// * `max_positions` - The maximum number of positions the strategy can hold
+    ///
+    /// # Returns
+    ///
+    /// A `PositionError::StrategyError` variant with StrategyFull details
     pub fn strategy_full(strategy_type: &str, max_positions: usize) -> Self {
         PositionError::StrategyError(StrategyErrorKind::StrategyFull {
             strategy_type: strategy_type.to_string(),
@@ -260,6 +439,16 @@ impl PositionError {
         })
     }
 
+    /// Creates an error for invalid position size values
+    ///
+    /// # Parameters
+    ///
+    /// * `size` - The invalid position size value
+    /// * `reason` - A description of why the size is invalid
+    ///
+    /// # Returns
+    ///
+    /// A `PositionError::ValidationError` variant with InvalidSize details
     pub fn invalid_position_size(size: f64, reason: &str) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::InvalidSize {
             size,
@@ -267,6 +456,16 @@ impl PositionError {
         })
     }
 
+    /// Creates an error for incompatible position side/direction
+    ///
+    /// # Parameters
+    ///
+    /// * `position_side` - The position side (Long or Short) that is incompatible
+    /// * `reason` - A description of why the position side is incompatible
+    ///
+    /// # Returns
+    ///
+    /// A `PositionError::ValidationError` variant with IncompatibleSide details
     pub fn invalid_position_type(position_side: Side, reason: String) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::IncompatibleSide {
             position_side,
@@ -274,6 +473,16 @@ impl PositionError {
         })
     }
 
+    /// Creates an error for incompatible option style
+    ///
+    /// # Parameters
+    ///
+    /// * `style` - The option style (Call or Put) that is incompatible
+    /// * `reason` - A description of why the option style is incompatible
+    ///
+    /// # Returns
+    ///
+    /// A `PositionError::ValidationError` variant with IncompatibleStyle details
     pub fn invalid_position_style(style: OptionStyle, reason: String) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::IncompatibleStyle {
             style,
@@ -281,6 +490,15 @@ impl PositionError {
         })
     }
 
+    /// Creates a generic invalid position error
+    ///
+    /// # Parameters
+    ///
+    /// * `reason` - A description of why the position is invalid
+    ///
+    /// # Returns
+    ///
+    /// A `PositionError::ValidationError` variant with InvalidPosition details
     pub fn invalid_position(reason: &str) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
             reason: reason.to_string(),

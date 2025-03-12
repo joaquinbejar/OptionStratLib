@@ -115,16 +115,49 @@ where
     }
 }
 
+/// Trait for merging and interpolating axes between compatible geometric structures.
+///
+/// This trait extends `AxisOperations` by providing methods to merge index values
+/// from two structures and interpolate points across the combined axes. This
+/// functionality is essential for operations that require aligning points from
+/// different structures onto a common set of coordinates.
+///
+/// # Type Parameters
+/// * `Point` - The complete point type (typically Point2D or Point3D)
+/// * `Input` - The input coordinate type (typically Decimal for 1D axes or Point2D for 2D axes)
+///
 pub trait MergeAxisInterpolate<Point, Input>: AxisOperations<Point, Input>
 where
     Point: Clone,
     Input: Hash + Eq + Clone + Ord,
 {
+    /// Merges the index values from two structures into a single ordered vector.
+    ///
+    /// This method combines the index values from `self` and `other` to create
+    /// a common set of indices that can be used for interpolation or alignment.
+    ///
+    /// # Arguments
+    /// * `other` - Another structure implementing the same trait
+    ///
+    /// # Returns
+    /// * `Vec<Input>` - Vector containing merged index values
     fn merge_axis_index<'a>(&'a self, other: &'a Self) -> Vec<Input> {
         let self_indexes: Vec<Input> = other.get_index_values();
         self.merge_indexes(self_indexes)
     }
 
+    /// Interpolates both structures to align them on a common set of index values.
+    ///
+    /// This method ensures that both structures have points at exactly the same
+    /// coordinate positions by adding interpolated points where necessary.
+    ///
+    /// # Arguments
+    /// * `other` - Another structure implementing the same trait
+    /// * `interpolation` - The interpolation method to use when creating new points
+    ///
+    /// # Returns
+    /// * `Result<(Self, Self), Self::Error>` - A tuple containing both structures
+    ///   with aligned coordinate points, or an error if interpolation fails
     fn merge_axis_interpolate(
         &self,
         other: &Self,

@@ -16,9 +16,42 @@ use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
 
+/// A wrapper type that represents a guaranteed positive decimal value.
+///
+/// This type encapsulates a `Decimal` value and ensures through its API that
+/// the contained value is always positive (greater than or equal to zero).
+/// It provides a type-safe way to handle numeric values in financial contexts
+/// where negative values would be invalid or meaningless.
+///
+/// The internal value is directly accessible only within the crate through
+/// the `pub(crate)` visibility modifier, while external access is provided
+/// through public methods that maintain the positive value invariant.
+///
+/// ## Example
+///
+/// ```rust
+/// use optionstratlib::pos;
+/// let strike_price = pos!(100.0);
+/// ```
 #[derive(PartialEq, Clone, Copy)]
 pub struct Positive(pub(crate) Decimal);
 
+/// Macro for creating a new `Positive` value with simplified syntax.
+///
+/// This macro attempts to create a `Positive` value from the given expression
+/// and unwraps the result. It will panic if the value cannot be converted to a
+/// `Positive` (e.g., if the value is negative or not representable).
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib::pos;
+/// let positive_value = pos!(5.0);
+/// ```
+///
+/// # Panics
+///
+/// This macro will panic if the provided value cannot be converted to a `Positive` value.
 #[macro_export]
 macro_rules! pos {
     ($val:expr) => {
@@ -26,6 +59,23 @@ macro_rules! pos {
     };
 }
 
+/// Macro for creating an `Option<Positive>` value with simplified syntax.
+///
+/// This macro attempts to create a `Positive` value from the given expression,
+/// unwraps the result, and wraps it in `Some()`. It will panic if the value
+/// cannot be converted to a `Positive` (e.g., if the value is negative or not
+/// representable).
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib::spos;
+/// let optional_positive = spos!(5.0); // Some(Positive(5.0))
+/// ```
+///
+/// # Panics
+///
+/// This macro will panic if the provided value cannot be converted to a `Positive` value.
 #[macro_export]
 macro_rules! spos {
     ($val:expr) => {
@@ -97,25 +147,43 @@ pub fn is_positive<T: 'static>() -> bool {
 }
 
 impl Positive {
+    /// A zero value represented as a `Positive` value.
     pub const ZERO: Positive = Positive(Decimal::ZERO);
 
+    /// A value of one represented as a `Positive` value.
     pub const ONE: Positive = Positive(Decimal::ONE);
 
+    /// A value of two represented as a `Positive` value.
     pub const TWO: Positive = Positive(Decimal::TWO);
 
+    /// Represents the maximum positive value possible (effectively infinity).
     pub const INFINITY: Positive = Positive(Decimal::MAX);
 
+    /// A value of ten represented as a `Positive` value.
     pub const TEN: Positive = Positive(Decimal::TEN);
 
+    /// A value of one hundred represented as a `Positive` value.
     pub const HUNDRED: Positive = Positive(Decimal::ONE_HUNDRED);
 
+    /// A value of one thousand represented as a `Positive` value.
     pub const THOUSAND: Positive = Positive(Decimal::ONE_THOUSAND);
 
+    /// The mathematical constant π (pi) represented as a `Positive` value.
     pub const PI: Positive = Positive(Decimal::PI);
 
+    /// Creates a new `Positive` value from a 64-bit floating-point number.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - A floating-point value to convert
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Positive)` if the value is non-negative and valid
+    /// * `Err(String)` if the value is negative or cannot be parsed as a Decimal
+    ///
     pub fn new(value: f64) -> Result<Self, String> {
         let dec = Decimal::from_f64(value);
-
         match dec {
             Some(value) if value >= Decimal::ZERO => Ok(Positive(value)),
             Some(value) => Err(format!("Value must be positive, got {}", value)),
@@ -123,6 +191,16 @@ impl Positive {
         }
     }
 
+    /// Creates a new `Positive` value directly from a `Decimal`.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - A `Decimal` value to wrap in a `Positive`
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Positive)` if the value is non-negative
+    /// * `Err(String)` if the value is negative
     pub fn new_decimal(value: Decimal) -> Result<Self, String> {
         if value >= Decimal::ZERO {
             Ok(Positive(value))
@@ -131,62 +209,178 @@ impl Positive {
         }
     }
 
+    /// Returns the inner `Decimal` value.
+    ///
+    /// # Returns
+    ///
+    /// The wrapped `Decimal` value.
     pub fn value(&self) -> Decimal {
         self.0
     }
 
+    /// Returns the inner `Decimal` value (alias for `value()`).
+    ///
+    /// # Returns
+    ///
+    /// The wrapped `Decimal` value.
     pub fn to_dec(&self) -> Decimal {
         self.0
     }
 
+    /// Converts the value to a 64-bit floating-point number.
+    ///
+    /// # Returns
+    ///
+    /// The value as an `f64`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the conversion fails.
     pub fn to_f64(&self) -> f64 {
         self.0.to_f64().unwrap()
     }
 
+    /// Converts the value to a 64-bit signed integer.
+    ///
+    /// # Returns
+    ///
+    /// The value as an `i64`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value cannot be represented as an `i64`.
     pub fn to_i64(&self) -> i64 {
         self.0.to_i64().unwrap()
     }
 
+    /// Returns the maximum of two `Positive` values.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - Another `Positive` value to compare with
+    ///
+    /// # Returns
+    ///
+    /// The larger of the two values.
     pub fn max(self, other: Positive) -> Positive {
         if self.0 > other.0 { self } else { other }
     }
 
+    /// Returns the minimum of two `Positive` values.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - Another `Positive` value to compare with
+    ///
+    /// # Returns
+    ///
+    /// The smaller of the two values.
     pub fn min(self, other: Positive) -> Positive {
         if self.0 < other.0 { self } else { other }
     }
 
+    /// Rounds the value down to the nearest integer.
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` value rounded down to the nearest integer.
     pub fn floor(&self) -> Positive {
         Positive(self.0.floor())
     }
 
+    /// Raises this value to an integer power.
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - The power to raise this value to
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` value representing `self` raised to the power `n`.
     pub fn powi(&self, n: i64) -> Positive {
         Positive(self.0.powi(n))
     }
 
+    /// Raises this value to a decimal power.
+    ///
+    /// This is a crate-internal method not exposed to public API users.
+    ///
+    /// # Arguments
+    ///
+    /// * `p0` - The power to raise this value to as a `Decimal`
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` value representing `self` raised to the power `p0`.
     pub(crate) fn powd(&self, p0: Decimal) -> Positive {
         Positive(self.0.powd(p0))
     }
 
+    /// Rounds the value to the nearest integer.
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` value rounded to the nearest integer.
     pub fn round(&self) -> Positive {
         Positive(self.0.round())
     }
 
+    /// Calculates the square root of the value.
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` value representing the square root.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the square root calculation fails.
     pub fn sqrt(&self) -> Positive {
         Positive(self.0.sqrt().unwrap())
     }
 
+    /// Calculates the natural logarithm of the value.
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` value representing the natural logarithm.
     pub fn ln(&self) -> Positive {
         Positive(self.0.ln())
     }
 
+    /// Rounds the value to a specified number of decimal places.
+    ///
+    /// # Arguments
+    ///
+    /// * `decimal_places` - The number of decimal places to round to
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` value rounded to the specified decimal places.
     pub fn round_to(&self, decimal_places: u32) -> Positive {
         Positive(self.0.round_dp(decimal_places))
     }
 
+    /// Calculates the exponential function e^x for this value.
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` value representing e raised to the power of `self`.
     pub fn exp(&self) -> Positive {
         Positive(self.0.exp())
     }
 
+    /// Clamps the value between a minimum and maximum.
+    ///
+    /// # Arguments
+    ///
+    /// * `min` - The lower bound
+    /// * `max` - The upper bound
+    ///
+    /// # Returns
+    ///
+    /// * `min` if `self` is less than `min`
+    /// * `max` if `self` is greater than `max`
+    /// * `self` if `self` is between `min` and `max` (inclusive)
     pub fn clamp(&self, min: Positive, max: Positive) -> Positive {
         if self < &min {
             min
@@ -197,6 +391,11 @@ impl Positive {
         }
     }
 
+    /// Checks if the value is exactly zero.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the value is zero, `false` otherwise.
     pub fn is_zero(&self) -> bool {
         self.0.is_zero()
     }

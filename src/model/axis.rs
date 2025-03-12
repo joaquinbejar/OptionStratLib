@@ -5,24 +5,69 @@
 ******************************************************************************/
 use serde::{Deserialize, Serialize};
 
+/// Represents the basic axis types used in financial option analysis and visualization.
+///
+/// This enum defines the fundamental dimensions along which option characteristics can be analyzed,
+/// plotted, or calculated. Each variant represents a specific financial metric or parameter that
+/// is commonly used in options trading and risk management.
+///
+/// These axis types can be used to:
+/// - Generate sensitivity analysis charts
+/// - Create parameter surfaces (e.g., volatility surface)
+/// - Define dimensions for multi-dimensional analysis
+/// - Specify which metrics to calculate or display
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
 pub enum BasicAxisTypes {
+    /// Sensitivity of option price to changes in underlying price (first derivative)
     Delta,
+
+    /// Rate of change of Delta with respect to underlying price (second derivative)
     Gamma,
+
+    /// Sensitivity of option price to time decay
     Theta,
+
+    /// Sensitivity of option price to changes in volatility
     Vega,
+
+    /// Implied or historical volatility of the underlying asset
     Volatility,
+
+    /// Price of the option contract
     Price,
+
+    /// Price of the underlying asset
     UnderlyingPrice,
+
+    /// Strike price of the option
     Strike,
+
+    /// Time until expiration of the option
     Expiration,
 }
 
+/// Iterator for traversing the basic axis types.
+///
+/// This iterator provides sequential access to each basic axis type defined in the system.
+/// It maintains an internal index to track the current position in the iteration sequence.
+///
+/// The iterator is particularly useful when you need to enumerate or process all available
+/// axis types in a systematic way, such as when generating charts, configuring visualization
+/// components, or performing operations that need to be applied to all axis types.
+///
 pub struct BasicAxisTypesIter {
+    /// Current position in the iteration sequence.
+    /// Starts at 0 and increments with each call to `next()`.
     index: usize,
 }
 
+/// Provides implementation for the BasicAxisTypes enumeration.
 impl BasicAxisTypes {
+    /// A constant array containing all variants of the BasicAxisTypes enum.
+    ///
+    /// This array allows efficient access to all available axis types without
+    /// needing to manually enumerate them in multiple places in the codebase.
+    /// The order of types is maintained consistently for iteration purposes.
     const VALUES: [BasicAxisTypes; 9] = [
         BasicAxisTypes::Delta,
         BasicAxisTypes::Gamma,
@@ -35,6 +80,26 @@ impl BasicAxisTypes {
         BasicAxisTypes::Expiration,
     ];
 
+    /// Creates an iterator over all variants of BasicAxisTypes.
+    ///
+    /// This method provides a convenient way to iterate through all available
+    /// axis types sequentially, which is useful for operations that need to
+    /// process each type, such as generating comprehensive reports or
+    /// applying calculations across all dimensions of options analysis.
+    ///
+    /// # Returns
+    ///
+    /// A `BasicAxisTypesIter` that yields each variant of `BasicAxisTypes` in order.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::model::BasicAxisTypes;
+    /// for axis_type in BasicAxisTypes::iter() {
+    ///     println!("Processing axis type: {:?}", axis_type);
+    ///     // Perform operations with each axis type
+    /// }
+    /// ```
     pub fn iter() -> BasicAxisTypesIter {
         BasicAxisTypesIter { index: 0 }
     }

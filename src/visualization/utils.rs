@@ -35,19 +35,57 @@ pub fn apply_shade(base_color: RGBColor, normalized_value: f64) -> RGBColor {
 
     RGBColor(r as u8, g as u8, b as u8)
 }
+
+/**
+Defines the backend for rendering graphs.  Different backends are available depending on the target architecture.
+
+# Backends
+
+* **Bitmap (Native Targets):** Renders the graph to a bitmap image file.  This is available for all targets except WebAssembly (`wasm32`).
+* **Canvas (WebAssembly):** Renders the graph to an HTML5 canvas element. This is only available for the WebAssembly target (`wasm32`).
+
+
+*/
 #[cfg(not(target_arch = "wasm32"))]
 pub enum GraphBackend<'a> {
+    /// Bitmap backend.  Writes the graph to an image file.
     Bitmap {
+        /// Path to the output image file.
         file_path: &'a str,
+        /// Dimensions of the output image (width, height).
         size: (u32, u32),
     },
 }
 
+/**
+Available backends for rendering the graph.
+
+Currently, only a Canvas backend is supported when targeting WebAssembly.
+*/
 #[cfg(target_arch = "wasm32")]
 pub enum GraphBackend {
-    Canvas { canvas: web_sys::HtmlCanvasElement },
+    /// Canvas backend. Renders the graph to an HTML5 canvas element.
+    Canvas {
+        /// The HTML5 canvas element to render to.
+        canvas: web_sys::HtmlCanvasElement,
+    },
 }
 
+/// Creates a drawing area with a white background.
+///
+/// # Arguments
+///
+/// * `$file_path` - The path to the output image file.
+/// * `$width` - The width of the drawing area.
+/// * `$height` - The height of the drawing area.
+///
+/// # Returns
+///
+/// A `DrawingArea` object.
+///
+/// # Errors
+///
+/// Returns an error if the drawing area cannot be created.
 #[macro_export]
 macro_rules! create_drawing_area {
     ($file_path:expr, $width:expr, $height:expr) => {{
@@ -57,6 +95,24 @@ macro_rules! create_drawing_area {
     }};
 }
 
+/// Builds a chart with a title and specified axis ranges.
+///
+/// # Arguments
+///
+/// * `$root` - The drawing area to build the chart on.
+/// * `$title` - The title of the chart.
+/// * `$title_size` - The font size of the title.
+/// * `$min_x` - The minimum value for the x-axis.
+/// * `$max_x` - The maximum value for the x-axis.
+/// * `$min_y` - The minimum value for the y-axis.
+/// * `$max_y` - The maximum value for the y-axis.
+///
+/// # Returns
+///
+/// A `ChartBuilder` object.        
+/// # Errors
+///
+/// Returns an error if the chart cannot be built.
 #[macro_export]
 macro_rules! build_chart {
     ($root:expr, $title:expr, $title_size:expr, $min_x:expr, $max_x:expr, $min_y:expr, $max_y:expr) => {
@@ -71,10 +127,22 @@ macro_rules! build_chart {
     };
 }
 
+/// Configures the chart mesh, labels, and draws a horizontal line at y = 0.
+///
+/// # Arguments
+///
+/// * `$chart` - The chart to configure.
+/// * `$x_labels` - The number of labels for the x-axis.
+/// * `$y_labels` - The number of labels for the y-axis.
+/// * `$min_x` - The minimum value for the x-axis.
+/// * `$max_x` - The maximum value for the x-axis.
+///
+/// # Errors
+///
+/// Returns an error if the chart cannot be configured or the line cannot be drawn.
 #[macro_export]
 macro_rules! configure_chart_and_draw_mesh {
     ($chart:expr, $x_labels:expr, $y_labels:expr, $min_x:expr, $max_x:expr) => {{
-        // Configure and draw the mesh grid
         $chart
             .configure_mesh()
             .disable_mesh() // Disable the mesh grid
@@ -89,6 +157,19 @@ macro_rules! configure_chart_and_draw_mesh {
     }};
 }
 
+/// Draws line segments on the chart based on provided data.
+///
+/// # Arguments
+///
+/// * `$chart` - The chart to draw on.
+/// * `$x_axis_data` - The data for the x-axis.
+/// * `$y_axis_data` - The data for the y-axis.
+/// * `$dark_green` - The color to use for positive values.
+/// * `$dark_red` - The color to use for negative values.
+///
+/// # Errors
+///
+/// Returns an error if the line segments cannot be drawn.
 #[macro_export]
 macro_rules! draw_line_segments {
     ($chart:expr, $x_axis_data:expr, $y_axis_data:expr, $dark_green:expr, $dark_red:expr) => {{
@@ -100,10 +181,8 @@ macro_rules! draw_line_segments {
                 } else {
                     &$dark_red
                 };
-
                 let points: Vec<(f64, f64)> =
                     vec![(last_price.to_f64(), last_profit), (price.to_f64(), value)];
-
                 $chart.draw_series(plotters::prelude::LineSeries::new(points, color))?;
             }
             last_point = Some((price, value));
@@ -112,7 +191,24 @@ macro_rules! draw_line_segments {
     }};
 }
 
+/// Trait for creating graphs of profit calculations.
+/// This trait extends the `Profit` trait, adding the functionality to visualize profit calculations.
 pub trait Graph: Profit {
+    /// Generates a graph of profit calculations.
+    ///
+    /// # Arguments
+    ///
+    /// * `x_axis_data` - A slice of `Positive` values representing the x-axis data points (e.g., prices).
+    /// * `backend` - The `GraphBackend` to use for rendering.  This determines whether the graph is rendered to a bitmap file or a canvas element.
+    /// * `title_size` - The font size for the graph title.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * `x_axis_data` is empty.
+    /// * No valid y-axis values could be calculated (e.g., all calculations resulted in errors).
+    /// * There is an issue during graph creation or rendering with the chosen backend.
+    ///
     fn graph(
         &self,
         x_axis_data: &[Positive],
@@ -168,8 +264,18 @@ pub trait Graph: Profit {
         Ok(())
     }
 
+    /// Returns the title of the graph.
     fn title(&self) -> String;
 
+    /// Calculates the y-axis values (profit) corresponding to the provided x-axis data.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - A slice of `Positive` values representing the x-axis data points.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `f64` representing the calculated profit values.
     fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
             .filter_map(|&price| {
@@ -180,10 +286,12 @@ pub trait Graph: Profit {
             .collect()
     }
 
+    /// Returns a vector of vertical lines to draw on the chart. Default implementation returns an empty vector.
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         Vec::new()
     }
 
+    /// Returns a vector of points to draw on the chart. Default implementation returns an empty vector.
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         Vec::new()
     }

@@ -85,13 +85,33 @@ use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
+/// Represents a Telegraph Process, a two-state continuous-time Markov chain model
+/// used to simulate stochastic processes with discrete state transitions.
+///
+/// The Telegraph Process alternates between two states (-1 and +1), modeling regime
+/// switches or market sentiment changes. State transitions are governed by Poisson
+/// processes with specified rates. This model is particularly useful for simulating
+/// financial markets that exhibit distinct behavioral regimes.
+///
+/// # Applications
+///
+/// - Modeling regime changes in market volatility
+/// - Simulating discrete sentiment shifts in financial markets
+/// - Representing asymmetric transition behaviors in stochastic systems
+/// - Pricing financial derivatives under regime-switching assumptions
+///
 #[derive(Clone)]
 pub struct TelegraphProcess {
-    /// Transition rate from state -1 to +1
+    /// Transition rate from state -1 to +1, representing the intensity
+    /// of the underlying Poisson process for upward state changes
     lambda_up: Decimal,
-    /// Transition rate from state +1 to -1
+
+    /// Transition rate from state +1 to -1, representing the intensity
+    /// of the underlying Poisson process for downward state changes
     lambda_down: Decimal,
-    /// Current state of the process (-1 or 1)
+
+    /// Current state of the process, which can be either -1 or +1,
+    /// representing the two possible regimes of the system
     current_state: i8,
 }
 
@@ -234,6 +254,29 @@ pub(crate) fn estimate_telegraph_parameters(
     Ok((lambda_up, lambda_down))
 }
 
+/// Prices an option using the Telegraph process simulation method.
+///
+/// This function simulates the underlying asset price movement using a Telegraph process,
+/// which oscillates between two states, affecting the volatility of the price path.
+/// It provides a more sophisticated model than standard geometric Brownian motion by
+/// capturing regime-switching behavior in market volatility.
+///
+/// # Arguments
+///
+/// * `option` - Reference to the Options structure containing all option parameters
+/// * `no_steps` - Number of time steps for the simulation
+/// * `lambda_up` - Optional transition rate from down state (-1) to up state (+1)
+/// * `lambda_down` - Optional transition rate from up state (+1) to down state (-1)
+///
+/// # Returns
+///
+/// * `Result<Decimal, Box<dyn Error>>` - The simulated option price or an error
+///
+/// # Details
+///
+/// The function handles parameter estimation automatically if transition rates are not provided.
+/// When missing, it simulates returns based on the option's implied volatility to estimate
+/// appropriate telegraph parameters.
 pub fn telegraph(
     option: &Options,
     no_steps: usize,

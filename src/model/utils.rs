@@ -9,12 +9,59 @@ use crate::{Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use rust_decimal_macros::dec;
 
+/// Converts a vector of `Positive` values to a vector of `f64` values.
+///
+/// This utility function transforms a collection of `Positive` type values
+/// to standard floating-point values by applying the `to_f64()` method to each element.
+/// The function consumes the input vector and returns a new vector containing the converted values.
+///
+/// # Parameters
+///
+/// * `vec` - A vector of `Positive` values to be converted.
+///
+/// # Returns
+///
+/// A vector of `f64` values corresponding to the input `Positive` values.
+///
 pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
     vec.into_iter().map(|pos_f64| pos_f64.to_f64()).collect()
 }
 
+/// Creates a sample option contract with predefined parameters for testing or demonstration purposes.
+///
+/// This utility function simplifies the creation of option contracts by providing a standard
+/// configuration with reasonable defaults. It creates a European-style option with a 30-day
+/// expiration and a fixed risk-free rate of 5%.
+///
+/// # Parameters
+///
+/// * `option_style` - Specifies whether the option is a Call or Put.
+/// * `side` - Determines if the position is Long or Short.
+/// * `underlying_price` - The current market price of the underlying asset.
+/// * `quantity` - The number of contracts in the position.
+/// * `strike_price` - The price at which the option holder can exercise the option.
+/// * `volatility` - The implied volatility used for pricing the option.
+///
+/// # Returns
+///
+/// An `Options` struct configured with the specified parameters and sensible defaults.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib::{pos, OptionStyle, Side};
+/// use optionstratlib::model::utils::create_sample_option;
+/// let option = create_sample_option(
+///     OptionStyle::Call,
+///     Side::Long,
+///     pos!(150.0),  // underlying price
+///     pos!(10.0),   // quantity
+///     pos!(155.0),  // strike price
+///     pos!(0.25),   // volatility (25%)
+/// );
+/// ```
 #[allow(dead_code)]
-pub(crate) fn create_sample_option(
+pub fn create_sample_option(
     option_style: OptionStyle,
     side: Side,
     underlying_price: Positive,
@@ -38,8 +85,49 @@ pub(crate) fn create_sample_option(
     )
 }
 
+/// Creates a sample position for testing and demonstration purposes.
+///
+/// This function generates a `Position` instance with predefined values for some fields
+/// while allowing customization of key option parameters. It's useful for creating test
+/// scenarios, examples, or sample data for option position analysis.
+///
+/// # Parameters
+///
+/// * `option_style` - The style of the option (Call or Put)
+/// * `side` - Whether the position is Long or Short
+/// * `underlying_price` - The current price of the underlying asset
+/// * `quantity` - The number of option contracts in the position
+/// * `strike_price` - The price at which the option can be exercised
+/// * `implied_volatility` - The market's forecast of likely movement in the underlying asset
+///
+/// # Returns
+///
+/// A `Position` instance with the specified parameters and these default values:
+/// * European-style option
+/// * "AAPL" as the underlying symbol
+/// * 30-day expiration
+/// * 5% risk-free rate
+/// * 1% dividend yield
+/// * Premium of $5.00
+/// * Open and close fees of $0.50 each
+/// * Current date and time
+///
+/// # Example
+///
+/// ```rust
+/// use optionstratlib::model::utils::create_sample_position;
+/// use optionstratlib::{pos, OptionStyle, Side};
+/// let sample_call = create_sample_position(
+///     OptionStyle::Call,
+///     Side::Long,
+///     pos!(150.0),  // underlying price
+///     pos!(1.0),    // quantity
+///     pos!(155.0),  // strike price
+///     pos!(0.25)    // implied volatility
+/// );
+/// ```
 #[allow(dead_code)]
-pub(crate) fn create_sample_position(
+pub fn create_sample_position(
     option_style: OptionStyle,
     side: Side,
     underlying_price: Positive,
@@ -69,8 +157,27 @@ pub(crate) fn create_sample_position(
     }
 }
 
-#[allow(dead_code)]
-pub(crate) fn create_sample_option_with_date(
+/// Creates a sample Options object with a specific expiration date.
+///
+/// This utility function simplifies the creation of option contracts for testing
+/// or demonstration purposes by providing a specific expiration date using a NaiveDateTime.
+/// It creates a European-style option with predefined parameters and a fixed risk-free rate of 5%
+/// and dividend yield of 1%.
+///
+/// # Parameters
+///
+/// * `option_style` - The style of the option (Call or Put)
+/// * `side` - The position side (Long or Short)
+/// * `underlying_price` - The current price of the underlying asset
+/// * `quantity` - The number of option contracts
+/// * `strike_price` - The strike price of the option
+/// * `volatility` - The implied volatility for pricing the option
+/// * `naive_date` - The expiration date and time in naive format (will be converted to UTC)
+///
+/// # Returns
+///
+/// Returns a fully configured Options instance with "AAPL" as the underlying symbol.
+pub fn create_sample_option_with_date(
     option_style: OptionStyle,
     side: Side,
     underlying_price: Positive,
@@ -95,8 +202,41 @@ pub(crate) fn create_sample_option_with_date(
     )
 }
 
-#[allow(dead_code)]
-pub(crate) fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> Options {
+/// Creates a simplified sample option contract for testing or demonstration purposes.
+///
+/// This function generates an Options instance with pre-defined values, requiring only
+/// the specification of the option style (Call or Put) and market position (Long or Short).
+/// It uses Apple Inc. (AAPL) as the underlying security with standard parameters suitable
+/// for basic examples or testing scenarios.
+///
+/// # Parameters
+///
+/// * `option_style` - Specifies whether the option is a Call or Put
+/// * `side` - Indicates whether the position is Long or Short
+///
+/// # Returns
+///
+/// Returns an `Options` instance with the following predefined values:
+/// - European-style option
+/// - AAPL as the underlying symbol
+/// - Strike price of $100.0
+/// - 30 days until expiration
+/// - 20% implied volatility (0.2)
+/// - Quantity of 1.0 contracts
+/// - Underlying price of $100.0
+/// - 5% risk-free rate
+/// - 1% dividend yield
+/// - No exotic parameters
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::model::utils::create_sample_option_simplest;
+/// use optionstratlib::{OptionStyle, Side};
+/// let long_call = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+/// let short_put = create_sample_option_simplest(OptionStyle::Put, Side::Short);
+/// ```
+pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> Options {
     Options::new(
         OptionType::European,
         side,
@@ -113,8 +253,38 @@ pub(crate) fn create_sample_option_simplest(option_style: OptionStyle, side: Sid
     )
 }
 
-#[allow(dead_code)]
-pub(crate) fn create_sample_option_simplest_strike(
+/// Creates a sample option with specified parameters and default values.
+///
+/// This function provides a convenient way to create an `Options` instance with common default values
+/// while allowing customization of the most important parameters: side, option style, and strike price.
+/// All other parameters are set to reasonable defaults for testing or demonstration purposes.
+///
+/// # Parameters
+/// * `side` - The position side (Long or Short) for the option.
+/// * `option_style` - The style of option (Call or Put).
+/// * `strike` - The strike price of the option as a `Positive` value.
+///
+/// # Returns
+/// An `Options` instance representing a European option on AAPL stock with:
+/// * 30 days until expiration
+/// * 20% implied volatility
+/// * Quantity of 1.0
+/// * Underlying price of $100.0
+/// * 5% risk-free rate
+/// * 1% dividend yield
+/// * No exotic parameters
+///
+/// # Examples
+/// ```
+/// use optionstratlib::model::utils::create_sample_option_simplest_strike;
+/// use optionstratlib::{pos, OptionStyle, Side};
+/// let long_call = create_sample_option_simplest_strike(
+///     Side::Long,
+///     OptionStyle::Call,
+///     pos!(105.0)
+/// );
+/// ```
+pub fn create_sample_option_simplest_strike(
     side: Side,
     option_style: OptionStyle,
     strike: Positive,

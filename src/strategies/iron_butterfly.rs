@@ -48,19 +48,117 @@ const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral options
     strike price. This strategy profits from low volatility and time decay, with maximum profit when \
     the underlying price equals the strike price of the short options at expiration.";
 
+/// # IronButterfly
+///
+/// Represents an Iron Butterfly options trading strategy. This strategy involves four options positions:
+/// a short call and short put at the same middle strike price, along with a long call at a higher strike
+/// and a long put at a lower strike, all with the same expiration date.
+///
+/// An Iron Butterfly is a neutral options strategy that profits from low volatility, where the underlying
+/// asset price remains close to the middle strike price through expiration.
+///
+/// ## Fields
+/// * `name`: A descriptive name for the specific strategy instance.
+/// * `kind`: The type of strategy, which is `StrategyType::IronButterfly`.
+/// * `description`: A detailed description of this specific strategy instance.
+/// * `break_even_points`: The price points at which the strategy breaks even (neither profit nor loss).
+/// * `short_call`: The short call position component at the middle strike price.
+/// * `short_put`: The short put position component at the same middle strike price.
+/// * `long_call`: The long call position component at a higher strike price.
+/// * `long_put`: The long put position component at a lower strike price.
+///
+/// ## Risk Profile
+/// An Iron Butterfly has limited risk and limited profit potential. The maximum risk is defined
+/// by the difference between the middle strike and either wing strike, minus the net premium received.
+///
+/// ## Maximum Profit
+/// The maximum profit is achieved when the underlying asset price at expiration equals exactly the middle strike price.
+/// In this scenario, all options expire worthless except the short positions, and the trader keeps the full premium collected.
+///
+/// ## Maximum Loss
+/// The maximum loss is limited and occurs when the price of the underlying asset moves beyond either the upper
+/// or lower strike price. The worst-case scenario loss is the difference between strike prices minus the premium received.
+///
+/// ## Break-even Points
+/// There are two break-even points in an Iron Butterfly:
+/// 1. Upper break-even point: Middle strike price + net premium received
+/// 2. Lower break-even point: Middle strike price - net premium received
+///
+/// ## Strategy Usage
+/// This strategy is typically used when:
+/// - The trader expects low volatility in the underlying asset
+/// - The trader believes the price will remain close to the current level
+/// - Implied volatility is high (making the sold options more expensive)
+/// - The trader wants defined risk/reward parameters compared to a short straddle
+///
 #[derive(Clone, Debug)]
 pub struct IronButterfly {
+    /// Name identifier for this specific strategy instance
     pub name: String,
+    /// Identifies this as an IronButterfly strategy type
     pub kind: StrategyType,
+    /// Detailed description of this strategy instance
     pub description: String,
+    /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
+    /// The short call position at the middle strike
     short_call: Position,
+    /// The short put position at the middle strike
     short_put: Position,
+    /// The long call position at a higher strike price
     long_call: Position,
+    /// The long put position at a lower strike price
     long_put: Position,
 }
 
 impl IronButterfly {
+    /// # Iron Butterfly Strategy Constructor
+    ///
+    /// Creates a new Iron Butterfly options trading strategy instance. An Iron Butterfly is a neutral options strategy
+    /// that combines selling an at-the-money put and call while buying an out-of-the-money call and an out-of-the-money put.
+    ///
+    /// The Iron Butterfly consists of four options contracts:
+    /// - Short call at the middle strike price
+    /// - Short put at the same middle strike price
+    /// - Long call at a higher strike price
+    /// - Long put at a lower strike price
+    ///
+    /// ## Parameters
+    ///
+    /// * `underlying_symbol` - Symbol of the underlying asset (e.g., "SPY")
+    /// * `underlying_price` - Current market price of the underlying asset
+    /// * `short_strike` - Strike price for both short call and short put options
+    /// * `long_call_strike` - Strike price for the long call option (higher than the short strike)
+    /// * `long_put_strike` - Strike price for the long put option (lower than the short strike)
+    /// * `expiration` - Expiration date for all options in the strategy
+    /// * `implied_volatility` - Implied volatility used for option pricing
+    /// * `risk_free_rate` - Risk-free interest rate as a decimal
+    /// * `dividend_yield` - Dividend yield of the underlying asset
+    /// * `quantity` - Number of contracts for each position in the strategy
+    /// * `premium_short_call` - Premium received for selling the call option
+    /// * `premium_short_put` - Premium received for selling the put option
+    /// * `premium_long_call` - Premium paid for buying the call option
+    /// * `premium_long_put` - Premium paid for buying the put option
+    /// * `open_fee` - Transaction fee for opening positions
+    /// * `close_fee` - Transaction fee for closing positions
+    ///
+    /// ## Return Value
+    ///
+    /// Returns a fully configured `IronButterfly` strategy instance with all positions established and break-even points calculated.
+    ///
+    /// ## Strategy Characteristics
+    ///
+    /// - **Maximum Profit**: Achieved when the underlying asset price equals the short strike price at expiration.
+    ///   The maximum profit equals the net credit received (premiums from short options minus premiums paid for long options).
+    ///
+    /// - **Maximum Risk**: Limited and defined by the difference between adjacent strike prices minus the net credit received.
+    ///
+    /// - **Break-even Points**: There are two break-even points:
+    ///   1. Lower break-even = short strike price - net credit received
+    ///   2. Upper break-even = short strike price + net credit received
+    ///
+    /// - **Ideal Market Outlook**: Neutral, expecting low volatility with the underlying price remaining near the short strike price.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,

@@ -48,17 +48,98 @@ const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an o
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
 is expected and the underlying asset's price is anticipated to remain stable.";
 
+/// # Short Strangle Strategy
+///
+/// A Short Strangle is an options trading strategy that involves simultaneously selling an out-of-the-money call option
+/// and an out-of-the-money put option with the same expiration date but different strike prices.
+///
+/// ## Strategy Overview
+/// - **Outlook**: Neutral, expecting low volatility
+/// - **Risk**: Unlimited in both directions (if the underlying asset moves significantly)
+/// - **Reward**: Limited to the combined premium received from selling both options
+/// - **Breakeven Points**: Upper strike + net premium received, Lower strike - net premium received
+/// - **Margin Requirements**: Typically high due to undefined risk
+///
+/// ## Properties
+/// The `ShortStrangle` struct encapsulates all components and characteristics of a short strangle options strategy.
+///
+/// ## Fields
+/// * `name`: A descriptive name for this specific strategy instance
+/// * `kind`: The type of strategy (ShortStrangle)
+/// * `description`: A detailed description of the specific strategy implementation
+/// * `break_even_points`: The price points at which the strategy breaks even (no profit/loss)
+/// * `short_call`: The short call position component of the strategy
+/// * `short_put`: The short put position component of the strategy
+///
+/// ## Maximum Profit/Loss
+/// * **Max Profit**: Limited to the total premium received from selling both options
+/// * **Max Loss**: Unlimited. Upside loss = stock price - call strike - premium received.
+///   Downside loss = put strike - stock price - premium received.
+///
+/// ## Ideal Market Conditions
+/// Best implemented during periods of high implied volatility that is expected to decrease,
+/// and when the underlying asset is anticipated to trade within a narrow price range until expiration.
+///
+/// ## Example
+/// A short strangle might be constructed by selling a call with a strike price of $110
+/// and selling a put with a strike price of $90, when the underlying is trading at $100.
+/// The premium collected might be $2 for the call and $2 for the put, for a total of $4.
+/// Break-even points would be at $86 ($90 - $4) and $114 ($110 + $4).
 #[derive(Clone, Debug)]
 pub struct ShortStrangle {
+    /// Name identifier for this specific strategy instance
     pub name: String,
+    /// Identifies this as a ShortStrangle strategy type
     pub kind: StrategyType,
+    /// Detailed description of this particular strategy implementation
     pub description: String,
+    /// Price points at which the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
+    /// The short call leg of the strategy (typically out-of-the-money)
     short_call: Position,
+    /// The short put leg of the strategy (typically out-of-the-money)
     short_put: Position,
 }
 
 impl ShortStrangle {
+    /// Creates a new Short Strangle options strategy.
+    ///
+    /// A Short Strangle is created by selling an out-of-the-money call option and an out-of-the-money put option with
+    /// the same expiration date. This strategy is profitable when the underlying asset's price remains stable
+    /// between the two strike prices, allowing both options to expire worthless.
+    ///
+    /// # Parameters
+    ///
+    /// * `underlying_symbol` - Symbol of the underlying asset (e.g., "AAPL", "SPY")
+    /// * `underlying_price` - Current market price of the underlying asset
+    /// * `call_strike` - Strike price for the short call option. If set to zero, defaults to 110% of underlying price.
+    /// * `put_strike` - Strike price for the short put option. If set to zero, defaults to 90% of underlying price.
+    /// * `expiration` - Expiration date for both options
+    /// * `implied_volatility` - Current implied volatility for the options
+    /// * `risk_free_rate` - Risk-free interest rate as a decimal
+    /// * `dividend_yield` - Expected dividend yield of the underlying asset
+    /// * `quantity` - Number of contracts to trade
+    /// * `premium_short_call` - Premium received for selling the call option
+    /// * `premium_short_put` - Premium received for selling the put option
+    /// * `open_fee_short_call` - Transaction fee for opening the short call position
+    /// * `close_fee_short_call` - Transaction fee for closing the short call position
+    /// * `open_fee_short_put` - Transaction fee for opening the short put position
+    /// * `close_fee_short_put` - Transaction fee for closing the short put position
+    ///
+    /// # Returns
+    ///
+    /// A new `ShortStrangle` instance with both positions initialized and break-even points calculated.
+    ///
+    /// # Default Values
+    ///
+    /// - If `call_strike` is zero, it will be set to 110% of the underlying price
+    /// - If `put_strike` is zero, it will be set to 90% of the underlying price
+    ///
+    /// # Break-Even Points
+    ///
+    /// The strategy has two break-even points:
+    /// - Lower break-even: Put strike minus the total premium received per contract
+    /// - Upper break-even: Call strike plus the total premium received per contract
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -830,17 +911,111 @@ out-of-the-money put with the same expiration date. This strategy is used when h
 is expected and a significant move in the underlying asset's price is anticipated, but the \
 direction is uncertain.";
 
+/// # LongStrangle
+///
+/// Represents a Long Strangle options trading strategy.
+///
+/// A Long Strangle strategy involves simultaneously buying an out-of-the-money call option
+/// and an out-of-the-money put option on the same underlying asset with the same expiration date
+/// but different strike prices. This strategy benefits from significant price movements in either
+/// direction.
+///
+/// ## Fields
+///
+/// * `name` - Custom name identifier for this specific strategy instance
+/// * `kind` - The type of strategy (always `StrategyType::LongStrangle` for this struct)
+/// * `description` - Detailed description of this specific strategy instance
+/// * `break_even_points` - Vector containing the price points where the strategy breaks even
+///   (typically two points: call strike + call premium and put strike - put premium)
+/// * `long_call` - The long call position component of the strategy
+/// * `long_put` - The long put position component of the strategy
+///
+/// ## Risk Profile
+///
+/// * Maximum Loss: Limited to the total premium paid (call premium + put premium + fees)
+/// * Maximum Profit: Theoretically unlimited on the upside; on the downside, limited to
+///   the put strike price minus total premium paid
+/// * Break-even Points: Upper break-even is call strike plus total premium paid;
+///   lower break-even is put strike minus total premium paid
+///
+/// ## Typical Usage
+///
+/// Used when an investor expects significant price movement in the underlying asset
+/// but is uncertain about the direction of the move. This strategy is often employed:
+///
+/// * Ahead of major market events with uncertain outcomes (earnings reports, regulatory decisions)
+/// * During periods of expected high volatility
+/// * When anticipating a break from a trading range
+///
+/// ## Example Scenario
+///
+/// If the underlying asset is trading at $100, a long strangle might involve:
+/// * Buying a put with a strike price of $90 for a premium of $2
+/// * Buying a call with a strike price of $110 for a premium of $2
+///
+/// Total cost: $4 per share ($400 per contract)
+/// Break-even points: $86 and $114
+///
+/// ## Advantages and Disadvantages
+///
+/// ### Advantages
+/// * Benefits from price movements in either direction
+/// * Limited risk (maximum loss is the premium paid)
+/// * No margin requirements (beyond the premium paid)
+///
+/// ### Disadvantages
+/// * Requires significant price movement to be profitable
+/// * Suffers from time decay (theta) as both options lose value over time
+/// * Generally more expensive than directional strategies due to purchasing two options
 #[derive(Clone, Debug)]
 pub struct LongStrangle {
+    /// Name identifier for this specific strategy instance
     pub name: String,
+    /// Type of the strategy (always StrategyType::LongStrangle)
     pub kind: StrategyType,
+    /// Detailed description of this strategy instance
     pub description: String,
+    /// Price points where the strategy breaks even (typically two points)
     pub break_even_points: Vec<Positive>,
+    /// The long call position component of the strategy
     long_call: Position,
+    /// The long put position component of the strategy
     long_put: Position,
 }
 
 impl LongStrangle {
+    /// ## Creation
+    ///
+    /// Creates a new Long Strangle strategy with two positions:
+    /// 1. A long call option with strike typically above the current underlying price (OTM)
+    /// 2. A long put option with strike typically below the current underlying price (OTM)
+    ///
+    /// If strike prices are not explicitly provided (passed as zero), the constructor will automatically set:
+    /// - Call strike at 10% above the underlying price
+    /// - Put strike at 10% below the underlying price
+    ///
+    /// ## Parameters
+    ///
+    /// * `underlying_symbol` - Symbol of the underlying asset
+    /// * `underlying_price` - Current price of the underlying asset
+    /// * `call_strike` - Strike price for the call option (will be set to 110% of underlying price if zero)
+    /// * `put_strike` - Strike price for the put option (will be set to 90% of underlying price if zero)
+    /// * `expiration` - Expiration date for both options
+    /// * `implied_volatility` - Implied volatility for pricing models
+    /// * `risk_free_rate` - Risk-free interest rate for pricing models
+    /// * `dividend_yield` - Dividend yield for the underlying asset
+    /// * `quantity` - Number of contracts to open for each position
+    /// * `premium_long_call` - Premium paid for the call option
+    /// * `premium_long_put` - Premium paid for the put option
+    /// * `open_fee_long_call` - Fee for opening the call position
+    /// * `close_fee_long_call` - Fee for closing the call position
+    /// * `open_fee_long_put` - Fee for opening the put position
+    /// * `close_fee_long_put` - Fee for closing the put position
+    ///
+    /// ## Returns
+    ///
+    /// Returns a fully initialized `LongStrangle` strategy with properly configured positions and calculated
+    /// break-even points.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,

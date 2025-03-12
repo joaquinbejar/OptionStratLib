@@ -30,23 +30,79 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, error};
 
+/// Represents a custom options trading strategy with user-defined positions and characteristics.
+///
+/// The `CustomStrategy` struct allows traders to create and analyze bespoke options strategies
+/// that don't fit into standard predefined patterns. It contains information about the strategy's
+/// positions, risk-reward profile, break-even points, and provides methods for profit-loss analysis.
+///
+/// This structure supports both analytical calculations and visualization of custom strategies,
+/// enabling traders to evaluate potential outcomes across different price points of the underlying asset.
+///
 #[derive(Clone, Debug)]
 pub struct CustomStrategy {
+    /// The name of the custom strategy.
     pub name: String,
+
+    /// The ticker symbol of the underlying asset.
     pub symbol: String,
+
+    /// The type of strategy, typically set to StrategyType::Custom.
     pub kind: StrategyType,
+
+    /// A detailed description of the strategy, its purpose, and expected outcomes.
     pub description: String,
+
+    /// The price points at which the strategy breaks even (neither profit nor loss).
     pub break_even_points: Vec<Positive>,
+
+    /// The collection of option positions that make up the strategy.
     pub positions: Vec<Position>,
+
+    /// The current price of the underlying asset.
     pub underlying_price: Positive,
+
+    /// Tolerance value used in numerical calculations for finding critical points.
     epsilon: Positive,
+
+    /// Maximum number of iterations allowed in numerical algorithms.
     max_iterations: u32,
+
+    /// Step size used in price interval calculations.
     step_by: Positive,
+
+    /// The price point and value of maximum profit, if calculated.
     max_profit_point: Option<(Positive, f64)>,
+
+    /// The price point and value of maximum loss, if calculated.
     max_loss_point: Option<(Positive, f64)>,
 }
 
 impl CustomStrategy {
+    /// Creates a new custom options trading strategy with the specified parameters.
+    ///
+    /// This constructor initializes a `CustomStrategy` instance and performs several
+    /// validation and calculation steps to ensure the strategy is valid and properly
+    /// analyzed before being returned to the caller.
+    ///
+    /// # Parameters
+    /// * `name` - The name of the custom strategy
+    /// * `symbol` - The ticker symbol of the underlying asset
+    /// * `description` - A detailed description of the strategy's purpose and characteristics
+    /// * `underlying_price` - The current price of the underlying asset
+    /// * `positions` - A collection of option positions that compose the strategy
+    /// * `epsilon` - Tolerance value used in numerical calculations for finding critical points
+    /// * `max_iterations` - Maximum number of iterations allowed in numerical algorithms
+    /// * `step_by` - Step size used in price interval calculations
+    ///
+    /// # Returns
+    /// A fully initialized `CustomStrategy` instance with calculated break-even points,
+    /// maximum profit, and maximum loss information.
+    ///
+    /// # Panics
+    /// Panics if the strategy validation fails or if break-even points cannot be calculated.
+    /// This typically occurs when the strategy has no positions or when the maximum loss point
+    /// cannot be determined.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: String,

@@ -8,6 +8,34 @@ use itertools::Itertools;
 use num_traits::ToPrimitive;
 use std::collections::BTreeSet;
 
+/// Checks for approximate equality between two f64 values within a defined tolerance.
+///
+/// This function compares two floating-point numbers and returns `true` if the absolute
+/// difference between them is less than the predefined `TOLERANCE` constant.  It is useful
+/// for comparing floating-point values that may be subject to small rounding errors.
+///
+/// # Arguments
+///
+/// * `a` - The first f64 value to compare.
+/// * `b` - The second f64 value to compare.
+///
+/// # Returns
+///
+/// `true` if the absolute difference between `a` and `b` is less than `TOLERANCE`, `false` otherwise.
+///
+/// # Example
+///
+/// ```
+/// use optionstratlib::utils::others::approx_equal;
+///
+/// let x = 1.0;
+/// let y = 1.00000001;
+/// assert!(approx_equal(x, y)); // Returns true
+///
+/// let x = 1.0;
+/// let y = 1.1;
+/// assert!(!approx_equal(x, y)); // Returns false
+/// ```
 #[allow(dead_code)]
 pub fn approx_equal(a: f64, b: f64) -> bool {
     (a - b).abs() < TOLERANCE.to_f64().unwrap()
@@ -62,6 +90,43 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 ///
 use rayon::prelude::*;
 
+/// Processes combinations of elements from a slice in parallel.
+///
+/// This function takes a slice of elements, a combination size `n`, and a closure `process_combination`.
+/// It generates all combinations with replacement of size `n` from the input slice and processes each combination
+/// using the provided closure. The results from each combination processing are collected into a single vector.
+///
+/// The processing is done in parallel using Rayon's parallel iterators for improved performance.
+///
+/// # Arguments
+///
+/// * `positions` - A slice of elements to generate combinations from.
+/// * `n` - The size of the combinations to generate.
+/// * `process_combination` - A closure that takes a slice of references to elements from `positions`
+///   and returns a vector of results.  This closure should implement `Send + Sync` since it's used in a multithreaded environment.
+///
+/// # Returns
+///
+/// * `Result<Vec<Y>, String>` - A `Result` containing a vector of the combined results from the closure
+///   or an error string if the input slice is empty.
+///
+/// # Errors
+///
+/// Returns an error if the input `positions` slice is empty.
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::utils::others::process_n_times_iter;
+///
+/// let numbers = vec![1, 2, 3];
+/// let n = 2;
+/// let result = process_n_times_iter(&numbers, n, |combination| {
+///     vec![combination[0] + combination[1]]
+/// }).unwrap();
+///
+/// assert_eq!(result, vec![2, 3, 4, 4, 5, 6]);
+/// ```
 pub fn process_n_times_iter<T, Y, F>(
     positions: &[T],
     n: usize,

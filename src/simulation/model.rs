@@ -13,31 +13,61 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Represents the results of a trading strategy simulation.
+///
+/// This structure contains comprehensive information about the performance of a trading strategy
+/// across multiple simulation iterations. It captures key statistics related to profitability,
+/// risk metrics, distribution of outcomes, and individual walk results.
+///
+/// The data in this structure can be used for strategy evaluation, risk assessment,
+/// performance visualization, and comparison between different trading approaches.
+///
+/// ## Key Features:
+/// - Probability analysis of profitable vs. losing outcomes
+/// - Statistical measures of profit/loss distribution
+/// - Detailed risk metrics at various confidence levels
+/// - Profit/loss distribution data suitable for histogram visualization
+/// - Results from individual simulation walks for granular analysis
+///
+/// ## Usage:
+/// This structure is typically generated as the output of a strategy backtesting or
+/// Monte Carlo simulation process, providing a comprehensive view of expected performance
+/// characteristics and risk profile.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationResult {
     /// Number of simulation iterations run.
     pub iterations: u32,
+
     /// Overall probability of profit (percentage from 0.0 to 100.0).
     pub profit_probability: Positive,
+
     /// Overall probability of loss (percentage from 0.0 to 100.0).
     pub loss_probability: Positive,
+
     /// Maximum profit observed across all simulations.
     pub max_profit: Positive,
+
     /// Minimum profit (maximum loss) observed across all simulations.
     pub max_loss: Positive,
+
     /// Average profit/loss across all simulations.
     pub average_pnl: Decimal,
+
     /// Standard deviation of profit/loss.
     pub pnl_std_dev: Positive,
+
     /// Risk metrics categorized by severity.
     pub risk_levels: RiskMetricsSimulation,
+
     /// Probability distribution of PnL outcomes (can be used for histograms).
     /// The keys represent profit/loss ranges, and the values represent the probability
     /// of the outcome falling within that range.
     pub pnl_distribution: HashMap<PnLRange, Decimal>,
+
     /// Additional strategy-specific metrics.
     pub additional_metrics: HashMap<String, Decimal>,
 
+    /// Detailed results for each individual simulation walk.
+    /// Maps walk identifiers to their corresponding results.
     pub walk_results: HashMap<WalkId, WalkResult>,
 }
 

@@ -23,13 +23,33 @@ use std::cmp::Ordering;
 /// - **x**: The x-coordinate of the point, represented as a `Decimal`
 /// - **y**: The y-coordinate of the point, represented as a `Decimal`
 /// - **z**: The z-coordinate of the point, represented as a `Decimal`
+///
+/// # Examples
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::surfaces::Point3D;
+///
+/// // Create a new 3D point
+/// let point = Point3D {
+///     x: dec!(1.5),
+///     y: dec!(2.0),
+///     z: dec!(-3.25),
+/// };
+/// ```
+///
+/// # Usage
+/// `Point3D` is primarily used within the surface module to represent vertices
+/// of 3D surfaces and for various geometric calculations. The high-precision `Decimal`
+/// type ensures accuracy in scientific and engineering applications.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Point3D {
+    /// The x-coordinate in the Cartesian system
     pub x: Decimal,
+    /// The y-coordinate in the Cartesian system
     pub y: Decimal,
+    /// The z-coordinate in the Cartesian system
     pub z: Decimal,
 }
-
 impl PartialEq for Point3D {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y
@@ -142,6 +162,33 @@ impl Point3D {
         }
     }
 
+    /// Converts this `Point3D` instance to a `Point2D` by projecting onto the XY plane.
+    ///
+    /// # Overview
+    /// This method creates a new `Point2D` instance using only the `x` and `y` coordinates
+    /// of the current `Point3D` object, effectively projecting the 3D point onto the XY plane.
+    /// The `z` coordinate is discarded in this operation.
+    ///
+    /// # Returns
+    /// A heap-allocated `Point2D` instance (`Box<Point2D>`) containing the `x` and `y` coordinates
+    /// from this `Point3D` object.
+    ///
+    /// # Example
+    /// ```
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::surfaces::Point3D;
+    ///
+    /// let point3d = Point3D { x: dec!(1.5), y: dec!(2.0), z: dec!(3.5) };
+    /// let point2d = point3d.point2d();
+    /// assert_eq!(point2d.x, dec!(1.5));
+    /// assert_eq!(point2d.y, dec!(2.0));
+    /// ```
+    ///
+    /// # Use Cases
+    /// This method is useful when:
+    /// - Working with visualization that requires 2D projections of 3D points
+    /// - Analyzing specific planes within a 3D model
+    /// - Converting between coordinate systems from 3D to 2D
     pub fn point2d(&self) -> Box<Point2D> {
         Box::new(Point2D::new(self.x, self.y))
     }

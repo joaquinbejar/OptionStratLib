@@ -65,17 +65,97 @@ Profits from decreased volatility and time decay, with maximum gain limited to p
 received and unlimited potential loss. Most effective in range-bound markets with low \
 volatility expectations.";
 
+/// # ShortStraddle
+///
+/// Represents a Short Straddle options trading strategy. This strategy involves selling both a call option and a put option
+/// with the same strike price and expiration date.
+///
+/// A short straddle is a neutral strategy that profits from low volatility, where the underlying asset price remains close
+/// to the strike price through expiration.
+///
+/// ## Structure
+///
+/// * `name`: A descriptive name for the specific strategy instance.
+/// * `kind`: The type of strategy, which is `StrategyType::ShortStraddle`.
+/// * `description`: A detailed description of this specific strategy instance.
+/// * `break_even_points`: The price points at which the strategy breaks even (neither profit nor loss).
+/// * `short_call`: The short call position component of the strategy.
+/// * `short_put`: The short put position component of the strategy.
+///
+/// ## Risk Profile
+///
+/// A short straddle has unlimited risk if the stock price moves significantly in either direction,
+/// but has limited profit potential equal to the total premium collected from both options.
+///
+/// ## Maximum Profit
+///
+/// The maximum profit is achieved when the underlying asset price at expiration equals exactly the strike price
+/// of both options. In this case, both options expire worthless and the trader keeps the full premium collected.
+///
+/// ## Maximum Loss
+///
+/// The potential loss is theoretically unlimited on the upside (if the stock price rises significantly)
+/// and is limited to the strike price minus the premium received on the downside (if the stock price falls to zero).
+///
+/// ## Break-Even Points
+///
+/// There are two break-even points in a short straddle:
+/// 1. Upper break-even point: Strike price + total premium received
+/// 2. Lower break-even point: Strike price - total premium received
+///
+/// ## Use Cases
+///
+/// This strategy is typically used when:
+/// - The trader expects low volatility in the underlying asset
+/// - The trader believes the price will remain close to the current level
+/// - Implied volatility is high (making the options more expensive to sell)
+///
 #[derive(Clone, Debug)]
 pub struct ShortStraddle {
+    /// Name identifier for this specific strategy instance
     pub name: String,
+    /// Identifies this as a ShortStraddle strategy type
     pub kind: StrategyType,
+    /// Detailed description of this strategy instance
     pub description: String,
+    /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
+    /// The short call leg of the strategy
     short_call: Position,
+    /// The short put leg of the strategy  
     short_put: Position,
 }
 
 impl ShortStraddle {
+    /// # ShortStraddle Constructor
+    ///
+    /// Creates a new Short Straddle options strategy, which involves simultaneously selling a call and a put option
+    /// with the same strike price and expiration date.
+    ///
+    /// ## Parameters
+    ///
+    /// * `underlying_symbol` - The ticker symbol of the underlying asset
+    /// * `underlying_price` - The current market price of the underlying asset
+    /// * `strike` - The strike price for both options. If set to zero, it defaults to the underlying price (at-the-money)
+    /// * `expiration` - The expiration date for both options
+    /// * `implied_volatility` - The implied volatility used for option pricing
+    /// * `risk_free_rate` - The risk-free interest rate used for option pricing
+    /// * `dividend_yield` - The dividend yield of the underlying asset
+    /// * `quantity` - The number of option contracts
+    /// * `premium_short_call` - The premium received for selling the call option
+    /// * `premium_short_put` - The premium received for selling the put option
+    /// * `open_fee_short_call` - The transaction fee for opening the short call position
+    /// * `close_fee_short_call` - The transaction fee for closing the short call position
+    /// * `open_fee_short_put` - The transaction fee for opening the short put position
+    /// * `close_fee_short_put` - The transaction fee for closing the short put position
+    ///
+    /// ## Returns
+    ///
+    /// A fully configured `ShortStraddle` strategy instance with:
+    /// - Initialized short call and short put positions
+    /// - Calculated break-even points
+    /// - Strategy metadata (name, description, etc.)
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -784,17 +864,83 @@ Profits from increased volatility and significant price movements in either dire
 Maximum loss limited to premium paid with unlimited profit potential. Most effective \
 when expecting large price movements but uncertain about direction.";
 
+/// # LongStraddle
+///
+/// Represents a Long Straddle options trading strategy, which involves buying both a call and put option
+/// with the same strike price and expiration date.
+///
+/// A Long Straddle is a volatility strategy that profits when the underlying asset price moves
+/// significantly in either direction. It consists of buying a call option and buying a put option
+/// with identical strike prices and expiration dates.
+///
+/// ## Fields
+///
+/// * `name` - The name of the strategy instance.
+/// * `kind` - The type of strategy, which is `StrategyType::LongStraddle`.
+/// * `description` - A description of this specific strategy instance.
+/// * `break_even_points` - Vector of price points where the strategy breaks even (typically two points for a Long Straddle).
+/// * `long_call` - The long call position component of the strategy.
+/// * `long_put` - The long put position component of the strategy.
+///
+/// ## Profit/Loss Characteristics
+///
+/// * Maximum Loss: Limited to the total premium paid for both options (occurs when price at expiration equals the strike price).
+/// * Maximum Profit: Theoretically unlimited to the upside, and limited to the downside by how far the underlying can fall (minus strike price and premiums paid).
+/// * Break-even Points: Strike Price + Total Premium Paid (upper) and Strike Price - Total Premium Paid (lower).
+///
+/// ## Use Cases
+///
+/// Long Straddles are typically used when:
+/// * Expecting significant price movement but uncertain about direction
+/// * Before major market events (earnings announcements, FDA approvals, etc.)
+/// * During periods of low implied volatility, anticipating increased volatility
+///
+/// ## Risk Management
+///
+/// * Time decay (theta) works against this strategy, as both options lose value over time
+/// * Most effective when implemented with sufficient time to expiration
+/// * Consider closing the position if implied volatility increases significantly without price movement
 #[derive(Clone, Debug)]
 pub struct LongStraddle {
+    /// The name identifier for this strategy instance
     pub name: String,
+    /// The strategy type classification, set to StrategyType::LongStraddle
     pub kind: StrategyType,
+    /// Detailed description of this specific strategy instance
     pub description: String,
+    /// The price points where profit/loss equals zero (typically two points for a straddle)
     pub break_even_points: Vec<Positive>,
+    /// The purchased call option position component
     long_call: Position,
+    /// The purchased put option position component
     long_put: Position,
 }
 
 impl LongStraddle {
+    /// Creates a new Long Straddle strategy.
+    ///
+    /// This constructor builds a Long Straddle by creating and adding both the long call and long put positions
+    /// with the same strike price and expiration date.
+    ///
+    /// # Arguments
+    /// * `underlying_symbol` - The ticker symbol of the underlying asset
+    /// * `underlying_price` - The current market price of the underlying asset
+    /// * `strike` - The strike price for both options (defaults to underlying_price if set to zero)
+    /// * `expiration` - The expiration date for both options
+    /// * `implied_volatility` - The implied volatility used for option pricing
+    /// * `risk_free_rate` - The risk-free interest rate
+    /// * `dividend_yield` - The dividend yield of the underlying asset
+    /// * `quantity` - The number of contracts for each position
+    /// * `premium_long_call` - The premium paid per contract for the call option
+    /// * `premium_long_put` - The premium paid per contract for the put option
+    /// * `open_fee_long_call` - Transaction fee for opening the call position
+    /// * `close_fee_long_call` - Transaction fee for closing the call position
+    /// * `open_fee_long_put` - Transaction fee for opening the put position
+    /// * `close_fee_long_put` - Transaction fee for closing the put position
+    ///
+    /// # Returns
+    /// A fully initialized Long Straddle strategy with calculated break-even points
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,

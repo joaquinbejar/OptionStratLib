@@ -13,14 +13,39 @@ use rust_decimal::Decimal;
 ///
 /// This trait is designed for use with numerical and graphical applications requiring
 /// high-precision interpolation of data points. It provides functionality
-/// to retrieve the points (`get_points`), interpolate a value (`interpolate`), and
-/// find bracketing points for a given x-coordinate (`find_bracket_points`).
+/// to retrieve the points, interpolate a value, and find bracketing points for a given x-coordinate.
 ///
-/// # Associated Methods
-/// - [`interpolate`](Self::interpolate): Interpolates a value for a given x-coordinate using
-///   a specified interpolation method.
-/// - [`find_bracket_points`](Self::find_bracket_points): Identifies the pair of points
-///   that bracket the target x-coordinate for interpolation.
+/// # Type Parameters
+/// - `Point`: The point type that contains coordinates, must implement `HasX` and `Clone`
+/// - `Input`: The input type for interpolation queries, must implement `HasX`
+///
+/// # Methods
+///
+/// ## `interpolate`
+/// Interpolates a value for a given x-coordinate using a specified interpolation method.
+///
+/// ### Parameters
+/// - `x`: The x-coordinate at which to interpolate
+/// - `interpolation_type`: The type of interpolation algorithm to use
+///
+/// ### Returns
+/// - `Result<Point, InterpolationError>`: The interpolated point or an error
+///
+/// ## `find_bracket_points`
+/// Identifies the pair of points that bracket the target x-coordinate for interpolation.
+///
+/// ### Parameters
+/// - `x`: The x-coordinate to bracket
+///
+/// ### Returns
+/// - `Result<(usize, usize), InterpolationError>`: The indices of the bracketing points or an error
+///
+/// # Error Handling
+/// Methods in this trait return `InterpolationError` to represent various issues during interpolation:
+/// - Insufficient points for interpolation (need at least two points)
+/// - X-coordinate outside the valid range of data points
+/// - Failure to find bracketing points
+/// - Specific errors from the various interpolation algorithms
 ///
 /// # Requirements
 /// Implementers must also implement the following traits:
@@ -28,18 +53,7 @@ use rust_decimal::Decimal;
 /// - `BiLinearInterpolation`
 /// - `CubicInterpolation`
 /// - `SplineInterpolation`
-///
-/// These sub-traits are expected to define the actual interpolation algorithms for their
-/// specific methods (e.g., linear interpolation, cubic spline interpolation, etc.).
-///
-/// # Error Handling
-/// Methods in this trait return `CurvesError` to represent various issues during interpolation:
-/// - **`InterpolationError`**: Indicates issues such as insufficient points, an x-coordinate
-///   outside the valid range, or failure to bracket points for interpolation.
-///
-/// # Example Implementation
-/// This trait is used to define a general interface for interpolation operations, which
-/// can then be implemented by various structs managing interpolation algorithms.
+/// - `GeometricObject`
 ///
 pub trait Interpolate<Point, Input>:
     LinearInterpolation<Point, Input>
@@ -51,6 +65,18 @@ where
     Input: HasX,
     Point: HasX + Clone,
 {
+    /// Interpolates a value at the given x-coordinate using the specified interpolation method.
+    ///
+    /// This method acts as a facade over the individual interpolation algorithms, delegating
+    /// to the appropriate method based on the requested interpolation type.
+    ///
+    /// # Parameters
+    /// - `x`: The x-coordinate at which to interpolate
+    /// - `interpolation_type`: The interpolation algorithm to use
+    ///
+    /// # Returns
+    /// - `Ok(Point)`: The successfully interpolated point
+    /// - `Err(InterpolationError)`: If interpolation fails for any reason
     fn interpolate(
         &self,
         x: Input,
@@ -64,36 +90,89 @@ where
         }
     }
 
+    /// Finds the indices of points that bracket the given x-coordinate.
+    ///
+    /// This utility method identifies the pair of consecutive points in the dataset
+    /// where the first point's x-coordinate is less than or equal to the target x,
+    /// and the second point's x-coordinate is greater than or equal to the target x.
+    ///
+    /// # Parameters
+    /// - `x`: The x-coordinate for which to find bracketing points
+    ///
+    /// # Returns
+    /// - `Ok((usize, usize))`: The indices of the two bracketing points
+    /// - `Err(InterpolationError)`: If bracketing points cannot be found
+    ///
+    /// # Errors
+    /// - If there are fewer than 2 points in the dataset
+    /// - If the requested x-coordinate is outside the range of available points
+    /// - If bracketing points cannot be determined for any other reason
     fn find_bracket_points(&self, x: Input) -> Result<(usize, usize), InterpolationError> {
         let points: Vec<&Point> = self.get_points().into_iter().collect();
-
         // Edge cases
         if points.len() < 2 {
             return Err(InterpolationError::StdError(
                 "Need at least two points for interpolation".to_string(),
             ));
         }
-
         if x.get_x() < points[0].get_x() || x.get_x() > points[points.len() - 1].get_x() {
             return Err(InterpolationError::StdError(
                 "x is outside the range of points".to_string(),
             ));
         }
-
         // Find points that bracket x
         for i in 0..points.len() - 1 {
             if points[i].get_x() <= x.get_x() && x.get_x() <= points[i + 1].get_x() {
                 return Ok((i, i + 1));
             }
         }
-
         Err(InterpolationError::StdError(
             "Could not find bracketing points".to_string(),
         ))
     }
 }
 
+/// A trait for types that provide access to an X-coordinate value.
+///
+/// This trait defines a standard interface for any type that contains or can compute
+/// an X-coordinate represented as a `Decimal` value. Implementing this trait allows
+/// objects to be used in contexts where X-coordinate access is required, such as:
+///
+/// - Geometric calculations
+/// - Plotting and visualization
+/// - Interpolation algorithms
+/// - Data point analysis
+///
+/// # Required Method
+///
+/// ## `get_x`
+///
+/// Returns the X-coordinate value of the implementing type.
+///
+/// ### Returns
+/// - `Decimal`: The X-coordinate value, typically representing a position along the x-axis.
+///
+/// # Implementation Notes
+///
+/// When implementing this trait, ensure that:
+/// - The returned value accurately represents the X-coordinate in the appropriate scale and units
+/// - The implementation handles any necessary internal conversions or calculations
+/// - The method is computationally efficient if it will be called frequently
+///
+/// # Usage Examples
+///
+/// This trait can be implemented for various types such as:
+/// - 2D or 3D points
+/// - Data samples with timestamps or sequential positions
+/// - Geometric shapes with a defined reference point
+///
+/// # See Also
+/// - `Decimal`: The numeric type used to represent the X-coordinate value
 pub trait HasX {
+    /// Returns the X-coordinate value of this object.
+    ///
+    /// # Returns
+    /// - `Decimal`: The X-coordinate value as a `Decimal` type.
     fn get_x(&self) -> Decimal;
 }
 

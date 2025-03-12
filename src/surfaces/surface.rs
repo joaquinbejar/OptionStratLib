@@ -43,16 +43,87 @@ use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
 
-/// Represents a mathematical surface in 3D space
+/// Represents a mathematical surface in 3D space.
+///
+/// # Overview
+/// The `Surface` struct defines a three-dimensional surface composed of a collection
+/// of 3D points. It tracks the range of coordinates in the X and Y dimensions to
+/// establish the boundaries of the surface.
+///
+/// # Fields
+/// - **points**: A sorted collection of `Point3D` objects that define the surface
+///   geometry. Using `BTreeSet` ensures points are uniquely stored and ordered.
+/// - **x_range**: A tuple containing the minimum and maximum x-coordinates of the surface
+///   as `Decimal` values, representing the surface's width boundaries.
+/// - **y_range**: A tuple containing the minimum and maximum y-coordinates of the surface
+///   as `Decimal` values, representing the surface's depth boundaries.
+///
+/// # Examples
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use std::collections::BTreeSet;
+/// use optionstratlib::surfaces::{Surface, Point3D};
+///
+/// // Create some 3D points
+/// let mut points = BTreeSet::new();
+/// points.insert(Point3D { x: dec!(0.0), y: dec!(0.0), z: dec!(1.0) });
+/// points.insert(Point3D { x: dec!(1.0), y: dec!(0.0), z: dec!(2.0) });
+/// points.insert(Point3D { x: dec!(0.0), y: dec!(1.0), z: dec!(1.5) });
+/// points.insert(Point3D { x: dec!(1.0), y: dec!(1.0), z: dec!(2.5) });
+///
+/// // Create a surface with these points
+/// let surface = Surface {
+///     points,
+///     x_range: (dec!(0.0), dec!(1.0)),
+///     y_range: (dec!(0.0), dec!(1.0)),
+/// };
+/// ```
+///
+/// # Usage
+/// `Surface` is primarily used for mathematical modeling, data visualization,
+/// and numerical analysis. It can represent various 3D structures such as
+/// option pricing surfaces, terrain models, or any other data that can be
+/// plotted in three dimensions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Surface {
     /// Collection of 3D points defining the surface
     pub points: BTreeSet<Point3D>,
+    /// The minimum and maximum x-coordinates of the surface (min_x, max_x)
     pub x_range: (Decimal, Decimal),
+    /// The minimum and maximum y-coordinates of the surface (min_y, max_y)
     pub y_range: (Decimal, Decimal),
 }
 
 impl Surface {
+    /// Creates a new instance from a set of 3D points.
+    ///
+    /// # Parameters
+    /// - `points`: A sorted set of `Point3D` objects that will form this geometric object.
+    ///
+    /// # Returns
+    /// A new instance of the implementing structure with computed x and y ranges.
+    ///
+    /// # Details
+    /// This constructor initializes a geometric object by:
+    /// 1. Computing the minimum and maximum x-coordinate values
+    /// 2. Computing the minimum and maximum y-coordinate values
+    /// 3. Storing the provided points and calculated ranges
+    ///
+    /// The ranges are calculated using the `calculate_range` utility method
+    /// defined in the `GeometricObject` trait.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use std::collections::BTreeSet;
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::surfaces::{Point3D, Surface};
+    ///
+    /// let mut points = BTreeSet::new();
+    /// points.insert(Point3D { x: dec!(1.0), y: dec!(2.0), z: dec!(3.0) });
+    /// points.insert(Point3D { x: dec!(4.0), y: dec!(5.0), z: dec!(6.0) });
+    ///
+    /// let object = Surface::new(points);
+    /// ```
     pub fn new(points: BTreeSet<Point3D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         let y_range = Self::calculate_range(points.iter().map(|p| p.y));
@@ -63,6 +134,26 @@ impl Surface {
         }
     }
 
+    /// Projects a 3D surface onto a 2D plane based on the specified axis.
+    ///
+    /// This method creates a 2D curve by projecting the points of the surface onto a plane
+    /// perpendicular to the specified axis. The projection is achieved by omitting the coordinate
+    /// that corresponds to the specified axis.
+    ///
+    /// # Parameters
+    /// - `&self`: Reference to the Surface instance
+    /// - `axis` (`Axis`): The axis perpendicular to the projection plane:
+    ///   - `Axis::X`: Projects onto the YZ plane (x-coordinate is omitted)
+    ///   - `Axis::Y`: Projects onto the XZ plane (y-coordinate is omitted)
+    ///   - `Axis::Z`: Projects onto the XY plane (z-coordinate is omitted)
+    ///
+    /// # Returns
+    /// - `Curve`: A new 2D curve containing the projected points
+    ///
+    /// # Behavior
+    /// - For `Axis::X`, the returned curve contains points with (y, z) coordinates
+    /// - For `Axis::Y`, the returned curve contains points with (x, z) coordinates
+    /// - For `Axis::Z`, the returned curve contains points with (x, y) coordinates
     pub fn get_curve(&self, axis: Axis) -> Curve {
         let points = self
             .points
@@ -73,11 +164,33 @@ impl Surface {
                 Axis::Z => Point2D::new(p.x, p.y),
             })
             .collect();
-
         Curve::new(points)
     }
 
-    // Helper method for one-dimensional cubic spline interpolation
+    /// Performs one-dimensional spline interpolation on a collection of points.
+    ///
+    /// This function interpolates a value along a one-dimensional curve defined by a collection
+    /// of points. It uses linear interpolation between adjacent points to estimate the value
+    /// at the target position.
+    ///
+    /// # Parameters
+    /// * `points` - A slice of points of type T
+    /// * `target` - The x-coordinate at which to interpolate
+    /// * `x_selector` - A function that extracts the x-coordinate from a point
+    /// * `z_selector` - A function that extracts the z-coordinate (value) from a point
+    ///
+    /// # Returns
+    /// * `Ok(Decimal)` - The interpolated value at the target position
+    /// * `Err(InterpolationError)` - If interpolation fails (e.g., insufficient points)
+    ///
+    /// # Type Parameters
+    /// * `T` - The type of points, which must implement Clone
+    ///
+    /// # Behavior
+    /// - Points are sorted by their x-coordinate
+    /// - If fewer than 2 points are provided, returns an error
+    /// - If the target is outside the range of x-coordinates, returns the value at the nearest endpoint
+    /// - Otherwise performs linear interpolation between the two points that bracket the target
     fn one_dimensional_spline_interpolation<T>(
         &self,
         points: &[T],
@@ -130,8 +243,39 @@ impl Surface {
         Ok(interpolated_z)
     }
 
+    /// Converts the surface points from Decimal to f64 format, with swapped y and z coordinates.
+    ///
+    /// # Returns
+    /// A vector of tuples containing the coordinates of each point in the surface as `(x, z, y)`
+    /// where each coordinate is converted to an `f64` value.
+    ///
+    /// # Details
+    /// - This function is only available on non-WebAssembly targets.
+    /// - The coordinates are returned as `(x, z, y)` tuples, with y and z swapped.
+    /// - If the conversion from `Decimal` to `f64` fails for any coordinate, that value
+    ///   will be replaced with 0.0.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use rust_decimal_macros::dec;
+    /// use std::collections::BTreeSet;
+    /// use optionstratlib::surfaces::{Point3D, Surface};
+    ///
+    /// let mut points = BTreeSet::new();
+    /// points.insert(Point3D { x: dec!(1.5), y: dec!(3.0), z: dec!(2.0) });
+    /// points.insert(Point3D { x: dec!(2.5), y: dec!(4.0), z: dec!(3.0) });
+    ///
+    /// let surface = Surface {
+    ///     points,
+    ///     x_range: (dec!(1.0), dec!(3.0)),
+    ///     y_range: (dec!(3.0), dec!(4.0)),
+    /// };
+    ///
+    /// // Will produce: [(1.5, 2.0, 3.0), (2.5, 3.0, 4.0)]
+    /// let points = surface.get_f64_points();
+    /// ```
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
+    pub fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
         self.points
             .iter()
             .map(|p| {
@@ -155,22 +299,107 @@ impl Default for Surface {
     }
 }
 
+/// Implementation of the `GeometricObject` trait for the `Surface` struct.
+///
+/// This implementation provides functionality to create and manipulate 3D surfaces using points
+/// in three-dimensional space. It supports construction from explicit point collections or
+/// through parametric functions.
+///
+/// # Type Parameters
+/// - Uses `Point3D` as the points that form the surface
+/// - Uses `Point2D` as the parametric input for surface generation
+///
+/// # Methods
+/// - `get_points()`: Retrieves all points in the surface
+/// - `from_vector()`: Constructs a surface from a vector of points
+/// - `construct()`: Creates a surface using different construction methods
+///
+/// # Error Handling
+/// Uses `SurfaceError` for various error conditions, including:
+/// - Empty point collections
+/// - Invalid construction parameters
+/// - Errors during parametric function evaluation
 impl GeometricObject<Point3D, Point2D> for Surface {
     type Error = SurfaceError;
 
+    /// Returns a borrowed reference to all points in the surface as an ordered set
+    ///
+    /// # Returns
+    /// * `BTreeSet<&Point3D>` - A sorted set containing references to all points
+    ///   that define the surface, maintaining the natural ordering of points
+    ///
+    /// # Example
+    /// ```rust
+    /// use optionstratlib::surfaces::{Surface, Point3D};
+    /// use std::collections::BTreeSet;
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::geometrics::GeometricObject;
+    ///
+    /// // Create a surface with some points
+    /// let mut surface = Surface {
+    ///     points: BTreeSet::new(),
+    ///     x_range: (dec!(0), dec!(10)),
+    ///     y_range: (dec!(0), dec!(10)),
+    /// };
+    ///
+    /// // Add points to the surface
+    /// surface.points.insert(Point3D { x: dec!(1.0), y: dec!(2.0), z: dec!(3.0) });
+    /// surface.points.insert(Point3D { x: dec!(4.0), y: dec!(5.0), z: dec!(6.0) });
+    ///
+    /// // Get references to all points in the surface
+    /// let points = surface.get_points();
+    /// assert_eq!(points.len(), 2);
+    /// ```
     fn get_points(&self) -> BTreeSet<&Point3D> {
         self.points.iter().collect()
     }
 
+    /// Creates a new Surface from a vector of points that can be converted into Point3D objects.
+    ///
+    /// This method constructs a Surface by converting each point in the input vector to a Point3D
+    /// and collecting them into an ordered set. It also calculates the x and y coordinate ranges
+    /// of the points to define the surface's boundaries.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T`: A type that can be converted into Point3D via the Into trait and can be cloned.
+    ///
+    /// # Parameters
+    ///
+    /// * `points`: A vector of objects that can be converted to Point3D.
+    ///
+    /// # Returns
+    ///
+    /// A new Surface instance containing the converted points and their coordinate ranges.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::surfaces::{Surface, Point3D};
+    /// use optionstratlib::geometrics::GeometricObject;
+    /// use rust_decimal_macros::dec;
+    ///
+    /// // Create points data
+    /// let points = vec![
+    ///     Point3D { x: dec!(1.0), y: dec!(2.0), z: dec!(3.0) },
+    ///     Point3D { x: dec!(4.0), y: dec!(5.0), z: dec!(6.0) }
+    /// ];
+    ///
+    /// // Create a surface from the points
+    /// let surface = Surface::from_vector(points);
+    ///
+    /// // The surface will contain both points and have x_range and y_range calculated automatically
+    /// assert_eq!(surface.points.len(), 2);
+    /// assert_eq!(surface.x_range, (dec!(1.0), dec!(4.0)));
+    /// assert_eq!(surface.y_range, (dec!(2.0), dec!(5.0)));
+    /// ```
     fn from_vector<T>(points: Vec<T>) -> Self
     where
         T: Into<Point3D> + Clone,
     {
         let points: BTreeSet<Point3D> = points.into_iter().map(|p| p.into()).collect();
-
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         let y_range = Self::calculate_range(points.iter().map(|p| p.y));
-
         Surface {
             points,
             x_range,
@@ -178,6 +407,64 @@ impl GeometricObject<Point3D, Point2D> for Surface {
         }
     }
 
+    /// Constructs a Surface from a given construction method.
+    ///
+    /// This function creates a Surface object from either a set of 3D points or a parametric function.
+    ///
+    /// # Parameters
+    /// * `method` - A construction method that can be converted into a `ConstructionMethod<Point3D, Point2D>`
+    ///
+    /// # Type Parameters
+    /// * `T` - Type that can be converted into a `ConstructionMethod<Point3D, Point2D>`
+    ///
+    /// # Returns
+    /// * `Result<Self, Self::Error>` - Either a successfully constructed Surface or an error
+    ///
+    /// # Errors
+    /// * `SurfaceError::Point3DError` - If an empty points array is provided
+    /// * `SurfaceError::ConstructionError` - If invalid parameters are provided or the parametric function fails
+    ///
+    /// # Examples
+    ///
+    /// ## Creating from existing points
+    /// ```rust
+    /// use std::collections::BTreeSet;
+    /// use optionstratlib::geometrics::{ConstructionMethod, GeometricObject};
+    /// use optionstratlib::surfaces::{Point3D, Surface};
+    /// let points = BTreeSet::from_iter(vec![
+    ///     Point3D::new(0, 0, 0),
+    ///     Point3D::new(1, 0, 1),
+    ///     Point3D::new(0, 1, 1),
+    /// ]);
+    /// let surface = Surface::construct(ConstructionMethod::FromData { points }).unwrap();
+    /// ```
+    ///
+    /// ## Creating from a parametric function
+    /// ```rust,no_run
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::curves::Point2D;
+    /// use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject, ResultPoint};
+    /// use optionstratlib::surfaces::{Point3D, Surface};
+    /// let params = ConstructionParams::D3 {
+    ///     x_start: dec!(-1.0),
+    ///     x_end: dec!(1.0),
+    ///     y_start: dec!(-1.0),
+    ///     y_end: dec!(1.0),
+    ///     x_steps: 20,
+    ///     y_steps: 20,
+    /// };
+    ///
+    /// // Parametric function defining a paraboloid: z = x² + y²
+    /// let f = Box::new(|p: Point2D| -> ResultPoint<Point3D> {
+    ///     Ok(Point3D {
+    ///         x: p.x,
+    ///         y: p.y,
+    ///         z: p.x * p.x + p.y * p.y,
+    ///     })
+    /// });
+    ///
+    /// let surface = Surface::construct(ConstructionMethod::Parametric { f, params }).unwrap();
+    /// ```
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
         Self: Sized,
@@ -234,19 +521,114 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     }
 }
 
+/// Implementation of the `Index` trait for `Surface`, allowing direct indexing access to surface points.
+///
+/// # Overview
+/// This implementation allows you to access individual points in a `Surface` using array-like
+/// indexing notation (e.g., `surface[0]`, `surface[1]`). Points are retrieved in the order they
+/// appear in the underlying `BTreeSet`.
+///
+/// # Panics
+/// This implementation will panic with the message "Index out of bounds" if the provided index
+/// is greater than or equal to the number of points in the surface.
+///
+/// # Performance
+/// Note that this implementation uses `iter().nth(index)` which has O(n) time complexity
+/// for `BTreeSet`. For frequent access to points by index, consider using a data structure
+/// with O(1) indexing performance.
 impl Index<usize> for Surface {
     type Output = Point3D;
 
+    /// Retrieves a reference to a point on the surface at the specified index.
+    ///
+    /// This implementation allows using indexing syntax (e.g., `surface[i]`) to access
+    /// individual points that make up the surface.
     fn index(&self, index: usize) -> &Self::Output {
         self.points.iter().nth(index).expect("Index out of bounds")
     }
 }
 
+/// Implementation of the `Interpolate` trait for the `Surface` type, enabling
+/// interpolation from 3D surface points to 2D points.
+///
+/// # Overview
+/// This implementation allows a `Surface` object to perform various types of interpolation
+/// (linear, bilinear, cubic, and spline) by projecting 3D points from the surface to 2D points.
+///
+/// # Functionality
+/// By implementing the `Interpolate` trait, `Surface` gains the following capabilities:
+/// - Interpolating between 3D surface points to produce 2D projections
+/// - Finding bracket points for interpolation operations
+/// - Supporting multiple interpolation algorithms through the trait's methods
+///
+/// # Usage Example
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::surfaces::{Surface, Point3D};
+/// use optionstratlib::curves::Point2D;
+/// use optionstratlib::geometrics::{Interpolate, InterpolationType};
+///
+/// let surface = Surface::new(Default::default());
+///
+/// // Interpolate a 2D point at a specific position using linear interpolation
+/// let input_point = Point2D { x: dec!(1.5), y: dec!(2.0) };
+/// let result = surface.interpolate(input_point, InterpolationType::Linear);
+/// ```
+///
+/// # Related Traits
+/// This implementation relies on the surface also implementing:
+/// - `LinearInterpolation<Point3D, Point2D>`
+/// - `BiLinearInterpolation<Point3D, Point2D>`
+/// - `CubicInterpolation<Point3D, Point2D>`
+/// - `SplineInterpolation<Point3D, Point2D>`
+/// - `GeometricObject<Point3D, Point2D>`
 impl Interpolate<Point3D, Point2D> for Surface {}
 
+/// # Linear Interpolation for Surfaces
+///
+/// Implementation of the `LinearInterpolation` trait for `Surface` structures, enabling
+/// interpolation from 2D points to 3D points using barycentric coordinates.
+///
+/// ## Overview
+///
+/// This implementation allows calculating the height (z-coordinate) of any point within
+/// the surface's x-y range by using linear interpolation based on the three nearest points
+/// in the surface. The method employs barycentric coordinate interpolation with triangulation
+/// of the nearest points.
+///
+/// ## Algorithm
+///
+/// The interpolation process follows these steps:
+/// 1. Validate that the input point is within the surface's range
+/// 2. Check for degenerate cases (all points at same location)
+/// 3. Check for exact matches with existing points
+/// 4. Find the three nearest points to the query point
+/// 5. Calculate barycentric coordinates for the triangle formed by these points
+/// 6. Interpolate the z-value using the barycentric weights
 impl LinearInterpolation<Point3D, Point2D> for Surface {
+    /// ## Parameters
+    ///
+    /// * `xy` - A `Point2D` representing the x and y coordinates where interpolation is needed
+    ///
+    /// ## Returns
+    ///
+    /// * `Result<Point3D, InterpolationError>` - The interpolated 3D point if successful, or an
+    ///   appropriate error if interpolation cannot be performed
+    ///
+    /// ## Errors
+    ///
+    /// Returns `InterpolationError::Linear` in the following cases:
+    /// * When the surface contains only coincident points forming a degenerate triangle
+    /// * When the query point is outside the surface's x-y range
     fn linear_interpolate(&self, xy: Point2D) -> Result<Point3D, InterpolationError> {
-        let first = self.points.iter().next().unwrap();
+        let first = match self.points.iter().next() {
+            Some(p) => p,
+            None => {
+                return Err(InterpolationError::Linear(
+                    "No points in the surface".to_string(),
+                ));
+            }
+        };
         let all_same_xy = self.points.iter().all(|p| p.x == first.x && p.y == first.y);
 
         if all_same_xy && (first.x == xy.x && first.y == xy.y) {

@@ -1,5 +1,9 @@
 /// Represents the different types of interpolation methods supported in the library.
 ///
+/// This enum defines the available interpolation techniques that can be used in various
+/// mathematical modeling, data analysis, and visualization scenarios. Each interpolation
+/// method has unique characteristics making it suitable for different applications.
+///
 /// # Variants
 /// - **`Linear`**:  
 ///   Performs linear interpolation. This method calculates interpolated values
@@ -48,13 +52,22 @@
 /// This enum is part of a modular design, with each interpolation type defined in its own
 /// module for clarity and separation of concerns.
 ///
-/// # `mod.rs` Usage
-/// The `mod.rs` file exports this type alongside other components such as traits and
-/// interpolation modules, making it a central component of the library's public API.
 #[derive(Debug, Clone, Copy)]
 pub enum InterpolationType {
+    /// Linear interpolation that calculates values by drawing straight lines between data points.
+    /// Efficient but may lack smoothness for certain applications.
     Linear,
+
+    /// Cubic interpolation that uses third-degree polynomials to create smoother curves
+    /// between data points, providing better continuity than linear interpolation.
     Cubic,
+
+    /// Spline interpolation that ensures smooth curves with continuous first and second
+    /// derivatives at the connection points between interpolation segments.
     Spline,
+
+    /// Bilinear interpolation for two-dimensional data, performing linear interpolation
+    /// first in one direction and then in the other, used commonly in image processing
+    /// and spatial data analysis.
     Bilinear,
 }

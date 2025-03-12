@@ -77,13 +77,35 @@ pub trait MetricsExtractor {
         Ok(Metrics::new(basic, shape, range, trend, risk))
     }
 
+    /// Computes comprehensive metrics for a surface representation.
+    ///
+    /// This method aggregates multiple specialized metric calculations into a single cohesive
+    /// result. It collects basic statistical properties, shape characteristics, range information,
+    /// trend analysis, and risk assessments to provide a complete analytical view of the surface.
+    ///
+    /// # Returns
+    /// - `Ok(Metrics)`: A composite structure containing all computed metrics categories:
+    ///   - Basic metrics (statistical fundamentals)
+    ///   - Shape metrics (geometric properties)
+    ///   - Range metrics (distribution characteristics)
+    ///   - Trend metrics (directional patterns)
+    ///   - Risk metrics (uncertainty measurements)
+    /// - `Err(MetricsError)`: If any of the individual metric computations fails
+    ///
+    /// # Errors
+    /// This method can return various error types depending on which computation fails:
+    /// - `MetricsError::BasicError` - If basic metrics computation fails
+    /// - `MetricsError::ShapeError` - If shape metrics computation fails
+    /// - `MetricsError::RangeError` - If range metrics computation fails
+    /// - `MetricsError::TrendError` - If trend metrics computation fails
+    /// - `MetricsError::RiskError` - If risk metrics computation fails
+    ///
     fn compute_surface_metrics(&self) -> Result<Metrics, MetricsError> {
         let basic = self.compute_basic_metrics()?;
         let shape = self.compute_shape_metrics()?;
         let range = self.compute_range_metrics()?;
         let trend = self.compute_trend_metrics()?;
         let risk = self.compute_risk_metrics()?;
-
         Ok(Metrics::new(basic, shape, range, trend, risk))
     }
 }
