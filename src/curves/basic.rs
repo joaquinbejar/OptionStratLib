@@ -11,7 +11,36 @@ use crate::{OptionStyle, Options, Side};
 use rust_decimal::Decimal;
 use std::sync::Arc;
 
+/// A trait for generating financial option curves based on different parameters.
+///
+/// This trait provides methods to create and retrieve option curves based on various
+/// financial metrics. It allows for the generation of curves that plot relationships
+/// between option strike prices and different option Greeks (Delta, Gamma, Theta, Vega),
+/// implied volatility, or prices.
+///
+/// Implementors of this trait can define custom curve generation logic while using
+/// the default implementation for extracting coordinate pairs for specific option metrics.
+///
+/// # Type Parameters
+///
+/// The trait is designed to work with options data structures and can generate curves
+/// for different visualization and analysis purposes.
 pub trait BasicCurves {
+    /// Generates a curve for the specified axis type, option style, and market side.
+    ///
+    /// This method creates a curve that represents the relationship between strike prices
+    /// and the selected option metric (as specified by the axis parameter).
+    ///
+    /// # Parameters
+    ///
+    /// * `axis` - The financial metric to be plotted on one of the axes (e.g., Delta, Gamma, Price)
+    /// * `option_style` - The style of the option (Call or Put)
+    /// * `side` - The market side perspective (Long or Short)
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing the plotted data points,
+    ///   or an error if the curve could not be generated
     fn curve(
         &self,
         axis: &BasicAxisTypes,
@@ -19,6 +48,22 @@ pub trait BasicCurves {
         side: &Side,
     ) -> Result<Curve, CurveError>;
 
+    /// Generates coordinate pairs for a specific option and axis type.
+    ///
+    /// This method extracts a pair of values (strike price and the selected metric)
+    /// from an option based on the specified axis type. The first value in the pair
+    /// is always the strike price, and the second value is determined by the axis type.
+    ///
+    /// # Parameters
+    ///
+    /// * `axis` - The financial metric to extract (e.g., Delta, Gamma, Implied Volatility)
+    /// * `option` - The option contract from which to extract the values
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(Decimal, Decimal), CurveError>` - A tuple containing (strike price, metric value),
+    ///   or an error if the values could not be extracted
+    ///
     fn get_curve_strike_versus(
         &self,
         axis: &BasicAxisTypes,
@@ -37,7 +82,6 @@ pub trait BasicCurves {
                 option.strike_price.to_dec(),
                 option.calculate_price_black_scholes()?,
             )),
-
             // Catch-all for unsupported combinations
             _ => Err(CurveError::OperationError(
                 crate::error::OperationErrorKind::InvalidParameters {
