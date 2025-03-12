@@ -12,32 +12,155 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fmt::Display;
 
+/// Enum representing a grouping of option data references for analysis or display purposes.
+///
+/// This enum provides different ways to group option data references, from individual options
+/// to collections of various sizes. It supports holding references to one, two, three, or four
+/// specific options, or an arbitrary number of options through the `Any` variant.
+///
+/// # Variants
+///
+/// * `One` - Contains a reference to a single option data record.
+///
+/// * `Two` - Contains references to exactly two option data records, typically used
+///   for comparison or spread analysis.
+///
+/// * `Three` - Contains references to exactly three option data records, useful for
+///   analyzing multi-leg option strategies like butterflies.
+///
+/// * `Four` - Contains references to exactly four option data records, useful for
+///   complex option strategies like condors or iron condors.
+///
+/// * `Any` - Contains a vector of option data references for more flexible grouping
+///   when the number of options is variable or exceeds four.
+///
+/// # Type Parameters
+///
+/// * `'a` - The lifetime parameter ensuring that all referenced `OptionData` instances
+///   live at least as long as this `OptionDataGroup`.
+///
+/// # Usage
+///
+/// This enum is typically used when analyzing multiple options together, displaying
+/// related options in a UI, or processing option groups in trading strategies.
 #[derive(Debug)]
 pub enum OptionDataGroup<'a> {
+    /// A single option data reference
     One(&'a OptionData),
+
+    /// Two option data references, useful for spreads
     Two(&'a OptionData, &'a OptionData),
+
+    /// Three option data references, useful for butterfly spreads
     Three(&'a OptionData, &'a OptionData, &'a OptionData),
+
+    /// Four option data references, useful for condors and iron condors
     Four(
         &'a OptionData,
         &'a OptionData,
         &'a OptionData,
         &'a OptionData,
     ),
+
+    /// A variable number of option data references
     Any(Vec<&'a OptionData>),
 }
+
+/// Parameters for building an option chain dataset.
+///
+/// This structure encapsulates all necessary configuration parameters to generate
+/// a synthetic option chain for financial modeling and analysis. It controls various
+/// aspects like size, pricing behavior, and volatility skew characteristics of the
+/// resulting option chain.
+///
+/// # Fields
+///
+/// * `symbol` - The ticker symbol for the option chain's underlying asset.
+///
+/// * `volume` - Optional trading volume to assign to the generated options. If None,
+///   default or random volumes may be used.
+///
+/// * `chain_size` - The number of strike prices to include above and below the at-the-money
+///   strike in the generated chain.
+///
+/// * `strike_interval` - The fixed price difference between adjacent strike prices in the chain.
+///
+/// * `skew_factor` - Controls the volatility skew pattern in the option chain. Positive values
+///   create a volatility smile, negative values create an inverted skew.
+///
+/// * `spread` - The bid-ask spread to apply to option prices in the chain.
+///
+/// * `decimal_places` - The number of decimal places to round prices to in the generated chain.
+///
+/// * `price_params` - Fundamental pricing parameters including underlying price, volatility,
+///   expiration, and other inputs required for option pricing models.
+///
+/// # Usage
+///
+/// This structure is typically used as input to option chain generation functions to create
+/// realistic synthetic option data for testing, simulation, or educational purposes.
 pub struct OptionChainBuildParams {
+    /// The ticker symbol of the underlying asset
     pub(crate) symbol: String,
+
+    /// Optional trading volume for the generated options
     pub(crate) volume: Option<Positive>,
+
+    /// Number of strike prices to include above and below the at-the-money strike
     pub(crate) chain_size: usize,
+
+    /// Price difference between adjacent strike prices
     pub(crate) strike_interval: Positive,
+
+    /// Factor controlling the volatility skew pattern (positive for smile, negative for skew)
     pub(crate) skew_factor: f64,
+
+    /// Bid-ask spread to apply to option prices
     pub(crate) spread: Positive,
+
+    /// Number of decimal places for price rounding
     pub(crate) decimal_places: i32,
+
+    /// Core pricing parameters required for option valuation
     pub(crate) price_params: OptionDataPriceParams,
 }
 
 #[allow(clippy::too_many_arguments)]
 impl OptionChainBuildParams {
+    /// Implementation of the constructor for `OptionChainBuildParams`.
+    ///
+    /// This implementation provides a constructor method `new()` to create instances of
+    /// `OptionChainBuildParams` for generating synthetic option chains with customizable
+    /// parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol` - The ticker symbol of the underlying asset for the option chain.
+    ///
+    /// * `volume` - Optional trading volume to assign to the generated options. When `None`,
+    ///   default or random volumes may be used depending on the chain generation logic.
+    ///
+    /// * `chain_size` - Number of strike prices to include above and below the at-the-money strike,
+    ///   determining the total size of the generated option chain.
+    ///
+    /// * `strike_interval` - The fixed price difference between adjacent strike prices in the chain,
+    ///   represented as a positive decimal value.
+    ///
+    /// * `skew_factor` - A factor controlling the volatility skew pattern in the option chain.
+    ///   Positive values create a volatility smile, negative values create an inverted skew.
+    ///
+    /// * `spread` - The bid-ask spread to apply to option prices in the chain, represented as a
+    ///   positive decimal value.
+    ///
+    /// * `decimal_places` - The number of decimal places to round prices to in the generated chain.
+    ///
+    /// * `price_params` - Core pricing parameters required for option valuation, including
+    ///   underlying price, expiration date, implied volatility, risk-free rate, and dividend yield.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `OptionChainBuildParams` with the specified configuration parameters.
+    ///
     pub fn new(
         symbol: String,
         volume: Option<Positive>,
@@ -61,17 +184,74 @@ impl OptionChainBuildParams {
     }
 }
 
+/// Parameters required for pricing an option contract.
+///
+/// This structure encapsulates all necessary inputs for option pricing models
+/// such as Black-Scholes or binomial tree models. It contains information about
+/// the underlying asset, market conditions, and contract specifications needed
+/// to calculate fair option values.
+///
+/// # Fields
+///
+/// * `underlying_price` - The current market price of the underlying asset.
+///
+/// * `expiration_date` - When the option contract expires, either as days to expiration
+///   or as a specific datetime.
+///
+/// * `implied_volatility` - The expected volatility of the underlying asset price over
+///   the life of the option. If None, it may be calculated from other parameters.
+///
+/// * `risk_free_rate` - The theoretical rate of return of an investment with zero risk,
+///   used in option pricing models.
+///
+/// * `dividend_yield` - The dividend yield of the underlying asset, expressed as a positive
+///   decimal value.
+///
+/// * `underlying_symbol` - Optional ticker or identifier for the underlying asset.
+///
+/// # Usage
+///
+/// This structure is typically used as input to option pricing functions to calculate
+/// theoretical values, Greeks (delta, gamma, etc.), and other option metrics.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionDataPriceParams {
+    /// The current price of the underlying asset
     pub(crate) underlying_price: Positive,
+
+    /// When the option expires, either as days to expiration or as a specific datetime
     pub(crate) expiration_date: ExpirationDate,
+
+    /// The expected volatility of the underlying asset price, if known
     pub(crate) implied_volatility: Option<Positive>,
+
+    /// The risk-free interest rate used in pricing calculations
     pub(crate) risk_free_rate: Decimal,
+
+    /// The dividend yield of the underlying asset
     pub(crate) dividend_yield: Positive,
+
+    /// Optional ticker symbol or identifier for the underlying asset
     pub(crate) underlying_symbol: Option<String>,
 }
 
 impl OptionDataPriceParams {
+    /// Creates a new instance of `OptionDataPriceParams` with the provided parameters.
+    ///
+    /// This constructor initializes all the required fields for option pricing calculations,
+    /// including asset price, expiration, volatility, and market rates.
+    ///
+    /// # Parameters
+    ///
+    /// * `underlying_price` - The current market price of the underlying asset
+    /// * `expiration_date` - When the option contract expires (either as days to expiration or as a specific datetime)
+    /// * `implied_volatility` - The expected volatility of the underlying asset price (if known)
+    /// * `risk_free_rate` - The theoretical risk-free interest rate used in pricing calculations
+    /// * `dividend_yield` - The dividend yield of the underlying asset
+    /// * `underlying_symbol` - Optional ticker or identifier for the underlying asset
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `OptionDataPriceParams` containing the provided parameters
     pub fn new(
         underlying_price: Positive,
         expiration_date: ExpirationDate,
@@ -90,22 +270,47 @@ impl OptionDataPriceParams {
         }
     }
 
+    /// Returns the current price of the underlying asset.
+    ///
+    /// # Returns
+    ///
+    /// A `Positive` value representing the underlying asset's current market price
     pub fn get_underlying_price(&self) -> Positive {
         self.underlying_price
     }
 
+    /// Returns the expiration date of the option contract.
+    ///
+    /// # Returns
+    ///
+    /// An `ExpirationDate` representing when the option expires, either as days to expiration or a specific datetime
     pub fn get_expiration_date(&self) -> ExpirationDate {
         self.expiration_date
     }
 
+    /// Returns the implied volatility of the underlying asset, if available.
+    ///
+    /// # Returns
+    ///
+    /// `Some(Positive)` containing the implied volatility if known, or `None` if not specified
     pub fn get_implied_volatility(&self) -> Option<Positive> {
         self.implied_volatility
     }
 
+    /// Returns the risk-free interest rate used in pricing calculations.
+    ///
+    /// # Returns
+    ///
+    /// A `Decimal` value representing the current risk-free rate
     pub fn get_risk_free_rate(&self) -> Decimal {
         self.risk_free_rate
     }
 
+    /// Returns the dividend yield of the underlying asset.
+    ///
+    /// # Returns
+    ///
+    /// A `Positive` value representing the dividend yield of the underlying asset
     pub fn get_dividend_yield(&self) -> Positive {
         self.dividend_yield
     }
@@ -138,7 +343,59 @@ impl Display for OptionDataPriceParams {
     }
 }
 
+/// A trait for obtaining option pricing parameters based on a strike price.
+///
+/// This trait defines an interface for types that can provide the necessary parameters
+/// for pricing options at a specific strike price. Implementations of this trait
+/// handle the logic of determining appropriate pricing parameters such as underlying price,
+/// expiration date, implied volatility, risk-free rate, dividend yield, and other relevant
+/// values required for option pricing models.
+///
+/// # Type Parameters
+///
+/// The trait is generic over the implementing type, allowing various sources of option
+/// parameters to conform to a single interface.
+///
+/// # Methods
+///
+/// * `get_params` - Retrieves the option pricing parameters for a given strike price.
+///
+/// # Errors
+///
+/// Returns a `ChainError` if the parameters cannot be determined or are invalid for
+/// the specified strike price.
+///
+/// # Usage
+///
+/// This trait is typically implemented by types that represent sources of option chain data,
+/// such as market data providers, model-based generators, or historical data repositories.
+/// It provides a uniform way to access option pricing parameters regardless of their source.
 pub trait OptionChainParams {
+    /// Retrieves the option pricing parameters for a given strike price.
+    ///
+    /// This method calculates or retrieves all parameters necessary for pricing an option
+    /// at the specified strike price, including the underlying price, expiration date,
+    /// implied volatility (if available), risk-free rate, dividend yield, and underlying symbol.
+    ///
+    /// # Parameters
+    ///
+    /// * `strike_price` - A positive decimal value representing the strike price of the option
+    ///   for which parameters are being requested.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(OptionDataPriceParams)` - A structure containing all necessary parameters for
+    ///   option pricing calculations if the parameters could be successfully determined.
+    /// * `Err(ChainError)` - An error if the parameters cannot be determined or are invalid
+    ///   for the given strike price.
+    ///
+    /// # Errors
+    ///
+    /// This method may return various `ChainError` variants depending on the implementation,
+    /// such as:
+    /// - `ChainError::OptionDataError` for invalid option data
+    /// - `ChainError::ChainBuildError` for problems constructing chain parameters
+    /// - Other error types as appropriate for the specific implementation
     fn get_params(&self, strike_price: Positive) -> Result<OptionDataPriceParams, ChainError>;
 }
 
@@ -172,6 +429,36 @@ pub struct RandomPositionsParams {
 }
 
 impl RandomPositionsParams {
+    /// Creates a new instance of `RandomPositionsParams` with the specified parameters.
+    ///
+    /// This constructor initializes a configuration object that defines parameters for
+    /// generating random option positions in an option chain. It allows specifying the
+    /// quantity of different option types (puts/calls, long/short), expiration settings,
+    /// and various fee structures.
+    ///
+    /// # Parameters
+    ///
+    /// * `qty_puts_long` - Optional number of long put positions to generate
+    /// * `qty_puts_short` - Optional number of short put positions to generate
+    /// * `qty_calls_long` - Optional number of long call positions to generate
+    /// * `qty_calls_short` - Optional number of short call positions to generate
+    /// * `expiration_date` - The expiration date for the options (can be specified as days from now or absolute date)
+    /// * `option_qty` - The quantity of contracts for each option position
+    /// * `risk_free_rate` - The risk-free interest rate used for option pricing calculations
+    /// * `dividend_yield` - The dividend yield of the underlying asset
+    /// * `open_put_fee` - The fee charged when opening put positions
+    /// * `open_call_fee` - The fee charged when opening call positions
+    /// * `close_put_fee` - The fee charged when closing put positions
+    /// * `close_call_fee` - The fee charged when closing call positions
+    ///
+    /// # Returns
+    ///
+    /// A new `RandomPositionsParams` instance with the specified configuration.
+    ///
+    /// # Note
+    ///
+    /// This function has many parameters, but this is justified by the complex nature
+    /// of option position generation which requires detailed configuration.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         qty_puts_long: Option<usize>,
@@ -202,8 +489,16 @@ impl RandomPositionsParams {
             close_call_fee,
         }
     }
-
-    /// Returns the total number of positions to generate
+    /// Returns the total number of positions to generate.
+    ///
+    /// This method calculates the sum of all option position types (puts long/short and calls long/short)
+    /// that need to be generated based on the current configuration. If any position type is not specified
+    /// (None), it is treated as zero.
+    ///
+    /// # Returns
+    ///
+    /// The total number of option positions to be generated.
+    ///
     pub fn total_positions(&self) -> usize {
         self.qty_puts_long.unwrap_or(0)
             + self.qty_puts_short.unwrap_or(0)
