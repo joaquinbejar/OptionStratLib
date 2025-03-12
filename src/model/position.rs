@@ -23,46 +23,100 @@ use std::error::Error;
 use tracing::{debug, trace};
 
 /// The `Position` struct represents a financial position in an options market.
-/// It includes various attributes related to the option, such as its cost,
-/// date, and associated fees.
 ///
-/// # Attributes
-/// - `option`: Represents the options details.
-/// - `premium`: The premium paid for the option per contract.
-/// - `date`: The date when the position was opened.
-/// - `open_fee`: The fee paid to open the position per contract.
-/// - `close_fee`: The fee paid to close the position per contract.
+/// This structure encapsulates all the necessary information to track an options position,
+/// including the underlying option details, costs associated with the position, and the date
+/// when the position was opened. It provides methods for analyzing profitability, time metrics,
+/// and position characteristics.
 ///
-/// # Methods
-/// - `new(option: Options, premium: Positive, date: DateTime<Utc>, open_fee: Positive, close_fee: Positive) -> Self`
-///   Creates a new `Position` instance.
-/// - `total_cost(&self) -> Result<Positive, PositionError>`
-///   Calculates the total cost including the premium and open fee.
-/// - `unrealized_pnl(&self, Positive: Positive) -> Result<Decimal, PositionError>`
-///   Calculates the unrealized profit or loss at the current price.
-/// - `pnl_at_expiration(&self, price: &Option<Positive>) -> Result<Decimal, Box<dyn Error>>`
-///   Calculates the realized profit or loss at the closing price.
-/// - `days_held(&self) -> Result<Positive, PositionError>`
-///   Returns the number of days the position has been held.
-/// - `days_to_expiration(&self) -> Result<Positive, PositionError>`
-///   Returns the number of days until the option expires.
-/// - `is_long(&self) -> bool`
-///   Checks if the position is a long position.
-/// - `is_short(&self) -> bool`
-///   Checks if the position is a short position.
+/// # Examples
 ///
-/// The `Greeks` trait is also implemented for the `Position` struct, allowing
-/// calculations related to options' sensitivities (e.g., Delta, Gamma).
+/// ```rust
+/// use optionstratlib::{Options, pos, Side, OptionStyle};
+/// use chrono::Utc;
+/// use optionstratlib::model::Position;
+/// use optionstratlib::model::utils::create_sample_option_simplest;
+///
+/// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+/// let position = Position::new(
+///     option,
+///     pos!(5.25),           // premium per contract
+///     Utc::now(),           // position open date
+///     pos!(0.65),           // opening fee per contract
+///     pos!(0.65),           // closing fee per contract
+/// );
+///
+/// let total_cost = position.total_cost().unwrap();
+/// println!("Total position cost: {}", total_cost);
+/// ```
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Position {
+    /// The detailed options contract information, including the type, strike price,
+    /// expiration, underlying asset details, and other option-specific parameters.
     pub option: Options,
+
+    /// The premium paid or received per contract. For long positions, this represents
+    /// the cost per contract; for short positions, this is the credit received.
     pub premium: Positive,
+
+    /// The date and time when the position was opened, used for calculating
+    /// time-based metrics like days held and days to expiration.
     pub date: DateTime<Utc>,
+
+    /// The fee paid to open the position per contract. This typically includes
+    /// broker commissions and exchange fees.
     pub open_fee: Positive,
+
+    /// The fee that will be paid to close the position per contract. This is used
+    /// in profit/loss calculations to account for all transaction costs.
     pub close_fee: Positive,
 }
 
 impl Position {
+    
+    /// Creates a new options position.
+    ///
+    /// This constructor initializes a new `Position` instance representing an options trade,
+    /// capturing all essential information for position tracking and analysis.
+    ///
+    /// # Parameters
+    ///
+    /// * `option` - The options contract details including type (call/put), strike price,
+    ///   expiration date, underlying asset information, and other option parameters.
+    ///
+    /// * `premium` - The premium paid (for long positions) or received (for short positions)
+    ///   per contract, represented as a positive value.
+    ///
+    /// * `date` - The timestamp when the position was opened, used for calculating time-based
+    ///   metrics like days to expiration and position duration.
+    ///
+    /// * `open_fee` - The transaction costs paid to open the position per contract,
+    ///   including broker commissions and exchange fees.
+    ///
+    /// * `close_fee` - The anticipated transaction costs to close the position per contract,
+    ///   used for accurate profit/loss calculations.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new `Position` instance containing the provided information.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use optionstratlib::{Options, pos, Side, OptionStyle};
+    /// use chrono::Utc;
+    /// use optionstratlib::model::Position;
+    /// use optionstratlib::model::utils::create_sample_option_simplest;
+    ///
+    /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+    /// let position = Position::new(
+    ///     option,
+    ///     pos!(5.25),           // premium per contract
+    ///     Utc::now(),           // position open date
+    ///     pos!(0.65),           // opening fee per contract
+    ///     pos!(0.65),           // closing fee per contract
+    /// );
+    /// ```
     pub fn new(
         option: Options,
         premium: Positive,
@@ -79,10 +133,34 @@ impl Position {
         }
     }
 
+    /// Updates a position with data from an `OptionData` instance, refreshing premium values
+    /// and option details.
+    ///
+    /// This method handles the complete update of a position based on new market data,
+    /// including:
+    ///
+    /// 1. Setting the position's timestamp to the current UTC time
+    /// 2. Updating the underlying option details through the option's own update method
+    /// 3. Setting the premium value based on the position's side (Long/Short) and option style (Call/Put)
+    ///
+    /// The premium is determined as follows:
+    /// - For Long Call positions: Uses the call ask price (price to buy a call)
+    /// - For Long Put positions: Uses the put ask price (price to buy a put)
+    /// - For Short Call positions: Uses the call bid price (price to sell a call)
+    /// - For Short Put positions: Uses the put bid price (price to sell a put)
+    ///
+    /// # Parameters
+    ///
+    /// * `option_data` - Reference to an `OptionData` struct containing current market data
+    ///   for the relevant option, including bid/ask prices and option characteristics.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the required premium value is `None` in the provided `option_data`.
+    ///
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.date = Utc::now();
         self.option.update_from_option_data(option_data);
-
         match (self.option.side, self.option.option_style) {
             (Side::Long, OptionStyle::Call) => {
                 self.premium = option_data.call_ask.unwrap();
@@ -123,6 +201,41 @@ impl Position {
         Ok(total_cost)
     }
 
+    /// Calculates the premium received from an options position.
+    ///
+    /// This method determines the premium amount received based on the position's side:
+    /// - For long positions, it returns zero as the trader pays premium (doesn't receive any)
+    /// - For short positions, it returns the total premium received (premium per contract × quantity)
+    ///
+    /// The result is always returned as a `Positive` value, ensuring non-negative amounts.
+    ///
+    /// # Returns
+    ///
+    /// - `Result<Positive, PositionError>` - A result containing the premium received as a `Positive` 
+    ///   value if successful, or a `PositionError` if any calculation errors occur.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use optionstratlib::{pos, Side, OptionStyle};
+    /// use optionstratlib::model::Position;
+    /// use optionstratlib::model::utils::create_sample_option_simplest;
+    /// use chrono::Utc;
+    ///
+    /// // Create a short position
+    /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
+    /// let position = Position::new(
+    ///     option,
+    ///     pos!(5.25),  // premium per contract
+    ///     Utc::now(),  // position open date
+    ///     pos!(0.65),  // opening fee
+    ///     pos!(0.65),  // closing fee
+    /// );
+    ///
+    /// // Calculate premium received
+    /// let received = position.premium_received().unwrap();
+    /// println!("Premium received: {}", received);
+    /// ```
     pub fn premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
@@ -130,6 +243,24 @@ impl Position {
         }
     }
 
+    /// Calculates the net premium received for the position.
+    ///
+    /// This method determines the premium amount received after accounting for costs,
+    /// which is relevant primarily for short positions. For long positions, this always
+    /// returns zero as premium is paid rather than received.
+    ///
+    /// For short positions, the method calculates the difference between the premium
+    /// received and the total costs incurred. If this value is positive (meaning the
+    /// premium exceeds the costs), it represents the maximum potential profit for the
+    /// position. If negative, the position is considered invalid as it would represent
+    /// a guaranteed loss.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Positive)` - The net premium received as a non-negative value
+    /// - `Err(PositionError)` - If the position is invalid because the premium received
+    ///   is less than the costs, resulting in a guaranteed loss
+    ///
     pub fn net_premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
@@ -149,8 +280,50 @@ impl Position {
         }
     }
 
+    /// Calculates the profit and loss (PnL) at the option's expiration.
+    ///
+    /// This function determines the total profit or loss that would be realized
+    /// when the option position expires, taking into account the intrinsic value
+    /// at expiration, the cost to establish the position, and any premiums received.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - An optional reference to a positive decimal value representing
+    ///   the underlying asset price at expiration. If None is provided, the calculation
+    ///   will use the current underlying price stored in the option.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit or loss as a Decimal value,
+    ///   or an error if the calculation fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    ///
+    /// // Assuming position is a properly initialized Position
+    /// use chrono::Utc;
+    /// use optionstratlib::model::utils::create_sample_option_simplest;
+    /// use optionstratlib::{pos, OptionStyle, Side};
+    /// use optionstratlib::model::Position;
+    ///
+    /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
+    /// let position = Position::new(
+    ///     option,
+    ///     pos!(5.25),  // premium per contract
+    ///     Utc::now(),  // position open date
+    ///     pos!(0.65),  // opening fee
+    ///     pos!(0.65),  // closing fee
+    /// );
+    /// let current_price = pos!(105.0);
+    ///
+    /// // Calculate PnL at expiration with specified price
+    /// let pnl_specific = position.pnl_at_expiration(&Some(&current_price)).unwrap();
+    ///
+    /// // Calculate PnL at expiration using the option's current underlying price
+    /// let pnl_current = position.pnl_at_expiration(&None).unwrap();
+    /// ```
     pub fn pnl_at_expiration(
-        // payoff
         &self,
         price: &Option<&Positive>,
     ) -> Result<Decimal, Box<dyn Error>> {
@@ -163,6 +336,44 @@ impl Position {
         }
     }
 
+    /// Calculates the unrealized profit and loss (PnL) for an options position at a given price.
+    ///
+    /// This method computes the current theoretical profit or loss of the position if it were
+    /// to be closed at the specified price, taking into account the premium paid/received and
+    /// all transaction fees (both opening and closing fees).
+    ///
+    /// The calculation differs based on the position side:
+    /// - For long positions: (current_price - premium - open_fee - close_fee) * quantity
+    /// - For short positions: (premium - current_price - open_fee - close_fee) * quantity
+    ///
+    /// # Parameters
+    ///
+    /// * `price` - A `Positive` value representing the current price of the option
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, PositionError>` - The calculated unrealized PnL as a `Decimal` if successful,
+    ///   or a `PositionError` if the calculation fails
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use chrono::Utc;
+    /// use optionstratlib::model::Position;
+    /// use optionstratlib::model::utils::create_sample_option_simplest;
+    /// use optionstratlib::{pos, OptionStyle, Side};
+    /// let current_price = pos!(6.50);
+    /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
+    /// let position = Position::new(
+    ///     option,
+    ///     pos!(5.25),  // premium per contract
+    ///     Utc::now(),  // position open date
+    ///     pos!(0.65),  // opening fee
+    ///     pos!(0.65),  // closing fee
+    /// );
+    /// let unrealized_pnl = position.unrealized_pnl(current_price)?;
+    /// println!("Current unrealized PnL: {}", unrealized_pnl);
+    /// ```
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self.option.side {
             Side::Long => Ok((price.to_dec()
@@ -178,19 +389,55 @@ impl Position {
         }
     }
 
+    /// Calculates the number of days the position has been held.
+    ///
+    /// This method computes the difference between the current UTC date and the 
+    /// position's opening date, returning the result as a `Positive` value.
+    ///
+    /// The calculation uses Chrono's `num_days` method to determine the precise
+    /// number of whole days between the position's date and current time.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Positive)` - The number of days the position has been held as a positive value
+    /// * `Err(PositionError)` - If there's an error during the calculation or validation
+    ///
     pub fn days_held(&self) -> Result<Positive, PositionError> {
         Ok(pos!((Utc::now() - self.date).num_days() as f64))
     }
 
+    /// Calculates the number of days remaining until the option expires.
+    ///
+    /// This function determines the time to expiration in days based on the option's
+    /// expiration date format. It handles both explicit day counts and datetime-based
+    /// expiration dates.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Positive)` - The number of days to expiration as a positive value
+    /// - `Err(PositionError)` - If the calculation fails due to issues with the position data
+    ///
+    /// For datetime-based expirations, the function calculates the difference between
+    /// the expiration date and the current date, converting the result to days.
     pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),
             ExpirationDate::DateTime(datetime) => Ok(pos!(
-                datetime.signed_duration_since(Utc::now()).num_days() as f64
-            )),
+            datetime.signed_duration_since(Utc::now()).num_days() as f64
+        )),
         }
     }
 
+    /// Determines if the position is a long position.
+    ///
+    /// This method checks the side attribute of the option to determine the directionality 
+    /// of the position. Long positions profit when the underlying asset's price increases.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the position is long
+    /// * `false` if the position is short
+    ///
     pub fn is_long(&self) -> bool {
         match self.option.side {
             Side::Long => true,
@@ -198,6 +445,16 @@ impl Position {
         }
     }
 
+    /// Determines if the position is a short position.
+    ///
+    /// This method checks the side attribute of the option to determine the directionality
+    /// of the position. Short positions profit when the underlying asset's price decreases.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the position is short
+    /// * `false` if the position is long
+    ///
     pub fn is_short(&self) -> bool {
         match self.option.side {
             Side::Long => false,
@@ -230,6 +487,27 @@ impl Position {
         }
     }
 
+    /// Calculates the break-even price for an options position.
+    ///
+    /// This method determines the price of the underlying asset at which the position
+    /// will neither make a profit nor a loss. The calculation varies based on both the
+    /// side of the position (Long/Short) and the option style (Call/Put).
+    ///
+    /// The break-even price is an important reference point for options traders as it
+    /// represents the threshold price that the underlying asset must cross for the 
+    /// position to become profitable, accounting for all costs associated with the position.
+    ///
+    /// # Formula by position type:
+    /// - Long Call: Strike Price + Total Cost per Contract
+    /// - Short Call: Strike Price + Premium - Total Cost per Contract
+    /// - Long Put: Strike Price - Total Cost per Contract
+    /// - Short Put: Strike Price - Premium + Total Cost per Contract
+    ///
+    /// # Returns
+    ///
+    /// - `Some(Positive)` containing the break-even price if the position has non-zero quantity
+    /// - `None` if the position has zero quantity (no contracts)
+    ///
     pub fn break_even(&self) -> Option<Positive> {
         if self.option.quantity == Positive::ZERO {
             return None;
@@ -251,6 +529,18 @@ impl Position {
         }
     }
 
+    /// Calculates the maximum potential profit for an options position.
+    ///
+    /// This method determines the maximum possible profit based on the position's side:
+    /// - For long positions (buying options), the profit potential is theoretically unlimited,
+    ///   as the underlying asset could increase in value indefinitely.
+    /// - For short positions (selling options), the maximum profit is capped at the net premium
+    ///   received after accounting for all costs.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Positive)` - The maximum potential profit as a positive value
+    /// - `Err(PositionError)` - If there's an issue calculating the maximum profit
     #[allow(dead_code)]
     pub(crate) fn max_profit(&self) -> Result<Positive, PositionError> {
         match self.option.side {
@@ -259,6 +549,18 @@ impl Position {
         }
     }
 
+    /// Calculates the maximum potential loss for an options position.
+    ///
+    /// This method determines the maximum possible loss based on the position's side:
+    /// - For long positions (buying options), the maximum loss is limited to the total cost
+    ///   of entering the position (premium paid plus all fees).
+    /// - For short positions (selling options), the loss potential is theoretically unlimited,
+    ///   as the underlying asset could increase in value indefinitely.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Positive)` - The maximum potential loss as a positive value
+    /// - `Err(PositionError)` - If there's an issue calculating the maximum loss
     #[allow(dead_code)]
     pub(crate) fn max_loss(&self) -> Result<Positive, PositionError> {
         match self.option.side {
@@ -267,10 +569,53 @@ impl Position {
         }
     }
 
+    /// Calculates the total transaction fees for the position.
+    ///
+    /// This method computes the sum of opening and closing fees for the position,
+    /// scaled by the quantity of options contracts. These fees typically include
+    /// broker commissions, exchange fees, and other transaction costs.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Positive)` - The total fees as a positive value
+    /// - `Err(PositionError)` - If there's an issue calculating the fees
     pub fn fees(&self) -> Result<Positive, PositionError> {
         Ok((self.open_fee + self.close_fee) * self.option.quantity)
     }
 
+    /// Validates the position to ensure it meets all necessary conditions for trading.
+    ///
+    /// This method performs a series of checks to determine if the position is valid:
+    /// 1. For short positions, verifies that:
+    ///    - Premium is greater than zero
+    ///    - Premium exceeds the sum of opening and closing fees
+    /// 2. Validates the underlying option parameters
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the position is valid and meets all conditions
+    /// * `false` otherwise, with specific failure reasons logged via debug messages
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use optionstratlib::model::{Position, Options};
+    /// use optionstratlib::{pos, Side, OptionStyle};
+    /// use optionstratlib::model::utils::create_sample_option_simplest;
+    /// use chrono::Utc;
+    ///
+    /// // Create a valid position
+    /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+    /// let position = Position::new(
+    ///     option,
+    ///     pos!(5.25),
+    ///     Utc::now(),
+    ///     pos!(0.65),
+    ///     pos!(0.65)
+    /// );
+    ///
+    /// assert!(position.validate());
+    /// ```
     pub fn validate(&self) -> bool {
         if self.option.side == Side::Short {
             if self.premium == Positive::ZERO {
@@ -302,13 +647,58 @@ impl Default for Position {
     }
 }
 
+/// Implementation of the `Greeks` trait for the `Position` struct.
+///
+/// This implementation allows a `Position` to calculate option Greeks (delta, gamma, 
+/// theta, vega, rho, etc.) by accessing its underlying option contract. The implementation
+/// provides a way to expose the position's option for use in Greek calculations.
+///
 impl Greeks for Position {
+    /// Returns a vector containing a reference to the option contract associated with this position.
+    ///
+    /// This method satisfies the `Greeks` trait requirement by providing access to the 
+    /// option contract that will be used for calculating various Greek values.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Vec<&Options>)` - A vector containing a reference to the position's underlying option
+    /// - `Err(GreeksError)` - If there is an error accessing the option data
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
         Ok(vec![&self.option])
     }
 }
 
+/// # Position Profit and Loss (PnL) Calculator
+///
+/// This trait implementation provides methods to calculate the profit and loss (PnL)
+/// for option positions under different market scenarios.
+///
+/// The implementation offers two main calculations:
+/// 1. Current PnL based on updated market conditions
+/// 2. PnL at expiration based on a projected underlying price
+///
+/// These calculations are essential for risk management, position monitoring, and
+/// strategy planning in options trading.
 impl PnLCalculator for Position {
+    /// Calculates the current unrealized profit and loss for an option position
+    /// based on updated market conditions.
+    ///
+    /// This method computes the difference between the option's price at entry and its
+    /// current theoretical price using the Black-Scholes model. It factors in changes to:
+    /// - The underlying asset price
+    /// - Time to expiration
+    /// - Implied volatility
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying_price` - The current price of the underlying asset
+    /// * `expiration_date` - The updated expiration date for the calculation
+    /// * `implied_volatility` - The current implied volatility of the option
+    ///
+    /// # Returns
+    ///
+    /// * `Result<PnL, Box<dyn Error>>` - A PnL object containing unrealized profit/loss and position cost details,
+    ///   or an error if the calculation fails
     fn calculate_pnl(
         &self,
         underlying_price: &Positive,
@@ -333,6 +723,21 @@ impl PnLCalculator for Position {
         ))
     }
 
+    /// Calculates the expected profit and loss at option expiration for a given
+    /// underlying price.
+    ///
+    /// This method determines the realized profit or loss that would occur if the option
+    /// expires with the underlying at the specified price. It uses intrinsic value calculation
+    /// at expiration rather than Black-Scholes pricing.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying_price` - The projected price of the underlying asset at expiration
+    ///
+    /// # Returns
+    ///
+    /// * `Result<PnL, Box<dyn Error>>` - A PnL object containing realized profit/loss and position cost details,
+    ///   or an error if the calculation fails
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
@@ -341,7 +746,6 @@ impl PnLCalculator for Position {
         let initial_cost = self.total_cost()?;
         let initial_income = self.premium_received()?;
         let date_time = self.option.expiration_date.get_date()?;
-
         Ok(PnL::new(
             Some(realized),
             None,
@@ -352,17 +756,58 @@ impl PnLCalculator for Position {
     }
 }
 
+/// Implementation of the Profit trait for the Position struct.
+///
+/// This allows calculating the profit of a position at a given price by using the
+/// position's profit and loss (PnL) calculation at expiration.
+///
 impl Profit for Position {
+    /// Calculates the profit of the position at a specific price.
+    ///
+    /// This method computes the profit or loss that would be realized if the position
+    /// were to expire with the underlying asset at the specified price.
+    ///
+    /// # Parameters
+    ///
+    /// * `price` - The price at which to calculate the profit, represented as a Positive value.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit as a Decimal if successful,
+    ///   or an error if the calculation fails.
     fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
         self.pnl_at_expiration(&Some(&price))
     }
 }
 
+/// Implementation of the `Graph` trait for the `Position` struct, enabling graphical representation
+/// of financial options positions.
+///
+/// This implementation provides methods to visualize the profit/loss (PnL) profile of an options position
+/// across different price levels of the underlying asset. It handles the generation of appropriate title,
+/// data values for plotting, and special chart elements like break-even points.
+///
+/// The visualization capabilities allow traders to analyze the potential outcomes of their options positions
+/// at expiration across various price scenarios.
 impl Graph for Position {
+    /// Generates a title for the graph based on the option's characteristics.
+    ///
+    /// # Returns
+    /// A `String` containing the formatted title that describes the position.
     fn title(&self) -> String {
         self.option.title()
     }
 
+    /// Calculates position profit/loss values at expiration for a range of underlying prices.
+    ///
+    /// This method transforms a slice of potential underlying prices into their corresponding
+    /// profit/loss values at expiration for this position.
+    ///
+    /// # Parameters
+    /// * `data` - A slice of `Positive` values representing potential prices of the underlying asset
+    ///
+    /// # Returns
+    /// A `Vec<f64>` containing the calculated profit/loss values for each input price
     fn get_values(&self, data: &[Positive]) -> Vec<f64> {
         data.iter()
             .map(|&price| {
@@ -374,6 +819,13 @@ impl Graph for Position {
             .collect()
     }
 
+    /// Generates vertical lines for the graph to highlight significant price levels.
+    ///
+    /// This method creates vertical line indicators for important price points in the position analysis,
+    /// specifically the break-even price level where the position transitions between profit and loss.
+    ///
+    /// # Returns
+    /// A `Vec<ChartVerticalLine<f64, f64>>` containing vertical line definitions to be displayed on the chart
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         match self.break_even() {
             Some(break_even) => {
@@ -387,7 +839,6 @@ impl Graph for Position {
                     line_style: ShapeStyle::from(&BLACK).stroke_width(1),
                     font_size: 18,
                 }];
-
                 vertical_lines
             }
             None => vec![],
