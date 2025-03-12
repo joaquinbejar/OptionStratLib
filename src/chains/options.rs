@@ -11,7 +11,7 @@ use std::error::Error;
 /// Represents a collection of option positions at the same strike price.
 ///
 /// This structure groups four option positions - long and short calls, along with
-/// long and short puts - that share the same strike price. It's commonly used for 
+/// long and short puts - that share the same strike price. It's commonly used for
 /// analyzing complex option strategies like straddles, strangles, iron condors,
 /// and other multi-leg option combinations that involve positions at the same strike.
 ///
