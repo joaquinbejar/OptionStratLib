@@ -12,21 +12,81 @@ use std::iter::Sum;
 use std::ops::Add;
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.
+///
+/// This structure captures the financial performance details of an investment or trading position,
+/// including both realized and unrealized gains or losses, as well as the initial costs and income
+/// associated with the position.
+///
+/// PnL serves as a fundamental measurement of trading performance, providing a comprehensive view
+/// of the current financial status of positions. It is particularly useful for options trading,
+/// portfolio management, and financial reporting.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct PnL {
-    /// The realized profit or loss.
+    /// The realized profit or loss that has been crystallized through closed positions.
+    /// This represents actual gains or losses that have been confirmed by completing the trade.
     pub realized: Option<Decimal>,
-    /// The unrealized profit or loss.
+
+    /// The unrealized profit or loss representing the current market value compared to entry price.
+    /// This value fluctuates with market movements and represents potential gains or losses if
+    /// the position were to be closed at current market prices.
     pub unrealized: Option<Decimal>,
-    /// The initial costs (fees, premiums paid).
+
+    /// The initial costs associated with entering the position, such as fees, commissions,
+    /// or premiums paid when buying options.
     pub initial_costs: Positive,
-    /// The initial income (premiums received).
+
+    /// The initial income received when entering the position, such as premiums collected
+    /// when selling options or other upfront payments received.
     pub initial_income: Positive,
-    /// The date of the PnL calculation.
+
+    /// The timestamp when this PnL calculation was performed.
+    /// Useful for tracking performance over time and creating historical PnL reports.
     pub date_time: DateTime<Utc>,
 }
 
 impl PnL {
+    /// Creates a new Profit and Loss (PnL) instance.
+    ///
+    /// This constructor initializes a new PnL object with information about the financial
+    /// performance of a trading position, including both realized and unrealized components.
+    ///
+    /// # Parameters
+    ///
+    /// * `realized` - The confirmed profit or loss from closed positions, if available.
+    ///   This represents actual gains or losses that have been crystallized through completed trades.
+    ///
+    /// * `unrealized` - The potential profit or loss based on current market values, if available.
+    ///   This value represents the theoretical gain or loss if the position were closed at current prices.
+    ///
+    /// * `initial_costs` - The costs associated with entering the position, such as premiums paid,
+    ///   commissions, or fees. Always represented as a positive value.
+    ///
+    /// * `initial_income` - The income received when entering the position, such as premiums
+    ///   collected when selling options. Always represented as a positive value.
+    ///
+    /// * `date_time` - The timestamp when this PnL calculation was performed, useful for
+    ///   tracking performance over time and creating historical reports.
+    ///
+    /// # Returns
+    ///
+    /// A new `PnL` instance containing the provided financial performance data.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use chrono::Utc;
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::pnl::utils::PnL;
+    /// use optionstratlib::pos;
+    ///
+    /// let pnl = PnL::new(
+    ///     Some(dec!(500.0)),  // Realized PnL
+    ///     Some(dec!(250.0)),  // Unrealized PnL
+    ///     pos!(100.0),        // Initial costs
+    ///     pos!(350.0),        // Initial income
+    ///     Utc::now(),         // Current timestamp
+    /// );
+    /// ```
     pub fn new(
         realized: Option<Decimal>,
         unrealized: Option<Decimal>,
@@ -144,7 +204,58 @@ impl Add for &PnL {
     }
 }
 
+/// Defines the interface for profit and loss (PnL) calculation on financial instruments.
+///
+/// This trait provides methods to calculate the profit and loss of financial instruments
+/// (particularly options) under different scenarios: at current market conditions and
+/// at expiration. Implementations of this trait can provide specific PnL calculation
+/// logic for different types of financial instruments or strategies.
+///
+/// # Examples
+///
+/// ```
+/// use std::error::Error;
+/// use optionstratlib::pnl::utils::{PnL, PnLCalculator};
+/// use optionstratlib::{ExpirationDate, Positive};
+/// use chrono::Utc;
+/// use optionstratlib::pos;
+///
+/// struct MyOption;
+///
+/// impl PnLCalculator for MyOption {
+///     fn calculate_pnl(
+///         &self,
+///         underlying_price: &Positive,
+///         expiration_date: ExpirationDate,
+///         implied_volatility: &Positive,
+///     ) -> Result<PnL, Box<dyn Error>> {
+///         // Implement PnL calculation logic
+///         Ok(PnL::default())
+///     }
+///
+///     fn calculate_pnl_at_expiration(
+///         &self,
+///         underlying_price: &Positive,
+///     ) -> Result<PnL, Box<dyn Error>> {
+///         // Implement PnL calculation at expiration
+///         Ok(PnL::default())
+///     }
+/// }
+/// ```
 pub trait PnLCalculator {
+    /// Calculates the current PnL based on market conditions.
+    ///
+    /// This method computes the profit and loss of a financial instrument given
+    /// the current underlying price, time to expiration, and implied volatility.
+    /// It returns a complete PnL structure with realized and unrealized values.
+    ///
+    /// # Parameters
+    /// * `_underlying_price` - The current market price of the underlying asset
+    /// * `_expiration_date` - The expiration date of the instrument
+    /// * `_implied_volatility` - The current implied volatility
+    ///
+    /// # Returns
+    /// * `Result<PnL, Box<dyn Error>>` - The calculated PnL or an error
     fn calculate_pnl(
         &self,
         _underlying_price: &Positive,
@@ -152,6 +263,17 @@ pub trait PnLCalculator {
         _implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>>;
 
+    /// Calculates the PnL at the expiration of the instrument.
+    ///
+    /// This method computes the final profit and loss at the expiration date,
+    /// which is typically simpler than the pre-expiration calculation since
+    /// time value and volatility no longer factor into the price.
+    ///
+    /// # Parameters
+    /// * `_underlying_price` - The price of the underlying asset at expiration
+    ///
+    /// # Returns
+    /// * `Result<PnL, Box<dyn Error>>` - The calculated PnL at expiration or an error
     fn calculate_pnl_at_expiration(
         &self,
         _underlying_price: &Positive,
