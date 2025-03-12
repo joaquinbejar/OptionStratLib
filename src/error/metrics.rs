@@ -66,7 +66,7 @@ pub enum MetricsError {
     /// Standard error with additional contextual information.
     StdError {
         /// Detailed explanation of the error cause
-        reason: String
+        reason: String,
     },
 }
 

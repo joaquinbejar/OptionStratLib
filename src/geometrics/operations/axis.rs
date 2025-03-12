@@ -156,7 +156,7 @@ where
     /// * `interpolation` - The interpolation method to use when creating new points
     ///
     /// # Returns
-    /// * `Result<(Self, Self), Self::Error>` - A tuple containing both structures 
+    /// * `Result<(Self, Self), Self::Error>` - A tuple containing both structures
     ///   with aligned coordinate points, or an error if interpolation fails
     fn merge_axis_interpolate(
         &self,

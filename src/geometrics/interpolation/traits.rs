@@ -56,11 +56,11 @@ use rust_decimal::Decimal;
 /// - `GeometricObject`
 ///
 pub trait Interpolate<Point, Input>:
-LinearInterpolation<Point, Input>
-+ BiLinearInterpolation<Point, Input>
-+ CubicInterpolation<Point, Input>
-+ SplineInterpolation<Point, Input>
-+ GeometricObject<Point, Input>
+    LinearInterpolation<Point, Input>
+    + BiLinearInterpolation<Point, Input>
+    + CubicInterpolation<Point, Input>
+    + SplineInterpolation<Point, Input>
+    + GeometricObject<Point, Input>
 where
     Input: HasX,
     Point: HasX + Clone,

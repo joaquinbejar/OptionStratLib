@@ -101,7 +101,7 @@ pub mod chains;
 /// * Data consistency issues
 mod common;
 
-/// ### Curve Errors (`CurveError`) 
+/// ### Curve Errors (`CurveError`)
 /// Handles:
 /// * Yield curve construction
 /// * Forward rate calculations
@@ -188,7 +188,6 @@ mod surfaces;
 /// * Volatility model parameter validation
 /// * Market data consistency checks
 mod volatility;
-
 
 pub use chains::ChainError;
 pub use common::OperationErrorKind;

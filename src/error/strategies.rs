@@ -179,8 +179,8 @@ pub enum PriceErrorKind {
 /// use optionstratlib::error::strategies::BreakEvenErrorKind;
 ///
 /// // When a calculation fails due to invalid input
-/// let error = BreakEvenErrorKind::CalculationError { 
-///     reason: String::from("Division by zero when calculating ratio") 
+/// let error = BreakEvenErrorKind::CalculationError {
+///     reason: String::from("Division by zero when calculating ratio")
 /// };
 ///
 /// // When a strategy has no break-even points
@@ -200,7 +200,7 @@ pub enum BreakEvenErrorKind {
     /// which can be useful for debugging or providing user feedback.
     CalculationError {
         /// Detailed explanation of what caused the calculation to fail
-        reason: String
+        reason: String,
     },
 
     /// Error indicating that no break-even points exist for the given strategy
@@ -233,7 +233,7 @@ pub enum ProfitLossErrorKind {
     /// computational limitations, or logical inconsistencies in the profit model.
     MaxProfitError {
         /// Detailed explanation of why the maximum profit calculation failed
-        reason: String
+        reason: String,
     },
 
     /// Error that occurs when calculating maximum loss.
@@ -242,7 +242,7 @@ pub enum ProfitLossErrorKind {
     /// computational limitations, or logical inconsistencies in the loss model.
     MaxLossError {
         /// Detailed explanation of why the maximum loss calculation failed
-        reason: String
+        reason: String,
     },
 
     /// Error that occurs during profit range calculation.
@@ -251,7 +251,7 @@ pub enum ProfitLossErrorKind {
     /// points, breakeven points, or when analyzing the profit curve of a strategy.
     ProfitRangeError {
         /// Detailed explanation of why the profit range calculation failed
-        reason: String
+        reason: String,
     },
 }
 

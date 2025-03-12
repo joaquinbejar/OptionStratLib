@@ -27,9 +27,9 @@ use std::ops::Index;
 /// of points in a two-dimensional Cartesian coordinate system. Each curve is associated
 /// with an `x_range`, specifying the inclusive domain of the curve in terms of its x-coordinates.
 ///
-/// This structure supports precise mathematical and computational operations, including 
-/// interpolation, analysis, transformations, and intersections. The use of `Decimal` 
-/// for coordinates ensures high-precision calculations, making it particularly suitable 
+/// This structure supports precise mathematical and computational operations, including
+/// interpolation, analysis, transformations, and intersections. The use of `Decimal`
+/// for coordinates ensures high-precision calculations, making it particularly suitable
 /// for scientific, financial, or mathematical applications.
 ///
 /// # Usage

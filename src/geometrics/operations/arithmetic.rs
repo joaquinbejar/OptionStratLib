@@ -1,7 +1,7 @@
 /// Represents mathematical or aggregation operations that can be applied
 /// during a merge or combination process of geometric objects or curves.
 ///
-/// This enum defines the possible operations when merging or combining multiple 
+/// This enum defines the possible operations when merging or combining multiple
 /// data sets, such as curves or points. It is commonly used with the `Arithmetic` trait
 /// to specify how values should be combined during geometric operations.
 ///

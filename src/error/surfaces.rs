@@ -11,7 +11,7 @@ use std::fmt;
 
 /// Error variants that can occur when working with surface-related operations.
 ///
-/// This enum categorizes different types of errors that might occur when handling 
+/// This enum categorizes different types of errors that might occur when handling
 /// mathematical or geometrical surfaces, particularly in the context of pricing
 /// models, interpolation, or volatility surfaces.
 ///
@@ -34,7 +34,7 @@ pub enum SurfaceError {
     /// or when mathematical operations on points fail.
     Point3DError {
         /// A reference to a static string that explains the reason for an error or a condition.
-        reason: &'static str 
+        reason: &'static str,
     },
 
     /// Error indicating a specific operation failed.
@@ -50,7 +50,7 @@ pub enum SurfaceError {
     /// providing a clear transition between external and internal error handling.
     StdError {
         /// A reference to a static string that explains the reason for an error or a condition.
-        reason: String 
+        reason: String,
     },
 
     /// Error that occurred during the construction of a surface.
