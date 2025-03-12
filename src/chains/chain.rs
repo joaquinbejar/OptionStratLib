@@ -36,62 +36,109 @@ use tracing::{debug, error, info, trace, warn};
 #[cfg(not(target_arch = "wasm32"))]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
-/// Struct representing a row in an option chain.
+/// Struct representing a row in an option chain with detailed pricing and analytics data.
+///
+/// This struct encapsulates the complete market data for an options contract at a specific
+/// strike price, including bid/ask prices for both call and put options, implied volatility,
+/// the Greeks (delta, gamma), volume, and open interest. It provides all the essential 
+/// information needed for options analysis and trading decision-making.
 ///
 /// # Fields
 ///
 /// * `strike_price` - The strike price of the option, represented as a positive floating-point number.
-/// * `call_bid` - The bid price for the call option, represented as a positive floating-point number.
-/// * `call_ask` - The ask price for the call option, represented as a positive floating-point number.
-/// * `put_bid` - The bid price for the put option, represented as a positive floating-point number.
-/// * `put_ask` - The ask price for the put option, represented as a positive floating-point number.
-/// * `implied_volatility` - The implied volatility of the option, represented as a positive floating-point number.
-/// * `delta` - The delta of the option, represented as a floating-point number. This measures the sensitivity of the option's price to changes in the price of the underlying asset.
-/// * `volume` - The volume of the option traded, represented as an optional positive floating-point number. It might be `None` if the data is not available.
-/// * `open_interest` - The open interest of the option, represented as an optional unsigned integer. This represents the total number of outstanding option contracts that have not yet been settled or closed.
+/// * `call_bid` - The bid price for the call option, represented as an optional positive floating-point number.
+///   May be `None` if market data is unavailable.
+/// * `call_ask` - The ask price for the call option, represented as an optional positive floating-point number.
+///   May be `None` if market data is unavailable.
+/// * `put_bid` - The bid price for the put option, represented as an optional positive floating-point number.
+///   May be `None` if market data is unavailable.
+/// * `put_ask` - The ask price for the put option, represented as an optional positive floating-point number.
+///   May be `None` if market data is unavailable.
+/// * `call_middle` - The mid-price between call bid and ask, represented as an optional positive floating-point number.
+///   May be `None` if underlying bid/ask data is unavailable.
+/// * `put_middle` - The mid-price between put bid and ask, represented as an optional positive floating-point number.
+///   May be `None` if underlying bid/ask data is unavailable.
+/// * `implied_volatility` - The implied volatility of the option, represented as an optional positive floating-point number.
+///   May be `None` if it cannot be calculated from available market data.
+/// * `delta_call` - The delta of the call option, represented as an optional decimal number.
+///   Measures the rate of change of the option price with respect to changes in the underlying asset price.
+/// * `delta_put` - The delta of the put option, represented as an optional decimal number.
+///   Measures the rate of change of the option price with respect to changes in the underlying asset price.
+/// * `gamma` - The gamma of the option, represented as an optional decimal number.
+///   Measures the rate of change of delta with respect to changes in the underlying asset price.
+/// * `volume` - The trading volume of the option, represented as an optional positive floating-point number.
+///   May be `None` if data is not available.
+/// * `open_interest` - The open interest of the option, represented as an optional unsigned integer.
+///   Represents the total number of outstanding option contracts that have not been settled.
+/// * `options` - An optional boxed reference to a `FourOptions` struct that may contain
+///   the actual option contracts represented by this data. This field is not serialized.
 ///
+/// # Usage
+///
+/// This struct is typically used to represent a single row in an option chain table,
+/// providing comprehensive market data for options at a specific strike price. It's
+/// useful for option pricing models, strategy analysis, and trading applications.
+///
+/// # Serialization
+///
+/// This struct implements Serialize and Deserialize traits, with fields that are `None`
+/// being skipped during serialization to produce more compact JSON output.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionData {
+    /// The strike price of the option, represented as a positive floating-point number.
     #[serde(rename = "strike_price")]
     pub(crate) strike_price: Positive,
 
+    /// The bid price for the call option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) call_bid: Option<Positive>,
 
+    /// The ask price for the call option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) call_ask: Option<Positive>,
 
+    /// The bid price for the put option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) put_bid: Option<Positive>,
 
+    /// The ask price for the put option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) put_ask: Option<Positive>,
 
+    /// The mid-price between call bid and ask. Calculated as (bid + ask) / 2.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub call_middle: Option<Positive>,
 
+    /// The mid-price between put bid and ask. Calculated as (bid + ask) / 2.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub put_middle: Option<Positive>,
 
+    /// The implied volatility of the option, derived from option prices.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) implied_volatility: Option<Positive>,
 
+    /// The delta of the call option, measuring price sensitivity to underlying changes.
     #[serde(skip_serializing_if = "Option::is_none")]
     delta_call: Option<Decimal>,
 
+    /// The delta of the put option, measuring price sensitivity to underlying changes.
     #[serde(skip_serializing_if = "Option::is_none")]
     delta_put: Option<Decimal>,
 
+    /// The gamma of the option, measuring the rate of change in delta.
     #[serde(skip_serializing_if = "Option::is_none")]
     gamma: Option<Decimal>,
 
+    /// The trading volume of the option, indicating market activity.
     #[serde(skip_serializing_if = "Option::is_none")]
     volume: Option<Positive>,
 
+    /// The open interest, representing the number of outstanding contracts.
     #[serde(skip_serializing_if = "Option::is_none")]
     open_interest: Option<u64>,
 
-    // Skip this field during serialization and deserialization
+    /// Optional reference to the actual option contracts represented by this data.
+    /// This field is not serialized.
     #[serde(skip)]
     pub options: Option<Box<FourOptions>>,
 }
